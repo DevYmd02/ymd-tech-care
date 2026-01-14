@@ -1,6 +1,6 @@
 /**
  * @file PRListPage.tsx
- * @description หน้ารายการใบขอซื้อ (Purchase Requisition List) - ใช้ PRHeader types ตาม Database Schema
+ * @description หน้ารายการใบขอซื้อ (Purchase Requisition List) - เชื่อมต่อกับ Backend API
  * @route /procurement/pr
  * @purpose แสดงรายการใบขอซื้อทั้งหมด พร้อมฟังก์ชันค้นหา กรองข้อมูล และอนุมัติ
  * 
@@ -10,13 +10,14 @@
  * - Approval Info: แสดงผู้อนุมัติจาก approval_tasks
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, X, Plus, FileText, Calendar, CheckCircle } from 'lucide-react';
 import { PRFormModal } from '../../components/pr-form';
 import { ApprovalModal } from '../../components/shared/ApprovalModal';
 import { formatThaiDate } from '../../utils/dateUtils';
 import { styles } from '../../constants';
-import { MOCK_PR_HEADERS, MOCK_COST_CENTERS } from '../../mocks';
+import { MOCK_COST_CENTERS } from '../../mocks';
+import { prService } from '../../services/prService';
 import type { PRHeader, PRStatus } from '../../types/pr-types';
 
 // ====================================================================================
@@ -75,7 +76,9 @@ const getCostCenterName = (costCenterId: string): string => {
 export default function PRListPage() {
   // ==================== STATE ====================
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [prList, setPrList] = useState<PRHeader[]>(MOCK_PR_HEADERS);
+  const [prList, setPrList] = useState<PRHeader[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [isLoading, setIsLoading] = useState(true); // TODO: ใช้กับ Loading Spinner ในอนาคต
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [approvalModal, setApprovalModal] = useState<{ isOpen: boolean; action: 'approve' | 'reject' }>({
     isOpen: false,
@@ -90,6 +93,22 @@ export default function PRListPage() {
     dateFrom: '',
     dateTo: ''
   });
+
+  // ==================== FETCH DATA FROM API ====================
+  useEffect(() => {
+    const fetchPRList = async () => {
+      setIsLoading(true);
+      try {
+        const response = await prService.getList();
+        setPrList(response.data);
+      } catch (error) {
+        console.error('Failed to fetch PR list:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchPRList();
+  }, []);
 
   // ==================== HANDLERS ====================
   const handleSearch = () => {

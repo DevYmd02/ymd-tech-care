@@ -1,10 +1,10 @@
 /**
  * @file prService.ts
- * @description Service สำหรับจัดการข้อมูล Purchase Requisition - ตาม Database Schema
+ * @description Service สำหรับจัดการข้อมูล Purchase Requisition - เชื่อมต่อกับ Backend API
  * @usage import { prService } from '@/services/prService';
  */
 
-import { API_BASE_URL } from './api';
+import api from './api';
 import type { 
   PRHeader, 
   PRFormData, 
@@ -63,7 +63,7 @@ export interface ConvertPRRequest {
 }
 
 // ====================================================================================
-// PR SERVICE - API Calls
+// PR SERVICE - API Calls (ใช้ axios จริง)
 // ====================================================================================
 
 /**
@@ -88,136 +88,181 @@ export const prService = {
 
   /**
    * ดึงรายการ PR ทั้งหมด
-   * GET /api/pr
+   * GET /pr
    */
   getList: async (params?: PRListParams): Promise<PRListResponse> => {
-    // TODO: Implement actual API call with axios
-    console.log('prService.getList called with:', params);
-    console.log('API URL:', `${API_BASE_URL}/pr`);
-    
-    // Placeholder response
-    return {
-      data: [],
-      total: 0,
-      page: params?.page || 1,
-      limit: params?.limit || 20,
-    };
+    try {
+      const response = await api.get<PRListResponse>('/pr', { params });
+      return response.data;
+    } catch (error) {
+      console.error('prService.getList error:', error);
+      // Return empty data on error (fallback)
+      return {
+        data: [],
+        total: 0,
+        page: params?.page || 1,
+        limit: params?.limit || 20,
+      };
+    }
   },
 
   /**
    * ดึงรายละเอียด PR ตาม ID
-   * GET /api/pr/:id
+   * GET /pr/:id
    */
   getById: async (prId: string): Promise<PRHeader | null> => {
-    // TODO: Implement actual API call
-    console.log('prService.getById called with:', prId);
-    console.log('API URL:', `${API_BASE_URL}/pr/${prId}`);
-    return null;
+    try {
+      const response = await api.get<PRHeader>(`/pr/${prId}`);
+      return response.data;
+    } catch (error) {
+      console.error('prService.getById error:', error);
+      return null;
+    }
   },
 
   // ==================== WRITE OPERATIONS ====================
 
   /**
    * สร้าง PR ใหม่ (สถานะ DRAFT)
-   * POST /api/pr
+   * POST /pr
    */
   create: async (data: PRFormData): Promise<PRHeader | null> => {
-    // TODO: Implement actual API call
-    console.log('prService.create called with:', data);
-    console.log('API URL:', `${API_BASE_URL}/pr`);
-    return null;
+    try {
+      const response = await api.post<PRHeader>('/pr', data);
+      return response.data;
+    } catch (error) {
+      console.error('prService.create error:', error);
+      return null;
+    }
   },
 
   /**
    * อัปเดต PR (เฉพาะ DRAFT)
-   * PUT /api/pr/:id
+   * PUT /pr/:id
    */
   update: async (prId: string, data: Partial<PRFormData>): Promise<PRHeader | null> => {
-    // TODO: Implement actual API call
-    console.log('prService.update called with:', prId, data);
-    console.log('API URL:', `${API_BASE_URL}/pr/${prId}`);
-    return null;
+    try {
+      const response = await api.put<PRHeader>(`/pr/${prId}`, data);
+      return response.data;
+    } catch (error) {
+      console.error('prService.update error:', error);
+      return null;
+    }
   },
 
   /**
    * ลบ PR (เฉพาะ DRAFT)
-   * DELETE /api/pr/:id
+   * DELETE /pr/:id
    */
   delete: async (prId: string): Promise<boolean> => {
-    // TODO: Implement actual API call
-    console.log('prService.delete called with:', prId);
-    console.log('API URL:', `${API_BASE_URL}/pr/${prId}`);
-    return false;
+    try {
+      await api.delete(`/pr/${prId}`);
+      return true;
+    } catch (error) {
+      console.error('prService.delete error:', error);
+      return false;
+    }
   },
 
   // ==================== WORKFLOW OPERATIONS ====================
 
   /**
    * ส่ง PR เพื่อขออนุมัติ (DRAFT → SUBMITTED → สร้าง approval_task)
-   * POST /api/pr/:id/submit
+   * POST /pr/:id/submit
    */
   submit: async (prId: string): Promise<{ success: boolean; message: string }> => {
-    // TODO: Implement actual API call
-    console.log('prService.submit called with:', prId);
-    console.log('API URL:', `${API_BASE_URL}/pr/${prId}/submit`);
-    return { success: false, message: 'Not implemented' };
+    try {
+      const response = await api.post<{ success: boolean; message: string }>(`/pr/${prId}/submit`);
+      return response.data;
+    } catch (error) {
+      console.error('prService.submit error:', error);
+      return { success: false, message: 'เกิดข้อผิดพลาดในการส่งอนุมัติ' };
+    }
   },
 
   /**
    * อนุมัติ/ปฏิเสธ PR
-   * POST /api/pr/:id/approve
+   * POST /pr/:id/approve
    */
   approve: async (request: ApprovalRequest): Promise<ApprovalResponse> => {
-    // TODO: Implement actual API call
-    console.log('prService.approve called with:', request);
-    console.log('API URL:', `${API_BASE_URL}/pr/${request.pr_id}/approve`);
-    return { success: false, message: 'Not implemented' };
+    try {
+      const response = await api.post<ApprovalResponse>(`/pr/${request.pr_id}/approve`, {
+        action: request.action,
+        remark: request.remark,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('prService.approve error:', error);
+      return { success: false, message: 'เกิดข้อผิดพลาดในการอนุมัติ' };
+    }
   },
 
   /**
    * ยกเลิก PR
-   * POST /api/pr/:id/cancel
+   * POST /pr/:id/cancel
    */
   cancel: async (prId: string, remark?: string): Promise<{ success: boolean; message: string }> => {
-    // TODO: Implement actual API call
-    console.log('prService.cancel called with:', prId, remark);
-    console.log('API URL:', `${API_BASE_URL}/pr/${prId}/cancel`);
-    return { success: false, message: 'Not implemented' };
+    try {
+      const response = await api.post<{ success: boolean; message: string }>(`/pr/${prId}/cancel`, { remark });
+      return response.data;
+    } catch (error) {
+      console.error('prService.cancel error:', error);
+      return { success: false, message: 'เกิดข้อผิดพลาดในการยกเลิก' };
+    }
   },
 
   /**
    * แปลง PR เป็น RFQ หรือ PO
-   * POST /api/pr/:id/convert
+   * POST /pr/:id/convert
    */
   convert: async (request: ConvertPRRequest): Promise<{ success: boolean; document_id?: string; document_no?: string }> => {
-    // TODO: Implement actual API call
-    console.log('prService.convert called with:', request);
-    console.log('API URL:', `${API_BASE_URL}/pr/${request.pr_id}/convert`);
-    return { success: false };
+    try {
+      const response = await api.post<{ success: boolean; document_id?: string; document_no?: string }>(
+        `/pr/${request.pr_id}/convert`,
+        { convert_to: request.convert_to, line_ids: request.line_ids }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('prService.convert error:', error);
+      return { success: false };
+    }
   },
 
   // ==================== ATTACHMENT OPERATIONS ====================
 
   /**
    * อัปโหลดไฟล์แนบ
-   * POST /api/pr/:id/attachments
+   * POST /pr/:id/attachments
    */
   uploadAttachment: async (prId: string, file: File): Promise<{ success: boolean; attachment_id?: string }> => {
-    // TODO: Implement actual API call with FormData
-    console.log('prService.uploadAttachment called with:', prId, file.name);
-    console.log('API URL:', `${API_BASE_URL}/pr/${prId}/attachments`);
-    return { success: false };
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await api.post<{ success: boolean; attachment_id?: string }>(
+        `/pr/${prId}/attachments`,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('prService.uploadAttachment error:', error);
+      return { success: false };
+    }
   },
 
   /**
    * ลบไฟล์แนบ
-   * DELETE /api/pr/:id/attachments/:attachmentId
+   * DELETE /pr/:id/attachments/:attachmentId
    */
   deleteAttachment: async (prId: string, attachmentId: string): Promise<boolean> => {
-    // TODO: Implement actual API call
-    console.log('prService.deleteAttachment called with:', prId, attachmentId);
-    console.log('API URL:', `${API_BASE_URL}/pr/${prId}/attachments/${attachmentId}`);
-    return false;
+    try {
+      await api.delete(`/pr/${prId}/attachments/${attachmentId}`);
+      return true;
+    } catch (error) {
+      console.error('prService.deleteAttachment error:', error);
+      return false;
+    }
   },
 
 };
