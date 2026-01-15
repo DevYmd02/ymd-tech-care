@@ -23,45 +23,43 @@ import {
     Phone,
     DollarSign,
     Building2,
-    Check
+    Check,
+    Loader2
 } from 'lucide-react';
 import { styles } from '../../constants';
+import { vendorService } from '../../services/vendorService';
+import type { VendorFormData } from '../../types/vendor-types';
+import { initialVendorFormData, toVendorCreateRequest } from '../../types/vendor-types';
 
 // ====================================================================================
-// TYPE DEFINITIONS
+// LOCAL TYPES
 // ====================================================================================
 
-interface VendorFormData {
-    vendorCode: string;
-    vendorCodeSearch: string;
-    vendorName: string;
-    vendorNameTh: string;
-    vendorNameEn: string;
-    // Address PP.20
+type TabType = 'address' | 'detail' | 'credit' | 'general' | 'contact' | 'account' | 'branch';
+
+// Extended form data with PP20 field aliases for this component
+interface VendorPageFormData extends VendorFormData {
+    // PP20 address aliases (map to addressLine1, etc)
     addressPP20Line1: string;
     addressPP20Line2: string;
     subDistrictPP20: string;
     districtPP20: string;
     provincePP20: string;
     postalCodePP20: string;
-    // Contact Address
-    useAddressPP20: boolean;
-    contactAddressLine1: string;
-    contactAddressLine2: string;
-    contactSubDistrict: string;
-    contactDistrict: string;
-    contactProvince: string;
-    contactPostalCode: string;
     contactEmail: string;
-    phone: string;
-    phoneExt: string;
-    // Status
-    onHold: boolean;
-    blocked: boolean;
-    inactive: boolean;
 }
 
-type TabType = 'address' | 'detail' | 'credit' | 'general' | 'contact' | 'account' | 'branch';
+const initialFormData: VendorPageFormData = {
+    ...initialVendorFormData,
+    // PP20 aliases
+    addressPP20Line1: '',
+    addressPP20Line2: '',
+    subDistrictPP20: '',
+    districtPP20: '',
+    provincePP20: '',
+    postalCodePP20: '',
+    contactEmail: '',
+};
 
 // ====================================================================================
 // TAB CONFIGURATION
@@ -83,73 +81,59 @@ const tabs: { key: TabType; label: string; icon: React.ReactNode }[] = [
 
 export default function VendorForm() {
     const navigate = useNavigate();
+    
     // Form state
-    const [formData, setFormData] = useState<VendorFormData>({
-        vendorCode: '',
-        vendorCodeSearch: '',
-        vendorName: '',
-        vendorNameTh: '',
-        vendorNameEn: '',
-        addressPP20Line1: '',
-        addressPP20Line2: '',
-        subDistrictPP20: '',
-        districtPP20: '',
-        provincePP20: '',
-        postalCodePP20: '',
-        useAddressPP20: true,
-        contactAddressLine1: '',
-        contactAddressLine2: '',
-        contactSubDistrict: '',
-        contactDistrict: '',
-        contactProvince: '',
-        contactPostalCode: '',
-        contactEmail: '',
-        phone: '',
-        phoneExt: '',
-        onHold: false,
-        blocked: false,
-        inactive: false,
-    });
-
+    const [formData, setFormData] = useState<VendorPageFormData>(initialFormData);
     const [activeTab, setActiveTab] = useState<TabType>('branch');
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
 
     // Handle input change
-    const handleInputChange = (field: keyof VendorFormData, value: string | boolean) => {
+    const handleInputChange = (field: keyof VendorPageFormData, value: string | boolean) => {
         setFormData(prev => ({ ...prev, [field]: value }));
     };
 
     // Handle form actions
     const handleNew = () => {
-        setFormData({
-            vendorCode: '',
-            vendorCodeSearch: '',
-            vendorName: '',
-            vendorNameTh: '',
-            vendorNameEn: '',
-            addressPP20Line1: '',
-            addressPP20Line2: '',
-            subDistrictPP20: '',
-            districtPP20: '',
-            provincePP20: '',
-            postalCodePP20: '',
-            useAddressPP20: true,
-            contactAddressLine1: '',
-            contactAddressLine2: '',
-            contactSubDistrict: '',
-            contactDistrict: '',
-            contactProvince: '',
-            contactPostalCode: '',
-            contactEmail: '',
-            phone: '',
-            phoneExt: '',
-            onHold: false,
-            blocked: false,
-            inactive: false,
-        });
+        setFormData(initialFormData);
+        setSaveError(null);
     };
 
-    const handleSave = () => {
-        // TODO: Implement save logic with API call
+    const handleSave = async () => {
+        if (!formData.vendorName.trim() && !formData.vendorNameTh.trim()) {
+            setSaveError('กรุณากรอกชื่อผู้ขาย');
+            return;
+        }
+
+        setIsSaving(true);
+        setSaveError(null);
+
+        try {
+            // Map PP20 fields to standard fields for API
+            const apiFormData = {
+                ...formData,
+                addressLine1: formData.addressPP20Line1 || formData.addressLine1,
+                addressLine2: formData.addressPP20Line2 || formData.addressLine2,
+                subDistrict: formData.subDistrictPP20 || formData.subDistrict,
+                district: formData.districtPP20 || formData.district,
+                province: formData.provincePP20 || formData.province,
+                postalCode: formData.postalCodePP20 || formData.postalCode,
+                email: formData.contactEmail || formData.email,
+            };
+
+            const request = toVendorCreateRequest(apiFormData);
+            const result = await vendorService.create(request);
+            
+            if (result.success) {
+                navigate('/master-data');
+            } else {
+                setSaveError(result.message || 'เกิดข้อผิดพลาดในการบันทึก');
+            }
+        } catch {
+            setSaveError('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const handleDelete = () => {
@@ -572,10 +556,11 @@ export default function VendorForm() {
                         </button>
                         <button
                             onClick={handleSave}
-                            className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-blue-500 hover:text-white hover:border-blue-500 dark:hover:bg-blue-600 dark:hover:border-blue-600 transition-all duration-200"
+                            disabled={isSaving}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            <Save size={16} />
-                            Save
+                            {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                            {isSaving ? 'กำลังบันทึก...' : 'Save'}
                         </button>
                         <button
                             onClick={handleDelete}
@@ -605,6 +590,7 @@ export default function VendorForm() {
                             <Eye size={16} />
                             Preview
                         </button>
+                        {saveError && <span className="text-red-500 text-sm ml-2">{saveError}</span>}
                     </div>
                     <button
                         type="button"

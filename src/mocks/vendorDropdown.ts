@@ -4,15 +4,35 @@
  * @purpose Centralized vendor dropdown options for PR form
  */
 
-export interface VendorDropdownItem {
-    code: string;
-    name: string;
+// ====================================================================================
+// LOCAL TYPES
+// ====================================================================================
+
+interface VendorDropdownItem {
+    vendor_code: string;
+    vendor_name: string;
 }
 
-export const VENDOR_DROPDOWN_OPTIONS: Record<string, string> = {
-    "V001": "บริษัท ไอทีซัพพลาย จำกัด",
-    "V002": "บริษัท แอดวานซ์ อินโฟร์ เซอร์วิส จำกัด",
-    "V003": "บริษัท ไมโครซอฟท์ (ประเทศไทย) จำกัด",
-    "V004": "บริษัท กูเกิล (ประเทศไทย) จำกัด",
-    "V005": "บริษัท อะเมซอน เว็บ เซอร์วิสเซส จำกัด"
-};
+// ====================================================================================
+// VENDOR DROPDOWN OPTIONS
+// ====================================================================================
+
+export const VENDOR_DROPDOWN_OPTIONS: VendorDropdownItem[] = [
+    { vendor_code: "V001", vendor_name: "บริษัท ไอทีซัพพลาย จำกัด" },
+    { vendor_code: "V002", vendor_name: "บริษัท แอดวานซ์ อินโฟร์ เซอร์วิส จำกัด" },
+    { vendor_code: "V003", vendor_name: "บริษัท ไมโครซอฟท์ (ประเทศไทย) จำกัด" },
+    { vendor_code: "V004", vendor_name: "บริษัท กูเกิล (ประเทศไทย) จำกัด" },
+    { vendor_code: "V005", vendor_name: "บริษัท อะเมซอน เว็บ เซอร์วิสเซส จำกัด" },
+];
+
+// ====================================================================================
+// LEGACY EXPORTS - For backward compatibility
+// ====================================================================================
+
+/** 
+ * @deprecated ใช้ VENDOR_DROPDOWN_OPTIONS แทน
+ * Record format สำหรับ backward compatibility 
+ */
+export const VENDOR_DROPDOWN_RECORD: Record<string, string> = Object.fromEntries(
+    VENDOR_DROPDOWN_OPTIONS.map(v => [v.vendor_code, v.vendor_name])
+);

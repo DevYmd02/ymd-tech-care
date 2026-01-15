@@ -2,15 +2,24 @@
  * @file VendorSearchModal.tsx
  * @description Modal สำหรับค้นหาและเลือกผู้ขาย (Vendor)
  * @usage เรียกใช้งานจาก PRHeader.tsx เมื่อกดปุ่ม "..."
- * @refactored ใช้ SearchModal component เพื่อลด duplicate code
+ * @refactored ใช้ SearchModal component และ centralized types
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { SearchModal, type ColumnDef } from './SearchModal';
-import { MOCK_VENDORS, type Vendor } from '../../mocks/vendors';
+import { vendorService } from '../../services/vendorService';
+import { LEGACY_VENDORS } from '../../mocks/vendors';
+import type { VendorDropdownItem } from '../../types/vendor-types';
 
-// Re-export Vendor type for consumers
-export type { Vendor } from '../../mocks/vendors';
+// Re-export Vendor type for backward compatibility
+export interface Vendor {
+    code: string;
+    name: string;
+    address: string;
+    contact?: string;
+    phone?: string;
+    taxId?: string;
+}
 
 /** Props ของ VendorSearchModal */
 interface Props {
@@ -47,24 +56,54 @@ const vendorColumns: ColumnDef<Vendor>[] = [
 // ====================================================================================
 
 export const VendorSearchModal: React.FC<Props> = ({ isOpen, onClose, onSelect }) => {
+    const [vendors, setVendors] = useState<Vendor[]>(LEGACY_VENDORS);
+    const [isLoading, setIsLoading] = useState(false);
+
+    // Fetch vendors when modal opens - fallback to mock if API fails
+    useEffect(() => {
+        if (isOpen) {
+            setIsLoading(true);
+            vendorService.getDropdown()
+                .then((data: VendorDropdownItem[]) => {
+                    if (data.length > 0) {
+                        // Use API data if available
+                        const apiVendors: Vendor[] = data.map(v => ({
+                            code: v.vendor_code,
+                            name: v.vendor_name,
+                            address: '',
+                        }));
+                        setVendors(apiVendors);
+                    } else {
+                        // Fallback to mock data
+                        setVendors(LEGACY_VENDORS);
+                    }
+                })
+                .catch(() => {
+                    // Fallback to mock data on error
+                    setVendors(LEGACY_VENDORS);
+                })
+                .finally(() => setIsLoading(false));
+        }
+    }, [isOpen]);
+
     return (
         <SearchModal<Vendor>
             isOpen={isOpen}
             onClose={onClose}
             onSelect={onSelect}
             title="ค้นหาผู้ขาย"
-            subtitle="กรอกข้อมูลเพื่อค้นหาผู้ขายในระบบ"
+            subtitle={isLoading ? 'กำลังโหลด...' : 'กรอกข้อมูลเพื่อค้นหาผู้ขายในระบบ'}
             searchLabel="รหัสผู้ขายหรือชื่อผู้ขาย"
             searchPlaceholder="รหัสผู้ขายหรือชื่อผู้ขาย"
             accentColor="emerald"
-            data={MOCK_VENDORS}
+            data={vendors}
             columns={vendorColumns}
             filterFn={(v, term) =>
                 v.code.toLowerCase().includes(term) ||
                 v.name.toLowerCase().includes(term)
             }
             getKey={(v) => v.code}
-            emptyText="ไม่พบผู้ขายที่ค้นหา"
+            emptyText={isLoading ? 'กำลังโหลดข้อมูล...' : 'ไม่พบผู้ขายที่ค้นหา'}
         />
     );
 };

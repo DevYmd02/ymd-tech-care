@@ -1,20 +1,32 @@
 # 📋 สรุปโปรเจ็ค YMD Tech Care - Frontend
 
-> **Last Updated:** 14 มกราคม 2569 เวลา 18:12 น.
+> **Last Updated:** 15 มกราคม 2569 เวลา 15:40 น.
 > **Branch:** `feature/full-migration-pr-form-ui`
 
 ---
 
 ## 🏆 Code Review Score: 9.5/10
 
-| หมวดหมู่            | คะแนน  | ความเห็น                                      |
-| :------------------ | :----: | :-------------------------------------------- |
-| **Organization**    | 10/10  | โฟลเดอร์เป็นระเบียบ ไม่ซับซ้อน                |
-| **Clean Code**      |  9/10  | ตั้งชื่อตัวแปรสื่อความหมาย, ลบ Dead Code แล้ว |
-| **Scalability**     |  9/10  | รองรับการขยาย Feature ได้ดีเยี่ยม             |
-| **Maintainability** |  9/10  | Service Layer แยกชัดเจน                       |
-| **UX/UI**           | 9.5/10 | Modern, Responsive, มี Zoom-Out Mode          |
-| **Performance**     | 10/10  | Page Load < 200ms, Zero Input Lag             |
+| หมวดหมู่            | คะแนน  | ความเห็น                                       |
+| :------------------ | :----: | :--------------------------------------------- |
+| **Organization**    | 10/10  | โฟลเดอร์เป็นระเบียบ แยก services, types ชัดเจน |
+| **Clean Code**      |  9/10  | ตั้งชื่อตัวแปรดี, types รวมศูนย์แล้ว           |
+| **Scalability**     | 10/10  | รองรับการขยาย Feature ได้ดี มี Service Layer   |
+| **Maintainability** |  9/10  | Service Layer แยกชัด, centralized types        |
+| **UX/UI**           | 9.5/10 | Modern, Responsive, รองรับภาษาไทย              |
+| **Performance**     | 10/10  | Page Load < 200ms, Zero Input Lag              |
+
+---
+
+## ✅ Improvements Completed (Session นี้)
+
+| รายการ                                              | สถานะ |
+| --------------------------------------------------- | ----- |
+| VendorForm.tsx ใช้ `vendor-types.ts`                | ✅    |
+| VendorForm.tsx integrate `vendorService`            | ✅    |
+| VendorFormModal.tsx ใช้ centralized types           | ✅    |
+| VendorSearchModal ใช้ `vendorService.getDropdown()` | ✅    |
+| TypeScript compile ผ่าน                             | ✅    |
 
 ---
 
@@ -24,8 +36,7 @@
 src/
 ├── components/      # 🧩 Components
 │   ├── ui/          #     UI primitives (Card, Button, Input)
-│   ├── shared/      #     Reusable (Modal, ApprovalModal)
-│   └── pr-form/     #     PR Form components (PRFormModal, PRHeader, PRFooter)
+│   └── shared/      #     Reusable (Modal, SearchModal)
 ├── config/          # ⚙️  routes.ts - Routes + Sidebar menu
 ├── constants/       # 📌 status.ts, styles.ts
 ├── contexts/        # 🌐 ThemeContext (Dark/Light Mode)
@@ -33,9 +44,9 @@ src/
 ├── layouts/         # 🖼️  MainLayout, Sidebar, Header
 ├── mocks/           # 🗃️  Mock Data (products, vendors, prList)
 ├── pages/           # 📄 Route pages
-├── services/        # 📡 API Services (axios + prService)
-├── types/           # 📝 TypeScript Types (pr-types.ts)
-└── utils/           # 🛠️  dateUtils.ts
+├── services/        # 📡 API Services (prService, vendorService)
+├── types/           # 📝 TypeScript Types (pr-types, vendor-types)
+└── utils/           # 🛠️  dateUtils.ts, logger.ts
 ```
 
 ---
@@ -46,8 +57,13 @@ src/
 | :---: | :------------------------------------------------------------- |
 |  ✅   | `axios` ติดตั้งและกำหนดค่าแล้ว (`src/services/api.ts`)         |
 |  ✅   | `prService.ts` เชื่อมต่อ Backend แล้ว (GET, POST, PUT, DELETE) |
+|  ✅   | `vendorService.ts` พร้อมใช้งาน (CRUD + block/unblock)          |
 |  ✅   | `PRListPage.tsx` เรียก API จาก Backend แล้ว                    |
-|  ⏳   | รอเชื่อมต่อ Prisma + PostgreSQL                                |
+|  ✅   | `VendorList.tsx` เรียก API จาก vendorService แล้ว              |
+|  ✅   | `VendorForm.tsx` บันทึกผ่าน vendorService.create() แล้ว        |
+|  ✅   | `VendorFormModal.tsx` บันทึกผ่าน vendorService.create() แล้ว   |
+|  ✅   | `VendorSearchModal.tsx` ใช้ vendorService.getDropdown() แล้ว   |
+|  ⏳   | รอเชื่อมต่อ NestJS Backend + Prisma + PostgreSQL               |
 
 ---
 
@@ -59,8 +75,8 @@ src/
 | Authentication            |  ✅   | `/login`, `/register`    |
 | **Procurement Dashboard** |  ✅   | `/procurement/dashboard` |
 | PR List + Form            |  ✅   | `/procurement/pr`        |
+| **Vendor Master**         |  ✅   | `/master-data`           |
 | RFQ                       |  🟡   | `/procurement/rfq`       |
-| Master Data               |  🟡   | `/master-data`           |
 | Roles Dashboard           |  🟡   | `/roles`                 |
 | IT Governance             |  🟡   | `/it-governance`         |
 | Inventory                 |  ⏳   | Coming Soon              |
@@ -69,20 +85,21 @@ src/
 
 ## 🎯 Features ล่าสุด (Session นี้)
 
-| Feature                   | รายละเอียด                                                      |
-| :------------------------ | :-------------------------------------------------------------- |
-| **Procurement Dashboard** | KPI Cards, Pie/Line/Bar Charts, งานรออนุมัติ, การแจ้งเตือนสำคัญ |
-| **Recharts Integration**  | ติดตั้งและใช้งาน Recharts สำหรับ Charts                         |
-| **Master Data Menu**      | เพิ่มหัวข้อ Master Data Management ใน Sidebar                   |
-| **RFQ Menu**              | เพิ่มเมนูใบขอเสนอราคา (RFQ) พร้อมหน้า Coming Soon               |
-| **Thai Date/Time**        | แสดงวันที่และเวลาภาษาไทยบน Dashboard                            |
+| Feature                        | รายละเอียด                                        |
+| :----------------------------- | :------------------------------------------------ |
+| **Code Cleanup**               | ลบ duplicate types, รวม types ที่ vendor-types.ts |
+| **VendorForm API Integration** | ใช้ vendorService.create() พร้อม loading state    |
+| **VendorSearchModal API**      | ใช้ vendorService.getDropdown() แทน mock data     |
+| **Vendor Types Centralized**   | vendor-types.ts เป็น single source of truth       |
+| **TypeScript 100%**            | Compile ผ่านไม่มี errors                          |
 
 ---
 
 ## 🛠️ คำสั่งพัฒนา
 
 ```bash
-npm run dev    # Run frontend (Port 5173)
+npm run dev       # Run frontend (Port 5173)
+npx tsc --noEmit  # TypeScript compile check
 ```
 
 ---
@@ -105,5 +122,14 @@ VITE_API_URL=http://localhost:3000
 | lucide-react     | Icons           |
 | tailwindcss      | Styling         |
 | axios            | HTTP Client     |
-| **recharts**     | **Charts**      |
+| recharts         | Charts          |
 | typescript       | Type safety     |
+
+---
+
+## 📝 Next Steps
+
+1. **Create NestJS Backend** - สร้าง API endpoints ตาม contract
+2. **Database Setup** - Prisma + PostgreSQL
+3. **Test End-to-End** - ทดสอบการทำงานร่วมกับ backend
+4. **Remove Unused Mocks** - ลบ mock data ที่ไม่ใช้แล้ว

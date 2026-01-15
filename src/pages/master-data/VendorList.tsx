@@ -4,7 +4,7 @@
  * @purpose แสดงรายการเจ้าหนี้ในรูปแบบตาราง พร้อมค้นหา กรอง และจัดการข้อมูล
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
     Plus, 
@@ -16,88 +16,14 @@ import {
     ChevronRight,
     ChevronsLeft,
     ChevronsRight,
-    Filter
+    Filter,
+    RefreshCw,
+    AlertCircle
 } from 'lucide-react';
 import { styles } from '../../constants';
 import { VendorFormModal } from './VendorFormModal';
-
-// ====================================================================================
-// TYPES
-// ====================================================================================
-
-interface Vendor {
-    id: string;
-    vendorCode: string;
-    vendorName: string;
-    vendorNameEn: string;
-    taxId: string;
-    status: 'active' | 'inactive' | 'blocked';
-    phone: string;
-    email: string;
-    createdAt: string;
-}
-
-// ====================================================================================
-// MOCK DATA
-// ====================================================================================
-
-const mockVendors: Vendor[] = [
-    {
-        id: '1',
-        vendorCode: 'VN001',
-        vendorName: 'บริษัท ซัพพลายเออร์ จำกัด',
-        vendorNameEn: 'Supplier Co., Ltd.',
-        taxId: '0105548123456',
-        status: 'active',
-        phone: '02-123-4567',
-        email: 'contact@supplier.co.th',
-        createdAt: '2024-01-15'
-    },
-    {
-        id: '2',
-        vendorCode: 'VN002',
-        vendorName: 'บริษัท วัสดุก่อสร้าง จำกัด',
-        vendorNameEn: 'Construction Materials Co., Ltd.',
-        taxId: '0105549876543',
-        status: 'active',
-        phone: '02-234-5678',
-        email: 'info@construction.co.th',
-        createdAt: '2024-02-20'
-    },
-    {
-        id: '3',
-        vendorCode: 'VN003',
-        vendorName: 'ห้างหุ้นส่วนจำกัด อุปกรณ์ไฟฟ้า',
-        vendorNameEn: 'Electrical Equipment Ltd. Part.',
-        taxId: '0103555123789',
-        status: 'inactive',
-        phone: '02-345-6789',
-        email: 'sales@electrical.co.th',
-        createdAt: '2024-03-10'
-    },
-    {
-        id: '4',
-        vendorCode: 'VN004',
-        vendorName: 'บริษัท เคมีภัณฑ์ จำกัด',
-        vendorNameEn: 'Chemical Products Co., Ltd.',
-        taxId: '0105550111222',
-        status: 'blocked',
-        phone: '02-456-7890',
-        email: 'order@chemical.co.th',
-        createdAt: '2024-04-05'
-    },
-    {
-        id: '5',
-        vendorCode: 'VN005',
-        vendorName: 'บริษัท อิเล็กทรอนิกส์ จำกัด',
-        vendorNameEn: 'Electronics Co., Ltd.',
-        taxId: '0105551234567',
-        status: 'active',
-        phone: '02-567-8901',
-        email: 'info@electronics.co.th',
-        createdAt: '2024-05-12'
-    },
-];
+import { vendorService } from '../../services/vendorService';
+import type { VendorListItem, VendorStatus, VendorListParams } from '../../types/vendor-types';
 
 // ====================================================================================
 // COMPONENT
@@ -107,42 +33,56 @@ export default function VendorList() {
     const navigate = useNavigate();
     
     // ==================== STATE ====================
-    const [vendors] = useState<Vendor[]>(mockVendors);
+    const [vendors, setVendors] = useState<VendorListItem[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'blocked'>('all');
+    const [statusFilter, setStatusFilter] = useState<'ALL' | VendorStatus>('ALL');
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
+    const [totalItems, setTotalItems] = useState(0);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    // Simulate API loading
-    useEffect(() => {
-        const timer = setTimeout(() => {
+    // ==================== API CALLS ====================
+    
+    const fetchVendors = useCallback(async () => {
+        setIsLoading(true);
+        setError(null);
+        
+        try {
+            const params: VendorListParams = {
+                page: currentPage,
+                limit: rowsPerPage,
+                status: statusFilter !== 'ALL' ? statusFilter : undefined,
+                search: searchTerm || undefined,
+            };
+            
+            const response = await vendorService.getList(params);
+            setVendors(response.data);
+            setTotalItems(response.total);
+        } catch {
+            setError('ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่อีกครั้ง');
+            setVendors([]);
+        } finally {
             setIsLoading(false);
-        }, 500);
+        }
+    }, [currentPage, rowsPerPage, statusFilter, searchTerm]);
 
-        return () => clearTimeout(timer);
-    }, []);
+    // Fetch on mount and when filters change
+    useEffect(() => {
+        fetchVendors();
+    }, [fetchVendors]);
 
-    //Filter Logic
-    const filteredVendors = vendors.filter(vendor => {
-        const matchesSearch = 
-            vendor.vendorCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            vendor.vendorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            vendor.vendorNameEn.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            vendor.taxId.includes(searchTerm);
-        
-        const matchesStatus = statusFilter === 'all' || vendor.status === statusFilter;
-        
-        return matchesSearch && matchesStatus;
-    });
+    // Reset page when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [statusFilter, searchTerm, rowsPerPage]);
 
-    //Pagination
-    const totalPages = Math.ceil(filteredVendors.length / rowsPerPage);
+    // ==================== PAGINATION ====================
+    const totalPages = Math.ceil(totalItems / rowsPerPage);
     const startIndex = (currentPage - 1) * rowsPerPage;
-    const paginatedVendors = filteredVendors.slice(startIndex, startIndex + rowsPerPage);
 
-    //Handlers
+    // ==================== HANDLERS ====================
     const handleCreateNew = () => {
         setIsModalOpen(true);
     };
@@ -151,33 +91,54 @@ export default function VendorList() {
         navigate(`/master-data/vendor?id=${vendorId}`);
     };
 
-    const handleDelete = (vendorId: string) => {
+    const handleDelete = async (vendorId: string) => {
         if (confirm('คุณต้องการลบข้อมูลเจ้าหนี้นี้หรือไม่?')) {
-            // TODO: Implement delete API call
-            void vendorId;
+            const result = await vendorService.delete(vendorId);
+            if (result.success) {
+                fetchVendors(); // Refresh list
+            } else {
+                alert(result.message || 'เกิดข้อผิดพลาดในการลบ');
+            }
         }
     };
 
-    const getStatusBadge = (status: Vendor['status']) => {
-        const badges = {
-            active: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-            inactive: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
-            blocked: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+    const handleRefresh = () => {
+        fetchVendors();
+    };
+
+    const handleModalClose = () => {
+        setIsModalOpen(false);
+        fetchVendors(); // Refresh after modal close
+    };
+
+    const getStatusBadge = (status: VendorStatus) => {
+        const badges: Record<VendorStatus, string> = {
+            ACTIVE: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+            INACTIVE: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+            BLOCKED: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+            ON_HOLD: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
         };
-        const labels = {
-            active: 'Active',
-            inactive: 'Inactive',
-            blocked: 'Blocked'
+        const labels: Record<VendorStatus, string> = {
+            ACTIVE: 'Active',
+            INACTIVE: 'Inactive',
+            BLOCKED: 'Blocked',
+            ON_HOLD: 'On Hold'
+        };
+        const dotColors: Record<VendorStatus, string> = {
+            ACTIVE: 'bg-green-500',
+            INACTIVE: 'bg-gray-500',
+            BLOCKED: 'bg-red-500',
+            ON_HOLD: 'bg-yellow-500'
         };
         return (
             <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ${badges[status]}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${status === 'active' ? 'bg-green-500' : status === 'blocked' ? 'bg-red-500' : 'bg-gray-500'}`}></span>
+                <span className={`w-1.5 h-1.5 rounded-full ${dotColors[status]}`}></span>
                 {labels[status]}
             </span>
         );
     };
 
-    //Render
+    // ==================== RENDER ====================
     return (
         <div className="p-6 space-y-6">
             
@@ -192,13 +153,22 @@ export default function VendorList() {
                         จัดการข้อมูลผู้ขายและคู่ค้าทั้งหมด
                     </p>
                 </div>
-                <button
-                    onClick={handleCreateNew}
-                    className={`${styles.btnPrimary} flex items-center gap-2 whitespace-nowrap`}
-                >
-                    <Plus size={20} />
-                    เพิ่มเจ้าหนี้ใหม่
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={handleRefresh}
+                        className="p-2 text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                        title="รีเฟรช"
+                    >
+                        <RefreshCw size={20} className={isLoading ? 'animate-spin' : ''} />
+                    </button>
+                    <button
+                        onClick={handleCreateNew}
+                        className={`${styles.btnPrimary} flex items-center gap-2 whitespace-nowrap`}
+                    >
+                        <Plus size={20} />
+                        เพิ่มเจ้าหนี้ใหม่
+                    </button>
+                </div>
             </div>
 
             {/* Search & Filter Section */}
@@ -210,10 +180,7 @@ export default function VendorList() {
                             type="text"
                             placeholder="ค้นหาชื่อ, รหัส, หรือเลขภาษี..."
                             value={searchTerm}
-                            onChange={(e) => {
-                                setSearchTerm(e.target.value);
-                                setCurrentPage(1);
-                            }}
+                            onChange={(e) => setSearchTerm(e.target.value)}
                             className={`${styles.input} pl-10`}
                         />
                     </div>
@@ -221,20 +188,32 @@ export default function VendorList() {
                         <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                         <select
                             value={statusFilter}
-                            onChange={(e) => {
-                                setStatusFilter(e.target.value as 'all' | 'active' | 'inactive' | 'blocked');
-                                setCurrentPage(1);
-                            }}
+                            onChange={(e) => setStatusFilter(e.target.value as 'ALL' | VendorStatus)}
                             className={`${styles.inputSelect} pl-10`}
                         >
-                            <option value="all">สถานะทั้งหมด</option>
-                            <option value="active">Active</option>
-                            <option value="inactive">Inactive</option>
-                            <option value="blocked">Blocked</option>
+                            <option value="ALL">สถานะทั้งหมด</option>
+                            <option value="ACTIVE">Active</option>
+                            <option value="INACTIVE">Inactive</option>
+                            <option value="BLOCKED">Blocked</option>
+                            <option value="ON_HOLD">On Hold</option>
                         </select>
                     </div>
                 </div>
             </div>
+
+            {/* Error Message */}
+            {error && (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-center gap-3">
+                    <AlertCircle className="text-red-500" size={20} />
+                    <span className="text-red-700 dark:text-red-400">{error}</span>
+                    <button
+                        onClick={handleRefresh}
+                        className="ml-auto text-red-600 hover:text-red-700 font-medium"
+                    >
+                        ลองใหม่
+                    </button>
+                </div>
+            )}
 
             {/* Data Table */}
             <div className={styles.tableContainer}>
@@ -257,21 +236,21 @@ export default function VendorList() {
                             </tr>
                         </thead>
                         <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                            {paginatedVendors.length > 0 ? (
-                                paginatedVendors.map((vendor) => (
-                                    <tr key={vendor.id} className={styles.tableTr}>
+                            {vendors.length > 0 ? (
+                                vendors.map((vendor) => (
+                                    <tr key={vendor.vendor_id} className={styles.tableTr}>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600 dark:text-blue-400">
-                                            {vendor.vendorCode}
+                                            {vendor.vendor_code}
                                         </td>
                                         <td className="px-6 py-4">
-                                            <div className="text-sm font-medium text-gray-900 dark:text-white">{vendor.vendorName}</div>
-                                            <div className="text-xs text-gray-500">{vendor.vendorNameEn}</div>
+                                            <div className="text-sm font-medium text-gray-900 dark:text-white">{vendor.vendor_name}</div>
+                                            <div className="text-xs text-gray-500">{vendor.vendor_name_en}</div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 hidden lg:table-cell">
-                                            {vendor.taxId}
+                                            {vendor.tax_id || '-'}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">
-                                            {vendor.phone}
+                                            {vendor.phone || '-'}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-center">
                                             {getStatusBadge(vendor.status)}
@@ -279,14 +258,14 @@ export default function VendorList() {
                                         <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                                             <div className="flex items-center justify-center gap-2">
                                                 <button 
-                                                    onClick={() => handleEdit(vendor.id)}
+                                                    onClick={() => handleEdit(vendor.vendor_id)}
                                                     className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                                                     title="แก้ไข"
                                                 >
                                                     <Edit2 size={18} />
                                                 </button>
                                                 <button 
-                                                    onClick={() => handleDelete(vendor.id)}
+                                                    onClick={() => handleDelete(vendor.vendor_id)}
                                                     className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                                                     title="ลบ"
                                                 >
@@ -299,7 +278,7 @@ export default function VendorList() {
                             ) : (
                                 <tr>
                                     <td colSpan={6} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
-                                        ไม่พบข้อมูลเจ้าหนี้
+                                        {error ? 'เกิดข้อผิดพลาดในการโหลดข้อมูล' : 'ไม่พบข้อมูลเจ้าหนี้'}
                                     </td>
                                 </tr>
                             )}
@@ -309,16 +288,13 @@ export default function VendorList() {
                 )}
 
                 {/* ========== PAGINATION ========== */}
-                {!isLoading && (
+                {!isLoading && vendors.length > 0 && (
                 <div className="px-4 py-4 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                         <span>แสดง</span>
                         <select
                             value={rowsPerPage}
-                            onChange={(e) => {
-                                setRowsPerPage(Number(e.target.value));
-                                setCurrentPage(1);
-                            }}
+                            onChange={(e) => setRowsPerPage(Number(e.target.value))}
                             className={styles.inputSm}
                         >
                             <option value={5}>5</option>
@@ -327,7 +303,7 @@ export default function VendorList() {
                             <option value={50}>50</option>
                         </select>
                         <span>รายการ</span>
-                        <span className="hidden sm:inline">| {startIndex + 1}-{Math.min(startIndex + rowsPerPage, filteredVendors.length)} จาก {filteredVendors.length}</span>
+                        <span className="hidden sm:inline">| {startIndex + 1}-{Math.min(startIndex + rowsPerPage, totalItems)} จาก {totalItems}</span>
                     </div>
 
                     <div className="flex items-center gap-1">
@@ -372,7 +348,7 @@ export default function VendorList() {
             {/* Render Modal */}
             <VendorFormModal 
                 isOpen={isModalOpen} 
-                onClose={() => setIsModalOpen(false)} 
+                onClose={handleModalClose} 
             />
         </div>
     );
