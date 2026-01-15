@@ -8,7 +8,7 @@
 // import axios from 'axios';
 
 // API Base URL (เปลี่ยนเป็น URL จริงเมื่อเชื่อมต่อ Backend)
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+// export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 /**
  * สร้าง axios instance สำหรับเรียก API
@@ -48,6 +48,16 @@ export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:30
  */
 
 // Placeholder export (จะใช้งานเมื่อติดตั้ง axios)
-export const api = {
-    baseURL: API_BASE_URL,
-};
+// src/services/api.ts
+
+import axios from 'axios';
+
+// สร้างตัวยิง API โดยดึง URL มาจาก .env
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL, // มันจะอ่านค่า http://localhost:3000 ให้เอง
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+export default api;

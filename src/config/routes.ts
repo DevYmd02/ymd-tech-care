@@ -19,6 +19,7 @@ import {
     FileText,
     Landmark,
     PieChart,
+    Database,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -74,14 +75,12 @@ export const implementedRoutes = {
 
 export const placeholderRoutes: Record<string, PlaceholderRoute[]> = {
     procurement: [
-        { path: 'procurement/vendor-comparison', title: 'Vendor Comparison' },
-        { path: 'procurement/po', title: 'Purchase Order' },
-        { path: 'procurement/grn', title: 'Goods Receipt Note' },
-        { path: 'procurement/return', title: 'Return to Supplier' },
-        { path: 'procurement/invoice', title: 'Supplier Invoice' },
-        { path: 'procurement/vendor-master', title: 'Vendor Master' },
-        { path: 'procurement/approval', title: 'Procurement Approval' },
-        { path: 'procurement/reports', title: 'Procurement Reports' },
+        { path: 'procurement/rfq', title: 'ใบขอเสนอราคา (RFQ)' },
+        { path: 'procurement/vendor-comparison', title: 'เปรียบเทียบราคา' },
+        { path: 'procurement/po', title: 'ใบสั่งซื้อ (PO)' },
+        { path: 'procurement/grn', title: 'ใบรับสินค้า (GRN)' },
+        { path: 'procurement/return', title: 'คืนสินค้า (Purchase Return)' },
+        { path: 'procurement/invoice', title: 'ใบแจ้งหนี้ผู้ขาย (Vendor Invoice)' },
     ],
     inventory: [
         { path: 'inventory/dashboard', title: 'Inventory Dashboard' },
@@ -282,16 +281,14 @@ export const sidebarMenuItems: MenuItem[] = [
         label: 'ระบบจัดซื้อ (Procurement)',
         icon: ShoppingBag,
         subItems: [
-            { id: 'proc-dashboard', label: 'Procurement Dashboard', path: '/procurement/dashboard' },
+            { id: 'proc-dashboard', label: 'Dashboard', path: '/procurement/dashboard' },
             { id: 'pr', label: 'ใบขอซื้อ (PR)', path: '/procurement/pr' },
-            { id: 'vendor-compare', label: 'เปรียบเทียบราคา/คัดเลือกผู้ขาย', path: '/procurement/vendor-comparison' },
+            { id: 'rfq', label: 'ใบขอเสนอราคา (RFQ)', path: '/procurement/rfq' },
+            { id: 'vendor-compare', label: 'เปรียบเทียบราคา', path: '/procurement/vendor-comparison' },
             { id: 'po', label: 'ใบสั่งซื้อ (PO)', path: '/procurement/po' },
-            { id: 'grn', label: 'รับสินค้า/รับบริการ (GRN)', path: '/procurement/grn' },
-            { id: 'return', label: 'คืนสินค้าให้ผู้ขาย', path: '/procurement/return' },
-            { id: 'invoice', label: 'ใบแจ้งหนี้ผู้ขาย', path: '/procurement/invoice' },
-            { id: 'vendor', label: 'ผู้ขาย (Vendor Master)', path: '/procurement/vendor-master' },
-            { id: 'approval', label: 'อนุมัติจัดซื้อ', path: '/procurement/approval' },
-            { id: 'reports', label: 'รายงานจัดซื้อ', path: '/procurement/reports' },
+            { id: 'grn', label: 'ใบรับสินค้า (GRN)', path: '/procurement/grn' },
+            { id: 'invoice', label: 'ใบแจ้งหนี้ผู้ขาย (Vendor Invoice)', path: '/procurement/invoice' },
+            { id: 'return', label: 'คืนสินค้า (Purchase Return)', path: '/procurement/return' },
         ]
     },
     {
@@ -422,6 +419,15 @@ export const sidebarMenuItems: MenuItem[] = [
             { id: 'output-tax', label: 'ภาษีขาย (Output Tax)', path: '/tax/output' },
             { id: 'tax-filing', label: 'ยื่นแบบภาษี', path: '/tax/filing' },
             { id: 'tax-reports', label: 'รายงานภาษี', path: '/tax/reports' },
+        ]
+    },
+    {
+        id: 'master-data',
+        label: 'Master Data Management',
+        icon: Database,
+        path: '/master-data',
+        subItems: [
+            { id: 'vendor-code', label: 'กำหนดรหัสเจ้าหนี้', path: '/master-data/vendor' },
         ]
     },
 ];
