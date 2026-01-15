@@ -12,7 +12,7 @@
 
 import { useState, useEffect } from 'react';
 import { Search, X, Plus, FileText, Calendar, CheckCircle } from 'lucide-react';
-import { PRFormModal } from '../../components/pr-form';
+import { PRFormModal } from './pr-form';
 import { ApprovalModal } from '../../components/shared/ApprovalModal';
 import { formatThaiDate } from '../../utils/dateUtils';
 import { styles } from '../../constants';
@@ -77,8 +77,7 @@ export default function PRListPage() {
   // ==================== STATE ====================
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [prList, setPrList] = useState<PRHeader[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [isLoading, setIsLoading] = useState(true); // TODO: ใช้กับ Loading Spinner ในอนาคต
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [approvalModal, setApprovalModal] = useState<{ isOpen: boolean; action: 'approve' | 'reject' }>({
     isOpen: false,
@@ -102,7 +101,7 @@ export default function PRListPage() {
         const response = await prService.getList();
         setPrList(response.data);
       } catch (error) {
-        console.error('Failed to fetch PR list:', error);
+        void error; // TODO: Implement proper error handling/UI feedback
       } finally {
         setIsLoading(false);
       }
@@ -112,7 +111,7 @@ export default function PRListPage() {
 
   // ==================== HANDLERS ====================
   const handleSearch = () => {
-    console.log('Searching with filters:', filters);
+    // TODO: Implement search with API call using filters
   };
 
   const handleClearFilters = () => {
@@ -356,6 +355,12 @@ export default function PRListPage() {
 
         {/* Table */}
         <div className="overflow-x-auto">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <span className="ml-3 text-gray-600 dark:text-gray-400">กำลังโหลดข้อมูล...</span>
+            </div>
+          ) : (
           <table className="w-full">
             <thead className={styles.tableHeader}>
               <tr>
@@ -419,6 +424,7 @@ export default function PRListPage() {
               ))}
             </tbody>
           </table>
+          )}
         </div>
 
         {/* Table Footer - Total */}

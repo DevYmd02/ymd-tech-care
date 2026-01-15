@@ -261,45 +261,41 @@ export default function ProcurementDashboard() {
                 {/* Pie Chart - Vendor Distribution */}
                 <Card>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">ยอดซื้อแยกตามผู้ขาย (YTD)</h3>
-                    <ResponsiveContainer width="100%" height={280}>
-                        <PieChart>
-                            <Pie
-                                data={vendorPieData}
-                                cx="50%"
-                                cy="50%"
-                                outerRadius={80}
-                                innerRadius={0}
-                                dataKey="value"
-                                isAnimationActive={true}
-                                animationDuration={600}
-                                animationEasing="ease-in-out"
-                                labelLine={true}
-                                label={({ name, value, cx, cy, midAngle = 0, outerRadius = 80 }) => {
-                                    const RADIAN = Math.PI / 180;
-                                    const radius = outerRadius + 25;
-                                    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                                    const y = cy + radius * Math.sin(-midAngle * RADIAN);
-                                    return (
-                                        <text
-                                            x={x}
-                                            y={y}
-                                            fill="#9ca3af"
-                                            textAnchor={x > cx ? 'start' : 'end'}
-                                            dominantBaseline="central"
-                                            fontSize={12}
-                                        >
-                                            {`${name} ${value}%`}
-                                        </text>
-                                    );
-                                }}
-                            >
-                                {vendorPieData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={entry.color} />
-                                ))}
-                            </Pie>
-                            <Tooltip formatter={(value) => [`${value}%`, 'สัดส่วน']} />
-                        </PieChart>
-                    </ResponsiveContainer>
+                    <div className="flex items-center">
+                        <ResponsiveContainer width="60%" height={250}>
+                            <PieChart>
+                                <Pie
+                                    data={vendorPieData}
+                                    cx="50%"
+                                    cy="50%"
+                                    outerRadius={90}
+                                    dataKey="value"
+                                    isAnimationActive={true}
+                                    animationDuration={600}
+                                    animationEasing="ease-in-out"
+                                >
+                                    {vendorPieData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.color} />
+                                    ))}
+                                </Pie>
+                                <Tooltip formatter={(value) => [`${value}%`, 'สัดส่วน']} />
+                            </PieChart>
+                        </ResponsiveContainer>
+                        {/* Custom Legend */}
+                        <div className="w-[40%] space-y-2">
+                            {vendorPieData.map((item, index) => (
+                                <div key={index} className="flex items-center gap-2">
+                                    <div 
+                                        className="w-3 h-3 rounded-full flex-shrink-0" 
+                                        style={{ backgroundColor: item.color }} 
+                                    />
+                                    <span className="text-sm text-gray-600 dark:text-gray-300 truncate">
+                                        {item.name} {item.value}%
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </Card>
 
                 {/* Line Chart - Monthly Trend */}

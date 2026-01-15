@@ -6,18 +6,30 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import type { SubmitHandler } from 'react-hook-form';
-import type { PRFormData, PRLineFormData } from '../../types/pr-types';
-import { MOCK_PRODUCTS as CENTRAL_MOCK_PRODUCTS } from '../../mocks';
+import type { PRFormData, PRLineFormData } from '../../../types/pr-types';
+import { MOCK_PRODUCTS as CENTRAL_MOCK_PRODUCTS } from '../../../mocks';
 import { FileText, Minimize2, Maximize2, X, Plus, Trash2, Search, Eraser, Triangle, FileBox, MoreHorizontal, Flame, FileBarChart, History as HistoryIcon } from 'lucide-react';
 
 import { PRHeader } from './PRHeader';
 import { PRFooter } from './PRFooter';
-import { Toast } from '../ui/Toast';
+import { Toast } from '../../../components/ui/Toast';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
 }
+
+// ====================================================================================
+// CONFIGURATION CONSTANTS
+// ====================================================================================
+
+/** ค่า Config สำหรับใบขอซื้อ */
+const PR_CONFIG = {
+  /** จำนวนแถวขั้นต่ำที่ต้องมี */
+  MIN_LINES: 5,
+  /** จำนวนแถวเริ่มต้นเมื่อเปิดฟอร์ม */
+  INITIAL_LINES: 5,
+} as const;
 
 // Map centralized items to form structure
 const MOCK_PRODUCTS = CENTRAL_MOCK_PRODUCTS.map(p => ({
@@ -51,7 +63,7 @@ const createEmptyLine = (): ExtendedLine => ({
   warehouse: '', location: '', discount: 0,
 });
 
-const getInitialLines = () => Array(7).fill(null).map(() => createEmptyLine());
+const getInitialLines = () => Array(PR_CONFIG.INITIAL_LINES).fill(null).map(() => createEmptyLine());
 
 const getDefaultFormValues = (): PRFormData => ({
   pr_no: generatePRNumber(), request_date: getTodayDate(), required_date: '', requester_name: '',
@@ -136,8 +148,8 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const addLine = () => setLines(prev => [...prev, createEmptyLine()]);
   
   const removeLine = (index: number) => {
-    if (lines.length <= 5) {
-      showToast('ต้องมีอย่างน้อย 5 แถว');
+    if (lines.length <= PR_CONFIG.MIN_LINES) {
+      showToast(`ต้องมีอย่างน้อย ${PR_CONFIG.MIN_LINES} แถว`);
       return;
     }
     setLines(prev => prev.filter((_, i) => i !== index));
@@ -217,7 +229,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
     if (!data.purpose) { showToast('กรุณาระบุวัตถุประสงค์'); return; }
     
     const payload = { ...data, lines: lines.filter(l => l.item_code), total_amount: grandTotal };
-    console.log('Payload:', payload);
+    void payload; // TODO: Use payload to call API
     alert(`บันทึกสำเร็จ!\nเลขที่: ${data.pr_no}\nรวม: ${subtotal.toLocaleString()}\nส่วนลด: ${discountAmount.toLocaleString()}\nVAT: ${vatAmount.toLocaleString()}\nรวมทั้งสิ้น: ${grandTotal.toLocaleString()} บาท`);
     handleClose();
   };

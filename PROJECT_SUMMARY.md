@@ -1,6 +1,6 @@
 # 📋 สรุปโปรเจ็ค YMD Tech Care - Frontend
 
-> **Last Updated:** 14 มกราคม 2569 เวลา 17:00 น.
+> **Last Updated:** 14 มกราคม 2569 เวลา 18:12 น.
 > **Branch:** `feature/full-migration-pr-form-ui`
 
 ---
@@ -53,14 +53,29 @@ src/
 
 ## 📊 สถานะโมดูล
 
-| โมดูล           | สถานะ | Route                 |
-| --------------- | :---: | --------------------- |
-| Admin Dashboard |  ✅   | `/admin`              |
-| Authentication  |  ✅   | `/login`, `/register` |
-| PR List + Form  |  ✅   | `/procurement/pr`     |
-| Roles Dashboard |  🟡   | `/roles`              |
-| IT Governance   |  🟡   | `/it-governance`      |
-| Inventory       |  ⏳   | Coming Soon           |
+| โมดูล                     | สถานะ | Route                    |
+| ------------------------- | :---: | ------------------------ |
+| Admin Dashboard           |  ✅   | `/admin`                 |
+| Authentication            |  ✅   | `/login`, `/register`    |
+| **Procurement Dashboard** |  ✅   | `/procurement/dashboard` |
+| PR List + Form            |  ✅   | `/procurement/pr`        |
+| RFQ                       |  🟡   | `/procurement/rfq`       |
+| Master Data               |  🟡   | `/master-data`           |
+| Roles Dashboard           |  🟡   | `/roles`                 |
+| IT Governance             |  🟡   | `/it-governance`         |
+| Inventory                 |  ⏳   | Coming Soon              |
+
+---
+
+## 🎯 Features ล่าสุด (Session นี้)
+
+| Feature                   | รายละเอียด                                                      |
+| :------------------------ | :-------------------------------------------------------------- |
+| **Procurement Dashboard** | KPI Cards, Pie/Line/Bar Charts, งานรออนุมัติ, การแจ้งเตือนสำคัญ |
+| **Recharts Integration**  | ติดตั้งและใช้งาน Recharts สำหรับ Charts                         |
+| **Master Data Menu**      | เพิ่มหัวข้อ Master Data Management ใน Sidebar                   |
+| **RFQ Menu**              | เพิ่มเมนูใบขอเสนอราคา (RFQ) พร้อมหน้า Coming Soon               |
+| **Thai Date/Time**        | แสดงวันที่และเวลาภาษาไทยบน Dashboard                            |
 
 ---
 
@@ -90,4 +105,5 @@ VITE_API_URL=http://localhost:3000
 | lucide-react     | Icons           |
 | tailwindcss      | Styling         |
 | axios            | HTTP Client     |
+| **recharts**     | **Charts**      |
 | typescript       | Type safety     |

@@ -11,6 +11,7 @@ import type {
   PRStatus, 
   ApprovalTask 
 } from '../types/pr-types';
+import { logger } from '../utils/logger';
 
 // ====================================================================================
 // TYPE DEFINITIONS - API Request/Response
@@ -95,7 +96,7 @@ export const prService = {
       const response = await api.get<PRListResponse>('/pr', { params });
       return response.data;
     } catch (error) {
-      console.error('prService.getList error:', error);
+      logger.error('prService.getList error:', error);
       // Return empty data on error (fallback)
       return {
         data: [],
@@ -115,7 +116,7 @@ export const prService = {
       const response = await api.get<PRHeader>(`/pr/${prId}`);
       return response.data;
     } catch (error) {
-      console.error('prService.getById error:', error);
+      logger.error('prService.getById error:', error);
       return null;
     }
   },
@@ -131,7 +132,7 @@ export const prService = {
       const response = await api.post<PRHeader>('/pr', data);
       return response.data;
     } catch (error) {
-      console.error('prService.create error:', error);
+      logger.error('prService.create error:', error);
       return null;
     }
   },
@@ -145,7 +146,7 @@ export const prService = {
       const response = await api.put<PRHeader>(`/pr/${prId}`, data);
       return response.data;
     } catch (error) {
-      console.error('prService.update error:', error);
+      logger.error('prService.update error:', error);
       return null;
     }
   },
@@ -159,7 +160,7 @@ export const prService = {
       await api.delete(`/pr/${prId}`);
       return true;
     } catch (error) {
-      console.error('prService.delete error:', error);
+      logger.error('prService.delete error:', error);
       return false;
     }
   },
@@ -175,7 +176,7 @@ export const prService = {
       const response = await api.post<{ success: boolean; message: string }>(`/pr/${prId}/submit`);
       return response.data;
     } catch (error) {
-      console.error('prService.submit error:', error);
+      logger.error('prService.submit error:', error);
       return { success: false, message: 'เกิดข้อผิดพลาดในการส่งอนุมัติ' };
     }
   },
@@ -192,7 +193,7 @@ export const prService = {
       });
       return response.data;
     } catch (error) {
-      console.error('prService.approve error:', error);
+      logger.error('prService.approve error:', error);
       return { success: false, message: 'เกิดข้อผิดพลาดในการอนุมัติ' };
     }
   },
@@ -206,7 +207,7 @@ export const prService = {
       const response = await api.post<{ success: boolean; message: string }>(`/pr/${prId}/cancel`, { remark });
       return response.data;
     } catch (error) {
-      console.error('prService.cancel error:', error);
+      logger.error('prService.cancel error:', error);
       return { success: false, message: 'เกิดข้อผิดพลาดในการยกเลิก' };
     }
   },
@@ -223,7 +224,7 @@ export const prService = {
       );
       return response.data;
     } catch (error) {
-      console.error('prService.convert error:', error);
+      logger.error('prService.convert error:', error);
       return { success: false };
     }
   },
@@ -246,7 +247,7 @@ export const prService = {
       );
       return response.data;
     } catch (error) {
-      console.error('prService.uploadAttachment error:', error);
+      logger.error('prService.uploadAttachment error:', error);
       return { success: false };
     }
   },
@@ -260,7 +261,7 @@ export const prService = {
       await api.delete(`/pr/${prId}/attachments/${attachmentId}`);
       return true;
     } catch (error) {
-      console.error('prService.deleteAttachment error:', error);
+      logger.error('prService.deleteAttachment error:', error);
       return false;
     }
   },

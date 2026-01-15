@@ -26,6 +26,10 @@ import RolesDashboard from './pages/roles/RolesDashboard';
 // IT Governance Pages
 import ITGCDashboard from './pages/it-governance/ITGCDashboard';
 
+// Master Data Pages
+import VendorList from './pages/master-data/VendorList';
+import VendorForm from './pages/master-data/VendorForm';
+
 // Auth Pages
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
@@ -81,6 +85,10 @@ function App() {
 
         {/* IT Governance - Implemented */}
         <Route path="it-governance/dashboard" element={<ITGCDashboard />} />
+
+        {/* Master Data - Implemented */}
+        <Route path="master-data" element={<VendorList />} />
+        <Route path="master-data/vendor" element={<VendorForm />} />
 
         {/* ==================== PLACEHOLDER ROUTES ==================== */}
         {/* These routes render a "Coming Soon" placeholder */}

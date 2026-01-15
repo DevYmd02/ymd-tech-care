@@ -425,8 +425,9 @@ export const sidebarMenuItems: MenuItem[] = [
         id: 'master-data',
         label: 'Master Data Management',
         icon: Database,
+        path: '/master-data',
         subItems: [
-            { id: 'vendor-code', label: 'กำหนดรหัสเจ้าหนี้', path: '/master-data/vendor-code' },
+            { id: 'vendor-code', label: 'กำหนดรหัสเจ้าหนี้', path: '/master-data/vendor' },
         ]
     },
 ];

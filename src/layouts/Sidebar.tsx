@@ -89,31 +89,68 @@ export default function Sidebar() {
                         <div key={item.id} className="mb-0.5">
                             {/* ---------- MENU HEADER ---------- */}
                             {hasSubItems ? (
-                                // เมนูที่มี submenu -> ใช้ button เพื่อเปิด/ปิด
-                                <button
-                                    onClick={() => toggleMenu(item.id)}
-                                    className={`
-                    w-full flex items-center justify-between px-4 py-2.5 text-sm cursor-pointer transition-colors
-                    ${isActive
-                                            ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
-                                            : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
-                                        }
-                  `}
-                                >
-                                    <div className="flex items-center space-x-3 min-w-0 flex-1">
-                                        {/* Icon */}
-                                        <div className={`flex-shrink-0 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-300'}`}>
-                                            <item.icon size={16} />
+                                // เมนูที่มี submenu
+                                item.path ? (
+                                    // มีทั้ง path และ subItems -> navigate และ expand ด้วย
+                                    <Link
+                                        to={item.path}
+                                        onClick={() => {
+                                            if (!isExpanded) toggleMenu(item.id);
+                                        }}
+                                        className={`
+                                            w-full flex items-center justify-between px-4 py-2.5 text-sm cursor-pointer transition-colors
+                                            ${isActive
+                                                ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                                                : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                                            }
+                                        `}
+                                    >
+                                        <div className="flex items-center space-x-3 min-w-0 flex-1">
+                                            {/* Icon */}
+                                            <div className={`flex-shrink-0 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-300'}`}>
+                                                <item.icon size={16} />
+                                            </div>
+                                            {/* Label */}
+                                            <span className="text-xs font-semibold truncate">{item.label}</span>
                                         </div>
-                                        {/* Label */}
-                                        <span className="text-xs font-semibold truncate">{item.label}</span>
-                                    </div>
-                                    {/* Chevron Icon - หมุนเมื่อเปิด/ปิด */}
-                                    <ChevronDown
-                                        size={14}
-                                        className={`flex-shrink-0 text-gray-400 dark:text-gray-300 transition-transform duration-200 ${isExpanded ? 'rotate-0' : '-rotate-90'}`}
-                                    />
-                                </button>
+                                        {/* Chevron Icon - หมุนเมื่อเปิด/ปิด */}
+                                        <ChevronDown
+                                            size={14}
+                                            className={`flex-shrink-0 text-gray-400 dark:text-gray-300 transition-transform duration-200 ${isExpanded ? 'rotate-0' : '-rotate-90'}`}
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                toggleMenu(item.id);
+                                            }}
+                                        />
+                                    </Link>
+                                ) : (
+                                    // มีแค่ subItems ไม่มี path -> ใช้ button เพื่อเปิด/ปิด
+                                    <button
+                                        onClick={() => toggleMenu(item.id)}
+                                        className={`
+                                            w-full flex items-center justify-between px-4 py-2.5 text-sm cursor-pointer transition-colors
+                                            ${isActive
+                                                ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                                                : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                                            }
+                                        `}
+                                    >
+                                        <div className="flex items-center space-x-3 min-w-0 flex-1">
+                                            {/* Icon */}
+                                            <div className={`flex-shrink-0 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-300'}`}>
+                                                <item.icon size={16} />
+                                            </div>
+                                            {/* Label */}
+                                            <span className="text-xs font-semibold truncate">{item.label}</span>
+                                        </div>
+                                        {/* Chevron Icon - หมุนเมื่อเปิด/ปิด */}
+                                        <ChevronDown
+                                            size={14}
+                                            className={`flex-shrink-0 text-gray-400 dark:text-gray-300 transition-transform duration-200 ${isExpanded ? 'rotate-0' : '-rotate-90'}`}
+                                        />
+                                    </button>
+                                )
                             ) : (
                                 // เมนูที่ไม่มี submenu -> ใช้ Link ไปหน้าอื่น
                                 <Link
