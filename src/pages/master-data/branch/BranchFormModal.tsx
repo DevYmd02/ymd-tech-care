@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react';
 import { X, Building2, Search, Save, RotateCcw } from 'lucide-react';
 import { styles } from '../../../constants';
-import { mockBranches } from '../../../mocks/masterDataMocks';
+import { mockBranches } from '../../../__mocks__/masterDataMocks';
 import type { BranchFormData } from '../../../types/master-data-types';
 import { initialBranchFormData } from '../../../types/master-data-types';
 

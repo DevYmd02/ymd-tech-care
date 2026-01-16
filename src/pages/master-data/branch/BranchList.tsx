@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { styles } from '../../../constants';
 import { BranchFormModal } from './BranchFormModal';
-import { mockBranches } from '../../../mocks/masterDataMocks';
+import { mockBranches } from '../../../__mocks__/masterDataMocks';
 import type { BranchListItem } from '../../../types/master-data-types';
 
 // ====================================================================================

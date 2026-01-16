@@ -8,7 +8,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Ruler, Search, Plus, Save, Trash2, X, Loader2 } from 'lucide-react';
 import { styles } from '../../../constants';
-import { mockUnits } from '../../../mocks/masterDataMocks';
+import { mockUnits } from '../../../__mocks__/masterDataMocks';
 import type { UnitFormData } from '../../../types/master-data-types';
 import { initialUnitFormData } from '../../../types/master-data-types';
 
@@ -90,7 +90,7 @@ export default function UnitForm() {
     return (
         <div className={styles.pageContainer}>
             {/* Header Banner */}
-            <div className="bg-gradient-to-r from-cyan-600 to-cyan-400 rounded-lg p-4 flex items-center gap-3 shadow-md">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-400 rounded-lg p-4 flex items-center gap-3 shadow-md">
                 <Ruler size={24} className="text-white" />
                 <h1 className="text-lg font-semibold text-white">กำหนดรหัสหน่วยนับ (Unit of Measure)</h1>
             </div>

@@ -8,7 +8,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Warehouse, Search, Plus, Save, Trash2, X, Loader2 } from 'lucide-react';
 import { styles } from '../../../constants';
-import { mockWarehouses, mockBranchDropdown } from '../../../mocks/masterDataMocks';
+import { mockWarehouses, mockBranchDropdown } from '../../../__mocks__/masterDataMocks';
 import type { WarehouseFormData } from '../../../types/master-data-types';
 import { initialWarehouseFormData } from '../../../types/master-data-types';
 
@@ -94,7 +94,7 @@ export default function WarehouseForm() {
     return (
         <div className={styles.pageContainer}>
             {/* Header Banner */}
-            <div className="bg-gradient-to-r from-orange-600 to-orange-400 rounded-lg p-4 flex items-center gap-3 shadow-md">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-400 rounded-lg p-4 flex items-center gap-3 shadow-md">
                 <Warehouse size={24} className="text-white" />
                 <h1 className="text-lg font-semibold text-white">กำหนดรหัสคลังสินค้า (Warehouse Master)</h1>
             </div>

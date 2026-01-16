@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react';
 import { X, Layers, Search, Save, RotateCcw } from 'lucide-react';
 import { styles } from '../../../constants';
-import { mockItemTypes } from '../../../mocks/masterDataMocks';
+import { mockItemTypes } from '../../../__mocks__/masterDataMocks';
 import type { ItemTypeFormData } from '../../../types/master-data-types';
 import { initialItemTypeFormData } from '../../../types/master-data-types';
 

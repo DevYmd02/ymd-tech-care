@@ -13,7 +13,7 @@ import {
 import { styles } from '../../constants';
 
 // Import mock data
-import { mockBranches, mockWarehouses, mockProductCategories, mockItemTypes, mockUnits } from '../../mocks/masterDataMocks';
+import { mockBranches, mockWarehouses, mockProductCategories, mockItemTypes, mockUnits } from '../../__mocks__/masterDataMocks';
 import { vendorService } from '../../services/vendorService';
 
 // Import all FormModal components from module folders

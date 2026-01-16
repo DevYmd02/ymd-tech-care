@@ -7,7 +7,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Plus, Search, Edit2, Trash2, Layers, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, RefreshCw } from 'lucide-react';
 import { styles } from '../../../constants';
 import { ItemTypeFormModal } from './ItemTypeFormModal';
-import { mockItemTypes } from '../../../mocks/masterDataMocks';
+import { mockItemTypes } from '../../../__mocks__/masterDataMocks';
 import type { ItemTypeListItem } from '../../../types/master-data-types';
 
 export default function ItemTypeList() {

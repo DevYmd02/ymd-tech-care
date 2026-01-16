@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react';
 import { X, Warehouse, Search, Save, RotateCcw } from 'lucide-react';
 import { styles } from '../../../constants';
-import { mockWarehouses, mockBranchDropdown } from '../../../mocks/masterDataMocks';
+import { mockWarehouses, mockBranchDropdown } from '../../../__mocks__/masterDataMocks';
 import type { WarehouseFormData } from '../../../types/master-data-types';
 import { initialWarehouseFormData } from '../../../types/master-data-types';
 

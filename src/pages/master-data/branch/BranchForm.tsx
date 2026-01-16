@@ -9,7 +9,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Building2, Search, Plus, Save, Trash2, X, Loader2 } from 'lucide-react';
 import { styles } from '../../../constants';
-import { mockBranches } from '../../../mocks/masterDataMocks';
+import { mockBranches } from '../../../__mocks__/masterDataMocks';
 import type { BranchFormData } from '../../../types/master-data-types';
 import { initialBranchFormData } from '../../../types/master-data-types';
 
@@ -105,7 +105,7 @@ export default function BranchForm() {
     return (
         <div className={styles.pageContainer}>
             {/* Header Banner */}
-            <div className="bg-gradient-to-r from-emerald-600 to-emerald-400 rounded-lg p-4 flex items-center gap-3 shadow-md">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-400 rounded-lg p-4 flex items-center gap-3 shadow-md">
                 <Building2 size={24} className="text-white" />
                 <h1 className="text-lg font-semibold text-white">กำหนดรหัสสาขา (Branch Master)</h1>
             </div>

@@ -7,7 +7,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Plus, Search, Edit2, Trash2, Tag, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, RefreshCw } from 'lucide-react';
 import { styles } from '../../../constants';
 import { ProductCategoryFormModal } from './ProductCategoryFormModal';
-import { mockProductCategories } from '../../../mocks/masterDataMocks';
+import { mockProductCategories } from '../../../__mocks__/masterDataMocks';
 import type { ProductCategoryListItem } from '../../../types/master-data-types';
 
 export default function ProductCategoryList() {

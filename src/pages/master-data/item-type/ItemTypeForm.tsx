@@ -8,7 +8,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Layers, Search, Plus, Save, Trash2, X, Loader2 } from 'lucide-react';
 import { styles } from '../../../constants';
-import { mockItemTypes } from '../../../mocks/masterDataMocks';
+import { mockItemTypes } from '../../../__mocks__/masterDataMocks';
 import type { ItemTypeFormData } from '../../../types/master-data-types';
 import { initialItemTypeFormData } from '../../../types/master-data-types';
 
@@ -90,7 +90,7 @@ export default function ItemTypeForm() {
     return (
         <div className={styles.pageContainer}>
             {/* Header Banner */}
-            <div className="bg-gradient-to-r from-pink-600 to-pink-400 rounded-lg p-4 flex items-center gap-3 shadow-md">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-400 rounded-lg p-4 flex items-center gap-3 shadow-md">
                 <Layers size={24} className="text-white" />
                 <h1 className="text-lg font-semibold text-white">กำหนดรหัสประเภทสินค้า (Item Type Master)</h1>
             </div>

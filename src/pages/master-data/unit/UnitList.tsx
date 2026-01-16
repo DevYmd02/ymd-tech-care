@@ -7,7 +7,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Plus, Search, Edit2, Trash2, Ruler, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, RefreshCw } from 'lucide-react';
 import { styles } from '../../../constants';
 import { UnitFormModal } from './UnitFormModal';
-import { mockUnits } from '../../../mocks/masterDataMocks';
+import { mockUnits } from '../../../__mocks__/masterDataMocks';
 import type { UnitListItem } from '../../../types/master-data-types';
 
 export default function UnitList() {

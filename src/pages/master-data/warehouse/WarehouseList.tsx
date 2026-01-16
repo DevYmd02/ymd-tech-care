@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { styles } from '../../../constants';
 import { WarehouseFormModal } from './WarehouseFormModal';
-import { mockWarehouses } from '../../../mocks/masterDataMocks';
+import { mockWarehouses } from '../../../__mocks__/masterDataMocks';
 import type { WarehouseListItem } from '../../../types/master-data-types';
 
 // ====================================================================================

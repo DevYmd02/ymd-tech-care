@@ -209,11 +209,11 @@ export const VendorFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
     return (
         <div 
-            className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm transition-opacity duration-300 font-sans ${isAnimating ? 'opacity-100' : 'opacity-0'}`} 
+            className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 backdrop-blur-sm transition-opacity duration-300 font-sans ${isAnimating ? 'opacity-100' : 'opacity-0'}`} 
             onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
         >
             <div className={`
-                flex flex-col overflow-hidden bg-white shadow-2xl border-4 border-blue-600 transition-all duration-300 ease-out origin-center
+                flex flex-col overflow-hidden bg-white dark:bg-gray-900 shadow-2xl border-4 border-blue-600 dark:border-blue-500 transition-all duration-300 ease-out origin-center
                 ${isMaximized 
                     ? 'w-full h-full rounded-none border-0 scale-100' 
                     : 'w-full max-w-7xl h-[85vh] scale-100 rounded-2xl'
@@ -254,33 +254,33 @@ export const VendorFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 </div>
 
                 {/* Content Container */}
-                <div className="flex-1 overflow-auto bg-[#F8F9FA] p-4 text-sm">
+                <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-800 p-4 text-sm">
                     <div className="w-full space-y-4">
                         
                         {/* 1. Header Information Panel */}
-                        <div className="bg-white rounded-md border border-gray-200 p-6 shadow-sm space-y-4">
+                        <div className="bg-white dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700 p-6 shadow-sm space-y-4">
                             
                             {/* Row 1: Vendor Code & Vendor Name */}
                             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 border-b pb-4">
                                 {/* Left: Vendor Code */}
                                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                                    <label className="w-full sm:w-32 xl:w-40 text-left sm:text-right font-semibold text-gray-700 flex-shrink-0">รหัสผู้ขาย</label>
+                                    <label className="w-full sm:w-32 xl:w-40 text-left sm:text-right font-semibold text-gray-700 dark:text-gray-300 flex-shrink-0">รหัสผู้ขาย</label>
                                     <input 
                                         type="text" 
                                         value={formData.vendorCode} 
                                         placeholder="Auto Generate"
                                         readOnly
-                                        className="flex-1 h-9 px-3 bg-white border border-gray-300 rounded focus:outline-none text-gray-500"
+                                        className="flex-1 h-9 px-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded focus:outline-none text-gray-500 dark:text-gray-400"
                                     />
                                 </div>
                                 {/* Right: Vendor Name */}
                                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                                    <label className="w-full sm:w-32 xl:w-40 text-left sm:text-right font-semibold text-gray-700 flex-shrink-0">ชื่อผู้ขาย</label>
+                                    <label className="w-full sm:w-32 xl:w-40 text-left sm:text-right font-semibold text-gray-700 dark:text-gray-300 flex-shrink-0">ชื่อผู้ขาย</label>
                                     <input 
                                         type="text" 
                                         value={formData.vendorName}
                                         onChange={(e) => handleInputChange('vendorName', e.target.value)}
-                                        className="flex-1 h-9 px-3 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 transition-all"
+                                        className="flex-1 h-9 px-3 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all"
                                     />
                                 </div>
                             </div>
@@ -289,13 +289,13 @@ export const VendorFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                                 {/* Left: Vendor Code Search */}
                                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                                    <label className="w-full sm:w-32 xl:w-40 text-left sm:text-right font-semibold text-gray-700 flex-shrink-0">รหัสผู้ขาย</label>
+                                    <label className="w-full sm:w-32 xl:w-40 text-left sm:text-right font-semibold text-gray-700 dark:text-gray-300 flex-shrink-0">รหัสผู้ขาย</label>
                                     <div className="flex-1 relative h-9">
                                         <input 
                                             type="text" 
                                             value={formData.vendorCodeSearch}
                                             onChange={(e) => handleInputChange('vendorCodeSearch', e.target.value)}
-                                            className="w-full h-full px-3 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500" 
+                                            className="w-full h-full px-3 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" 
                                         />
                                         <button className="absolute top-0 -right-11 h-9 w-9 bg-purple-600 text-white rounded flex items-center justify-center hover:bg-purple-700 transition-colors shadow-sm">
                                             <Search size={16} />
@@ -305,16 +305,16 @@ export const VendorFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                                 {/* Right: Status Interface */}
                                 <div className="flex items-center gap-6 pl-0 sm:pl-[8.5rem] xl:pl-[11rem]">
                                     <label className="flex items-center gap-2 cursor-pointer select-none">
-                                        <input type="checkbox" checked={formData.onHold} onChange={(e) => handleInputChange('onHold', e.target.checked)} className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 bg-white" />
-                                        <span className="font-medium text-gray-700">On Hold</span>
+                                        <input type="checkbox" checked={formData.onHold} onChange={(e) => handleInputChange('onHold', e.target.checked)} className="w-5 h-5 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 bg-white dark:bg-gray-800" />
+                                        <span className="font-medium text-gray-700 dark:text-gray-300">On Hold</span>
                                     </label>
                                     <label className="flex items-center gap-2 cursor-pointer select-none">
-                                        <input type="checkbox" checked={formData.blocked} onChange={(e) => handleInputChange('blocked', e.target.checked)} className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 bg-white" />
-                                        <span className="font-medium text-gray-700">Block</span>
+                                        <input type="checkbox" checked={formData.blocked} onChange={(e) => handleInputChange('blocked', e.target.checked)} className="w-5 h-5 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 bg-white dark:bg-gray-800" />
+                                        <span className="font-medium text-gray-700 dark:text-gray-300">Block</span>
                                     </label>
                                     <label className="flex items-center gap-2 cursor-pointer select-none">
-                                        <input type="checkbox" checked={formData.inactive} onChange={(e) => handleInputChange('inactive', e.target.checked)} className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 bg-white" />
-                                        <span className="font-medium text-gray-700">Inactive</span>
+                                        <input type="checkbox" checked={formData.inactive} onChange={(e) => handleInputChange('inactive', e.target.checked)} className="w-5 h-5 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 bg-white dark:bg-gray-800" />
+                                        <span className="font-medium text-gray-700 dark:text-gray-300">Inactive</span>
                                     </label>
                                 </div>
                             </div>
@@ -323,12 +323,12 @@ export const VendorFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                                 {/* Left: Name TH */}
                                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                                    <label className="w-full sm:w-32 xl:w-40 text-left sm:text-right font-semibold text-gray-700 flex-shrink-0">ชื่อผู้ขาย</label>
+                                    <label className="w-full sm:w-32 xl:w-40 text-left sm:text-right font-semibold text-gray-700 dark:text-gray-300 flex-shrink-0">ชื่อผู้ขาย</label>
                                     <input 
                                         type="text" 
                                         value={formData.vendorNameTh}
                                         onChange={(e) => handleInputChange('vendorNameTh', e.target.value)}
-                                        className="flex-1 h-9 px-3 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500" 
+                                        className="flex-1 h-9 px-3 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" 
                                     />
                                 </div>
                                 {/* Right: Revenue Button */}
@@ -343,12 +343,12 @@ export const VendorFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                                 {/* Left: Name EN */}
                                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                                    <label className="w-full sm:w-32 xl:w-40 text-left sm:text-right font-semibold text-gray-700 flex-shrink-0">ชื่อผู้ขาย (Eng)</label>
+                                    <label className="w-full sm:w-32 xl:w-40 text-left sm:text-right font-semibold text-gray-700 dark:text-gray-300 flex-shrink-0">ชื่อผู้ขาย (Eng)</label>
                                     <input 
                                         type="text" 
                                         value={formData.vendorNameEn}
                                         onChange={(e) => handleInputChange('vendorNameEn', e.target.value)}
-                                        className="flex-1 h-9 px-3 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500" 
+                                        className="flex-1 h-9 px-3 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" 
                                     />
                                 </div>
                                 {/* Right: Empty Spacer */}
@@ -361,15 +361,15 @@ export const VendorFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                         <div className="space-y-6">
                             
                             {/* 2. Address - PP.20 */}
-                        <div className="bg-white rounded-md border border-gray-200 p-6 shadow-sm">
-                            <h3 className="text-lg font-bold text-gray-800 mb-4 border-b pb-2">ที่อยู่ ภพ.20</h3>
+                        <div className="bg-white dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
+                            <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">ที่อยู่ ภพ.20</h3>
                             
                             <div className="space-y-4">
                                 {/* Row 1: ที่อยู่ | (empty) */}
                                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-x-4 md:gap-x-8 xl:gap-x-12 gap-y-4">
                                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                                        <label className="w-full sm:w-32 text-left sm:text-right text-gray-700 flex-shrink-0">ที่อยู่</label>
-                                        <input type="text" value={formData.addressLine1} onChange={e => handleInputChange('addressLine1', e.target.value)} className="flex-1 min-w-0 h-9 px-3 border border-gray-300 rounded-md bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                        <label className="w-full sm:w-32 text-left sm:text-right text-gray-700 dark:text-gray-300 flex-shrink-0">ที่อยู่</label>
+                                        <input type="text" value={formData.addressLine1} onChange={e => handleInputChange('addressLine1', e.target.value)} className="flex-1 min-w-0 h-9 px-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
                                     </div>
                                     <div className="hidden xl:block"></div>
                                 </div>
@@ -377,8 +377,8 @@ export const VendorFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                                 {/* Row 2: ที่อยู่ (line 2) | (empty) */}
                                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-x-4 md:gap-x-8 xl:gap-x-12 gap-y-4">
                                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                                        <label className="w-full sm:w-32 text-left sm:text-right text-gray-700 flex-shrink-0"></label>
-                                        <input type="text" value={formData.addressLine2} onChange={e => handleInputChange('addressLine2', e.target.value)} className="flex-1 min-w-0 h-9 px-3 border border-gray-300 rounded-md bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                        <label className="w-full sm:w-32 text-left sm:text-right text-gray-700 dark:text-gray-300 flex-shrink-0"></label>
+                                        <input type="text" value={formData.addressLine2} onChange={e => handleInputChange('addressLine2', e.target.value)} className="flex-1 min-w-0 h-9 px-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
                                     </div>
                                     <div className="hidden xl:block"></div>
                                 </div>
@@ -386,33 +386,33 @@ export const VendorFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                                 {/* Row 3: แขวง/ตำบล | เขต/อำเภอ */}
                                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-x-4 md:gap-x-8 xl:gap-x-12 gap-y-4">
                                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                                        <label className="w-full sm:w-32 text-left sm:text-right text-gray-700 flex-shrink-0">แขวง/ตำบล</label>
-                                        <input type="text" value={formData.subDistrict} onChange={e => handleInputChange('subDistrict', e.target.value)} className="flex-1 min-w-0 h-9 px-3 border border-gray-300 rounded-md bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                        <label className="w-full sm:w-32 text-left sm:text-right text-gray-700 dark:text-gray-300 flex-shrink-0">แขวง/ตำบล</label>
+                                        <input type="text" value={formData.subDistrict} onChange={e => handleInputChange('subDistrict', e.target.value)} className="flex-1 min-w-0 h-9 px-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
                                     </div>
                                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                                        <label className="w-full sm:w-32 text-left sm:text-right text-gray-700 flex-shrink-0">เขต/อำเภอ</label>
-                                        <input type="text" value={formData.district} onChange={e => handleInputChange('district', e.target.value)} className="flex-1 min-w-0 h-9 px-3 border border-gray-300 rounded-md bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                        <label className="w-full sm:w-32 text-left sm:text-right text-gray-700 dark:text-gray-300 flex-shrink-0">เขต/อำเภอ</label>
+                                        <input type="text" value={formData.district} onChange={e => handleInputChange('district', e.target.value)} className="flex-1 min-w-0 h-9 px-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
                                     </div>
                                 </div>
                                 
                                 {/* Row 4: จังหวัด | รหัสไปรษณีย์ */}
                                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-x-4 md:gap-x-8 xl:gap-x-12 gap-y-4">
                                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                                        <label className="w-full sm:w-32 text-left sm:text-right text-gray-700 flex-shrink-0">จังหวัด</label>
-                                        <input type="text" value={formData.province} onChange={e => handleInputChange('province', e.target.value)} className="flex-1 min-w-0 h-9 px-3 border border-gray-300 rounded-md bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                        <label className="w-full sm:w-32 text-left sm:text-right text-gray-700 dark:text-gray-300 flex-shrink-0">จังหวัด</label>
+                                        <input type="text" value={formData.province} onChange={e => handleInputChange('province', e.target.value)} className="flex-1 min-w-0 h-9 px-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
                                     </div>
                                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                                        <label className="w-full sm:w-32 text-left sm:text-right text-gray-700 flex-shrink-0">รหัสไปรษณีย์</label>
-                                        <input type="text" value={formData.postalCode} onChange={e => handleInputChange('postalCode', e.target.value)} className="flex-1 min-w-0 h-9 px-3 border border-gray-300 rounded-md bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                        <label className="w-full sm:w-32 text-left sm:text-right text-gray-700 dark:text-gray-300 flex-shrink-0">รหัสไปรษณีย์</label>
+                                        <input type="text" value={formData.postalCode} onChange={e => handleInputChange('postalCode', e.target.value)} className="flex-1 min-w-0 h-9 px-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         {/* 3. Contact Address */}
-                        <div className="bg-white rounded-md border border-gray-200 p-6 shadow-sm">
-                             <div className="flex items-center gap-4 mb-4 border-b pb-2">
-                                <h3 className="text-lg font-bold text-gray-800">ที่อยู่ที่ติดต่อ (ตามที่อยู่ ภพ.20)</h3>
+                        <div className="bg-white dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
+                             <div className="flex items-center gap-4 mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
+                                <h3 className="text-lg font-bold text-gray-800 dark:text-white">ที่อยู่ที่ติดต่อ (ตามที่อยู่ ภพ.20)</h3>
                                 <label className="flex items-center gap-2 cursor-pointer select-none">
                                     <div className="relative">
                                         <input 
@@ -432,8 +432,8 @@ export const VendorFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                                 {/* Row 1: ที่อยู่ | (empty) */}
                                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-x-4 md:gap-x-8 xl:gap-x-12 gap-y-4">
                                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                                        <label className="w-full sm:w-32 text-left sm:text-right text-gray-700 flex-shrink-0">ที่อยู่</label>
-                                        <input type="text" value={formData.contactAddressLine1} onChange={e => handleInputChange('contactAddressLine1', e.target.value)} className="flex-1 h-9 px-3 border border-gray-300 rounded bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                        <label className="w-full sm:w-32 text-left sm:text-right text-gray-700 dark:text-gray-300 flex-shrink-0">ที่อยู่</label>
+                                        <input type="text" value={formData.contactAddressLine1} onChange={e => handleInputChange('contactAddressLine1', e.target.value)} className="flex-1 h-9 px-3 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
                                     </div>
                                     <div className="hidden xl:block"></div>
                                 </div>
@@ -441,8 +441,8 @@ export const VendorFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                                 {/* Row 2: ที่อยู่ (line 2) | (empty) */}
                                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-x-4 md:gap-x-8 xl:gap-x-12 gap-y-4">
                                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                                        <label className="w-full sm:w-32 text-left sm:text-right text-gray-700 flex-shrink-0"></label>
-                                        <input type="text" value={formData.contactAddressLine2} onChange={e => handleInputChange('contactAddressLine2', e.target.value)} className="flex-1 h-9 px-3 border border-gray-300 rounded bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                        <label className="w-full sm:w-32 text-left sm:text-right text-gray-700 dark:text-gray-300 flex-shrink-0"></label>
+                                        <input type="text" value={formData.contactAddressLine2} onChange={e => handleInputChange('contactAddressLine2', e.target.value)} className="flex-1 h-9 px-3 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
                                     </div>
                                     <div className="hidden xl:block"></div>
                                 </div>
@@ -450,40 +450,40 @@ export const VendorFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                                 {/* Row 3: แขวง/ตำบล | เขต/อำเภอ */}
                                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-x-4 md:gap-x-8 xl:gap-x-12 gap-y-4">
                                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                                        <label className="w-full sm:w-32 text-left sm:text-right text-gray-700 flex-shrink-0">แขวง/ตำบล</label>
-                                        <input type="text" value={formData.contactSubDistrict} onChange={e => handleInputChange('contactSubDistrict', e.target.value)} className="flex-1 h-9 px-3 border border-gray-300 rounded bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                        <label className="w-full sm:w-32 text-left sm:text-right text-gray-700 dark:text-gray-300 flex-shrink-0">แขวง/ตำบล</label>
+                                        <input type="text" value={formData.contactSubDistrict} onChange={e => handleInputChange('contactSubDistrict', e.target.value)} className="flex-1 h-9 px-3 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
                                     </div>
                                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                                        <label className="w-full sm:w-32 text-left sm:text-right text-gray-700 flex-shrink-0">เขต/อำเภอ</label>
-                                        <input type="text" value={formData.contactDistrict} onChange={e => handleInputChange('contactDistrict', e.target.value)} className="flex-1 h-9 px-3 border border-gray-300 rounded bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                        <label className="w-full sm:w-32 text-left sm:text-right text-gray-700 dark:text-gray-300 flex-shrink-0">เขต/อำเภอ</label>
+                                        <input type="text" value={formData.contactDistrict} onChange={e => handleInputChange('contactDistrict', e.target.value)} className="flex-1 h-9 px-3 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
                                     </div>
                                 </div>
                                 
                                 {/* Row 4: จังหวัด | รหัสไปรษณีย์ */}
                                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-x-4 md:gap-x-8 xl:gap-x-12 gap-y-4">
                                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                                        <label className="w-full sm:w-32 text-left sm:text-right text-gray-700 flex-shrink-0">จังหวัด</label>
-                                        <input type="text" value={formData.contactProvince} onChange={e => handleInputChange('contactProvince', e.target.value)} className="flex-1 h-9 px-3 border border-gray-300 rounded bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                        <label className="w-full sm:w-32 text-left sm:text-right text-gray-700 dark:text-gray-300 flex-shrink-0">จังหวัด</label>
+                                        <input type="text" value={formData.contactProvince} onChange={e => handleInputChange('contactProvince', e.target.value)} className="flex-1 h-9 px-3 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
                                     </div>
                                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                                        <label className="w-full sm:w-32 text-left sm:text-right text-gray-700 flex-shrink-0">รหัสไปรษณีย์</label>
-                                        <input type="text" value={formData.contactPostalCode} onChange={e => handleInputChange('contactPostalCode', e.target.value)} className="flex-1 h-9 px-3 border border-gray-300 rounded bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                        <label className="w-full sm:w-32 text-left sm:text-right text-gray-700 dark:text-gray-300 flex-shrink-0">รหัสไปรษณีย์</label>
+                                        <input type="text" value={formData.contactPostalCode} onChange={e => handleInputChange('contactPostalCode', e.target.value)} className="flex-1 h-9 px-3 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
                                     </div>
                                 </div>
                                 
                                 {/* Row 5: โทรศัพท์ | Email */}
                                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-x-4 md:gap-x-8 xl:gap-x-12 gap-y-4">
                                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                                        <label className="w-full sm:w-32 text-left sm:text-right text-gray-700 flex-shrink-0">โทรศัพท์</label>
+                                        <label className="w-full sm:w-32 text-left sm:text-right text-gray-700 dark:text-gray-300 flex-shrink-0">โทรศัพท์</label>
                                         <div className="flex-1 flex items-center gap-2">
-                                            <input type="text" value={formData.phone} onChange={e => handleInputChange('phone', e.target.value)} className="flex-1 h-9 px-3 border border-gray-300 rounded bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                                            <span className="text-gray-700 font-medium">ต่อ</span>
-                                            <input type="text" value={formData.phoneExt} onChange={e => handleInputChange('phoneExt', e.target.value)} className="w-24 h-9 px-3 border border-gray-300 rounded bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                            <input type="text" value={formData.phone} onChange={e => handleInputChange('phone', e.target.value)} className="flex-1 h-9 px-3 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                            <span className="text-gray-700 dark:text-gray-300 font-medium">ต่อ</span>
+                                            <input type="text" value={formData.phoneExt} onChange={e => handleInputChange('phoneExt', e.target.value)} className="w-24 h-9 px-3 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
                                         </div>
                                     </div>
                                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                                        <label className="w-full sm:w-32 text-left sm:text-right text-gray-700 flex-shrink-0">Email</label>
-                                        <input type="text" value={formData.email} onChange={e => handleInputChange('email', e.target.value)} className="flex-1 h-9 px-3 border border-gray-300 rounded bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                        <label className="w-full sm:w-32 text-left sm:text-right text-gray-700 dark:text-gray-300 flex-shrink-0">Email</label>
+                                        <input type="text" value={formData.email} onChange={e => handleInputChange('email', e.target.value)} className="flex-1 h-9 px-3 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
                                     </div>
                                 </div>
                             </div>
@@ -509,7 +509,7 @@ export const VendorFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                                     </button>
                                 ))}
                             </div>
-                            <div className="h-24 bg-gray-100 rounded-b-lg border border-gray-200 p-4 flex items-center text-gray-500">
+                            <div className="h-24 bg-gray-100 dark:bg-gray-800 rounded-b-lg border border-gray-200 dark:border-gray-700 p-4 flex items-center text-gray-500 dark:text-gray-400">
                                 <span>ข้อมูลที่อยู่ถูกแสดงในส่วนด้านบนแล้ว</span>
                             </div>
                         </div>
@@ -518,9 +518,9 @@ export const VendorFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 </div>
 
                 {/* Footer Actions */}
-                <div className="bg-white border-t border-gray-200 p-3 flex justify-between items-center gap-4 shrink-0 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+                <div className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 p-3 flex justify-between items-center gap-4 shrink-0 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
                    <div className="flex items-center gap-2">
-                        <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 font-bold transition-all text-sm">
+                        <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-50 dark:hover:bg-gray-800 font-bold transition-all text-sm">
                             <Plus size={16} /> New
                         </button>
                         <button 
@@ -531,23 +531,23 @@ export const VendorFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                             {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} 
                             {isSaving ? 'กำลังบันทึก...' : 'Save'}
                         </button>
-                        <button className="flex items-center gap-2 px-4 py-2 border border-red-200 text-red-600 rounded hover:bg-red-50 font-bold transition-all text-sm">
+                        <button className="flex items-center gap-2 px-4 py-2 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-900/30 font-bold transition-all text-sm">
                             <Trash2 size={16} /> Delete
                         </button>
-                        <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 font-bold transition-all text-sm">
+                        <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-50 dark:hover:bg-gray-800 font-bold transition-all text-sm">
                             <Search size={16} /> Find
                         </button>
-                        <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 font-bold transition-all text-sm">
+                        <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-50 dark:hover:bg-gray-800 font-bold transition-all text-sm">
                             <Copy size={16} /> Copy
                         </button>
-                        <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 font-bold transition-all text-sm">
+                        <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-50 dark:hover:bg-gray-800 font-bold transition-all text-sm">
                             <FileText size={16} /> Preview
                         </button>
                         {saveError && <span className="text-red-500 text-sm ml-2">{saveError}</span>}
                    </div>
                    
                    <div>
-                        <button onClick={handleClose} className="px-6 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 font-bold transition-colors text-sm flex items-center gap-2">
+                        <button onClick={handleClose} className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-50 dark:hover:bg-gray-800 font-bold transition-colors text-sm flex items-center gap-2">
                             <X size={16} /> Close
                         </button>
                    </div>

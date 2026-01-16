@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react';
 import { X, Ruler, Search, Save, RotateCcw } from 'lucide-react';
 import { styles } from '../../../constants';
-import { mockUnits } from '../../../mocks/masterDataMocks';
+import { mockUnits } from '../../../__mocks__/masterDataMocks';
 import type { UnitFormData } from '../../../types/master-data-types';
 import { initialUnitFormData } from '../../../types/master-data-types';
 

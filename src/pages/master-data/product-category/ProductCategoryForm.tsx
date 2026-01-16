@@ -8,7 +8,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Tag, Search, Plus, Save, Trash2, X, Loader2 } from 'lucide-react';
 import { styles } from '../../../constants';
-import { mockProductCategories } from '../../../mocks/masterDataMocks';
+import { mockProductCategories } from '../../../__mocks__/masterDataMocks';
 import type { ProductCategoryFormData } from '../../../types/master-data-types';
 import { initialProductCategoryFormData } from '../../../types/master-data-types';
 
@@ -90,7 +90,7 @@ export default function ProductCategoryForm() {
     return (
         <div className={styles.pageContainer}>
             {/* Header Banner */}
-            <div className="bg-gradient-to-r from-purple-600 to-purple-400 rounded-lg p-4 flex items-center gap-3 shadow-md">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-400 rounded-lg p-4 flex items-center gap-3 shadow-md">
                 <Tag size={24} className="text-white" />
                 <h1 className="text-lg font-semibold text-white">กำหนดรหัสหมวดสินค้า (Product Category Master)</h1>
             </div>
