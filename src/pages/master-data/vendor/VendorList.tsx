@@ -20,10 +20,10 @@ import {
     RefreshCw,
     AlertCircle
 } from 'lucide-react';
-import { styles } from '../../constants';
+import { styles } from '../../../constants';
 import { VendorFormModal } from './VendorFormModal';
-import { vendorService } from '../../services/vendorService';
-import type { VendorListItem, VendorStatus, VendorListParams } from '../../types/vendor-types';
+import { vendorService } from '../../../services/vendorService';
+import type { VendorListItem, VendorStatus, VendorListParams } from '../../../types/vendor-types';
 
 // ====================================================================================
 // COMPONENT
@@ -115,20 +115,20 @@ export default function VendorList() {
         const badges: Record<VendorStatus, string> = {
             ACTIVE: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
             INACTIVE: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
-            BLOCKED: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-            ON_HOLD: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+            BLACKLISTED: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+            SUSPENDED: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
         };
         const labels: Record<VendorStatus, string> = {
             ACTIVE: 'Active',
             INACTIVE: 'Inactive',
-            BLOCKED: 'Blocked',
-            ON_HOLD: 'On Hold'
+            BLACKLISTED: 'Blacklisted',
+            SUSPENDED: 'Suspended'
         };
         const dotColors: Record<VendorStatus, string> = {
             ACTIVE: 'bg-green-500',
             INACTIVE: 'bg-gray-500',
-            BLOCKED: 'bg-red-500',
-            ON_HOLD: 'bg-yellow-500'
+            BLACKLISTED: 'bg-red-500',
+            SUSPENDED: 'bg-yellow-500'
         };
         return (
             <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ${badges[status]}`}>
@@ -194,8 +194,8 @@ export default function VendorList() {
                             <option value="ALL">สถานะทั้งหมด</option>
                             <option value="ACTIVE">Active</option>
                             <option value="INACTIVE">Inactive</option>
-                            <option value="BLOCKED">Blocked</option>
-                            <option value="ON_HOLD">On Hold</option>
+                            <option value="BLACKLISTED">Blacklisted</option>
+                            <option value="SUSPENDED">Suspended</option>
                         </select>
                     </div>
                 </div>

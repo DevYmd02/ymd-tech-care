@@ -7,10 +7,10 @@
 
 import React from 'react';
 import { SearchModal, type ColumnDef } from './SearchModal';
-import { MOCK_PRODUCTS, type Product } from '../../mocks/products';
+import { MOCK_PRODUCTS, type Product } from '../../__mocks__/products';
 
 // Re-export Product type for consumers
-export type { Product } from '../../mocks/products';
+export type { Product } from '../../__mocks__/products';
 
 /** Props ของ ProductSearchModal */
 interface Props {

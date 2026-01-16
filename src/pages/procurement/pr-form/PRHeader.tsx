@@ -7,7 +7,7 @@ import React from 'react';
 import type { UseFormRegister, UseFormSetValue } from 'react-hook-form';
 import { Search, Calendar, Building2, FolderKanban, User } from 'lucide-react';
 import type { PRFormData } from '../../../types/pr-types';
-import { MOCK_COST_CENTERS, MOCK_PROJECTS } from '../../../mocks';
+import { MOCK_COST_CENTERS, MOCK_PROJECTS } from '../../../__mocks__';
 
 interface Props {
   register: UseFormRegister<PRFormData>;
@@ -15,25 +15,25 @@ interface Props {
 }
 
 export const PRHeader: React.FC<Props> = ({ register, setValue }) => {
-  // Style classes (คงสไตล์เดิม)
-  const inputClass = "h-8 w-full px-2 text-sm border border-gray-300 rounded-l-md focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-gray-50";
-  const selectClass = "h-8 w-full px-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:border-blue-500 bg-white";
-  const labelClass = "block text-xs font-bold text-gray-700 mb-1";
+  // Style classes (คงสไตล์เดิม + dark mode)
+  const inputClass = "h-8 w-full px-2 text-sm border border-gray-300 dark:border-gray-600 rounded-l-md focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white";
+  const selectClass = "h-8 w-full px-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white";
+  const labelClass = "block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1";
   const searchButtonClass = "h-8 w-8 bg-blue-600 text-white rounded-r-md flex items-center justify-center hover:bg-blue-700 transition-colors border border-blue-600";
 
   return (
-    <div className="p-2 border-b border-gray-200 bg-white shadow-sm font-sans">
+    <div className="p-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm font-sans">
       {/* Document Status & Logo */}
       <div className="flex justify-between items-start mb-2">
         <div>
-          <h2 className="text-pink-600 font-bold text-sm">สถานะเอกสาร : ร่าง (DRAFT)</h2>
+          <h2 className="text-pink-600 dark:text-pink-400 font-bold text-sm">สถานะเอกสาร : ร่าง (DRAFT)</h2>
         </div>
         <div className="text-right">
-          <div className="text-[10px] font-bold text-blue-800 leading-tight">YOUNGMEEDEE</div>
-          <div className="text-[9px] text-gray-500 tracking-wider">FUTURE GROUP</div>
-          <div className="text-[9px] font-bold text-gray-600 mt-0.5 flex justify-end items-center gap-1">
+          <div className="text-[10px] font-bold text-blue-800 dark:text-blue-400 leading-tight">YOUNGMEEDEE</div>
+          <div className="text-[9px] text-gray-500 dark:text-gray-400 tracking-wider">FUTURE GROUP</div>
+          <div className="text-[9px] font-bold text-gray-600 dark:text-gray-400 mt-0.5 flex justify-end items-center gap-1">
             <span>TAKE & CARE</span>
-            <span className="text-[8px] border border-gray-400 px-0.5 rounded">SIAM BIO</span>
+            <span className="text-[8px] border border-gray-400 dark:border-gray-600 px-0.5 rounded">SIAM BIO</span>
           </div>
         </div>
       </div>
@@ -53,7 +53,7 @@ export const PRHeader: React.FC<Props> = ({ register, setValue }) => {
           <label className={labelClass}>วันที่ขอซื้อ</label>
           <div className="flex">
             <input {...register("request_date")} type="date" className={inputClass} />
-            <div className="h-8 w-8 border border-l-0 border-gray-300 bg-blue-50 text-blue-500 rounded-r-md flex items-center justify-center pointer-events-none">
+            <div className="h-8 w-8 border border-l-0 border-gray-300 dark:border-gray-600 bg-blue-50 dark:bg-blue-900/30 text-blue-500 dark:text-blue-400 rounded-r-md flex items-center justify-center pointer-events-none">
               <Calendar size={14} />
             </div>
           </div>
@@ -63,7 +63,7 @@ export const PRHeader: React.FC<Props> = ({ register, setValue }) => {
           <label className={labelClass}>วันที่ต้องการใช้ <span className="text-red-500">*</span></label>
           <div className="flex">
             <input {...register("required_date")} type="date" className={inputClass} />
-            <div className="h-8 w-8 border border-l-0 border-gray-300 bg-blue-50 text-blue-500 rounded-r-md flex items-center justify-center pointer-events-none">
+            <div className="h-8 w-8 border border-l-0 border-gray-300 dark:border-gray-600 bg-blue-50 dark:bg-blue-900/30 text-blue-500 dark:text-blue-400 rounded-r-md flex items-center justify-center pointer-events-none">
               <Calendar size={14} />
             </div>
           </div>
@@ -114,7 +114,7 @@ export const PRHeader: React.FC<Props> = ({ register, setValue }) => {
           <textarea 
             {...register("purpose")}
             placeholder="ระบุเหตุผลและวัตถุประสงค์ในการขอซื้อ..."
-            className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-gray-50 resize-none"
+            className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white resize-none"
             rows={2}
           />
         </div>

@@ -9,7 +9,7 @@
 // ====================================================================================
 
 /** สถานะของ Vendor */
-export type VendorStatus = 'ACTIVE' | 'INACTIVE' | 'BLOCKED' | 'ON_HOLD';
+export type VendorStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'BLACKLISTED';
 
 /** ประเภท Vendor */
 export type VendorType = 'COMPANY' | 'INDIVIDUAL' | 'GOVERNMENT';
@@ -224,7 +224,7 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
         district: vendor.district || '',
         province: vendor.province || '',
         postalCode: vendor.postal_code || '',
-        useAddressPP20: true,
+        useAddressPP20: false,
         contactAddressLine1: vendor.address_line1 || '',
         contactAddressLine2: vendor.address_line2 || '',
         contactSubDistrict: vendor.sub_district || '',
@@ -257,7 +257,7 @@ export const initialVendorFormData: VendorFormData = {
     district: '',
     province: '',
     postalCode: '',
-    useAddressPP20: true,
+    useAddressPP20: false,
     contactAddressLine1: '',
     contactAddressLine2: '',
     contactSubDistrict: '',

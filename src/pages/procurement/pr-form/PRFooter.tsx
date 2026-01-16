@@ -11,10 +11,10 @@ interface ButtonProps {
 const ActionButton: React.FC<ButtonProps> = ({ icon, label, onClick, danger }) => {
     const baseClass = "flex items-center justify-center space-x-1 px-3 py-2 rounded border shadow-sm text-xs font-bold transition-all uppercase select-none w-full sm:w-auto";
 
-    let colorClass = "bg-white border-gray-300 text-gray-700 hover:bg-green-600 hover:text-white hover:border-green-600 hover:shadow-md";
+    let colorClass = "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-green-600 hover:text-white hover:border-green-600 hover:shadow-md";
 
     if (danger) {
-        colorClass = "bg-white border-gray-300 text-gray-700 hover:bg-red-500 hover:text-white hover:border-red-500 hover:shadow-md";
+        colorClass = "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-red-500 hover:text-white hover:border-red-500 hover:shadow-md";
     }
 
     return (
@@ -25,7 +25,7 @@ const ActionButton: React.FC<ButtonProps> = ({ icon, label, onClick, danger }) =
 };
 
 export const PRFooter: React.FC<{ onSave: () => void; onClose?: () => void }> = ({ onSave, onClose }) => (
-    <div className="p-3 bg-gray-100 border-t flex flex-wrap items-center sticky bottom-0 z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] gap-2">
+    <div className="p-3 bg-gray-100 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex flex-wrap items-center sticky bottom-0 z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] gap-2">
 
         <ActionButton icon={<FilePlus size={14} />} label="New" />
         <ActionButton icon={<Save size={14} />} label="Save" onClick={onSave} />

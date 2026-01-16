@@ -7,7 +7,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import type { SubmitHandler } from 'react-hook-form';
 import type { PRFormData, PRLineFormData } from '../../../types/pr-types';
-import { MOCK_PRODUCTS as CENTRAL_MOCK_PRODUCTS } from '../../../mocks';
+import { MOCK_PRODUCTS as CENTRAL_MOCK_PRODUCTS } from '../../../__mocks__';
 import { FileText, Minimize2, Maximize2, X, Plus, Trash2, Search, Eraser, Triangle, FileBox, MoreHorizontal, Flame, FileBarChart, History as HistoryIcon } from 'lucide-react';
 
 import { PRHeader } from './PRHeader';
@@ -236,10 +236,10 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
   if (!isOpen && !isClosing) return null;
 
-  const cardClass = 'bg-white border border-gray-300 rounded-sm overflow-hidden';
-  const tableInputClass = 'w-full h-8 px-3 text-sm bg-gray-50 border border-gray-300 !rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white shadow-sm transition-all';
-  const tdBaseClass = 'p-1 border-r border-gray-200';
-  const tabClass = (tab: string) => `px-6 py-2 text-sm font-medium flex items-center gap-2 cursor-pointer border-b-2 transition-colors ${activeTab === tab ? 'border-blue-600 text-blue-600 bg-blue-50' : 'border-transparent text-gray-500 hover:text-gray-700'}`;
+  const cardClass = 'bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-sm overflow-hidden';
+  const tableInputClass = 'w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 !rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white dark:focus:bg-gray-700 dark:text-white shadow-sm transition-all';
+  const tdBaseClass = 'p-1 border-r border-gray-200 dark:border-gray-700';
+  const tabClass = (tab: string) => `px-6 py-2 text-sm font-medium flex items-center gap-2 cursor-pointer border-b-2 transition-colors ${activeTab === tab ? 'border-blue-600 text-blue-600 bg-blue-50 dark:bg-blue-900/30' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`;
 
   const filteredProducts = MOCK_PRODUCTS.filter(p => 
     p.item_code.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -247,31 +247,31 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
   );
 
   return (
-    <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${isAnimating ? 'opacity-100' : 'opacity-0'}`} onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}>
+    <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 backdrop-blur-sm transition-opacity duration-300 ${isAnimating ? 'opacity-100' : 'opacity-0'}`} onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}>
       {toast && <Toast message={toast.message} onClose={() => setToast(null)} />}
 
       {/* Product Search Modal - ตาม UI ที่ต้องการ */}
       {isProductModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30" onClick={() => setIsProductModalOpen(false)}>
-          <div className="bg-white rounded-xl shadow-2xl w-[900px] max-h-[85vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-[900px] max-h-[85vh] overflow-hidden" onClick={e => e.stopPropagation()}>
             {/* Header */}
-            <div className="p-6 border-b border-gray-200">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
               <div className="flex justify-between items-start">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-800">ค้นหาสินค้า</h2>
-                  <p className="text-sm text-cyan-600 mt-1">กรอกข้อมูลเพื่อค้นหาสินค้าในระบบ</p>
+                  <h2 className="text-2xl font-bold text-gray-800 dark:text-white">ค้นหาสินค้า</h2>
+                  <p className="text-sm text-cyan-600 dark:text-cyan-400 mt-1">กรอกข้อมูลเพื่อค้นหาสินค้าในระบบ</p>
                 </div>
-                <button onClick={() => setIsProductModalOpen(false)} className="text-gray-400 hover:text-gray-600 text-xl">×</button>
+                <button onClick={() => setIsProductModalOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xl">×</button>
               </div>
               
               {/* Search Input */}
               <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">รหัสสินค้าหรือชื่อสินค้า</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">รหัสสินค้าหรือชื่อสินค้า</label>
                 <input 
                   value={searchTerm} 
                   onChange={(e) => setSearchTerm(e.target.value)} 
                   placeholder="รหัสสินค้าหรือชื่อสินค้า" 
-                  className="w-full h-10 px-4 border border-gray-300 rounded-full focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200" 
+                  className="w-full h-10 px-4 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800" 
                   autoFocus 
                 />
               </div>
@@ -280,8 +280,8 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
             {/* Table */}
             <div className="max-h-[450px] overflow-auto">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50 sticky top-0 border-b border-gray-200">
-                  <tr className="text-gray-600">
+                <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 border-b border-gray-200 dark:border-gray-700">
+                  <tr className="text-gray-600 dark:text-gray-300">
                     <th className="px-3 py-3 text-center font-medium w-20">เลือก</th>
                     <th className="px-3 py-3 text-left font-medium">รหัสสินค้า</th>
                     <th className="px-3 py-3 text-left font-medium">ชื่อสินค้า</th>
@@ -292,9 +292,9 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                     <th className="px-3 py-3 text-right font-medium">ราคา/หน่วย</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="bg-white dark:bg-gray-900">
                   {filteredProducts.map((p) => (
-                    <tr key={p.item_id} className="border-b border-gray-100 hover:bg-gray-50">
+                    <tr key={p.item_id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
                       <td className="px-3 py-2.5 text-center">
                         <button 
                           type="button"
@@ -305,13 +305,13 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                           เลือก
                         </button>
                       </td>
-                      <td className="px-3 py-2.5 font-medium text-gray-800">{p.item_code}</td>
-                      <td className="px-3 py-2.5 text-gray-700">{p.item_name}</td>
-                      <td className="px-3 py-2.5 text-gray-500 text-xs">{p.description}</td>
-                      <td className="px-3 py-2.5 text-center text-gray-600">{p.warehouse}</td>
-                      <td className="px-3 py-2.5 text-center text-gray-600">{p.location}</td>
-                      <td className="px-3 py-2.5 text-center text-gray-600">{p.uom}</td>
-                      <td className="px-3 py-2.5 text-right font-medium text-cyan-600">{p.est_unit_price.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท</td>
+                      <td className="px-3 py-2.5 font-medium text-gray-800 dark:text-gray-200">{p.item_code}</td>
+                      <td className="px-3 py-2.5 text-gray-700 dark:text-gray-300">{p.item_name}</td>
+                      <td className="px-3 py-2.5 text-gray-500 dark:text-gray-400 text-xs">{p.description}</td>
+                      <td className="px-3 py-2.5 text-center text-gray-600 dark:text-gray-400">{p.warehouse}</td>
+                      <td className="px-3 py-2.5 text-center text-gray-600 dark:text-gray-400">{p.location}</td>
+                      <td className="px-3 py-2.5 text-center text-gray-600 dark:text-gray-400">{p.uom}</td>
+                      <td className="px-3 py-2.5 text-right font-medium text-cyan-600 dark:text-cyan-400">{p.est_unit_price.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท</td>
                     </tr>
                   ))}
                 </tbody>
@@ -322,7 +322,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
       )}
 
       <div className={`
-        flex flex-col overflow-hidden bg-white shadow-2xl border-4 border-blue-600 transition-all duration-300 ease-out origin-center
+        flex flex-col overflow-hidden bg-white dark:bg-gray-900 shadow-2xl border-4 border-blue-600 dark:border-blue-500 transition-all duration-300 ease-out origin-center
         ${isMaximized 
           ? 'w-full h-full rounded-none border-0 scale-100' 
           : 'w-[120vw] h-[120vh] scale-[0.8] rounded-2xl'
@@ -343,12 +343,12 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
         </div>
 
         {/* Form Content */}
-        <form className="flex-1 overflow-auto bg-gray-100 p-1.5 space-y-1">
+        <form className="flex-1 overflow-auto bg-gray-100 dark:bg-gray-800 p-1.5 space-y-1">
           <div className={cardClass}><PRHeader register={register} setValue={setValue} /></div>
 
           {/* Info Bar - ตามรูปภาพต้นฉบับ */}
           <div className={cardClass}>
-            <div className="w-full overflow-x-auto border border-gray-300 shadow-sm bg-white">
+              <div className="w-full overflow-x-auto border border-gray-300 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-900">
               <table className="w-full min-w-[800px] text-xs border-collapse">
                 <thead className="bg-blue-600 text-white">
                   <tr>
@@ -361,17 +361,17 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 </thead>
                 <tbody>
                   <tr>
-                    <td className="px-2 py-1 border-r border-gray-300">
-                      <input type="date" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)} className="bg-gray-100 border border-gray-300 text-gray-700 px-2 py-0.5 rounded-sm w-full h-6 text-xs focus:outline-none focus:border-blue-500" />
+                    <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700">
+                      <input type="date" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)} className="bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-sm w-full h-6 text-xs focus:outline-none focus:border-blue-500" />
                     </td>
-                    <td className="px-2 py-1 border-r border-gray-300 text-center">
-                      <input type="number" value={creditDays} onChange={(e) => setCreditDays(parseInt(e.target.value) || 0)} className="bg-gray-100 border border-gray-300 text-gray-700 px-2 py-0.5 rounded-sm w-full h-6 text-xs text-center focus:outline-none focus:border-blue-500" />
+                    <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700 text-center">
+                      <input type="number" value={creditDays} onChange={(e) => setCreditDays(parseInt(e.target.value) || 0)} className="bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-sm w-full h-6 text-xs text-center focus:outline-none focus:border-blue-500" />
                     </td>
-                    <td className="px-2 py-1 border-r border-gray-300 font-bold">
-                      <input value={vendorQuoteNo} onChange={(e) => setVendorQuoteNo(e.target.value)} className="bg-gray-100 border border-gray-300 text-gray-700 px-2 py-0.5 rounded-sm w-full h-6 text-xs focus:outline-none focus:border-blue-500" />
+                    <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700 font-bold">
+                      <input value={vendorQuoteNo} onChange={(e) => setVendorQuoteNo(e.target.value)} className="bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-sm w-full h-6 text-xs focus:outline-none focus:border-blue-500" />
                     </td>
-                    <td className="px-2 py-1 border-r border-gray-300 font-bold">
-                      <select value={shippingMethod} onChange={(e) => setShippingMethod(e.target.value)} className="bg-white border border-gray-300 text-gray-700 px-2 py-0.5 rounded-sm w-full h-6 text-xs focus:outline-none focus:border-blue-500">
+                    <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700 font-bold">
+                      <select value={shippingMethod} onChange={(e) => setShippingMethod(e.target.value)} className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-sm w-full h-6 text-xs focus:outline-none focus:border-blue-500">
                         <option value="รถยนต์">รถยนต์</option>
                         <option value="รถบรรทุก">รถบรรทุก</option>
                         <option value="ไปรษณีย์">ไปรษณีย์</option>
@@ -379,7 +379,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                       </select>
                     </td>
                     <td className="px-2 py-1 font-bold">
-                      <input value={requesterName} onChange={(e) => setRequesterName(e.target.value)} className="bg-gray-100 border border-gray-300 text-gray-700 px-2 py-0.5 rounded-sm w-full h-6 text-xs focus:outline-none focus:border-blue-500" />
+                      <input value={requesterName} onChange={(e) => setRequesterName(e.target.value)} className="bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-sm w-full h-6 text-xs focus:outline-none focus:border-blue-500" />
                     </td>
                   </tr>
                 </tbody>
@@ -389,8 +389,8 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
           {/* Item Table - ตามรูปภาพต้นฉบับ พร้อม คลัง, ที่เก็บ, ส่วนลด */}
           <div className={cardClass}>
-            <div className="px-4 py-4 overflow-x-auto bg-blue-50 min-h-[250px]">
-              <table className="w-full min-w-[1200px] border-collapse bg-white shadow-sm text-sm border border-gray-200">
+            <div className="px-4 py-4 overflow-x-auto bg-blue-50 dark:bg-gray-800 min-h-[250px]">
+              <table className="w-full min-w-[1200px] border-collapse bg-white dark:bg-gray-900 shadow-sm text-sm border border-gray-200 dark:border-gray-700">
                 <thead className="bg-blue-600 text-white text-xs">
                   <tr>
                     <th className="p-2 w-12 text-center border-r border-blue-600/50 sticky left-0 z-10 bg-blue-700">No.</th>
@@ -411,8 +411,8 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                     const lineDiscount = line.discount || 0;
                     const lineTotal = (line.quantity * line.est_unit_price) - lineDiscount;
                     return (
-                      <tr key={index} className="border-b border-gray-200 hover:bg-blue-50">
-                        <td className="p-1 text-center bg-slate-200 text-slate-700 font-bold border-r border-gray-300 sticky left-0 z-10">{index + 1}</td>
+                      <tr key={index} className="border-b border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-800">
+                        <td className="p-1 text-center bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold border-r border-gray-300 dark:border-gray-600 sticky left-0 z-10">{index + 1}</td>
                         <td className={tdBaseClass}><input value={line.item_code} onChange={(e) => updateLine(index, 'item_code', e.target.value)} className={`${tableInputClass} text-center`} /></td>
                         <td className={tdBaseClass}><input value={line.item_name} onChange={(e) => updateLine(index, 'item_name', e.target.value)} className={tableInputClass} /></td>
                         <td className={tdBaseClass}><input value={line.warehouse || ''} onChange={(e) => updateLine(index, 'warehouse', e.target.value)} className={`${tableInputClass} text-center`} /></td>
@@ -421,7 +421,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                         <td className={tdBaseClass}><input type="number" value={line.quantity || ''} onChange={(e) => updateLine(index, 'quantity', parseFloat(e.target.value) || 0)} className={`${tableInputClass} text-center`} /></td>
                         <td className={tdBaseClass}><input type="number" value={line.est_unit_price || ''} onChange={(e) => updateLine(index, 'est_unit_price', parseFloat(e.target.value) || 0)} className={`${tableInputClass} text-center`} /></td>
                         <td className={tdBaseClass}><input type="number" value={line.discount || ''} onChange={(e) => updateLine(index, 'discount', parseFloat(e.target.value) || 0)} className={`${tableInputClass} text-center`} /></td>
-                        <td className={`${tdBaseClass} text-right font-bold pr-2 text-gray-700`}>{lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                        <td className={`${tdBaseClass} text-right font-bold pr-2 text-gray-700 dark:text-gray-300`}>{lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                         <td className="p-1">
                           <div className="flex justify-center items-center space-x-1 h-8">
                             <button type="button" className="text-green-600 hover:text-green-800" title="ค้นหา" onClick={() => openProductSearch(index)}><Search size={16} /></button>
@@ -434,41 +434,41 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                   })}
                 </tbody>
               </table>
-              <button type="button" onClick={addLine} className="mt-2 flex items-center px-3 py-1.5 bg-gray-100 text-gray-700 rounded-sm hover:bg-gray-200 text-xs font-bold border border-gray-300"><Plus size={14} className="mr-1" /> เพิ่มรายการ</button>
+              <button type="button" onClick={addLine} className="mt-2 flex items-center px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-sm hover:bg-gray-200 dark:hover:bg-gray-600 text-xs font-bold border border-gray-300 dark:border-gray-600"><Plus size={14} className="mr-1" /> เพิ่มรายการ</button>
             </div>
           </div>
 
           {/* Summary */}
           <div className={cardClass}>
-            <div className="p-3 bg-white">
+            <div className="p-3 bg-white dark:bg-gray-900">
               <div className="flex justify-end">
                 <div className="w-96 space-y-2 text-sm">
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-600">รวม</span>
-                    <input value={subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })} readOnly className="w-28 h-7 px-2 text-right bg-yellow-50 border border-yellow-300 rounded" />
+                    <span className="text-gray-600 dark:text-gray-400">รวม</span>
+                    <input value={subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })} readOnly className="w-28 h-7 px-2 text-right bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-600 rounded text-gray-900 dark:text-yellow-200" />
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-600">ส่วนลด</span>
+                    <span className="text-gray-600 dark:text-gray-400">ส่วนลด</span>
                     <div className="flex items-center gap-2">
-                      <input type="number" value={discountPercent} onChange={(e) => setDiscountPercent(parseFloat(e.target.value) || 0)} className="w-16 h-7 px-2 text-center border border-gray-300 rounded" />
-                      <span>%</span>
-                      <span>=</span>
-                      <input value={discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} readOnly className="w-24 h-7 px-2 text-right bg-gray-100 border border-gray-300 rounded" />
+                      <input type="number" value={discountPercent} onChange={(e) => setDiscountPercent(parseFloat(e.target.value) || 0)} className="w-16 h-7 px-2 text-center border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white" />
+                      <span className="text-gray-600 dark:text-gray-400">%</span>
+                      <span className="text-gray-600 dark:text-gray-400">=</span>
+                      <input value={discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} readOnly className="w-24 h-7 px-2 text-right bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white" />
                     </div>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-600">ภาษี VAT</span>
+                    <span className="text-gray-600 dark:text-gray-400">ภาษี VAT</span>
                     <div className="flex items-center gap-2">
-                      <input value={afterDiscount.toLocaleString(undefined, { minimumFractionDigits: 2 })} readOnly className="w-20 h-7 px-2 text-right bg-gray-100 border border-gray-300 rounded text-xs" />
-                      <span className="text-xs">ภาษี (%)</span>
-                      <input type="number" value={vatRate} onChange={(e) => setVatRate(parseFloat(e.target.value) || 0)} className="w-12 h-7 px-1 text-center border border-gray-300 rounded" />
-                      <span>=</span>
-                      <input value={vatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} readOnly className="w-24 h-7 px-2 text-right bg-gray-100 border border-gray-300 rounded" />
+                      <input value={afterDiscount.toLocaleString(undefined, { minimumFractionDigits: 2 })} readOnly className="w-20 h-7 px-2 text-right bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-xs text-gray-900 dark:text-white" />
+                      <span className="text-xs text-gray-600 dark:text-gray-400">ภาษี (%)</span>
+                      <input type="number" value={vatRate} onChange={(e) => setVatRate(parseFloat(e.target.value) || 0)} className="w-12 h-7 px-1 text-center border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white" />
+                      <span className="text-gray-600 dark:text-gray-400">=</span>
+                      <input value={vatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} readOnly className="w-24 h-7 px-2 text-right bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white" />
                     </div>
                   </div>
-                  <div className="flex justify-between items-center pt-2 border-t border-gray-300">
-                    <span className="font-bold text-gray-700">รวมทั้งสิ้น</span>
-                    <input value={grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })} readOnly className="w-28 h-7 px-2 text-right font-bold bg-yellow-100 border border-yellow-400 rounded" />
+                  <div className="flex justify-between items-center pt-2 border-t border-gray-300 dark:border-gray-600">
+                    <span className="font-bold text-gray-700 dark:text-gray-300">รวมทั้งสิ้น</span>
+                    <input value={grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })} readOnly className="w-28 h-7 px-2 text-right font-bold bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-400 dark:border-yellow-600 rounded text-gray-900 dark:text-yellow-200" />
                   </div>
                 </div>
               </div>
@@ -477,21 +477,21 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
           {/* Tabs */}
           <div className={cardClass}>
-            <div className="flex border-b border-gray-300 bg-gray-50">
+            <div className="flex border-b border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
               <div className={tabClass('detail')} onClick={() => setActiveTab('detail')}><FileBox size={14} /> Detail</div>
               <div className={tabClass('more')} onClick={() => setActiveTab('more')}><MoreHorizontal size={14} /> More</div>
               <div className={tabClass('rate')} onClick={() => setActiveTab('rate')}><Flame size={14} /> Rate</div>
               <div className={tabClass('description')} onClick={() => setActiveTab('description')}><FileBarChart size={14} /> Description</div>
               <div className={tabClass('history')} onClick={() => setActiveTab('history')}><HistoryIcon size={14} /> History</div>
             </div>
-            <div className="p-3 min-h-[80px]">
+            <div className="p-3 min-h-[80px] dark:bg-gray-900">
               {activeTab === 'detail' && (
-                <textarea value={remarks} onChange={(e) => setRemarks(e.target.value)} placeholder="กรอกหมายเหตุเพิ่มเติม..." className="w-full h-20 px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:border-blue-500 resize-none" />
+                <textarea value={remarks} onChange={(e) => setRemarks(e.target.value)} placeholder="กรอกหมายเหตุเพิ่มเติม..." className="w-full h-20 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 resize-none" />
               )}
-              {activeTab === 'more' && <div className="text-gray-500 text-sm">ข้อมูลเพิ่มเติม...</div>}
-              {activeTab === 'rate' && <div className="text-gray-500 text-sm">อัตราแลกเปลี่ยน / ราคา...</div>}
-              {activeTab === 'description' && <div className="text-gray-500 text-sm">รายละเอียดเอกสาร...</div>}
-              {activeTab === 'history' && <div className="text-gray-500 text-sm">ประวัติการแก้ไข...</div>}
+              {activeTab === 'more' && <div className="text-gray-500 dark:text-gray-400 text-sm">ข้อมูลเพิ่มเติม...</div>}
+              {activeTab === 'rate' && <div className="text-gray-500 dark:text-gray-400 text-sm">อัตราแลกเปลี่ยน / ราคา...</div>}
+              {activeTab === 'description' && <div className="text-gray-500 dark:text-gray-400 text-sm">รายละเอียดเอกสาร...</div>}
+              {activeTab === 'history' && <div className="text-gray-500 dark:text-gray-400 text-sm">ประวัติการแก้ไข...</div>}
             </div>
           </div>
         </form>

@@ -26,9 +26,16 @@ import RolesDashboard from './pages/roles/RolesDashboard';
 // IT Governance Pages
 import ITGCDashboard from './pages/it-governance/ITGCDashboard';
 
-// Master Data Pages
-import VendorList from './pages/master-data/VendorList';
-import VendorForm from './pages/master-data/VendorForm';
+// Master Data Pages - Import from module index files
+import {
+    MasterDataDashboard,
+    VendorForm,
+    BranchForm,
+    WarehouseForm,
+    ProductCategoryForm,
+    ItemTypeForm,
+    UnitForm
+} from './pages/master-data';
 
 // Auth Pages
 import LoginPage from './pages/auth/LoginPage';
@@ -87,8 +94,13 @@ function App() {
         <Route path="it-governance/dashboard" element={<ITGCDashboard />} />
 
         {/* Master Data - Implemented */}
-        <Route path="master-data" element={<VendorList />} />
+        <Route path="master-data" element={<MasterDataDashboard />} />
         <Route path="master-data/vendor" element={<VendorForm />} />
+        <Route path="master-data/branch" element={<BranchForm />} />
+        <Route path="master-data/warehouse" element={<WarehouseForm />} />
+        <Route path="master-data/product-category" element={<ProductCategoryForm />} />
+        <Route path="master-data/item-type" element={<ItemTypeForm />} />
+        <Route path="master-data/unit" element={<UnitForm />} />
 
         {/* ==================== PLACEHOLDER ROUTES ==================== */}
         {/* These routes render a "Coming Soon" placeholder */}

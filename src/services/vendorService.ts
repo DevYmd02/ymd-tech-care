@@ -4,6 +4,7 @@
  * @usage import { vendorService } from '@/services/vendorService';
  */
 
+
 import api from './api';
 import type {
     VendorMaster,
@@ -42,7 +43,7 @@ export const vendorService = {
      */
     getList: async (params?: VendorListParams): Promise<VendorListResponse> => {
         try {
-            const response = await api.get<VendorListResponse>('/vendor', { params });
+            const response = await api.get<VendorListResponse>('/vendors', { params });
             return response.data;
         } catch (error) {
             logger.error('vendorService.getList error:', error);
@@ -62,7 +63,7 @@ export const vendorService = {
      */
     getById: async (vendorId: string): Promise<VendorMaster | null> => {
         try {
-            const response = await api.get<VendorMaster>(`/vendor/${vendorId}`);
+            const response = await api.get<VendorMaster>(`/vendors/${vendorId}`);
             return response.data;
         } catch (error) {
             logger.error('vendorService.getById error:', error);
@@ -76,7 +77,7 @@ export const vendorService = {
      */
     getDropdown: async (): Promise<VendorDropdownItem[]> => {
         try {
-            const response = await api.get<VendorDropdownItem[]>('/vendor/dropdown');
+            const response = await api.get<VendorDropdownItem[]>('/vendors/dropdown');
             return response.data;
         } catch (error) {
             logger.error('vendorService.getDropdown error:', error);
@@ -92,7 +93,7 @@ export const vendorService = {
      */
     create: async (data: VendorCreateRequest): Promise<VendorResponse> => {
         try {
-            const response = await api.post<VendorResponse>('/vendor', data);
+            const response = await api.post<VendorResponse>('/vendors', data);
             return response.data;
         } catch (error) {
             logger.error('vendorService.create error:', error);
@@ -106,7 +107,7 @@ export const vendorService = {
      */
     update: async (vendorId: string, data: Partial<VendorCreateRequest>): Promise<VendorResponse> => {
         try {
-            const response = await api.put<VendorResponse>(`/vendor/${vendorId}`, data);
+            const response = await api.put<VendorResponse>(`/vendors/${vendorId}`, data);
             return response.data;
         } catch (error) {
             logger.error('vendorService.update error:', error);
@@ -120,7 +121,7 @@ export const vendorService = {
      */
     delete: async (vendorId: string): Promise<{ success: boolean; message?: string }> => {
         try {
-            await api.delete(`/vendor/${vendorId}`);
+            await api.delete(`/vendors/${vendorId}`);
             return { success: true };
         } catch (error) {
             logger.error('vendorService.delete error:', error);
@@ -136,7 +137,7 @@ export const vendorService = {
      */
     block: async (vendorId: string, remark?: string): Promise<VendorResponse> => {
         try {
-            const response = await api.post<VendorResponse>(`/vendor/${vendorId}/block`, { remark });
+            const response = await api.post<VendorResponse>(`/vendors/${vendorId}/block`, { remark });
             return response.data;
         } catch (error) {
             logger.error('vendorService.block error:', error);
@@ -150,7 +151,7 @@ export const vendorService = {
      */
     unblock: async (vendorId: string): Promise<VendorResponse> => {
         try {
-            const response = await api.post<VendorResponse>(`/vendor/${vendorId}/unblock`);
+            const response = await api.post<VendorResponse>(`/vendors/${vendorId}/unblock`);
             return response.data;
         } catch (error) {
             logger.error('vendorService.unblock error:', error);
@@ -164,7 +165,7 @@ export const vendorService = {
      */
     setOnHold: async (vendorId: string, onHold: boolean): Promise<VendorResponse> => {
         try {
-            const response = await api.post<VendorResponse>(`/vendor/${vendorId}/hold`, { on_hold: onHold });
+            const response = await api.post<VendorResponse>(`/vendors/${vendorId}/hold`, { on_hold: onHold });
             return response.data;
         } catch (error) {
             logger.error('vendorService.setOnHold error:', error);

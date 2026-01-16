@@ -16,7 +16,7 @@ import { PRFormModal } from './pr-form';
 import { ApprovalModal } from '../../components/shared/ApprovalModal';
 import { formatThaiDate } from '../../utils/dateUtils';
 import { styles } from '../../constants';
-import { MOCK_COST_CENTERS } from '../../mocks';
+import { MOCK_COST_CENTERS } from '../../__mocks__';
 import { prService } from '../../services/prService';
 import type { PRHeader, PRStatus } from '../../types/pr-types';
 
