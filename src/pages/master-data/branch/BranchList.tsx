@@ -1,139 +1,128 @@
 /**
- * @file VendorList.tsx
- * @description หน้ารายการข้อมูลเจ้าหนี้ (Vendor Master Data List)
- * @purpose แสดงรายการเจ้าหนี้ในรูปแบบตาราง พร้อมค้นหา กรอง และจัดการข้อมูล
+ * @file BranchList.tsx
+ * @description หน้ารายการข้อมูลสาขา (Branch Master Data List)
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { 
     Plus, 
     Search, 
     Edit2, 
     Trash2, 
-    Database,
+    Building2,
     ChevronLeft,
     ChevronRight,
     ChevronsLeft,
     ChevronsRight,
-    Filter,
-    RefreshCw,
-    AlertCircle
+    RefreshCw
 } from 'lucide-react';
-import { styles } from '../../constants';
-import { VendorFormModal } from './VendorFormModal';
-import { vendorService } from '../../services/vendorService';
-import type { VendorListItem, VendorStatus, VendorListParams } from '../../types/vendor-types';
+import { styles } from '../../../constants';
+import { BranchFormModal } from './BranchFormModal';
+import { mockBranches } from '../../../mocks/masterDataMocks';
+import type { BranchListItem } from '../../../types/master-data-types';
 
 // ====================================================================================
 // COMPONENT
 // ====================================================================================
 
-export default function VendorList() {
-    const navigate = useNavigate();
-    
+export default function BranchList() {
     // ==================== STATE ====================
-    const [vendors, setVendors] = useState<VendorListItem[]>([]);
+    const [branches, setBranches] = useState<BranchListItem[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState<'ALL' | VendorStatus>('ALL');
+    const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
-    const [totalItems, setTotalItems] = useState(0);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingId, setEditingId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const isFirstRender = useRef(true);
+    const prevFilters = useRef({ statusFilter, searchTerm, rowsPerPage });
 
-    // ==================== API CALLS ====================
-    
-    const fetchVendors = useCallback(async () => {
+    // ==================== DATA FETCHING ====================
+    const fetchData = useCallback(() => {
         setIsLoading(true);
-        setError(null);
-        
-        try {
-            const params: VendorListParams = {
-                page: currentPage,
-                limit: rowsPerPage,
-                status: statusFilter !== 'ALL' ? statusFilter : undefined,
-                search: searchTerm || undefined,
-            };
+        // Mock API call
+        setTimeout(() => {
+            let filtered = [...mockBranches];
             
-            const response = await vendorService.getList(params);
-            setVendors(response.data);
-            setTotalItems(response.total);
-        } catch {
-            setError('ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่อีกครั้ง');
-            setVendors([]);
-        } finally {
+            // Filter by status
+            if (statusFilter !== 'ALL') {
+                filtered = filtered.filter(b => 
+                    statusFilter === 'ACTIVE' ? b.is_active : !b.is_active
+                );
+            }
+            
+            // Filter by search
+            if (searchTerm) {
+                const term = searchTerm.toLowerCase();
+                filtered = filtered.filter(b => 
+                    b.branch_code.toLowerCase().includes(term) ||
+                    b.branch_name.toLowerCase().includes(term)
+                );
+            }
+            
+            setBranches(filtered);
             setIsLoading(false);
+        }, 300);
+    }, [statusFilter, searchTerm]);
+
+    useEffect(() => {
+        fetchData();
+        // Reset page when filters change (not on first render)
+        if (!isFirstRender.current) {
+            const filtersChanged = 
+                prevFilters.current.statusFilter !== statusFilter ||
+                prevFilters.current.searchTerm !== searchTerm ||
+                prevFilters.current.rowsPerPage !== rowsPerPage;
+            if (filtersChanged) {
+                setCurrentPage(1);
+            }
         }
-    }, [currentPage, rowsPerPage, statusFilter, searchTerm]);
-
-    // Fetch on mount and when filters change
-    useEffect(() => {
-        fetchVendors();
-    }, [fetchVendors]);
-
-    // Reset page when filters change
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [statusFilter, searchTerm, rowsPerPage]);
+        isFirstRender.current = false;
+        prevFilters.current = { statusFilter, searchTerm, rowsPerPage };
+    }, [fetchData, statusFilter, searchTerm, rowsPerPage]);
 
     // ==================== PAGINATION ====================
+    const totalItems = branches.length;
     const totalPages = Math.ceil(totalItems / rowsPerPage);
     const startIndex = (currentPage - 1) * rowsPerPage;
+    const paginatedData = branches.slice(startIndex, startIndex + rowsPerPage);
 
     // ==================== HANDLERS ====================
     const handleCreateNew = () => {
+        setEditingId(null);
         setIsModalOpen(true);
     };
 
-    const handleEdit = (vendorId: string) => {
-        navigate(`/master-data/vendor?id=${vendorId}`);
+    const handleEdit = (id: string) => {
+        setEditingId(id);
+        setIsModalOpen(true);
     };
 
-    const handleDelete = async (vendorId: string) => {
-        if (confirm('คุณต้องการลบข้อมูลเจ้าหนี้นี้หรือไม่?')) {
-            const result = await vendorService.delete(vendorId);
-            if (result.success) {
-                fetchVendors(); // Refresh list
-            } else {
-                alert(result.message || 'เกิดข้อผิดพลาดในการลบ');
-            }
+    const handleDelete = (id: string) => {
+        if (confirm('คุณต้องการลบข้อมูลสาขานี้หรือไม่?')) {
+            // Mock delete
+            console.log('Delete branch:', id);
+            fetchData();
         }
-    };
-
-    const handleRefresh = () => {
-        fetchVendors();
     };
 
     const handleModalClose = () => {
         setIsModalOpen(false);
-        fetchVendors(); // Refresh after modal close
+        setEditingId(null);
+        fetchData();
     };
 
-    const getStatusBadge = (status: VendorStatus) => {
-        const badges: Record<VendorStatus, string> = {
-            ACTIVE: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-            INACTIVE: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
-            BLOCKED: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-            ON_HOLD: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-        };
-        const labels: Record<VendorStatus, string> = {
-            ACTIVE: 'Active',
-            INACTIVE: 'Inactive',
-            BLOCKED: 'Blocked',
-            ON_HOLD: 'On Hold'
-        };
-        const dotColors: Record<VendorStatus, string> = {
-            ACTIVE: 'bg-green-500',
-            INACTIVE: 'bg-gray-500',
-            BLOCKED: 'bg-red-500',
-            ON_HOLD: 'bg-yellow-500'
-        };
-        return (
-            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ${badges[status]}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${dotColors[status]}`}></span>
-                {labels[status]}
+    const getStatusBadge = (isActive: boolean) => {
+        return isActive ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                ใช้งาน
+            </span>
+        ) : (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                <span className="w-1.5 h-1.5 rounded-full bg-gray-500"></span>
+                ไม่ใช้งาน
             </span>
         );
     };
@@ -146,16 +135,16 @@ export default function VendorList() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                        <Database className="text-blue-600" />
-                        ข้อมูลเจ้าหนี้ (Vendor Master)
+                        <Building2 className="text-blue-600" />
+                        กำหนดรหัสสาขา (Branch)
                     </h1>
                     <p className="text-gray-500 dark:text-gray-400 mt-1">
-                        จัดการข้อมูลผู้ขายและคู่ค้าทั้งหมด
+                        จัดการข้อมูลสาขาทั้งหมด
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
                     <button
-                        onClick={handleRefresh}
+                        onClick={fetchData}
                         className="p-2 text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                         title="รีเฟรช"
                     >
@@ -166,7 +155,7 @@ export default function VendorList() {
                         className={`${styles.btnPrimary} flex items-center gap-2 whitespace-nowrap`}
                     >
                         <Plus size={20} />
-                        เพิ่มเจ้าหนี้ใหม่
+                        เพิ่มสาขาใหม่
                     </button>
                 </div>
             </div>
@@ -178,42 +167,23 @@ export default function VendorList() {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                         <input
                             type="text"
-                            placeholder="ค้นหาชื่อ, รหัส, หรือเลขภาษี..."
+                            placeholder="ค้นหารหัสหรือชื่อสาขา..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className={`${styles.input} pl-10`}
                         />
                     </div>
-                    <div className="relative w-full md:w-48">
-                        <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                        <select
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value as 'ALL' | VendorStatus)}
-                            className={`${styles.inputSelect} pl-10`}
-                        >
-                            <option value="ALL">สถานะทั้งหมด</option>
-                            <option value="ACTIVE">Active</option>
-                            <option value="INACTIVE">Inactive</option>
-                            <option value="BLOCKED">Blocked</option>
-                            <option value="ON_HOLD">On Hold</option>
-                        </select>
-                    </div>
+                    <select
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value as 'ALL' | 'ACTIVE' | 'INACTIVE')}
+                        className={`${styles.inputSelect} w-full md:w-40`}
+                    >
+                        <option value="ALL">ทั้งหมด</option>
+                        <option value="ACTIVE">ใช้งาน</option>
+                        <option value="INACTIVE">ไม่ใช้งาน</option>
+                    </select>
                 </div>
             </div>
-
-            {/* Error Message */}
-            {error && (
-                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-center gap-3">
-                    <AlertCircle className="text-red-500" size={20} />
-                    <span className="text-red-700 dark:text-red-400">{error}</span>
-                    <button
-                        onClick={handleRefresh}
-                        className="ml-auto text-red-600 hover:text-red-700 font-medium"
-                    >
-                        ลองใหม่
-                    </button>
-                </div>
-            )}
 
             {/* Data Table */}
             <div className={styles.tableContainer}>
@@ -227,45 +197,36 @@ export default function VendorList() {
                     <table className="w-full">
                         <thead className={styles.tableHeader}>
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-200 uppercase tracking-wider">รหัส</th>
-                                <th className="px-6 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-200 uppercase tracking-wider">ชื่อเจ้าหนี้</th>
-                                <th className="px-6 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-200 uppercase tracking-wider hidden lg:table-cell">เลขผู้เสียภาษี</th>
-                                <th className="px-6 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-200 uppercase tracking-wider hidden md:table-cell">เบอร์โทรศัพท์</th>
+                                <th className="px-6 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-200 uppercase tracking-wider">รหัสสาขา</th>
+                                <th className="px-6 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-200 uppercase tracking-wider">ชื่อสาขา</th>
                                 <th className="px-6 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-200 uppercase tracking-wider">สถานะ</th>
                                 <th className="px-6 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-200 uppercase tracking-wider">จัดการ</th>
                             </tr>
                         </thead>
                         <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                            {vendors.length > 0 ? (
-                                vendors.map((vendor) => (
-                                    <tr key={vendor.vendor_id} className={styles.tableTr}>
+                            {paginatedData.length > 0 ? (
+                                paginatedData.map((item) => (
+                                    <tr key={item.branch_id} className={styles.tableTr}>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600 dark:text-blue-400">
-                                            {vendor.vendor_code}
+                                            {item.branch_code}
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <div className="text-sm font-medium text-gray-900 dark:text-white">{vendor.vendor_name}</div>
-                                            <div className="text-xs text-gray-500">{vendor.vendor_name_en}</div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 hidden lg:table-cell">
-                                            {vendor.tax_id || '-'}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">
-                                            {vendor.phone || '-'}
+                                        <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
+                                            {item.branch_name}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-center">
-                                            {getStatusBadge(vendor.status)}
+                                            {getStatusBadge(item.is_active)}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                                             <div className="flex items-center justify-center gap-2">
                                                 <button 
-                                                    onClick={() => handleEdit(vendor.vendor_id)}
+                                                    onClick={() => handleEdit(item.branch_id)}
                                                     className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                                                     title="แก้ไข"
                                                 >
                                                     <Edit2 size={18} />
                                                 </button>
                                                 <button 
-                                                    onClick={() => handleDelete(vendor.vendor_id)}
+                                                    onClick={() => handleDelete(item.branch_id)}
                                                     className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                                                     title="ลบ"
                                                 >
@@ -277,8 +238,8 @@ export default function VendorList() {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={6} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
-                                        {error ? 'เกิดข้อผิดพลาดในการโหลดข้อมูล' : 'ไม่พบข้อมูลเจ้าหนี้'}
+                                    <td colSpan={4} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                                        ไม่พบข้อมูลสาขา
                                     </td>
                                 </tr>
                             )}
@@ -287,8 +248,8 @@ export default function VendorList() {
                 </div>
                 )}
 
-                {/* ========== PAGINATION ========== */}
-                {!isLoading && vendors.length > 0 && (
+                {/* Pagination */}
+                {!isLoading && paginatedData.length > 0 && (
                 <div className="px-4 py-4 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                         <span>แสดง</span>
@@ -300,10 +261,8 @@ export default function VendorList() {
                             <option value={5}>5</option>
                             <option value={10}>10</option>
                             <option value={25}>25</option>
-                            <option value={50}>50</option>
                         </select>
-                        <span>รายการ</span>
-                        <span className="hidden sm:inline">| {startIndex + 1}-{Math.min(startIndex + rowsPerPage, totalItems)} จาก {totalItems}</span>
+                        <span>รายการ | {startIndex + 1}-{Math.min(startIndex + rowsPerPage, totalItems)} จาก {totalItems}</span>
                     </div>
 
                     <div className="flex items-center gap-1">
@@ -345,10 +304,11 @@ export default function VendorList() {
                 )}
             </div>
 
-            {/* Render Modal */}
-            <VendorFormModal 
+            {/* Modal */}
+            <BranchFormModal 
                 isOpen={isModalOpen} 
-                onClose={handleModalClose} 
+                onClose={handleModalClose}
+                editId={editingId}
             />
         </div>
     );

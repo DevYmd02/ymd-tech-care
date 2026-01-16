@@ -26,10 +26,10 @@ import {
     Check,
     Loader2
 } from 'lucide-react';
-import { styles } from '../../constants';
-import { vendorService } from '../../services/vendorService';
-import type { VendorFormData } from '../../types/vendor-types';
-import { initialVendorFormData, toVendorCreateRequest } from '../../types/vendor-types';
+import { styles } from '../../../constants';
+import { vendorService } from '../../../services/vendorService';
+import type { VendorFormData } from '../../../types/vendor-types';
+import { initialVendorFormData, toVendorCreateRequest } from '../../../types/vendor-types';
 
 // ====================================================================================
 // LOCAL TYPES

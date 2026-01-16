@@ -9,9 +9,9 @@ import {
     Home, ClipboardList, CreditCard, Settings, Phone, DollarSign, Building2, Check,
     Loader2
 } from 'lucide-react';
-import { vendorService } from '../../services/vendorService';
-import type { VendorFormData } from '../../types/vendor-types';
-import { toVendorCreateRequest } from '../../types/vendor-types';
+import { vendorService } from '../../../services/vendorService';
+import type { VendorFormData } from '../../../types/vendor-types';
+import { toVendorCreateRequest } from '../../../types/vendor-types';
 
 // ====================================================================================
 // LOCAL TYPES
@@ -39,7 +39,7 @@ const initialFormData: ModalFormData = {
     district: '',
     province: '',
     postalCode: '',
-    useAddressPP20: true,
+    useAddressPP20: false,
     contactAddressLine1: '',
     contactAddressLine2: '',
     contactSubDistrict: '',
