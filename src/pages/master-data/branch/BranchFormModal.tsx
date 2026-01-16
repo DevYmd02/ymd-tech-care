@@ -135,7 +135,6 @@ export function BranchFormModal({ isOpen, onClose, editId }: Props) {
                                     value={formData.branchCodeSearch}
                                     readOnly
                                     className={`${styles.input} bg-gray-100 dark:bg-gray-600`}
-                                    placeholder="ไม่ข้า"
                                 />
                             </div>
                             <div>
@@ -162,7 +161,6 @@ export function BranchFormModal({ isOpen, onClose, editId }: Props) {
                                         value={formData.branchCodeSearch}
                                         onChange={(e) => handleInputChange('branchCodeSearch', e.target.value)}
                                         className={styles.input}
-                                        placeholder="ไม่ข้า"
                                     />
                                     <button
                                         onClick={handleSearch}
@@ -175,7 +173,7 @@ export function BranchFormModal({ isOpen, onClose, editId }: Props) {
                             </div>
 
                             {/* Is Active Checkbox */}
-                            <div className="flex items-center pt-6">
+                            <div className="flex items-end pb-2">
                                 <label className="flex items-center gap-2 cursor-pointer">
                                     <input
                                         type="checkbox"
@@ -198,7 +196,6 @@ export function BranchFormModal({ isOpen, onClose, editId }: Props) {
                                 value={formData.branchName}
                                 onChange={(e) => handleInputChange('branchName', e.target.value)}
                                 className={styles.input}
-                                placeholder="กรอกชื่อสาขา"
                             />
                         </div>
                     </div>

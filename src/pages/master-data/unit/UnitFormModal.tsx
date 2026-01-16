@@ -82,7 +82,7 @@ export function UnitFormModal({ isOpen, onClose, editId }: Props) {
 
                     <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div><label className={styles.label}>โค้ดหน่วย</label><input type="text" value={formData.unitCodeSearch} readOnly className={`${styles.input} bg-gray-100 dark:bg-gray-600`} placeholder="ชิ้น/แท่ง/กิโลกรัม" /></div>
+                            <div><label className={styles.label}>โค้ดหน่วย</label><input type="text" value={formData.unitCodeSearch} readOnly className={`${styles.input} bg-gray-100 dark:bg-gray-600`} /></div>
                             <div><label className={styles.label}>ชื่อหน่วย</label><input type="text" value={formData.unitName} readOnly className={`${styles.input} bg-gray-100 dark:bg-gray-600`} /></div>
                         </div>
                     </div>
@@ -92,20 +92,20 @@ export function UnitFormModal({ isOpen, onClose, editId }: Props) {
                             <div>
                                 <label className={styles.label}>โค้ดหน่วย</label>
                                 <div className="flex gap-2">
-                                    <input type="text" value={formData.unitCodeSearch} onChange={(e) => handleInputChange('unitCodeSearch', e.target.value)} className={styles.input} placeholder="ชิ้น/แท่ง/กิโลกรัม" />
+                                    <input type="text" value={formData.unitCodeSearch} onChange={(e) => handleInputChange('unitCodeSearch', e.target.value)} className={styles.input} />
                                     <button onClick={handleSearch} disabled={isSearching} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"><Search size={18} /></button>
                                 </div>
                             </div>
                             <div>
                                 <label className={styles.label}>ชื่อหน่วย (EN)</label>
-                                <input type="text" value={formData.unitNameEn} onChange={(e) => handleInputChange('unitNameEn', e.target.value)} className={styles.input} placeholder="varchar(100)" />
+                                <input type="text" value={formData.unitNameEn} onChange={(e) => handleInputChange('unitNameEn', e.target.value)} className={styles.input} />
                             </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label className={styles.label}>ชื่อหน่วย</label>
-                                <input type="text" value={formData.unitName} onChange={(e) => handleInputChange('unitName', e.target.value)} className={styles.input} placeholder="varchar(100)" />
+                                <input type="text" value={formData.unitName} onChange={(e) => handleInputChange('unitName', e.target.value)} className={styles.input} />
                             </div>
                             <div></div>
                         </div>

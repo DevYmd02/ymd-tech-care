@@ -53,8 +53,10 @@
 import axios from 'axios';
 
 // สร้างตัวยิง API โดยดึง URL มาจาก .env
+// ตรวจสอบว่า URL มี /api หรือไม่ ถ้าไม่มีให้เติมเข้าไป
+const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL, // มันจะอ่านค่า http://localhost:3000 ให้เอง
+  baseURL: baseURL.endsWith('/api') ? baseURL : `${baseURL}/api`,
   headers: {
     'Content-Type': 'application/json',
   },

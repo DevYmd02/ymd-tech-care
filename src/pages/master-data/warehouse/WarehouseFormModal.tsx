@@ -134,7 +134,7 @@ export function WarehouseFormModal({ isOpen, onClose, editId }: Props) {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label className={styles.label}>รหัสคลังสินค้า</label>
-                                <input type="text" value={formData.warehouseCodeSearch} readOnly className={`${styles.input} bg-gray-100 dark:bg-gray-600`} placeholder="ไม่ข้า" />
+                                <input type="text" value={formData.warehouseCodeSearch} readOnly className={`${styles.input} bg-gray-100 dark:bg-gray-600`} />
                             </div>
                             <div>
                                 <label className={styles.label}>ชื่อคลังสินค้า</label>
@@ -155,7 +155,6 @@ export function WarehouseFormModal({ isOpen, onClose, editId }: Props) {
                                         value={formData.warehouseCodeSearch}
                                         onChange={(e) => handleInputChange('warehouseCodeSearch', e.target.value)}
                                         className={styles.input}
-                                        placeholder="ไม่ข้า"
                                     />
                                     <button
                                         onClick={handleSearch}
@@ -168,7 +167,7 @@ export function WarehouseFormModal({ isOpen, onClose, editId }: Props) {
                             </div>
 
                             {/* Is Active */}
-                            <div className="flex items-center pt-6">
+                            <div className="flex items-end pb-2">
                                 <label className="flex items-center gap-2 cursor-pointer">
                                     <input
                                         type="checkbox"
@@ -202,7 +201,6 @@ export function WarehouseFormModal({ isOpen, onClose, editId }: Props) {
                                         value={formData.branchName}
                                         readOnly
                                         className={`${styles.input} bg-gray-50 dark:bg-gray-700`}
-                                        placeholder="อ้างอิง org_branch.branch_id"
                                     />
                                     <button
                                         onClick={handleBranchSearch}
@@ -237,7 +235,6 @@ export function WarehouseFormModal({ isOpen, onClose, editId }: Props) {
                                 value={formData.address}
                                 onChange={(e) => handleInputChange('address', e.target.value)}
                                 className={`${styles.input} min-h-[80px]`}
-                                placeholder="ที่อยู่คลังสินค้า (ไม่บังคับ)"
                             />
                         </div>
                     </div>

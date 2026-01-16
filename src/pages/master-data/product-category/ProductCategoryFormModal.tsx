@@ -82,7 +82,7 @@ export function ProductCategoryFormModal({ isOpen, onClose, editId }: Props) {
 
                     <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div><label className={styles.label}>รหัสหมวดสินค้า</label><input type="text" value={formData.categoryCodeSearch} readOnly className={`${styles.input} bg-gray-100 dark:bg-gray-600`} placeholder="ไม่ข้า" /></div>
+                            <div><label className={styles.label}>รหัสหมวดสินค้า</label><input type="text" value={formData.categoryCodeSearch} readOnly className={`${styles.input} bg-gray-100 dark:bg-gray-600`} /></div>
                             <div><label className={styles.label}>ชื่อหมวด</label><input type="text" value={formData.categoryName} readOnly className={`${styles.input} bg-gray-100 dark:bg-gray-600`} /></div>
                         </div>
                     </div>
@@ -92,11 +92,11 @@ export function ProductCategoryFormModal({ isOpen, onClose, editId }: Props) {
                             <div>
                                 <label className={styles.label}>รหัสหมวดสินค้า</label>
                                 <div className="flex gap-2">
-                                    <input type="text" value={formData.categoryCodeSearch} onChange={(e) => handleInputChange('categoryCodeSearch', e.target.value)} className={styles.input} placeholder="ไม่ข้า" />
+                                    <input type="text" value={formData.categoryCodeSearch} onChange={(e) => handleInputChange('categoryCodeSearch', e.target.value)} className={styles.input} />
                                     <button onClick={handleSearch} disabled={isSearching} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"><Search size={18} /></button>
                                 </div>
                             </div>
-                            <div className="flex items-center pt-6">
+                            <div className="flex items-end pb-2">
                                 <label className="flex items-center gap-2 cursor-pointer">
                                     <input type="checkbox" checked={formData.isActive} onChange={(e) => handleInputChange('isActive', e.target.checked)} className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
                                     <span className="text-gray-700 dark:text-gray-300 font-medium">ใช้งานอยู่</span>

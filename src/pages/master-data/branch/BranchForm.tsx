@@ -146,7 +146,6 @@ export default function BranchForm() {
                                     value={formData.branchCodeSearch}
                                     onChange={(e) => handleInputChange('branchCodeSearch', e.target.value)}
                                     className={styles.inputFlex}
-                                    placeholder="varchar(20)"
                                 />
                                 <button
                                     onClick={handleFind}
@@ -158,7 +157,7 @@ export default function BranchForm() {
                         </div>
 
                         {/* Active Status */}
-                        <div className="flex items-center pt-0 sm:pt-6">
+                        <div className="flex items-end pb-1">
                             <label className="flex items-center gap-2 cursor-pointer">
                                 <input
                                     type="checkbox"
@@ -180,7 +179,6 @@ export default function BranchForm() {
                                 value={formData.branchName}
                                 onChange={(e) => handleInputChange('branchName', e.target.value)}
                                 className={styles.inputFlex}
-                                placeholder="varchar(100)"
                             />
                         </div>
                     </div>
