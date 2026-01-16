@@ -43,6 +43,10 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     this.setState({ errorInfo });
+    // Log error in development mode
+    if (import.meta.env.DEV) {
+      console.error('[ErrorBoundary] Caught error:', error, errorInfo);
+    }
     // TODO: Log to error monitoring service (e.g., Sentry)
     // logErrorToService(error, errorInfo);
   }

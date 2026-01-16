@@ -2,26 +2,19 @@
  * @file vendors.ts
  * @description Mock data สำหรับ Vendor (ผู้ขาย)
  * @purpose รวมข้อมูล mock ไว้ที่เดียวเพื่อง่ายต่อการจัดการและเปลี่ยนเป็น API
+ * @note ใช้ VendorSearchItem จาก vendor-types.ts เป็น single source of truth
  */
 
-// ====================================================================================
-// LEGACY INTERFACES - For backward compatibility
-// ====================================================================================
+import type { VendorSearchItem } from '../types/vendor-types';
 
-export interface Vendor {
-    code: string;
-    name: string;
-    address: string;
-    contact?: string;
-    phone?: string;
-    taxId?: string;
-}
+// Re-export for backward compatibility
+export type Vendor = VendorSearchItem;
 
 // ====================================================================================
 // MOCK DATA
 // ====================================================================================
 
-export const MOCK_VENDORS: Vendor[] = [
+export const MOCK_VENDORS: VendorSearchItem[] = [
     { 
         code: 'V001', 
         name: 'บริษัท ไอทีซัพพลาย จำกัด',
