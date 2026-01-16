@@ -2,16 +2,10 @@
  * @file vendorDropdown.ts
  * @description Mock data for vendor dropdown in PRHeader
  * @purpose Centralized vendor dropdown options for PR form
+ * @note ใช้ VendorDropdownItem จาก vendor-types.ts เป็น single source of truth
  */
 
-// ====================================================================================
-// LOCAL TYPES
-// ====================================================================================
-
-interface VendorDropdownItem {
-    vendor_code: string;
-    vendor_name: string;
-}
+import type { VendorDropdownItem } from '../types/vendor-types';
 
 // ====================================================================================
 // VENDOR DROPDOWN OPTIONS

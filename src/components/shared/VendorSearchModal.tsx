@@ -2,37 +2,39 @@
  * @file VendorSearchModal.tsx
  * @description Modal สำหรับค้นหาและเลือกผู้ขาย (Vendor)
  * @usage เรียกใช้งานจาก PRHeader.tsx เมื่อกดปุ่ม "..."
- * @refactored ใช้ SearchModal component และ centralized types
+ * @refactored ใช้ SearchModal component และ centralized types จาก vendor-types.ts
  */
 
 import React, { useState, useEffect } from 'react';
 import { SearchModal, type ColumnDef } from './SearchModal';
 import { vendorService } from '../../services/vendorService';
-import { LEGACY_VENDORS } from '../../mocks/vendors';
-import type { VendorDropdownItem } from '../../types/vendor-types';
+import type { VendorSearchItem } from '../../types/vendor-types';
 
-// Re-export Vendor type for backward compatibility
-export interface Vendor {
-    code: string;
-    name: string;
-    address: string;
-    contact?: string;
-    phone?: string;
-    taxId?: string;
-}
+// Re-export for backward compatibility
+export type Vendor = VendorSearchItem;
 
 /** Props ของ VendorSearchModal */
 interface Props {
-    isOpen: boolean;                    // สถานะเปิด/ปิด Modal
-    onClose: () => void;                // Callback เมื่อปิด Modal
-    onSelect: (vendor: Vendor) => void; // Callback เมื่อเลือกผู้ขาย
+    isOpen: boolean;                           // สถานะเปิด/ปิด Modal
+    onClose: () => void;                       // Callback เมื่อปิด Modal
+    onSelect: (vendor: VendorSearchItem) => void; // Callback เมื่อเลือกผู้ขาย
 }
+
+// ====================================================================================
+// MOCK DATA - Fallback เมื่อ API ไม่พร้อม
+// ====================================================================================
+
+const FALLBACK_VENDORS: VendorSearchItem[] = [
+    { code: 'V001', name: 'บริษัท ไอทีซัพพลาย จำกัด', address: '123 ถ.พระราม4 คลองเตย กทม.' },
+    { code: 'V002', name: 'บริษัท ออฟฟิศเมท จำกัด', address: '456 ถ.สุขุมวิท วัฒนา กทม.' },
+    { code: 'V003', name: 'บริษัท เทคโนโลยี โซลูชั่น จำกัด', address: '789 ถ.รัชดาภิเษก ห้วยขวาง กทม.' },
+];
 
 // ====================================================================================
 // COLUMN CONFIGURATION
 // ====================================================================================
 
-const vendorColumns: ColumnDef<Vendor>[] = [
+const vendorColumns: ColumnDef<VendorSearchItem>[] = [
     { key: 'action', header: 'เลือก', width: '80px', align: 'center' },
     {
         key: 'code', header: 'รหัสผู้ขาย', width: '100px', render: (v) => (
@@ -46,7 +48,7 @@ const vendorColumns: ColumnDef<Vendor>[] = [
     },
     {
         key: 'address', header: 'ที่อยู่', width: '1fr', render: (v) => (
-            <span className="text-xs text-gray-500 truncate">{v.address}</span>
+            <span className="text-xs text-gray-500 truncate">{v.address || '-'}</span>
         )
     },
 ];
@@ -56,38 +58,54 @@ const vendorColumns: ColumnDef<Vendor>[] = [
 // ====================================================================================
 
 export const VendorSearchModal: React.FC<Props> = ({ isOpen, onClose, onSelect }) => {
-    const [vendors, setVendors] = useState<Vendor[]>(LEGACY_VENDORS);
+    const [vendors, setVendors] = useState<VendorSearchItem[]>(FALLBACK_VENDORS);
     const [isLoading, setIsLoading] = useState(false);
 
     // Fetch vendors when modal opens - fallback to mock if API fails
     useEffect(() => {
-        if (isOpen) {
-            setIsLoading(true);
-            vendorService.getDropdown()
-                .then((data: VendorDropdownItem[]) => {
-                    if (data.length > 0) {
-                        // Use API data if available
-                        const apiVendors: Vendor[] = data.map(v => ({
-                            code: v.vendor_code,
-                            name: v.vendor_name,
-                            address: '',
-                        }));
-                        setVendors(apiVendors);
-                    } else {
-                        // Fallback to mock data
-                        setVendors(LEGACY_VENDORS);
-                    }
-                })
-                .catch(() => {
-                    // Fallback to mock data on error
-                    setVendors(LEGACY_VENDORS);
-                })
-                .finally(() => setIsLoading(false));
-        }
+        if (!isOpen) return;
+
+        let isMounted = true;
+
+        const fetchVendors = async () => {
+            try {
+                const data = await vendorService.getDropdown();
+                if (!isMounted) return;
+
+                if (data.length > 0) {
+                    // Transform API data to VendorSearchItem format
+                    const apiVendors: VendorSearchItem[] = data.map(v => ({
+                        code: v.vendor_code,
+                        name: v.vendor_name,
+                        address: '',
+                    }));
+                    setVendors(apiVendors);
+                } else {
+                    // Fallback to mock data
+                    setVendors(FALLBACK_VENDORS);
+                }
+            } catch {
+                // Fallback to mock data on error
+                if (isMounted) {
+                    setVendors(FALLBACK_VENDORS);
+                }
+            } finally {
+                if (isMounted) {
+                    setIsLoading(false);
+                }
+            }
+        };
+
+        setIsLoading(true);
+        fetchVendors();
+
+        return () => {
+            isMounted = false;
+        };
     }, [isOpen]);
 
     return (
-        <SearchModal<Vendor>
+        <SearchModal<VendorSearchItem>
             isOpen={isOpen}
             onClose={onClose}
             onSelect={onSelect}

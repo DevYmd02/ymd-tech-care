@@ -124,6 +124,18 @@ export interface VendorDropdownItem {
     vendor_name: string;
 }
 
+/**
+ * VendorSearchItem - สำหรับ SearchModal (รองรับทั้ง API และ legacy)
+ */
+export interface VendorSearchItem {
+    code: string;
+    name: string;
+    address?: string;
+    contact?: string;
+    phone?: string;
+    taxId?: string;
+}
+
 // ====================================================================================
 // API TYPES - Request/Response
 // ====================================================================================
