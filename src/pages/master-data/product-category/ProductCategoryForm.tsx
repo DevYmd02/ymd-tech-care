@@ -100,11 +100,11 @@ export default function ProductCategoryForm() {
                 {/* Quick Search Row */}
                 <div className="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row gap-4 sm:gap-6">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 flex-1">
-                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300 shrink-0">รหัส</label>
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300 shrink-0">รหัสหมวดสินค้า</label>
                         <input type="text" value={formData.categoryCode} readOnly className={`${styles.inputFlex} bg-gray-100 dark:bg-gray-600`} />
                     </div>
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 flex-1">
-                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300 shrink-0">ชื่อ</label>
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300 shrink-0">ชื่อหมวดสินค้า</label>
                         <input type="text" value={formData.categoryName} readOnly className={`${styles.inputFlex} bg-gray-100 dark:bg-gray-600`} />
                     </div>
                 </div>
@@ -113,15 +113,15 @@ export default function ProductCategoryForm() {
                 <div className="p-4 sm:p-6 space-y-6">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:w-32 shrink-0">รหัส</label>
+                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:w-32 shrink-0">รหัสหมวดสินค้า</label>
                             <div className="flex gap-2 min-w-0 flex-1">
-                                <input type="text" value={formData.categoryCodeSearch} onChange={(e) => handleInputChange('categoryCodeSearch', e.target.value)} className={styles.inputFlex} placeholder="varchar(20)" />
+                                <input type="text" value={formData.categoryCodeSearch} onChange={(e) => handleInputChange('categoryCodeSearch', e.target.value)} className={styles.inputFlex} />
                                 <button onClick={handleFind} className="px-3 h-9 bg-purple-600 hover:bg-purple-700 text-white rounded-md transition-colors shrink-0">
                                     <Search size={18} />
                                 </button>
                             </div>
                         </div>
-                        <div className="flex items-center pt-0 sm:pt-6">
+                        <div className="flex items-end pb-1">
                             <label className="flex items-center gap-2 cursor-pointer">
                                 <input type="checkbox" checked={formData.isActive} onChange={(e) => handleInputChange('isActive', e.target.checked)} className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
                                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">ใช้งานอยู่</span>
@@ -131,12 +131,12 @@ export default function ProductCategoryForm() {
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:w-32 shrink-0">ชื่อ</label>
-                            <input type="text" value={formData.categoryName} onChange={(e) => handleInputChange('categoryName', e.target.value)} className={styles.inputFlex} placeholder="varchar(100)" />
+                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:w-32 shrink-0">ชื่อหมวดสินค้า</label>
+                            <input type="text" value={formData.categoryName} onChange={(e) => handleInputChange('categoryName', e.target.value)} className={styles.inputFlex} />
                         </div>
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:w-32 shrink-0">ชื่อ EN</label>
-                            <input type="text" value={formData.categoryNameEn} onChange={(e) => handleInputChange('categoryNameEn', e.target.value)} className={styles.inputFlex} placeholder="varchar(100)" />
+                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:w-32 shrink-0">ชื่อหมวดสินค้า (EN)</label>
+                            <input type="text" value={formData.categoryNameEn} onChange={(e) => handleInputChange('categoryNameEn', e.target.value)} className={styles.inputFlex} />
                         </div>
                     </div>
                 </div>

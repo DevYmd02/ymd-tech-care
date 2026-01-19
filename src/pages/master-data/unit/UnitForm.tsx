@@ -100,11 +100,11 @@ export default function UnitForm() {
                 {/* Quick Search Row */}
                 <div className="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row gap-4 sm:gap-6">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 flex-1">
-                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300 shrink-0">โค้ดหน่วย</label>
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300 shrink-0">รหัสหน่วยนับ</label>
                         <input type="text" value={formData.unitCode} readOnly className={`${styles.inputFlex} bg-gray-100 dark:bg-gray-600`} />
                     </div>
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 flex-1">
-                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300 shrink-0">ชื่อหน่วย</label>
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300 shrink-0">ชื่อหน่วยนับ</label>
                         <input type="text" value={formData.unitName} readOnly className={`${styles.inputFlex} bg-gray-100 dark:bg-gray-600`} />
                     </div>
                 </div>
@@ -113,7 +113,7 @@ export default function UnitForm() {
                 <div className="p-4 sm:p-6 space-y-6">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:w-32 shrink-0">โค้ดหน่วย</label>
+                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:w-32 shrink-0">รหัสหน่วยนับ</label>
                             <div className="flex gap-2 min-w-0 flex-1">
                                 <input type="text" value={formData.unitCodeSearch} onChange={(e) => handleInputChange('unitCodeSearch', e.target.value)} className={styles.inputFlex} placeholder="ชิ้น/แท่ง/กิโลกรัม" />
                                 <button onClick={handleFind} className="px-3 h-9 bg-purple-600 hover:bg-purple-700 text-white rounded-md transition-colors shrink-0">
@@ -121,16 +121,22 @@ export default function UnitForm() {
                                 </button>
                             </div>
                         </div>
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:w-32 shrink-0">ชื่อหน่วย (EN)</label>
-                            <input type="text" value={formData.unitNameEn} onChange={(e) => handleInputChange('unitNameEn', e.target.value)} className={styles.inputFlex} placeholder="varchar(100)" />
+                        <div className="flex items-end pb-1">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" checked={formData.isActive} onChange={(e) => handleInputChange('isActive', e.target.checked)} className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">ใช้งานอยู่</span>
+                            </label>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:w-32 shrink-0">ชื่อหน่วย</label>
-                            <input type="text" value={formData.unitName} onChange={(e) => handleInputChange('unitName', e.target.value)} className={styles.inputFlex} placeholder="varchar(100)" />
+                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:w-32 shrink-0">ชื่อหน่วยนับ</label>
+                            <input type="text" value={formData.unitName} onChange={(e) => handleInputChange('unitName', e.target.value)} className={styles.inputFlex} />
+                        </div>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:w-32 shrink-0">ชื่อหน่วยนับ (EN)</label>
+                            <input type="text" value={formData.unitNameEn} onChange={(e) => handleInputChange('unitNameEn', e.target.value)} className={styles.inputFlex} />
                         </div>
                     </div>
                 </div>
