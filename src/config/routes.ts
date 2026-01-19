@@ -55,6 +55,7 @@ export const implementedRoutes = {
     procurement: {
         dashboard: '/procurement/dashboard',
         pr: '/procurement/pr',
+        rfq: '/procurement/rfq',
     },
     roles: {
         dashboard: '/roles/dashboard',
@@ -75,7 +76,6 @@ export const implementedRoutes = {
 
 export const placeholderRoutes: Record<string, PlaceholderRoute[]> = {
     procurement: [
-        { path: 'procurement/rfq', title: 'ใบขอเสนอราคา (RFQ)' },
         { path: 'procurement/vendor-comparison', title: 'เปรียบเทียบราคา' },
         { path: 'procurement/po', title: 'ใบสั่งซื้อ (PO)' },
         { path: 'procurement/grn', title: 'ใบรับสินค้า (GRN)' },
@@ -427,12 +427,16 @@ export const sidebarMenuItems: MenuItem[] = [
         icon: Database,
         path: '/master-data',
         subItems: [
-            { id: 'vendor-code', label: 'กำหนดรหัสเจ้าหนี้', path: '/master-data/vendor' },
+            { id: 'master-data-dashboard', label: 'Master Data Dashboard', path: '/master-data' },
+            { id: 'vendor-management', label: 'กำหนดรหัสเจ้าหนี้', path: '/master-data/vendor' },
             { id: 'branch-code', label: 'กำหนดรหัสสาขา', path: '/master-data/branch' },
             { id: 'warehouse-code', label: 'กำหนดรหัสคลังสินค้า', path: '/master-data/warehouse' },
             { id: 'product-category', label: 'กำหนดรหัสหมวดสินค้า', path: '/master-data/product-category' },
             { id: 'item-type', label: 'กำหนดรหัสประเภทสินค้า', path: '/master-data/item-type' },
             { id: 'unit', label: 'กำหนดรหัสหน่วยนับ', path: '/master-data/unit' },
+            { id: 'item-master', label: 'กำหนดรหัสสินค้าและบริการ', path: '/master-data/item' },
+            { id: 'uom-conversion', label: 'แปลงหน่วย (หลายหน่วยนับ)', path: '/master-data/uom-conversion' },
+            { id: 'item-barcode', label: 'บาร์โค้ดหลายรายการ/หลายหน่วย', path: '/master-data/item-barcode' },
         ]
     },
 ];

@@ -14,8 +14,8 @@ export type CommonStatus = 'ACTIVE' | 'INACTIVE';
 /** สถานะ Vendor (รวม SUSPENDED และ BLACKLISTED) */
 export type VendorStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'BLACKLISTED';
 
-/** สถานะ PR */
-export type PRStatus = 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+// NOTE: PRStatus ย้ายไปที่ pr-types.ts เพื่อหลีกเลี่ยง conflict
+// import type { PRStatus } from './pr-types' ถ้าต้องการใช้
 
 // ====================================================================================
 // BASE INTERFACES

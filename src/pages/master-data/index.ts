@@ -23,3 +23,12 @@ export * from './item-type';
 
 // Unit Module
 export * from './unit';
+
+// Item Master Module
+export * from './item-master';
+
+// UOM Conversion Module
+export * from './uom-conversion';
+
+// Item Barcode Module
+export * from './item-barcode';

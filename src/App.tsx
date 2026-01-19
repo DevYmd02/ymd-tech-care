@@ -18,7 +18,8 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 
 // Procurement Pages
 import ProcurementDashboard from './pages/procurement/ProcurementDashboard';
-import PRListPage from './pages/procurement/PRListPage';
+import PRListPage from './pages/procurement/pr/PRListPage';
+import RFQListPage from './pages/procurement/rfq/RFQListPage';
 
 // Roles Pages
 import RolesDashboard from './pages/roles/RolesDashboard';
@@ -30,11 +31,16 @@ import ITGCDashboard from './pages/it-governance/ITGCDashboard';
 import {
     MasterDataDashboard,
     VendorForm,
+    VendorDashboard,
+    VendorList,
     BranchForm,
     WarehouseForm,
     ProductCategoryForm,
     ItemTypeForm,
-    UnitForm
+    UnitForm,
+    ItemMasterForm,
+    UOMConversionForm,
+    ItemBarcodeForm
 } from './pages/master-data';
 
 // Auth Pages
@@ -86,6 +92,7 @@ function App() {
         {/* Procurement - Implemented */}
         <Route path="procurement/dashboard" element={<ProcurementDashboard />} />
         <Route path="procurement/pr" element={<PRListPage />} />
+        <Route path="procurement/rfq" element={<RFQListPage />} />
 
         {/* Roles - Implemented */}
         <Route path="roles/dashboard" element={<RolesDashboard />} />
@@ -95,12 +102,17 @@ function App() {
 
         {/* Master Data - Implemented */}
         <Route path="master-data" element={<MasterDataDashboard />} />
-        <Route path="master-data/vendor" element={<VendorForm />} />
+        <Route path="master-data/vendor" element={<VendorDashboard />} />
+        <Route path="master-data/vendor/list" element={<VendorList />} />
+        <Route path="master-data/vendor/form" element={<VendorForm />} />
         <Route path="master-data/branch" element={<BranchForm />} />
         <Route path="master-data/warehouse" element={<WarehouseForm />} />
         <Route path="master-data/product-category" element={<ProductCategoryForm />} />
         <Route path="master-data/item-type" element={<ItemTypeForm />} />
         <Route path="master-data/unit" element={<UnitForm />} />
+        <Route path="master-data/item" element={<ItemMasterForm />} />
+        <Route path="master-data/uom-conversion" element={<UOMConversionForm />} />
+        <Route path="master-data/item-barcode" element={<ItemBarcodeForm />} />
 
         {/* ==================== PLACEHOLDER ROUTES ==================== */}
         {/* These routes render a "Coming Soon" placeholder */}

@@ -10,6 +10,7 @@ export * from './products';
 
 // New exports (ตาม Database Schema)
 export { MOCK_PR_HEADERS, MOCK_COST_CENTERS, MOCK_PROJECTS } from './prList';
+export { MOCK_RFQS, getRFQStats } from './rfqMocks';
 
 // Legacy exports (for backward compatibility)
 export { MOCK_PR_LIST } from './prList';
