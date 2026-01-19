@@ -95,7 +95,7 @@ export default function Sidebar() {
                                     <Link
                                         to={item.path}
                                         onClick={() => {
-                                            if (!isExpanded) toggleMenu(item.id);
+                                            toggleMenu(item.id);
                                         }}
                                         className={`
                                             w-full flex items-center justify-between px-4 py-2.5 text-sm cursor-pointer transition-colors

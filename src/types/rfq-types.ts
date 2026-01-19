@@ -1,112 +1,228 @@
 /**
  * @file rfq-types.ts
- * @description Types สำหรับ RFQ (Request for Quotation) Module - ตาม Database Schema
- * @usage import { RFQHeader, RFQLine, RFQStatus } from '@/types/rfq-types';
+ * @description Type definitions for Request for Quotation (RFQ) module
+ * @tables rfq_header, rfq_line, rfq_vendor, quotation_header
  */
 
 // ====================================================================================
-// RFQ STATUS - ตาม rfq_header.status
+// ENUMS
 // ====================================================================================
 
-export type RFQStatus = 
-  | 'DRAFT'        // ร่าง
-  | 'SENT'         // ส่งแล้ว
-  | 'IN_PROGRESS'  // กำลังดำเนินการ (รอใบเสนอราคา)
-  | 'CLOSED'       // ปิดแล้ว
-  | 'CANCELLED';   // ยกเลิก
+/** RFQ Status - สถานะใบขอเสนอราคา */
+export type RFQStatus = 'DRAFT' | 'SENT' | 'IN_PROGRESS' | 'CLOSED' | 'CANCELLED';
+
+/** RFQ Vendor Status - สถานะการส่ง RFQ ไปยังเจ้าหนี้ */
+export type RFQVendorStatus = 'PENDING' | 'SENT' | 'RESPONDED' | 'NO_RESPONSE' | 'DECLINED';
+
+/** Quotation Status - สถานะใบเสนอราคาจากผู้ขาย */
+export type QuotationStatus = 'DRAFT' | 'SUBMITTED' | 'SELECTED' | 'REJECTED';
 
 // ====================================================================================
-// RFQ HEADER - ตาม rfq_header table
+// RFQ HEADER - ตาราง rfq_header
 // ====================================================================================
 
+/** RFQ Header - ข้อมูลหัวใบขอเสนอราคา */
 export interface RFQHeader {
-  rfq_id: string;                 // UUID - Primary Key
-  rfq_no: string;                 // VARCHAR(50) - เลขที่ RFQ เช่น RFQ-202601-0001
-  pr_id: string;                  // UUID FK → pr_header.pr_id
-  pr_no?: string;                 // จาก JOIN - เลขที่ PR อ้างอิง
-  branch_id: string;              // UUID FK → org_branch.branch_id
-  branch_name?: string;           // จาก JOIN - ชื่อสาขา
-  rfq_date: string;               // DATE - วันที่ออก RFQ
-  quote_due_date: string;         // DATE - วันครบกำหนดส่งใบเสนอราคา
-  terms_and_conditions?: string;  // TEXT - เงื่อนไขและข้อกำหนด
-  status: RFQStatus;
-  created_by_user_id: string;     // UUID FK → users.user_id
-  created_by_name?: string;       // จาก JOIN - ชื่อผู้สร้าง
-  created_at: string;             // TIMESTAMP
-  updated_at: string;             // TIMESTAMP
-
-  // Relations (populated by API)
-  lines?: RFQLine[];
-  vendors?: RFQVendor[];
-  
-  // Computed fields (for display)
-  vendor_count?: number;          // จำนวนผู้ขายทั้งหมด
-  vendor_responded?: number;      // จำนวนผู้ขายที่ตอบกลับ
+    rfq_id: string;                     // UUID - Primary Key
+    rfq_no: string;                     // VARCHAR(50) - เลขที่ RFQ เช่น RFQ-202601-0001
+    pr_id: string | null;               // UUID - FK -> pr_header.pr_id (PR ที่ Approved แล้ว)
+    branch_id: string | null;           // UUID - FK -> org_branch.branch_id
+    rfq_date: string;                   // DATE - วันที่ออก RFQ
+    quote_due_date: string | null;      // DATE - วันครบกำหนดส่งใบเสนอราคา
+    terms_and_conditions?: string | null; // TEXT - เงื่อนไขและข้อกำหนด
+    status: RFQStatus;                  // VARCHAR(50) - DRAFT, SENT, IN_PROGRESS, CLOSED, CANCELLED
+    created_by_user_id?: string | null;  // UUID - FK -> users.user_id
+    created_at: string;                 // TIMESTAMP
+    updated_at: string;                 // TIMESTAMP
+    
+    // Extended fields for UI display (from JOINs)
+    pr_no?: string | null;              // From joined pr_header
+    branch_name?: string | null;        // From joined org_branch
+    created_by_name?: string | null;    // From joined users
+    vendor_count?: number;              // From COUNT(rfq_vendor)
+    vendor_responded?: number;          // From COUNT where responded
+    
+    // Form-related fields
+    currency?: string;                  // สกุลเงิน
+    exchange_rate?: number;             // อัตราแลกเปลี่ยน
+    delivery_location?: string;         // สถานที่จัดส่ง/ส่งมอบ
+    payment_terms?: string;             // เงื่อนไขการชำระ
+    incoterm?: string;                  // เงื่อนไขส่งมอบ (FOB, CIF, EXW, etc.)
+    remarks?: string;                   // หมายเหตุเพิ่มเติม
 }
 
 // ====================================================================================
-// RFQ LINE - ตาม rfq_line table (คัดลอกจาก pr_line)
+// RFQ LINE - ตาราง rfq_line
 // ====================================================================================
 
+/** RFQ Line Item - รายการสินค้าใน RFQ (Copy from PR Lines) */
 export interface RFQLine {
-  rfq_line_id: string;            // UUID - Primary Key
-  rfq_id: string;                 // UUID FK → rfq_header.rfq_id
-  pr_line_id?: string;            // UUID FK → pr_line (ถ้ามี)
-  line_no: number;                // INTEGER - ลำดับรายการ
-  item_id: string;                // UUID FK → item
-  item_code: string;              // VARCHAR(50)
-  item_name: string;              // VARCHAR(500)
-  item_description?: string;      // TEXT
-  quantity: number;               // DECIMAL(18,4)
-  uom: string;                    // VARCHAR(50) - หน่วยนับ
-  remark?: string;                // TEXT - หมายเหตุ
+    rfq_line_id: string;                // UUID - Primary Key
+    rfq_id: string;                     // UUID - FK -> rfq_header.rfq_id
+    line_no: number;                    // INTEGER - ลำดับรายการ
+    pr_line_id: string | null;          // UUID - FK -> pr_line.pr_line_id (อ้างอิง PR Line)
+    item_id: string | null;             // UUID - FK -> item.item_id
+    item_code: string;                  // VARCHAR(50)
+    item_name: string;                  // VARCHAR(500)
+    item_description: string | null;    // TEXT
+    required_qty: number;               // DECIMAL(18,4) - จำนวนที่ต้องการ
+    uom: string;                        // VARCHAR(50) - หน่วยนับ
+    required_date: string | null;       // DATE - วันที่ต้องการสินค้า
+    technical_spec: string | null;      // TEXT - ข้อกำหนดทางเทคนิค
 }
 
 // ====================================================================================
-// RFQ VENDOR - ตาม rfq_vendor table
+// RFQ VENDOR - ตาราง rfq_vendor (Junction Table)
 // ====================================================================================
 
-export type RFQVendorStatus = 
-  | 'PENDING'     // รอส่ง
-  | 'SENT'        // ส่งแล้ว
-  | 'RESPONDED'   // ตอบกลับแล้ว
-  | 'NO_RESPONSE' // ไม่ตอบกลับ
-  | 'DECLINED';   // ปฏิเสธ
-
+/** RFQ Vendor - รายชื่อผู้ขายที่ส่ง RFQ ไป */
 export interface RFQVendor {
-  rfq_vendor_id: string;          // UUID - Primary Key
-  rfq_id: string;                 // UUID FK → rfq_header.rfq_id
-  vendor_id: string;              // UUID FK → vendor_master.vendor_id
-  vendor_code?: string;           // จาก JOIN
-  vendor_name?: string;           // จาก JOIN
-  sent_date?: string;             // TIMESTAMP - วันที่ส่ง
-  response_date?: string;         // TIMESTAMP - วันที่ตอบกลับ
-  status: RFQVendorStatus;
-  quotation_id?: string;          // UUID FK → quotation_header (ถ้าตอบกลับ)
+    rfq_vendor_id: string;              // UUID - Primary Key
+    rfq_id: string;                     // UUID - FK -> rfq_header.rfq_id
+    vendor_id: string;                  // UUID - FK -> vendor.vendor_id
+    sent_date: string | null;           // TIMESTAMP - วันเวลาที่ส่ง RFQ
+    sent_via: string | null;            // VARCHAR(50) - EMAIL, PORTAL, MANUAL
+    email_sent_to: string | null;       // VARCHAR(200) - อีเมลที่ส่งไป
+    response_date: string | null;       // TIMESTAMP - วันเวลาที่ผู้ขายตอบกลับ
+    status: RFQVendorStatus;            // VARCHAR(50) - PENDING, SENT, RESPONDED, NO_RESPONSE, DECLINED
+    remark: string | null;              // TEXT
 }
 
 // ====================================================================================
-// RFQ FORM DATA - สำหรับ Form สร้าง/แก้ไข RFQ
+// QUOTATION HEADER - ตาราง quotation_header (Response to RFQ)
 // ====================================================================================
 
+/** Quotation Header - ใบเสนอราคาจากผู้ขาย */
+export interface QuotationHeader {
+    quotation_id: string;               // UUID - Primary Key
+    quotation_no: string;               // VARCHAR(50) - เลขที่ใบเสนอราคา
+    rfq_id: string;                     // UUID - FK -> rfq_header.rfq_id
+    vendor_id: string;                  // UUID - FK -> vendor.vendor_id
+    quote_date: string;                 // DATE - วันที่ใบเสนอราคา
+    valid_until: string | null;         // DATE - ราคามีผลถึงวันที่
+    payment_term_days: number | null;   // INTEGER
+    delivery_lead_time: number | null;  // INTEGER - Lead Time (วัน)
+    total_amount: number;               // DECIMAL(18,2)
+    status: QuotationStatus;            // VARCHAR(50) - DRAFT, SUBMITTED, SELECTED, REJECTED
+}
+
+// ====================================================================================
+// UI DISPLAY TYPES
+// ====================================================================================
+
+/** RFQ List Item - สำหรับแสดงในตาราง */
+export interface RFQListItem {
+    rfq_id: string;
+    rfq_no: string;
+    rfq_date: string;
+    pr_no: string | null;               // From joined pr_header
+    pr_id: string | null;
+    created_by_name: string;            // ผู้สร้าง
+    status: RFQStatus;
+    quote_due_date: string | null;
+    vendor_count?: number;              // จำนวนเจ้าหนี้ที่ส่ง
+}
+
+// ====================================================================================
+// FORM DATA TYPES
+// ====================================================================================
+
+/** RFQ Form Data - สำหรับ form input */
 export interface RFQFormData {
-  pr_id: string;                  // PR ที่เลือก (required)
-  quote_due_date: string;         // วันครบกำหนดส่งใบเสนอราคา
-  terms_and_conditions?: string;  // เงื่อนไข
-  vendor_ids: string[];           // รายการ vendor ที่เลือก
+    // Header
+    rfq_no: string;
+    rfq_date: string;
+    pr_id: string | null;
+    pr_no: string | null;
+    branch_id: string | null;
+    created_by_name: string;
+    status: RFQStatus;
+    quote_due_date: string;
+    currency: string;
+    exchange_rate: number;
+    delivery_location: string;
+    payment_terms: string;
+    incoterm: string;
+    remarks: string;
+    
+    // Lines
+    lines: RFQLineFormData[];
+}
+
+/** RFQ Line Form Data */
+export interface RFQLineFormData {
+    line_no: number;
+    item_code: string;
+    item_name: string;
+    item_description: string;
+    required_qty: number;
+    uom: string;
+    required_date: string;
+    remarks: string;
+}
+
+// ====================================================================================
+// INITIAL VALUES
+// ====================================================================================
+
+export const initialRFQLineFormData: RFQLineFormData = {
+    line_no: 1,
+    item_code: '',
+    item_name: '',
+    item_description: '',
+    required_qty: 0,
+    uom: '',
+    required_date: '',
+    remarks: '',
+};
+
+export const initialRFQFormData: RFQFormData = {
+    rfq_no: '',
+    rfq_date: new Date().toISOString().split('T')[0],
+    pr_id: null,
+    pr_no: null,
+    branch_id: null,
+    created_by_name: '',
+    status: 'DRAFT',
+    quote_due_date: '',
+    currency: 'THB',
+    exchange_rate: 1,
+    delivery_location: '',
+    payment_terms: '',
+    incoterm: '',
+    remarks: '',
+    lines: [{ ...initialRFQLineFormData }],
+};
+
+// ====================================================================================
+// FILTER TYPES
+// ====================================================================================
+
+/** RFQ Search/Filter Criteria */
+export interface RFQFilterCriteria {
+    rfq_no?: string;
+    pr_no?: string;
+    created_by_name?: string;
+    status?: RFQStatus | 'ALL';
+    date_from?: string;
+    date_to?: string;
 }
 
 // ====================================================================================
 // API RESPONSE TYPES
 // ====================================================================================
 
+/** RFQ List Response - สำหรับ API response */
 export interface RFQListResponse {
-  data: RFQHeader[];
-  total: number;
-  page: number;
-  limit: number;
+    data: RFQHeader[];
+    total: number;
+    page: number;
+    limit: number;
 }
 
-export interface RFQDetailResponse {
-  data: RFQHeader;
+/** RFQ Create/Update Data - สำหรับ API request */
+export interface RFQCreateData extends Omit<RFQFormData, 'lines'> {
+    lines: RFQLineFormData[];
+    vendor_ids?: string[];
+    terms_and_conditions?: string;
 }

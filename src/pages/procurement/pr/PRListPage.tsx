@@ -12,22 +12,27 @@
 
 import { useState, useEffect } from 'react';
 import { Search, X, Plus, FileText, Calendar, CheckCircle } from 'lucide-react';
-import { PRFormModal } from './components';
+import { useWindowManager } from '../../../hooks/useWindowManager';
 import { ApprovalModal, PRStatusBadge } from '../../../components/shared';
 import { formatThaiDate } from '../../../utils/dateUtils';
 import { styles } from '../../../constants';
-import { MOCK_COST_CENTERS } from '../../../__mocks__';
 import { prService } from '../../../services/prService';
+import { masterDataService } from '../../../services/masterDataService';
 import type { PRHeader, PRStatus } from '../../../types/pr-types';
+import type { CostCenter } from '../../../types/master-data-types';
 
 // ====================================================================================
 // STATUS UTILITIES - ใช้ shared PRStatusBadge แทน local component
 // ====================================================================================
 
-/** หา Cost Center name จาก ID */
-const getCostCenterName = (costCenterId: string): string => {
-  const costCenter = MOCK_COST_CENTERS.find(cc => cc.cost_center_id === costCenterId);
-  return costCenter ? costCenter.cost_center_name : '-';
+// ====================================================================================
+// STATUS UTILITIES - ใช้ shared PRStatusBadge แทน local component
+// ====================================================================================
+
+// Helper to find cost center name from list
+const findCostCenterName = (costCenters: CostCenter[], id: string): string => {
+  const cc = costCenters.find(c => c.cost_center_id === id);
+  return cc ? cc.cost_center_name : '-';
 };
 
 // ====================================================================================
@@ -36,10 +41,11 @@ const getCostCenterName = (costCenterId: string): string => {
 
 export default function PRListPage() {
   // ==================== STATE ====================
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { openWindow } = useWindowManager();
   const [prList, setPrList] = useState<PRHeader[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
   const [approvalModal, setApprovalModal] = useState<{ isOpen: boolean; action: 'approve' | 'reject' }>({
     isOpen: false,
     action: 'approve'
@@ -55,19 +61,25 @@ export default function PRListPage() {
   });
 
   // ==================== FETCH DATA FROM API ====================
+  // ==================== FETCH DATA FROM API ====================
   useEffect(() => {
-    const fetchPRList = async () => {
+    const fetchData = async () => {
       setIsLoading(true);
       try {
-        const response = await prService.getList();
-        setPrList(response.data);
+        const [prResponse, ccList] = await Promise.all([
+          prService.getList(),
+          masterDataService.getCostCenters()
+        ]);
+        setPrList(prResponse.data);
+        setCostCenters(ccList);
       } catch (error) {
         void error; // TODO: Implement proper error handling/UI feedback
+        console.error('Failed to fetch data', error);
       } finally {
         setIsLoading(false);
       }
     };
-    fetchPRList();
+    fetchData();
   }, []);
 
   // ==================== HANDLERS ====================
@@ -269,11 +281,21 @@ export default function PRListPage() {
               ล้างค่า
             </button>
           </div>
+          
+          {/* Create Button - Right Aligned in Grid */}
+          <div className="flex items-end justify-end col-span-1 border-gray-100 dark:border-gray-700">
+            <button
+              onClick={() => openWindow('PR')}
+              className="h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-semibold flex items-center gap-2 transition-colors shadow-sm w-full md:w-auto justify-center"
+            >
+              <Plus size={18} />
+              สร้างใบขอซื้อใหม่
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* ==================== BATCH ACTIONS & CREATE BUTTON ==================== */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         {/* Batch Actions */}
         <div className="flex items-center gap-2">
           {selectedIds.length > 0 && (
@@ -291,15 +313,6 @@ export default function PRListPage() {
             </>
           )}
         </div>
-
-        {/* Create Button */}
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold flex items-center gap-2 transition-colors shadow-md"
-        >
-          <Plus size={18} />
-          สร้างใบขอซื้อใหม่
-        </button>
       </div>
 
       {/* ==================== DATA TABLE ==================== */}
@@ -361,7 +374,7 @@ export default function PRListPage() {
                   {/* ศูนย์ต้นทุน */}
                   <td className="px-4 py-3">
                     <div className="text-sm text-gray-600 dark:text-gray-300">
-                      {getCostCenterName(item.cost_center_id)}
+                      {findCostCenterName(costCenters, item.cost_center_id)}
                     </div>
                   </td>
 
@@ -397,11 +410,7 @@ export default function PRListPage() {
         </div>
       </div>
 
-      {/* ==================== MODALS ==================== */}
-      <PRFormModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-      />
+
 
       <ApprovalModal
         isOpen={approvalModal.isOpen}

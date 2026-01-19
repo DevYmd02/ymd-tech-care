@@ -20,6 +20,13 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import ProcurementDashboard from './pages/procurement/ProcurementDashboard';
 import PRListPage from './pages/procurement/pr/PRListPage';
 import RFQListPage from './pages/procurement/rfq/RFQListPage';
+import { 
+    QuotationListPage, 
+    QuotationComparisonListPage, 
+    PurchaseOrderListPage, 
+    GoodsReceiptNoteListPage, 
+    PurchaseReturnListPage 
+} from './pages/procurement/ProcurementComingSoon';
 
 // Roles Pages
 import RolesDashboard from './pages/roles/RolesDashboard';
@@ -93,6 +100,13 @@ function App() {
         <Route path="procurement/dashboard" element={<ProcurementDashboard />} />
         <Route path="procurement/pr" element={<PRListPage />} />
         <Route path="procurement/rfq" element={<RFQListPage />} />
+        
+        {/* Procurement - Coming Soon */}
+        <Route path="procurement/qt" element={<QuotationListPage />} />
+        <Route path="procurement/qc" element={<QuotationComparisonListPage />} />
+        <Route path="procurement/po" element={<PurchaseOrderListPage />} />
+        <Route path="procurement/grn" element={<GoodsReceiptNoteListPage />} />
+        <Route path="procurement/prt" element={<PurchaseReturnListPage />} />
 
         {/* Roles - Implemented */}
         <Route path="roles/dashboard" element={<RolesDashboard />} />

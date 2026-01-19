@@ -5,13 +5,13 @@
 
 import api from './api';
 import { MOCK_RFQS } from '../__mocks__/rfqMocks';
-import type { RFQHeader, RFQListResponse, RFQFormData } from '../types/rfq-types';
+import type { RFQHeader, RFQListResponse, RFQCreateData } from '../types/rfq-types';
 
 // ====================================================================================
 // CONFIGURATION
 // ====================================================================================
 
-const USE_MOCK = true; // Toggle to false when backend is ready
+const USE_MOCK = false; // Toggle to false when backend is ready
 const ENDPOINTS = {
   list: '/rfq',
   detail: (id: string) => `/rfq/${id}`,
@@ -57,7 +57,7 @@ export const rfqService = {
   /**
    * สร้าง RFQ ใหม่
    */
-  async create(data: RFQFormData): Promise<RFQHeader> {
+  async create(data: RFQCreateData): Promise<RFQHeader> {
     if (USE_MOCK) {
       await new Promise(resolve => setTimeout(resolve, 500));
       const newRFQ: RFQHeader = {
@@ -75,7 +75,7 @@ export const rfqService = {
         created_by_name: 'ผู้ใช้ปัจจุบัน',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        vendor_count: data.vendor_ids.length,
+        vendor_count: data.vendor_ids?.length ?? 0,
         vendor_responded: 0,
       };
       MOCK_RFQS.push(newRFQ);

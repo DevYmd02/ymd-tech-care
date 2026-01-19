@@ -94,7 +94,7 @@ export default function ItemBarcodeForm() {
 
             {/* Note Banner */}
             <div className="bg-orange-100 dark:bg-orange-900/30 rounded-lg px-4 py-2 text-sm text-orange-700 dark:text-orange-300">
-                Table: item_barcode (M9) - สินค้า 1 รายการอาจมีบาร์โค้ดหลายตัว เช่น ลัง/แพ็ค
+                สินค้า 1 รายการอาจมีบาร์โค้ดหลายตัว เช่น ลัง/แพ็ค
             </div>
 
             {/* Main Form Card */}

@@ -112,7 +112,7 @@ export default function ItemMasterForm() {
                 {/* Quick Search Row */}
                 <div className="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row gap-4 sm:gap-6">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 flex-1">
-                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300 shrink-0">โค้ดสินค้า</label>
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300 shrink-0">รหัสสินค้า</label>
                         <input type="text" value={formData.itemCode} readOnly className={`${styles.inputFlex} bg-gray-100 dark:bg-gray-600`} />
                     </div>
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 flex-1">
@@ -126,7 +126,7 @@ export default function ItemMasterForm() {
                     {/* Row 1: Item Code Search + Barcode */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:w-32 shrink-0">โค้ดสินค้า</label>
+                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:w-32 shrink-0">รหัสสินค้า</label>
                             <div className="flex gap-2 min-w-0 flex-1">
                                 <input type="text" value={formData.itemCodeSearch} onChange={(e) => handleInputChange('itemCodeSearch', e.target.value)} className={styles.inputFlex} placeholder="ไม่ซ้ำ" />
                                 <button onClick={handleFind} className="px-3 h-9 bg-purple-600 hover:bg-purple-700 text-white rounded-md transition-colors shrink-0">
