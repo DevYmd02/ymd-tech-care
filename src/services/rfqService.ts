@@ -11,7 +11,7 @@ import type { RFQHeader, RFQListResponse, RFQCreateData } from '../types/rfq-typ
 // CONFIGURATION
 // ====================================================================================
 
-const USE_MOCK = true; // Toggle to false when backend is ready
+const USE_MOCK = false; // Toggle to false when backend is ready
 const ENDPOINTS = {
   list: '/rfq',
   detail: (id: string) => `/rfq/${id}`,

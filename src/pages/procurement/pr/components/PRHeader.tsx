@@ -7,14 +7,16 @@ import React from 'react';
 import type { UseFormRegister, UseFormSetValue } from 'react-hook-form';
 import { Search, Calendar, Building2, FolderKanban, User } from 'lucide-react';
 import type { PRFormData } from '../../../../types/pr-types';
-import { MOCK_COST_CENTERS, MOCK_PROJECTS } from '../../../../__mocks__';
+import type { CostCenter, Project } from '../../../../types/master-data-types';
 
 interface Props {
   register: UseFormRegister<PRFormData>;
   setValue: UseFormSetValue<PRFormData>;
+  costCenters: CostCenter[];
+  projects: Project[];
 }
 
-export const PRHeader: React.FC<Props> = ({ register, setValue }) => {
+export const PRHeader: React.FC<Props> = ({ register, setValue, costCenters, projects }) => {
   // Style classes (คงสไตล์เดิม + dark mode)
   const inputClass = "h-8 w-full px-2 text-sm border border-gray-300 dark:border-gray-600 rounded-l-md focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white";
   const selectClass = "h-8 w-full px-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white";
@@ -88,7 +90,7 @@ export const PRHeader: React.FC<Props> = ({ register, setValue }) => {
           <label className={labelClass}><Building2 size={11} className="inline mr-1" />ศูนย์ต้นทุน <span className="text-red-500">*</span></label>
           <select className={selectClass} {...register("cost_center_id")} onChange={(e) => setValue("cost_center_id", e.target.value)}>
             <option value="">-- เลือกศูนย์ต้นทุน --</option>
-            {MOCK_COST_CENTERS.filter(cc => cc.is_active).map((cc) => (
+            {costCenters.filter(cc => cc.is_active).map((cc) => (
               <option key={cc.cost_center_id} value={cc.cost_center_id}>
                 {cc.cost_center_code} - {cc.cost_center_name}
               </option>
@@ -100,7 +102,7 @@ export const PRHeader: React.FC<Props> = ({ register, setValue }) => {
           <label className={labelClass}><FolderKanban size={11} className="inline mr-1" />โครงการ <span className="text-gray-400">(ถ้ามี)</span></label>
           <select className={selectClass} {...register("project_id")} onChange={(e) => setValue("project_id", e.target.value || undefined)}>
             <option value="">-- ไม่ระบุโครงการ --</option>
-            {MOCK_PROJECTS.filter(p => p.status === 'ACTIVE').map((project) => (
+            {projects.filter(p => p.status === 'ACTIVE').map((project) => (
               <option key={project.project_id} value={project.project_id}>
                 {project.project_code} - {project.project_name}
               </option>

@@ -11,7 +11,7 @@ import { rfqService } from '../../../services/rfqService';
 import { formatThaiDate } from '../../../utils/dateUtils';
 import { styles } from '../../../constants';
 import { RFQStatusBadge } from '../../../components/shared';
-import { RFQFormModal } from './components/RFQFormModal';
+import { useWindowManager } from '../../../hooks/useWindowManager';
 import type { RFQHeader, RFQFilterCriteria } from '../../../types/rfq-types';
 
 // ====================================================================================
@@ -22,7 +22,9 @@ export default function RFQListPage() {
     const [rfqList, setRfqList] = useState<RFQHeader[]>([]);
     const [filteredList, setFilteredList] = useState<RFQHeader[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    
+    // Window Manager
+    const { openWindow } = useWindowManager();
     
     // Filter state
     const [filters, setFilters] = useState<RFQFilterCriteria>({
@@ -203,7 +205,7 @@ export default function RFQListPage() {
                     </div>
                     
                     <button
-                        onClick={() => setIsModalOpen(true)}
+                        onClick={() => openWindow('RFQ')}
                         className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors shadow-md"
                     >
                         <Plus size={16} />
@@ -286,11 +288,6 @@ export default function RFQListPage() {
                 </div>
             </div>
 
-            {/* RFQ Form Modal */}
-            <RFQFormModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-            />
         </div>
     );
 }
