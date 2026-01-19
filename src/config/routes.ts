@@ -55,6 +55,7 @@ export const implementedRoutes = {
     procurement: {
         dashboard: '/procurement/dashboard',
         pr: '/procurement/pr',
+        rfq: '/procurement/rfq',
     },
     roles: {
         dashboard: '/roles/dashboard',
@@ -75,7 +76,6 @@ export const implementedRoutes = {
 
 export const placeholderRoutes: Record<string, PlaceholderRoute[]> = {
     procurement: [
-        { path: 'procurement/rfq', title: 'ใบขอเสนอราคา (RFQ)' },
         { path: 'procurement/vendor-comparison', title: 'เปรียบเทียบราคา' },
         { path: 'procurement/po', title: 'ใบสั่งซื้อ (PO)' },
         { path: 'procurement/grn', title: 'ใบรับสินค้า (GRN)' },

@@ -6,8 +6,8 @@
 import React from 'react';
 import type { UseFormRegister, UseFormSetValue } from 'react-hook-form';
 import { Search, Calendar, Building2, FolderKanban, User } from 'lucide-react';
-import type { PRFormData } from '../../../types/pr-types';
-import { MOCK_COST_CENTERS, MOCK_PROJECTS } from '../../../__mocks__';
+import type { PRFormData } from '../../../../types/pr-types';
+import { MOCK_COST_CENTERS, MOCK_PROJECTS } from '../../../../__mocks__';
 
 interface Props {
   register: UseFormRegister<PRFormData>;

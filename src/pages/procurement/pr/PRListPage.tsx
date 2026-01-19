@@ -12,56 +12,17 @@
 
 import { useState, useEffect } from 'react';
 import { Search, X, Plus, FileText, Calendar, CheckCircle } from 'lucide-react';
-import { PRFormModal } from './pr-form';
-import { ApprovalModal } from '../../components/shared/ApprovalModal';
-import { formatThaiDate } from '../../utils/dateUtils';
-import { styles } from '../../constants';
-import { MOCK_COST_CENTERS } from '../../__mocks__';
-import { prService } from '../../services/prService';
-import type { PRHeader, PRStatus } from '../../types/pr-types';
+import { PRFormModal } from './components';
+import { ApprovalModal, PRStatusBadge } from '../../../components/shared';
+import { formatThaiDate } from '../../../utils/dateUtils';
+import { styles } from '../../../constants';
+import { MOCK_COST_CENTERS } from '../../../__mocks__';
+import { prService } from '../../../services/prService';
+import type { PRHeader, PRStatus } from '../../../types/pr-types';
 
 // ====================================================================================
-// STATUS UTILITIES
+// STATUS UTILITIES - ใช้ shared PRStatusBadge แทน local component
 // ====================================================================================
-
-/** แปลง PRStatus เป็นข้อความภาษาไทย */
-const getStatusLabel = (status: PRStatus): string => {
-  const labels: Record<PRStatus, string> = {
-    DRAFT: 'ร่าง',
-    SUBMITTED: 'ส่งแล้ว',
-    IN_APPROVAL: 'รออนุมัติ',
-    APPROVED: 'อนุมัติแล้ว',
-    REJECTED: 'ปฏิเสธ',
-    CANCELLED: 'ยกเลิก',
-    PARTIALLY_CONVERTED: 'แปลงบางส่วน',
-    CONVERTED: 'แปลงแล้ว',
-    CLOSED: 'ปิด',
-  };
-  return labels[status] || status;
-};
-
-/** กำหนดสีของ Status Badge */
-const getStatusColor = (status: PRStatus): string => {
-  const colors: Record<PRStatus, string> = {
-    DRAFT: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
-    SUBMITTED: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
-    IN_APPROVAL: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
-    APPROVED: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
-    REJECTED: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
-    CANCELLED: 'bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-400',
-    PARTIALLY_CONVERTED: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300',
-    CONVERTED: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300',
-    CLOSED: 'bg-gray-200 text-gray-600 dark:bg-gray-600 dark:text-gray-300',
-  };
-  return colors[status] || 'bg-gray-100 text-gray-700';
-};
-
-/** Component แสดง Status Badge */
-const PRStatusBadge = ({ status }: { status: PRStatus }) => (
-  <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusColor(status)}`}>
-    {getStatusLabel(status)}
-  </span>
-);
 
 /** หา Cost Center name จาก ID */
 const getCostCenterName = (costCenterId: string): string => {

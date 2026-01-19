@@ -6,13 +6,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import type { SubmitHandler } from 'react-hook-form';
-import type { PRFormData, PRLineFormData } from '../../../types/pr-types';
-import { MOCK_PRODUCTS as CENTRAL_MOCK_PRODUCTS } from '../../../__mocks__';
+import type { PRFormData, PRLineFormData } from '../../../../types/pr-types';
+import { MOCK_PRODUCTS as CENTRAL_MOCK_PRODUCTS } from '../../../../__mocks__';
 import { FileText, Minimize2, Maximize2, X, Plus, Trash2, Search, Eraser, Triangle, FileBox, MoreHorizontal, Flame, FileBarChart, History as HistoryIcon } from 'lucide-react';
 
 import { PRHeader } from './PRHeader';
 import { PRFooter } from './PRFooter';
-import { Toast } from '../../../components/ui/Toast';
+import { Toast } from '../../../../components/ui/Toast';
 
 interface Props {
   isOpen: boolean;

@@ -94,36 +94,10 @@ export interface ApprovalTask {
 }
 
 // ====================================================================================
-// COST CENTER - ตาม cost_center table
+// COST CENTER & PROJECT - Re-export from master-data-types.ts
 // ====================================================================================
 
-export interface CostCenter {
-  cost_center_id: string;           // UUID - Primary Key
-  cost_center_code: string;         // VARCHAR(50) - CC-IT, CC-HR
-  cost_center_name: string;         // VARCHAR(200)
-  description?: string;             // TEXT
-  budget_amount: number;            // DECIMAL(18,2)
-  manager_name: string;             // VARCHAR(200)
-  is_active: boolean;               // BOOLEAN
-}
-
-// ====================================================================================
-// PROJECT - ตาม project table
-// ====================================================================================
-
-export type ProjectStatus = 'ACTIVE' | 'COMPLETED' | 'ON_HOLD' | 'CANCELLED';
-
-export interface Project {
-  project_id: string;               // UUID - Primary Key
-  project_code: string;             // VARCHAR(50) - PRJ-2026-001
-  project_name: string;             // VARCHAR(500)
-  description?: string;             // TEXT
-  cost_center_id: string;           // UUID FK → cost_center
-  budget_amount: number;            // DECIMAL(18,2)
-  start_date: string;               // DATE
-  end_date: string;                 // DATE
-  status: ProjectStatus;
-}
+export type { CostCenter, Project, ProjectStatus } from './master-data-types';
 
 // ====================================================================================
 // PR FORM DATA - สำหรับ Form สร้าง/แก้ไข PR

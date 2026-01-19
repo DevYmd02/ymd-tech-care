@@ -18,7 +18,8 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 
 // Procurement Pages
 import ProcurementDashboard from './pages/procurement/ProcurementDashboard';
-import PRListPage from './pages/procurement/PRListPage';
+import PRListPage from './pages/procurement/pr/PRListPage';
+import RFQListPage from './pages/procurement/rfq/RFQListPage';
 
 // Roles Pages
 import RolesDashboard from './pages/roles/RolesDashboard';
@@ -86,6 +87,7 @@ function App() {
         {/* Procurement - Implemented */}
         <Route path="procurement/dashboard" element={<ProcurementDashboard />} />
         <Route path="procurement/pr" element={<PRListPage />} />
+        <Route path="procurement/rfq" element={<RFQListPage />} />
 
         {/* Roles - Implemented */}
         <Route path="roles/dashboard" element={<RolesDashboard />} />
