@@ -1,54 +1,88 @@
 /**
  * @file MasterDataDashboard.tsx
- * @description หน้า Dashboard รวมข้อมูล Master Data ทั้งหมด พร้อม Tab-based Navigation
+ * @description หน้า Master Data Management - ตามดีไซน์ใหม่
+ * @purpose แสดง Tab-based navigation สำหรับ Master Data ต่างๆ พร้อม Card-based list และ Database Relations
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { 
-    Database, Users, Building2, Warehouse, Tag, Layers, Ruler,
-    CheckCircle, XCircle, RefreshCw, Plus, Search, Edit2, Trash2,
-    ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Filter
+    Database, Users, Package, Building2, Warehouse as WarehouseIcon, 
+    DollarSign, FolderKanban, Plus, Search, Filter, Edit2, Trash2,
+    ChevronDown, ChevronUp, Phone, Mail, MapPin
 } from 'lucide-react';
 import { styles } from '../../constants';
 
 // Import mock data
-import { mockBranches, mockWarehouses, mockProductCategories, mockItemTypes, mockUnits } from '../../__mocks__/masterDataMocks';
+import { mockBranches, mockWarehouses, mockItemTypes } from '../../__mocks__/masterDataMocks';
 import { vendorService } from '../../services/vendorService';
 
-// Import all FormModal components from module folders
+// Import Form Modals
 import { VendorFormModal } from './vendor';
 import { BranchFormModal } from './branch';
 import { WarehouseFormModal } from './warehouse';
-import { ProductCategoryFormModal } from './product-category';
-import { ItemTypeFormModal } from './item-type';
-import { UnitFormModal } from './unit';
+import { ItemMasterList } from './item-master';
 
 // Import types
 import type { VendorListItem } from '../../types/vendor-types';
-import type { BranchListItem, WarehouseListItem, ProductCategoryListItem, ItemTypeListItem, UnitListItem } from '../../types/master-data-types';
+import type { 
+    BranchListItem, 
+    WarehouseListItem, 
+} from '../../types/master-data-types';
 
 // ====================================================================================
 // TYPES
 // ====================================================================================
 
-type TabType = 'vendor' | 'branch' | 'warehouse' | 'product-category' | 'item-type' | 'unit';
+type TabType = 'vendor' | 'item' | 'branch' | 'warehouse' | 'cost-center' | 'project';
 
 interface TabConfig {
     id: TabType;
     label: string;
+    labelEn: string;
     icon: React.ElementType;
-    color: string;
+    recordCount: number;
+    dbTable: string;
+    relations: string[];
+    fk: string;
 }
 
-const TABS: TabConfig[] = [
-    { id: 'vendor', label: 'เจ้าหนี้', icon: Users, color: 'blue' },
-    { id: 'branch', label: 'สาขา', icon: Building2, color: 'emerald' },
-    { id: 'warehouse', label: 'คลังสินค้า', icon: Warehouse, color: 'orange' },
-    { id: 'product-category', label: 'หมวดสินค้า', icon: Tag, color: 'purple' },
-    { id: 'item-type', label: 'ประเภทสินค้า', icon: Layers, color: 'pink' },
-    { id: 'unit', label: 'หน่วยนับ', icon: Ruler, color: 'cyan' },
-];
+// ====================================================================================
+// DATABASE RELATIONS CONFIG
+// ====================================================================================
+
+const DB_RELATIONS: Record<TabType, { dbTable: string; relations: string[]; fk: string }> = {
+    'vendor': {
+        dbTable: 'vendor',
+        relations: ['po_header', 'quotation_header', 'vendor_invoice_header'],
+        fk: 'vendor_id'
+    },
+    'item': {
+        dbTable: 'item_master',
+        relations: ['po_detail', 'pr_detail', 'stock_transaction'],
+        fk: 'item_id'
+    },
+    'branch': {
+        dbTable: 'branch',
+        relations: ['warehouse', 'user', 'document_header'],
+        fk: 'branch_id'
+    },
+    'warehouse': {
+        dbTable: 'warehouse',
+        relations: ['stock_balance', 'stock_transaction', 'grn_header'],
+        fk: 'warehouse_id'
+    },
+    'cost-center': {
+        dbTable: 'cost_center',
+        relations: ['pr_header', 'po_header', 'budget_allocation'],
+        fk: 'cost_center_id'
+    },
+    'project': {
+        dbTable: 'project',
+        relations: ['pr_header', 'po_header', 'budget_project'],
+        fk: 'project_id'
+    }
+};
 
 // ====================================================================================
 // MAIN COMPONENT
@@ -61,39 +95,30 @@ export default function MasterDataDashboard() {
     const initialTab = (searchParams.get('tab') as TabType) || 'vendor';
     const [activeTab, setActiveTab] = useState<TabType>(initialTab);
     
-    // Modal states
+    // Modal & UI states
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
-    
-    // List states
     const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'BLACKLISTED'>('ALL');
-    const [currentPage, setCurrentPage] = useState(1);
-    const [rowsPerPage, setRowsPerPage] = useState(10);
+    const [expandedId, setExpandedId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     
-    // Data states for each type
+    // Data states
     const [vendors, setVendors] = useState<VendorListItem[]>([]);
     const [branches, setBranches] = useState<BranchListItem[]>([]);
     const [warehouses, setWarehouses] = useState<WarehouseListItem[]>([]);
-    const [productCategories, setProductCategories] = useState<ProductCategoryListItem[]>([]);
-    const [itemTypes, setItemTypes] = useState<ItemTypeListItem[]>([]);
-    const [units, setUnits] = useState<UnitListItem[]>([]);
 
-    // Summary stats
-    const stats = {
-        vendor: { total: vendors.length, active: vendors.filter(v => v.status === 'ACTIVE').length, inactive: vendors.filter(v => v.status !== 'ACTIVE').length },
-        branch: { total: mockBranches.length, active: mockBranches.filter(b => b.is_active).length },
-        warehouse: { total: mockWarehouses.length, active: mockWarehouses.filter(w => w.is_active).length },
-        'product-category': { total: mockProductCategories.length, active: mockProductCategories.filter(c => c.is_active).length },
-        'item-type': { total: mockItemTypes.length, active: mockItemTypes.filter(i => i.is_active).length },
-        unit: { total: mockUnits.length, active: mockUnits.filter(u => u.is_active).length },
-    };
 
-    // ====================================================================================
-    // DATA FETCHING
-    // ====================================================================================
+    // Tab configs with record counts
+    const tabs: TabConfig[] = [
+        { id: 'vendor', label: 'Vendor', labelEn: 'ผู้ขาย', icon: Users, recordCount: vendors.length, ...DB_RELATIONS['vendor'] },
+        { id: 'item', label: 'Item', labelEn: 'สินค้า', icon: Package, recordCount: mockItemTypes.length, ...DB_RELATIONS['item'] },
+        { id: 'branch', label: 'Branch', labelEn: 'สาขา', icon: Building2, recordCount: mockBranches.length, ...DB_RELATIONS['branch'] },
+        { id: 'warehouse', label: 'Warehouse', labelEn: 'คลัง', icon: WarehouseIcon, recordCount: mockWarehouses.length, ...DB_RELATIONS['warehouse'] },
+        { id: 'cost-center', label: 'Cost Center', labelEn: '', icon: DollarSign, recordCount: 4, ...DB_RELATIONS['cost-center'] },
+        { id: 'project', label: 'Project', labelEn: 'โครงการ', icon: FolderKanban, recordCount: 3, ...DB_RELATIONS['project'] },
+    ];
 
+    // Fetch Data
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         
@@ -112,14 +137,12 @@ export default function MasterDataDashboard() {
             case 'warehouse':
                 setWarehouses([...mockWarehouses]);
                 break;
-            case 'product-category':
-                setProductCategories([...mockProductCategories]);
+            case 'item':
+                // Item Master uses its own list component for now
                 break;
-            case 'item-type':
-                setItemTypes([...mockItemTypes]);
-                break;
-            case 'unit':
-                setUnits([...mockUnits]);
+            case 'cost-center':
+            case 'project':
+                // Mock data for now
                 break;
         }
         
@@ -130,23 +153,18 @@ export default function MasterDataDashboard() {
         fetchData();
     }, [fetchData]);
 
-    // Update URL when tab changes
     useEffect(() => {
         setSearchParams({ tab: activeTab });
         setSearchTerm('');
-        setStatusFilter('ALL');
-        setCurrentPage(1);
+        setExpandedId(null);
     }, [activeTab, setSearchParams]);
 
-    // ====================================================================================
-    // HANDLERS
-    // ====================================================================================
-
-    const handleTabChange = (tab: TabType) => {
-        setActiveTab(tab);
+    // Handlers
+    const handleTabChange = (tabId: TabType) => {
+        setActiveTab(tabId);
     };
 
-    const handleCreateNew = () => {
+    const handleAddNew = () => {
         setEditingId(null);
         setIsModalOpen(true);
     };
@@ -156,9 +174,11 @@ export default function MasterDataDashboard() {
         setIsModalOpen(true);
     };
 
-    const handleDelete = (id: string) => {
-        if (confirm('คุณต้องการลบข้อมูลนี้หรือไม่?')) {
-            console.log('Delete:', id);
+    const handleDelete = async (id: string) => {
+        if (confirm('ต้องการลบข้อมูลนี้หรือไม่?')) {
+            if (activeTab === 'vendor') {
+                await vendorService.delete(id);
+            }
             fetchData();
         }
     };
@@ -169,365 +189,417 @@ export default function MasterDataDashboard() {
         fetchData();
     };
 
-    // ====================================================================================
-    // FILTER & PAGINATION
-    // ====================================================================================
+    const toggleExpand = (id: string) => {
+        setExpandedId(expandedId === id ? null : id);
+    };
 
+    // Get current tab config
+    const currentTab = tabs.find(t => t.id === activeTab) || tabs[0];
+
+    // Get tab label with Thai name
+    const getTabLabel = () => {
+        switch (activeTab) {
+            case 'vendor': return { main: 'Vendor (ผู้ขาย)', desc: 'ทะเบียนผู้ขายและข้อมูลการติดต่อ' };
+            case 'item': return { main: 'Item (สินค้า)', desc: 'รายการสินค้าและวัตถุดิบ' };
+            case 'branch': return { main: 'Branch (สาขา)', desc: 'ข้อมูลสาขาและสถานที่ตั้ง' };
+            case 'warehouse': return { main: 'Warehouse (คลัง)', desc: 'คลังสินค้าและสถานที่จัดเก็บ' };
+            case 'cost-center': return { main: 'Cost Center', desc: 'ศูนย์ต้นทุนสำหรับการบัญชี' };
+            case 'project': return { main: 'Project (โครงการ)', desc: 'โครงการและงานที่เกี่ยวข้อง' };
+            default: return { main: 'Master Data', desc: '' };
+        }
+    };
+
+    // Filter data based on search
     const getFilteredData = () => {
-        let data: Array<{ id: string; code: string; name: string; nameEn?: string; isActive: boolean; status?: string }> = [];
+        const term = searchTerm.toLowerCase();
         
         switch (activeTab) {
             case 'vendor':
-                data = vendors.map(v => ({
-                    id: v.vendor_id,
-                    code: v.vendor_code,
-                    name: v.vendor_name,
-                    nameEn: v.vendor_name_en,
-                    isActive: v.status === 'ACTIVE',
-                    status: v.status  // Keep original status for filtering
-                }));
-                break;
+                return vendors.filter(v => 
+                    v.vendor_code.toLowerCase().includes(term) ||
+                    v.vendor_name.toLowerCase().includes(term) ||
+                    v.tax_id?.toLowerCase().includes(term)
+                );
             case 'branch':
-                data = branches.map(b => ({
-                    id: b.branch_id,
-                    code: b.branch_code,
-                    name: b.branch_name,
-                    isActive: b.is_active
-                }));
-                break;
+                return branches.filter(b =>
+                    b.branch_code.toLowerCase().includes(term) ||
+                    b.branch_name.toLowerCase().includes(term)
+                );
             case 'warehouse':
-                data = warehouses.map(w => ({
-                    id: w.warehouse_id,
-                    code: w.warehouse_code,
-                    name: w.warehouse_name,
-                    nameEn: w.branch_name,
-                    isActive: w.is_active
-                }));
-                break;
-            case 'product-category':
-                data = productCategories.map(c => ({
-                    id: c.category_id,
-                    code: c.category_code,
-                    name: c.category_name,
-                    nameEn: c.category_name_en,
-                    isActive: c.is_active
-                }));
-                break;
-            case 'item-type':
-                data = itemTypes.map(i => ({
-                    id: i.item_type_id,
-                    code: i.item_type_code,
-                    name: i.item_type_name,
-                    nameEn: i.item_type_name_en,
-                    isActive: i.is_active
-                }));
-                break;
-            case 'unit':
-                data = units.map(u => ({
-                    id: u.unit_id,
-                    code: u.unit_code,
-                    name: u.unit_name,
-                    nameEn: u.unit_name_en,
-                    isActive: u.is_active
-                }));
-                break;
+                return warehouses.filter(w =>
+                    w.warehouse_code.toLowerCase().includes(term) ||
+                    w.warehouse_name.toLowerCase().includes(term)
+                );
+            default:
+                return [];
         }
-
-        // Apply filters - for vendor use status string, for others use isActive boolean
-        if (statusFilter !== 'ALL') {
-            if (activeTab === 'vendor') {
-                // Vendor: filter by exact status match
-                data = data.filter(d => d.status === statusFilter);
-            } else {
-                // Others: filter by active/inactive (boolean)
-                data = data.filter(d => statusFilter === 'ACTIVE' ? d.isActive : !d.isActive);
-            }
-        }
-        if (searchTerm) {
-            const term = searchTerm.toLowerCase();
-            data = data.filter(d => 
-                d.code.toLowerCase().includes(term) || 
-                d.name.toLowerCase().includes(term) ||
-                d.nameEn?.toLowerCase().includes(term)
-            );
-        }
-
-        return data;
     };
 
-    const filteredData = getFilteredData();
-    const totalPages = Math.ceil(filteredData.length / rowsPerPage);
-    const paginatedData = filteredData.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+    // ====================================================================================
+    // RENDER HELPERS
+    // ====================================================================================
+
+    const renderVendorCard = (vendor: VendorListItem, isExpanded: boolean) => (
+        <div key={vendor.vendor_id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            {/* Card Header */}
+            <div 
+                className="p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                onClick={() => toggleExpand(vendor.vendor_id)}
+            >
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
+                            <Users size={24} className="text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className="font-semibold text-gray-900 dark:text-white">
+                                    {vendor.vendor_name}
+                                </span>
+                                <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                                    vendor.status === 'ACTIVE' 
+                                        ? 'bg-green-100 text-green-700' 
+                                        : 'bg-gray-100 text-gray-600'
+                                }`}>
+                                    {vendor.status}
+                                </span>
+                            </div>
+                            <p className="text-sm text-gray-500">
+                                Code: {vendor.vendor_code} | Tax ID: {vendor.tax_id || '-'}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <div className="text-right">
+                            <p className="text-lg font-semibold text-gray-700 dark:text-gray-300">30 days</p>
+                            <p className="text-xs text-gray-500">Payment Term</p>
+                        </div>
+                        {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                    </div>
+                </div>
+            </div>
+
+            {/* Expanded Content */}
+            {isExpanded && (
+                <div className="border-t border-gray-200 dark:border-gray-700">
+                    <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Address */}
+                        <div>
+                            <p className="text-xs text-gray-500 mb-1">Address</p>
+                            <div className="flex items-start gap-2">
+                                <MapPin size={16} className="text-gray-400 mt-0.5" />
+                                <p className="text-sm text-gray-700 dark:text-gray-300">
+                                    789 ถนนสุขุมวิท กรุงเทพฯ
+                                </p>
+                            </div>
+                        </div>
+                        
+                        {/* Contact */}
+                        <div>
+                            <p className="text-xs text-gray-500 mb-1">Contact</p>
+                            <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                    <Phone size={14} className="text-gray-400" />
+                                    <span className="text-sm text-gray-700 dark:text-gray-300">
+                                        {vendor.phone || '02-123-4567'}
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Mail size={14} className="text-gray-400" />
+                                    <a href={`mailto:${vendor.email}`} className="text-sm text-blue-600 hover:underline">
+                                        {vendor.email || 'sales@techdigital.co.th'}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Tax Settings */}
+                        <div>
+                            <p className="text-xs text-gray-500 mb-1">Tax Settings</p>
+                            <div className="flex gap-2">
+                                <span className="px-2 py-1 text-xs font-medium border border-green-500 text-green-600 rounded">
+                                    VAT Registered
+                                </span>
+                                <span className="px-2 py-1 text-xs font-medium border border-orange-500 text-orange-600 rounded">
+                                    WHT Applicable
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Currency */}
+                        <div>
+                            <p className="text-xs text-gray-500 mb-1">Currency</p>
+                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">THB</p>
+                        </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="px-4 pb-4 flex gap-2">
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); handleEdit(vendor.vendor_id); }}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                            <Edit2 size={16} />
+                            Edit
+                        </button>
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); handleDelete(vendor.vendor_id); }}
+                            className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                        >
+                            <Trash2 size={16} />
+                            Delete
+                        </button>
+                    </div>
+
+                    {/* Database Relations */}
+                    <div className="px-4 pb-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+                        <div className="flex items-center gap-2 mb-3">
+                            <Database size={16} className="text-gray-500" />
+                            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Database Relations</span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-4 text-sm">
+                            <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <p className="text-xs text-gray-500 mb-1">Table:</p>
+                                <p className="text-blue-600 font-mono">{currentTab.dbTable}</p>
+                            </div>
+                            <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <p className="text-xs text-gray-500 mb-1">Relations:</p>
+                                <p className="text-blue-600 font-mono text-xs">
+                                    {currentTab.relations.join(', ')}
+                                </p>
+                            </div>
+                            <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <p className="text-xs text-gray-500 mb-1">FK:</p>
+                                <p className="text-blue-600 font-mono">{currentTab.fk}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+
+    const renderBranchCard = (branch: BranchListItem, isExpanded: boolean) => (
+        <div key={branch.branch_id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div 
+                className="p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                onClick={() => toggleExpand(branch.branch_id)}
+            >
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center">
+                            <Building2 size={24} className="text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className="font-semibold text-gray-900 dark:text-white">
+                                    {branch.branch_name}
+                                </span>
+                                <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                                    branch.is_active 
+                                        ? 'bg-green-100 text-green-700' 
+                                        : 'bg-gray-100 text-gray-600'
+                                }`}>
+                                    {branch.is_active ? 'ACTIVE' : 'INACTIVE'}
+                                </span>
+                            </div>
+                            <p className="text-sm text-gray-500">
+                                Code: {branch.branch_code}
+                            </p>
+                        </div>
+                    </div>
+                    {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                </div>
+            </div>
+            {isExpanded && (
+                <div className="border-t border-gray-200 dark:border-gray-700 p-4">
+                    <div className="flex gap-2 mb-4">
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); handleEdit(branch.branch_id); }}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                        >
+                            <Edit2 size={16} /> Edit
+                        </button>
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); handleDelete(branch.branch_id); }}
+                            className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                        >
+                            <Trash2 size={16} /> Delete
+                        </button>
+                    </div>
+                    {/* Database Relations */}
+                    <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                        <div className="flex items-center gap-2 mb-3">
+                            <Database size={16} className="text-gray-500" />
+                            <span className="text-sm font-medium text-gray-600">Database Relations</span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-4 text-sm">
+                            <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <p className="text-xs text-gray-500 mb-1">Table:</p>
+                                <p className="text-blue-600 font-mono">{currentTab.dbTable}</p>
+                            </div>
+                            <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <p className="text-xs text-gray-500 mb-1">Relations:</p>
+                                <p className="text-blue-600 font-mono text-xs">{currentTab.relations.join(', ')}</p>
+                            </div>
+                            <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <p className="text-xs text-gray-500 mb-1">FK:</p>
+                                <p className="text-blue-600 font-mono">{currentTab.fk}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
 
     // ====================================================================================
     // RENDER
     // ====================================================================================
 
-    const totalAll = Object.values(stats).reduce((sum, s) => sum + s.total, 0);
-    const activeAll = Object.values(stats).reduce((sum, s) => sum + s.active, 0);
-
     return (
-        <div className="p-6 space-y-6">
+        <div className="p-6 min-h-screen bg-gray-50 dark:bg-gray-900">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                        <Database className="text-blue-600" />
-                        Master Data Management
-                    </h1>
-                    <p className="text-gray-500 dark:text-gray-400 mt-1">
-                        จัดการข้อมูลหลักทั้งหมดในระบบ
-                    </p>
+            <div className="mb-6">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-blue-500 rounded-lg flex items-center justify-center">
+                        <Database size={24} className="text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                            Master Data Management
+                        </h1>
+                        <p className="text-sm text-gray-500">
+                            จัดการข้อมูลหลักสำหรับระบบจัดซื้อ - ครบถ้วนพร้อม Table Relationships
+                        </p>
+                    </div>
                 </div>
-                <button 
-                    onClick={() => fetchData()} 
-                    className="p-2 text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors w-fit"
-                    title="รีเฟรช"
+            </div>
+
+            {/* Tab Navigation */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
+                <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+                    {tabs.map((tab) => (
+                        <button
+                            key={tab.id}
+                            onClick={() => handleTabChange(tab.id)}
+                            className={`p-4 rounded-xl flex flex-col items-center gap-2 transition-all ${
+                                activeTab === tab.id
+                                    ? 'bg-blue-50 dark:bg-blue-900/30 border-2 border-blue-500'
+                                    : 'bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600'
+                            }`}
+                        >
+                            <div className={`p-3 rounded-xl ${
+                                activeTab === tab.id
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
+                            }`}>
+                                <tab.icon size={24} />
+                            </div>
+                            <div className="text-center">
+                                <p className={`text-sm font-medium ${
+                                    activeTab === tab.id
+                                        ? 'text-blue-600 dark:text-blue-400'
+                                        : 'text-gray-700 dark:text-gray-300'
+                                }`}>
+                                    {tab.label} {tab.labelEn && `(${tab.labelEn})`}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                    {tab.recordCount} records
+                                </p>
+                            </div>
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Content Section Header */}
+            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/50 rounded-xl flex items-center justify-center">
+                        <currentTab.icon size={24} className="text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div>
+                        <h2 className="text-lg font-semibold text-blue-800 dark:text-blue-300">
+                            {getTabLabel().main}
+                        </h2>
+                        <p className="text-sm text-blue-600 dark:text-blue-400">
+                            {getTabLabel().desc}
+                        </p>
+                    </div>
+                </div>
+                {activeTab !== 'item' && (
+                <button
+                    onClick={handleAddNew}
+                    className={`${styles.btnPrimary} flex items-center gap-2`}
                 >
-                    <RefreshCw size={20} className={isLoading ? 'animate-spin' : ''} />
+                    <Plus size={20} />
+                    Add New
+                </button>
+                )}
+            </div>
+
+            {/* Search & Filter - Hide for Item tab as it has its own */}
+            {activeTab !== 'item' && (
+            <div className="flex gap-4 mb-4">
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                    <input
+                        type="text"
+                        placeholder={`Search ${currentTab.label} (${currentTab.labelEn})...`}
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500"
+                    />
+                </div>
+                <button className="flex items-center gap-2 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <Filter size={20} className="text-gray-500" />
+                    <span className="text-gray-700 dark:text-gray-300">Filter</span>
                 </button>
             </div>
+            )}
 
-            {/* Summary Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                            <Database className="text-blue-600" size={20} />
-                        </div>
-                        <div>
-                            <p className="text-xs text-gray-500">ข้อมูลหลักทั้งหมด</p>
-                            <p className="text-xl font-bold text-gray-800 dark:text-white">{totalAll}</p>
-                        </div>
+            {/* Data Cards */}
+            <div className="space-y-4">
+                {isLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        <span className="ml-3 text-gray-600">กำลังโหลดข้อมูล...</span>
                     </div>
-                </div>
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                            <CheckCircle className="text-green-600" size={20} />
+                ) : activeTab === 'vendor' ? (
+                    getFilteredData().length > 0 ? (
+                        (getFilteredData() as VendorListItem[]).map(vendor => 
+                            renderVendorCard(vendor, expandedId === vendor.vendor_id)
+                        )
+                    ) : (
+                        <div className="text-center py-12 text-gray-500">
+                            ไม่พบข้อมูล {currentTab.label}
                         </div>
-                        <div>
-                            <p className="text-xs text-gray-500">ใช้งานอยู่</p>
-                            <p className="text-xl font-bold text-green-600">{activeAll}</p>
+                    )
+                ) : activeTab === 'branch' ? (
+                    getFilteredData().length > 0 ? (
+                        (getFilteredData() as BranchListItem[]).map(branch => 
+                            renderBranchCard(branch, expandedId === branch.branch_id)
+                        )
+                    ) : (
+                        <div className="text-center py-12 text-gray-500">
+                            ไม่พบข้อมูล {currentTab.label}
                         </div>
+                    )
+                ) : activeTab === 'item' ? (
+                     <ItemMasterList />
+                ) : (
+                    <div className="text-center py-12 text-gray-500">
+                        <p>{currentTab.label} - Coming Soon</p>
                     </div>
-                </div>
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                            <XCircle className="text-gray-500" size={20} />
-                        </div>
-                        <div>
-                            <p className="text-xs text-gray-500">ไม่ใช้งาน</p>
-                            <p className="text-xl font-bold text-gray-500">{totalAll - activeAll}</p>
-                        </div>
-                    </div>
-                </div>
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                    <div className="flex items-center gap-3">
-                        <div className={`p-2 bg-${TABS.find(t => t.id === activeTab)?.color || 'blue'}-100 dark:bg-${TABS.find(t => t.id === activeTab)?.color || 'blue'}-900/30 rounded-lg`}>
-                            {(() => {
-                                const IconComponent = TABS.find(t => t.id === activeTab)?.icon || Database;
-                                return <IconComponent className="text-blue-600" size={20} />;
-                            })()}
-                        </div>
-                        <div>
-                            <p className="text-xs text-gray-500">{TABS.find(t => t.id === activeTab)?.label}</p>
-                            <p className="text-xl font-bold text-gray-800 dark:text-white">{stats[activeTab].total}</p>
-                        </div>
-                    </div>
-                </div>
+                )}
             </div>
 
-            {/* Tabs */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-                {/* Tab Headers */}
-                <div className="flex overflow-x-auto border-b border-gray-200 dark:border-gray-700">
-                    {TABS.map((tab) => {
-                        const IconComponent = tab.icon;
-                        const isActive = activeTab === tab.id;
-                        return (
-                            <button
-                                key={tab.id}
-                                onClick={() => handleTabChange(tab.id)}
-                                className={`
-                                    flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors
-                                    ${isActive 
-                                        ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50 dark:bg-blue-900/20' 
-                                        : 'text-gray-600 dark:text-gray-400 hover:text-blue-600 hover:bg-gray-50 dark:hover:bg-gray-700'
-                                    }
-                                `}
-                            >
-                                <IconComponent size={18} />
-                                <span>{tab.label}</span>
-                                <span className={`px-2 py-0.5 text-xs rounded-full ${
-                                    isActive 
-                                        ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/40' 
-                                        : 'bg-gray-100 text-gray-600 dark:bg-gray-700'
-                                }`}>
-                                    {stats[tab.id].total}
-                                </span>
-                            </button>
-                        );
-                    })}
-                </div>
-
-                {/* Tab Content */}
-                <div className="p-4">
-                    {/* Search & Filter */}
-                    <div className="flex flex-col md:flex-row gap-4 mb-4">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                            <input
-                                type="text"
-                                placeholder="ค้นหารหัส, ชื่อ..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className={`${styles.input} pl-10`}
-                            />
-                        </div>
-                        <div className="relative w-full md:w-48">
-                            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                            <select
-                                value={statusFilter}
-                                onChange={(e) => setStatusFilter(e.target.value as 'ALL' | 'ACTIVE' | 'INACTIVE')}
-                                className={`${styles.inputSelect} pl-10`}
-                            >
-                                <option value="ALL">สถานะทั้งหมด</option>
-                                <option value="ACTIVE">ใช้งาน</option>
-                                <option value="INACTIVE">ไม่ใช้งาน</option>
-                                <option value="SUSPENDED">พักใช้งาน</option>
-                                <option value="BLACKLISTED">ระงับการใช้งาน</option>
-                            </select>
-                        </div>
-                        <button
-                            onClick={handleCreateNew}
-                            className={`${styles.btnPrimary} flex items-center gap-2 whitespace-nowrap`}
-                        >
-                            <Plus size={20} />
-                            เพิ่มใหม่
-                        </button>
-                    </div>
-
-                    {/* Data Table */}
-                    <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
-                        {isLoading ? (
-                            <div className="flex items-center justify-center py-12">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                                <span className="ml-3 text-gray-600 dark:text-gray-400">กำลังโหลดข้อมูล...</span>
-                            </div>
-                        ) : (
-                            <table className="w-full">
-                                <thead className="bg-gray-50 dark:bg-gray-700">
-                                    <tr>
-                                        <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-200 uppercase">รหัส</th>
-                                        <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-200 uppercase">ชื่อ</th>
-                                        <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-200 uppercase hidden md:table-cell">ชื่อ EN / อื่นๆ</th>
-                                        <th className="px-4 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-200 uppercase">สถานะ</th>
-                                        <th className="px-4 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-200 uppercase">จัดการ</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                    {paginatedData.length > 0 ? (
-                                        paginatedData.map((item) => (
-                                            <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                                                <td className="px-4 py-3 text-sm font-medium text-blue-600 dark:text-blue-400">
-                                                    {item.code}
-                                                </td>
-                                                <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
-                                                    {item.name}
-                                                </td>
-                                                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">
-                                                    {item.nameEn || '-'}
-                                                </td>
-                                                <td className="px-4 py-3 text-center">
-                                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ${
-                                                        item.isActive 
-                                                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
-                                                            : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                                                    }`}>
-                                                        <span className={`w-1.5 h-1.5 rounded-full ${item.isActive ? 'bg-green-500' : 'bg-gray-500'}`}></span>
-                                                        {item.isActive ? 'Active' : 'Inactive'}
-                                                    </span>
-                                                </td>
-                                                <td className="px-4 py-3 text-center">
-                                                    <div className="flex items-center justify-center gap-1">
-                                                        <button 
-                                                            onClick={() => handleEdit(item.id)}
-                                                            className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-                                                            title="แก้ไข"
-                                                        >
-                                                            <Edit2 size={16} />
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => handleDelete(item.id)}
-                                                            className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-                                                            title="ลบ"
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan={5} className="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
-                                                ไม่พบข้อมูล
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        )}
-                    </div>
-
-                    {/* Pagination */}
-                    {!isLoading && paginatedData.length > 0 && (
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-4">
-                            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                                <span>แสดง</span>
-                                <select
-                                    value={rowsPerPage}
-                                    onChange={(e) => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }}
-                                    className={styles.inputSm}
-                                >
-                                    <option value={5}>5</option>
-                                    <option value={10}>10</option>
-                                    <option value={25}>25</option>
-                                </select>
-                                <span>รายการ | {filteredData.length} รายการ</span>
-                            </div>
-
-                            <div className="flex items-center gap-1">
-                                <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50">
-                                    <ChevronsLeft size={18} className="text-gray-600 dark:text-gray-400" />
-                                </button>
-                                <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50">
-                                    <ChevronLeft size={18} className="text-gray-600 dark:text-gray-400" />
-                                </button>
-                                <span className="px-3 py-1 text-sm text-gray-700 dark:text-gray-300">
-                                    หน้า {currentPage} / {totalPages || 1}
-                                </span>
-                                <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50">
-                                    <ChevronRight size={18} className="text-gray-600 dark:text-gray-400" />
-                                </button>
-                                <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage >= totalPages} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50">
-                                    <ChevronsRight size={18} className="text-gray-600 dark:text-gray-400" />
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* All Form Modals */}
+            {/* Form Modals */}
             <VendorFormModal isOpen={isModalOpen && activeTab === 'vendor'} onClose={handleModalClose} />
             <BranchFormModal isOpen={isModalOpen && activeTab === 'branch'} onClose={handleModalClose} editId={editingId} />
             <WarehouseFormModal isOpen={isModalOpen && activeTab === 'warehouse'} onClose={handleModalClose} editId={editingId} />
-            <ProductCategoryFormModal isOpen={isModalOpen && activeTab === 'product-category'} onClose={handleModalClose} editId={editingId} />
-            <ItemTypeFormModal isOpen={isModalOpen && activeTab === 'item-type'} onClose={handleModalClose} editId={editingId} />
-            <UnitFormModal isOpen={isModalOpen && activeTab === 'unit'} onClose={handleModalClose} editId={editingId} />
+            {/* Item Master modals are handled within ItemMasterList */}
         </div>
     );
 }

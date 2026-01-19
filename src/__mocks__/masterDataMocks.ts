@@ -10,6 +10,9 @@ import type {
     ProductCategoryListItem,
     ItemTypeListItem,
     UnitListItem,
+    ItemListItem,
+    UOMConversionListItem,
+    ItemBarcodeListItem,
 } from '../types/master-data-types';
 
 // ====================================================================================
@@ -216,5 +219,125 @@ export const mockUnits: UnitListItem[] = [
         unit_name_en: 'Package',
         is_active: false,
         created_at: '2024-01-01T00:00:00Z',
+    },
+];
+
+// ====================================================================================
+// ITEM MASTER MOCK DATA
+// ====================================================================================
+
+export const mockItems: ItemListItem[] = [
+    {
+        item_id: 'IT001',
+        item_code: 'RM-001',
+        item_name: 'Paracetamol 500mg',
+        category_name: 'ยา (Drug)',
+        unit_name: 'เม็ด (Tablet)',
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+    },
+    {
+        item_id: 'IT002',
+        item_code: 'EQ-005',
+        item_name: 'Surgical Mask',
+        category_name: 'เวชภัณฑ์ (Medical Supplies)',
+        unit_name: 'กล่อง (Box)',
+        is_active: true,
+        created_at: '2024-01-02T00:00:00Z',
+    },
+    {
+        item_id: 'IT003',
+        item_code: 'SV-001',
+        item_name: 'ค่าบริการตรวจสุขภาพ',
+        category_name: 'บริการ (Service)',
+        unit_name: 'ครั้ง (Time)',
+        is_active: true,
+        created_at: '2024-01-05T00:00:00Z',
+    },
+    {
+        item_id: 'IT004',
+        item_code: 'MED-002',
+        item_name: 'Amoxicillin 250mg',
+        category_name: 'ยา (Drug)',
+        unit_name: 'แคปซูล (Capsule)',
+        is_active: true,
+        created_at: '2024-01-10T00:00:00Z',
+    },
+];
+
+// ====================================================================================
+// UOM CONVERSION MOCK DATA
+// ====================================================================================
+
+export const mockUOMConversions: UOMConversionListItem[] = [
+    {
+        conversion_id: 'UC001',
+        item_code: 'RM-001',
+        item_name: 'Paracetamol 500mg',
+        from_unit_name: 'ลัง',
+        to_unit_name: 'แพ็ค',
+        conversion_factor: 12,
+        is_purchase_unit: true,
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+    },
+    {
+        conversion_id: 'UC002',
+        item_code: 'RM-001',
+        item_name: 'Paracetamol 500mg',
+        from_unit_name: 'แพ็ค',
+        to_unit_name: 'ชิ้น',
+        conversion_factor: 6,
+        is_purchase_unit: false,
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+    },
+    {
+        conversion_id: 'UC003',
+        item_code: 'EQ-005',
+        item_name: 'Surgical Mask',
+        from_unit_name: 'ลัง',
+        to_unit_name: 'กล่อง',
+        conversion_factor: 20,
+        is_purchase_unit: true,
+        is_active: true,
+        created_at: '2024-01-02T00:00:00Z',
+    },
+];
+
+// ====================================================================================
+// ITEM BARCODE MOCK DATA
+// ====================================================================================
+
+export const mockItemBarcodes: ItemBarcodeListItem[] = [
+    {
+        barcode_id: 'BC001',
+        item_code: 'RM-001',
+        item_name: 'Paracetamol 500mg',
+        barcode: '8850007001234',
+        unit_name: 'ลัง',
+        is_primary: true,
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+    },
+    {
+        barcode_id: 'BC002',
+        item_code: 'RM-001',
+        item_name: 'Paracetamol 500mg',
+        barcode: '8850007001241',
+        unit_name: 'แพ็ค',
+        is_primary: false,
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+    },
+    {
+        barcode_id: 'BC003',
+        item_code: 'EQ-005',
+        item_name: 'Surgical Mask',
+        barcode: '8850007005678',
+        unit_name: undefined,
+        is_primary: true,
+        is_active: true,
+        created_at: '2024-01-02T00:00:00Z',
     },
 ];

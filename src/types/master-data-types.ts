@@ -261,6 +261,192 @@ export const initialUnitFormData: UnitFormData = {
 };
 
 // ====================================================================================
+// ITEM MASTER - กำหนดรหัสสินค้า
+// ====================================================================================
+
+/**
+ * ItemMaster - ข้อมูลสินค้า
+ */
+export interface ItemMaster extends BaseMasterData {
+    item_id: string;
+    item_code: string;
+    item_name: string;
+    barcode?: string;
+    category_id?: string;
+    category_name: string;
+    item_type_id?: string;
+    item_type_name?: string;
+    unit_id?: string;
+    unit_name: string;
+    purchasing_unit_id?: string;
+    purchasing_unit_name?: string;
+    sales_unit_id?: string;
+    sales_unit_name?: string;
+    tax_code?: string;
+    is_active: boolean;
+}
+
+/**
+ * ItemMasterFormData - สำหรับ Frontend Form
+ */
+export interface ItemMasterFormData {
+    itemCode: string;
+    itemCodeSearch: string;
+    itemName: string;
+    barcode: string;
+    mainUnit: string;
+    productCategory: string;
+    itemType: string;
+    purchasingUnit: string;
+    salesUnit: string;
+    taxCode: string;
+    isActive: boolean;
+}
+
+/**
+ * ItemListItem - สำหรับแสดงในตาราง
+ */
+export interface ItemListItem {
+    item_id: string;
+    item_code: string;
+    item_name: string;
+    category_name: string;
+    unit_name: string;
+    is_active: boolean;
+    created_at: string;
+}
+
+/** Initial form data สำหรับ new item master */
+export const initialItemMasterFormData: ItemMasterFormData = {
+    itemCode: '',
+    itemCodeSearch: '',
+    itemName: '',
+    barcode: '',
+    mainUnit: '',
+    productCategory: '',
+    itemType: '',
+    purchasingUnit: '',
+    salesUnit: '',
+    taxCode: '',
+    isActive: true,
+};
+
+// ====================================================================================
+// ITEM UOM CONVERSION - แปลงหน่วย (หลายหน่วยนับ)
+// ====================================================================================
+
+/**
+ * ItemUOMConversion - ข้อมูลการแปลงหน่วย
+ */
+export interface ItemUOMConversion {
+    conversion_id: string;
+    item_id: string;
+    item_code: string;
+    item_name: string;
+    from_unit_id: string;
+    from_unit_name: string;
+    to_unit_id: string;
+    to_unit_name: string;
+    conversion_factor: number;
+    is_purchase_unit: boolean;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+/**
+ * UOMConversionFormData - สำหรับ Frontend Form
+ */
+export interface UOMConversionFormData {
+    itemCode: string;
+    itemName: string;
+    fromUnit: string;
+    toUnit: string;
+    conversionFactor: number;
+    isPurchaseUnit: boolean;
+}
+
+/**
+ * UOMConversionListItem - สำหรับแสดงในตาราง
+ */
+export interface UOMConversionListItem {
+    conversion_id: string;
+    item_code: string;
+    item_name: string;
+    from_unit_name: string;
+    to_unit_name: string;
+    conversion_factor: number;
+    is_purchase_unit: boolean;
+    is_active: boolean;
+    created_at: string;
+}
+
+/** Initial form data สำหรับ new UOM Conversion */
+export const initialUOMConversionFormData: UOMConversionFormData = {
+    itemCode: '',
+    itemName: '',
+    fromUnit: '',
+    toUnit: '',
+    conversionFactor: 0,
+    isPurchaseUnit: false,
+};
+
+// ====================================================================================
+// ITEM BARCODE - บาร์โค้ดหลายรายการ/หลายหน่วย
+// ====================================================================================
+
+/**
+ * ItemBarcode - ข้อมูลบาร์โค้ดสินค้า
+ */
+export interface ItemBarcode {
+    barcode_id: string;
+    item_id: string;
+    item_code: string;
+    item_name: string;
+    barcode: string;
+    unit_id?: string;
+    unit_name?: string;
+    is_primary: boolean;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+/**
+ * ItemBarcodeFormData - สำหรับ Frontend Form
+ */
+export interface ItemBarcodeFormData {
+    itemCode: string;
+    itemName: string;
+    barcode: string;
+    linkedUnit: string;
+    isPrimary: boolean;
+}
+
+/**
+ * ItemBarcodeListItem - สำหรับแสดงในตาราง
+ */
+export interface ItemBarcodeListItem {
+    barcode_id: string;
+    item_code: string;
+    item_name: string;
+    barcode: string;
+    unit_name?: string;
+    is_primary: boolean;
+    is_active: boolean;
+    created_at: string;
+}
+
+/** Initial form data สำหรับ new Item Barcode */
+export const initialItemBarcodeFormData: ItemBarcodeFormData = {
+    itemCode: '',
+    itemName: '',
+    barcode: '',
+    linkedUnit: '',
+    isPrimary: false,
+};
+
+// ====================================================================================
 // API TYPES - Request/Response (Common for all master data)
 // ====================================================================================
 

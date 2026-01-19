@@ -427,12 +427,16 @@ export const sidebarMenuItems: MenuItem[] = [
         icon: Database,
         path: '/master-data',
         subItems: [
-            { id: 'vendor-code', label: 'กำหนดรหัสเจ้าหนี้', path: '/master-data/vendor' },
+            { id: 'master-data-dashboard', label: 'Master Data Dashboard', path: '/master-data' },
+            { id: 'vendor-management', label: 'กำหนดรหัสเจ้าหนี้', path: '/master-data/vendor' },
             { id: 'branch-code', label: 'กำหนดรหัสสาขา', path: '/master-data/branch' },
             { id: 'warehouse-code', label: 'กำหนดรหัสคลังสินค้า', path: '/master-data/warehouse' },
             { id: 'product-category', label: 'กำหนดรหัสหมวดสินค้า', path: '/master-data/product-category' },
             { id: 'item-type', label: 'กำหนดรหัสประเภทสินค้า', path: '/master-data/item-type' },
             { id: 'unit', label: 'กำหนดรหัสหน่วยนับ', path: '/master-data/unit' },
+            { id: 'item-master', label: 'กำหนดรหัสสินค้าและบริการ', path: '/master-data/item' },
+            { id: 'uom-conversion', label: 'แปลงหน่วย (หลายหน่วยนับ)', path: '/master-data/uom-conversion' },
+            { id: 'item-barcode', label: 'บาร์โค้ดหลายรายการ/หลายหน่วย', path: '/master-data/item-barcode' },
         ]
     },
 ];
