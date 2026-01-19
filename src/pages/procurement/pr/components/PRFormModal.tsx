@@ -8,7 +8,7 @@ import { useForm } from 'react-hook-form';
 import type { SubmitHandler } from 'react-hook-form';
 import type { PRFormData, PRLineFormData } from '../../../../types/pr-types';
 import { MOCK_PRODUCTS as CENTRAL_MOCK_PRODUCTS } from '../../../../__mocks__';
-import { FileText, Minimize2, Maximize2, X, Plus, Trash2, Search, Eraser, Triangle, FileBox, MoreHorizontal, Flame, FileBarChart, History as HistoryIcon } from 'lucide-react';
+import { FileText, Minus, Maximize2, X, Plus, Trash2, Search, Eraser, Triangle, FileBox, MoreHorizontal, Flame, FileBarChart, History as HistoryIcon } from 'lucide-react';
 
 import { PRHeader } from './PRHeader';
 import { PRFooter } from './PRFooter';
@@ -95,6 +95,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
   const [isMaximized, setIsMaximized] = useState(true);
+  const [isMinimized, setIsMinimized] = useState(false);
   
   const { register, handleSubmit, setValue, reset } = useForm<PRFormData>({
     defaultValues: getDefaultFormValues()
@@ -127,6 +128,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
         setRemarks('');
         setActiveTab('detail');
         reset(getDefaultFormValues());
+        setIsMinimized(false);
       }, 0);
       return () => clearTimeout(timer);
     }
@@ -247,7 +249,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
   );
 
   return (
-    <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 backdrop-blur-sm transition-opacity duration-300 ${isAnimating ? 'opacity-100' : 'opacity-0'}`} onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}>
+    <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-300 ${isAnimating ? 'opacity-100' : 'opacity-0'} ${isMinimized ? 'bg-transparent pointer-events-none' : 'bg-black/50 dark:bg-black/70 backdrop-blur-sm'}`} onClick={(e) => { if (e.target === e.currentTarget && !isMinimized) handleClose(); }}>
       {toast && <Toast message={toast.message} onClose={() => setToast(null)} />}
 
       {/* Product Search Modal - ตาม UI ที่ต้องการ */}
@@ -322,25 +324,33 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
       )}
 
       <div className={`
-        flex flex-col overflow-hidden bg-white dark:bg-gray-900 shadow-2xl border-4 border-blue-600 dark:border-blue-500 transition-all duration-300 ease-out origin-center
-        ${isMaximized 
-          ? 'w-full h-full rounded-none border-0 scale-100' 
-          : 'w-[120vw] h-[120vh] scale-[0.8] rounded-2xl'
+        flex flex-col overflow-hidden bg-white dark:bg-gray-900 shadow-2xl border-4 border-blue-600 dark:border-blue-500 transition-all duration-300 ease-out pointer-events-auto
+        ${isMinimized 
+          ? 'fixed bottom-4 left-1/2 -translate-x-1/2 w-[400px] h-auto rounded-xl ring-2 ring-white/20' 
+          : isMaximized 
+            ? 'w-full h-full rounded-none border-0 scale-100' 
+            : 'w-[120vw] h-[120vh] scale-[0.8] rounded-2xl'
         }
         ${isAnimating ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}
       `}>
         {/* Title Bar */}
-        <div className="bg-blue-600 text-white px-3 py-1.5 font-bold text-sm flex justify-between items-center select-none flex-shrink-0">
+        <div 
+          className="bg-blue-600 text-white px-3 py-2 font-bold text-sm flex justify-between items-center select-none flex-shrink-0 cursor-pointer"
+          onClick={() => isMinimized && setIsMinimized(false)}
+        >
           <div className="flex items-center space-x-2">
             <div className="bg-red-500 p-1 rounded-md shadow-sm"><FileText size={14} strokeWidth={3} /></div>
             <span>ใบขอซื้อ (Purchase Requisition)</span>
           </div>
           <div className="flex items-center space-x-1">
-            <button type="button" onClick={() => setIsMaximized(false)} className={`w-6 h-6 bg-blue-500 hover:bg-blue-400 rounded-sm flex items-center justify-center ${!isMaximized ? 'opacity-50 cursor-not-allowed' : ''}`}><Minimize2 size={12} strokeWidth={3} /></button>
-            <button type="button" onClick={() => setIsMaximized(true)} className={`w-6 h-6 bg-blue-500 hover:bg-blue-400 rounded-sm flex items-center justify-center ${isMaximized ? 'opacity-50 cursor-not-allowed' : ''}`}><Maximize2 size={12} strokeWidth={3} /></button>
-            <button type="button" onClick={handleClose} className="w-6 h-6 bg-red-600 hover:bg-red-500 rounded-sm flex items-center justify-center"><X size={14} strokeWidth={3} /></button>
+            <button type="button" onClick={() => setIsMinimized(!isMinimized)} title={isMinimized ? "คืนค่าหน้าต่าง" : "พับหน้าต่าง"} className="w-6 h-6 bg-blue-500 hover:bg-blue-400 rounded-sm flex items-center justify-center transition-colors"><Minus size={12} strokeWidth={3} /></button>
+            <button type="button" onClick={() => { setIsMinimized(false); setIsMaximized(!isMaximized); }} title={isMaximized ? "ย่อขนาด" : "ขยายเต็มจอ"} disabled={isMinimized} className={`w-6 h-6 bg-blue-500 hover:bg-blue-400 rounded-sm flex items-center justify-center transition-colors ${isMinimized ? 'opacity-50' : ''}`}><Maximize2 size={12} strokeWidth={3} /></button>
+            <button type="button" onClick={handleClose} title="ปิด" className="w-6 h-6 bg-red-600 hover:bg-red-500 rounded-sm flex items-center justify-center transition-colors"><X size={14} strokeWidth={3} /></button>
           </div>
         </div>
+
+        {!isMinimized && (
+        <>
 
         {/* Form Content */}
         <form className="flex-1 overflow-auto bg-gray-100 dark:bg-gray-800 p-1.5 space-y-1">
@@ -497,6 +507,8 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
         </form>
 
         <div className={`${cardClass} flex-shrink-0`}><PRFooter onSave={handleSubmit(onSubmit)} onClose={handleClose} /></div>
+        </>
+        )}
       </div>
     </div>
   );

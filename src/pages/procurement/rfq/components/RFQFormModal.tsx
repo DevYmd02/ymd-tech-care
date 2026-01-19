@@ -1,405 +1,527 @@
 /**
  * @file RFQFormModal.tsx
- * @description Modal สร้าง RFQ ตาม Transaction Flow: PR Approved → Create RFQ
- * @layout 4 Sections: เลือก PR, ข้อมูล Header, รายการสินค้า, เลือกผู้ขาย
+ * @description Modal สร้าง RFQ - ใช้ layout และ dark theme เหมือน PR modal
+ * @features full-screen, dark theme, smooth animations, window control buttons
  */
 
-import { useState } from 'react';
-import { X, FileText, Send, ChevronRight, Mail, Phone, Check } from 'lucide-react';
-import { styles } from '../../../../constants';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, FileText, Save, Plus, Trash2, Minus, Maximize2 } from 'lucide-react';
+import { mockBranches, mockItems, mockUnits } from '../../../../__mocks__/masterDataMocks';
+import type { RFQFormData, RFQLineFormData } from '../../../../types/rfq-types';
+import { initialRFQFormData, initialRFQLineFormData } from '../../../../types/rfq-types';
 
 // ====================================================================================
 // TYPES
 // ====================================================================================
 
 interface Props {
-  isOpen: boolean;
-  onClose: () => void;
+    isOpen: boolean;
+    onClose: () => void;
+    editId?: string | null;
 }
-
-interface ApprovedPR {
-  pr_id: string;
-  pr_no: string;
-  required_date: string;
-  branch_name: string;
-  lines: PRLine[];
-}
-
-interface PRLine {
-  item_code: string;
-  item_name: string;
-  description: string;
-  quantity: number;
-  uom: string;
-  needed_date: string;
-}
-
-interface Vendor {
-  vendor_id: string;
-  vendor_code: string;
-  vendor_name: string;
-  email: string;
-  phone: string;
-}
-
-interface FormData {
-  pr_id: string;
-  branch_name: string;
-  rfq_date: string;
-  quote_due_date: string;
-  send_via: 'email' | 'portal';
-  terms_and_conditions: string;
-  selected_vendors: string[];
-}
-
-// ====================================================================================
-// MOCK DATA
-// ====================================================================================
-
-const MOCK_APPROVED_PRS: ApprovedPR[] = [
-  {
-    pr_id: 'pr-001',
-    pr_no: 'PR-202601-002',
-    required_date: '2569-02-01',
-    branch_name: 'สำนักงานใหญ่',
-    lines: [
-      {
-        item_code: 'ITM-002',
-        item_name: 'เก้าอี้สำนักงานเออร์โกโนมิค',
-        description: 'เก้าอี้สำนักงานเออร์โกโนมิค รุ่นพรีเมียม',
-        quantity: 10,
-        uom: 'ตัว',
-        needed_date: '2569-02-01',
-      },
-    ],
-  },
-  {
-    pr_id: 'pr-002',
-    pr_no: 'PR-202601-003',
-    required_date: '2569-02-15',
-    branch_name: 'สาขาเชียงใหม่',
-    lines: [
-      {
-        item_code: 'ITM-005',
-        item_name: 'โต๊ะทำงานปรับระดับ',
-        description: 'โต๊ะทำงานปรับระดับไฟฟ้า',
-        quantity: 5,
-        uom: 'ตัว',
-        needed_date: '2569-02-15',
-      },
-    ],
-  },
-];
-
-const MOCK_VENDORS: Vendor[] = [
-  {
-    vendor_id: 'v1',
-    vendor_code: 'VEN001',
-    vendor_name: 'บริษัท เทคโนโลยีดิจิทัล จำกัด',
-    email: 'sales@techdigital.co.th',
-    phone: '02-123-4567',
-  },
-  {
-    vendor_id: 'v2',
-    vendor_code: 'VEN002',
-    vendor_name: 'ห้างหุ้นส่วนจำกัด สยาม ซัพพลาย',
-    email: 'info@siamsupply.com',
-    phone: '02-234-5678',
-  },
-  {
-    vendor_id: 'v3',
-    vendor_code: 'VEN003',
-    vendor_name: 'Global Trading Co., Ltd.',
-    email: 'contact@globaltrading.com',
-    phone: '02-345-6789',
-  },
-];
-
-const DEFAULT_TERMS = `1. ราคาที่เสนอต้องรวมภาษีมูลค่าเพิ่ม 7%
-2. ระบุระยะเวลาการส่งมอบสินค้า (Lead Time)
-3. เงื่อนไขการชำระเงิน
-4. ระยะเวลาที่ราคาเสนอมีผลบังคับใช้ (Valid Until)
-5. ระบุยี่ห้อและรุ่นของสินค้าที่เสนอ
-6. เงื่อนไขการรับประกัน (Warranty)`;
 
 // ====================================================================================
 // COMPONENT
 // ====================================================================================
 
-export function RFQFormModal({ isOpen, onClose }: Props) {
-  const [formData, setFormData] = useState<FormData>({
-    pr_id: '',
-    branch_name: '',
-    rfq_date: new Date().toISOString().split('T')[0],
-    quote_due_date: '',
-    send_via: 'email',
-    terms_and_conditions: DEFAULT_TERMS,
-    selected_vendors: [],
-  });
+export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
+    const prevIsOpenRef = useRef(false);
 
-  const selectedPR = MOCK_APPROVED_PRS.find(pr => pr.pr_id === formData.pr_id);
+    const [formData, setFormData] = useState<RFQFormData>({
+        ...initialRFQFormData,
+        rfq_no: `RFQ2024-007`,
+        rfq_date: new Date().toLocaleDateString('en-CA'),
+        created_by_name: 'ระบบจะกรอกอัตโนมัติ',
+        lines: Array.from({ length: 5 }, (_, i) => ({
+            ...initialRFQLineFormData,
+            line_no: i + 1,
+        })),
+    });
 
-  if (!isOpen) return null;
+    const [isSaving, setIsSaving] = useState(false);
+    const [isMaximized, setIsMaximized] = useState(true);
+    const [isMinimized, setIsMinimized] = useState(false);
+    const [isAnimating, setIsAnimating] = useState(false);
+    const [isClosing, setIsClosing] = useState(false);
 
-  const handlePRSelect = (pr: ApprovedPR) => {
-    setFormData(prev => ({
-      ...prev,
-      pr_id: pr.pr_id,
-      branch_name: pr.branch_name,
-    }));
-  };
+    // Animation effect
+    useEffect(() => {
+        let timer: ReturnType<typeof setTimeout>;
+        if (isOpen) {
+            timer = setTimeout(() => {
+                setIsClosing(false);
+                setIsAnimating(true);
+            }, 10);
+        } else {
+            timer = setTimeout(() => {
+                setIsAnimating(false);
+            }, 0);
+        }
+        return () => clearTimeout(timer);
+    }, [isOpen]);
 
-  const handleVendorToggle = (vendorId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      selected_vendors: prev.selected_vendors.includes(vendorId)
-        ? prev.selected_vendors.filter(id => id !== vendorId)
-        : [...prev.selected_vendors, vendorId]
-    }));
-  };
+    // Reset form when modal opens
+    useEffect(() => {
+        if (isOpen && !prevIsOpenRef.current) {
+            const timer = setTimeout(() => {
+                setFormData({
+                    ...initialRFQFormData,
+                    rfq_no: `RFQ2024-007`,
+                    rfq_date: new Date().toLocaleDateString('en-CA'),
+                    created_by_name: 'ระบบจะกรอกอัตโนมัติ',
+                    lines: Array.from({ length: 5 }, (_, i) => ({
+                        ...initialRFQLineFormData,
+                        line_no: i + 1,
+                    })),
+                });
+                setIsMaximized(true);
+                setIsMinimized(false);
+            }, 0);
+            return () => clearTimeout(timer);
+        }
+        prevIsOpenRef.current = isOpen;
+    }, [isOpen]);
 
-  const handleSubmit = () => {
-    console.log('Create RFQ:', formData);
-    onClose();
-  };
+    if (!isOpen && !isClosing) return null;
 
-  const formatDate = (dateStr: string) => {
-    if (!dateStr) return '-';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
-  };
+    // Handlers
+    const handleClose = () => {
+        setIsClosing(true);
+        setIsAnimating(false);
+        setTimeout(() => { setIsClosing(false); onClose(); }, 300);
+    };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
-        
-        {/* ==================== HEADER ==================== */}
-        <div className="bg-gradient-to-r from-pink-500 to-pink-600 p-5 flex items-center justify-between shrink-0">
-          <div>
-            <h2 className="text-xl font-bold text-white">สร้าง RFQ (Request for Quotation)</h2>
-            <p className="text-pink-100 text-sm">ส่งขอใบเสนอราคาจากผู้ขาย</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-colors"
-          >
-            <X size={24} />
-          </button>
-        </div>
+    const handleChange = (field: keyof RFQFormData, value: string | number) => {
+        setFormData(prev => ({ ...prev, [field]: value }));
+    };
 
-        {/* ==================== CONTENT (Scrollable) ==================== */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          
-          {/* ---------- Section 1: เลือก PR ที่ Approved ---------- */}
-          <section>
-            <h3 className="text-lg font-bold text-blue-700 dark:text-blue-400 mb-3">
-              1. เลือก PR ที่ Approved แล้ว
-            </h3>
-            <div className="space-y-2">
-              {MOCK_APPROVED_PRS.map(pr => (
-                <div
-                  key={pr.pr_id}
-                  onClick={() => handlePRSelect(pr)}
-                  className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                    formData.pr_id === pr.pr_id
-                      ? 'border-pink-500 bg-pink-50 dark:bg-pink-900/20'
-                      : 'border-gray-200 dark:border-gray-600 hover:border-pink-300'
-                  }`}
+    const handleLineChange = (index: number, field: keyof RFQLineFormData, value: string | number) => {
+        setFormData(prev => {
+            const newLines = [...prev.lines];
+            newLines[index] = { ...newLines[index], [field]: value };
+            return { ...prev, lines: newLines };
+        });
+    };
+
+    const handleAddLine = () => {
+        setFormData(prev => ({
+            ...prev,
+            lines: [...prev.lines, { ...initialRFQLineFormData, line_no: prev.lines.length + 1 }],
+        }));
+    };
+
+    const handleRemoveLine = (index: number) => {
+        if (formData.lines.length <= 1) return;
+        setFormData(prev => ({
+            ...prev,
+            lines: prev.lines.filter((_, i) => i !== index).map((line, i) => ({ ...line, line_no: i + 1 })),
+        }));
+    };
+
+    const handleSave = async () => {
+        setIsSaving(true);
+        try {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            console.log('Save RFQ:', formData);
+            handleClose();
+        } catch (error) {
+            console.error('Failed to save RFQ:', error);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    // Shared styles (same as PR modal)
+    const cardClass = 'bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-sm overflow-hidden';
+    const inputStyle = "w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent dark:text-white transition-all";
+    const selectStyle = "w-full h-8 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent dark:text-white";
+    const labelStyle = "text-sm font-medium text-teal-700 dark:text-teal-300 mb-1 block";
+    const hintStyle = "text-xs text-gray-400 dark:text-gray-500 mt-1";
+
+    return (
+        <div 
+            className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-300 ${isAnimating ? 'opacity-100' : 'opacity-0'} ${isMinimized ? 'bg-transparent pointer-events-none' : 'bg-black/50 dark:bg-black/70 backdrop-blur-sm'}`}
+            onClick={(e) => { if (e.target === e.currentTarget && !isMinimized) handleClose(); }}
+        >
+            <div className={`
+                flex flex-col overflow-hidden bg-white dark:bg-gray-900 shadow-2xl border-4 border-teal-600 dark:border-teal-500 transition-all duration-300 ease-out pointer-events-auto
+                ${isMinimized 
+                    ? 'fixed bottom-4 left-1/2 -translate-x-1/2 w-[400px] h-auto rounded-xl ring-2 ring-white/20' 
+                    : isMaximized 
+                        ? 'w-full h-full rounded-none border-0 scale-100' 
+                        : 'w-[120vw] h-[120vh] scale-[0.8] rounded-2xl'
+                }
+                ${isAnimating ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}
+            `}>
+                
+                {/* ===== TITLE BAR - Teal (like PR's blue) ===== */}
+                <div 
+                    className="bg-teal-600 text-white px-3 py-2 font-bold text-sm flex justify-between items-center select-none flex-shrink-0 cursor-pointer"
+                    onClick={() => isMinimized && setIsMinimized(false)}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <FileText size={20} className="text-pink-500" />
-                      <span className="font-semibold text-gray-900 dark:text-white">{pr.pr_no}</span>
+                    <div className="flex items-center space-x-2">
+                        <div className="bg-white/20 p-1 rounded-md shadow-sm"><FileText size={14} strokeWidth={3} /></div>
+                        <span>สร้างใบขอเสนอราคา (RFQ)</span>
+                        {!isMinimized && <span className="text-teal-200 font-normal">Request for Quotation</span>}
                     </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        วันที่ต้องการ: {formatDate(pr.required_date)}
-                      </span>
-                      <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
-                        Approved
-                      </span>
+                    <div className="flex items-center space-x-1">
+                        <button 
+                            type="button" 
+                            onClick={() => setIsMinimized(!isMinimized)} 
+                            className="w-6 h-6 bg-blue-600 hover:bg-blue-500 rounded-sm flex items-center justify-center transition-colors"
+                            title={isMinimized ? "คืนค่าหน้าต่าง" : "พับหน้าต่าง"}
+                        >
+                            <Minus size={12} strokeWidth={3} />
+                        </button>
+                        <button 
+                            type="button" 
+                            onClick={() => { setIsMinimized(false); setIsMaximized(!isMaximized); }} 
+                            className={`w-6 h-6 bg-blue-600 hover:bg-blue-500 rounded-sm flex items-center justify-center transition-colors ${isMinimized ? 'opacity-50' : ''}`}
+                            title={isMaximized ? "ย่อขนาด" : "ขยายเต็มจอ"}
+                            disabled={isMinimized}
+                        >
+                            <Maximize2 size={12} strokeWidth={3} />
+                        </button>
+                        <button 
+                            type="button" 
+                            onClick={handleClose} 
+                            className="w-6 h-6 bg-red-600 hover:bg-red-500 rounded-sm flex items-center justify-center transition-colors"
+                            title="ปิด"
+                        >
+                            <X size={14} strokeWidth={3} />
+                        </button>
                     </div>
-                  </div>
                 </div>
-              ))}
-            </div>
-          </section>
 
-          {/* ---------- Section 2: ข้อมูล RFQ Header ---------- */}
-          <section>
-            <h3 className="text-lg font-bold text-blue-700 dark:text-blue-400 mb-3">
-              2. ข้อมูล RFQ Header
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className={styles.label}>สาขา *</label>
-                <input
-                  type="text"
-                  value={formData.branch_name || (selectedPR?.branch_name ?? '')}
-                  readOnly
-                  className={`${styles.input} bg-gray-100 cursor-not-allowed`}
-                  placeholder="เลือก PR ก่อน"
-                />
-              </div>
-              <div>
-                <label className={styles.label}>วันที่ออก RFQ *</label>
-                <input
-                  type="date"
-                  value={formData.rfq_date}
-                  onChange={(e) => setFormData(prev => ({ ...prev, rfq_date: e.target.value }))}
-                  className={styles.input}
-                />
-              </div>
-              <div>
-                <label className={styles.label}>กำหนดส่งใบเสนอราคา (Quote Due Date) *</label>
-                <input
-                  type="date"
-                  value={formData.quote_due_date}
-                  onChange={(e) => setFormData(prev => ({ ...prev, quote_due_date: e.target.value }))}
-                  className={styles.input}
-                />
-              </div>
-              <div>
-                <label className={styles.label}>ส่งทาง (Send Via) *</label>
-                <select
-                  value={formData.send_via}
-                  onChange={(e) => setFormData(prev => ({ ...prev, send_via: e.target.value as 'email' | 'portal' }))}
-                  className={styles.input}
-                >
-                  <option value="email">Email</option>
-                  <option value="portal">Portal</option>
-                </select>
-              </div>
-            </div>
-            <div className="mt-4">
-              <label className={styles.label}>Terms and Conditions (เงื่อนไขและข้อกำหนด)</label>
-              <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700">
-                <pre className="text-sm text-blue-800 dark:text-blue-300 whitespace-pre-wrap font-sans">
-                  {formData.terms_and_conditions}
-                </pre>
-              </div>
-            </div>
-          </section>
+                {/* ===== FORM CONTENT (hidden when minimized) ===== */}
+                {!isMinimized && (
+                <>
+                <div className="flex-1 overflow-auto bg-gray-100 dark:bg-gray-800 p-1.5 space-y-1">
+                    
+                    {/* ===== HEADER SECTION ===== */}
+                    <div className={cardClass}>
+                        <div className="p-4">
+                            <div className="flex items-center gap-2 text-teal-600 dark:text-teal-400 mb-4 border-b border-gray-200 dark:border-gray-700 pb-3">
+                                <FileText size={18} />
+                                <span className="font-semibold">ส่วนหัวเอกสาร - Header RFQ (Request for Quotation)</span>
+                            </div>
 
-          {/* ---------- Section 3: รายการสินค้า (RFQ Lines) ---------- */}
-          <section>
-            <h3 className="text-lg font-bold text-blue-700 dark:text-blue-400 mb-3">
-              3. รายการสินค้า (RFQ Lines)
-            </h3>
-            {selectedPR ? (
-              <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
-                <table className="w-full">
-                  <thead className="bg-gray-50 dark:bg-gray-800">
-                    <tr>
-                      <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 dark:text-gray-300">ลำดับ</th>
-                      <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 dark:text-gray-300">รหัสสินค้า</th>
-                      <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 dark:text-gray-300">ชื่อสินค้า</th>
-                      <th className="px-3 py-2 text-left text-xs font-bold text-gray-600 dark:text-gray-300">คำอธิบาย</th>
-                      <th className="px-3 py-2 text-center text-xs font-bold text-gray-600 dark:text-gray-300">จำนวน</th>
-                      <th className="px-3 py-2 text-center text-xs font-bold text-gray-600 dark:text-gray-300">วันที่ต้องการ</th>
-                      <th className="px-3 py-2 text-center text-xs font-bold text-gray-600 dark:text-gray-300">TECHNICAL SPEC</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                    {selectedPR.lines.map((line, idx) => (
-                      <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">{idx + 1}</td>
-                        <td className="px-3 py-2 text-sm font-medium text-gray-900 dark:text-white">{line.item_code}</td>
-                        <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">{line.item_name}</td>
-                        <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400">{line.description}</td>
-                        <td className="px-3 py-2 text-sm text-center text-gray-700 dark:text-gray-300">
-                          {line.quantity} {line.uom}
-                        </td>
-                        <td className="px-3 py-2 text-sm text-center text-gray-700 dark:text-gray-300">
-                          {formatDate(line.needed_date)}
-                        </td>
-                        <td className="px-3 py-2 text-center">
-                          <button className="px-3 py-1 text-xs text-pink-600 hover:text-pink-700 border border-pink-300 rounded hover:bg-pink-50 transition-colors">
-                            ระบุข้อกำหนดทางเทคนิค
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="p-8 text-center text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                กรุณาเลือก PR ก่อนเพื่อดูรายการสินค้า
-              </div>
-            )}
-          </section>
+                            {/* Row 1: เลขที่ RFQ, วันที่สร้าง, PR ต้นทาง */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                <div>
+                                    <label className={labelStyle}>เลขที่ RFQ <span className="text-red-500">*</span></label>
+                                    <input
+                                        type="text"
+                                        value={formData.rfq_no}
+                                        readOnly
+                                        className={inputStyle}
+                                    />
+                                    <p className={hintStyle}>เลขที่เอกสาร RFQ (Running จาก sequence_running)</p>
+                                </div>
+                                <div>
+                                    <label className={labelStyle}>วันที่สร้าง RFQ <span className="text-red-500">*</span></label>
+                                    <input
+                                        type="date"
+                                        value={formData.rfq_date}
+                                        onChange={(e) => handleChange('rfq_date', e.target.value)}
+                                        className={inputStyle}
+                                    />
+                                </div>
+                                <div>
+                                    <label className={labelStyle}>PR ต้นทาง <span className="text-red-500">*</span></label>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            placeholder="PR2024-xxx"
+                                            value={formData.pr_no || ''}
+                                            onChange={(e) => handleChange('pr_no', e.target.value)}
+                                            className={inputStyle}
+                                        />
+                                        <button className="px-4 py-1.5 bg-teal-600 hover:bg-teal-500 text-white rounded-lg transition-colors shrink-0 font-medium text-sm">
+                                            เลือก
+                                        </button>
+                                    </div>
+                                    <p className={hintStyle}>อ้างถึง pr_header.pr_id (PR ต้นทาง)</p>
+                                </div>
+                            </div>
 
-          {/* ---------- Section 4: เลือกผู้ขาย ---------- */}
-          <section>
-            <h3 className="text-lg font-bold text-blue-700 dark:text-blue-400 mb-3">
-              4. เลือกผู้ขายที่จะส่ง RFQ ({formData.selected_vendors.length} ราย)
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {MOCK_VENDORS.map(vendor => {
-                const isSelected = formData.selected_vendors.includes(vendor.vendor_id);
-                return (
-                  <div
-                    key={vendor.vendor_id}
-                    onClick={() => handleVendorToggle(vendor.vendor_id)}
-                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all relative ${
-                      isSelected
-                        ? 'border-pink-500 bg-pink-50 dark:bg-pink-900/20'
-                        : 'border-gray-200 dark:border-gray-600 hover:border-pink-300'
-                    }`}
-                  >
-                    {isSelected && (
-                      <div className="absolute top-2 right-2 w-6 h-6 bg-pink-500 rounded-full flex items-center justify-center">
-                        <Check size={14} className="text-white" />
-                      </div>
-                    )}
-                    <h4 className="font-bold text-gray-900 dark:text-white mb-1">{vendor.vendor_name}</h4>
-                    <p className="text-xs text-pink-600 dark:text-pink-400 mb-2">{vendor.vendor_code}</p>
-                    <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
-                      <div className="flex items-center gap-2">
-                        <Mail size={14} />
-                        <span>{vendor.email}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Phone size={14} />
-                        <span>{vendor.phone}</span>
-                      </div>
+                            {/* Row 2: สาขา, ผู้สร้าง, สถานะ */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                <div>
+                                    <label className={labelStyle}>สาขาที่สร้าง RFQ</label>
+                                    <select
+                                        value={formData.branch_id || ''}
+                                        onChange={(e) => handleChange('branch_id', e.target.value)}
+                                        className={selectStyle}
+                                    >
+                                        <option value="">เลือกสาขา</option>
+                                        {mockBranches.filter(b => b.is_active).map(b => (
+                                            <option key={b.branch_id} value={b.branch_id}>{b.branch_name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className={labelStyle}>ผู้สร้าง RFQ</label>
+                                    <input
+                                        type="text"
+                                        value="ระบบจะกรอกอัตโนมัติ"
+                                        readOnly
+                                        className={`${inputStyle} bg-gray-200 dark:bg-gray-700`}
+                                    />
+                                </div>
+                                <div>
+                                    <label className={labelStyle}>สถานะ <span className="text-red-500">*</span></label>
+                                    <select
+                                        value={formData.status}
+                                        onChange={(e) => handleChange('status', e.target.value)}
+                                        className={selectStyle}
+                                    >
+                                        <option value="DRAFT">DRAFT - แบบร่าง</option>
+                                        <option value="SENT">SENT - ส่งแล้ว</option>
+                                        <option value="CLOSED">CLOSED - ปิดแล้ว</option>
+                                        <option value="CANCELLED">CANCELLED - ยกเลิก</option>
+                                    </select>
+                                    <p className={hintStyle}>สถานะ: DRAFT/SENT/CLOSED/CANCELLED</p>
+                                </div>
+                            </div>
+
+                            {/* Row 3: ใช้ได้ถึงวันที่, สกุลเงิน, อัตราแลกเปลี่ยน */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                <div>
+                                    <label className={labelStyle}>ใช้ได้ถึงวันที่ <span className="text-red-500">*</span></label>
+                                    <input
+                                        type="date"
+                                        value={formData.quote_due_date}
+                                        onChange={(e) => handleChange('quote_due_date', e.target.value)}
+                                        className={inputStyle}
+                                    />
+                                    <p className={hintStyle}>วันหมดอายุการเสนอราคา</p>
+                                </div>
+                                <div>
+                                    <label className={labelStyle}>สกุลเงิน</label>
+                                    <select
+                                        value={formData.currency}
+                                        onChange={(e) => handleChange('currency', e.target.value)}
+                                        className={selectStyle}
+                                    >
+                                        <option value="THB">THB - บาท</option>
+                                        <option value="USD">USD - ดอลลาร์สหรัฐ</option>
+                                        <option value="EUR">EUR - ยูโร</option>
+                                    </select>
+                                    <p className={hintStyle}>สกุลเงิน (ค่าเริ่มต้น THB)</p>
+                                </div>
+                                <div>
+                                    <label className={labelStyle}>อัตราแลกเปลี่ยน</label>
+                                    <input
+                                        type="number"
+                                        step="0.000001"
+                                        value={formData.exchange_rate}
+                                        onChange={(e) => handleChange('exchange_rate', parseFloat(e.target.value) || 1)}
+                                        className={inputStyle}
+                                    />
+                                    <p className={hintStyle}>อัตราแลกเปลี่ยน (ค่า 1)</p>
+                                </div>
+                            </div>
+
+                            {/* Row 4: สถานที่จัดส่ง, เงื่อนไขการชำระ */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <label className={labelStyle}>สถานที่จัดส่ง/ส่งมอบ</label>
+                                    <input
+                                        type="text"
+                                        placeholder="ระบุสถานที่ส่งมอบ"
+                                        value={formData.delivery_location}
+                                        onChange={(e) => handleChange('delivery_location', e.target.value)}
+                                        className={inputStyle}
+                                    />
+                                    <p className={hintStyle}>สถานที่จัดส่ง/ส่งมอบ (ถ้ามีให้กรณีประเมินราคาค่าขนส่ง)</p>
+                                </div>
+                                <div>
+                                    <label className={labelStyle}>เงื่อนไขการชำระ</label>
+                                    <input
+                                        type="text"
+                                        placeholder="เช่น Net 30"
+                                        value={formData.payment_terms}
+                                        onChange={(e) => handleChange('payment_terms', e.target.value)}
+                                        className={inputStyle}
+                                    />
+                                    <p className={hintStyle}>แนวทางเงื่อนไขที่ต้องการ (เช่น Net 30)</p>
+                                </div>
+                            </div>
+
+                            {/* Row 5: เงื่อนไขส่งมอบ, หมายเหตุ */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className={labelStyle}>เงื่อนไขส่งมอบ (Incoterm)</label>
+                                    <input
+                                        type="text"
+                                        placeholder="FOB, CIF, EXW, etc."
+                                        value={formData.incoterm}
+                                        onChange={(e) => handleChange('incoterm', e.target.value)}
+                                        className={inputStyle}
+                                    />
+                                    <p className={hintStyle}>เงื่อนไขส่งมอบ (กรณีต่างประเทศ)</p>
+                                </div>
+                                <div>
+                                    <label className={labelStyle}>หมายเหตุเพิ่มเติม</label>
+                                    <textarea
+                                        placeholder="ระบุหมายเหตุ..."
+                                        value={formData.remarks}
+                                        onChange={(e) => handleChange('remarks', e.target.value)}
+                                        rows={2}
+                                        className={`${inputStyle} h-auto resize-none`}
+                                    />
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                  </div>
-                );
-              })}
+
+                    {/* ===== LINE ITEMS SECTION ===== */}
+                    <div className={cardClass}>
+                        <div className="p-4">
+                            <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400 mb-4 border-b border-gray-200 dark:border-gray-700 pb-3">
+                                <FileText size={18} />
+                                <span className="font-semibold">รายการสินค้า - Line RFQ (Request for Quotation)</span>
+                            </div>
+
+                            {/* Lines Table */}
+                            <div className="overflow-x-auto bg-gray-50 dark:bg-gray-800/50 p-2 rounded-lg">
+                                <table className="w-full min-w-[900px] border-collapse bg-white dark:bg-gray-900 text-sm border border-gray-200 dark:border-gray-700 shadow-sm">
+                                    <thead className="bg-purple-600 text-white text-xs">
+                                        <tr>
+                                            <th className="px-3 py-2 text-center font-medium border-r border-purple-500 w-14">ลำดับ</th>
+                                            <th className="px-3 py-2 text-center font-medium border-r border-purple-500 w-36">รหัสสินค้า</th>
+                                            <th className="px-3 py-2 text-left font-medium border-r border-purple-500">รายละเอียด</th>
+                                            <th className="px-3 py-2 text-center font-medium border-r border-purple-500 w-20">จำนวน</th>
+                                            <th className="px-3 py-2 text-center font-medium border-r border-purple-500 w-24">หน่วย</th>
+                                            <th className="px-3 py-2 text-center font-medium border-r border-purple-500 w-32">วันที่ต้องการ</th>
+                                            <th className="px-3 py-2 text-left font-medium border-r border-purple-500 w-32">หมายเหตุ</th>
+                                            <th className="px-3 py-2 text-center font-medium w-20">จัดการ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {formData.lines.map((line, index) => (
+                                            <tr key={index} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                                                <td className="px-3 py-1.5 text-center text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 font-medium border-r border-gray-200 dark:border-gray-700">
+                                                    {line.line_no}
+                                                </td>
+                                                <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">
+                                                    <select
+                                                        value={line.item_code}
+                                                        onChange={(e) => {
+                                                            const item = mockItems.find(i => i.item_code === e.target.value);
+                                                            handleLineChange(index, 'item_code', e.target.value);
+                                                            if (item) handleLineChange(index, 'item_name', item.item_name);
+                                                        }}
+                                                        className="w-full px-2 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300"
+                                                    >
+                                                        <option value="">เลือกรหัสสินค้า</option>
+                                                        {mockItems.filter(i => i.is_active).map(i => (
+                                                            <option key={i.item_id} value={i.item_code}>{i.item_code}</option>
+                                                        ))}
+                                                    </select>
+                                                </td>
+                                                <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">
+                                                    <input
+                                                        type="text"
+                                                        placeholder="รายละเอียดสินค้า"
+                                                        value={line.item_description}
+                                                        onChange={(e) => handleLineChange(index, 'item_description', e.target.value)}
+                                                        className="w-full px-2 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 placeholder:text-gray-300 dark:placeholder:text-gray-500"
+                                                    />
+                                                </td>
+                                                <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        value={line.required_qty || 0}
+                                                        onChange={(e) => handleLineChange(index, 'required_qty', parseFloat(e.target.value) || 0)}
+                                                        className="w-full px-2 py-1.5 text-sm text-center border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800 dark:text-white"
+                                                    />
+                                                </td>
+                                                <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">
+                                                    <select
+                                                        value={line.uom}
+                                                        onChange={(e) => handleLineChange(index, 'uom', e.target.value)}
+                                                        className="w-full px-2 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300"
+                                                    >
+                                                        <option value="">เลือก</option>
+                                                        {mockUnits.filter(u => u.is_active).map(u => (
+                                                            <option key={u.unit_id} value={u.unit_code}>{u.unit_code}</option>
+                                                        ))}
+                                                    </select>
+                                                </td>
+                                                <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">
+                                                    <input
+                                                        type="date"
+                                                        value={line.required_date}
+                                                        onChange={(e) => handleLineChange(index, 'required_date', e.target.value)}
+                                                        className="w-full px-2 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-400"
+                                                    />
+                                                </td>
+                                                <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">
+                                                    <input
+                                                        type="text"
+                                                        placeholder="หมายเหตุ"
+                                                        value={line.remarks}
+                                                        onChange={(e) => handleLineChange(index, 'remarks', e.target.value)}
+                                                        className="w-full px-2 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-400 placeholder:text-gray-300 dark:placeholder:text-gray-500"
+                                                    />
+                                                </td>
+                                                <td className="px-1 py-1 text-center">
+                                                    <div className="flex items-center justify-center gap-1">
+                                                        <button
+                                                            type="button"
+                                                            onClick={handleAddLine}
+                                                            className="p-1 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded transition-colors"
+                                                        >
+                                                            <Plus size={16} />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleRemoveLine(index)}
+                                                            className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* ===== FOOTER ===== */}
+                <div className={`${cardClass} flex-shrink-0`}>
+                    <div className="px-4 py-3 flex justify-end gap-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+                        <button
+                            type="button"
+                            onClick={handleClose}
+                            className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors font-medium"
+                        >
+                            ยกเลิก
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleSave}
+                            disabled={isSaving}
+                            className="flex items-center gap-2 px-6 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-lg transition-colors font-medium disabled:opacity-50"
+                        >
+                            <Save size={18} />
+                            {isSaving ? 'กำลังบันทึก...' : 'บันทึก RFQ'}
+                        </button>
+                    </div>
+                </div>
+                </>
+                )}
             </div>
-          </section>
-
         </div>
+    );
+};
 
-        {/* ==================== FOOTER ==================== */}
-        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between bg-gray-50 dark:bg-gray-800/50 shrink-0">
-          <button
-            onClick={onClose}
-            className="px-5 py-2.5 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg font-medium transition-colors"
-          >
-            ยกเลิก
-          </button>
-          <div className="flex gap-3">
-            <button
-              onClick={handleSubmit}
-              className="px-5 py-2.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
-            >
-              บันทึกร่าง
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={!formData.pr_id || formData.selected_vendors.length === 0}
-              className="px-5 py-2.5 bg-pink-500 hover:bg-pink-600 text-white rounded-lg font-medium flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Send size={18} />
-              ส่งไปยังผู้ขาย
-              <ChevronRight size={18} />
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+// Named export for backward compatibility
+export { RFQFormModal as default };

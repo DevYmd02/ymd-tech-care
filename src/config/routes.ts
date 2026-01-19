@@ -278,17 +278,17 @@ export const sidebarMenuItems: MenuItem[] = [
     },
     {
         id: 'procurement',
-        label: 'ระบบจัดซื้อ (Procurement)',
+        label: 'Procurement (ระบบจัดซื้อ)',
         icon: ShoppingBag,
         subItems: [
-            { id: 'proc-dashboard', label: 'Dashboard', path: '/procurement/dashboard' },
-            { id: 'pr', label: 'ใบขอซื้อ (PR)', path: '/procurement/pr' },
-            { id: 'rfq', label: 'ใบขอเสนอราคา (RFQ)', path: '/procurement/rfq' },
-            { id: 'vendor-compare', label: 'เปรียบเทียบราคา', path: '/procurement/vendor-comparison' },
-            { id: 'po', label: 'ใบสั่งซื้อ (PO)', path: '/procurement/po' },
-            { id: 'grn', label: 'ใบรับสินค้า (GRN)', path: '/procurement/grn' },
-            { id: 'invoice', label: 'ใบแจ้งหนี้ผู้ขาย (Vendor Invoice)', path: '/procurement/invoice' },
-            { id: 'return', label: 'คืนสินค้า (Purchase Return)', path: '/procurement/return' },
+            { id: 'proc-dashboard', label: 'Procurement Dashboard', path: '/procurement/dashboard' },
+            { id: 'pr', label: 'รายการใบขอซื้อ (PR)', path: '/procurement/pr' },
+            { id: 'rfq', label: 'รายการขอใบเสนอราคา (RFQ)', path: '/procurement/rfq' },
+            { id: 'qt', label: 'รายการใบเสนอราคา (QT)', path: '/procurement/qt' },
+            { id: 'qc', label: 'รายการใบเปรียบเทียบราคา (QC)', path: '/procurement/qc' },
+            { id: 'po', label: 'รายการขอสั่งซื้อ (PO)', path: '/procurement/po' },
+            { id: 'grn', label: 'รายการใบรับสินค้า (GRN)', path: '/procurement/grn' },
+            { id: 'prt', label: 'รายการใบคืนสินค้า (PRT)', path: '/procurement/prt' },
         ]
     },
     {
