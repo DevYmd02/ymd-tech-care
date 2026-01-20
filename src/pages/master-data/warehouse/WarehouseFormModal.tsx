@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import { X, Warehouse, Search, Save, RotateCcw } from 'lucide-react';
 import { styles } from '../../../constants';
+import { logger } from '../../../utils/logger';
 import { mockWarehouses, mockBranchDropdown } from '../../../__mocks__/masterDataMocks';
 import type { WarehouseFormData } from '../../../types/master-data-types';
 import { initialWarehouseFormData } from '../../../types/master-data-types';
@@ -101,7 +102,7 @@ export function WarehouseFormModal({ isOpen, onClose, editId }: Props) {
             return;
         }
         
-        console.log('Save warehouse:', formData);
+        logger.log('Save warehouse:', formData);
         alert(editId ? 'บันทึกการแก้ไขสำเร็จ' : 'เพิ่มคลังสินค้าใหม่สำเร็จ');
         onClose();
     };

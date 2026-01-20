@@ -26,6 +26,7 @@ import { styles } from '../../../constants';
 import { VendorFormModal } from './VendorFormModal';
 import { vendorService } from '../../../services/vendorService';
 import type { VendorListItem, VendorStatus } from '../../../types/vendor-types';
+import { VendorStatusBadge } from '../../../components/shared';
 
 // ====================================================================================
 // MAIN COMPONENT
@@ -109,20 +110,7 @@ export default function VendorDashboard() {
         alert('Export to Excel - Coming soon!');
     };
 
-    const getStatusBadge = (status: VendorStatus) => {
-        const styles: Record<VendorStatus, { bg: string; text: string; label: string }> = {
-            ACTIVE: { bg: 'bg-green-100', text: 'text-green-700', label: 'ใช้งาน' },
-            INACTIVE: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'ไม่ใช้งาน' },
-            BLACKLISTED: { bg: 'bg-red-100', text: 'text-red-700', label: 'บัญชีดำ' },
-            SUSPENDED: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'ระงับ' }
-        };
-        const style = styles[status];
-        return (
-            <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${style.bg} ${style.text}`}>
-                {style.label}
-            </span>
-        );
-    };
+
 
     // ====================================================================================
     // RENDER
@@ -341,7 +329,7 @@ export default function VendorDashboard() {
                                                 </div>
                                             </td>
                                             <td className="px-4 py-3 text-center">
-                                                {getStatusBadge(vendor.status)}
+                                                <VendorStatusBadge status={vendor.status} />
                                             </td>
                                         </tr>
                                     ))

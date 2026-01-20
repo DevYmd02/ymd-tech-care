@@ -5,14 +5,15 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { FileText, Plus, Trash2 } from 'lucide-react';
+import { FileText, Plus, Trash2, Info, MoreHorizontal, Star, AlignLeft, History } from 'lucide-react';
 import { RFQFooter } from './RFQFooter';
-import { WindowFormLayout } from '../../../../components/shared/WindowFormLayout';
+import { WindowFormLayout, TabPanel } from '../../../../components/shared';
 import { SystemAlert } from '../../../../components/shared/SystemAlert';
 import { masterDataService } from '../../../../services/masterDataService';
 import type { BranchMaster, ItemMaster, UnitMaster } from '../../../../types/master-data-types';
 import type { RFQFormData, RFQLineFormData } from '../../../../types/rfq-types';
 import { initialRFQFormData, initialRFQLineFormData } from '../../../../types/rfq-types';
+import { logger } from '../../../../utils/logger';
 
 // ====================================================================================
 // TYPES
@@ -43,6 +44,16 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
     });
 
     const [isSaving, setIsSaving] = useState(false);
+    const [activeTab, setActiveTab] = useState('detail');
+
+    // Tab configuration
+    const tabs = [
+        { id: 'detail', label: 'Detail', icon: <Info size={16} /> },
+        { id: 'more', label: 'More', icon: <MoreHorizontal size={16} /> },
+        { id: 'rate', label: 'Rate', icon: <Star size={16} /> },
+        { id: 'description', label: 'Description', icon: <AlignLeft size={16} /> },
+        { id: 'history', label: 'History', icon: <History size={16} /> },
+    ];
 
 
 
@@ -64,7 +75,7 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 setItems(itemsData);
                 setUnits(unitsData);
             } catch (error) {
-                console.error('Failed to fetch master data:', error);
+                logger.error('Failed to fetch master data:', error);
             }
         };
         fetchMasterData();
@@ -130,10 +141,10 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
         setIsSaving(true);
         try {
             await new Promise(resolve => setTimeout(resolve, 1000));
-            console.log('Save RFQ:', formData);
+            logger.log('Save RFQ:', formData);
             onClose();
         } catch (error) {
-            console.error('Failed to save RFQ:', error);
+            logger.error('Failed to save RFQ:', error);
         } finally {
             setIsSaving(false);
         }
@@ -464,6 +475,50 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </div>
+
+            {/* Tab Panel Section */}
+            <div className={cardClass}>
+                <div className="p-4">
+                    <TabPanel
+                        tabs={tabs}
+                        activeTab={activeTab}
+                        onTabChange={setActiveTab}
+                        variant="underline"
+                    >
+                        {activeTab === 'detail' && (
+                            <div className="space-y-3">
+                                <textarea
+                                    placeholder="กรอกหมายเหตุเพิ่มเติม..."
+                                    rows={3}
+                                    className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 dark:text-white resize-none"
+                                    value={formData.remarks}
+                                    onChange={(e) => handleChange('remarks', e.target.value)}
+                                />
+                            </div>
+                        )}
+                        {activeTab === 'more' && (
+                            <div className="text-gray-500 dark:text-gray-400 text-sm">
+                                ข้อมูลเพิ่มเติม (พร้อมใช้งานเร็วๆ นี้)
+                            </div>
+                        )}
+                        {activeTab === 'rate' && (
+                            <div className="text-gray-500 dark:text-gray-400 text-sm">
+                                ข้อมูลอัตราแลกเปลี่ยน (พร้อมใช้งานเร็วๆ นี้)
+                            </div>
+                        )}
+                        {activeTab === 'description' && (
+                            <div className="text-gray-500 dark:text-gray-400 text-sm">
+                                รายละเอียดเพิ่มเติม (พร้อมใช้งานเร็วๆ นี้)
+                            </div>
+                        )}
+                        {activeTab === 'history' && (
+                            <div className="text-gray-500 dark:text-gray-400 text-sm">
+                                ประวัติการเปลี่ยนแปลง (พร้อมใช้งานเร็วๆ นี้)
+                            </div>
+                        )}
+                    </TabPanel>
                 </div>
             </div>
         </WindowFormLayout>

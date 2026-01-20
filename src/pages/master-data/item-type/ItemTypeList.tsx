@@ -6,9 +6,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Search, Edit2, Trash2, Layers, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, RefreshCw } from 'lucide-react';
 import { styles } from '../../../constants';
+import { logger } from '../../../utils/logger';
 import { ItemTypeFormModal } from './ItemTypeFormModal';
 import { mockItemTypes } from '../../../__mocks__/masterDataMocks';
 import type { ItemTypeListItem } from '../../../types/master-data-types';
+import { ActiveStatusBadge } from '../../../components/shared';
 
 export default function ItemTypeList() {
     const [items, setItems] = useState<ItemTypeListItem[]>([]);
@@ -44,12 +46,10 @@ export default function ItemTypeList() {
 
     const handleCreateNew = () => { setEditingId(null); setIsModalOpen(true); };
     const handleEdit = (id: string) => { setEditingId(id); setIsModalOpen(true); };
-    const handleDelete = (id: string) => { if (confirm('คุณต้องการลบข้อมูลประเภทสินค้านี้หรือไม่?')) { console.log('Delete:', id); fetchData(); } };
+    const handleDelete = (id: string) => { if (confirm('คุณต้องการลบข้อมูลประเภทสินค้านี้หรือไม่?')) { logger.log('Delete:', id); fetchData(); } };
     const handleModalClose = () => { setIsModalOpen(false); setEditingId(null); fetchData(); };
 
-    const getStatusBadge = (isActive: boolean) => isActive 
-        ? <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"><span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>ใช้งาน</span>
-        : <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"><span className="w-1.5 h-1.5 rounded-full bg-gray-500"></span>ไม่ใช้งาน</span>;
+
 
     return (
         <div className="p-6 space-y-6">
@@ -95,7 +95,7 @@ export default function ItemTypeList() {
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600 dark:text-blue-400">{item.item_type_code}</td>
                                     <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">{item.item_type_name}</td>
                                     <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">{item.item_type_name_en || '-'}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-center">{getStatusBadge(item.is_active)}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-center"><ActiveStatusBadge isActive={item.is_active} /></td>
                                     <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                                         <div className="flex items-center justify-center gap-2">
                                             <button onClick={() => handleEdit(item.item_type_id)} className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors" title="แก้ไข"><Edit2 size={18} /></button>

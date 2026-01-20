@@ -17,9 +17,11 @@ import {
     RefreshCw
 } from 'lucide-react';
 import { styles } from '../../../constants';
+import { logger } from '../../../utils/logger';
 import { WarehouseFormModal } from './WarehouseFormModal';
 import { mockWarehouses } from '../../../__mocks__/masterDataMocks';
 import type { WarehouseListItem } from '../../../types/master-data-types';
+import { ActiveStatusBadge } from '../../../components/shared';
 
 // ====================================================================================
 // COMPONENT
@@ -89,7 +91,7 @@ export default function WarehouseList() {
 
     const handleDelete = (id: string) => {
         if (confirm('คุณต้องการลบข้อมูลคลังสินค้านี้หรือไม่?')) {
-            console.log('Delete warehouse:', id);
+            logger.log('Delete warehouse:', id);
             fetchData();
         }
     };
@@ -100,19 +102,7 @@ export default function WarehouseList() {
         fetchData();
     };
 
-    const getStatusBadge = (isActive: boolean) => {
-        return isActive ? (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                ใช้งาน
-            </span>
-        ) : (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
-                <span className="w-1.5 h-1.5 rounded-full bg-gray-500"></span>
-                ไม่ใช้งาน
-            </span>
-        );
-    };
+
 
     // ==================== RENDER ====================
     return (
@@ -205,7 +195,7 @@ export default function WarehouseList() {
                                             {item.branch_name || '-'}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-center">
-                                            {getStatusBadge(item.is_active)}
+                                            <ActiveStatusBadge isActive={item.is_active} />
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                                             <div className="flex items-center justify-center gap-2">

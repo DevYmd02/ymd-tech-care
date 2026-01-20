@@ -1,11 +1,13 @@
 /**
  * @file vendorService.ts
- * @description Service สำหรับจัดการข้อมูล Vendor Master - เชื่อมต่อกับ Backend API
- * @usage import { vendorService } from '@/services/vendorService';
+ * @description Service สำหรับจัดการข้อมูล Vendor Master
+ * 
+ * @note รองรับทั้ง Mock Data และ Real API
+ * ควบคุมโดย VITE_USE_MOCK ใน .env
  */
 
-
-import api from './api';
+import api, { USE_MOCK } from './api';
+import { RELATED_VENDORS } from '../__mocks__/relatedMocks';
 import type {
     VendorMaster,
     VendorListParams,
@@ -16,38 +18,51 @@ import type {
 } from '../types/vendor-types';
 import { logger } from '../utils/logger';
 
-// ====================================================================================
-// VENDOR SERVICE - API Calls
-// ====================================================================================
+// =============================================================================
+// VENDOR SERVICE
+// =============================================================================
 
-/**
- * Vendor Service - API calls สำหรับ Vendor Master Data
- * 
- * @example
- * // ดึงรายการ Vendor
- * const response = await vendorService.getList({ status: 'ACTIVE' });
- * 
- * // สร้าง Vendor ใหม่
- * const newVendor = await vendorService.create(data);
- * 
- * // อัปเดต Vendor
- * await vendorService.update(vendorId, data);
- */
 export const vendorService = {
 
     // ==================== READ OPERATIONS ====================
 
     /**
      * ดึงรายการ Vendor ทั้งหมด
-     * GET /vendor
      */
     getList: async (params?: VendorListParams): Promise<VendorListResponse> => {
+        if (USE_MOCK) {
+            logger.log('[vendorService] Using MOCK data');
+            await new Promise(resolve => setTimeout(resolve, 300));
+            
+            let filteredVendors = [...RELATED_VENDORS];
+            
+            // Filter by status
+            if (params?.status && params.status !== 'ALL') {
+                filteredVendors = filteredVendors.filter(v => v.status === params.status);
+            }
+            
+            // Filter by search
+            if (params?.search) {
+                const search = params.search.toLowerCase();
+                filteredVendors = filteredVendors.filter(v => 
+                    v.vendor_name.toLowerCase().includes(search) ||
+                    v.vendor_code.toLowerCase().includes(search)
+                );
+            }
+            
+            return {
+                data: filteredVendors as VendorMaster[],
+                total: filteredVendors.length,
+                page: params?.page || 1,
+                limit: params?.limit || 20,
+            };
+        }
+
         try {
             const response = await api.get<VendorListResponse>('/vendors', { params });
             return response.data;
         } catch (error) {
             logger.error('vendorService.getList error:', error);
-            // Return empty data on error (fallback)
             return {
                 data: [],
                 total: 0,
@@ -59,9 +74,13 @@ export const vendorService = {
 
     /**
      * ดึงรายละเอียด Vendor ตาม ID
-     * GET /vendor/:id
      */
     getById: async (vendorId: string): Promise<VendorMaster | null> => {
+        if (USE_MOCK) {
+            const vendor = RELATED_VENDORS.find(v => v.vendor_id === vendorId);
+            return vendor as VendorMaster || null;
+        }
+
         try {
             const response = await api.get<VendorMaster>(`/vendors/${vendorId}`);
             return response.data;
@@ -73,9 +92,15 @@ export const vendorService = {
 
     /**
      * ดึงรายการ Vendor สำหรับ Dropdown
-     * GET /vendor/dropdown
      */
     getDropdown: async (): Promise<VendorDropdownItem[]> => {
+        if (USE_MOCK) {
+            return RELATED_VENDORS.map(v => ({
+                vendor_code: v.vendor_code,
+                vendor_name: v.vendor_name,
+            }));
+        }
+
         try {
             const response = await api.get<VendorDropdownItem[]>('/vendors/dropdown');
             return response.data;
@@ -89,9 +114,13 @@ export const vendorService = {
 
     /**
      * สร้าง Vendor ใหม่
-     * POST /vendor
      */
     create: async (data: VendorCreateRequest): Promise<VendorResponse> => {
+        if (USE_MOCK) {
+            logger.log('[vendorService] Mock create:', data);
+            return { success: true, message: 'สร้าง Vendor สำเร็จ (Mock)' };
+        }
+
         try {
             const response = await api.post<VendorResponse>('/vendors', data);
             return response.data;
@@ -103,9 +132,13 @@ export const vendorService = {
 
     /**
      * อัปเดต Vendor
-     * PUT /vendor/:id
      */
     update: async (vendorId: string, data: Partial<VendorCreateRequest>): Promise<VendorResponse> => {
+        if (USE_MOCK) {
+            logger.log('[vendorService] Mock update:', vendorId, data);
+            return { success: true, message: 'อัปเดต Vendor สำเร็จ (Mock)' };
+        }
+
         try {
             const response = await api.put<VendorResponse>(`/vendors/${vendorId}`, data);
             return response.data;
@@ -117,9 +150,13 @@ export const vendorService = {
 
     /**
      * ลบ Vendor
-     * DELETE /vendor/:id
      */
     delete: async (vendorId: string): Promise<{ success: boolean; message?: string }> => {
+        if (USE_MOCK) {
+            logger.log('[vendorService] Mock delete:', vendorId);
+            return { success: true };
+        }
+
         try {
             await api.delete(`/vendors/${vendorId}`);
             return { success: true };
@@ -131,11 +168,10 @@ export const vendorService = {
 
     // ==================== STATUS OPERATIONS ====================
 
-    /**
-     * Block Vendor
-     * POST /vendor/:id/block
-     */
     block: async (vendorId: string, remark?: string): Promise<VendorResponse> => {
+        if (USE_MOCK) {
+            return { success: true, message: 'Block Vendor สำเร็จ (Mock)' };
+        }
         try {
             const response = await api.post<VendorResponse>(`/vendors/${vendorId}/block`, { remark });
             return response.data;
@@ -145,11 +181,10 @@ export const vendorService = {
         }
     },
 
-    /**
-     * Unblock Vendor
-     * POST /vendor/:id/unblock
-     */
     unblock: async (vendorId: string): Promise<VendorResponse> => {
+        if (USE_MOCK) {
+            return { success: true, message: 'Unblock Vendor สำเร็จ (Mock)' };
+        }
         try {
             const response = await api.post<VendorResponse>(`/vendors/${vendorId}/unblock`);
             return response.data;
@@ -159,11 +194,10 @@ export const vendorService = {
         }
     },
 
-    /**
-     * Set On Hold
-     * POST /vendor/:id/hold
-     */
     setOnHold: async (vendorId: string, onHold: boolean): Promise<VendorResponse> => {
+        if (USE_MOCK) {
+            return { success: true, message: `Set Hold=${onHold} สำเร็จ (Mock)` };
+        }
         try {
             const response = await api.post<VendorResponse>(`/vendors/${vendorId}/hold`, { on_hold: onHold });
             return response.data;
@@ -172,7 +206,6 @@ export const vendorService = {
             return { success: false, message: 'เกิดข้อผิดพลาดในการเปลี่ยนสถานะ Hold' };
         }
     },
-
 };
 
 export default vendorService;
