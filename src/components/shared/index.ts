@@ -39,3 +39,8 @@ export { SystemAlert } from './SystemAlert';
 
 // Utilities
 export { ErrorBoundary } from './ErrorBoundary';
+
+// Tab Panel
+export { default as TabPanel } from './TabPanel';
+export type { TabItem, TabPanelProps } from './TabPanel';
+export { DOCUMENT_FORM_TABS } from './tabConstants';

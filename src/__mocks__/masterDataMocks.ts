@@ -1,6 +1,13 @@
 /**
  * @file masterDataMocks.ts
  * @description Mock data สำหรับ Master Data - Branch, Warehouse, ProductCategory, ItemType, UnitOfMeasure
+ * 
+ * @note Mock data จะถูก export เฉพาะใน DEV mode เท่านั้น
+ *       ใน Production build จะ export เป็น array ว่าง เพื่อลดขนาด bundle
+ * 
+ * @usage 
+ * - DEV: ใช้ mock data ในการพัฒนา UI
+ * - PROD: ควรเปลี่ยนไปใช้ service API จริง (เช่น branchService.getList())
  */
 
 import type {
@@ -16,10 +23,17 @@ import type {
 } from '../types/master-data-types';
 
 // ====================================================================================
+// ENVIRONMENT FLAG
+// ====================================================================================
+
+/** true = Development mode, false = Production mode */
+const IS_DEV = import.meta.env.DEV;
+
+// ====================================================================================
 // BRANCH MOCK DATA
 // ====================================================================================
 
-export const mockBranches: BranchListItem[] = [
+const _mockBranches: BranchListItem[] = [
     {
         branch_id: 'BR001',
         branch_code: 'HQ',
@@ -50,19 +64,23 @@ export const mockBranches: BranchListItem[] = [
     },
 ];
 
-export const mockBranchDropdown: BranchDropdownItem[] = mockBranches
-    .filter(b => b.is_active)
-    .map(b => ({
+/** Mock data สำหรับ Branch List - เฉพาะ DEV mode */
+export const mockBranches: BranchListItem[] = IS_DEV ? _mockBranches : [];
+
+/** Mock dropdown สำหรับ Branch - เฉพาะ DEV mode */
+export const mockBranchDropdown: BranchDropdownItem[] = IS_DEV
+    ? _mockBranches.filter(b => b.is_active).map(b => ({
         branch_id: b.branch_id,
         branch_code: b.branch_code,
         branch_name: b.branch_name,
-    }));
+    }))
+    : [];
 
 // ====================================================================================
 // WAREHOUSE MOCK DATA
 // ====================================================================================
 
-export const mockWarehouses: WarehouseListItem[] = [
+const _mockWarehouses: WarehouseListItem[] = [
     {
         warehouse_id: 'WH001',
         warehouse_code: 'WH-HQ',
@@ -97,11 +115,14 @@ export const mockWarehouses: WarehouseListItem[] = [
     },
 ];
 
+/** Mock data สำหรับ Warehouse List - เฉพาะ DEV mode */
+export const mockWarehouses: WarehouseListItem[] = IS_DEV ? _mockWarehouses : [];
+
 // ====================================================================================
 // PRODUCT CATEGORY MOCK DATA
 // ====================================================================================
 
-export const mockProductCategories: ProductCategoryListItem[] = [
+const _mockProductCategories: ProductCategoryListItem[] = [
     {
         category_id: 'CAT001',
         category_code: 'MED',
@@ -136,11 +157,14 @@ export const mockProductCategories: ProductCategoryListItem[] = [
     },
 ];
 
+/** Mock data สำหรับ Product Category List - เฉพาะ DEV mode */
+export const mockProductCategories: ProductCategoryListItem[] = IS_DEV ? _mockProductCategories : [];
+
 // ====================================================================================
 // ITEM TYPE MOCK DATA
 // ====================================================================================
 
-export const mockItemTypes: ItemTypeListItem[] = [
+const _mockItemTypes: ItemTypeListItem[] = [
     {
         item_type_id: 'IT001',
         item_type_code: 'DRUG',
@@ -175,11 +199,14 @@ export const mockItemTypes: ItemTypeListItem[] = [
     },
 ];
 
+/** Mock data สำหรับ Item Type List - เฉพาะ DEV mode */
+export const mockItemTypes: ItemTypeListItem[] = IS_DEV ? _mockItemTypes : [];
+
 // ====================================================================================
 // UNIT OF MEASURE MOCK DATA
 // ====================================================================================
 
-export const mockUnits: UnitListItem[] = [
+const _mockUnits: UnitListItem[] = [
     {
         unit_id: 'UN001',
         unit_code: 'PCS',
@@ -222,11 +249,14 @@ export const mockUnits: UnitListItem[] = [
     },
 ];
 
+/** Mock data สำหรับ Unit List - เฉพาะ DEV mode */
+export const mockUnits: UnitListItem[] = IS_DEV ? _mockUnits : [];
+
 // ====================================================================================
 // ITEM MASTER MOCK DATA
 // ====================================================================================
 
-export const mockItems: ItemListItem[] = [
+const _mockItems: ItemListItem[] = [
     {
         item_id: 'IT001',
         item_code: 'RM-001',
@@ -265,11 +295,14 @@ export const mockItems: ItemListItem[] = [
     },
 ];
 
+/** Mock data สำหรับ Item Master List - เฉพาะ DEV mode */
+export const mockItems: ItemListItem[] = IS_DEV ? _mockItems : [];
+
 // ====================================================================================
 // UOM CONVERSION MOCK DATA
 // ====================================================================================
 
-export const mockUOMConversions: UOMConversionListItem[] = [
+const _mockUOMConversions: UOMConversionListItem[] = [
     {
         conversion_id: 'UC001',
         item_code: 'RM-001',
@@ -305,11 +338,14 @@ export const mockUOMConversions: UOMConversionListItem[] = [
     },
 ];
 
+/** Mock data สำหรับ UOM Conversion List - เฉพาะ DEV mode */
+export const mockUOMConversions: UOMConversionListItem[] = IS_DEV ? _mockUOMConversions : [];
+
 // ====================================================================================
 // ITEM BARCODE MOCK DATA
 // ====================================================================================
 
-export const mockItemBarcodes: ItemBarcodeListItem[] = [
+const _mockItemBarcodes: ItemBarcodeListItem[] = [
     {
         barcode_id: 'BC001',
         item_code: 'RM-001',
@@ -341,3 +377,6 @@ export const mockItemBarcodes: ItemBarcodeListItem[] = [
         created_at: '2024-01-02T00:00:00Z',
     },
 ];
+
+/** Mock data สำหรับ Item Barcode List - เฉพาะ DEV mode */
+export const mockItemBarcodes: ItemBarcodeListItem[] = IS_DEV ? _mockItemBarcodes : [];

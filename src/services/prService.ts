@@ -1,10 +1,13 @@
 /**
  * @file prService.ts
- * @description Service สำหรับจัดการข้อมูล Purchase Requisition - เชื่อมต่อกับ Backend API
- * @usage import { prService } from '@/services/prService';
+ * @description Service สำหรับจัดการข้อมูล Purchase Requisition
+ * 
+ * @note รองรับทั้ง Mock Data และ Real API
+ * ควบคุมโดย VITE_USE_MOCK ใน .env
  */
 
-import api from './api';
+import api, { USE_MOCK } from './api';
+import { RELATED_PRS } from '../__mocks__/relatedMocks';
 import type { 
   PRHeader, 
   PRFormData, 
@@ -13,11 +16,10 @@ import type {
 } from '../types/pr-types';
 import { logger } from '../utils/logger';
 
-// ====================================================================================
-// TYPE DEFINITIONS - API Request/Response
-// ====================================================================================
+// =============================================================================
+// TYPE DEFINITIONS
+// =============================================================================
 
-/** Parameters สำหรับ getList */
 export interface PRListParams {
   status?: PRStatus | 'ALL';
   cost_center_id?: string;
@@ -29,7 +31,6 @@ export interface PRListParams {
   limit?: number;
 }
 
-/** Response จาก getList */
 export interface PRListResponse {
   data: PRHeader[];
   total: number;
@@ -37,67 +38,72 @@ export interface PRListResponse {
   limit: number;
 }
 
-/** Request สำหรับ submit PR for approval */
 export interface SubmitPRRequest {
   pr_id: string;
 }
 
-/** Request สำหรับ approve/reject PR */
 export interface ApprovalRequest {
   pr_id: string;
   action: 'APPROVE' | 'REJECT';
   remark?: string;
 }
 
-/** Response จาก approval action */
 export interface ApprovalResponse {
   success: boolean;
   message: string;
   approval_task?: ApprovalTask;
 }
 
-/** Request สำหรับ convert PR to RFQ/PO */
 export interface ConvertPRRequest {
   pr_id: string;
   convert_to: 'RFQ' | 'PO';
-  line_ids?: string[];  // ถ้าไม่ระบุ = convert ทั้งหมด
+  line_ids?: string[];
 }
 
-// ====================================================================================
-// PR SERVICE - API Calls (ใช้ axios จริง)
-// ====================================================================================
+// =============================================================================
+// PR SERVICE
+// =============================================================================
 
-/**
- * PR Service - API calls สำหรับ Purchase Requisition
- * 
- * @example
- * // ดึงรายการ PR
- * const response = await prService.getList({ status: 'IN_APPROVAL' });
- * 
- * // สร้าง PR ใหม่
- * const newPR = await prService.create(formData);
- * 
- * // ส่ง PR เพื่ออนุมัติ
- * await prService.submit(prId);
- * 
- * // อนุมัติ PR
- * await prService.approve({ pr_id: prId, action: 'APPROVE', remark: 'OK' });
- */
 export const prService = {
 
   // ==================== READ OPERATIONS ====================
 
   /**
    * ดึงรายการ PR ทั้งหมด
-   * GET /pr
    */
   getList: async (params?: PRListParams): Promise<PRListResponse> => {
+    if (USE_MOCK) {
+      logger.log('[prService] Using MOCK data');
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      let filteredPRs = [...RELATED_PRS];
+      
+      // Filter by status
+      if (params?.status && params.status !== 'ALL') {
+        filteredPRs = filteredPRs.filter(pr => pr.status === params.status);
+      }
+      
+      // Filter by requester name
+      if (params?.requester_name) {
+        const search = params.requester_name.toLowerCase();
+        filteredPRs = filteredPRs.filter(pr => 
+          pr.requester_name?.toLowerCase().includes(search)
+        );
+      }
+      
+      return {
+        data: filteredPRs,
+        total: filteredPRs.length,
+        page: params?.page || 1,
+        limit: params?.limit || 20,
+      };
+    }
+
     try {
       const response = await api.get<PRListResponse>('/pr', { params });
       return response.data;
     } catch (error) {
       logger.error('prService.getList error:', error);
-      // Return empty data on error (fallback)
       return {
         data: [],
         total: 0,
@@ -109,9 +115,12 @@ export const prService = {
 
   /**
    * ดึงรายละเอียด PR ตาม ID
-   * GET /pr/:id
    */
   getById: async (prId: string): Promise<PRHeader | null> => {
+    if (USE_MOCK) {
+      return RELATED_PRS.find(pr => pr.pr_id === prId) || null;
+    }
+
     try {
       const response = await api.get<PRHeader>(`/pr/${prId}`);
       return response.data;
@@ -124,10 +133,33 @@ export const prService = {
   // ==================== WRITE OPERATIONS ====================
 
   /**
-   * สร้าง PR ใหม่ (สถานะ DRAFT)
-   * POST /pr
+   * สร้าง PR ใหม่
    */
   create: async (data: PRFormData): Promise<PRHeader | null> => {
+    if (USE_MOCK) {
+      logger.log('[prService] Mock create:', data);
+      const newPR: PRHeader = {
+        pr_id: `pr-${Date.now()}`,
+        pr_no: `PR-202601-${String(RELATED_PRS.length + 1).padStart(4, '0')}`,
+        branch_id: 'branch-001',
+        requester_user_id: 'user-001',
+        requester_name: 'ผู้ใช้ปัจจุบัน',
+        request_date: new Date().toISOString().split('T')[0],
+        required_date: data.required_date || '',
+        cost_center_id: data.cost_center_id || '',
+        purpose: data.purpose || '',
+        status: 'DRAFT',
+        currency_code: 'THB',
+        total_amount: 0,
+        attachment_count: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        created_by_user_id: 'user-001',
+        updated_by_user_id: 'user-001',
+      };
+      return newPR;
+    }
+
     try {
       const response = await api.post<PRHeader>('/pr', data);
       return response.data;
@@ -138,10 +170,14 @@ export const prService = {
   },
 
   /**
-   * อัปเดต PR (เฉพาะ DRAFT)
-   * PUT /pr/:id
+   * อัปเดต PR
    */
   update: async (prId: string, data: Partial<PRFormData>): Promise<PRHeader | null> => {
+    if (USE_MOCK) {
+      logger.log('[prService] Mock update:', prId, data);
+      return RELATED_PRS.find(pr => pr.pr_id === prId) || null;
+    }
+
     try {
       const response = await api.put<PRHeader>(`/pr/${prId}`, data);
       return response.data;
@@ -152,10 +188,14 @@ export const prService = {
   },
 
   /**
-   * ลบ PR (เฉพาะ DRAFT)
-   * DELETE /pr/:id
+   * ลบ PR
    */
   delete: async (prId: string): Promise<boolean> => {
+    if (USE_MOCK) {
+      logger.log('[prService] Mock delete:', prId);
+      return true;
+    }
+
     try {
       await api.delete(`/pr/${prId}`);
       return true;
@@ -168,10 +208,14 @@ export const prService = {
   // ==================== WORKFLOW OPERATIONS ====================
 
   /**
-   * ส่ง PR เพื่อขออนุมัติ (DRAFT → SUBMITTED → สร้าง approval_task)
-   * POST /pr/:id/submit
+   * ส่ง PR เพื่อขออนุมัติ
    */
   submit: async (prId: string): Promise<{ success: boolean; message: string }> => {
+    if (USE_MOCK) {
+      logger.log('[prService] Mock submit:', prId);
+      return { success: true, message: 'ส่งอนุมัติสำเร็จ (Mock)' };
+    }
+
     try {
       const response = await api.post<{ success: boolean; message: string }>(`/pr/${prId}/submit`);
       return response.data;
@@ -183,9 +227,13 @@ export const prService = {
 
   /**
    * อนุมัติ/ปฏิเสธ PR
-   * POST /pr/:id/approve
    */
   approve: async (request: ApprovalRequest): Promise<ApprovalResponse> => {
+    if (USE_MOCK) {
+      logger.log('[prService] Mock approve:', request);
+      return { success: true, message: `${request.action} สำเร็จ (Mock)` };
+    }
+
     try {
       const response = await api.post<ApprovalResponse>(`/pr/${request.pr_id}/approve`, {
         action: request.action,
@@ -200,9 +248,13 @@ export const prService = {
 
   /**
    * ยกเลิก PR
-   * POST /pr/:id/cancel
    */
   cancel: async (prId: string, remark?: string): Promise<{ success: boolean; message: string }> => {
+    if (USE_MOCK) {
+      logger.log('[prService] Mock cancel:', prId);
+      return { success: true, message: 'ยกเลิกสำเร็จ (Mock)' };
+    }
+
     try {
       const response = await api.post<{ success: boolean; message: string }>(`/pr/${prId}/cancel`, { remark });
       return response.data;
@@ -214,9 +266,13 @@ export const prService = {
 
   /**
    * แปลง PR เป็น RFQ หรือ PO
-   * POST /pr/:id/convert
    */
   convert: async (request: ConvertPRRequest): Promise<{ success: boolean; document_id?: string; document_no?: string }> => {
+    if (USE_MOCK) {
+      logger.log('[prService] Mock convert:', request);
+      return { success: true, document_id: 'doc-001', document_no: 'RFQ-001' };
+    }
+
     try {
       const response = await api.post<{ success: boolean; document_id?: string; document_no?: string }>(
         `/pr/${request.pr_id}/convert`,
@@ -231,15 +287,15 @@ export const prService = {
 
   // ==================== ATTACHMENT OPERATIONS ====================
 
-  /**
-   * อัปโหลดไฟล์แนบ
-   * POST /pr/:id/attachments
-   */
   uploadAttachment: async (prId: string, file: File): Promise<{ success: boolean; attachment_id?: string }> => {
+    if (USE_MOCK) {
+      logger.log('[prService] Mock uploadAttachment:', prId);
+      return { success: true, attachment_id: `att-${Date.now()}` };
+    }
+
     try {
       const formData = new FormData();
       formData.append('file', file);
-      
       const response = await api.post<{ success: boolean; attachment_id?: string }>(
         `/pr/${prId}/attachments`,
         formData,
@@ -252,11 +308,12 @@ export const prService = {
     }
   },
 
-  /**
-   * ลบไฟล์แนบ
-   * DELETE /pr/:id/attachments/:attachmentId
-   */
   deleteAttachment: async (prId: string, attachmentId: string): Promise<boolean> => {
+    if (USE_MOCK) {
+      logger.log('[prService] Mock deleteAttachment:', prId, attachmentId);
+      return true;
+    }
+
     try {
       await api.delete(`/pr/${prId}/attachments/${attachmentId}`);
       return true;
@@ -265,5 +322,6 @@ export const prService = {
       return false;
     }
   },
-
 };
+
+export default prService;

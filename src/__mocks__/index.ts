@@ -1,20 +1,38 @@
 /**
  * @file index.ts
  * @description Barrel export สำหรับ Mock Data
- * @note vendors.ts และ vendorDropdown.ts ต้อง import ตรงๆ จากแต่ละไฟล์
- *       เพราะมี dependency กับ types/vendor-types.ts
+ * 
+ * @structure
+ * - masterDataMocks.ts: Branch, Warehouse, Unit, ProductCategory, ItemType
+ * - products.ts: Product mock สำหรับ ProductSearchModal
+ * - relatedMocks.ts: Vendor → PR → RFQ (linked data)
  */
 
-// Export products mock (ไม่มี external dependencies)
-export * from './products';
+// Master Data Mocks
+export {
+  mockBranches,
+  mockBranchDropdown,
+  mockWarehouses,
+  mockProductCategories,
+  mockItemTypes,
+  mockUnits,
+  mockItems,
+  mockUOMConversions,
+  mockItemBarcodes,
+} from './masterDataMocks';
 
-// New exports (ตาม Database Schema)
-export { MOCK_PR_HEADERS, MOCK_COST_CENTERS, MOCK_PROJECTS } from './prList';
-export { MOCK_RFQS, getRFQStats } from './rfqMocks';
+// Product Mocks
+export { MOCK_PRODUCTS, type Product } from './products';
 
-// Legacy exports (for backward compatibility)
-export { MOCK_PR_LIST } from './prList';
-export type { PRItem, ApproverInfo } from './prList';
-
-// Note: For vendors, import directly from './vendors' or './vendorDropdown'
-// NOT from this index file to avoid circular dependency issues
+// Related Mocks (Vendor → PR → RFQ linked)
+export {
+  RELATED_VENDORS,
+  RELATED_PRS,
+  RELATED_RFQS,
+  RELATED_RFQ_LINES,
+  RELATED_RFQ_VENDORS,
+  getApprovedPRs,
+  getRFQByPRId,
+  getVendorsByRFQId,
+  getVendorById,
+} from './relatedMocks';
