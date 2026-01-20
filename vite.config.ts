@@ -8,11 +8,17 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          // แยก vendor chunks ตาม node_modules
           if (id.includes('node_modules')) {
-            // React core + react-dom ควรอยู่ด้วยกันเพื่อหลีกเลี่ยง circular dependency
-            if (id.includes('react-dom') || id.includes('node_modules/react/')) return 'vendor-react';
-            if (id.includes('react-router')) return 'vendor-react-router';
+            // Core libs: React + Router (รวมกันเพื่อแก้ circular dependency)
+            if (
+              id.includes('react-dom') || 
+              id.includes('node_modules/react/') || 
+              id.includes('react-router') || 
+              id.includes('scheduler')
+            ) {
+              return 'vendor-core';
+            }
+            
             if (id.includes('lucide-react')) return 'vendor-lucide';
             if (id.includes('react-hook-form')) return 'vendor-form';
             if (id.includes('zod')) return 'vendor-zod';
