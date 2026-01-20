@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import { X, Layers, Search, Save, RotateCcw } from 'lucide-react';
 import { styles } from '../../../constants';
+import { logger } from '../../../utils/logger';
 import { mockItemTypes } from '../../../__mocks__/masterDataMocks';
 import type { ItemTypeFormData } from '../../../types/master-data-types';
 import { initialItemTypeFormData } from '../../../types/master-data-types';
@@ -61,7 +62,7 @@ export function ItemTypeFormModal({ isOpen, onClose, editId }: Props) {
 
     const handleSave = () => {
         if (!formData.itemTypeCode.trim() || !formData.itemTypeName.trim()) { alert('กรุณากรอกข้อมูลให้ครบถ้วน'); return; }
-        console.log('Save item type:', formData);
+        logger.log('Save item type:', formData);
         alert(editId ? 'บันทึกการแก้ไขสำเร็จ' : 'เพิ่มประเภทสินค้าใหม่สำเร็จ');
         onClose();
     };

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Save, Printer, FilePlus, X, CheckCircle, Copy, Search, Trash2 } from 'lucide-react';
 
-import { ActionButton } from '../../../../components/shared/ActionButton';
+import { ActionButton } from '../../../../components/ui/ActionButton';
 
 export const RFQFooter: React.FC<{ onSave: () => void; onClose?: () => void; isSaving?: boolean }> = ({ onSave, onClose, isSaving }) => (
     <div className="p-3 bg-gray-100 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex flex-wrap items-center sticky bottom-0 z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] gap-2">

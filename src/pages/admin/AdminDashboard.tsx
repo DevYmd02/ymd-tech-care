@@ -18,7 +18,7 @@ import {
     ChevronRight
 } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
-import { StatCard, QuickAccessCard } from '../../components/ui/StatCard';
+import { StatCard, QuickAccessCard } from '../../components/shared/StatCard';
 import { styles } from '../../constants';
 
 // ====================================================================================

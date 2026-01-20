@@ -267,10 +267,3 @@ export const prService = {
   },
 
 };
-
-// ====================================================================================
-// LEGACY EXPORTS - สำหรับ Backward Compatibility
-// ====================================================================================
-
-/** @deprecated ใช้ PRHeader แทน */
-export type { PRDetail, PRListItem, PRItem } from '../types/pr-types';

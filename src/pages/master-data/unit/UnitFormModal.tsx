@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import { X, Ruler, Search, Save, RotateCcw } from 'lucide-react';
 import { styles } from '../../../constants';
+import { logger } from '../../../utils/logger';
 import { mockUnits } from '../../../__mocks__/masterDataMocks';
 import type { UnitFormData } from '../../../types/master-data-types';
 import { initialUnitFormData } from '../../../types/master-data-types';
@@ -61,7 +62,7 @@ export function UnitFormModal({ isOpen, onClose, editId }: Props) {
 
     const handleSave = () => {
         if (!formData.unitCode.trim() || !formData.unitName.trim()) { alert('กรุณากรอกข้อมูลให้ครบถ้วน'); return; }
-        console.log('Save unit:', formData);
+        logger.log('Save unit:', formData);
         alert(editId ? 'บันทึกการแก้ไขสำเร็จ' : 'เพิ่มหน่วยนับใหม่สำเร็จ');
         onClose();
     };

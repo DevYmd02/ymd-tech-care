@@ -9,6 +9,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Building2, Search, Plus, Save, Trash2, X, Loader2 } from 'lucide-react';
 import { styles } from '../../../constants';
+import { logger } from '../../../utils/logger';
 import { mockBranches } from '../../../__mocks__/masterDataMocks';
 import type { BranchFormData } from '../../../types/master-data-types';
 import { initialBranchFormData } from '../../../types/master-data-types';
@@ -66,7 +67,7 @@ export default function BranchForm() {
         try {
             // Mock save
             await new Promise(resolve => setTimeout(resolve, 500));
-            console.log('Save branch:', formData);
+            logger.log('Save branch:', formData);
             navigate('/master-data');
         } catch {
             setSaveError('เกิดข้อผิดพลาดในการบันทึก');
@@ -77,7 +78,7 @@ export default function BranchForm() {
 
     const handleDelete = () => {
         if (confirm('คุณต้องการลบข้อมูลนี้หรือไม่?')) {
-            console.log('Delete branch:', editId);
+            logger.log('Delete branch:', editId);
             navigate('/master-data');
         }
     };

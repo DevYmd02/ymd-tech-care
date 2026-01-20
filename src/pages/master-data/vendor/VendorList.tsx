@@ -24,6 +24,7 @@ import { styles } from '../../../constants';
 import { VendorFormModal } from './VendorFormModal';
 import { vendorService } from '../../../services/vendorService';
 import type { VendorListItem, VendorStatus, VendorListParams } from '../../../types/vendor-types';
+import { VendorStatusBadge } from '../../../components/shared';
 
 // ====================================================================================
 // COMPONENT
@@ -111,32 +112,7 @@ export default function VendorList() {
         fetchVendors(); // Refresh after modal close
     };
 
-    const getStatusBadge = (status: VendorStatus) => {
-        const badges: Record<VendorStatus, string> = {
-            ACTIVE: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-            INACTIVE: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
-            BLACKLISTED: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-            SUSPENDED: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-        };
-        const labels: Record<VendorStatus, string> = {
-            ACTIVE: 'Active',
-            INACTIVE: 'Inactive',
-            BLACKLISTED: 'Blacklisted',
-            SUSPENDED: 'Suspended'
-        };
-        const dotColors: Record<VendorStatus, string> = {
-            ACTIVE: 'bg-green-500',
-            INACTIVE: 'bg-gray-500',
-            BLACKLISTED: 'bg-red-500',
-            SUSPENDED: 'bg-yellow-500'
-        };
-        return (
-            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ${badges[status]}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${dotColors[status]}`}></span>
-                {labels[status]}
-            </span>
-        );
-    };
+
 
     // ==================== RENDER ====================
     return (
@@ -253,7 +229,7 @@ export default function VendorList() {
                                             {vendor.phone || '-'}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-center">
-                                            {getStatusBadge(vendor.status)}
+                                            <VendorStatusBadge status={vendor.status} />
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                                             <div className="flex items-center justify-center gap-2">

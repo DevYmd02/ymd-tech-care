@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRightLeft, Search, Plus, Save, Trash2, X, Loader2 } from 'lucide-react';
 import { styles } from '../../../constants';
+import { logger } from '../../../utils/logger';
 import { mockItems, mockUnits, mockUOMConversions } from '../../../__mocks__/masterDataMocks';
 import type { UOMConversionFormData } from '../../../types/master-data-types';
 import { initialUOMConversionFormData } from '../../../types/master-data-types';
@@ -56,7 +57,7 @@ export default function UOMConversionForm() {
         setSaveError(null);
         try {
             await new Promise(resolve => setTimeout(resolve, 500));
-            console.log('Save UOM Conversion:', formData);
+            logger.log('Save UOM Conversion:', formData);
             navigate('/master-data');
         } catch {
             setSaveError('เกิดข้อผิดพลาดในการบันทึก');

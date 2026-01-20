@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Tag, Search, Plus, Save, Trash2, X, Loader2 } from 'lucide-react';
 import { styles } from '../../../constants';
+import { logger } from '../../../utils/logger';
 import { mockProductCategories } from '../../../__mocks__/masterDataMocks';
 import type { ProductCategoryFormData } from '../../../types/master-data-types';
 import { initialProductCategoryFormData } from '../../../types/master-data-types';
@@ -55,7 +56,7 @@ export default function ProductCategoryForm() {
         setSaveError(null);
         try {
             await new Promise(resolve => setTimeout(resolve, 500));
-            console.log('Save category:', formData);
+            logger.log('Save category:', formData);
             navigate('/master-data');
         } catch {
             setSaveError('เกิดข้อผิดพลาดในการบันทึก');

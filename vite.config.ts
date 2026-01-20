@@ -10,7 +10,8 @@ export default defineConfig({
         manualChunks(id) {
           // แยก vendor chunks ตาม node_modules
           if (id.includes('node_modules')) {
-            if (id.includes('react-dom')) return 'vendor-react-dom';
+            // React core + react-dom ควรอยู่ด้วยกันเพื่อหลีกเลี่ยง circular dependency
+            if (id.includes('react-dom') || id.includes('node_modules/react/')) return 'vendor-react';
             if (id.includes('react-router')) return 'vendor-react-router';
             if (id.includes('lucide-react')) return 'vendor-lucide';
             if (id.includes('react-hook-form')) return 'vendor-form';

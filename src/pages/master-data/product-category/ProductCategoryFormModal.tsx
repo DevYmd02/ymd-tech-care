@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import { X, Tag, Search, Save, RotateCcw } from 'lucide-react';
 import { styles } from '../../../constants';
+import { logger } from '../../../utils/logger';
 import { mockProductCategories } from '../../../__mocks__/masterDataMocks';
 import type { ProductCategoryFormData } from '../../../types/master-data-types';
 import { initialProductCategoryFormData } from '../../../types/master-data-types';
@@ -61,7 +62,7 @@ export function ProductCategoryFormModal({ isOpen, onClose, editId }: Props) {
 
     const handleSave = () => {
         if (!formData.categoryCode.trim() || !formData.categoryName.trim()) { alert('กรุณากรอกข้อมูลให้ครบถ้วน'); return; }
-        console.log('Save category:', formData);
+        logger.log('Save category:', formData);
         alert(editId ? 'บันทึกการแก้ไขสำเร็จ' : 'เพิ่มหมวดสินค้าใหม่สำเร็จ');
         onClose();
     };

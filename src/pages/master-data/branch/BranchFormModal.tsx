@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import { X, Building2, Search, Save, RotateCcw } from 'lucide-react';
 import { styles } from '../../../constants';
+import { logger } from '../../../utils/logger';
 import { mockBranches } from '../../../__mocks__/masterDataMocks';
 import type { BranchFormData } from '../../../types/master-data-types';
 import { initialBranchFormData } from '../../../types/master-data-types';
@@ -86,7 +87,7 @@ export function BranchFormModal({ isOpen, onClose, editId }: Props) {
         }
         
         // Mock save
-        console.log('Save branch:', formData);
+        logger.log('Save branch:', formData);
         alert(editId ? 'บันทึกการแก้ไขสำเร็จ' : 'เพิ่มสาขาใหม่สำเร็จ');
         onClose();
     };

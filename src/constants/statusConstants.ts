@@ -1,11 +1,11 @@
 /**
  * @file statusConstants.ts
- * @description Constants สำหรับ Status Colors และ Labels
- * @usage Import จากไฟล์นี้แทนการ import จาก StatusBadge.tsx
+ * @description Unified Status Constants สำหรับทั้งระบบ
+ * @usage import { PR_STATUS_COLORS, PR_STATUS_LABELS } from '@/constants/statusConstants';
  */
 
 // ====================================================================================
-// PR STATUS
+// PR STATUS - Purchase Requisition
 // ====================================================================================
 
 export const PR_STATUS_COLORS: Record<string, string> = {
@@ -33,15 +33,15 @@ export const PR_STATUS_LABELS: Record<string, string> = {
 };
 
 // ====================================================================================
-// RFQ STATUS
+// RFQ STATUS - Request for Quotation
 // ====================================================================================
 
 export const RFQ_STATUS_COLORS: Record<string, string> = {
-  DRAFT: 'bg-gray-100 text-gray-700',
-  SENT: 'bg-pink-100 text-pink-700',
-  IN_PROGRESS: 'bg-yellow-100 text-yellow-700',
-  CLOSED: 'bg-green-100 text-green-700',
-  CANCELLED: 'bg-red-100 text-red-600',
+  DRAFT: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+  SENT: 'bg-pink-100 text-pink-700 dark:bg-pink-900 dark:text-pink-300',
+  IN_PROGRESS: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
+  CLOSED: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+  CANCELLED: 'bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-400',
 };
 
 export const RFQ_STATUS_LABELS: Record<string, string> = {
@@ -50,4 +50,37 @@ export const RFQ_STATUS_LABELS: Record<string, string> = {
   IN_PROGRESS: 'กำลังดำเนินการ',
   CLOSED: 'ปิดแล้ว',
   CANCELLED: 'ยกเลิก',
+};
+
+// ====================================================================================
+// LEGACY CONSTANTS - For backward compatibility (from status.ts)
+// ====================================================================================
+
+/** @deprecated ใช้ PR_STATUS_LABELS แทน */
+export const PR_STATUS = {
+  PENDING: 'รออนุมัติ',
+  APPROVED: 'อนุมัติแล้ว',
+  CANCELLED: 'ยกเลิก',
+} as const;
+
+export type PRStatus = typeof PR_STATUS[keyof typeof PR_STATUS];
+
+/** Document Status ทั่วไป */
+export const DOC_STATUS = {
+  DRAFT: 'ร่าง',
+  PENDING: 'รออนุมัติ',
+  APPROVED: 'อนุมัติแล้ว',
+  CANCELLED: 'ยกเลิก',
+  COMPLETED: 'เสร็จสิ้น',
+} as const;
+
+export type DocStatus = typeof DOC_STATUS[keyof typeof DOC_STATUS];
+
+/** @deprecated ใช้ PR_STATUS_COLORS หรือ RFQ_STATUS_COLORS แทน */
+export const STATUS_COLORS: Record<string, string> = {
+  'รออนุมัติ': 'bg-yellow-100 text-yellow-700 border-yellow-200',
+  'อนุมัติแล้ว': 'bg-green-100 text-green-700 border-green-200',
+  'ยกเลิก': 'bg-gray-100 text-gray-700 border-gray-200',
+  'ร่าง': 'bg-blue-100 text-blue-700 border-blue-200',
+  'เสร็จสิ้น': 'bg-purple-100 text-purple-700 border-purple-200',
 };

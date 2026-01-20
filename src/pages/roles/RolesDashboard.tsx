@@ -37,7 +37,7 @@ import {
     Scale,
     Search
 } from 'lucide-react';
-import { PageBanner } from '../../components/ui/PageBanner';
+import { PageBanner } from '../../components/shared/PageBanner';
 import { styles } from '../../constants';
 
 // ====================================================================================

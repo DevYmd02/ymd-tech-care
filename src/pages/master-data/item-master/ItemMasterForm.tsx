@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Package, Search, Plus, Save, Trash2, X, Loader2 } from 'lucide-react';
 import { styles } from '../../../constants';
+import { logger } from '../../../utils/logger';
 import { mockItems, mockProductCategories, mockItemTypes, mockUnits } from '../../../__mocks__/masterDataMocks';
 import type { ItemMasterFormData } from '../../../types/master-data-types';
 import { initialItemMasterFormData } from '../../../types/master-data-types';
@@ -61,7 +62,7 @@ export default function ItemMasterForm() {
         setSaveError(null);
         try {
             await new Promise(resolve => setTimeout(resolve, 500));
-            console.log('Save item:', formData);
+            logger.log('Save item:', formData);
             navigate('/master-data');
         } catch {
             setSaveError('เกิดข้อผิดพลาดในการบันทึก');

@@ -11,7 +11,7 @@ export const logger = {
   /**
    * Log info message (only in dev)
    */
-  log: (message: string, ...args: any[]) => {
+  log: (message: string, ...args: unknown[]) => {
     if (isDev) {
       console.log(`[INFO] ${message}`, ...args);
     }
@@ -20,7 +20,7 @@ export const logger = {
   /**
    * Log warning message (only in dev)
    */
-  warn: (message: string, ...args: any[]) => {
+  warn: (message: string, ...args: unknown[]) => {
     if (isDev) {
       console.warn(`[WARN] ${message}`, ...args);
     }
@@ -30,7 +30,7 @@ export const logger = {
    * Log error message (always log, but formatted)
    * TODO: connect to Sentry/monitoring service in production
    */
-  error: (message: string, error?: any) => {
+  error: (message: string, error?: unknown) => {
     // Always log errors, but format them nicely
     if (isDev) {
       console.error(`[ERROR] ${message}`, error);

@@ -13,6 +13,7 @@ import { masterDataService } from '../../../../services/masterDataService';
 import type { BranchMaster, ItemMaster, UnitMaster } from '../../../../types/master-data-types';
 import type { RFQFormData, RFQLineFormData } from '../../../../types/rfq-types';
 import { initialRFQFormData, initialRFQLineFormData } from '../../../../types/rfq-types';
+import { logger } from '../../../../utils/logger';
 
 // ====================================================================================
 // TYPES
@@ -64,7 +65,7 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 setItems(itemsData);
                 setUnits(unitsData);
             } catch (error) {
-                console.error('Failed to fetch master data:', error);
+                logger.error('Failed to fetch master data:', error);
             }
         };
         fetchMasterData();
@@ -130,10 +131,10 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
         setIsSaving(true);
         try {
             await new Promise(resolve => setTimeout(resolve, 1000));
-            console.log('Save RFQ:', formData);
+            logger.log('Save RFQ:', formData);
             onClose();
         } catch (error) {
-            console.error('Failed to save RFQ:', error);
+            logger.error('Failed to save RFQ:', error);
         } finally {
             setIsSaving(false);
         }
