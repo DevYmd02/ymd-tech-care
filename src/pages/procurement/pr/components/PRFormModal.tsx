@@ -13,6 +13,7 @@ import { PRHeader } from './PRHeader';
 import { PRFooter } from './PRFooter';
 import { WindowFormLayout } from '../../../../components/shared/WindowFormLayout';
 import { masterDataService } from '../../../../services/masterDataService';
+import { prService } from '../../../../services/prService';
 import type { ItemMaster, CostCenter, Project } from '../../../../types/master-data-types';
 import { SystemAlert } from '../../../../components/shared/SystemAlert';
 
@@ -215,16 +216,35 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const vatAmount = afterDiscount * (vatRate / 100);
   const grandTotal = afterDiscount + vatAmount;
 
-  const onSubmit: SubmitHandler<PRFormData> = (data) => {
+  const onSubmit: SubmitHandler<PRFormData> = async (data) => {
     if (!data.required_date) { showAlert('กรุณาระบุวันที่ต้องการใช้'); return; }
     if (!data.requester_name) { showAlert('กรุณาระบุชื่อผู้ขอซื้อ'); return; }
     if (!data.cost_center_id) { showAlert('กรุณาเลือกศูนย์ต้นทุน'); return; }
     if (!data.purpose) { showAlert('กรุณาระบุวัตถุประสงค์'); return; }
     
+    // 1. Prepare Payload
     const payload = { ...data, lines: lines.filter(l => l.item_code), total_amount: grandTotal };
-    void payload; // TODO: Use payload to call API
-    window.alert(`บันทึกสำเร็จ!\nเลขที่: ${data.pr_no}\nรวม: ${subtotal.toLocaleString()}\nส่วนลด: ${discountAmount.toLocaleString()}\nVAT: ${vatAmount.toLocaleString()}\nรวมทั้งสิ้น: ${grandTotal.toLocaleString()} บาท`);
-    onClose();
+
+    try {
+        // 2. Create PR
+        const newPR = await prService.create(payload);
+        if (newPR?.pr_id) {
+            // 3. Auto Submit for Testing
+            const submitResult = await prService.submit(newPR.pr_id);
+            if (submitResult.success) {
+                window.alert(`บันทึกและส่งอนุมัติสำเร็จ!\nเลขที่: ${newPR.pr_no}\nสถานะ: รออนุมัติ (In Approval)`);
+                onClose();
+            } else {
+                window.alert(`บันทึกสำเร็จแต่ส่งอนุมัติไม่ผ่าน: ${submitResult.message}`);
+                onClose();
+            }
+        } else {
+            showAlert('เกิดข้อผิดพลาดในการสร้างเอกสาร');
+        }
+    } catch (error) {
+        console.error('Create PR failed', error);
+        showAlert('เกิดข้อผิดพลาดในการเชื่อมต่อระบบ');
+    }
   };
 
   // if (!isOpen && !isClosing) return null; // Handled by WindowFormLayout

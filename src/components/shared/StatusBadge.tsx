@@ -16,6 +16,8 @@ import {
   PR_STATUS_LABELS,
   RFQ_STATUS_COLORS,
   RFQ_STATUS_LABELS,
+  QT_STATUS_COLORS,
+  QT_STATUS_LABELS,
 } from '../../constants/statusConstants';
 
 // ====================================================================================
@@ -87,7 +89,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
     const label = labelMap?.[status] || status;
 
     return (
-      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${colorClass} ${className}`}>
+      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${colorClass} ${className}`}>
         {label}
       </span>
     );
@@ -99,7 +101,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
 
   return (
     <span className={`
-      inline-flex items-center rounded-full font-semibold border
+      inline-flex items-center rounded-full font-semibold border whitespace-nowrap
       ${sizeClasses}
       ${variantClasses[resolvedVariant]}
       ${className}
@@ -133,6 +135,16 @@ export const RFQStatusBadge: React.FC<{ status: string; className?: string }> = 
   />
 );
 
+/** StatusBadge สำหรับ Quotation */
+export const QTStatusBadge: React.FC<{ status: string; className?: string }> = ({ status, className }) => (
+  <StatusBadge
+    status={status}
+    colorMap={QT_STATUS_COLORS}
+    labelMap={QT_STATUS_LABELS}
+    className={className}
+  />
+);
+
 // ====================================================================================
 // ACTIVE/INACTIVE STATUS BADGE - สำหรับ Master Data Lists
 // ====================================================================================
@@ -152,12 +164,12 @@ export const ActiveStatusBadge: React.FC<ActiveStatusBadgeProps> = ({
   className = '',
 }) => {
   return isActive ? (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 ${className}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 whitespace-nowrap ${className}`}>
       <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
       {activeLabel}
     </span>
   ) : (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 ${className}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 whitespace-nowrap ${className}`}>
       <span className="w-1.5 h-1.5 rounded-full bg-gray-500" />
       {inactiveLabel}
     </span>
@@ -203,7 +215,7 @@ export const VendorStatusBadge: React.FC<VendorStatusBadgeProps> = ({ status, cl
   const config = vendorStatusConfig[status] || vendorStatusConfig.INACTIVE;
   
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ${config.colorClass} ${className}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full whitespace-nowrap ${config.colorClass} ${className}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${config.dotColor}`} />
       {config.label}
     </span>

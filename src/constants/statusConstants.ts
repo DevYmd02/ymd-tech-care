@@ -53,6 +53,24 @@ export const RFQ_STATUS_LABELS: Record<string, string> = {
 };
 
 // ====================================================================================
+// QT STATUS - Quotation
+// ====================================================================================
+
+export const QT_STATUS_COLORS: Record<string, string> = {
+  DRAFT: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+  SUBMITTED: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
+  SELECTED: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+  REJECTED: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
+};
+
+export const QT_STATUS_LABELS: Record<string, string> = {
+  DRAFT: 'ร่าง',
+  SUBMITTED: 'ได้รับแล้ว',
+  SELECTED: 'เทียบราคาแล้ว',
+  REJECTED: 'ไม่เลือก (Rejected)',
+};
+
+// ====================================================================================
 // LEGACY CONSTANTS - For backward compatibility (from status.ts)
 // ====================================================================================
 

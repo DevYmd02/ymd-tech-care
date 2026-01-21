@@ -20,9 +20,10 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import ProcurementDashboard from './pages/procurement/ProcurementDashboard';
 import PRListPage from './pages/procurement/pr/PRListPage';
 import RFQListPage from './pages/procurement/rfq/RFQListPage';
+import QTListPage from './pages/procurement/qt/QTListPage';
+import QCListPage from './pages/procurement/qc/QCListPage';
 import { 
-    QuotationListPage, 
-    QuotationComparisonListPage, 
+    // QuotationComparisonListPage, 
     PurchaseOrderListPage, 
     GoodsReceiptNoteListPage, 
     PurchaseReturnListPage 
@@ -102,8 +103,8 @@ function App() {
         <Route path="procurement/rfq" element={<RFQListPage />} />
         
         {/* Procurement - Coming Soon */}
-        <Route path="procurement/qt" element={<QuotationListPage />} />
-        <Route path="procurement/qc" element={<QuotationComparisonListPage />} />
+        <Route path="procurement/qt" element={<QTListPage />} />
+        <Route path="procurement/qc" element={<QCListPage />} />
         <Route path="procurement/po" element={<PurchaseOrderListPage />} />
         <Route path="procurement/grn" element={<GoodsReceiptNoteListPage />} />
         <Route path="procurement/prt" element={<PurchaseReturnListPage />} />

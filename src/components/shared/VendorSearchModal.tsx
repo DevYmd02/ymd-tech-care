@@ -9,6 +9,7 @@ import React, { useState, useEffect } from 'react';
 import { SearchModal, type ColumnDef } from './SearchModal';
 import { vendorService } from '../../services/vendorService';
 import type { VendorSearchItem } from '../../types/vendor-types';
+import { RELATED_VENDORS } from '../../__mocks__/relatedMocks';
 
 // Re-export for backward compatibility
 export type Vendor = VendorSearchItem;
@@ -21,34 +22,54 @@ interface Props {
 }
 
 // ====================================================================================
-// MOCK DATA - Fallback เมื่อ API ไม่พร้อม
+// MOCK DATA - Fallback เมื่อ API ไม่พร้อม (ใช้ข้อมูลจาก relatedMocks)
 // ====================================================================================
 
-const FALLBACK_VENDORS: VendorSearchItem[] = [
-    { code: 'V001', name: 'บริษัท ไอทีซัพพลาย จำกัด', address: '123 ถ.พระราม4 คลองเตย กทม.' },
-    { code: 'V002', name: 'บริษัท ออฟฟิศเมท จำกัด', address: '456 ถ.สุขุมวิท วัฒนา กทม.' },
-    { code: 'V003', name: 'บริษัท เทคโนโลยี โซลูชั่น จำกัด', address: '789 ถ.รัชดาภิเษก ห้วยขวาง กทม.' },
-];
+const FALLBACK_VENDORS: VendorSearchItem[] = RELATED_VENDORS.length > 0
+    ? RELATED_VENDORS.map(v => ({
+        code: v.vendor_code,
+        name: v.vendor_name,
+        address: [v.address_line1, v.address_line2].filter(Boolean).join(' ') || '-',
+        phone: v.phone,
+        taxId: v.tax_id,
+    }))
+    : [
+        { code: 'EQ-ASS-BBP-003', name: 'หจก. ปะกาจัง จำกัด', address: 'เลขที่22/3อาทิตย์ ต่างประเทศปร ต.บางบอ' },
+        { code: 'EQ-ASS-SLL-004', name: 'สมหมาย สามเสน จำกัด', address: 'เลขที่22/3ธนัว ต่างประเทศรวมสุข อ.บางบวง' },
+        { code: 'EQ-ASS-SLO-013', name: 'สต๊าฟ ไลท์ องมีแวน จำกัด', address: 'อาคารนครสยม การวงค์ ชีลอบสุระ E907-910 เลข' },
+        { code: 'EQ-ASS-SRR-005', name: 'สมหมาย สามเสน จำกัด', address: 'เลขที่20 ซอมพุทธรณาคร4 ถนนพรรณาคร' },
+        { code: 'EQ-ASS-VSC-006', name: 'บริษัท วีอธซีคอม จำกัด', address: 'เลขที่ 2002/250 สุรสคพ หลานสาม', phone: 'VSHOP COMPUTER CO.,LTD' },
+        { code: 'EQ-ASS-WST-002', name: 'เจริญ สมเด็น จงยุทใ (ประเทศไทย) จำกัด', address: 'อาคารสำรัตรกธานาคี ชั้น6 อาทิตปะคอบ อา ทิต440,442 >' },
+        { code: 'EQ-CAL-A&P-001', name: 'เอ แอนด์ พี ทันรื้อ 1351', address: 'เลขที่ 174 ถนนม เอกชัย แขวงสองหายพระ' },
+        { code: 'EQ-FOK-APM-001', name: 'เอ พี.ซัม. มาร์เคติ้ง เอครีจิ้ม เจาอมีค', address: '552 ซอมสุจิงกรุ 57 ถนนเอริงกรุ แขวงส' },
+        { code: 'EQ-GAD-WRW-001', name: 'วรงษ์ เข็มเรือ', address: '24 ซ.เรียงเหนือส 1/1 ถนม เจาพาวาเวร เงค' },
+        { code: 'EQ-OEQ-ACT-002', name: 'แอคทีฟ ไมทีค จำกัด', address: '69/138 ถนนตำหทท 56 ระงบวอว ทรีพา' },
+    ];
 
 // ====================================================================================
 // COLUMN CONFIGURATION
 // ====================================================================================
 
 const vendorColumns: ColumnDef<VendorSearchItem>[] = [
-    { key: 'action', header: 'เลือก', width: '80px', align: 'center' },
+    { key: 'action', header: 'เลือก', width: '60px', align: 'center' },
     {
-        key: 'code', header: 'รหัสผู้ขาย', width: '100px', render: (v) => (
-            <span className="text-sm font-bold text-emerald-600">{v.code}</span>
+        key: 'code', header: 'รหัสผู้ขาย', width: '180px', render: (v) => (
+            <span className="text-sm font-bold text-blue-600 dark:text-blue-400">{v.code}</span>
         )
     },
     {
-        key: 'name', header: 'ชื่อผู้ขาย', width: '1fr', render: (v) => (
-            <span className="text-sm text-gray-700">{v.name}</span>
+        key: 'name', header: 'ชื่อผู้ขาย', width: '250px', render: (v) => (
+            <span className="text-sm text-gray-800 dark:text-gray-200">{v.name}</span>
+        )
+    },
+    {
+        key: 'phone', header: 'ชื่อผู้ขาย (ENG)', width: '200px', render: (v) => (
+            <span className="text-xs text-gray-600 dark:text-gray-400">{v.phone || '-'}</span>
         )
     },
     {
         key: 'address', header: 'ที่อยู่', width: '1fr', render: (v) => (
-            <span className="text-xs text-gray-500 truncate">{v.address || '-'}</span>
+            <span className="text-xs text-gray-500 dark:text-gray-500 truncate">{v.address || '-'}</span>
         )
     },
 ];
@@ -109,16 +130,17 @@ export const VendorSearchModal: React.FC<Props> = ({ isOpen, onClose, onSelect }
             isOpen={isOpen}
             onClose={onClose}
             onSelect={onSelect}
-            title="ค้นหาผู้ขาย"
-            subtitle={isLoading ? 'กำลังโหลด...' : 'กรอกข้อมูลเพื่อค้นหาผู้ขายในระบบ'}
-            searchLabel="รหัสผู้ขายหรือชื่อผู้ขาย"
-            searchPlaceholder="รหัสผู้ขายหรือชื่อผู้ขาย"
-            accentColor="emerald"
+            title="ค้นหาผู้ขาย - Find Vendor"
+            subtitle={isLoading ? 'กำลังโหลด...' : 'ค้นหารหัส หรือ ชื่อผู้ขาย...'}
+            searchLabel="ค้นหา"
+            searchPlaceholder="ค้นหารหัส หรือ ชื่อผู้ขาย..."
+            accentColor="blue"
             data={vendors}
             columns={vendorColumns}
             filterFn={(v, term) =>
                 v.code.toLowerCase().includes(term) ||
-                v.name.toLowerCase().includes(term)
+                v.name.toLowerCase().includes(term) ||
+                (v.phone?.toLowerCase().includes(term) || false)
             }
             getKey={(v) => v.code}
             emptyText={isLoading ? 'กำลังโหลดข้อมูล...' : 'ไม่พบผู้ขายที่ค้นหา'}

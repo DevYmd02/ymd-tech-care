@@ -5,31 +5,12 @@
  * @purpose กำหนดรหัสเจ้าหนี้ และจัดการข้อมูลผู้ขาย
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-    FileText,
-    Search,
-    Plus,
-    Save,
-    Trash2,
-    Copy,
-    Eye,
-    X,
-    Home,
-    ClipboardList,
-    CreditCard,
-    Settings,
-    Phone,
-    DollarSign,
-    Building2,
-    Check,
-    Loader2
-} from 'lucide-react';
+import { FileText, Search, Plus, Save, Trash2, Copy, Eye, X, Loader2, Check, Home, ClipboardList, CreditCard, Settings, Phone, DollarSign, Building2 } from 'lucide-react';
 import { styles } from '../../../constants';
 import { vendorService } from '../../../services/vendorService';
-import type { VendorFormData } from '../../../types/vendor-types';
-import { initialVendorFormData, toVendorCreateRequest } from '../../../types/vendor-types';
+import { initialVendorFormData, toVendorCreateRequest, type VendorFormData } from '../../../types/vendor-types';
 
 // ====================================================================================
 // LOCAL TYPES
@@ -37,9 +18,7 @@ import { initialVendorFormData, toVendorCreateRequest } from '../../../types/ven
 
 type TabType = 'address' | 'detail' | 'credit' | 'general' | 'contact' | 'account' | 'branch';
 
-// Extended form data with PP20 field aliases for this component
 interface VendorPageFormData extends VendorFormData {
-    // PP20 address aliases (map to addressLine1, etc)
     addressPP20Line1: string;
     addressPP20Line2: string;
     subDistrictPP20: string;
@@ -47,6 +26,8 @@ interface VendorPageFormData extends VendorFormData {
     provincePP20: string;
     postalCodePP20: string;
     contactEmail: string;
+    vendorCodeSearch: string;
+    vendorNameTh: string;
 }
 
 const initialFormData: VendorPageFormData = {
@@ -59,21 +40,11 @@ const initialFormData: VendorPageFormData = {
     provincePP20: '',
     postalCodePP20: '',
     contactEmail: '',
+    // Additional UI fields
+    vendorCodeSearch: '',
+    vendorNameTh: '',
 };
 
-// ====================================================================================
-// TAB CONFIGURATION
-// ====================================================================================
-
-const tabs: { key: TabType; label: string; icon: React.ReactNode }[] = [
-    { key: 'address', label: 'Address', icon: <Home size={16} /> },
-    { key: 'detail', label: 'Detail', icon: <ClipboardList size={16} /> },
-    { key: 'credit', label: 'Credit', icon: <CreditCard size={16} /> },
-    { key: 'general', label: 'General', icon: <Settings size={16} /> },
-    { key: 'contact', label: 'Contact', icon: <Phone size={16} /> },
-    { key: 'account', label: 'Account', icon: <DollarSign size={16} /> },
-    { key: 'branch', label: 'Branch', icon: <Building2 size={16} /> },
-];
 
 // ====================================================================================
 // MAIN COMPONENT
@@ -477,14 +448,23 @@ export default function VendorForm() {
                             </div>
                         </div>
                     </div>
+                </div>
 
                     {/* ==================== TABS ==================== */}
                     <div className="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
                         <div className="flex overflow-x-auto border-b border-gray-200 dark:border-gray-700 -mx-4 sm:mx-0 px-4 sm:px-0">
-                            {tabs.map((tab) => (
+                            {[
+                                { key: 'address', label: 'Address', icon: <Home size={16} /> },
+                                { key: 'detail', label: 'Detail', icon: <ClipboardList size={16} /> },
+                                { key: 'credit', label: 'Credit', icon: <CreditCard size={16} /> },
+                                { key: 'general', label: 'General', icon: <Settings size={16} /> },
+                                { key: 'contact', label: 'Contact', icon: <Phone size={16} /> },
+                                { key: 'account', label: 'Account', icon: <DollarSign size={16} /> },
+                                { key: 'branch', label: 'Branch', icon: <Building2 size={16} /> },
+                            ].map((tab) => (
                                 <button
                                     key={tab.key}
-                                    onClick={() => setActiveTab(tab.key)}
+                                    onClick={() => setActiveTab(tab.key as TabType)}
                                     className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors shrink-0 ${activeTab === tab.key
                                             ? 'bg-blue-600 text-white rounded-t-lg'
                                             : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -602,6 +582,5 @@ export default function VendorForm() {
                     </button>
                 </div>
             </div>
-        </div>
     );
 }

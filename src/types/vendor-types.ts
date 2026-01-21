@@ -44,6 +44,7 @@ export interface VendorMaster {
     phone_ext?: string;
     email?: string;
     website?: string;
+    remarks?: string;
     
     // Payment Info
     payment_term_days?: number;
@@ -94,6 +95,7 @@ export interface VendorFormData {
     phone: string;
     phoneExt: string;
     email: string;
+    remarks: string;
     
     // Status flags
     onHold: boolean;
@@ -172,6 +174,7 @@ export interface VendorCreateRequest {
     phone?: string;
     phone_ext?: string;
     email?: string;
+    remarks?: string;
 }
 
 /** Response จาก create/update */
@@ -203,6 +206,7 @@ export function toVendorCreateRequest(form: VendorFormData): VendorCreateRequest
         phone: form.phone || undefined,
         phone_ext: form.phoneExt || undefined,
         email: form.email || undefined,
+        remarks: form.remarks || undefined,
     };
 }
 
@@ -234,6 +238,7 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
         phone: vendor.phone || '',
         phoneExt: vendor.phone_ext || '',
         email: vendor.email || '',
+        remarks: vendor.remarks || '',
         onHold: vendor.is_on_hold,
         blocked: vendor.is_blocked,
         inactive: vendor.status === 'INACTIVE',
@@ -267,6 +272,7 @@ export const initialVendorFormData: VendorFormData = {
     phone: '',
     phoneExt: '',
     email: '',
+    remarks: '',
     onHold: false,
     blocked: false,
     inactive: false,

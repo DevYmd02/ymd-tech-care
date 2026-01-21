@@ -6,44 +6,52 @@
  */
 
 import { useState, useEffect } from 'react';
-import { FileText, Search, X, Plus } from 'lucide-react';
-import { rfqService } from '../../../services/rfqService';
+import { FileText, Search, X, Plus, Eye, Send } from 'lucide-react';
 import { formatThaiDate } from '../../../utils/dateUtils';
 import { styles } from '../../../constants';
 import { RFQStatusBadge } from '../../../components/shared';
 import { useWindowManager } from '../../../hooks/useWindowManager';
-import type { RFQHeader, RFQFilterCriteria } from '../../../types/rfq-types';
+import { RFQ_MOCKS, type MockRFQItem } from '../../../__mocks__/rfqMocks';
+import { PR_MOCKS } from '../../../__mocks__/prMocks';
+
+//Helper to get PR details
+const getPRDetails = (prId: string) => PR_MOCKS.find(p => p.pr_id === prId);
 
 // ====================================================================================
 // MAIN COMPONENT
 // ====================================================================================
 
 export default function RFQListPage() {
-    const [rfqList, setRfqList] = useState<RFQHeader[]>([]);
-    const [filteredList, setFilteredList] = useState<RFQHeader[]>([]);
+    // ... (State remains the same)
+    const [rfqList, setRfqList] = useState<MockRFQItem[]>([]);
+    const [filteredList, setFilteredList] = useState<MockRFQItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     
     // Window Manager
     const { openWindow } = useWindowManager();
     
     // Filter state
-    const [filters, setFilters] = useState<RFQFilterCriteria>({
+    const [filters, setFilters] = useState({
         rfq_no: '',
-        pr_no: '',
-        created_by_name: '',
         status: 'ALL',
         date_from: '',
         date_to: '',
     });
 
-    // Fetch RFQ list
+    // ... (useEffect and Handlers remain same, but I need to include them to keep context if I am replacing a large chunk.
+    // However, replace_file_content allows replacing specific blocks. I will target the imports and the render part.)
+
+    // ... (Skipping logic parts to focus on Render if possible, but safer to replace main blocks if they are contiguous)
+    
+     // Fetch RFQ list
     useEffect(() => {
         const fetchRFQList = async () => {
             setIsLoading(true);
             try {
-                const response = await rfqService.getList();
-                setRfqList(response.data);
-                setFilteredList(response.data);
+                // MOCK DELAY
+                await new Promise(resolve => setTimeout(resolve, 500));
+                setRfqList(RFQ_MOCKS);
+                setFilteredList(RFQ_MOCKS);
             } catch (error) {
                 console.error('Failed to fetch RFQ list:', error);
             } finally {
@@ -58,18 +66,11 @@ export default function RFQListPage() {
         let result = [...rfqList];
         
         if (filters.rfq_no) {
-            result = result.filter(r => r.rfq_no.toLowerCase().includes(filters.rfq_no!.toLowerCase()));
-        }
-        if (filters.pr_no) {
-            result = result.filter(r => r.pr_no?.toLowerCase().includes(filters.pr_no!.toLowerCase()));
-        }
-        if (filters.created_by_name) {
-            result = result.filter(r => r.created_by_name?.toLowerCase().includes(filters.created_by_name!.toLowerCase()));
+            result = result.filter(r => r.rfq_no.toLowerCase().includes(filters.rfq_no.toLowerCase()));
         }
         if (filters.status && filters.status !== 'ALL') {
             result = result.filter(r => r.status === filters.status);
         }
-        // Date filters could be added here
         
         setFilteredList(result);
     };
@@ -78,8 +79,6 @@ export default function RFQListPage() {
     const handleClearFilters = () => {
         setFilters({
             rfq_no: '',
-            pr_no: '',
-            created_by_name: '',
             status: 'ALL',
             date_from: '',
             date_to: '',
@@ -88,7 +87,7 @@ export default function RFQListPage() {
     };
 
     // Handle filter change
-    const handleFilterChange = (field: keyof RFQFilterCriteria, value: string) => {
+    const handleFilterChange = (field: string, value: string) => {
         setFilters(prev => ({ ...prev, [field]: value }));
     };
 
@@ -127,21 +126,19 @@ export default function RFQListPage() {
                         <input
                             type="text"
                             placeholder="PR2024-xxx"
-                            value={filters.pr_no}
-                            onChange={(e) => handleFilterChange('pr_no', e.target.value)}
                             className={styles.input}
+                            disabled // Mock functionality for now as per image reference it's just a field
                         />
                     </div>
-                    
+
                     {/* ผู้สร้าง RFQ */}
                     <div>
                         <label className="text-sm text-gray-600 dark:text-gray-400 mb-1 block">ผู้สร้าง RFQ</label>
                         <input
                             type="text"
                             placeholder="ชื่อผู้สร้าง"
-                            value={filters.created_by_name}
-                            onChange={(e) => handleFilterChange('created_by_name', e.target.value)}
                             className={styles.input}
+                            disabled // Mock functionality
                         />
                     </div>
                     
@@ -156,15 +153,12 @@ export default function RFQListPage() {
                             <option value="ALL">ทั้งหมด</option>
                             <option value="DRAFT">แบบร่าง</option>
                             <option value="SENT">ส่งแล้ว</option>
-                            <option value="IN_PROGRESS">กำลังดำเนินการ</option>
                             <option value="CLOSED">ปิดแล้ว</option>
                             <option value="CANCELLED">ยกเลิก</option>
                         </select>
                     </div>
-                </div>
 
-                {/* Date Range */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                     {/* Date Range */}
                     <div>
                         <label className="text-sm text-gray-600 dark:text-gray-400 mb-1 block">วันที่เริ่มต้น</label>
                         <input
@@ -183,39 +177,40 @@ export default function RFQListPage() {
                             className={styles.input}
                         />
                     </div>
-                </div>
 
-                {/* Action Buttons */}
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                    <div className="flex gap-2">
+                    {/* Action Buttons: Search & Clear */}
+                    <div className="flex items-end gap-2">
                         <button
                             onClick={handleSearch}
-                            className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors"
+                            className="flex items-center justify-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors h-[42px]"
                         >
                             <Search size={16} />
                             ค้นหา
                         </button>
                         <button
                             onClick={handleClearFilters}
-                            className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                            className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors h-[42px]"
                         >
                             <X size={16} />
                             ล้างฟิลเตอร์
                         </button>
                     </div>
-                    
-                    <button
-                        onClick={() => openWindow('RFQ')}
-                        className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors shadow-md"
-                    >
-                        <Plus size={16} />
-                        สร้าง RFQ ใหม่
-                    </button>
+
+                    {/* Create Button */}
+                    <div className="flex items-end justify-end">
+                        <button
+                            onClick={() => openWindow('RFQ')}
+                            className="flex items-center justify-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors shadow-md h-[42px] w-full sm:w-auto"
+                        >
+                            <Plus size={16} />
+                            สร้าง RFQ ใหม่
+                        </button>
+                    </div>
                 </div>
             </div>
 
             {/* Results Section */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
                 {/* Results Header */}
                 <div className="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
                     <h2 className="text-lg font-bold text-gray-900 dark:text-white">ผลลัพธ์การค้นหา</h2>
@@ -235,49 +230,78 @@ export default function RFQListPage() {
                         <table className="w-full">
                             <thead className="bg-blue-600 text-white">
                                 <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-bold uppercase">ลำดับ</th>
+                                    <th className="px-4 py-3 text-left text-xs font-bold uppercase w-12">ลำดับ</th>
                                     <th className="px-4 py-3 text-left text-xs font-bold uppercase">เลขที่ RFQ</th>
                                     <th className="px-4 py-3 text-left text-xs font-bold uppercase">วันที่สร้าง</th>
                                     <th className="px-4 py-3 text-left text-xs font-bold uppercase">PR อ้างอิง</th>
                                     <th className="px-4 py-3 text-left text-xs font-bold uppercase">ผู้สร้าง</th>
                                     <th className="px-4 py-3 text-center text-xs font-bold uppercase">สถานะ</th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold uppercase">ใช้ได้ถึงวันที่</th>
+                                    <th className="px-4 py-3 text-center text-xs font-bold uppercase">ใช้ได้ถึงวันที่</th>
+                                    <th className="px-4 py-3 text-center text-xs font-bold uppercase">จน.เจ้าหนี้</th>
+                                    <th className="px-4 py-3 text-center text-xs font-bold uppercase">จัดการ</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700 text-sm">
                                 {filteredList.length > 0 ? (
-                                    filteredList.map((rfq, index) => (
-                                        <tr key={rfq.rfq_id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer">
-                                            <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                                    filteredList.map((rfq, index) => {
+                                        const pr = getPRDetails(rfq.pr_id);
+                                        return (
+                                        <tr key={rfq.rfq_id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                                            <td className="px-4 py-4 text-gray-500 dark:text-gray-400 text-center">
                                                 {index + 1}
                                             </td>
-                                            <td className="px-4 py-3">
-                                                <span className="text-sm font-semibold text-teal-600 hover:underline cursor-pointer">
+                                            <td className="px-4 py-4">
+                                                <div className="font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer">
                                                     {rfq.rfq_no}
-                                                </span>
+                                                </div>
                                             </td>
-                                            <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                                                {formatThaiDate(rfq.rfq_date)}
+                                            <td className="px-4 py-4 text-gray-600 dark:text-gray-400">
+                                                {formatThaiDate(rfq.created_date)}
                                             </td>
-                                            <td className="px-4 py-3">
-                                                <span className="text-sm font-semibold text-blue-600 hover:underline cursor-pointer">
-                                                    {rfq.pr_no || '-'}
-                                                </span>
+                                            <td className="px-4 py-4">
+                                                <div className="font-semibold text-purple-600 hover:text-purple-800 hover:underline cursor-pointer">
+                                                    {pr?.pr_no || '-'}
+                                                </div>
                                             </td>
-                                            <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                                                {rfq.created_by_name || '-'}
+                                            <td className="px-4 py-4 text-gray-700 dark:text-gray-300">
+                                                {pr?.requester_name || '-'}
                                             </td>
-                                            <td className="px-4 py-3 text-center">
-                                                <RFQStatusBadge status={rfq.status} />
+                                            <td className="px-4 py-4 text-center">
+                                                <div className="flex justify-center">
+                                                    <RFQStatusBadge status={rfq.status} />
+                                                </div>
                                             </td>
-                                            <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                                                {rfq.quote_due_date ? formatThaiDate(rfq.quote_due_date) : '-'}
+                                            <td className="px-4 py-4 text-center text-gray-600 dark:text-gray-400">
+                                                {formatThaiDate(rfq.valid_until)}
+                                            </td>
+                                            <td className="px-4 py-4 text-center font-medium text-gray-700 dark:text-gray-300">
+                                                {rfq.vendor_count} ราย
+                                            </td>
+                                            <td className="px-4 py-4 text-center">
+                                                <div className="flex items-center justify-center gap-3">
+                                                    <button className="text-gray-500 hover:text-gray-700 transition-colors" title="ดูรายละเอียด">
+                                                        <Eye size={20} />
+                                                    </button>
+                                                    
+                                                    {rfq.status === 'DRAFT' && (
+                                                        <button className="flex items-center gap-1.5 px-3 py-1.5 bg-[#f97316] hover:bg-[#c2410c] text-white text-xs font-bold rounded shadow transition-colors">
+                                                            <Send size={14} /> ส่ง RFQ
+                                                        </button>
+                                                    )}
+
+                                                    {rfq.status === 'SENT' && (
+                                                        <button className="flex items-center gap-1.5 px-3 py-1.5 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-xs font-bold rounded shadow transition-colors">
+                                                            <FileText size={14} /> บันทึกราคา
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </td>
                                         </tr>
-                                    ))
+                                    ); 
+                                    })
                                 ) : (
                                     <tr>
-                                        <td colSpan={7} className="px-4 py-12 text-center text-gray-500">
+                                        <td colSpan={8} className="px-4 py-12 text-center text-gray-500">
                                             ไม่พบข้อมูล RFQ
                                         </td>
                                     </tr>

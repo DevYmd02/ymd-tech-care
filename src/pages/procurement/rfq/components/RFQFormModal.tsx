@@ -5,14 +5,15 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { FileText, Plus, Trash2, Info, MoreHorizontal, Star, AlignLeft, History } from 'lucide-react';
+import { FileText, Plus, Trash2, Info, MoreHorizontal, Star, AlignLeft, History, Search, Users } from 'lucide-react';
 import { RFQFooter } from './RFQFooter';
-import { WindowFormLayout, TabPanel } from '../../../../components/shared';
+import { WindowFormLayout, TabPanel, VendorSearchModal } from '../../../../components/shared';
 import { SystemAlert } from '../../../../components/shared/SystemAlert';
 import { masterDataService } from '../../../../services/masterDataService';
 import type { BranchMaster, ItemMaster, UnitMaster } from '../../../../types/master-data-types';
 import type { RFQFormData, RFQLineFormData } from '../../../../types/rfq-types';
 import { initialRFQFormData, initialRFQLineFormData } from '../../../../types/rfq-types';
+import type { VendorSearchItem } from '../../../../types/vendor-types';
 import { logger } from '../../../../utils/logger';
 
 // ====================================================================================
@@ -23,6 +24,12 @@ interface Props {
     isOpen: boolean;
     onClose: () => void;
     editId?: string | null;
+}
+
+interface VendorSelection {
+    vendor_code: string;
+    vendor_name: string;
+    vendor_name_display: string;
 }
 
 // ====================================================================================
@@ -45,6 +52,15 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
     const [isSaving, setIsSaving] = useState(false);
     const [activeTab, setActiveTab] = useState('detail');
+    
+    // Vendor Selection State
+    const [selectedVendors, setSelectedVendors] = useState<VendorSelection[]>([
+        { vendor_code: '', vendor_name: '', vendor_name_display: '' },
+        { vendor_code: '', vendor_name: '', vendor_name_display: '' },
+        { vendor_code: '', vendor_name: '', vendor_name_display: '' },
+    ]);
+    const [activeVendorIndex, setActiveVendorIndex] = useState<number | null>(null);
+    const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
 
     // Tab configuration
     const tabs = [
@@ -95,6 +111,11 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                         line_no: i + 1,
                     })),
                 });
+                setSelectedVendors([
+                    { vendor_code: '', vendor_name: '', vendor_name_display: '' },
+                    { vendor_code: '', vendor_name: '', vendor_name_display: '' },
+                    { vendor_code: '', vendor_name: '', vendor_name_display: '' },
+                ]);
             }, 0);
             return () => clearTimeout(timer);
         }
@@ -142,12 +163,33 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
         try {
             await new Promise(resolve => setTimeout(resolve, 1000));
             logger.log('Save RFQ:', formData);
+            logger.log('Selected Vendors:', selectedVendors);
             onClose();
         } catch (error) {
             logger.error('Failed to save RFQ:', error);
         } finally {
             setIsSaving(false);
         }
+    };
+
+    // Vendor Selection Handlers
+    const handleOpenVendorModal = (index: number) => {
+        setActiveVendorIndex(index);
+        setIsVendorModalOpen(true);
+    };
+
+    const handleVendorSelect = (vendor: VendorSearchItem) => {
+        if (activeVendorIndex !== null) {
+            const newVendors = [...selectedVendors];
+            newVendors[activeVendorIndex] = {
+                vendor_code: vendor.code,
+                vendor_name: vendor.name,
+                vendor_name_display: `${vendor.code} - ${vendor.name}`,
+            };
+            setSelectedVendors(newVendors);
+        }
+        setIsVendorModalOpen(false);
+        setActiveVendorIndex(null);
     };
 
     // Shared styles (same as PR modal)
@@ -391,11 +433,21 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                                                     handleLineChange(index, 'item_code', selectedItem.item_code);
                                                     handleLineChange(index, 'item_name', selectedItem.item_name);
                                                     handleLineChange(index, 'uom', selectedItem.unit_name || '');
+                                                } else {
+                                                    handleLineChange(index, 'item_code', e.target.value);
                                                 }
                                             }}
                                             className={selectStyle}
                                         >
-                                            <option value="">เลือกสินค้า</option>
+                                            <option value="">เลือกรหัสสินค้า</option>
+                                            <option value="ITEM001">ITEM001 - คอมพิวเตอร์โน๊ตบุ๊ค</option>
+                                            <option value="ITEM002">ITEM002 - เมาส์ไร้สาย</option>
+                                            <option value="ITEM003">ITEM003 - คีย์บอร์ด</option>
+                                            <option value="ITEM004">ITEM004 - จอมอนิเตอร์ 24"</option>
+                                            <option value="ITEM005">ITEM005 - ปรินเตอร์เลเซอร์</option>
+                                            <option value="ITEM006">ITEM006 - กระดาษ A4</option>
+                                            <option value="ITEM007">ITEM007 - หมึกพิมพ์ดำ</option>
+                                            <option value="ITEM008">ITEM008 - สายแลน CAT6</option>
                                             {items.map(item => (
                                                 <option key={item.item_id} value={item.item_code}>
                                                     {item.item_code} - {item.item_name}
@@ -427,7 +479,12 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                                             onChange={(e) => handleLineChange(index, 'uom', e.target.value)}
                                             className={selectStyle}
                                         >
-                                            <option value="">หน่วยนับ</option>
+                                            <option value="">เลือก</option>
+                                            <option value="เครื่อง">เครื่อง</option>
+                                            <option value="ชิ้น">ชิ้น</option>
+                                            <option value="กล่อง">กล่อง</option>
+                                            <option value="ลัง">ลัง</option>
+                                            <option value="กก.">กก.</option>
                                             {units.map(unit => (
                                                 <option key={unit.unit_id} value={unit.unit_name}>
                                                     {unit.unit_name}
@@ -478,6 +535,54 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 </div>
             </div>
 
+            {/* ===== VENDOR SELECTION SECTION ===== */}
+            <div className={cardClass}>
+                <div className="p-4">
+                    <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400 mb-4 border-b border-gray-200 dark:border-gray-700 pb-3">
+                        <Users size={18} />
+                        <span className="font-semibold">เลือกผู้ขาย - Vendor Selection for RFQ</span>
+                    </div>
+
+                    <div className="space-y-4">
+                        {selectedVendors.map((vendor, index) => (
+                            <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className={labelStyle}>รหัสผู้ขาย {index + 1}</label>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            placeholder="เลือกรหัสผู้ขาย"
+                                            value={vendor.vendor_code}
+                                            readOnly
+                                            className={`${inputStyle} flex-1 cursor-pointer`}
+                                            onClick={() => handleOpenVendorModal(index)}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => handleOpenVendorModal(index)}
+                                            className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors shrink-0 font-medium text-sm flex items-center gap-2"
+                                        >
+                                            <Search size={16} />
+                                            ค้นหา
+                                        </button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className={labelStyle}>ชื่อผู้ขาย</label>
+                                    <input
+                                        type="text"
+                                        placeholder="ชื่อผู้ขายจะแสดงอัตโนมัติ"
+                                        value={vendor.vendor_name_display}
+                                        readOnly
+                                        className={`${inputStyle} bg-gray-100 dark:bg-gray-700 cursor-not-allowed`}
+                                    />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
             {/* Tab Panel Section */}
             <div className={cardClass}>
                 <div className="p-4">
@@ -521,6 +626,16 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                     </TabPanel>
                 </div>
             </div>
+
+            {/* Vendor Search Modal */}
+            <VendorSearchModal
+                isOpen={isVendorModalOpen}
+                onClose={() => {
+                    setIsVendorModalOpen(false);
+                    setActiveVendorIndex(null);
+                }}
+                onSelect={handleVendorSelect}
+            />
         </WindowFormLayout>
     );
 };

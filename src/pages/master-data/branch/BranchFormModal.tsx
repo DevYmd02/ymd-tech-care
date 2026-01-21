@@ -19,13 +19,14 @@ interface Props {
     isOpen: boolean;
     onClose: () => void;
     editId?: string | null;
+    onSuccess?: () => void;
 }
 
 // ====================================================================================
 // MAIN COMPONENT
 // ====================================================================================
 
-export function BranchFormModal({ isOpen, onClose, editId }: Props) {
+export function BranchFormModal({ isOpen, onClose, editId, onSuccess }: Props) {
     const [formData, setFormData] = useState<BranchFormData>(initialBranchFormData);
     const [isSearching, setIsSearching] = useState(false);
 
@@ -86,9 +87,33 @@ export function BranchFormModal({ isOpen, onClose, editId }: Props) {
             return;
         }
         
-        // Mock save
+        // Mock save logic - Actually update the mock array
+        if (editId) {
+            const index = mockBranches.findIndex(b => b.branch_id === editId);
+            if (index !== -1) {
+                mockBranches[index] = {
+                    ...mockBranches[index],
+                    branch_code: formData.branchCode,
+                    branch_name: formData.branchName,
+                    is_active: formData.isActive
+                };
+            }
+        } else {
+            mockBranches.push({
+                branch_id: `BR${Math.floor(Math.random() * 10000)}`, // Generate random ID
+                branch_code: formData.branchCode,
+                branch_name: formData.branchName,
+                is_active: formData.isActive,
+                created_at: new Date().toISOString()
+            });
+        }
+
         logger.log('Save branch:', formData);
         alert(editId ? 'บันทึกการแก้ไขสำเร็จ' : 'เพิ่มสาขาใหม่สำเร็จ');
+        
+        if (onSuccess) {
+            onSuccess();
+        }
         onClose();
     };
 

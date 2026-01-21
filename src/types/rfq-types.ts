@@ -14,8 +14,7 @@ export type RFQStatus = 'DRAFT' | 'SENT' | 'IN_PROGRESS' | 'CLOSED' | 'CANCELLED
 /** RFQ Vendor Status - สถานะการส่ง RFQ ไปยังเจ้าหนี้ */
 export type RFQVendorStatus = 'PENDING' | 'SENT' | 'RESPONDED' | 'NO_RESPONSE' | 'DECLINED';
 
-/** Quotation Status - สถานะใบเสนอราคาจากผู้ขาย */
-export type QuotationStatus = 'DRAFT' | 'SUBMITTED' | 'SELECTED' | 'REJECTED';
+
 
 // ====================================================================================
 // RFQ HEADER - ตาราง rfq_header
@@ -88,23 +87,7 @@ export interface RFQVendor {
     remark: string | null;              // TEXT
 }
 
-// ====================================================================================
-// QUOTATION HEADER - ตาราง quotation_header (Response to RFQ)
-// ====================================================================================
 
-/** Quotation Header - ใบเสนอราคาจากผู้ขาย */
-export interface QuotationHeader {
-    quotation_id: string;               // UUID - Primary Key
-    quotation_no: string;               // VARCHAR(50) - เลขที่ใบเสนอราคา
-    rfq_id: string;                     // UUID - FK -> rfq_header.rfq_id
-    vendor_id: string;                  // UUID - FK -> vendor.vendor_id
-    quote_date: string;                 // DATE - วันที่ใบเสนอราคา
-    valid_until: string | null;         // DATE - ราคามีผลถึงวันที่
-    payment_term_days: number | null;   // INTEGER
-    delivery_lead_time: number | null;  // INTEGER - Lead Time (วัน)
-    total_amount: number;               // DECIMAL(18,2)
-    status: QuotationStatus;            // VARCHAR(50) - DRAFT, SUBMITTED, SELECTED, REJECTED
-}
 
 // ====================================================================================
 // UI DISPLAY TYPES
@@ -226,3 +209,6 @@ export interface RFQCreateData extends Omit<RFQFormData, 'lines'> {
     vendor_ids?: string[];
     terms_and_conditions?: string;
 }
+
+
+
