@@ -45,7 +45,7 @@ export const RFQ_STATUS_COLORS: Record<string, string> = {
 };
 
 export const RFQ_STATUS_LABELS: Record<string, string> = {
-  DRAFT: 'ร่าง',
+  DRAFT: 'แบบร่าง',
   SENT: 'ส่งแล้ว',
   IN_PROGRESS: 'กำลังดำเนินการ',
   CLOSED: 'ปิดแล้ว',

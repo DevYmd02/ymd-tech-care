@@ -2,7 +2,7 @@
  * @file RFQListPage.tsx
  * @description หน้ารายการขอใบเสนอราคา (Request for Quotation List)
  * @route /procurement/rfq
- * @refactored ปรับ UI ตาม Reference Image ที่ user ส่งมา
+ * @refactored Clean Architecture - Separated UI and Data Layer
  */
 
 import { useState, useEffect } from 'react';
@@ -11,21 +11,26 @@ import { formatThaiDate } from '../../../utils/dateUtils';
 import { styles } from '../../../constants';
 import { RFQStatusBadge } from '../../../components/shared';
 import { useWindowManager } from '../../../hooks/useWindowManager';
-import { RFQ_MOCKS, type MockRFQItem } from '../../../__mocks__/rfqMocks';
-import { PR_MOCKS } from '../../../__mocks__/prMocks';
+import { logger } from '../../../utils/logger';
+import QTFormModal from '../qt/components/QTFormModal';
 
-//Helper to get PR details
-const getPRDetails = (prId: string) => PR_MOCKS.find(p => p.pr_id === prId);
+// Services & Types
+import { rfqService } from '../../../services/rfqService';
+import type { RFQHeader, RFQStatus } from '../../../types/rfq-types';
 
 // ====================================================================================
 // MAIN COMPONENT
 // ====================================================================================
 
 export default function RFQListPage() {
-    // ... (State remains the same)
-    const [rfqList, setRfqList] = useState<MockRFQItem[]>([]);
-    const [filteredList, setFilteredList] = useState<MockRFQItem[]>([]);
+    // State
+    const [rfqList, setRfqList] = useState<RFQHeader[]>([]);
+    const [filteredList, setFilteredList] = useState<RFQHeader[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    
+    // QT Modal State
+    const [isQTModalOpen, setIsQTModalOpen] = useState(false);
+    const [selectedRFQForQT, setSelectedRFQForQT] = useState<RFQHeader | null>(null);
     
     // Window Manager
     const { openWindow } = useWindowManager();
@@ -33,27 +38,21 @@ export default function RFQListPage() {
     // Filter state
     const [filters, setFilters] = useState({
         rfq_no: '',
-        status: 'ALL',
+        status: 'ALL' as RFQStatus | 'ALL',
         date_from: '',
         date_to: '',
     });
 
-    // ... (useEffect and Handlers remain same, but I need to include them to keep context if I am replacing a large chunk.
-    // However, replace_file_content allows replacing specific blocks. I will target the imports and the render part.)
-
-    // ... (Skipping logic parts to focus on Render if possible, but safer to replace main blocks if they are contiguous)
-    
-     // Fetch RFQ list
+    // Fetch RFQ list
     useEffect(() => {
         const fetchRFQList = async () => {
             setIsLoading(true);
             try {
-                // MOCK DELAY
-                await new Promise(resolve => setTimeout(resolve, 500));
-                setRfqList(RFQ_MOCKS);
-                setFilteredList(RFQ_MOCKS);
+                const response = await rfqService.getList();
+                setRfqList(response.data);
+                setFilteredList(response.data);
             } catch (error) {
-                console.error('Failed to fetch RFQ list:', error);
+                logger.error('Failed to fetch RFQ list:', error);
             } finally {
                 setIsLoading(false);
             }
@@ -70,6 +69,12 @@ export default function RFQListPage() {
         }
         if (filters.status && filters.status !== 'ALL') {
             result = result.filter(r => r.status === filters.status);
+        }
+        if (filters.date_from) {
+             result = result.filter(r => r.rfq_date >= filters.date_from);
+        }
+        if (filters.date_to) {
+             result = result.filter(r => r.rfq_date <= filters.date_to);
         }
         
         setFilteredList(result);
@@ -89,6 +94,12 @@ export default function RFQListPage() {
     // Handle filter change
     const handleFilterChange = (field: string, value: string) => {
         setFilters(prev => ({ ...prev, [field]: value }));
+    };
+
+    // Handle Open QT Modal
+    const handleOpenQT = (rfq: RFQHeader) => {
+        setSelectedRFQForQT(rfq);
+        setIsQTModalOpen(true);
     };
 
     return (
@@ -127,7 +138,7 @@ export default function RFQListPage() {
                             type="text"
                             placeholder="PR2024-xxx"
                             className={styles.input}
-                            disabled // Mock functionality for now as per image reference it's just a field
+                            disabled
                         />
                     </div>
 
@@ -138,7 +149,7 @@ export default function RFQListPage() {
                             type="text"
                             placeholder="ชื่อผู้สร้าง"
                             className={styles.input}
-                            disabled // Mock functionality
+                            disabled
                         />
                     </div>
                     
@@ -243,9 +254,7 @@ export default function RFQListPage() {
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-700 text-sm">
                                 {filteredList.length > 0 ? (
-                                    filteredList.map((rfq, index) => {
-                                        const pr = getPRDetails(rfq.pr_id);
-                                        return (
+                                    filteredList.map((rfq, index) => (
                                         <tr key={rfq.rfq_id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                                             <td className="px-4 py-4 text-gray-500 dark:text-gray-400 text-center">
                                                 {index + 1}
@@ -256,15 +265,15 @@ export default function RFQListPage() {
                                                 </div>
                                             </td>
                                             <td className="px-4 py-4 text-gray-600 dark:text-gray-400">
-                                                {formatThaiDate(rfq.created_date)}
+                                                {formatThaiDate(rfq.rfq_date)}
                                             </td>
                                             <td className="px-4 py-4">
                                                 <div className="font-semibold text-purple-600 hover:text-purple-800 hover:underline cursor-pointer">
-                                                    {pr?.pr_no || '-'}
+                                                    {rfq.pr_no || '-'}
                                                 </div>
                                             </td>
                                             <td className="px-4 py-4 text-gray-700 dark:text-gray-300">
-                                                {pr?.requester_name || '-'}
+                                                {rfq.created_by_name || '-'}
                                             </td>
                                             <td className="px-4 py-4 text-center">
                                                 <div className="flex justify-center">
@@ -272,7 +281,7 @@ export default function RFQListPage() {
                                                 </div>
                                             </td>
                                             <td className="px-4 py-4 text-center text-gray-600 dark:text-gray-400">
-                                                {formatThaiDate(rfq.valid_until)}
+                                                {formatThaiDate(rfq.quote_due_date || '')}
                                             </td>
                                             <td className="px-4 py-4 text-center font-medium text-gray-700 dark:text-gray-300">
                                                 {rfq.vendor_count} ราย
@@ -290,18 +299,20 @@ export default function RFQListPage() {
                                                     )}
 
                                                     {rfq.status === 'SENT' && (
-                                                        <button className="flex items-center gap-1.5 px-3 py-1.5 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-xs font-bold rounded shadow transition-colors">
+                                                        <button 
+                                                            onClick={() => handleOpenQT(rfq)}
+                                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-xs font-bold rounded shadow transition-colors"
+                                                        >
                                                             <FileText size={14} /> บันทึกราคา
                                                         </button>
                                                     )}
                                                 </div>
                                             </td>
                                         </tr>
-                                    ); 
-                                    })
+                                    ))
                                 ) : (
                                     <tr>
-                                        <td colSpan={8} className="px-4 py-12 text-center text-gray-500">
+                                        <td colSpan={9} className="px-4 py-12 text-center text-gray-500">
                                             ไม่พบข้อมูล RFQ
                                         </td>
                                     </tr>
@@ -312,6 +323,15 @@ export default function RFQListPage() {
                 </div>
             </div>
 
+            {/* QT Form Modal */}
+            <QTFormModal
+                isOpen={isQTModalOpen}
+                onClose={() => {
+                    setIsQTModalOpen(false);
+                    setSelectedRFQForQT(null);
+                }}
+                initialRFQ={selectedRFQForQT}
+            />
         </div>
     );
 }

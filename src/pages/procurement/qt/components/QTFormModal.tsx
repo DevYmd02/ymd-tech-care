@@ -1,11 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
-import { FileText, Plus, Trash2, Search, FileBox, MoreHorizontal, X, Save, CheckCircle, Copy, Printer } from 'lucide-react';
+import { FileText, Plus, Trash2, Search, X, Save, CheckCircle, Copy, Printer, FileBox, MoreHorizontal } from 'lucide-react';
 
 import { WindowFormLayout } from '../../../../components/shared/WindowFormLayout';
 import { SystemAlert } from '../../../../components/shared/SystemAlert';
 import type { QuotationHeader, QuotationLine } from '../../../../types/qt-types';
 import { masterDataService } from '../../../../services/masterDataService';
-import type { ItemMaster } from '../../../../types/master-data-types';
+import type { UnitMaster } from '../../../../types/master-data-types';
+import type { ProductLookup } from '../../../../__mocks__';
+import { MOCK_PRODUCTS } from '../../../../__mocks__';
+import type { RFQHeader } from '../../../../types/rfq-types';
 
 // ====================================================================================
 // TYPES & CONSTANTS
@@ -15,6 +18,7 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  initialRFQ?: RFQHeader | null;
 }
 
 // Extend QuotationLine for Form State (handling UI-specific fields)
@@ -52,7 +56,7 @@ const getInitialLines = (count = 5) => Array(count).fill(null).map(() => createE
 // COMPONENT
 // ====================================================================================
 
-const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
+const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ }) => {
   const prevIsOpenRef = useRef(false);
   
   // -- State --
@@ -62,8 +66,12 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
   
   // Header State
   const [quotationNo, setQuotationNo] = useState('');
+  const [refRfqNo, setRefRfqNo] = useState(''); // Ref RFQ
   const [vendorId, setVendorId] = useState('');
-  const [qcId, setQcId] = useState(''); // QC Link
+  const [vendorName, setVendorName] = useState('');
+  const [contactPerson, setContactPerson] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
   const [quotationDate, setQuotationDate] = useState(new Date().toISOString().split('T')[0]);
   const [validUntil, setValidUntil] = useState('');
   const [paymentTermDays, setPaymentTermDays] = useState(30);
@@ -72,13 +80,12 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
   const [exchangeRate, setExchangeRate] = useState(1.0);
   const [remark, setRemark] = useState('');
 
-  // Info Bar State
-  const [vendorQuoteRef, setVendorQuoteRef] = useState(''); 
-  const [shippingMethod, setShippingMethod] = useState('');
+  // Info Bar State (removing unused qcId)
+  // vendorQuoteRef and shippingMethod removed - not used in new layout
   
   // Master Data
-  const [products, setProducts] = useState<ItemMaster[]>([]);
-  const [vendors, setVendors] = useState<{vendor_id: string; vendor_name: string; vendor_code: string}[]>([]); // Mock vendor list
+  const [products] = useState<ProductLookup[]>(MOCK_PRODUCTS);
+  const [units, setUnits] = useState<UnitMaster[]>([]); // Add units state
 
   // Product Search Modal
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -88,28 +95,35 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
   // -- Effects --
 
   useEffect(() => {
-    // Mock Fetch Master Data
-    masterDataService.getItems().then(setProducts);
-    // TODO: masterDataService.getVendors().then(...)
-    setVendors([
-        { vendor_id: 'v-001', vendor_name: 'บริษัท เอบีซี จำกัด', vendor_code: 'V001' },
-        { vendor_id: 'v-002', vendor_name: 'หจก ดีอีเอฟ จำกัด', vendor_code: 'V002' }, 
-    ]);
+    // Fetch Units for dropdown
+    masterDataService.getUnits().then(setUnits);
   }, []);
 
   useEffect(() => {
     if (isOpen && !prevIsOpenRef.current) {
         // Reset Form
         setLines(getInitialLines(5));
-        setQuotationNo(`QT-${new Date().getFullYear()}${String(new Date().getMonth()+1).padStart(2,'0')}-${String(Math.floor(Math.random()*1000)).padStart(3,'0')}`);
+        setQuotationNo(`QT-V001-${new Date().getFullYear()}-xxx (Auto)`);
         setQuotationDate(new Date().toISOString().split('T')[0]);
         setValidUntil('');
         setRemark('');
         setCurrencyCode('THB');
         setExchangeRate(1.0);
+        setVendorId('');
+        setVendorName('');
+        setContactPerson('');
+        setContactEmail('');
+        setContactPhone('');
+        
+        // Pre-fill Ref RFQ from initialRFQ
+        if (initialRFQ) {
+            setRefRfqNo(initialRFQ.rfq_no);
+        } else {
+            setRefRfqNo('');
+        }
     }
     prevIsOpenRef.current = isOpen;
-  }, [isOpen]);
+  }, [isOpen, initialRFQ]);
 
   // -- Calculations --
   const totalAmount = lines.reduce((sum, line) => sum + (line.net_amount || 0), 0);
@@ -145,6 +159,13 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
   };
 
   const addLine = () => setLines(prev => [...prev, createEmptyLine()]);
+  const insertLine = (index: number) => {
+    setLines(prev => {
+        const newLines = [...prev];
+        newLines.splice(index + 1, 0, createEmptyLine());
+        return newLines;
+    });
+  };
   const removeLine = (index: number) => {
       if (lines.length <= 1) return;
       setLines(prev => prev.filter((_, i) => i !== index));
@@ -157,11 +178,12 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
     setIsProductModalOpen(true);
   };
 
-  const selectProduct = (product: ItemMaster) => {
+  const selectProduct = (product: ProductLookup) => {
       if (activeRowIndex !== null) {
           updateLine(activeRowIndex, 'item_code', product.item_code);
           updateLine(activeRowIndex, 'item_name', product.item_name);
-          updateLine(activeRowIndex, 'uom_name', product.unit_name || '');
+          updateLine(activeRowIndex, 'uom_name', product.unit);
+          updateLine(activeRowIndex, 'unit_price', product.unit_price);
           updateLine(activeRowIndex, 'qty', 1);
           setIsProductModalOpen(false);
       }
@@ -180,7 +202,7 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
           quotation_no: quotationNo,
           quotation_date: quotationDate,
           vendor_id: vendorId,
-          qc_id: qcId,
+          qc_id: refRfqNo, // Using qc_id field for RFQ reference
           currency_code: currencyCode,
           exchange_rate: exchangeRate,
           total_amount: grandTotal,
@@ -201,10 +223,7 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
 
   // -- Render Helpers --
   // Using shared styles where applicable, but keeping specific grid layouts custom for this dense form
-  const cardClass = 'bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-sm overflow-hidden';
-  const tableInputClass = 'w-full h-8 px-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 !rounded-none focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all text-right';
-  const tableTextInputClass = 'w-full h-8 px-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 !rounded-none focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all text-left';
-  const tdBaseClass = 'p-0 border-r border-gray-200 dark:border-gray-700';
+  const cardClass = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden shadow-sm';
 
   const tabClass = (tab: string) => `px-6 py-2 text-sm font-medium flex items-center gap-2 cursor-pointer border-b-2 transition-colors ${activeTab === tab ? 'border-blue-600 text-blue-600 bg-blue-50 dark:bg-blue-900/30' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`;
 
@@ -250,38 +269,56 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
 
       {/* Product Search Modal */}
       {isProductModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30" onClick={() => setIsProductModalOpen(false)}>
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-[900px] max-h-[85vh] overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setIsProductModalOpen(false)}>
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-[900px] max-h-[85vh] overflow-hidden flex flex-col border border-gray-200 dark:border-gray-700" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
                <div className="flex justify-between items-center mb-4">
-                 <h2 className="text-xl font-bold">ค้นหาสินค้า</h2>
-                 <button onClick={() => setIsProductModalOpen(false)}><X /></button>
+                 <h2 className="text-xl font-bold text-gray-800 dark:text-white">ค้นหาสินค้า</h2>
+                 <button onClick={() => setIsProductModalOpen(false)} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"><X /></button>
                </div>
-               <input 
-                  value={searchTerm} 
-                  onChange={e => setSearchTerm(e.target.value)}
-                  placeholder="ค้นหา..."
-                  className="w-full px-4 py-2 border rounded"
-                  autoFocus
-               />
+               <div className="relative">
+                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                   <input 
+                      value={searchTerm} 
+                      onChange={e => setSearchTerm(e.target.value)}
+                      placeholder="ค้นหารหัส หรือ ชื่อสินค้า..."
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      autoFocus
+                   />
+               </div>
             </div>
-            <div className="max-h-[400px] overflow-auto p-0">
-               <table className="w-full text-sm">
-                   <thead className="bg-gray-100">
+            <div className="flex-1 overflow-auto p-0 bg-white dark:bg-gray-900">
+               <table className="w-full text-sm text-left">
+                   <thead className="bg-blue-600 sticky top-0 z-10">
                        <tr>
-                           <th className="p-2">Action</th>
-                           <th className="p-2 text-left">Code</th>
-                           <th className="p-2 text-left">Name</th>
+                           <th className="p-3 font-semibold text-white border-b border-blue-700 w-28">รหัส</th>
+                           <th className="p-3 font-semibold text-white border-b border-blue-700">ชื่อสินค้า</th>
+                           <th className="p-3 font-semibold text-white border-b border-blue-700 w-24 text-center">หน่วย</th>
+                           <th className="p-3 font-semibold text-white border-b border-blue-700 w-32 text-right">ราคา/หน่วย</th>
+                           <th className="p-3 font-semibold text-white border-b border-blue-700 w-24 text-center">เลือก</th>
                        </tr>
                    </thead>
-                   <tbody>
+                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-gray-900">
                        {filteredProducts.map(p => (
-                           <tr key={p.item_id} className="border-b hover:bg-gray-50">
-                               <td className="p-2 text-center"><button onClick={() => selectProduct(p)} className="text-blue-600 hover:underline">เลือก</button></td>
-                               <td className="p-2">{p.item_code}</td>
-                               <td className="p-2">{p.item_name}</td>
+                           <tr key={p.item_code} className="hover:bg-blue-50 dark:hover:bg-gray-800 transition-colors">
+                               <td className="p-3 font-medium text-blue-600 dark:text-blue-400">{p.item_code}</td>
+                               <td className="p-3 text-gray-700 dark:text-gray-300">{p.item_name}</td>
+                               <td className="p-3 text-gray-600 dark:text-gray-400 text-center">{p.unit}</td>
+                               <td className="p-3 text-gray-800 dark:text-gray-200 text-right">{p.unit_price.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท</td>
+                               <td className="p-3 text-center">
+                                   <button onClick={() => selectProduct(p)} className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-bold shadow-sm transition-colors">
+                                       เลือก
+                                   </button>
+                               </td>
                            </tr>
                        ))}
+                       {filteredProducts.length === 0 && (
+                           <tr>
+                               <td colSpan={5} className="p-8 text-center text-gray-500 dark:text-gray-400 italic">
+                                   ไม่พบข้อมูลสินค้า
+                               </td>
+                           </tr>
+                       )}
                    </tbody>
                </table>
             </div>
@@ -292,154 +329,282 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
       {/* MAIN FORM */}
       <div className="flex-1 overflow-auto bg-gray-100 dark:bg-gray-800 p-2 space-y-2">
           
-          {/* 1. Header Card */}
+          {/* 1. Header Card - Vendor Quotation Header */}
+          {/* 1. Header Card - Vendor Quotation Header */}
           <div className={cardClass}>
-              <div className="p-4 bg-white dark:bg-gray-900">
-                  <div className="grid grid-cols-12 gap-4">
-                      {/* Left: Basic Info */}
-                      <div className="col-span-8 grid grid-cols-2 gap-x-4 gap-y-3">
-                            <div className="col-span-1">
-                                <label className="block text-xs font-semibold text-gray-600 mb-1">เลขที่ใบเสนอราคา (Quotation No.)</label>
-                                <input value={quotationNo} onChange={e => setQuotationNo(e.target.value)} className="w-full px-3 py-1.5 text-sm border rounded bg-gray-50" />
-                            </div>
-                            <div className="col-span-1">
-                                <label className="block text-xs font-semibold text-gray-600 mb-1">วันที่เสนอราคา (Quotation Date)</label>
-                                <input type="date" value={quotationDate} onChange={e => setQuotationDate(e.target.value)} className="w-full px-3 py-1.5 text-sm border rounded" />
-                            </div>
-                            
-                            <div className="col-span-2">
-                                <label className="block text-xs font-semibold text-gray-600 mb-1">ผู้ขาย (Vendor)</label>
-                                <select value={vendorId} onChange={e => setVendorId(e.target.value)} className="w-full px-3 py-1.5 text-sm border rounded">
-                                    <option value="">-- เลือกผู้ขาย --</option>
-                                    {vendors.map(v => <option key={v.vendor_id} value={v.vendor_id}>{v.vendor_code} : {v.vendor_name}</option>)}
-                                </select>
-                            </div>
-
-                            <div className="col-span-1">
-                                <label className="block text-xs font-semibold text-gray-600 mb-1">อ้างอิงใบเปรียบเทียบ (Ref QC)</label>
-                                <input value={qcId} onChange={e => setQcId(e.target.value)} placeholder="เลือก QC..." className="w-full px-3 py-1.5 text-sm border rounded" />
-                            </div>
-                            <div className="col-span-1">
-                                <label className="block text-xs font-semibold text-gray-600 mb-1">ยืนราคาถึง (Valid Until)</label>
-                                <input type="date" value={validUntil} onChange={e => setValidUntil(e.target.value)} className="w-full px-3 py-1.5 text-sm border rounded" />
-                            </div>
+              <div className="p-5 bg-white dark:bg-gray-900">
+                  {/* Section Title */}
+                  <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-6 border-b border-gray-100 dark:border-gray-800 pb-4">
+                      <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                        <FileText size={20} />
                       </div>
+                      <span className="font-bold text-lg">ส่วนหัวใบเสนอราคา - Vendor Quotation Header</span>
+                  </div>
 
-                      {/* Right: Currency & Payment */}
-                      <div className="col-span-4 bg-gray-50 dark:bg-gray-800 p-3 rounded border border-gray-200">
-                           <div className="space-y-3">
-                               <div>
-                                   <label className="block text-xs font-semibold text-gray-600 mb-1">สกุลเงิน (Currency)</label>
-                                   <div className="flex gap-2">
-                                       <select value={currencyCode} onChange={e => setCurrencyCode(e.target.value)} className="flex-1 px-3 py-1.5 text-sm border rounded">
-                                           <option value="THB">THB</option>
-                                           <option value="USD">USD</option>
-                                           <option value="EUR">EUR</option>
-                                       </select>
-                                       <input type="number" value={exchangeRate} onChange={e => setExchangeRate(parseFloat(e.target.value))} className="w-20 px-3 py-1.5 text-sm border rounded text-right" placeholder="Rate" />
-                                   </div>
-                               </div>
-                               <div className="grid grid-cols-2 gap-2">
-                                   <div>
-                                       <label className="block text-xs font-semibold text-gray-600 mb-1">เครดิต (วัน)</label>
-                                       <input type="number" value={paymentTermDays} onChange={e => setPaymentTermDays(parseInt(e.target.value))} className="w-full px-3 py-1.5 text-sm border rounded" />
-                                   </div>
-                                   <div>
-                                       <label className="block text-xs font-semibold text-gray-600 mb-1">ส่งของ (วัน)</label>
-                                       <input type="number" value={leadTimeDays} onChange={e => setLeadTimeDays(parseInt(e.target.value))} className="w-full px-3 py-1.5 text-sm border rounded" />
-                                   </div>
-                               </div>
-                           </div>
+                  {/* Row 1: Quotation No, Date, Ref RFQ, Valid Until */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-5">
+                      <div>
+                          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">เลขที่ใบเสนอราคา <span className="text-gray-400 font-normal">(quotation_no)</span> *</label>
+                          <input value={quotationNo} onChange={e => setQuotationNo(e.target.value)} className="w-full px-4 py-2.5 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" readOnly />
+                      </div>
+                      <div>
+                          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">วันที่ใบเสนอราคา <span className="text-gray-400 font-normal">(quotation_date)</span> *</label>
+                          <input type="date" value={quotationDate} onChange={e => setQuotationDate(e.target.value)} className="w-full px-4 py-2.5 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
+                      </div>
+                      <div>
+                          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">เลขที่ RFQ อ้างอิง <span className="text-gray-400 font-normal">(rfq_id FK)</span></label>
+                          <input value={refRfqNo} onChange={e => setRefRfqNo(e.target.value)} className="w-full px-4 py-2.5 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-100 dark:bg-gray-800/50 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" readOnly />
+                      </div>
+                      <div>
+                          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">วันที่ใช้ได้ถึง <span className="text-gray-400 font-normal">(valid_until)</span> *</label>
+                          <input type="date" value={validUntil} onChange={e => setValidUntil(e.target.value)} className="w-full px-4 py-2.5 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
+                      </div>
+                  </div>
+
+                  {/* Row 2: Vendor Code + Search, Vendor Name, Contact Person */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-5">
+                      <div>
+                          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">รหัสเจ้าหนี้ <span className="text-gray-400 font-normal">(vendor_id FK)</span> *</label>
+                          <div className="flex gap-2">
+                              <input value={vendorId} onChange={e => setVendorId(e.target.value)} placeholder="V001" className="flex-1 px-4 py-2.5 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
+                              <button type="button" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-md hover:shadow-lg">
+                                  <Search size={18} />
+                              </button>
+                          </div>
+                      </div>
+                      <div>
+                          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">ชื่อเจ้าหนี้ <span className="text-gray-400 font-normal">(vendor_name)</span></label>
+                          <input value={vendorName} onChange={e => setVendorName(e.target.value)} placeholder="ชื่อเจ้าหนี้" className="w-full px-4 py-2.5 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-100 dark:bg-gray-800/50 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" readOnly />
+                      </div>
+                      <div>
+                          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">ผู้ติดต่อ <span className="text-gray-400 font-normal">(contact_person)</span></label>
+                          <input value={contactPerson} onChange={e => setContactPerson(e.target.value)} placeholder="ชื่อผู้ติดต่อ" className="w-full px-4 py-2.5 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
+                      </div>
+                  </div>
+
+                  {/* Row 3: Currency, Exchange Rate, Payment Term, Lead Time */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-5">
+                      <div>
+                          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">สกุลเงิน <span className="text-gray-400 font-normal">(currency_code)</span> *</label>
+                          <select value={currencyCode} onChange={e => setCurrencyCode(e.target.value)} className="w-full px-4 py-2.5 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all">
+                              <option value="THB">THB - บาท</option>
+                              <option value="USD">USD - ดอลลาร์</option>
+                              <option value="EUR">EUR - ยูโร</option>
+                          </select>
+                      </div>
+                      <div>
+                          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">อัตราแลกเปลี่ยน <span className="text-gray-400 font-normal">(exchange_rate)</span></label>
+                          <input type="number" value={exchangeRate} onChange={e => setExchangeRate(parseFloat(e.target.value))} className="w-full px-4 py-2.5 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 dark:text-gray-100 text-right focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
+                      </div>
+                      <div>
+                          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">เงื่อนไขชำระเงิน (วัน) <span className="text-gray-400 font-normal">(payment_term_days)</span></label>
+                          <input type="number" value={paymentTermDays} onChange={e => setPaymentTermDays(parseInt(e.target.value))} className="w-full px-4 py-2.5 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 dark:text-gray-100 text-right focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
+                      </div>
+                      <div>
+                          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">Lead Time (วัน) <span className="text-gray-400 font-normal">(lead_time_days)</span></label>
+                          <input type="number" value={leadTimeDays} onChange={e => setLeadTimeDays(parseInt(e.target.value))} className="w-full px-4 py-2.5 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 dark:text-gray-100 text-right focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
+                      </div>
+                  </div>
+
+                  {/* Row 4: Email, Phone */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+                      <div>
+                          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">Email <span className="text-gray-400 font-normal">(contact_email)</span></label>
+                          <input type="email" value={contactEmail} onChange={e => setContactEmail(e.target.value)} placeholder="email@example.com" className="w-full px-4 py-2.5 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
+                      </div>
+                      <div>
+                          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">โทรศัพท์ <span className="text-gray-400 font-normal">(contact_phone)</span></label>
+                          <input type="tel" value={contactPhone} onChange={e => setContactPhone(e.target.value)} placeholder="02-xxx-xxxx" className="w-full px-4 py-2.5 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
+                      </div>
+                  </div>
+
+                  {/* Row 5: Remarks */}
+                  <div>
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">หมายเหตุ <span className="text-gray-400 font-normal">(remarks)</span></label>
+                      <textarea value={remark} onChange={e => setRemark(e.target.value)} placeholder="กรอกหมายเหตุเพิ่มเติม..." rows={2} className="w-full px-4 py-2.5 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none transition-all" />
+                  </div>
+              </div>
+          </div>
+
+          {/* 2. Items Table - Vendor Quotation Lines */}
+          <div className={cardClass}>
+              <div className="p-5 bg-white dark:bg-gray-900">
+                  {/* Section Title */}
+                  <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-6 border-b border-gray-100 dark:border-gray-800 pb-4">
+                      <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                        <FileText size={20} />
+                      </div>
+                      <span className="font-bold text-lg">รายการสินค้า - Vendor Quotation Lines</span>
+                  </div>
+                  
+                  <div className="overflow-x-auto bg-[#1e1e1e] p-4 rounded-lg border border-gray-800">
+                     <table className="w-full min-w-[1000px] border-collapse bg-[#1e1e1e] text-sm">
+                         <thead className="bg-[#4c1d95] text-white">
+                             <tr>
+                                 <th className="p-3 w-12 text-center border-r border-purple-800 font-normal">#</th>
+                                 <th className="p-3 w-48 text-center border-r border-purple-800 font-normal">รหัสสินค้า</th>
+                                 <th className="p-3 min-w-[200px] text-center border-r border-purple-800 font-normal">รายละเอียดสินค้า</th>
+                                 <th className="p-3 w-24 text-center border-r border-purple-800 font-normal">จำนวน</th>
+                                 <th className="p-3 w-28 text-center border-r border-purple-800 font-normal">หน่วยนับ</th>
+                                 <th className="p-3 w-32 text-center border-r border-purple-800 font-normal">ราคา/หน่วย</th>
+                                 <th className="p-3 w-24 text-center border-r border-purple-800 font-normal">ส่วนลด</th>
+                                 <th className="p-3 w-28 text-center border-r border-purple-800 font-normal">ลดยอด (บาท)</th>
+                                 <th className="p-3 w-32 text-center border-r border-purple-800 font-normal">ยอดรวม</th>
+                                 <th className="p-3 w-24 text-center font-normal">จัดการ</th>
+                             </tr>
+                         </thead>
+                         <tbody className="divide-y divide-gray-800">
+                             {lines.map((line, idx) => (
+                                 <tr key={idx} className="hover:bg-[#2d2d2d] transition-colors">
+                                     <td className="p-2 text-center text-gray-400 border-r border-gray-800">{idx + 1}</td>
+                                     
+                                     {/* Product Code: Input + Square Teal Button */}
+                                     <td className="p-2 border-r border-gray-800">
+                                         <div className="flex items-center gap-1">
+                                            <input 
+                                                value={line.item_code} 
+                                                onChange={e => updateLine(idx, 'item_code', e.target.value)} 
+                                                className="w-full h-9 px-3 bg-[#2d2d2d] border border-gray-700 rounded text-gray-200 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition-all placeholder-gray-500" 
+                                            />
+                                            <button 
+                                                onClick={() => openProductSearch(idx)} 
+                                                className="h-9 w-9 flex items-center justify-center bg-teal-600 hover:bg-teal-500 text-white rounded shadow-sm transition-colors"
+                                            >
+                                                <Search size={16} />
+                                            </button>
+                                         </div>
+                                     </td>
+
+                                     <td className="p-2 border-r border-gray-800">
+                                         <input 
+                                            value={line.item_name} 
+                                            onChange={e => updateLine(idx, 'item_name', e.target.value)} 
+                                            className="w-full h-9 px-3 bg-[#2d2d2d] border border-gray-700 rounded text-gray-200 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition-all placeholder-gray-500" 
+                                         />
+                                     </td>
+                                     
+                                     <td className="p-2 border-r border-gray-800">
+                                         <input 
+                                            type="number" 
+                                            value={line.qty || ''} 
+                                            onChange={e => updateLine(idx, 'qty', parseFloat(e.target.value))} 
+                                            className="w-full h-9 px-3 bg-[#2d2d2d] border border-gray-700 rounded text-center text-teal-400 font-medium focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition-all placeholder-gray-500" 
+                                         />
+                                     </td>
+                                     
+                                     {/* Unit Dropdown */}
+                                     <td className="p-2 border-r border-gray-800">
+                                        <select 
+                                            value={line.uom_name} 
+                                            onChange={e => updateLine(idx, 'uom_name', e.target.value)} 
+                                            className="w-full h-9 px-2 bg-[#2d2d2d] border border-gray-700 rounded text-center text-gray-200 cursor-pointer focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none appearance-none"
+                                        >
+                                            <option value="" hidden>เลือก</option>
+                                            {units.map(u => (
+                                                <option key={u.unit_id} value={u.unit_name} className="bg-[#2d2d2d] text-center">{u.unit_name}</option>
+                                            ))}
+                                        </select>
+                                     </td>
+
+                                     <td className="p-2 border-r border-gray-800">
+                                         <input 
+                                            type="number" 
+                                            value={line.unit_price || ''} 
+                                            onChange={e => updateLine(idx, 'unit_price', parseFloat(e.target.value))} 
+                                            placeholder="0.00" 
+                                            className="w-full h-9 px-3 bg-[#2d2d2d] border border-gray-700 rounded text-right text-gray-200 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition-all placeholder-gray-500" 
+                                         />
+                                     </td>
+                                     
+                                     <td className="p-2 border-r border-gray-800">
+                                         <input 
+                                            type="number" 
+                                            placeholder="0" 
+                                            className="w-full h-9 px-3 bg-[#2d2d2d] border border-gray-700 rounded text-center text-gray-400 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition-all placeholder-gray-500" 
+                                         />
+                                     </td>
+
+                                     <td className="p-2 border-r border-gray-800">
+                                         <input 
+                                            type="number" 
+                                            value={line.discount_amount || ''} 
+                                            onChange={e => updateLine(idx, 'discount_amount', parseFloat(e.target.value))} 
+                                            placeholder="0.00" 
+                                            className="w-full h-9 px-3 bg-[#2d2d2d] border border-gray-700 rounded text-right text-gray-200 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition-all placeholder-gray-500" 
+                                         />
+                                     </td>
+                                     
+                                     <td className="p-2 border-r border-gray-800">
+                                         <input 
+                                            value={(line.net_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})} 
+                                            readOnly 
+                                            className="w-full h-9 px-3 bg-[#1e1e1e] border border-transparent rounded text-right text-emerald-500 font-bold focus:outline-none" 
+                                         />
+                                     </td>
+                                     
+                                     {/* Action Buttons: Green Plus, Red Trash */}
+                                     <td className="p-2 text-center">
+                                         <div className="flex items-center justify-center gap-2">
+                                             <button 
+                                                onClick={() => insertLine(idx)} 
+                                                className="text-green-500 hover:text-green-400 transition-colors p-1"
+                                                title="เพิ่มแถว"
+                                             >
+                                                <Plus size={18} />
+                                             </button>
+                                             <button 
+                                                onClick={() => removeLine(idx)} 
+                                                className="text-red-500 hover:text-red-400 transition-colors p-1"
+                                                title="ลบแถว"
+                                             >
+                                                <Trash2 size={18} />
+                                             </button>
+                                         </div>
+                                     </td>
+                                 </tr>
+                             ))}
+                         </tbody>
+                     </table>
+                     
+                     <div className="mt-4 flex justify-between items-center px-1">
+                        <button onClick={addLine} className="flex items-center gap-2 px-4 py-2 bg-[#2d2d2d] hover:bg-[#3d3d3d] text-teal-500 font-bold rounded border border-gray-700 transition-all text-xs uppercase tracking-wider">
+                            <Plus size={14} strokeWidth={3}/> Add Line
+                        </button>
+                        
+                        <div className="flex items-center gap-4 text-xs text-gray-500">
+                             <span>Rows: {lines.length}</span>
+                        </div>
+                     </div>
+                  </div>
+                  
+                  {/* Total Amount */}
+                  <div className="flex justify-end mt-6 pt-6 border-t border-gray-100 dark:border-gray-800">
+                      <div className="text-right bg-blue-50 dark:bg-gray-800/50 p-4 rounded-xl border border-blue-100 dark:border-gray-700">
+                          <span className="text-gray-600 dark:text-gray-300 text-sm font-bold mr-4 uppercase tracking-wide">ยอดรวมทั้งสิ้น (Total Amount)</span>
+                          <div className="flex items-baseline justify-end gap-2 mt-1">
+                              <span className="text-3xl font-extrabold text-[#1d4ed8] dark:text-blue-400">{grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                              <span className="text-gray-500 dark:text-gray-400 font-medium text-lg">THB</span>
+                          </div>
                       </div>
                   </div>
               </div>
           </div>
 
-          {/* 2. Info Bar (Derived from PR Form Style) */}
+          {/* 3. Footer Summary (Clone PR Style) */}
           <div className={cardClass}>
-            <div className="w-full overflow-x-auto border border-gray-300 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-900">
-            <table className="w-full min-w-[800px] text-xs border-collapse">
-              <thead className="bg-emerald-600 text-white">
-                <tr>
-                  <th className="px-2 py-1.5 text-left font-normal border-r border-emerald-500 whitespace-nowrap w-48">Vendor Quote Ref.</th>
-                  <th className="px-2 py-1.5 text-left font-normal border-r border-emerald-500 whitespace-nowrap w-24">การจัดส่ง</th>
-                  <th className="px-2 py-1.5 text-left font-normal border-r border-emerald-500 whitespace-nowrap">เงื่อนไขเพิ่มเติม</th>
-                  <th className="px-2 py-1.5 text-left font-normal whitespace-nowrap">ผู้บันทึก</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                   <td className="px-2 py-1 border-r"><input value={vendorQuoteRef} onChange={e => setVendorQuoteRef(e.target.value)} className="w-full bg-transparent outline-none" placeholder="เลขที่อ้างอิงผู้ขาย..." /></td>
-                   <td className="px-2 py-1 border-r"><input value={shippingMethod} onChange={e => setShippingMethod(e.target.value)} className="w-full bg-transparent outline-none" placeholder="ขนส่ง..." /></td>
-                   <td className="px-2 py-1 border-r"><input className="w-full bg-transparent outline-none" placeholder="-" /></td>
-                   <td className="px-2 py-1 text-gray-500 font-medium">Admin User</td>
-                </tr>
-              </tbody>
-            </table>
-            </div>
-          </div>
-
-          {/* 3. Items Table */}
-          <div className={cardClass}>
-              <div className="px-0 py-0 overflow-x-auto bg-gray-50 dark:bg-gray-800 min-h-[250px]">
-                 <table className="w-full min-w-[1000px] border-collapse bg-white dark:bg-gray-900 shadow-sm text-sm border border-gray-200">
-                     <thead className="bg-emerald-600 text-white text-xs">
-                         <tr>
-                             <th className="p-2 w-10 text-center border-r border-emerald-500 sticky left-0 z-10 bg-emerald-700">#</th>
-                             <th className="p-2 w-28 text-center border-r border-emerald-500">รหัสสินค้า</th>
-                             <th className="p-2 min-w-[200px] text-center border-r border-emerald-500">ชื่อสินค้า</th>
-                             <th className="p-2 w-20 text-center border-r border-emerald-500">หน่วยนับ</th>
-                             <th className="p-2 w-24 text-center border-r border-emerald-500">จำนวน</th>
-                             <th className="p-2 w-28 text-center border-r border-emerald-500">ราคา/หน่วย</th>
-                             <th className="p-2 w-24 text-center border-r border-emerald-500">ส่วนลด</th>
-                             <th className="p-2 w-28 text-center border-r border-emerald-500">รวมเงิน</th>
-                             <th className="p-2 w-16 text-center">Action</th>
-                         </tr>
-                     </thead>
-                     <tbody>
-                         {lines.map((line, idx) => (
-                             <tr key={idx} className="border-b border-gray-200 dark:border-gray-700 hover:bg-emerald-50">
-                                 <td className="p-1 text-center bg-gray-50 font-bold sticky left-0 z-10 border-r">{idx + 1}</td>
-                                 <td className={tdBaseClass}>
-                                     <div className="flex">
-                                        <input value={line.item_code} onChange={e => updateLine(idx, 'item_code', e.target.value)} className={tableTextInputClass} />
-                                        <button onClick={() => openProductSearch(idx)} className="px-1 text-gray-400 hover:text-blue-600"><Search size={14}/></button>
-                                     </div>
-                                 </td>
-                                 <td className={tdBaseClass}><input value={line.item_name} onChange={e => updateLine(idx, 'item_name', e.target.value)} className={tableTextInputClass} /></td>
-                                 <td className={tdBaseClass}><input value={line.uom_name} onChange={e => updateLine(idx, 'uom_name', e.target.value)} className={`${tableTextInputClass} text-center`} /></td>
-                                 <td className={tdBaseClass}><input type="number" value={line.qty || ''} onChange={e => updateLine(idx, 'qty', parseFloat(e.target.value))} className={tableInputClass} /></td>
-                                 <td className={tdBaseClass}><input type="number" value={line.unit_price || ''} onChange={e => updateLine(idx, 'unit_price', parseFloat(e.target.value))} className={tableInputClass} /></td>
-                                 <td className={tdBaseClass}><input type="number" value={line.discount_amount || ''} onChange={e => updateLine(idx, 'discount_amount', parseFloat(e.target.value))} className={tableInputClass} /></td>
-                                 <td className={tdBaseClass}><input value={(line.net_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})} readOnly className={`${tableInputClass} font-bold bg-gray-100 text-emerald-700`} /></td>
-                                 <td className="p-1 text-center">
-                                     <button onClick={() => removeLine(idx)} className="text-red-500 hover:text-red-700 p-1"><Trash2 size={16} /></button>
-                                 </td>
-                             </tr>
-                         ))}
-                     </tbody>
-                 </table>
-                 <button onClick={addLine} className="m-2 flex items-center px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs font-bold border border-gray-300">
-                     <Plus size={14} className="mr-1"/> เพิ่มรายการ
-                 </button>
-              </div>
-          </div>
-
-          {/* 4. Footer Summary (Clone PR Style) */}
-          <div className={cardClass}>
-              <div className="p-3 bg-white dark:bg-gray-900 flex justify-end">
-                  <div className="w-80 space-y-2 text-sm">
+              <div className="p-4 bg-white dark:bg-gray-900 flex justify-end">
+                  <div className="w-80 space-y-3 text-sm">
                       <div className="flex justify-between">
-                          <span className="text-gray-600">รวมเป็นเงิน</span>
-                          <span className="font-medium">{totalAmount.toLocaleString(undefined, {minimumFractionDigits:2})}</span>
+                          <span className="text-gray-600 dark:text-gray-400">รวมเป็นเงิน (Subtotal)</span>
+                          <span className="font-medium text-gray-900 dark:text-gray-200">{totalAmount.toLocaleString(undefined, {minimumFractionDigits:2})}</span>
                       </div>
                       <div className="flex justify-between">
-                          <span className="text-gray-600">ภาษีมูลค่าเพิ่ม ({vatRate}%)</span>
-                          <span className="font-medium">{vatAmount.toLocaleString(undefined, {minimumFractionDigits:2})}</span>
+                          <span className="text-gray-600 dark:text-gray-400">ภาษีมูลค่าเพิ่ม ({vatRate}%)</span>
+                          <span className="font-medium text-gray-900 dark:text-gray-200">{vatAmount.toLocaleString(undefined, {minimumFractionDigits:2})}</span>
                       </div>
-                      <div className="flex justify-between pt-2 border-t border-gray-200">
-                          <span className="font-bold text-gray-800">ยอดรวมทั้งสิ้น</span>
-                          <span className="font-bold text-emerald-600 text-lg">{grandTotal.toLocaleString(undefined, {minimumFractionDigits:2})}</span>
+                      <div className="flex justify-between pt-3 border-t border-gray-200 dark:border-gray-700 mt-2">
+                          <span className="font-bold text-gray-800 dark:text-white text-lg">ยอดรวมทั้งสิ้น (Grand Total)</span>
+                          <span className="font-extrabold text-[#1d4ed8] dark:text-blue-400 text-xl">{grandTotal.toLocaleString(undefined, {minimumFractionDigits:2})}</span>
                       </div>
                   </div>
               </div>
@@ -447,15 +612,15 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
           
           {/* Tabs */}
         <div className={cardClass}>
-          <div className="flex border-b border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+          <div className="flex border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
             <div className={tabClass('detail')} onClick={() => setActiveTab('detail')}><FileBox size={14} /> Note</div>
             <div className={tabClass('more')} onClick={() => setActiveTab('more')}><MoreHorizontal size={14} /> More</div>
           </div>
-          <div className="p-3 min-h-[80px] dark:bg-gray-900">
+          <div className="p-4 min-h-[100px] bg-white dark:bg-gray-900">
             {activeTab === 'detail' && (
-              <textarea value={remark} onChange={(e) => setRemark(e.target.value)} placeholder="กรอกหมายเหตุเพิ่มเติม..." className="w-full h-20 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 resize-none" />
+              <textarea value={remark} onChange={(e) => setRemark(e.target.value)} placeholder="กรอกหมายเหตุเพิ่มเติม..." className="w-full h-24 px-4 py-3 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
             )}
-            {activeTab === 'more' && <div className="text-gray-500 dark:text-gray-400 text-sm">ข้อมูลเพิ่มเติม...</div>}
+            {activeTab === 'more' && <div className="text-gray-500 dark:text-gray-400 text-sm italic">ข้อมูลเพิ่มเติม...</div>}
           </div>
         </div>
 

@@ -139,6 +139,23 @@ export const VendorFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
         });
     };
 
+    const handleStatusChange = (status: 'ACTIVE' | 'ON_HOLD' | 'BLOCKED' | 'INACTIVE') => {
+        setFormData(prev => {
+            // Logic: If clicking an already true status, toggle it off (Active).
+            // If clicking a different status, set that one true and others false.
+            if (status === 'ON_HOLD' && prev.onHold) return { ...prev, onHold: false, blocked: false, inactive: false };
+            if (status === 'BLOCKED' && prev.blocked) return { ...prev, onHold: false, blocked: false, inactive: false };
+            if (status === 'INACTIVE' && prev.inactive) return { ...prev, onHold: false, blocked: false, inactive: false };
+
+            return {
+                ...prev,
+                onHold: status === 'ON_HOLD',
+                blocked: status === 'BLOCKED',
+                inactive: status === 'INACTIVE'
+            };
+        });
+    };
+
     // Save handler - call API
     const handleSave = async () => {
         if (!formData.vendorName.trim()) {
@@ -243,17 +260,38 @@ export const VendorFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                                 </div>
                             </div>
                             {/* Right: Status Interface */}
+                            {/* Right: Status Interface - Exclusive Checkboxes */}
                             <div className="flex items-center gap-6 pl-0 sm:pl-[8.5rem] xl:pl-[11rem]">
+                                {/* ON HOLD */}
                                 <label className="flex items-center gap-2 cursor-pointer select-none">
-                                    <input type="checkbox" checked={formData.onHold} onChange={(e) => handleInputChange('onHold', e.target.checked)} className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 bg-white dark:bg-gray-800" />
+                                    <input 
+                                        type="checkbox" 
+                                        checked={formData.onHold} 
+                                        onChange={() => handleStatusChange('ON_HOLD')}
+                                        className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 bg-white dark:bg-gray-800"
+                                    />
                                     <span className="font-medium text-gray-700 dark:text-gray-300">On Hold</span>
                                 </label>
+
+                                {/* BLOCKED */}
                                 <label className="flex items-center gap-2 cursor-pointer select-none">
-                                    <input type="checkbox" checked={formData.blocked} onChange={(e) => handleInputChange('blocked', e.target.checked)} className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 bg-white dark:bg-gray-800" />
+                                    <input 
+                                        type="checkbox" 
+                                        checked={formData.blocked} 
+                                        onChange={() => handleStatusChange('BLOCKED')}
+                                        className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 bg-white dark:bg-gray-800"
+                                    />
                                     <span className="font-medium text-gray-700 dark:text-gray-300">Block</span>
                                 </label>
+
+                                {/* INACTIVE */}
                                 <label className="flex items-center gap-2 cursor-pointer select-none">
-                                    <input type="checkbox" checked={formData.inactive} onChange={(e) => handleInputChange('inactive', e.target.checked)} className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 bg-white dark:bg-gray-800" />
+                                    <input 
+                                        type="checkbox" 
+                                        checked={formData.inactive} 
+                                        onChange={() => handleStatusChange('INACTIVE')}
+                                        className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 bg-white dark:bg-gray-800"
+                                    />
                                     <span className="font-medium text-gray-700 dark:text-gray-300">Inactive</span>
                                 </label>
                             </div>

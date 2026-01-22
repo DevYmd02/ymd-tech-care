@@ -15,6 +15,7 @@ import type { RFQFormData, RFQLineFormData } from '../../../../types/rfq-types';
 import { initialRFQFormData, initialRFQLineFormData } from '../../../../types/rfq-types';
 import type { VendorSearchItem } from '../../../../types/vendor-types';
 import { logger } from '../../../../utils/logger';
+import type { PRHeader } from '../../../../types/pr-types';
 
 // ====================================================================================
 // TYPES
@@ -24,6 +25,7 @@ interface Props {
     isOpen: boolean;
     onClose: () => void;
     editId?: string | null;
+    initialPR?: PRHeader | null; // Add initialPR prop
 }
 
 interface VendorSelection {
@@ -36,7 +38,7 @@ interface VendorSelection {
 // COMPONENT
 // ====================================================================================
 
-export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
+export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose, initialPR }) => {
     const prevIsOpenRef = useRef(false);
 
     const [formData, setFormData] = useState<RFQFormData>({
@@ -97,20 +99,43 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
         fetchMasterData();
     }, []);
 
-    // Reset form when modal opens
+    // Reset form when modal opens or initialPR changes
     useEffect(() => {
         if (isOpen && !prevIsOpenRef.current) {
-            const timer = setTimeout(() => {
-                setFormData({
-                    ...initialRFQFormData,
-                    rfq_no: `RFQ2024-007`,
-                    rfq_date: new Date().toLocaleDateString('en-CA'),
-                    created_by_name: 'ระบบจะกรอกอัตโนมัติ',
-                    lines: Array.from({ length: 5 }, (_, i) => ({
-                        ...initialRFQLineFormData,
-                        line_no: i + 1,
-                    })),
-                });
+             const timer = setTimeout(() => {
+                // If there's an initial PR, pre-fill the form
+                if (initialPR) {
+                     setFormData({
+                        ...initialRFQFormData,
+                        rfq_no: `RFQ-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(4, '0')}`, // Mock RFQ No
+                        rfq_date: new Date().toLocaleDateString('en-CA'),
+                        pr_no: initialPR.pr_no, // Pre-fill PR No
+                        created_by_name: 'ระบบจะกรอกอัตโนมัติ',
+                        // Map lines from PR if available (MockPRItem currently doesn't have detailed lines in the interface used in PRListPage interaction, strictly speaking, but we can assume structure or default)
+                        // For now we just keep default lines or if we had PR lines we would map them.
+                        // Since MockPRItem in the list is a summary, we might not have lines. 
+                        // But if we did fetch full PR details, we would map here.
+                        // Let's just set default lines for now as requested by user context "to pre-fill or set initial data".
+                        lines: Array.from({ length: 5 }, (_, i) => ({
+                            ...initialRFQLineFormData,
+                            line_no: i + 1,
+                        })),
+                        remarks: `Generated from PR: ${initialPR.pr_no}`
+                    });
+                } else {
+                    // Default logic
+                    setFormData({
+                        ...initialRFQFormData,
+                        rfq_no: `RFQ2024-007`,
+                        rfq_date: new Date().toLocaleDateString('en-CA'),
+                        created_by_name: 'ระบบจะกรอกอัตโนมัติ',
+                        lines: Array.from({ length: 5 }, (_, i) => ({
+                            ...initialRFQLineFormData,
+                            line_no: i + 1,
+                        })),
+                    });
+                }
+                
                 setSelectedVendors([
                     { vendor_code: '', vendor_name: '', vendor_name_display: '' },
                     { vendor_code: '', vendor_name: '', vendor_name_display: '' },
@@ -120,7 +145,7 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
             return () => clearTimeout(timer);
         }
         prevIsOpenRef.current = isOpen;
-    }, [isOpen]);
+    }, [isOpen, initialPR]);
 
     // if (!isOpen && !isClosing) return null; // Handled by WindowFormLayout
 
@@ -191,6 +216,33 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
         setIsVendorModalOpen(false);
         setActiveVendorIndex(null);
     };
+
+    // Product Search Handlers
+    const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+    const [productSearchTerm, setProductSearchTerm] = useState('');
+    const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
+
+    const handleOpenProductSearch = (index: number) => {
+        setActiveRowIndex(index);
+        setProductSearchTerm('');
+        setIsProductModalOpen(true);
+    };
+
+    const handleProductSelect = (product: ItemMaster) => {
+        if (activeRowIndex !== null) {
+            handleLineChange(activeRowIndex, 'item_code', product.item_code);
+            handleLineChange(activeRowIndex, 'item_name', product.item_name);
+            handleLineChange(activeRowIndex, 'uom', product.unit_name || '');
+        }
+        setIsProductModalOpen(false);
+        setActiveRowIndex(null);
+    };
+
+    // Filter products for search
+    const filteredProducts = items.filter(p => 
+        p.item_code.toLowerCase().includes(productSearchTerm.toLowerCase()) || 
+        p.item_name.toLowerCase().includes(productSearchTerm.toLowerCase())
+    );
 
     // Shared styles (same as PR modal)
     const cardClass = 'bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-sm overflow-hidden';
@@ -425,35 +477,22 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                                             {line.line_no}
                                         </td>
                                         <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">
-                                            <select
-                                            value={line.item_code}
-                                            onChange={(e) => {
-                                                const selectedItem = items.find(i => i.item_code === e.target.value);
-                                                if (selectedItem) {
-                                                    handleLineChange(index, 'item_code', selectedItem.item_code);
-                                                    handleLineChange(index, 'item_name', selectedItem.item_name);
-                                                    handleLineChange(index, 'uom', selectedItem.unit_name || '');
-                                                } else {
-                                                    handleLineChange(index, 'item_code', e.target.value);
-                                                }
-                                            }}
-                                            className={selectStyle}
-                                        >
-                                            <option value="">เลือกรหัสสินค้า</option>
-                                            <option value="ITEM001">ITEM001 - คอมพิวเตอร์โน๊ตบุ๊ค</option>
-                                            <option value="ITEM002">ITEM002 - เมาส์ไร้สาย</option>
-                                            <option value="ITEM003">ITEM003 - คีย์บอร์ด</option>
-                                            <option value="ITEM004">ITEM004 - จอมอนิเตอร์ 24"</option>
-                                            <option value="ITEM005">ITEM005 - ปรินเตอร์เลเซอร์</option>
-                                            <option value="ITEM006">ITEM006 - กระดาษ A4</option>
-                                            <option value="ITEM007">ITEM007 - หมึกพิมพ์ดำ</option>
-                                            <option value="ITEM008">ITEM008 - สายแลน CAT6</option>
-                                            {items.map(item => (
-                                                <option key={item.item_id} value={item.item_code}>
-                                                    {item.item_code} - {item.item_name}
-                                                </option>
-                                            ))}
-                                        </select>
+                                            <div className="flex items-center gap-1">
+                                                <input
+                                                    type="text"
+                                                    value={line.item_code}
+                                                    onChange={(e) => handleLineChange(index, 'item_code', e.target.value)}
+                                                    className={`${inputStyle} text-center`}
+                                                    placeholder="รหัสสินค้า"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleOpenProductSearch(index)}
+                                                    className="p-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-md transition-colors shadow-sm"
+                                                >
+                                                    <Search size={14} />
+                                                </button>
+                                            </div>
                                         </td>
                                         <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">
                                             <input
@@ -626,6 +665,77 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                     </TabPanel>
                 </div>
             </div>
+
+            {/* Product Search Modal */}
+            {isProductModalOpen && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50" onClick={() => setIsProductModalOpen(false)}>
+                    <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-[800px] max-h-[80vh] overflow-hidden border border-gray-200 dark:border-gray-700" onClick={e => e.stopPropagation()}>
+                        <div className="p-6 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                            <div className="flex justify-between items-start mb-4">
+                                <div>
+                                    <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                                        <Search className="text-teal-600" />
+                                        ค้นหาสินค้า
+                                    </h2>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">เลือกสินค้าที่ต้องการเพิ่มในรายการ</p>
+                                </div>
+                                <button onClick={() => setIsProductModalOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                                    <span className="text-2xl">×</span>
+                                </button>
+                            </div>
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                <input 
+                                    value={productSearchTerm} 
+                                    onChange={(e) => setProductSearchTerm(e.target.value)} 
+                                    placeholder="ค้นหาด้วยรหัส หรือชื่อสินค้า..." 
+                                    className="w-full h-10 pl-10 pr-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500" 
+                                    autoFocus 
+                                />
+                            </div>
+                        </div>
+                        <div className="max-h-[400px] overflow-auto">
+                            <table className="w-full text-sm text-left">
+                                <thead className="bg-gray-100 dark:bg-gray-800 sticky top-0 z-10">
+                                    <tr className="text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">
+                                        <th className="px-4 py-3 font-semibold w-24 text-center">เลือก</th>
+                                        <th className="px-4 py-3 font-semibold w-32">รหัสสินค้า</th>
+                                        <th className="px-4 py-3 font-semibold">ชื่อสินค้า</th>
+                                        <th className="px-4 py-3 font-semibold w-24 text-center">หน่วย</th>
+                                        <th className="px-4 py-3 font-semibold w-24 text-right">ราคา</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                                    {filteredProducts.length > 0 ? (
+                                        filteredProducts.map((item) => (
+                                            <tr key={item.item_id} className="hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-colors">
+                                                <td className="px-4 py-3 text-center">
+                                                    <button 
+                                                        onClick={() => handleProductSelect(item)} 
+                                                        className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded text-xs font-medium transition-colors shadow-sm"
+                                                    >
+                                                        เลือก
+                                                    </button>
+                                                </td>
+                                                <td className="px-4 py-3 font-medium text-teal-600 dark:text-teal-400">{item.item_code}</td>
+                                                <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{item.item_name}</td>
+                                                <td className="px-4 py-3 text-center text-gray-500 dark:text-gray-400">{item.unit_name}</td>
+                                                <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300">0.00</td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan={5} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                                                ไม่พบข้อมูลสินค้า
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Vendor Search Modal */}
             <VendorSearchModal

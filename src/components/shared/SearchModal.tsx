@@ -120,24 +120,24 @@ export function SearchModal<T>({
         // Overlay
         <div className={`${styles.modalOverlay} p-4 font-sans`}>
             {/* Modal Container */}
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl h-[600px] flex flex-col border border-gray-200">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl h-[600px] flex flex-col border border-gray-200 dark:border-gray-700">
 
                 {/* ==================== HEADER ==================== */}
-                <div className="flex justify-between items-center p-4 border-b border-gray-200">
+                <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
                     <div>
                         <h2 className={`text-xl font-bold ${colorClasses.title}`}>{title}</h2>
-                        <p className="text-sm text-gray-500">{subtitle}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{subtitle}</p>
                     </div>
                     <button
                         onClick={onClose}
-                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
                     >
                         <X size={20} />
                     </button>
                 </div>
 
                 {/* ==================== SEARCH BAR ==================== */}
-                <div className="p-4 bg-gray-50 border-b border-gray-200">
+                <div className="p-4 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
                     {searchLabel && (
                         <label className={`block text-sm font-bold ${colorClasses.label} mb-1`}>
                             {searchLabel}
@@ -146,7 +146,7 @@ export function SearchModal<T>({
                     <input
                         type="text"
                         placeholder={searchPlaceholder}
-                        className={`w-full h-10 px-3 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 ${colorClasses.ring} text-sm`}
+                        className={`w-full h-10 px-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 ${colorClasses.ring} text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500`}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         autoFocus
@@ -154,11 +154,11 @@ export function SearchModal<T>({
                 </div>
 
                 {/* ==================== DATA TABLE ==================== */}
-                <div className="flex-1 overflow-y-auto p-4 bg-white">
+                <div className="flex-1 overflow-y-auto p-4 bg-white dark:bg-gray-800">
                     <div className="space-y-1">
                         {/* Table Header */}
                         <div
-                            className={`grid gap-4 px-2 py-2 text-sm font-bold ${colorClasses.label} border-b border-gray-100`}
+                            className={`grid gap-4 px-2 py-2 text-sm font-bold ${colorClasses.label} border-b border-gray-100 dark:border-gray-700`}
                             style={{ gridTemplateColumns: gridCols }}
                         >
                             {columns.map((col) => (
@@ -175,7 +175,7 @@ export function SearchModal<T>({
                         {filteredData.map((item) => (
                             <div
                                 key={getKey(item)}
-                                className={`grid gap-4 items-center px-2 py-3 border-b border-gray-100 ${colorClasses.hover} transition-colors rounded-md`}
+                                className={`grid gap-4 items-center px-2 py-3 border-b border-gray-100 dark:border-gray-700 ${colorClasses.hover} dark:hover:bg-gray-700/50 transition-colors rounded-md`}
                                 style={{ gridTemplateColumns: gridCols }}
                             >
                                 {columns.map((col) => {
@@ -207,7 +207,7 @@ export function SearchModal<T>({
                                     return (
                                         <div
                                             key={String(col.key)}
-                                            className={`text-sm ${col.align === 'center' ? 'text-center' : ''}`}
+                                            className={`text-sm text-gray-800 dark:text-gray-200 ${col.align === 'center' ? 'text-center' : ''}`}
                                         >
                                             {String(item[col.key as keyof T] ?? '')}
                                         </div>
@@ -218,16 +218,16 @@ export function SearchModal<T>({
 
                         {/* Empty State */}
                         {filteredData.length === 0 && (
-                            <div className="text-center py-10 text-gray-400">{emptyText}</div>
+                            <div className="text-center py-10 text-gray-400 dark:text-gray-500">{emptyText}</div>
                         )}
                     </div>
                 </div>
 
                 {/* ==================== FOOTER ==================== */}
-                <div className="p-3 border-t border-gray-200 bg-gray-50 flex justify-end">
+                <div className="p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex justify-end">
                     <button
                         onClick={onClose}
-                        className="px-4 py-2 bg-white border border-gray-300 rounded text-sm font-bold hover:bg-gray-100 text-gray-600"
+                        className="px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm font-bold hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-200"
                     >
                         ปิดหน้าต่าง
                     </button>

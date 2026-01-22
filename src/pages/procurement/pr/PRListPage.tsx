@@ -17,8 +17,9 @@ import { ApprovalModal, PRStatusBadge } from '../../../components/shared';
 import { formatThaiDate } from '../../../utils/dateUtils';
 import { styles } from '../../../constants';
 import { prService } from '../../../services/prService';
-import { PR_MOCKS, type MockPRItem } from '../../../__mocks__/prMocks';
-import type { PRStatus } from '../../../types/pr-types';
+import { MOCK_PRS } from '../../../__mocks__';
+import type { PRHeader, PRStatus } from '../../../types/pr-types';
+import RFQFormModal from '../rfq/components/RFQFormModal';
 
 // ====================================================================================
 // MAIN COMPONENT - PRListPage
@@ -27,7 +28,7 @@ import type { PRStatus } from '../../../types/pr-types';
 export default function PRListPage() {
   // ==================== STATE ====================
   const { openWindow } = useWindowManager();
-  const [prList, setPrList] = useState<MockPRItem[]>([]);
+  const [prList, setPrList] = useState<PRHeader[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [approvalModal, setApprovalModal] = useState<{ isOpen: boolean; action: 'approve' | 'reject' }>({
@@ -35,10 +36,15 @@ export default function PRListPage() {
     action: 'approve'
   });
 
+  // RFQ Modal State
+  const [isRFQModalOpen, setIsRFQModalOpen] = useState(false);
+  const [selectedPR, setSelectedPR] = useState<PRHeader | null>(null);
+
   // Search filters state
   const [filters, setFilters] = useState({
     pr_no: '',
     requester_name: '',
+    department: '', // Added department
     status: 'ALL' as PRStatus | 'ALL',
     dateFrom: '',
     dateTo: ''
@@ -52,7 +58,7 @@ export default function PRListPage() {
         // MOCK DATA LOCALLY AS REQUESTED
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        setPrList(PR_MOCKS);
+        setPrList(MOCK_PRS as PRHeader[]);
       } catch (error) {
         console.error('Failed to fetch data', error);
       } finally {
@@ -71,6 +77,7 @@ export default function PRListPage() {
     setFilters({
       pr_no: '',
       requester_name: '',
+      department: '',
       status: 'ALL',
       dateFrom: '',
       dateTo: ''
@@ -81,6 +88,12 @@ export default function PRListPage() {
   // const handleSelectAll = (checked: boolean) => { ... };
   // const handleSelectOne = (id: string, checked: boolean) => { ... };
 
+
+  const handleCreateRFQ = (pr: PRHeader) => {
+    setSelectedPR(pr);
+    setIsRFQModalOpen(true);
+  };
+    
   // Approval handlers
   const handleApprovalConfirm = async (remark: string) => {
     setIsLoading(true);
@@ -153,13 +166,11 @@ export default function PRListPage() {
     <div className={styles.pageContainerCompact}>
 
       {/* ==================== PAGE HEADER ==================== */}
-      <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 rounded-lg p-4 shadow-lg">
-        <div className="flex items-center space-x-3">
+      {/* ==================== PAGE HEADER ==================== */}
+      <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 rounded-lg p-4 shadow-lg mb-6">
+        <div className="flex items-center gap-3">
           <FileText size={24} className="text-white" />
-          <div>
-            <h1 className="text-xl font-bold text-white">รายการใบขอซื้อ</h1>
-            <p className="text-emerald-100 text-sm">Purchase Requisition List</p>
-          </div>
+          <h1 className="text-xl font-bold text-white">รายการใบขอซื้อ - Purchase Requisition (PR)</h1>
         </div>
       </div>
 
@@ -170,8 +181,9 @@ export default function PRListPage() {
           <h2 className="text-base font-bold text-gray-700 dark:text-white">ฟอร์มค้นหาข้อมูล</h2>
         </div>
 
-        <div className={styles.grid4}>
-          {/* เลขที่เอกสาร */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Row 1 */}
+          {/* 1. เลขที่เอกสาร */}
           <div>
             <label className={labelClass}>เลขที่เอกสาร</label>
             <input
@@ -183,7 +195,7 @@ export default function PRListPage() {
             />
           </div>
 
-          {/* ผู้ขอ */}
+          {/* 2. ผู้ขอ */}
           <div>
             <label className={labelClass}>ผู้ขอ</label>
             <input
@@ -195,7 +207,19 @@ export default function PRListPage() {
             />
           </div>
 
-          {/* สถานะ */}
+          {/* 3. แผนก (New Field) */}
+          <div>
+            <label className={labelClass}>แผนก</label>
+            <input
+              type="text"
+              placeholder="แผนก"
+              className={inputClass}
+              value={filters.department}
+              onChange={(e) => setFilters({ ...filters, department: e.target.value })}
+            />
+          </div>
+
+          {/* 4. สถานะ */}
           <div>
             <label className={labelClass}>สถานะ</label>
             <select
@@ -215,7 +239,8 @@ export default function PRListPage() {
             </select>
           </div>
 
-          {/* วันที่เอกสาร จาก */}
+          {/* Row 2 */}
+          {/* 5. วันที่เอกสาร จาก */}
           <div>
             <label className={labelClass}>วันที่เอกสาร จาก</label>
             <div className="relative">
@@ -229,7 +254,7 @@ export default function PRListPage() {
             </div>
           </div>
 
-          {/* ถึงวันที่ */}
+          {/* 6. ถึงวันที่ */}
           <div>
             <label className={labelClass}>ถึงวันที่</label>
             <div className="relative">
@@ -243,8 +268,8 @@ export default function PRListPage() {
             </div>
           </div>
 
-          {/* Buttons */}
-          <div className="flex items-end gap-2 col-span-1 md:col-span-2">
+          {/* 7. Action Buttons (Search & Clear) */}
+          <div className="flex items-end gap-2">
             <button
               onClick={handleSearch}
               className="flex-1 h-10 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-md flex items-center justify-center gap-2 transition-colors"
@@ -261,8 +286,8 @@ export default function PRListPage() {
             </button>
           </div>
           
-          {/* Create Button - Right Aligned in Grid */}
-          <div className="flex items-end justify-end col-span-1 border-gray-100 dark:border-gray-700">
+          {/* 8. Create Button - Right Aligned (Shifted to fit grid or use ml-auto logic if needed, but grid col 4 puts it right) */}
+          <div className="flex items-end justify-end">
             <button
               onClick={() => openWindow('PR')}
               className="h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-semibold flex items-center gap-2 transition-colors shadow-sm w-full md:w-auto justify-center"
@@ -329,7 +354,7 @@ export default function PRListPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700 text-sm">
-              {filteredPRList.map((item: MockPRItem, index: number) => (
+              {filteredPRList.map((item: PRHeader, index: number) => (
                 <tr key={item.pr_id} className="hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors">
                   {/* ลำดับ */}
                   <td className="px-4 py-4 text-gray-600 dark:text-gray-300 text-center">{index + 1}</td>
@@ -353,7 +378,7 @@ export default function PRListPage() {
 
                   {/* แผนก */}
                   <td className="px-4 py-4 text-gray-600 dark:text-gray-300">
-                    {item.department || '-'}
+                    {item.purpose || '-'}
                   </td>
 
                   {/* สถานะ */}
@@ -363,7 +388,7 @@ export default function PRListPage() {
 
                   {/* จำนวนรายการ */}
                   <td className="px-4 py-4 text-center text-gray-600 dark:text-gray-300">
-                    {item.item_count || 0}
+                    {item.lines?.length || 0}
                   </td>
 
                   {/* ยอดรวม */}
@@ -379,7 +404,10 @@ export default function PRListPage() {
                         </button>
                         
                         {item.status === 'APPROVED' ? (
-                            <button className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded shadow-sm transition-colors flex items-center gap-1">
+                            <button 
+                                onClick={() => handleCreateRFQ(item)}
+                                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded shadow-sm transition-colors flex items-center gap-1"
+                            >
                                 <FileText size={14} /> สร้าง RFQ
                             </button>
                         ) : (
@@ -416,6 +444,15 @@ export default function PRListPage() {
         onConfirm={handleApprovalConfirm}
         action={approvalModal.action}
         count={selectedIds.length}
+      />
+
+      <RFQFormModal
+        isOpen={isRFQModalOpen}
+        onClose={() => {
+            setIsRFQModalOpen(false);
+            setSelectedPR(null);
+        }}
+        initialPR={selectedPR}
       />
 
     </div>

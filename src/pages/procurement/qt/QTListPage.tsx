@@ -18,11 +18,21 @@ import { formatThaiDate } from '../../../utils/dateUtils';
 
 import { QTStatusBadge } from '../../../components/shared/StatusBadge';
 import QTFormModal from './components/QTFormModal';
+import { QCFormModal } from '../qc/components/QCFormModal';
 
 export default function QTListPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [qtList, setQtList] = useState<QTListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // QC Modal State
+  const [isQCModalOpen, setIsQCModalOpen] = useState(false);
+  const [selectedQTForQC, setSelectedQTForQC] = useState<QTListItem | null>(null);
+
+  const handleOpenQCModal = (qt: QTListItem) => {
+    setSelectedQTForQC(qt);
+    setIsQCModalOpen(true);
+  };
   
   // Filters
   const [filters, setFilters] = useState<QTListParams>({
@@ -273,7 +283,10 @@ export default function QTListPage() {
                                         {item.status === 'SUBMITTED' && (
                                             <>
                                                 <button className="text-blue-500 hover:text-blue-700 transition-colors" title="แก้ไข"><Edit size={18} /></button>
-                                                <button className="flex items-center gap-1.5 px-3 py-1.5 bg-[#a855f7] hover:bg-[#9333ea] text-white text-xs font-bold rounded shadow transition-colors">
+                                                <button 
+                                                    onClick={() => handleOpenQCModal(item)}
+                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#a855f7] hover:bg-[#9333ea] text-white text-xs font-bold rounded shadow transition-colors"
+                                                >
                                                     <RefreshCw size={14} /> ส่งเปรียบเทียบราคา
                                                 </button>
                                             </>
@@ -289,6 +302,17 @@ export default function QTListPage() {
             </table>
         </div>
       </div>
+
+      {/* QC Form Modal */}
+      <QCFormModal
+        isOpen={isQCModalOpen}
+        onClose={() => {
+          setIsQCModalOpen(false);
+          setSelectedQTForQC(null);
+        }}
+        initialRFQNo={selectedQTForQC?.rfq_no}
+        onSuccess={fetchData}
+      />
     </div>
   );
 }

@@ -9,7 +9,7 @@ import React, { useState, useEffect } from 'react';
 import { SearchModal, type ColumnDef } from './SearchModal';
 import { vendorService } from '../../services/vendorService';
 import type { VendorSearchItem } from '../../types/vendor-types';
-import { RELATED_VENDORS } from '../../__mocks__/relatedMocks';
+import { MOCK_VENDORS } from '../../__mocks__';
 
 // Re-export for backward compatibility
 export type Vendor = VendorSearchItem;
@@ -25,8 +25,8 @@ interface Props {
 // MOCK DATA - Fallback เมื่อ API ไม่พร้อม (ใช้ข้อมูลจาก relatedMocks)
 // ====================================================================================
 
-const FALLBACK_VENDORS: VendorSearchItem[] = RELATED_VENDORS.length > 0
-    ? RELATED_VENDORS.map(v => ({
+const FALLBACK_VENDORS: VendorSearchItem[] = MOCK_VENDORS.length > 0
+    ? MOCK_VENDORS.map(v => ({
         code: v.vendor_code,
         name: v.vendor_name,
         address: [v.address_line1, v.address_line2].filter(Boolean).join(' ') || '-',

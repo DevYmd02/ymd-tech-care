@@ -26,18 +26,23 @@ interface Props {
 const productColumns: ColumnDef<Product>[] = [
     { key: 'action', header: 'เลือก', width: '100px', align: 'center' },
     {
-        key: 'code', header: 'รหัสสินค้า', width: '100px', render: (p) => (
-            <span className="text-sm font-bold text-gray-800">{p.code}</span>
+        key: 'item_code', header: 'รหัสสินค้า', width: '120px', render: (p) => (
+            <span className="text-sm font-bold text-gray-800">{p.item_code}</span>
         )
     },
     {
-        key: 'name', header: 'ชื่อสินค้า', width: '1fr', render: (p) => (
-            <span className="text-sm text-gray-700">{p.name}</span>
+        key: 'item_name', header: 'ชื่อสินค้า', width: '1fr', render: (p) => (
+            <span className="text-sm text-gray-700">{p.item_name}</span>
         )
     },
     {
-        key: 'detail', header: 'รายละเอียด', width: '1fr', render: (p) => (
-            <span className="text-xs text-gray-500">{p.detail}</span>
+        key: 'unit', header: 'หน่วย', width: '120px', render: (p) => (
+            <span className="text-xs text-gray-600">{p.unit}</span>
+        )
+    },
+    {
+        key: 'unit_price', header: 'ราคา/หน่วย', width: '140px', align: 'right', render: (p) => (
+            <span className="text-xs text-gray-500">{p.unit_price.toLocaleString()}</span>
         )
     },
 ];
@@ -60,10 +65,10 @@ export const ProductSearchModal: React.FC<Props> = ({ isOpen, onClose, onSelect 
             data={MOCK_PRODUCTS}
             columns={productColumns}
             filterFn={(p, term) =>
-                p.code.toLowerCase().includes(term) ||
-                p.name.toLowerCase().includes(term)
+                p.item_code.toLowerCase().includes(term) ||
+                p.item_name.toLowerCase().includes(term)
             }
-            getKey={(p) => p.code}
+            getKey={(p) => p.item_code}
             emptyText="ไม่พบสินค้าที่ค้นหา"
         />
     );

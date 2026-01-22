@@ -14,7 +14,7 @@ import { PRFooter } from './PRFooter';
 import { WindowFormLayout } from '../../../../components/shared/WindowFormLayout';
 import { masterDataService } from '../../../../services/masterDataService';
 import { prService } from '../../../../services/prService';
-import type { ItemMaster, CostCenter, Project } from '../../../../types/master-data-types';
+import type { ItemMaster, CostCenter, Project, UnitMaster } from '../../../../types/master-data-types';
 import { SystemAlert } from '../../../../components/shared/SystemAlert';
 
 interface Props {
@@ -95,19 +95,22 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const [products, setProducts] = useState<ItemMaster[]>([]);
   const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [units, setUnits] = useState<UnitMaster[]>([]);
 
   // Fetch Master Data
   useEffect(() => {
     const fetchMasterData = async () => {
       try {
-        const [items, cc, prj] = await Promise.all([
+        const [items, cc, prj, uom] = await Promise.all([
           masterDataService.getItems(),
           masterDataService.getCostCenters(),
-          masterDataService.getProjects()
+          masterDataService.getProjects(),
+          masterDataService.getUnits()
         ]);
         setProducts(items);
         setCostCenters(cc);
         setProjects(prj);
+        setUnits(uom);
       } catch (error) {
         console.error('Failed to fetch master data:', error);
       }
@@ -397,7 +400,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                   <th className="p-2 min-w-[180px] text-center border-r border-blue-500">ชื่อสินค้า</th>
                   <th className="p-2 w-16 text-center border-r border-blue-500">คลัง</th>
                   <th className="p-2 w-16 text-center border-r border-blue-500">ที่เก็บ</th>
-                  <th className="p-2 w-20 text-center border-r border-blue-500">หน่วยนับ</th>
+                  <th className="p-2 w-28 text-center border-r border-blue-500">หน่วยนับ</th>
                   <th className="p-2 w-20 text-center border-r border-blue-500">จำนวน</th>
                   <th className="p-2 w-24 text-center border-r border-blue-500">ราคา/หน่วย</th>
                   <th className="p-2 w-20 text-center border-r border-blue-500">ส่วนลด</th>
@@ -416,7 +419,20 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                       <td className={tdBaseClass}><input value={line.item_name} onChange={(e) => updateLine(index, 'item_name', e.target.value)} className={tableInputClass} /></td>
                       <td className={tdBaseClass}><input value={line.warehouse || ''} onChange={(e) => updateLine(index, 'warehouse', e.target.value)} className={`${tableInputClass} text-center`} /></td>
                       <td className={tdBaseClass}><input value={line.location || ''} onChange={(e) => updateLine(index, 'location', e.target.value)} className={`${tableInputClass} text-center`} /></td>
-                      <td className={tdBaseClass}><input value={line.uom} onChange={(e) => updateLine(index, 'uom', e.target.value)} className={`${tableInputClass} text-center`} /></td>
+                      <td className={tdBaseClass}>
+                        <select 
+                          value={line.uom} 
+                          onChange={(e) => updateLine(index, 'uom', e.target.value)} 
+                          className={`${tableInputClass} text-center !px-1`}
+                        >
+                          <option value="">เลือก</option>
+                          {units.map(unit => (
+                            <option key={unit.unit_id} value={unit.unit_name}>
+                              {unit.unit_name}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
                       <td className={tdBaseClass}><input type="number" value={line.quantity || ''} onChange={(e) => updateLine(index, 'quantity', parseFloat(e.target.value) || 0)} className={`${tableInputClass} text-center`} /></td>
                       <td className={tdBaseClass}><input type="number" value={line.est_unit_price || ''} onChange={(e) => updateLine(index, 'est_unit_price', parseFloat(e.target.value) || 0)} className={`${tableInputClass} text-center`} /></td>
                       <td className={tdBaseClass}><input type="number" value={line.discount || ''} onChange={(e) => updateLine(index, 'discount', parseFloat(e.target.value) || 0)} className={`${tableInputClass} text-center`} /></td>

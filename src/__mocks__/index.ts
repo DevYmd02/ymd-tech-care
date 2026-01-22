@@ -3,12 +3,25 @@
  * @description Barrel export สำหรับ Mock Data
  * 
  * @structure
- * - masterDataMocks.ts: Branch, Warehouse, Unit, ProductCategory, ItemType
- * - products.ts: Product mock สำหรับ ProductSearchModal
- * - relatedMocks.ts: Vendor → PR → RFQ (linked data)
+ * - vendorMocks.ts: Vendor Master (SSOT)
+ * - masterDataMocks.ts: Branch, Warehouse, Unit, ProductCategory, ItemType, Item
+ * - procurementMocks.ts: PR → RFQ → QT → QC (linked flow)
+ * - approvalFlowMocks.ts: Approval configuration
  */
 
-// Master Data Mocks
+// ====================================================================================
+// VENDOR MASTER (Single Source of Truth)
+// ====================================================================================
+export {
+  MOCK_VENDORS,
+  getVendorById,
+  getVendorByCode,
+  getActiveVendors,
+} from './vendorMocks';
+
+// ====================================================================================
+// MASTER DATA
+// ====================================================================================
 export {
   mockBranches,
   mockBranchDropdown,
@@ -21,18 +34,50 @@ export {
   mockItemBarcodes,
 } from './masterDataMocks';
 
-// Product Mocks
-export { MOCK_PRODUCTS, type Product } from './products';
-
-// Related Mocks (Vendor → PR → RFQ linked)
+// ====================================================================================
+// PROCUREMENT FLOW (PR → RFQ → QT → QC)
+// ====================================================================================
 export {
-  RELATED_VENDORS,
-  RELATED_PRS,
-  RELATED_RFQS,
-  RELATED_RFQ_LINES,
-  RELATED_RFQ_VENDORS,
+  // PR
+  MOCK_PRS,
+  MOCK_PR_LINES,
   getApprovedPRs,
+  // RFQ
+  MOCK_RFQS,
+  MOCK_RFQ_LINES,
+  MOCK_RFQ_VENDORS,
   getRFQByPRId,
+  getRFQLinesByRFQId,
   getVendorsByRFQId,
-  getVendorById,
-} from './relatedMocks';
+  // QT
+  MOCK_QTS,
+  getQTsByRFQNo,
+  // QC
+  MOCK_QCS,
+  getQCByPRId,
+} from './procurementMocks';
+
+// ====================================================================================
+// APPROVAL FLOW
+// ====================================================================================
+export {
+  MOCK_APPROVAL_FLOWS,
+  MOCK_APPROVERS,
+  getMockFlowWithSteps,
+} from './approvalFlowMocks';
+
+// ====================================================================================
+// LEGACY EXPORTS (For backward compatibility - will be deprecated)
+// ====================================================================================
+
+// Re-export from procurementMocks for backward compatibility with existing imports
+export { MOCK_PRS as RELATED_PRS } from './procurementMocks';
+export { MOCK_RFQS as RELATED_RFQS } from './procurementMocks';
+export { MOCK_RFQ_LINES as RELATED_RFQ_LINES } from './procurementMocks';
+export { MOCK_RFQ_VENDORS as RELATED_RFQ_VENDORS } from './procurementMocks';
+export { MOCK_VENDORS as RELATED_VENDORS } from './vendorMocks';
+
+// ====================================================================================
+// PRODUCT LOOKUP (Item Search)
+// ====================================================================================
+export { MOCK_PRODUCTS, type ProductLookup, type Product } from './products';

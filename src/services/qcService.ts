@@ -1,59 +1,25 @@
 /**
  * @file qcService.ts
- * @description Service สำหรับจัดการ Quotation Comparison (QC)
+ * @description Service Entry Point for QC Module
+ * Uses Factory Pattern to switch between Mock and Real API implementations
  */
 
-import { MOCK_QC_LIST } from '../__mocks__/qcMocks';
-import type { QCListItem } from '../types/qc-types';
+import { USE_MOCK } from './api';
+import type { IQCService } from './interfaces/IQCService';
+import { MockQCService } from './implementations/MockQCService';
+import { QCServiceImpl } from './implementations/QCServiceImpl';
 
-export interface QCListParams {
-    qc_no?: string;
-    pr_no?: string;
-    status?: string;
-    date_from?: string;
-    date_to?: string;
-}
-
-export interface QCListResponse {
-    data: QCListItem[];
-    total: number;
-    page: number;
-    limit: number;
-}
-
-export const qcService = {
-    /**
-     * ดึงรายการ QC ทั้งหมด (Mock)
-     */
-    getList: async (params?: QCListParams): Promise<QCListResponse> => {
-        // Simulate API latency
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        let data = [...MOCK_QC_LIST];
-
-        if (params) {
-            if (params.qc_no) {
-                data = data.filter(item => item.qc_no.toLowerCase().includes(params.qc_no!.toLowerCase()));
-            }
-            if (params.pr_no) {
-                data = data.filter(item => item.pr_no?.toLowerCase().includes(params.pr_no!.toLowerCase()));
-            }
-            if (params.status && params.status !== 'ALL') {
-                data = data.filter(item => item.status.toLowerCase() === params.status!.toLowerCase());
-            }
-            if (params.date_from) {
-                data = data.filter(item => item.created_at >= params.date_from!);
-            }
-            if (params.date_to) {
-                data = data.filter(item => item.created_at <= params.date_to!);
-            }
-        }
-
-        return {
-            data,
-            total: data.length,
-            page: 1,
-            limit: 20
-        };
+const getQCService = (): IQCService => {
+    if (USE_MOCK) {
+        console.log('🔧 [QC Service] Using Mock Implementation');
+        return new MockQCService();
     }
+    console.log('🔧 [QC Service] Using Real API Implementation');
+    return new QCServiceImpl();
 };
+
+export const qcService = getQCService();
+
+export default qcService;
+
+export type { QCListParams, QCListResponse } from './interfaces/IQCService';
