@@ -23,7 +23,6 @@ import RFQListPage from './pages/procurement/rfq/RFQListPage';
 import QTListPage from './pages/procurement/qt/QTListPage';
 import QCListPage from './pages/procurement/qc/QCListPage';
 import { 
-    // QuotationComparisonListPage, 
     PurchaseOrderListPage, 
     GoodsReceiptNoteListPage, 
     PurchaseReturnListPage 

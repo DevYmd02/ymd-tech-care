@@ -1,8 +1,10 @@
 /**
  * @file VendorSearchModal.tsx
  * @description Modal สำหรับค้นหาและเลือกผู้ขาย (Vendor)
- * @usage เรียกใช้งานจาก PRHeader.tsx เมื่อกดปุ่ม "..."
- * @refactored ใช้ SearchModal component และ centralized types จาก vendor-types.ts
+ * 
+ * @refactored 2026-01-22: Decoupled data fetching from UI
+ * - VendorSearchModalBase: Pure/Dumb component ที่รับ data ผ่าน props
+ * - VendorSearchModal: Smart wrapper ที่ fetch data และส่งต่อให้ Base
  */
 
 import React, { useState, useEffect } from 'react';
@@ -14,40 +16,8 @@ import { MOCK_VENDORS } from '../../__mocks__';
 // Re-export for backward compatibility
 export type Vendor = VendorSearchItem;
 
-/** Props ของ VendorSearchModal */
-interface Props {
-    isOpen: boolean;                           // สถานะเปิด/ปิด Modal
-    onClose: () => void;                       // Callback เมื่อปิด Modal
-    onSelect: (vendor: VendorSearchItem) => void; // Callback เมื่อเลือกผู้ขาย
-}
-
 // ====================================================================================
-// MOCK DATA - Fallback เมื่อ API ไม่พร้อม (ใช้ข้อมูลจาก relatedMocks)
-// ====================================================================================
-
-const FALLBACK_VENDORS: VendorSearchItem[] = MOCK_VENDORS.length > 0
-    ? MOCK_VENDORS.map(v => ({
-        code: v.vendor_code,
-        name: v.vendor_name,
-        address: [v.address_line1, v.address_line2].filter(Boolean).join(' ') || '-',
-        phone: v.phone,
-        taxId: v.tax_id,
-    }))
-    : [
-        { code: 'EQ-ASS-BBP-003', name: 'หจก. ปะกาจัง จำกัด', address: 'เลขที่22/3อาทิตย์ ต่างประเทศปร ต.บางบอ' },
-        { code: 'EQ-ASS-SLL-004', name: 'สมหมาย สามเสน จำกัด', address: 'เลขที่22/3ธนัว ต่างประเทศรวมสุข อ.บางบวง' },
-        { code: 'EQ-ASS-SLO-013', name: 'สต๊าฟ ไลท์ องมีแวน จำกัด', address: 'อาคารนครสยม การวงค์ ชีลอบสุระ E907-910 เลข' },
-        { code: 'EQ-ASS-SRR-005', name: 'สมหมาย สามเสน จำกัด', address: 'เลขที่20 ซอมพุทธรณาคร4 ถนนพรรณาคร' },
-        { code: 'EQ-ASS-VSC-006', name: 'บริษัท วีอธซีคอม จำกัด', address: 'เลขที่ 2002/250 สุรสคพ หลานสาม', phone: 'VSHOP COMPUTER CO.,LTD' },
-        { code: 'EQ-ASS-WST-002', name: 'เจริญ สมเด็น จงยุทใ (ประเทศไทย) จำกัด', address: 'อาคารสำรัตรกธานาคี ชั้น6 อาทิตปะคอบ อา ทิต440,442 >' },
-        { code: 'EQ-CAL-A&P-001', name: 'เอ แอนด์ พี ทันรื้อ 1351', address: 'เลขที่ 174 ถนนม เอกชัย แขวงสองหายพระ' },
-        { code: 'EQ-FOK-APM-001', name: 'เอ พี.ซัม. มาร์เคติ้ง เอครีจิ้ม เจาอมีค', address: '552 ซอมสุจิงกรุ 57 ถนนเอริงกรุ แขวงส' },
-        { code: 'EQ-GAD-WRW-001', name: 'วรงษ์ เข็มเรือ', address: '24 ซ.เรียงเหนือส 1/1 ถนม เจาพาวาเวร เงค' },
-        { code: 'EQ-OEQ-ACT-002', name: 'แอคทีฟ ไมทีค จำกัด', address: '69/138 ถนนตำหทท 56 ระงบวอว ทรีพา' },
-    ];
-
-// ====================================================================================
-// COLUMN CONFIGURATION
+// COLUMN CONFIGURATION (Shared)
 // ====================================================================================
 
 const vendorColumns: ColumnDef<VendorSearchItem>[] = [
@@ -75,14 +45,124 @@ const vendorColumns: ColumnDef<VendorSearchItem>[] = [
 ];
 
 // ====================================================================================
-// COMPONENT - VendorSearchModal
+// BASE COMPONENT - Pure/Dumb Component (Receives data via props)
 // ====================================================================================
 
-export const VendorSearchModal: React.FC<Props> = ({ isOpen, onClose, onSelect }) => {
-    const [vendors, setVendors] = useState<VendorSearchItem[]>(FALLBACK_VENDORS);
+/** Props for VendorSearchModalBase - Dumb Component */
+export interface VendorSearchModalBaseProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onSelect: (vendor: VendorSearchItem) => void;
+    /** Vendor data to display - passed from parent */
+    data: VendorSearchItem[];
+    /** Loading state indicator */
+    isLoading?: boolean;
+    /** Custom title */
+    title?: string;
+    /** Custom subtitle */
+    subtitle?: string;
+    /** Custom empty text */
+    emptyText?: string;
+}
+
+/**
+ * VendorSearchModalBase - Pure/Dumb Component
+ * 
+ * @description รับ data ผ่าน props ไม่ fetch เอง - สามารถ reuse ได้ง่าย
+ * @usage ใช้เมื่อต้องการควบคุม data source เอง
+ * 
+ * @example
+ * ```tsx
+ * const myVendors = [...];
+ * <VendorSearchModalBase 
+ *   isOpen={open} 
+ *   onClose={close} 
+ *   onSelect={handleSelect}
+ *   data={myVendors}
+ * />
+ * ```
+ */
+export const VendorSearchModalBase: React.FC<VendorSearchModalBaseProps> = ({
+    isOpen,
+    onClose,
+    onSelect,
+    data,
+    isLoading = false,
+    title = 'ค้นหาผู้ขาย - Find Vendor',
+    subtitle,
+    emptyText,
+}) => {
+    const displaySubtitle = subtitle ?? (isLoading ? 'กำลังโหลด...' : 'ค้นหารหัส หรือ ชื่อผู้ขาย...');
+    const displayEmptyText = emptyText ?? (isLoading ? 'กำลังโหลดข้อมูล...' : 'ไม่พบผู้ขายที่ค้นหา');
+
+    return (
+        <SearchModal<VendorSearchItem>
+            isOpen={isOpen}
+            onClose={onClose}
+            onSelect={onSelect}
+            title={title}
+            subtitle={displaySubtitle}
+            searchLabel="ค้นหา"
+            searchPlaceholder="ค้นหารหัส หรือ ชื่อผู้ขาย..."
+            accentColor="blue"
+            data={data}
+            columns={vendorColumns}
+            filterFn={(v, term) =>
+                v.code.toLowerCase().includes(term) ||
+                v.name.toLowerCase().includes(term) ||
+                (v.phone?.toLowerCase().includes(term) || false)
+            }
+            getKey={(v) => v.code}
+            emptyText={displayEmptyText}
+        />
+    );
+};
+
+// ====================================================================================
+// SMART WRAPPER - Handles data fetching (Backward Compatible)
+// ====================================================================================
+
+/** Props for VendorSearchModal - Smart Wrapper */
+interface VendorSearchModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onSelect: (vendor: VendorSearchItem) => void;
+}
+
+/**
+ * Transform MOCK_VENDORS to VendorSearchItem format
+ */
+const transformMockVendors = (): VendorSearchItem[] => {
+    if (MOCK_VENDORS.length === 0) return [];
+    return MOCK_VENDORS.map(v => ({
+        code: v.vendor_code,
+        name: v.vendor_name,
+        address: [v.address_line1, v.address_line2].filter(Boolean).join(' ') || '-',
+        phone: v.phone,
+        taxId: v.tax_id,
+    }));
+};
+
+/**
+ * VendorSearchModal - Smart Component (Handles fetching)
+ * 
+ * @description Wrapper ที่ fetch data แล้วส่งต่อให้ VendorSearchModalBase
+ * @usage ใช้เมื่อต้องการให้ component จัดการ fetch เอง (backward compatible)
+ * 
+ * @example
+ * ```tsx
+ * <VendorSearchModal 
+ *   isOpen={open} 
+ *   onClose={close} 
+ *   onSelect={handleSelect}
+ * />
+ * ```
+ */
+export const VendorSearchModal: React.FC<VendorSearchModalProps> = ({ isOpen, onClose, onSelect }) => {
+    const [vendors, setVendors] = useState<VendorSearchItem[]>(transformMockVendors());
     const [isLoading, setIsLoading] = useState(false);
 
-    // Fetch vendors when modal opens - fallback to mock if API fails
+    // Fetch vendors when modal opens
     useEffect(() => {
         if (!isOpen) return;
 
@@ -94,7 +174,6 @@ export const VendorSearchModal: React.FC<Props> = ({ isOpen, onClose, onSelect }
                 if (!isMounted) return;
 
                 if (data.length > 0) {
-                    // Transform API data to VendorSearchItem format
                     const apiVendors: VendorSearchItem[] = data.map(v => ({
                         code: v.vendor_code,
                         name: v.vendor_name,
@@ -102,13 +181,11 @@ export const VendorSearchModal: React.FC<Props> = ({ isOpen, onClose, onSelect }
                     }));
                     setVendors(apiVendors);
                 } else {
-                    // Fallback to mock data
-                    setVendors(FALLBACK_VENDORS);
+                    setVendors(transformMockVendors());
                 }
             } catch {
-                // Fallback to mock data on error
                 if (isMounted) {
-                    setVendors(FALLBACK_VENDORS);
+                    setVendors(transformMockVendors());
                 }
             } finally {
                 if (isMounted) {
@@ -126,24 +203,12 @@ export const VendorSearchModal: React.FC<Props> = ({ isOpen, onClose, onSelect }
     }, [isOpen]);
 
     return (
-        <SearchModal<VendorSearchItem>
+        <VendorSearchModalBase
             isOpen={isOpen}
             onClose={onClose}
             onSelect={onSelect}
-            title="ค้นหาผู้ขาย - Find Vendor"
-            subtitle={isLoading ? 'กำลังโหลด...' : 'ค้นหารหัส หรือ ชื่อผู้ขาย...'}
-            searchLabel="ค้นหา"
-            searchPlaceholder="ค้นหารหัส หรือ ชื่อผู้ขาย..."
-            accentColor="blue"
             data={vendors}
-            columns={vendorColumns}
-            filterFn={(v, term) =>
-                v.code.toLowerCase().includes(term) ||
-                v.name.toLowerCase().includes(term) ||
-                (v.phone?.toLowerCase().includes(term) || false)
-            }
-            getKey={(v) => v.code}
-            emptyText={isLoading ? 'กำลังโหลดข้อมูล...' : 'ไม่พบผู้ขายที่ค้นหา'}
+            isLoading={isLoading}
         />
     );
 };

@@ -88,7 +88,8 @@ export default function ProductCategoryListRefactored() {
     };
 
     const handleDelete = (id: string) => {
-        console.log('Delete category:', id);
+        void id; // Will be used when delete API is implemented
+        // TODO: Implement productCategoryService.delete(id)
         // After delete, refresh the list
         listState.refresh();
     };

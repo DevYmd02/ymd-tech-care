@@ -9,7 +9,9 @@ import { FileText, Search, Trash2, Scale } from 'lucide-react';
 import { WindowFormLayout } from '../../../../components/shared/WindowFormLayout';
 import { QCFooter } from './QCFooter';
 import { VendorSearchModal } from '../../../../components/shared/VendorSearchModal';
+import { qcService } from '../../../../services';
 import type { VendorSearchItem } from '../../../../types/vendor-types';
+import type { QCCreateData } from '../../../../services/interfaces/IQCService';
 
 interface QCFormModalProps {
   isOpen: boolean;
@@ -135,11 +137,30 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
   const handleSave = async () => {
     setIsLoading(true);
     try {
-      // TODO: Implement actual save logic with qcService
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      window.alert('บันทึกใบเปรียบเทียบราคาสำเร็จ!');
-      onSuccess?.();
-      onClose();
+      const qcData: QCCreateData = {
+        pr_no: prNo,
+        rfq_no: rfqNo,
+        qc_date: qcDate,
+        vendor_lines: vendorLines.map(line => ({
+          vendor_code: line.vendor_code,
+          vendor_name: line.vendor_name,
+          qt_no: line.qt_no,
+          total_amount: line.total_amount,
+          payment_term_days: line.payment_term_days,
+          lead_time_days: line.lead_time_days,
+          valid_until: line.valid_until,
+        })),
+      };
+
+      const result = await qcService.create(qcData);
+      
+      if (result.success) {
+        window.alert(result.message || 'บันทึกใบเปรียบเทียบราคาสำเร็จ!');
+        onSuccess?.();
+        onClose();
+      } else {
+        window.alert(result.message || 'เกิดข้อผิดพลาดในการบันทึก');
+      }
     } catch (error) {
       console.error('Save QC failed:', error);
       window.alert('เกิดข้อผิดพลาดในการบันทึก');

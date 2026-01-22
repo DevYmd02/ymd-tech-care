@@ -3,7 +3,7 @@
  * @description Mock implementation for QC Service
  */
 
-import type { IQCService, QCListParams, QCListResponse } from '../interfaces/IQCService';
+import type { IQCService, QCListParams, QCListResponse, QCCreateData } from '../interfaces/IQCService';
 import { MOCK_QCS } from '../../__mocks__/procurementMocks';
 import { logger } from '../../utils/logger';
 
@@ -37,6 +37,19 @@ export class MockQCService implements IQCService {
       total: data.length,
       page: 1,
       limit: 20,
+    };
+  }
+
+  async create(data: QCCreateData): Promise<{ success: boolean; qc_id?: string; message?: string }> {
+    logger.log('[MockQCService] create', data);
+    await this.delay(800);
+
+    // Simulate successful creation
+    const newQCId = `qc-${Date.now()}`;
+    return {
+      success: true,
+      qc_id: newQCId,
+      message: 'บันทึกใบเปรียบเทียบราคาสำเร็จ',
     };
   }
 

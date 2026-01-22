@@ -67,17 +67,6 @@ export {
 } from './approvalFlowMocks';
 
 // ====================================================================================
-// LEGACY EXPORTS (For backward compatibility - will be deprecated)
-// ====================================================================================
-
-// Re-export from procurementMocks for backward compatibility with existing imports
-export { MOCK_PRS as RELATED_PRS } from './procurementMocks';
-export { MOCK_RFQS as RELATED_RFQS } from './procurementMocks';
-export { MOCK_RFQ_LINES as RELATED_RFQ_LINES } from './procurementMocks';
-export { MOCK_RFQ_VENDORS as RELATED_RFQ_VENDORS } from './procurementMocks';
-export { MOCK_VENDORS as RELATED_VENDORS } from './vendorMocks';
-
-// ====================================================================================
 // PRODUCT LOOKUP (Item Search)
 // ====================================================================================
 export { MOCK_PRODUCTS, type ProductLookup, type Product } from './products';

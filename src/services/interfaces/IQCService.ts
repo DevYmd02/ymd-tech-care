@@ -20,6 +20,23 @@ export interface QCListResponse {
   limit: number;
 }
 
+export interface QCCreateData {
+  pr_no?: string;
+  rfq_no?: string;
+  qc_date: string;
+  vendor_lines: Array<{
+    vendor_code: string;
+    vendor_name: string;
+    qt_no: string;
+    total_amount: number;
+    payment_term_days: number;
+    lead_time_days: number;
+    valid_until: string;
+  }>;
+  remark?: string;
+}
+
 export interface IQCService {
   getList(params?: QCListParams): Promise<QCListResponse>;
+  create(data: QCCreateData): Promise<{ success: boolean; qc_id?: string; message?: string }>;
 }

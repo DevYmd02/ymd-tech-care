@@ -35,7 +35,13 @@ export { VendorSearchModal } from './VendorSearchModal';
 
 // Layouts
 export { WindowFormLayout } from './WindowFormLayout';
+export { PageListLayout } from './PageListLayout';
+export type { PageListLayoutProps, AccentColor } from './PageListLayout';
 export { SystemAlert } from './SystemAlert';
+
+// Filter Components
+export { FilterField, FilterActions } from './FilterField';
+export type { FilterFieldProps, FilterActionsProps, SelectOption } from './FilterField';
 
 // Utilities
 export { ErrorBoundary } from './ErrorBoundary';

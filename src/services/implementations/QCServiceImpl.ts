@@ -4,11 +4,12 @@
  */
 
 import api from '../api';
-import type { IQCService, QCListParams, QCListResponse } from '../interfaces/IQCService';
+import type { IQCService, QCListParams, QCListResponse, QCCreateData } from '../interfaces/IQCService';
 import { logger } from '../../utils/logger';
 
 const ENDPOINTS = {
   list: '/qc',
+  create: '/qc',
 };
 
 export class QCServiceImpl implements IQCService {
@@ -23,6 +24,23 @@ export class QCServiceImpl implements IQCService {
         total: 0,
         page: 1,
         limit: 20,
+      };
+    }
+  }
+
+  async create(data: QCCreateData): Promise<{ success: boolean; qc_id?: string; message?: string }> {
+    try {
+      const response = await api.post<{ qc_id: string }>(ENDPOINTS.create, data);
+      return {
+        success: true,
+        qc_id: response.data.qc_id,
+        message: 'บันทึกใบเปรียบเทียบราคาสำเร็จ',
+      };
+    } catch (error) {
+      logger.error('[QCServiceImpl] create error:', error);
+      return {
+        success: false,
+        message: 'เกิดข้อผิดพลาดในการบันทึก',
       };
     }
   }

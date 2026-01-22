@@ -5,6 +5,7 @@ import { WindowFormLayout } from '../../../../components/shared/WindowFormLayout
 import { SystemAlert } from '../../../../components/shared/SystemAlert';
 import type { QuotationHeader, QuotationLine } from '../../../../types/qt-types';
 import { masterDataService } from '../../../../services/masterDataService';
+import { qtService } from '../../../../services';
 import type { UnitMaster } from '../../../../types/master-data-types';
 import type { ProductLookup } from '../../../../__mocks__';
 import { MOCK_PRODUCTS } from '../../../../__mocks__';
@@ -208,16 +209,15 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ }
           total_amount: grandTotal,
           lines: lines.filter(l => l.item_code),
       };
-
-      console.log('Sending Payload:', payload);
       
-      // Call Service
-      import('../../../../services/qtService').then(({ qtService }) => {
-          qtService.create(payload).then(() => {
-             window.alert('บันทึกใบเสนอราคาเรียบร้อย');
-             if (onSuccess) onSuccess();
-             onClose();
-          });
+      // Call Service directly (static import)
+      qtService.create(payload).then(() => {
+         window.alert('บันทึกใบเสนอราคาเรียบร้อย');
+         if (onSuccess) onSuccess();
+         onClose();
+      }).catch(error => {
+         console.error('Save QT failed:', error);
+         window.alert('เกิดข้อผิดพลาดในการบันทึก');
       });
   };
 
