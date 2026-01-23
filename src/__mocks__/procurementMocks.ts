@@ -100,7 +100,7 @@ const _mockPRs: PRHeader[] = [
     updated_at: '2026-01-16T14:00:00Z',
     created_by_user_id: 'user-001',
     updated_by_user_id: 'user-mgr-001',
-    lines: _prLines001,
+    lines: structuredClone(_prLines001),
   },
   {
     pr_id: 'pr-002',
@@ -120,7 +120,7 @@ const _mockPRs: PRHeader[] = [
     updated_at: '2026-01-21T10:00:00Z',
     created_by_user_id: 'user-002',
     updated_by_user_id: 'user-mgr-001',
-    lines: _prLines002,
+    lines: structuredClone(_prLines002),
   },
   {
     pr_id: 'pr-003',
@@ -132,7 +132,7 @@ const _mockPRs: PRHeader[] = [
     required_date: '2026-03-01',
     cost_center_id: 'cc-003',
     purpose: 'จัดซื้อเฟอร์นิเจอร์สำนักงาน',
-    status: 'IN_APPROVAL', // ⏳ Pending Approval
+    status: 'PENDING', // ⏳ รออนุมัติ
     currency_code: 'THB',
     total_amount: 85000,
     attachment_count: 1,
@@ -151,7 +151,7 @@ const _mockPRs: PRHeader[] = [
     required_date: '2026-02-10',
     cost_center_id: 'cc-001',
     purpose: 'จัดซื้ออุปกรณ์ IT เพิ่มเติม',
-    status: 'DRAFT', // 📝 Draft
+    status: 'DRAFT', // 📝 ร่าง
     currency_code: 'THB',
     total_amount: 45000,
     attachment_count: 0,
@@ -159,6 +159,45 @@ const _mockPRs: PRHeader[] = [
     updated_at: '2026-01-18T14:00:00Z',
     created_by_user_id: 'user-001',
     updated_by_user_id: 'user-001',
+  },
+  // ❌ CANCELLED Items for Testing
+  {
+    pr_id: 'pr-005',
+    pr_no: 'PR-202601-0005',
+    branch_id: 'BR001',
+    requester_user_id: 'user-004',
+    requester_name: 'นภา สวยงาม',
+    request_date: '2026-01-10',
+    required_date: '2026-01-25',
+    cost_center_id: 'cc-002',
+    purpose: 'จัดซื้ออุปกรณ์สำนักงาน (ยกเลิก - เปลี่ยนแผน)',
+    status: 'CANCELLED', // ❌ ยกเลิก
+    currency_code: 'THB',
+    total_amount: 25000,
+    attachment_count: 0,
+    created_at: '2026-01-10T10:00:00Z',
+    updated_at: '2026-01-12T09:00:00Z',
+    created_by_user_id: 'user-004',
+    updated_by_user_id: 'user-mgr-001',
+  },
+  {
+    pr_id: 'pr-006',
+    pr_no: 'PR-202601-0006',
+    branch_id: 'BR002',
+    requester_user_id: 'user-005',
+    requester_name: 'ประสิทธิ์ ทำดี',
+    request_date: '2026-01-08',
+    required_date: '2026-01-20',
+    cost_center_id: 'cc-003',
+    purpose: 'จัดซื้อวัสดุก่อสร้าง (ยกเลิก - งบไม่ผ่าน)',
+    status: 'CANCELLED', // ❌ ยกเลิก
+    currency_code: 'THB',
+    total_amount: 150000,
+    attachment_count: 2,
+    created_at: '2026-01-08T08:00:00Z',
+    updated_at: '2026-01-09T16:00:00Z',
+    created_by_user_id: 'user-005',
+    updated_by_user_id: 'user-mgr-002',
   },
 ];
 

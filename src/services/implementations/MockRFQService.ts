@@ -12,7 +12,7 @@ import type { RFQHeader, RFQListResponse, RFQCreateData, RFQFilterCriteria } fro
 import { logger } from '../../utils/logger';
 
 export class MockRFQService implements IRFQService {
-  private rfqs: RFQHeader[] = [...MOCK_RFQS];
+  private rfqs: RFQHeader[] = structuredClone(MOCK_RFQS);
 
   async getList(params?: RFQFilterCriteria): Promise<RFQListResponse> {
     logger.log('[MockRFQService] getList', params);

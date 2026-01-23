@@ -148,7 +148,7 @@ export class MockPRService implements IPRService {
 
     this.prs[prIndex] = {
       ...pr,
-      status: 'IN_APPROVAL',
+      status: 'PENDING',
       approval_tasks: [newTask],
     };
 
@@ -182,7 +182,7 @@ export class MockPRService implements IPRService {
     if (request.action === 'REJECT') {
       this.prs[prIndex] = {
         ...pr,
-        status: 'REJECTED',
+        status: 'CANCELLED',
         approval_tasks: newTasks,
       };
       return { success: true, message: 'ไม่อนุมัติเอกสารเรียบร้อย', approval_task: structuredClone(updatedTask) };
@@ -211,7 +211,7 @@ export class MockPRService implements IPRService {
 
         this.prs[prIndex] = {
           ...pr,
-          status: 'IN_APPROVAL',
+          status: 'PENDING',
           approval_tasks: [...newTasks, nextTask],
         };
 

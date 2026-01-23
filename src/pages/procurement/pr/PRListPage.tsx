@@ -28,13 +28,9 @@ import type { PRHeader, PRStatus } from '../../../types/pr-types';
 const PR_STATUS_OPTIONS = [
     { value: 'ALL', label: 'ทั้งหมด' },
     { value: 'DRAFT', label: 'ร่าง' },
-    { value: 'SUBMITTED', label: 'ส่งแล้ว' },
-    { value: 'IN_APPROVAL', label: 'รออนุมัติ' },
+    { value: 'PENDING', label: 'รออนุมัติ' },
     { value: 'APPROVED', label: 'อนุมัติแล้ว' },
-    { value: 'REJECTED', label: 'ปฏิเสธ' },
     { value: 'CANCELLED', label: 'ยกเลิก' },
-    { value: 'CONVERTED', label: 'แปลงแล้ว' },
-    { value: 'CLOSED', label: 'ปิด' },
 ];
 
 // ====================================================================================
@@ -179,73 +175,88 @@ export default function PRListPage() {
                         </span>
                     </div>
 
-                    {/* Table */}
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
+                    {/* Table - Responsive Fixed Layout */}
+                    <div className="overflow-hidden">
+                        <table className="w-full table-fixed">
                             <thead className="bg-gray-50 dark:bg-gray-700">
                                 <tr>
-                                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase w-12">ลำดับ</th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">เลขที่เอกสาร</th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">วันที่</th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">ผู้ขอ</th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">แผนก</th>
-                                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">สถานะ</th>
-                                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">จำนวนรายการ</th>
-                                    <th className="px-4 py-3 text-right text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">ยอดรวม (บาท)</th>
-                                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">จัดการ</th>
+                                    <th className="w-[4%] px-2 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">ลำดับ</th>
+                                    <th className="w-[13%] px-2 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">เลขที่เอกสาร</th>
+                                    <th className="w-[10%] px-2 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">วันที่</th>
+                                    <th className="w-[12%] px-2 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">ผู้ขอ</th>
+                                    <th className="w-[17%] px-2 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">วัตถุประสงค์</th>
+                                    <th className="w-[10%] px-2 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">สถานะ</th>
+                                    <th className="w-[6%] px-2 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">รายการ</th>
+                                    <th className="w-[11%] px-2 py-3 text-right text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">ยอดรวม</th>
+                                    <th className="w-[17%] px-2 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">จัดการ</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-700 text-sm">
                                 {prList.length > 0 ? (
                                     prList.map((item, index) => (
                                         <tr key={item.pr_id} className="hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors">
-                                            <td className="px-4 py-4 text-gray-600 dark:text-gray-300 text-center">{index + 1}</td>
-                                            <td className="px-4 py-4">
-                                                <span className="font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer">
+                                            <td className="px-2 py-3 text-gray-600 dark:text-gray-300 text-center text-xs">{index + 1}</td>
+                                            <td className="px-2 py-3">
+                                                <span className="font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer text-xs truncate block" title={item.pr_no}>
                                                     {item.pr_no}
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-4 text-gray-600 dark:text-gray-300">
+                                            <td className="px-2 py-3 text-gray-600 dark:text-gray-300 text-xs whitespace-nowrap">
                                                 {formatThaiDate(item.request_date)}
                                             </td>
-                                            <td className="px-4 py-4">
-                                                <div className="font-medium text-gray-700 dark:text-gray-200">{item.requester_name}</div>
+                                            <td className="px-2 py-3">
+                                                <div className="font-medium text-gray-700 dark:text-gray-200 text-xs truncate" title={item.requester_name}>{item.requester_name}</div>
                                             </td>
-                                            <td className="px-4 py-4 text-gray-600 dark:text-gray-300">
-                                                {item.purpose || '-'}
+                                            <td className="px-2 py-3 text-gray-600 dark:text-gray-300 text-xs">
+                                                <span className="truncate block" title={item.purpose || '-'}>{item.purpose || '-'}</span>
                                             </td>
-                                            <td className="px-4 py-4 text-center">
+                                            <td className="px-2 py-3 text-center">
                                                 <PRStatusBadge status={item.status as PRStatus} />
                                             </td>
-                                            <td className="px-4 py-4 text-center text-gray-600 dark:text-gray-300">
+                                            <td className="px-2 py-3 text-center text-gray-600 dark:text-gray-300 text-xs">
                                                 {item.lines?.length || 0}
                                             </td>
-                                            <td className="px-4 py-4 font-semibold text-gray-800 dark:text-gray-200 text-right">
+                                            <td className="px-2 py-3 font-semibold text-gray-800 dark:text-gray-200 text-right text-xs whitespace-nowrap">
                                                 {item.total_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                             </td>
-                                            <td className="px-4 py-4 text-center">
-                                                <div className="flex items-center justify-center gap-3">
-                                                    <button className="text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors" title="ดูรายละเอียด">
-                                                        <Eye size={18} />
+                                            <td className="px-2 py-3 text-center">
+                                                <div className="flex items-center justify-center gap-1.5">
+                                                    <button className="p-1 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors" title="ดูรายละเอียด">
+                                                        <Eye size={16} />
                                                     </button>
                                                     
+                                                    {/* Edit button - only for DRAFT */}
+                                                    {item.status === 'DRAFT' && (
+                                                        <button className="p-1 text-orange-500 hover:text-orange-700 transition-colors" title="แก้ไข">
+                                                            <Edit size={16} />
+                                                        </button>
+                                                    )}
+                                                    
+                                                    {/* Submit button - only for DRAFT */}
+                                                    {item.status === 'DRAFT' && (
+                                                        <button className="p-1 text-blue-500 hover:text-blue-700 transition-colors" title="ส่งอนุมัติ">
+                                                            <Send size={16} />
+                                                        </button>
+                                                    )}
+                                                    
+                                                    {/* Create RFQ button - Enabled ONLY for APPROVED status */}
                                                     {item.status === 'APPROVED' ? (
                                                         <button 
                                                             onClick={() => handleCreateRFQ(item)}
-                                                            className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded shadow-sm transition-colors flex items-center gap-1"
+                                                            className="bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm transition-colors flex items-center gap-0.5 whitespace-nowrap"
+                                                            title="สร้างใบขอใบเสนอราคา"
                                                         >
-                                                            <FileText size={14} /> สร้าง RFQ
+                                                            <FileText size={12} /> สร้าง RFQ
                                                         </button>
-                                                    ) : (
-                                                        <>
-                                                            <button className="text-orange-500 hover:text-orange-700 transition-colors" title="แก้ไข">
-                                                                <Edit size={18} />
-                                                            </button>
-                                                            <button className="text-blue-500 hover:text-blue-700 transition-colors" title="ส่ง">
-                                                                <Send size={18} />
-                                                            </button>
-                                                        </>
-                                                    )}
+                                                    ) : item.status !== 'DRAFT' ? (
+                                                        <button 
+                                                            disabled
+                                                            className="bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 text-[10px] font-bold px-2 py-1 rounded shadow-sm cursor-not-allowed flex items-center gap-0.5 whitespace-nowrap"
+                                                            title={item.status === 'PENDING' ? 'ต้องอนุมัติก่อนจึงจะสร้าง RFQ ได้' : 'ไม่สามารถสร้าง RFQ ได้ (สถานะ: ยกเลิก)'}
+                                                        >
+                                                            <FileText size={12} /> สร้าง RFQ
+                                                        </button>
+                                                    ) : null}
                                                 </div>
                                             </td>
                                         </tr>
