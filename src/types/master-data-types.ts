@@ -513,3 +513,35 @@ export interface Project {
   end_date: string;                 // DATE
   status: ProjectStatus;
 }
+
+// ====================================================================================
+// APPROVAL WORKFLOW - กำหนด Flow การอนุมัติ
+// ====================================================================================
+
+/**
+ * ApprovalDocType - ประเภทเอกสารที่ต้องอนุมัติ
+ */
+export type ApprovalDocType = 'PR' | 'PO' | 'GRN' | 'INVOICE';
+
+/**
+ * ApprovalFlow - ตารางกำหนดเงื่อนไขการอนุมัติ (approval_flow)
+ */
+export interface ApprovalFlow {
+    flow_id: string;                // UUID - Primary Key
+    doc_type: ApprovalDocType;      // ประเภทเอกสาร
+    min_amount: number;             // วงเงินต่ำสุด
+    max_amount: number;             // วงเงินสูงสุด
+    
+    // Relations
+    approval_flow_steps?: ApprovalFlowStep[];
+}
+
+/**
+ * ApprovalFlowStep - ขั้นตอนการอนุมัติ (approval_flow_step)
+ */
+export interface ApprovalFlowStep {
+    step_id: string;                // UUID - Primary Key
+    flow_id: string;                // FK -> approval_flow
+    approver_user_id: string;       // User ที่ต้องอนุมัติในขั้นตอนนี้
+    sequence_no: number;            // ลำดับการอนุมัติ (1, 2, 3...)
+}

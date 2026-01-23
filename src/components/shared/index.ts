@@ -18,14 +18,17 @@ export { PageBanner } from './PageBanner';
 export type { PageBannerProps } from './PageBanner';
 
 // Status Badges
-export { 
-  StatusBadge, 
-  PRStatusBadge, 
+export {
+  StatusBadge,
+  PRStatusBadge,
   RFQStatusBadge,
+  QTStatusBadge,
+  QCStatusBadge,
   ActiveStatusBadge,
   VendorStatusBadge,
+  ModuleStatusBadge,
 } from './StatusBadge';
-export type { StatusBadgeProps, ActiveStatusBadgeProps, VendorStatusBadgeProps } from './StatusBadge';
+export type { StatusBadgeProps, ActiveStatusBadgeProps, VendorStatusBadgeProps, ModuleStatusBadgeProps } from './StatusBadge';
 
 // Modals
 export { ApprovalModal } from './ApprovalModal';
@@ -35,7 +38,19 @@ export { VendorSearchModal } from './VendorSearchModal';
 
 // Layouts
 export { WindowFormLayout } from './WindowFormLayout';
+export { PageListLayout } from './PageListLayout';
+export type { PageListLayoutProps, AccentColor } from './PageListLayout';
 export { SystemAlert } from './SystemAlert';
+
+// Filter Components
+export { FilterField, FilterActions } from './FilterField';
+export type { FilterFieldProps, FilterActionsProps, SelectOption } from './FilterField';
+
+// Filter Form Builder
+export { FilterFormBuilder } from './FilterFormBuilder';
+export type { FilterFieldConfig, FilterFormBuilderProps } from './FilterFormBuilder';
+export { createFilterChangeHandler } from './filterFormUtils';
+export type { FilterChangeHandlers } from './filterFormUtils';
 
 // Utilities
 export { ErrorBoundary } from './ErrorBoundary';

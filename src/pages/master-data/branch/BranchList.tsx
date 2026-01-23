@@ -112,10 +112,9 @@ export default function BranchList() {
     const handleModalClose = () => {
         setIsModalOpen(false);
         setEditingId(null);
-        fetchData();
     };
 
-
+    // ...
 
     // ==================== RENDER ====================
     return (
@@ -299,6 +298,7 @@ export default function BranchList() {
                 isOpen={isModalOpen} 
                 onClose={handleModalClose}
                 editId={editingId}
+                onSuccess={fetchData}
             />
         </div>
     );

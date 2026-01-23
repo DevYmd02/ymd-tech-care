@@ -3,29 +3,13 @@
  * @description Coming Soon placeholder pages for Procurement modules (QT, QC, PO, GRN, PRT)
  */
 
-import { Clock, FileText, ShoppingCart, Package, RotateCcw, CheckSquare } from 'lucide-react';
+import { Clock, ShoppingCart, Package, RotateCcw } from 'lucide-react';
 
 interface ProcurementComingSoonProps {
-    module: 'QT' | 'QC' | 'PO' | 'GRN' | 'PRT';
+    module: 'PO' | 'GRN' | 'PRT';
 }
 
 const moduleConfig = {
-    QT: {
-        title: 'รายการใบเสนอราคา (QT)',
-        subtitle: 'Quotation',
-        description: 'ระบบจัดการใบเสนอราคาจากผู้ขาย',
-        icon: FileText,
-        color: 'text-blue-400',
-        bgColor: 'bg-blue-600/20',
-    },
-    QC: {
-        title: 'รายการใบเปรียบเทียบราคา (QC)',
-        subtitle: 'Quotation Comparison',
-        description: 'ระบบเปรียบเทียบราคาจากผู้ขายหลายราย',
-        icon: CheckSquare,
-        color: 'text-purple-400',
-        bgColor: 'bg-purple-600/20',
-    },
     PO: {
         title: 'รายการขอสั่งซื้อ (PO)',
         subtitle: 'Purchase Order',
@@ -87,14 +71,6 @@ export function ProcurementComingSoon({ module }: ProcurementComingSoonProps) {
 }
 
 // Export individual page components
-export function QuotationListPage() {
-    return <ProcurementComingSoon module="QT" />;
-}
-
-export function QuotationComparisonListPage() {
-    return <ProcurementComingSoon module="QC" />;
-}
-
 export function PurchaseOrderListPage() {
     return <ProcurementComingSoon module="PO" />;
 }

@@ -44,15 +44,18 @@ export interface VendorMaster {
     phone_ext?: string;
     email?: string;
     website?: string;
+    remarks?: string;
     
     // Payment Info
     payment_term_days?: number;
     credit_limit?: number;
     currency_code?: string;
+    vat_registered?: boolean;
     
     // Flags
     is_blocked: boolean;
     is_on_hold: boolean;
+    is_active?: boolean;
     
     // Audit
     created_at: string;
@@ -94,6 +97,7 @@ export interface VendorFormData {
     phone: string;
     phoneExt: string;
     email: string;
+    remarks: string;
     
     // Status flags
     onHold: boolean;
@@ -126,14 +130,20 @@ export interface VendorDropdownItem {
 
 /**
  * VendorSearchItem - สำหรับ SearchModal (รองรับทั้ง API และ legacy)
+ * Extended to include all fields needed for vendor selection
  */
 export interface VendorSearchItem {
+    vendor_id: string;
     code: string;
     name: string;
+    name_en?: string;
     address?: string;
-    contact?: string;
     phone?: string;
+    email?: string;
     taxId?: string;
+    payment_term_days?: number;
+    vat_registered?: boolean;
+    is_active?: boolean;
 }
 
 // ====================================================================================
@@ -172,6 +182,7 @@ export interface VendorCreateRequest {
     phone?: string;
     phone_ext?: string;
     email?: string;
+    remarks?: string;
 }
 
 /** Response จาก create/update */
@@ -203,6 +214,7 @@ export function toVendorCreateRequest(form: VendorFormData): VendorCreateRequest
         phone: form.phone || undefined,
         phone_ext: form.phoneExt || undefined,
         email: form.email || undefined,
+        remarks: form.remarks || undefined,
     };
 }
 
@@ -234,6 +246,7 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
         phone: vendor.phone || '',
         phoneExt: vendor.phone_ext || '',
         email: vendor.email || '',
+        remarks: vendor.remarks || '',
         onHold: vendor.is_on_hold,
         blocked: vendor.is_blocked,
         inactive: vendor.status === 'INACTIVE',
@@ -267,6 +280,7 @@ export const initialVendorFormData: VendorFormData = {
     phone: '',
     phoneExt: '',
     email: '',
+    remarks: '',
     onHold: false,
     blocked: false,
     inactive: false,

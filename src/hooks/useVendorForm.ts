@@ -125,6 +125,7 @@ export const initialVendorFormState: VendorFormState = {
   phone: '',
   phoneExt: '',
   email: '',
+  remarks: '',
   // Status
   onHold: false,
   blocked: false,

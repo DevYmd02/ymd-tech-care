@@ -1,0 +1,156 @@
+/**
+ * @file PRServiceImpl.ts
+ * @description Real API implementation for PR Service
+ */
+
+import api from '../api';
+import type {
+  IPRService,
+  PRListParams,
+  PRListResponse,
+  ApprovalRequest,
+  ApprovalResponse,
+  ConvertPRRequest,
+} from '../interfaces/IPRService';
+import type { PRHeader, PRFormData } from '../../types/pr-types';
+import { logger } from '../../utils/logger';
+
+const ENDPOINTS = {
+  list: '/pr',
+  detail: (id: string) => `/pr/${id}`,
+  submit: (id: string) => `/pr/${id}/submit`,
+  approve: (id: string) => `/pr/${id}/approve`,
+  cancel: (id: string) => `/pr/${id}/cancel`,
+  convert: (id: string) => `/pr/${id}/convert`,
+  attachments: (id: string) => `/pr/${id}/attachments`,
+  attachment: (id: string, attachmentId: string) => `/pr/${id}/attachments/${attachmentId}`,
+};
+
+export class PRServiceImpl implements IPRService {
+  async getList(params?: PRListParams): Promise<PRListResponse> {
+    try {
+      const response = await api.get<PRListResponse>(ENDPOINTS.list, { params });
+      return response.data;
+    } catch (error) {
+      logger.error('[PRServiceImpl] getList error:', error);
+      return {
+        data: [],
+        total: 0,
+        page: params?.page || 1,
+        limit: params?.limit || 20,
+      };
+    }
+  }
+
+  async getById(prId: string): Promise<PRHeader | null> {
+    try {
+      const response = await api.get<PRHeader>(ENDPOINTS.detail(prId));
+      return response.data;
+    } catch (error) {
+      logger.error('[PRServiceImpl] getById error:', error);
+      return null;
+    }
+  }
+
+  async create(data: PRFormData): Promise<PRHeader | null> {
+    try {
+      const response = await api.post<PRHeader>(ENDPOINTS.list, data);
+      return response.data;
+    } catch (error) {
+      logger.error('[PRServiceImpl] create error:', error);
+      return null;
+    }
+  }
+
+  async update(prId: string, data: Partial<PRFormData>): Promise<PRHeader | null> {
+    try {
+      const response = await api.put<PRHeader>(ENDPOINTS.detail(prId), data);
+      return response.data;
+    } catch (error) {
+      logger.error('[PRServiceImpl] update error:', error);
+      return null;
+    }
+  }
+
+  async delete(prId: string): Promise<boolean> {
+    try {
+      await api.delete(ENDPOINTS.detail(prId));
+      return true;
+    } catch (error) {
+      logger.error('[PRServiceImpl] delete error:', error);
+      return false;
+    }
+  }
+
+  async submit(prId: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await api.post<{ success: boolean; message: string }>(ENDPOINTS.submit(prId));
+      return response.data;
+    } catch (error) {
+      logger.error('[PRServiceImpl] submit error:', error);
+      return { success: false, message: 'เกิดข้อผิดพลาดในการส่งอนุมัติ' };
+    }
+  }
+
+  async approve(request: ApprovalRequest): Promise<ApprovalResponse> {
+    try {
+      const response = await api.post<ApprovalResponse>(ENDPOINTS.approve(request.pr_id), {
+        action: request.action,
+        remark: request.remark,
+      });
+      return response.data;
+    } catch (error) {
+      logger.error('[PRServiceImpl] approve error:', error);
+      return { success: false, message: 'เกิดข้อผิดพลาดในการอนุมัติ' };
+    }
+  }
+
+  async cancel(prId: string, remark?: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await api.post<{ success: boolean; message: string }>(ENDPOINTS.cancel(prId), { remark });
+      return response.data;
+    } catch (error) {
+      logger.error('[PRServiceImpl] cancel error:', error);
+      return { success: false, message: 'เกิดข้อผิดพลาดในการยกเลิก' };
+    }
+  }
+
+  async convert(request: ConvertPRRequest): Promise<{ success: boolean; document_id?: string; document_no?: string }> {
+    try {
+      const response = await api.post<{ success: boolean; document_id?: string; document_no?: string }>(
+        ENDPOINTS.convert(request.pr_id),
+        { convert_to: request.convert_to, line_ids: request.line_ids }
+      );
+      return response.data;
+    } catch (error) {
+      logger.error('[PRServiceImpl] convert error:', error);
+      return { success: false };
+    }
+  }
+
+  async uploadAttachment(prId: string, file: File): Promise<{ success: boolean; attachment_id?: string }> {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const response = await api.post<{ success: boolean; attachment_id?: string }>(
+        ENDPOINTS.attachments(prId),
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+      return response.data;
+    } catch (error) {
+      logger.error('[PRServiceImpl] uploadAttachment error:', error);
+      return { success: false };
+    }
+  }
+
+  async deleteAttachment(prId: string, attachmentId: string): Promise<boolean> {
+    try {
+      await api.delete(ENDPOINTS.attachment(prId, attachmentId));
+      return true;
+    } catch (error) {
+      logger.error('[PRServiceImpl] deleteAttachment error:', error);
+      return false;
+    }
+  }
+}

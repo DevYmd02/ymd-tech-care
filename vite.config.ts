@@ -23,13 +23,15 @@ export default defineConfig({
             if (id.includes('react-hook-form')) return 'vendor-form';
             if (id.includes('zod')) return 'vendor-zod';
             if (id.includes('axios')) return 'vendor-axios';
-            // Other vendors
-            return 'vendor';
+            if (id.includes('recharts')) return 'vendor-charts';
+            
+            // Other vendors - Let Vite/Rollup handle them to avoid circular dependencies
+            // return 'vendor';
           }
         },
       },
     },
-    chunkSizeWarningLimit: 700,
+    chunkSizeWarningLimit: 1000,
   },
   test: {
     globals: true,

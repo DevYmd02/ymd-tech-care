@@ -45,11 +45,43 @@ export const RFQ_STATUS_COLORS: Record<string, string> = {
 };
 
 export const RFQ_STATUS_LABELS: Record<string, string> = {
-  DRAFT: 'ร่าง',
+  DRAFT: 'แบบร่าง',
   SENT: 'ส่งแล้ว',
   IN_PROGRESS: 'กำลังดำเนินการ',
   CLOSED: 'ปิดแล้ว',
   CANCELLED: 'ยกเลิก',
+};
+
+// ====================================================================================
+// QT STATUS - Quotation
+// ====================================================================================
+
+export const QT_STATUS_COLORS: Record<string, string> = {
+  DRAFT: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+  SUBMITTED: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
+  SELECTED: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+  REJECTED: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
+};
+
+export const QT_STATUS_LABELS: Record<string, string> = {
+  DRAFT: 'ร่าง',
+  SUBMITTED: 'ได้รับแล้ว',
+  SELECTED: 'เทียบราคาแล้ว',
+  REJECTED: 'ไม่เลือก (Rejected)',
+};
+
+// ====================================================================================
+// QC STATUS - Quotation Comparison
+// ====================================================================================
+
+export const QC_STATUS_COLORS: Record<string, string> = {
+  WAITING_FOR_PO: 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300',
+  PO_CREATED: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+};
+
+export const QC_STATUS_LABELS: Record<string, string> = {
+  WAITING_FOR_PO: 'รอเปิดใบสั่งซื้อ',
+  PO_CREATED: 'เปิดใบสั่งซื้อแล้ว',
 };
 
 // ====================================================================================

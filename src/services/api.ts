@@ -53,6 +53,15 @@ export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:30
 export const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
 
 // =============================================================================
+// CONSTANTS
+// =============================================================================
+
+/**
+ * Key สำหรับเก็บ Auth Token ใน localStorage
+ */
+export const AUTH_TOKEN_KEY = 'auth_token';
+
+// =============================================================================
 // AXIOS INSTANCE
 // =============================================================================
 
@@ -76,7 +85,7 @@ const api = axios.create({
  */
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('auth_token');
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -99,7 +108,7 @@ api.interceptors.response.use(
   (error) => {
     // Handle 401 Unauthorized
     if (error.response?.status === 401) {
-      localStorage.removeItem('auth_token');
+      localStorage.removeItem(AUTH_TOKEN_KEY);
       // Redirect to login if not already there
       if (!window.location.pathname.includes('/login')) {
         window.location.href = '/login';
@@ -121,6 +130,40 @@ export const logApiMode = (): void => {
     console.log(`🔧 API Mode: ${USE_MOCK ? 'MOCK DATA' : 'REAL API'}`);
     console.log(`🔗 API URL: ${API_BASE_URL}`);
   }
+};
+
+// =============================================================================
+// ERROR HANDLING UTILITIES
+// =============================================================================
+
+/**
+ * Type สำหรับ API Error Response
+ */
+export interface ApiError {
+  message: string;
+  status?: number;
+  code?: string;
+}
+
+/**
+ * แปลง error จาก API ให้เป็น message ที่อ่านได้
+ * @example
+ * ```typescript
+ * try {
+ *   await api.post('/data', payload);
+ * } catch (error) {
+ *   toast.error(extractErrorMessage(error));
+ * }
+ * ```
+ */
+export const extractErrorMessage = (error: unknown): string => {
+  if (axios.isAxiosError(error)) {
+    return error.response?.data?.message || error.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อ';
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ';
 };
 
 // Log mode on startup (only in DEV)
