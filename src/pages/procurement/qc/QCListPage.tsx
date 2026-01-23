@@ -121,54 +121,56 @@ export default function QCListPage() {
                         </span>
                     </div>
 
-                    {/* Table */}
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
+                    {/* Table - Responsive Fixed Layout */}
+                    <div className="overflow-hidden">
+                        <table className="w-full table-fixed">
                             <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                                 <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-16">ลำดับ</th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">เลขที่ใบ QC</th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">วันที่สร้าง</th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">เลขที่ PR อ้างอิง</th>
-                                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">สถานะ</th>
-                                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">จำนวน Vendors</th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ผู้เสนอราคาต่ำสุด</th>
-                                    <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ราคาต่ำสุด (บาท)</th>
+                                    <th className="w-[5%] px-2 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">ลำดับ</th>
+                                    <th className="w-[14%] px-2 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">เลขที่ใบ QC</th>
+                                    <th className="w-[12%] px-2 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">วันที่สร้าง</th>
+                                    <th className="w-[14%] px-2 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">PR อ้างอิง</th>
+                                    <th className="w-[10%] px-2 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">สถานะ</th>
+                                    <th className="w-[10%] px-2 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Vendors</th>
+                                    <th className="w-[18%] px-2 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">ผู้เสนอราคาต่ำสุด</th>
+                                    <th className="w-[17%] px-2 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">ราคาต่ำสุด (บาท)</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900 text-xs">
                                 {qcList.length > 0 ? (
                                     qcList.map((item, index) => (
                                         <tr key={item.qc_id} className="hover:bg-indigo-50 dark:hover:bg-gray-800 transition-colors">
-                                            <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300 text-center">{index + 1}</td>
+                                            <td className="px-2 py-3 text-gray-600 dark:text-gray-300 text-center">{index + 1}</td>
                                             
-                                            <td className="px-4 py-3">
-                                                <a href="#" className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 hover:underline">
+                                            <td className="px-2 py-3">
+                                                <span className="font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 hover:underline cursor-pointer truncate block" title={item.qc_no}>
                                                     {item.qc_no}
-                                                </a>
+                                                </span>
                                             </td>
 
-                                            <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                                            <td className="px-2 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">
                                                 {formatThaiDate(item.created_at)}
                                             </td>
 
-                                            <td className="px-4 py-3 text-sm font-medium text-purple-500 dark:text-purple-300">
-                                                {item.pr_no}
+                                            <td className="px-2 py-3">
+                                                <span className="font-medium text-purple-500 dark:text-purple-300 truncate block" title={item.pr_no}>
+                                                    {item.pr_no}
+                                                </span>
                                             </td>
 
-                                            <td className="px-4 py-3 text-center">
+                                            <td className="px-2 py-3 text-center">
                                                 <QCStatusBadge status={item.status} />
                                             </td>
 
-                                            <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300 text-center">
+                                            <td className="px-2 py-3 text-gray-600 dark:text-gray-300 text-center">
                                                 {item.vendor_count}
                                             </td>
 
-                                            <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-200">
-                                                {item.lowest_bidder_name}
+                                            <td className="px-2 py-3 text-gray-700 dark:text-gray-200">
+                                                <span className="truncate block" title={item.lowest_bidder_name}>{item.lowest_bidder_name}</span>
                                             </td>
 
-                                            <td className="px-4 py-3 text-sm font-bold text-gray-800 dark:text-white text-right">
+                                            <td className="px-2 py-3 font-bold text-gray-800 dark:text-white text-right whitespace-nowrap">
                                                 {item.lowest_bid_amount?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                             </td>
                                         </tr>

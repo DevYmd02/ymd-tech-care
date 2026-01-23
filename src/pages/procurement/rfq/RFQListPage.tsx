@@ -144,74 +144,72 @@ export default function RFQListPage() {
                         </span>
                     </div>
 
-                    {/* Table */}
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
+                    {/* Table - Responsive Fixed Layout */}
+                    <div className="overflow-hidden">
+                        <table className="w-full table-fixed">
                             <thead className="bg-gray-50 dark:bg-gray-700">
                                 <tr>
-                                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase w-12">ลำดับ</th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">เลขที่ RFQ</th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">วันที่สร้าง</th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">PR อ้างอิง</th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">ผู้สร้าง</th>
-                                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">สถานะ</th>
-                                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">ใช้ได้ถึงวันที่</th>
-                                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">จน.เจ้าหนี้</th>
-                                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">จัดการ</th>
+                                    <th className="w-[4%] px-2 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">ลำดับ</th>
+                                    <th className="w-[14%] px-2 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">เลขที่ RFQ</th>
+                                    <th className="w-[10%] px-2 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">วันที่</th>
+                                    <th className="w-[14%] px-2 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">PR อ้างอิง</th>
+                                    <th className="w-[14%] px-2 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">ผู้สร้าง</th>
+                                    <th className="w-[10%] px-2 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">สถานะ</th>
+                                    <th className="w-[10%] px-2 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">ใช้ได้ถึง</th>
+                                    <th className="w-[8%] px-2 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">เจ้าหนี้</th>
+                                    <th className="w-[16%] px-2 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">จัดการ</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700 text-sm">
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700 text-xs">
                                 {rfqList.length > 0 ? (
                                     rfqList.map((rfq, index) => (
                                         <tr key={rfq.rfq_id} className="hover:bg-teal-50 dark:hover:bg-gray-700 transition-colors">
-                                            <td className="px-4 py-4 text-gray-500 dark:text-gray-400 text-center">
+                                            <td className="px-2 py-3 text-gray-500 dark:text-gray-400 text-center">
                                                 {index + 1}
                                             </td>
-                                            <td className="px-4 py-4">
-                                                <div className="font-semibold text-teal-600 hover:text-teal-800 hover:underline cursor-pointer">
+                                            <td className="px-2 py-3">
+                                                <span className="font-semibold text-teal-600 hover:text-teal-800 hover:underline cursor-pointer truncate block" title={rfq.rfq_no}>
                                                     {rfq.rfq_no}
-                                                </div>
+                                                </span>
                                             </td>
-                                            <td className="px-4 py-4 text-gray-600 dark:text-gray-400">
+                                            <td className="px-2 py-3 text-gray-600 dark:text-gray-400 whitespace-nowrap">
                                                 {formatThaiDate(rfq.rfq_date)}
                                             </td>
-                                            <td className="px-4 py-4">
-                                                <div className="font-semibold text-purple-600 hover:text-purple-800 hover:underline cursor-pointer">
+                                            <td className="px-2 py-3">
+                                                <span className="font-semibold text-purple-600 hover:text-purple-800 hover:underline cursor-pointer truncate block" title={rfq.pr_no || '-'}>
                                                     {rfq.pr_no || '-'}
-                                                </div>
+                                                </span>
                                             </td>
-                                            <td className="px-4 py-4 text-gray-700 dark:text-gray-300">
-                                                {rfq.created_by_name || '-'}
+                                            <td className="px-2 py-3 text-gray-700 dark:text-gray-300">
+                                                <span className="truncate block" title={rfq.created_by_name || '-'}>{rfq.created_by_name || '-'}</span>
                                             </td>
-                                            <td className="px-4 py-4 text-center">
-                                                <div className="flex justify-center">
-                                                    <RFQStatusBadge status={rfq.status} />
-                                                </div>
+                                            <td className="px-2 py-3 text-center">
+                                                <RFQStatusBadge status={rfq.status} />
                                             </td>
-                                            <td className="px-4 py-4 text-center text-gray-600 dark:text-gray-400">
+                                            <td className="px-2 py-3 text-center text-gray-600 dark:text-gray-400 whitespace-nowrap">
                                                 {formatThaiDate(rfq.quote_due_date || '')}
                                             </td>
-                                            <td className="px-4 py-4 text-center font-medium text-gray-700 dark:text-gray-300">
+                                            <td className="px-2 py-3 text-center font-medium text-gray-700 dark:text-gray-300">
                                                 {rfq.vendor_count} ราย
                                             </td>
-                                            <td className="px-4 py-4 text-center">
-                                                <div className="flex items-center justify-center gap-3">
-                                                    <button className="text-gray-500 hover:text-gray-700 transition-colors" title="ดูรายละเอียด">
-                                                        <Eye size={20} />
+                                            <td className="px-2 py-3 text-center">
+                                                <div className="flex items-center justify-center gap-1.5">
+                                                    <button className="p-1 text-gray-500 hover:text-gray-700 transition-colors" title="ดูรายละเอียด">
+                                                        <Eye size={16} />
                                                     </button>
                                                     
                                                     {rfq.status === 'DRAFT' && (
-                                                        <button className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold rounded shadow transition-colors">
-                                                            <Send size={14} /> ส่ง RFQ
+                                                        <button className="flex items-center gap-0.5 px-2 py-1 bg-orange-500 hover:bg-orange-600 text-white text-[10px] font-bold rounded shadow transition-colors whitespace-nowrap">
+                                                            <Send size={12} /> ส่ง RFQ
                                                         </button>
                                                     )}
 
                                                     {rfq.status === 'SENT' && (
                                                         <button 
                                                             onClick={() => handleOpenQT(rfq)}
-                                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded shadow transition-colors"
+                                                            className="flex items-center gap-0.5 px-2 py-1 bg-teal-600 hover:bg-teal-700 text-white text-[10px] font-bold rounded shadow transition-colors whitespace-nowrap"
                                                         >
-                                                            <FileText size={14} /> บันทึกราคา
+                                                            <FileText size={12} /> บันทึกราคา
                                                         </button>
                                                     )}
                                                 </div>

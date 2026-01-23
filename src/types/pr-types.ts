@@ -10,14 +10,9 @@
 
 export type PRStatus = 
   | 'DRAFT'                 // ร่าง
-  | 'SUBMITTED'             // ส่งแล้ว
-  | 'IN_APPROVAL'           // อยู่ระหว่างอนุมัติ
+  | 'PENDING'               // รออนุมัติ
   | 'APPROVED'              // อนุมัติแล้ว
-  | 'REJECTED'              // ปฏิเสธ
-  | 'CANCELLED'             // ยกเลิก
-  | 'PARTIALLY_CONVERTED'   // แปลงบางส่วน
-  | 'CONVERTED'             // แปลงแล้ว (เป็น RFQ/PO)
-  | 'CLOSED';               // ปิด
+  | 'CANCELLED';            // ยกเลิก
 
 // ====================================================================================
 // PR HEADER - ตาม pr_header table

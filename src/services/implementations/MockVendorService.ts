@@ -16,7 +16,7 @@ import { MOCK_VENDORS } from '../../__mocks__/vendorMocks';
 import { logger } from '../../utils/logger';
 
 export class MockVendorService implements IVendorService {
-  private vendors: VendorMaster[] = [...MOCK_VENDORS];
+  private vendors: VendorMaster[] = structuredClone(MOCK_VENDORS);
 
   async getList(params?: VendorListParams): Promise<VendorListResponse> {
     logger.log('[MockVendorService] getList', params);

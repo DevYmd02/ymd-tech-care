@@ -157,7 +157,7 @@ export default function VendorList() {
                             placeholder="ค้นหาชื่อ, รหัส, หรือเลขภาษี..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className={`${styles.input} pl-10`}
+                            className={`${styles.input} pl-10 dark:text-white`}
                         />
                     </div>
                     <div className="relative w-full md:w-48">

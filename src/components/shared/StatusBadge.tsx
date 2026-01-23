@@ -54,39 +54,19 @@ const statusConfig: Record<ModuleType, ModuleStatusConfig> = {
   PR: {
     DRAFT: {
       label: 'ร่าง',
-      colorClass: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+      colorClass: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
     },
-    SUBMITTED: {
-      label: 'ส่งแล้ว',
-      colorClass: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
-    },
-    IN_APPROVAL: {
+    PENDING: {
       label: 'รออนุมัติ',
-      colorClass: 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300',
+      colorClass: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
     },
     APPROVED: {
       label: 'อนุมัติแล้ว',
-      colorClass: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
-    },
-    REJECTED: {
-      label: 'ปฏิเสธ',
-      colorClass: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
+      colorClass: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
     },
     CANCELLED: {
       label: 'ยกเลิก',
-      colorClass: 'bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-400',
-    },
-    PARTIALLY_CONVERTED: {
-      label: 'แปลงบางส่วน',
-      colorClass: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300',
-    },
-    CONVERTED: {
-      label: 'แปลงแล้ว',
-      colorClass: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300',
-    },
-    CLOSED: {
-      label: 'ปิด',
-      colorClass: 'bg-gray-200 text-gray-600 dark:bg-gray-600 dark:text-gray-300',
+      colorClass: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-400',
     },
   },
   RFQ: {

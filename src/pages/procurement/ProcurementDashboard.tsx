@@ -233,7 +233,7 @@ export default function ProcurementDashboard() {
             <div className="flex justify-between items-start">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Procurement Dashboard</h1>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">แdashboard ระบบจัดซื้อ - ภาพรวมและสถานะการดำเนินงาน</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Dashboard ระบบจัดซื้อ - ภาพรวมและสถานะการดำเนินงาน</p>
                 </div>
                 <div className="text-right">
                     <p className="text-lg font-semibold text-gray-900 dark:text-white">{thaiDate}</p>

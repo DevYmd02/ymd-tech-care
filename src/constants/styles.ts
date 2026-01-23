@@ -58,7 +58,7 @@ export const TABLE_FOOTER = 'flex justify-between items-center px-4 py-3 bg-gray
 export const INPUT = 'w-full h-10 px-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-900 dark:text-white placeholder-gray-400';
 
 /** Input แบบ compact */
-export const INPUT_SM = 'h-8 px-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500';
+export const INPUT_SM = 'h-8 px-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-900 dark:text-white';
 
 /** Input with flex-1 for form rows */
 export const INPUT_FLEX = 'flex-1 min-w-0 h-9 px-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500';
