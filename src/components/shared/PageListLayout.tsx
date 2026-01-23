@@ -27,7 +27,7 @@ import { styles } from '../../constants';
 // TYPES
 // ====================================================================================
 
-export type AccentColor = 'emerald' | 'blue' | 'purple' | 'amber' | 'red' | 'teal';
+export type AccentColor = 'emerald' | 'blue' | 'purple' | 'amber' | 'red' | 'teal' | 'indigo';
 
 export interface PageListLayoutProps {
     /** Page title (Thai) */
@@ -86,6 +86,11 @@ const colorMaps: Record<AccentColor, { header: string; icon: string; border: str
         header: 'from-teal-600 to-teal-700',
         icon: 'text-teal-600 dark:text-teal-400',
         border: 'border-teal-600',
+    },
+    indigo: {
+        header: 'from-indigo-600 to-indigo-700',
+        icon: 'text-indigo-600 dark:text-indigo-400',
+        border: 'border-indigo-600',
     },
 };
 

@@ -33,7 +33,7 @@ export interface FilterFieldProps {
     /** Options for select type */
     options?: SelectOption[];
     /** Accent color for focus ring */
-    accentColor?: 'emerald' | 'blue' | 'purple';
+    accentColor?: 'emerald' | 'blue' | 'purple' | 'teal' | 'indigo';
     /** Disabled state */
     disabled?: boolean;
 }
@@ -46,6 +46,8 @@ const ringColors = {
     emerald: 'ring-emerald-500 focus:ring-emerald-500',
     blue: 'ring-blue-500 focus:ring-blue-500',
     purple: 'ring-purple-500 focus:ring-purple-500',
+    teal: 'ring-teal-500 focus:ring-teal-500',
+    indigo: 'ring-indigo-500 focus:ring-indigo-500',
 };
 
 // ====================================================================================
@@ -124,13 +126,15 @@ export interface FilterActionsProps {
     onClear: () => void;
     searchLabel?: string;
     clearLabel?: string;
-    accentColor?: 'emerald' | 'blue' | 'purple';
+    accentColor?: 'emerald' | 'blue' | 'purple' | 'teal' | 'indigo';
 }
 
 const buttonColors = {
     emerald: 'bg-emerald-600 hover:bg-emerald-700',
     blue: 'bg-blue-600 hover:bg-blue-700',
     purple: 'bg-purple-600 hover:bg-purple-700',
+    teal: 'bg-teal-600 hover:bg-teal-700',
+    indigo: 'bg-indigo-600 hover:bg-indigo-700',
 };
 
 export const FilterActions: React.FC<FilterActionsProps> = ({

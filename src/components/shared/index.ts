@@ -22,6 +22,7 @@ export {
   StatusBadge, 
   PRStatusBadge, 
   RFQStatusBadge,
+  QTStatusBadge,
   ActiveStatusBadge,
   VendorStatusBadge,
 } from './StatusBadge';

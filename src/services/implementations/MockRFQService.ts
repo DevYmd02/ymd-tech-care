@@ -17,9 +17,52 @@ export class MockRFQService implements IRFQService {
   async getList(params?: RFQFilterCriteria): Promise<RFQListResponse> {
     logger.log('[MockRFQService] getList', params);
     await this.delay(300);
+
+    // Apply filtering (mimicking server-side behavior)
+    let filteredData = [...this.rfqs];
+
+    if (params) {
+      // Filter by RFQ number (partial match)
+      if (params.rfq_no) {
+        const searchTerm = params.rfq_no.toLowerCase();
+        filteredData = filteredData.filter(r => 
+          r.rfq_no.toLowerCase().includes(searchTerm)
+        );
+      }
+
+      // Filter by status
+      if (params.status && params.status !== 'ALL') {
+        filteredData = filteredData.filter(r => r.status === params.status);
+      }
+
+      // Filter by date range
+      if (params.date_from) {
+        filteredData = filteredData.filter(r => r.rfq_date >= params.date_from!);
+      }
+      if (params.date_to) {
+        filteredData = filteredData.filter(r => r.rfq_date <= params.date_to!);
+      }
+
+      // Filter by PR number (if provided)
+      if (params.pr_no) {
+        const prSearch = params.pr_no.toLowerCase();
+        filteredData = filteredData.filter(r => 
+          r.pr_no?.toLowerCase().includes(prSearch)
+        );
+      }
+
+      // Filter by creator name (if provided)
+      if (params.created_by_name) {
+        const nameSearch = params.created_by_name.toLowerCase();
+        filteredData = filteredData.filter(r => 
+          r.created_by_name?.toLowerCase().includes(nameSearch)
+        );
+      }
+    }
+
     return {
-      data: this.rfqs,
-      total: this.rfqs.length,
+      data: filteredData,
+      total: filteredData.length,
       page: 1,
       limit: 20
     };

@@ -63,3 +63,7 @@ export interface QuotationLine {
 
 /** QT List Item - สำหรับแสดงในตาราง */
 export type QTListItem = QuotationHeader;
+
+/** Alias for QuotationStatus (for backward compatibility) */
+export type QTStatus = QuotationStatus;
+

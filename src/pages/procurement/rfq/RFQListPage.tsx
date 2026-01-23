@@ -2,265 +2,237 @@
  * @file RFQListPage.tsx
  * @description หน้ารายการขอใบเสนอราคา (Request for Quotation List)
  * @route /procurement/rfq
- * @refactored Clean Architecture - Separated UI and Data Layer
+ * @refactored Uses PageListLayout, FilterField, React Query, and URL-based filters
  */
 
-import { useState, useEffect } from 'react';
-import { FileText, Search, X, Plus, Eye, Send } from 'lucide-react';
+import { useState } from 'react';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { FileText, Plus, Eye, Send, Search, X } from 'lucide-react';
 import { formatThaiDate } from '../../../utils/dateUtils';
 import { styles } from '../../../constants';
-import { RFQStatusBadge } from '../../../components/shared';
+import { PageListLayout, FilterField, RFQStatusBadge } from '../../../components/shared';
 import { useWindowManager } from '../../../hooks/useWindowManager';
-import { logger } from '../../../utils/logger';
+import { useTableFilters } from '../../../hooks';
 import QTFormModal from '../qt/components/QTFormModal';
 
 // Services & Types
 import { rfqService } from '../../../services/rfqService';
-import type { RFQHeader, RFQStatus } from '../../../types/rfq-types';
+import type { RFQHeader, RFQStatus, RFQFilterCriteria } from '../../../types/rfq-types';
+
+// ====================================================================================
+// STATUS OPTIONS
+// ====================================================================================
+
+const RFQ_STATUS_OPTIONS = [
+    { value: 'ALL', label: 'ทั้งหมด' },
+    { value: 'DRAFT', label: 'แบบร่าง' },
+    { value: 'SENT', label: 'ส่งแล้ว' },
+    { value: 'IN_PROGRESS', label: 'กำลังดำเนินการ' },
+    { value: 'CLOSED', label: 'ปิดแล้ว' },
+    { value: 'CANCELLED', label: 'ยกเลิก' },
+];
 
 // ====================================================================================
 // MAIN COMPONENT
 // ====================================================================================
 
 export default function RFQListPage() {
-    // State
-    const [rfqList, setRfqList] = useState<RFQHeader[]>([]);
-    const [filteredList, setFilteredList] = useState<RFQHeader[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    
+    // URL-based Filter State
+    // search = เลขที่ RFQ, search2 = เลขที่ PR อ้างอิง, search3 = ผู้สร้าง RFQ
+    const { 
+        filters, 
+        handleSearchChange, 
+        handleSearch2Change,
+        handleSearch3Change,
+        handleStatusChange, 
+        handleDateRangeChange,
+        resetFilters 
+    } = useTableFilters<RFQStatus>({
+        defaultStatus: 'ALL',
+    });
+
+    // Convert to API filter format
+    const apiFilters: RFQFilterCriteria = {
+        rfq_no: filters.search || undefined,
+        pr_no: filters.search2 || undefined,
+        created_by_name: filters.search3 || undefined,
+        status: filters.status === 'ALL' ? undefined : filters.status,
+        date_from: filters.dateFrom || undefined,
+        date_to: filters.dateTo || undefined,
+    };
+
+    // Data Fetching with React Query
+    const { data, isLoading, isFetching } = useQuery({
+        queryKey: ['rfqs', apiFilters],
+        queryFn: () => rfqService.getList(apiFilters),
+        placeholderData: keepPreviousData,
+    });
+
     // QT Modal State
     const [isQTModalOpen, setIsQTModalOpen] = useState(false);
     const [selectedRFQForQT, setSelectedRFQForQT] = useState<RFQHeader | null>(null);
     
     // Window Manager
     const { openWindow } = useWindowManager();
-    
-    // Filter state
-    const [filters, setFilters] = useState({
-        rfq_no: '',
-        status: 'ALL' as RFQStatus | 'ALL',
-        date_from: '',
-        date_to: '',
-    });
 
-    // Fetch RFQ list
-    useEffect(() => {
-        const fetchRFQList = async () => {
-            setIsLoading(true);
-            try {
-                const response = await rfqService.getList();
-                setRfqList(response.data);
-                setFilteredList(response.data);
-            } catch (error) {
-                logger.error('Failed to fetch RFQ list:', error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchRFQList();
-    }, []);
-
-    // Handle search
-    const handleSearch = () => {
-        let result = [...rfqList];
-        
-        if (filters.rfq_no) {
-            result = result.filter(r => r.rfq_no.toLowerCase().includes(filters.rfq_no.toLowerCase()));
-        }
-        if (filters.status && filters.status !== 'ALL') {
-            result = result.filter(r => r.status === filters.status);
-        }
-        if (filters.date_from) {
-             result = result.filter(r => r.rfq_date >= filters.date_from);
-        }
-        if (filters.date_to) {
-             result = result.filter(r => r.rfq_date <= filters.date_to);
-        }
-        
-        setFilteredList(result);
-    };
-
-    // Handle clear filters
-    const handleClearFilters = () => {
-        setFilters({
-            rfq_no: '',
-            status: 'ALL',
-            date_from: '',
-            date_to: '',
-        });
-        setFilteredList(rfqList);
-    };
-
-    // Handle filter change
-    const handleFilterChange = (field: string, value: string) => {
-        setFilters(prev => ({ ...prev, [field]: value }));
-    };
-
-    // Handle Open QT Modal
+    // Handlers
     const handleOpenQT = (rfq: RFQHeader) => {
         setSelectedRFQForQT(rfq);
         setIsQTModalOpen(true);
     };
 
+    const rfqList = data?.data ?? [];
+
+    // ====================================================================================
+    // RENDER
+    // ====================================================================================
+
     return (
-        <div className={styles.pageContainer}>
-            {/* Header Banner */}
-            <div className="bg-gradient-to-r from-teal-600 to-teal-500 rounded-lg p-4 flex items-center gap-3 shadow-md">
-                <FileText size={24} className="text-white" />
-                <h1 className="text-lg font-semibold text-white">ใบขอเสนอราคา - Request for Quotation (RFQ)</h1>
-            </div>
-
-            {/* Search Form Card */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
-                <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300 mb-4">
-                    <Search size={18} />
-                    <span className="font-medium">ฟอร์มค้นหาข้อมูล</span>
-                </div>
-
-                {/* Filter Fields */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                    {/* เลขที่ RFQ */}
-                    <div>
-                        <label className="text-sm text-gray-600 dark:text-gray-400 mb-1 block">เลขที่ RFQ</label>
-                        <input
+        <>
+            <PageListLayout
+                title="รายการใบขอเสนอราคา"
+                subtitle="Request for Quotation (RFQ)"
+                icon={FileText}
+                accentColor="teal"
+                isLoading={isLoading}
+                searchForm={
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {/* Row 1 */}
+                        {/* เลขที่ RFQ */}
+                        <FilterField
+                            label="เลขที่ RFQ"
                             type="text"
+                            value={filters.search}
+                            onChange={handleSearchChange}
                             placeholder="RFQ2024-xxx"
-                            value={filters.rfq_no}
-                            onChange={(e) => handleFilterChange('rfq_no', e.target.value)}
-                            className={styles.input}
+                            accentColor="teal"
                         />
-                    </div>
-                    
-                    {/* เลขที่ PR อ้างอิง */}
-                    <div>
-                        <label className="text-sm text-gray-600 dark:text-gray-400 mb-1 block">เลขที่ PR อ้างอิง</label>
-                        <input
+                        
+                        {/* เลขที่ PR อ้างอิง */}
+                        <FilterField
+                            label="เลขที่ PR อ้างอิง"
                             type="text"
+                            value={filters.search2}
+                            onChange={handleSearch2Change}
                             placeholder="PR2024-xxx"
-                            className={styles.input}
-                            disabled
+                            accentColor="teal"
                         />
-                    </div>
 
-                    {/* ผู้สร้าง RFQ */}
-                    <div>
-                        <label className="text-sm text-gray-600 dark:text-gray-400 mb-1 block">ผู้สร้าง RFQ</label>
-                        <input
+                        {/* ผู้สร้าง RFQ */}
+                        <FilterField
+                            label="ผู้สร้าง RFQ"
                             type="text"
+                            value={filters.search3}
+                            onChange={handleSearch3Change}
                             placeholder="ชื่อผู้สร้าง"
-                            className={styles.input}
-                            disabled
+                            accentColor="teal"
                         />
-                    </div>
-                    
-                    {/* สถานะ */}
-                    <div>
-                        <label className="text-sm text-gray-600 dark:text-gray-400 mb-1 block">สถานะ</label>
-                        <select
+
+                        {/* สถานะ */}
+                        <FilterField
+                            label="สถานะ"
+                            type="select"
                             value={filters.status}
-                            onChange={(e) => handleFilterChange('status', e.target.value)}
-                            className={styles.inputSelect}
-                        >
-                            <option value="ALL">ทั้งหมด</option>
-                            <option value="DRAFT">แบบร่าง</option>
-                            <option value="SENT">ส่งแล้ว</option>
-                            <option value="CLOSED">ปิดแล้ว</option>
-                            <option value="CANCELLED">ยกเลิก</option>
-                        </select>
-                    </div>
-
-                     {/* Date Range */}
-                    <div>
-                        <label className="text-sm text-gray-600 dark:text-gray-400 mb-1 block">วันที่เริ่มต้น</label>
-                        <input
-                            type="date"
-                            value={filters.date_from}
-                            onChange={(e) => handleFilterChange('date_from', e.target.value)}
-                            className={styles.input}
+                            onChange={(val) => handleStatusChange(val as RFQStatus | 'ALL')}
+                            options={RFQ_STATUS_OPTIONS}
+                            accentColor="teal"
                         />
-                    </div>
-                    <div>
-                        <label className="text-sm text-gray-600 dark:text-gray-400 mb-1 block">วันที่สิ้นสุด</label>
-                        <input
+
+                        {/* Row 2 */}
+                        {/* วันที่เริ่มต้น */}
+                        <FilterField
+                            label="วันที่เริ่มต้น"
                             type="date"
-                            value={filters.date_to}
-                            onChange={(e) => handleFilterChange('date_to', e.target.value)}
-                            className={styles.input}
+                            value={filters.dateFrom}
+                            onChange={(val) => handleDateRangeChange(val, filters.dateTo)}
+                            accentColor="teal"
                         />
-                    </div>
 
-                    {/* Action Buttons: Search & Clear */}
-                    <div className="flex items-end gap-2">
-                        <button
-                            onClick={handleSearch}
-                            className="flex items-center justify-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors h-[42px]"
-                        >
-                            <Search size={16} />
-                            ค้นหา
-                        </button>
-                        <button
-                            onClick={handleClearFilters}
-                            className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors h-[42px]"
-                        >
-                            <X size={16} />
-                            ล้างฟิลเตอร์
-                        </button>
-                    </div>
+                        {/* วันที่สิ้นสุด */}
+                        <FilterField
+                            label="วันที่สิ้นสุด"
+                            type="date"
+                            value={filters.dateTo}
+                            onChange={(val) => handleDateRangeChange(filters.dateFrom, val)}
+                            accentColor="teal"
+                        />
 
-                    {/* Create Button */}
-                    <div className="flex items-end justify-end">
-                        <button
-                            onClick={() => openWindow('RFQ')}
-                            className="flex items-center justify-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors shadow-md h-[42px] w-full sm:w-auto"
-                        >
-                            <Plus size={16} />
-                            สร้าง RFQ ใหม่
-                        </button>
-                    </div>
-                </div>
-            </div>
+                        {/* Action Buttons - inline */}
+                        <div className="lg:col-span-2 flex items-end justify-end gap-2 flex-wrap sm:flex-nowrap">
+                            {/* Search Button */}
+                            <button
+                                type="button"
+                                onClick={() => {}}
+                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg flex items-center gap-2 transition-colors whitespace-nowrap"
+                            >
+                                <Search size={16} />
+                                ค้นหา
+                            </button>
 
-            {/* Results Section */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-                {/* Results Header */}
-                <div className="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                    <h2 className="text-lg font-bold text-gray-900 dark:text-white">ผลลัพธ์การค้นหา</h2>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                        พบทั้งหมด <span className="font-semibold text-teal-600">{filteredList.length}</span> รายการ
-                    </span>
-                </div>
+                            {/* Clear Button */}
+                            <button
+                                type="button"
+                                onClick={resetFilters}
+                                className="px-4 py-2 bg-white hover:bg-gray-100 text-gray-700 font-medium rounded-lg border border-gray-300 flex items-center gap-2 transition-colors whitespace-nowrap"
+                            >
+                                <X size={16} />
+                                ล้างค่า
+                            </button>
 
-                {/* Table */}
-                <div className="overflow-x-auto">
-                    {isLoading ? (
-                        <div className="flex items-center justify-center py-12">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
-                            <span className="ml-3 text-gray-600 dark:text-gray-400">กำลังโหลดข้อมูล...</span>
+                            {/* Create Button */}
+                            <button
+                                onClick={() => openWindow('RFQ')}
+                                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-lg flex items-center gap-2 transition-colors whitespace-nowrap"
+                            >
+                                <Plus size={18} />
+                                สร้าง RFQ ใหม่
+                            </button>
                         </div>
-                    ) : (
+                    </div>
+                }
+            >
+                {/* Results Section */}
+                <div className={`${styles.tableContainer} relative`}>
+                    {/* Fetching indicator */}
+                    {isFetching && !isLoading && (
+                        <div className="absolute top-2 right-2 z-10">
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-teal-600" />
+                        </div>
+                    )}
+
+                    {/* Results Header */}
+                    <div className="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-teal-600">
+                        <h2 className="text-lg font-bold text-white">ผลลัพธ์การค้นหา</h2>
+                        <span className="text-sm text-teal-100">
+                            พบทั้งหมด <span className="font-semibold">{data?.total ?? 0}</span> รายการ
+                        </span>
+                    </div>
+
+                    {/* Table */}
+                    <div className="overflow-x-auto">
                         <table className="w-full">
-                            <thead className="bg-blue-600 text-white">
+                            <thead className="bg-gray-50 dark:bg-gray-700">
                                 <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-bold uppercase w-12">ลำดับ</th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold uppercase">เลขที่ RFQ</th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold uppercase">วันที่สร้าง</th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold uppercase">PR อ้างอิง</th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold uppercase">ผู้สร้าง</th>
-                                    <th className="px-4 py-3 text-center text-xs font-bold uppercase">สถานะ</th>
-                                    <th className="px-4 py-3 text-center text-xs font-bold uppercase">ใช้ได้ถึงวันที่</th>
-                                    <th className="px-4 py-3 text-center text-xs font-bold uppercase">จน.เจ้าหนี้</th>
-                                    <th className="px-4 py-3 text-center text-xs font-bold uppercase">จัดการ</th>
+                                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase w-12">ลำดับ</th>
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">เลขที่ RFQ</th>
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">วันที่สร้าง</th>
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">PR อ้างอิง</th>
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">ผู้สร้าง</th>
+                                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">สถานะ</th>
+                                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">ใช้ได้ถึงวันที่</th>
+                                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">จน.เจ้าหนี้</th>
+                                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">จัดการ</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-700 text-sm">
-                                {filteredList.length > 0 ? (
-                                    filteredList.map((rfq, index) => (
-                                        <tr key={rfq.rfq_id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                                {rfqList.length > 0 ? (
+                                    rfqList.map((rfq, index) => (
+                                        <tr key={rfq.rfq_id} className="hover:bg-teal-50 dark:hover:bg-gray-700 transition-colors">
                                             <td className="px-4 py-4 text-gray-500 dark:text-gray-400 text-center">
                                                 {index + 1}
                                             </td>
                                             <td className="px-4 py-4">
-                                                <div className="font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer">
+                                                <div className="font-semibold text-teal-600 hover:text-teal-800 hover:underline cursor-pointer">
                                                     {rfq.rfq_no}
                                                 </div>
                                             </td>
@@ -293,7 +265,7 @@ export default function RFQListPage() {
                                                     </button>
                                                     
                                                     {rfq.status === 'DRAFT' && (
-                                                        <button className="flex items-center gap-1.5 px-3 py-1.5 bg-[#f97316] hover:bg-[#c2410c] text-white text-xs font-bold rounded shadow transition-colors">
+                                                        <button className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold rounded shadow transition-colors">
                                                             <Send size={14} /> ส่ง RFQ
                                                         </button>
                                                     )}
@@ -301,7 +273,7 @@ export default function RFQListPage() {
                                                     {rfq.status === 'SENT' && (
                                                         <button 
                                                             onClick={() => handleOpenQT(rfq)}
-                                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-xs font-bold rounded shadow transition-colors"
+                                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded shadow transition-colors"
                                                         >
                                                             <FileText size={14} /> บันทึกราคา
                                                         </button>
@@ -319,9 +291,9 @@ export default function RFQListPage() {
                                 )}
                             </tbody>
                         </table>
-                    )}
+                    </div>
                 </div>
-            </div>
+            </PageListLayout>
 
             {/* QT Form Modal */}
             <QTFormModal
@@ -332,6 +304,6 @@ export default function RFQListPage() {
                 }}
                 initialRFQ={selectedRFQForQT}
             />
-        </div>
+        </>
     );
 }

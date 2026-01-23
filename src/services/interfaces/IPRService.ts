@@ -11,10 +11,12 @@ import type {
 } from '../../types/pr-types';
 
 export interface PRListParams {
+  pr_no?: string;
   status?: PRStatus | 'ALL';
   cost_center_id?: string;
   project_id?: string;
   requester_name?: string;
+  department?: string;
   date_from?: string;
   date_to?: string;
   page?: number;

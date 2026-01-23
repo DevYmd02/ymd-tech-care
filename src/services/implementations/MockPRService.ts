@@ -25,13 +25,35 @@ export class MockPRService implements IPRService {
 
     let filteredPRs = [...this.prs];
 
-    if (params?.status && params.status !== 'ALL') {
-      filteredPRs = filteredPRs.filter(pr => pr.status === params.status);
-    }
+    if (params) {
+      // Filter by status
+      if (params.status && params.status !== 'ALL') {
+        filteredPRs = filteredPRs.filter(pr => pr.status === params.status);
+      }
 
-    if (params?.requester_name) {
-      const search = params.requester_name.toLowerCase();
-      filteredPRs = filteredPRs.filter(pr => pr.requester_name?.toLowerCase().includes(search));
+      // Filter by requester name (partial match)
+      if (params.requester_name) {
+        const search = params.requester_name.toLowerCase();
+        filteredPRs = filteredPRs.filter(pr => pr.requester_name?.toLowerCase().includes(search));
+      }
+
+      // Filter by date range
+      if (params.date_from) {
+        filteredPRs = filteredPRs.filter(pr => pr.request_date >= params.date_from!);
+      }
+      if (params.date_to) {
+        filteredPRs = filteredPRs.filter(pr => pr.request_date <= params.date_to!);
+      }
+
+      // Filter by cost center
+      if (params.cost_center_id) {
+        filteredPRs = filteredPRs.filter(pr => pr.cost_center_id === params.cost_center_id);
+      }
+
+      // Filter by project
+      if (params.project_id) {
+        filteredPRs = filteredPRs.filter(pr => pr.project_id === params.project_id);
+      }
     }
 
     return {
