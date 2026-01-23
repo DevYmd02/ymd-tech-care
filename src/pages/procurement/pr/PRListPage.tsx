@@ -2,17 +2,18 @@
  * @file PRListPage.tsx
  * @description หน้ารายการใบขอซื้อ (Purchase Requisition List)
  * @route /procurement/pr
- * @refactored Uses PageListLayout, FilterField, useTableFilters, React Query
+ * @refactored Uses PageListLayout, FilterFormBuilder, useTableFilters, React Query
  */
 
 import { useState } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { FileText, Plus, Eye, Edit, Send, CheckCircle, Search, X } from 'lucide-react';
+import { FileText, Eye, Edit, Send, CheckCircle } from 'lucide-react';
 import { formatThaiDate } from '../../../utils/dateUtils';
 import { styles } from '../../../constants';
-import { PageListLayout, FilterField, ApprovalModal, PRStatusBadge } from '../../../components/shared';
+import { PageListLayout, FilterFormBuilder, ApprovalModal, PRStatusBadge } from '../../../components/shared';
+import type { FilterFieldConfig } from '../../../components/shared/FilterFormBuilder';
 import { useWindowManager } from '../../../hooks/useWindowManager';
-import { useTableFilters } from '../../../hooks';
+import { useTableFilters, type TableFilters } from '../../../hooks';
 import RFQFormModal from '../rfq/components/RFQFormModal';
 
 // Services & Types
@@ -37,21 +38,27 @@ const PR_STATUS_OPTIONS = [
 ];
 
 // ====================================================================================
+// FILTER CONFIG
+// ====================================================================================
+
+type PRFilterKeys = keyof TableFilters<PRStatus>;
+
+const PR_FILTER_CONFIG: FilterFieldConfig<PRFilterKeys>[] = [
+    { name: 'search', label: 'เลขที่เอกสาร', type: 'text', placeholder: 'PR2024-xxx' },
+    { name: 'search2', label: 'ผู้ขอ', type: 'text', placeholder: 'ชื่อผู้ขอ' },
+    { name: 'search3', label: 'แผนก', type: 'text', placeholder: 'แผนก' },
+    { name: 'status', label: 'สถานะ', type: 'select', options: PR_STATUS_OPTIONS },
+    { name: 'dateFrom', label: 'วันที่เอกสาร จาก', type: 'date' },
+    { name: 'dateTo', label: 'ถึงวันที่', type: 'date' },
+];
+
+// ====================================================================================
 // MAIN COMPONENT
 // ====================================================================================
 
 export default function PRListPage() {
     // URL-based Filter State
-    // search = เลขที่เอกสาร, search2 = ผู้ขอ, search3 = แผนก
-    const { 
-        filters, 
-        handleSearchChange, 
-        handleSearch2Change,
-        handleSearch3Change,
-        handleStatusChange, 
-        handleDateRangeChange,
-        resetFilters 
-    } = useTableFilters<PRStatus>({
+    const { filters, setFilters, resetFilters } = useTableFilters<PRStatus>({
         defaultStatus: 'ALL',
     });
 
@@ -85,6 +92,10 @@ export default function PRListPage() {
     });
 
     // Handlers
+    const handleFilterChange = (name: PRFilterKeys, value: string) => {
+        setFilters({ [name]: value });
+    };
+
     const handleCreateRFQ = (pr: PRHeader) => {
         setSelectedPR(pr);
         setIsRFQModalOpen(true);
@@ -99,7 +110,7 @@ export default function PRListPage() {
                     remark: remark
                 }))
             );
-            refetch(); // Refresh data
+            refetch();
         } finally {
             setSelectedIds([]);
             setApprovalModal({ isOpen: false, action: 'approve' });
@@ -122,71 +133,18 @@ export default function PRListPage() {
                 accentColor="blue"
                 isLoading={isLoading}
                 searchForm={
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {/* Row 1: 4 filter fields */}
-                        {/* เลขที่เอกสาร */}
-                        <FilterField
-                            label="เลขที่เอกสาร"
-                            type="text"
-                            value={filters.search}
-                            onChange={handleSearchChange}
-                            placeholder="PR2024-xxx"
-                            accentColor="blue"
-                        />
-                        
-                        {/* ผู้ขอ */}
-                        <FilterField
-                            label="ผู้ขอ"
-                            type="text"
-                            value={filters.search2}
-                            onChange={handleSearch2Change}
-                            placeholder="ชื่อผู้ขอ"
-                            accentColor="blue"
-                        />
-
-                        {/* แผนก */}
-                        <FilterField
-                            label="แผนก"
-                            type="text"
-                            value={filters.search3}
-                            onChange={handleSearch3Change}
-                            placeholder="แผนก"
-                            accentColor="blue"
-                        />
-
-                        {/* สถานะ */}
-                        <FilterField
-                            label="สถานะ"
-                            type="select"
-                            value={filters.status}
-                            onChange={(val) => handleStatusChange(val as PRStatus | 'ALL')}
-                            options={PR_STATUS_OPTIONS}
-                            accentColor="blue"
-                        />
-
-                        {/* Row 2: 2 date fields + all action buttons inline */}
-                        {/* วันที่เอกสาร จาก */}
-                        <FilterField
-                            label="วันที่เอกสาร จาก"
-                            type="date"
-                            value={filters.dateFrom}
-                            onChange={(val) => handleDateRangeChange(val, filters.dateTo)}
-                            accentColor="blue"
-                        />
-
-                        {/* ถึงวันที่ */}
-                        <FilterField
-                            label="ถึงวันที่"
-                            type="date"
-                            value={filters.dateTo}
-                            onChange={(val) => handleDateRangeChange(filters.dateFrom, val)}
-                            accentColor="blue"
-                        />
-
-                        {/* Action Buttons - all inline */}
-                        <div className="lg:col-span-2 flex items-end justify-end gap-2 flex-wrap sm:flex-nowrap">
-                            {/* Batch Approve - Shows when items are selected */}
-                            {selectedIds.length > 0 && (
+                    <FilterFormBuilder
+                        config={PR_FILTER_CONFIG}
+                        filters={filters}
+                        onFilterChange={handleFilterChange}
+                        onSearch={() => {}} // React Query auto-fetches on filter change
+                        onReset={resetFilters}
+                        accentColor="blue"
+                        columns={{ sm: 2, md: 4, lg: 4 }}
+                        onCreate={() => openWindow('PR')}
+                        createLabel="สร้างใบขอซื้อใหม่"
+                        actionButtons={
+                            selectedIds.length > 0 ? (
                                 <div className="flex items-center gap-2 mr-auto">
                                     <span className="text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">
                                         เลือก <strong>{selectedIds.length}</strong> รายการ
@@ -199,38 +157,9 @@ export default function PRListPage() {
                                         อนุมัติ
                                     </button>
                                 </div>
-                            )}
-                            
-                            {/* Search Button */}
-                            <button
-                                type="button"
-                                onClick={() => {}}
-                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg flex items-center gap-2 transition-colors whitespace-nowrap"
-                            >
-                                <Search size={16} />
-                                ค้นหา
-                            </button>
-
-                            {/* Clear Button */}
-                            <button
-                                type="button"
-                                onClick={resetFilters}
-                                className="px-4 py-2 bg-white hover:bg-gray-100 text-gray-700 font-medium rounded-lg border border-gray-300 flex items-center gap-2 transition-colors whitespace-nowrap"
-                            >
-                                <X size={16} />
-                                ล้างค่า
-                            </button>
-
-                            {/* Create New Button */}
-                            <button
-                                onClick={() => openWindow('PR')}
-                                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-lg flex items-center gap-2 transition-colors whitespace-nowrap"
-                            >
-                                <Plus size={18} />
-                                สร้างใบขอซื้อใหม่
-                            </button>
-                        </div>
-                    </div>
+                            ) : undefined
+                        }
+                    />
                 }
             >
                 {/* Results Section */}

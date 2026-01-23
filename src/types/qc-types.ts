@@ -9,7 +9,7 @@
 // ====================================================================================
 
 /** QC Status - สถานะใบเปรียบเทียบราคา */
-export type QCStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
+export type QCStatus = 'WAITING_FOR_PO' | 'PO_CREATED';
 
 /** Quotation Comparison Header - ใบเปรียบเทียบราคา */
 export interface QCHeader {

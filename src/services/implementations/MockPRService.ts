@@ -17,7 +17,7 @@ import { getMockFlowWithSteps, MOCK_APPROVERS } from '../../__mocks__/approvalFl
 import { logger } from '../../utils/logger';
 
 export class MockPRService implements IPRService {
-  private prs: PRHeader[] = [...MOCK_PRS];
+  private prs: PRHeader[] = structuredClone(MOCK_PRS);
 
   async getList(params?: PRListParams): Promise<PRListResponse> {
     logger.log('[MockPRService] getList', params);
@@ -101,8 +101,9 @@ export class MockPRService implements IPRService {
     logger.log('[MockPRService] update', prId, data);
     const index = this.prs.findIndex(pr => pr.pr_id === prId);
     if (index !== -1) {
-      this.prs[index] = { ...this.prs[index], ...(data as unknown as Partial<PRHeader>) };
-      return this.prs[index];
+      const updatedPR = { ...this.prs[index], ...(data as unknown as Partial<PRHeader>) };
+      this.prs[index] = updatedPR;
+      return structuredClone(updatedPR);
     }
     return null;
   }
@@ -161,29 +162,30 @@ export class MockPRService implements IPRService {
     if (prIndex === -1) return { success: false, message: 'PR not found' };
 
     const pr = this.prs[prIndex];
-    const currentTasks = pr.approval_tasks || [];
+    const currentTasks = [...(pr.approval_tasks || [])];
     const pendingTaskIndex = currentTasks.findIndex(t => t.status === 'PENDING');
 
     if (pendingTaskIndex === -1) {
       return { success: false, message: 'ไม่พบงานที่รออนุมัติ' };
     }
 
-    const updatedTask = {
+    const updatedTask: ApprovalTask = {
       ...currentTasks[pendingTaskIndex],
       status: request.action === 'APPROVE' ? 'APPROVED' : 'REJECTED',
       approved_at: new Date().toISOString(),
       remark: request.remark,
-    } as ApprovalTask;
+    };
 
-    currentTasks[pendingTaskIndex] = updatedTask;
+    const newTasks = [...currentTasks];
+    newTasks[pendingTaskIndex] = updatedTask;
 
     if (request.action === 'REJECT') {
       this.prs[prIndex] = {
         ...pr,
         status: 'REJECTED',
-        approval_tasks: currentTasks,
+        approval_tasks: newTasks,
       };
-      return { success: true, message: 'ไม่อนุมัติเอกสารเรียบร้อย', approval_task: updatedTask };
+      return { success: true, message: 'ไม่อนุมัติเอกสารเรียบร้อย', approval_task: structuredClone(updatedTask) };
     }
 
     const flowConfig = getMockFlowWithSteps('PR', pr.total_amount);
@@ -206,33 +208,33 @@ export class MockPRService implements IPRService {
           status: 'PENDING',
           created_at: new Date().toISOString(),
         };
-        currentTasks.push(nextTask);
 
         this.prs[prIndex] = {
           ...pr,
           status: 'IN_APPROVAL',
-          approval_tasks: currentTasks,
+          approval_tasks: [...newTasks, nextTask],
         };
 
-        return { success: true, message: `อนุมัติเรียบร้อย (ส่งต่อ: ${approverName})`, approval_task: updatedTask };
+        return { success: true, message: `อนุมัติเรียบร้อย (ส่งต่อ: ${approverName})`, approval_task: structuredClone(updatedTask) };
       }
 
       this.prs[prIndex] = {
         ...pr,
         status: 'APPROVED',
-        approval_tasks: currentTasks,
+        approval_tasks: newTasks,
       };
-      return { success: true, message: 'อนุมัติเอกสารเสร็จสมบูรณ์', approval_task: updatedTask };
+      return { success: true, message: 'อนุมัติเอกสารเสร็จสมบูรณ์', approval_task: structuredClone(updatedTask) };
     }
 
-    return { success: true, message: 'บันทึกเรียบร้อย', approval_task: updatedTask };
+    return { success: true, message: 'บันทึกเรียบร้อย', approval_task: structuredClone(updatedTask) };
   }
 
   async cancel(prId: string, remark?: string): Promise<{ success: boolean; message: string }> {
     logger.log('[MockPRService] cancel', prId, remark);
     const index = this.prs.findIndex(pr => pr.pr_id === prId);
     if (index !== -1) {
-      this.prs[index] = { ...this.prs[index], status: 'CANCELLED' };
+      const cancelledPR = { ...this.prs[index], status: 'CANCELLED' as const };
+      this.prs[index] = cancelledPR;
     }
     return { success: true, message: 'ยกเลิกสำเร็จ (Mock)' };
   }

@@ -15,6 +15,7 @@ import type {
 export interface IVendorService {
   getList(params?: VendorListParams): Promise<VendorListResponse>;
   getById(vendorId: string): Promise<VendorMaster | null>;
+  getByTaxId(taxId: string): Promise<VendorMaster | null>;
   getDropdown(): Promise<VendorDropdownItem[]>;
   create(data: VendorCreateRequest): Promise<VendorResponse>;
   update(vendorId: string, data: Partial<VendorCreateRequest>): Promise<VendorResponse>;

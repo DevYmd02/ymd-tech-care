@@ -2,16 +2,17 @@
  * @file QCListPage.tsx
  * @description หน้ารายการใบเปรียบเทียบราคา - Quote Comparison Master (QC)
  * @route /procurement/qc
- * @refactored Uses PageListLayout, FilterField, useTableFilters, React Query
+ * @refactored Uses PageListLayout, FilterFormBuilder, useTableFilters, React Query
  */
 
 import { useState } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { Scale, Search, X } from 'lucide-react';
+import { Scale } from 'lucide-react';
 import { formatThaiDate } from '../../../utils/dateUtils';
 import { styles } from '../../../constants';
-import { PageListLayout, FilterField } from '../../../components/shared';
-import { useTableFilters } from '../../../hooks';
+import { PageListLayout, FilterFormBuilder, QCStatusBadge } from '../../../components/shared';
+import type { FilterFieldConfig } from '../../../components/shared/FilterFormBuilder';
+import { useTableFilters, type TableFilters } from '../../../hooks';
 import { QCFormModal } from './components/QCFormModal';
 
 // Services & Types
@@ -25,37 +26,23 @@ import type { QCStatus } from '../../../types/qc-types';
 
 const QC_STATUS_OPTIONS = [
     { value: 'ALL', label: 'ทั้งหมด' },
-    { value: 'DRAFT', label: 'Draft' },
-    { value: 'SUBMITTED', label: 'Submitted' },
-    { value: 'APPROVED', label: 'Approved' },
+    { value: 'WAITING_FOR_PO', label: 'รอเปิดใบสั่งซื้อ' },
+    { value: 'PO_CREATED', label: 'เปิดใบสั่งซื้อแล้ว' },
 ];
 
 // ====================================================================================
-// STATUS BADGE COMPONENT
+// FILTER CONFIG
 // ====================================================================================
 
-const QCStatusBadge = ({ status }: { status: string }) => {
-    let className = 'px-3 py-1 rounded-full text-xs font-semibold';
-    let label = status;
+type QCFilterKeys = keyof TableFilters<QCStatus>;
 
-    switch (status.toUpperCase()) {
-        case 'APPROVED':
-            className += ' bg-emerald-100 text-emerald-700';
-            label = 'Approved';
-            break;
-        case 'SUBMITTED':
-            className += ' bg-blue-100 text-blue-700';
-            label = 'Submitted';
-            break;
-        case 'DRAFT':
-        default:
-            className += ' bg-gray-100 text-gray-700';
-            label = 'Draft';
-            break;
-    }
-
-    return <span className={className}>{label}</span>;
-};
+const QC_FILTER_CONFIG: FilterFieldConfig<QCFilterKeys>[] = [
+    { name: 'search', label: 'เลขที่ใบ QC', type: 'text', placeholder: 'QC2024-xxx' },
+    { name: 'search2', label: 'เลขที่ PR อ้างอิง', type: 'text', placeholder: 'PR2024-xxx' },
+    { name: 'status', label: 'สถานะ', type: 'select', options: QC_STATUS_OPTIONS },
+    { name: 'dateFrom', label: 'วันที่สร้าง จาก', type: 'date' },
+    { name: 'dateTo', label: 'ถึงวันที่', type: 'date' },
+];
 
 // ====================================================================================
 // MAIN COMPONENT
@@ -63,15 +50,7 @@ const QCStatusBadge = ({ status }: { status: string }) => {
 
 export default function QCListPage() {
     // URL-based Filter State
-    // search = เลขที่ใบ QC (qc_no), search2 = เลขที่ PR อ้างอิง (pr_id FK)
-    const { 
-        filters, 
-        handleSearchChange, 
-        handleSearch2Change,
-        handleStatusChange, 
-        handleDateRangeChange,
-        resetFilters 
-    } = useTableFilters<QCStatus>({
+    const { filters, setFilters, resetFilters } = useTableFilters<QCStatus>({
         defaultStatus: 'ALL',
     });
 
@@ -96,6 +75,11 @@ export default function QCListPage() {
     // Modal State (for future create functionality)
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
+    // Handlers
+    const handleFilterChange = (name: QCFilterKeys, value: string) => {
+        setFilters({ [name]: value });
+    };
+
     // ====================================================================================
     // RENDER
     // ====================================================================================
@@ -109,80 +93,15 @@ export default function QCListPage() {
                 accentColor="indigo"
                 isLoading={isLoading}
                 searchForm={
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {/* Row 1 */}
-                        {/* เลขที่ใบ QC (qc_no) */}
-                        <FilterField
-                            label="เลขที่ใบ QC (qc_no)"
-                            type="text"
-                            value={filters.search}
-                            onChange={handleSearchChange}
-                            placeholder="QC2024-xxx"
-                            accentColor="indigo"
-                        />
-                        
-                        {/* เลขที่ PR อ้างอิง (pr_id FK) */}
-                        <FilterField
-                            label="เลขที่ PR อ้างอิง (pr_id FK)"
-                            type="text"
-                            value={filters.search2}
-                            onChange={handleSearch2Change}
-                            placeholder="PR2024-xxx"
-                            accentColor="indigo"
-                        />
-
-                        {/* สถานะ (status) */}
-                        <FilterField
-                            label="สถานะ (status)"
-                            type="select"
-                            value={filters.status}
-                            onChange={(val) => handleStatusChange(val as QCStatus | 'ALL')}
-                            options={QC_STATUS_OPTIONS}
-                            accentColor="indigo"
-                        />
-
-                        {/* Row 2 */}
-                        {/* วันที่สร้าง จาก (created_at) */}
-                        <FilterField
-                            label="วันที่สร้าง จาก"
-                            type="date"
-                            value={filters.dateFrom}
-                            onChange={(val) => handleDateRangeChange(val, filters.dateTo)}
-                            accentColor="indigo"
-                        />
-
-                        {/* ถึงวันที่ */}
-                        <FilterField
-                            label="ถึงวันที่"
-                            type="date"
-                            value={filters.dateTo}
-                            onChange={(val) => handleDateRangeChange(filters.dateFrom, val)}
-                            accentColor="indigo"
-                        />
-
-                        {/* Action Buttons - inline (Col 3) */}
-                        <div className="flex items-end justify-end gap-2 flex-wrap sm:flex-nowrap h-full pb-0.5">
-                            {/* Search Button */}
-                            <button
-                                type="button"
-                                onClick={() => {}}
-                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg flex items-center gap-2 transition-colors whitespace-nowrap"
-                            >
-                                <Search size={16} />
-                                ค้นหา
-                            </button>
-
-                            {/* Clear Button */}
-                            <button
-                                type="button"
-                                onClick={resetFilters}
-                                className="px-4 py-2 bg-white hover:bg-gray-100 text-gray-700 font-medium rounded-lg border border-gray-300 flex items-center gap-2 transition-colors whitespace-nowrap"
-                            >
-                                <X size={16} />
-                                ล้างค่า
-                            </button>
-                        </div>
-                    </div>
+                    <FilterFormBuilder
+                        config={QC_FILTER_CONFIG}
+                        filters={filters}
+                        onFilterChange={handleFilterChange}
+                        onSearch={() => {}} // React Query auto-fetches on filter change
+                        onReset={resetFilters}
+                        accentColor="indigo"
+                        columns={{ sm: 2, md: 3, lg: 3 }}
+                    />
                 }
             >
                 {/* Results Section */}

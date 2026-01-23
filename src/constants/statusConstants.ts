@@ -71,6 +71,20 @@ export const QT_STATUS_LABELS: Record<string, string> = {
 };
 
 // ====================================================================================
+// QC STATUS - Quotation Comparison
+// ====================================================================================
+
+export const QC_STATUS_COLORS: Record<string, string> = {
+  WAITING_FOR_PO: 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300',
+  PO_CREATED: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+};
+
+export const QC_STATUS_LABELS: Record<string, string> = {
+  WAITING_FOR_PO: 'รอเปิดใบสั่งซื้อ',
+  PO_CREATED: 'เปิดใบสั่งซื้อแล้ว',
+};
+
+// ====================================================================================
 // LEGACY CONSTANTS - For backward compatibility (from status.ts)
 // ====================================================================================
 

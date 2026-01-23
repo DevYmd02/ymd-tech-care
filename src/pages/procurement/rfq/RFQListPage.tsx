@@ -2,17 +2,18 @@
  * @file RFQListPage.tsx
  * @description หน้ารายการขอใบเสนอราคา (Request for Quotation List)
  * @route /procurement/rfq
- * @refactored Uses PageListLayout, FilterField, React Query, and URL-based filters
+ * @refactored Uses PageListLayout, FilterFormBuilder, React Query, and URL-based filters
  */
 
 import { useState } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { FileText, Plus, Eye, Send, Search, X } from 'lucide-react';
+import { FileText, Plus, Eye, Send } from 'lucide-react';
 import { formatThaiDate } from '../../../utils/dateUtils';
 import { styles } from '../../../constants';
-import { PageListLayout, FilterField, RFQStatusBadge } from '../../../components/shared';
+import { PageListLayout, FilterFormBuilder, RFQStatusBadge } from '../../../components/shared';
+import type { FilterFieldConfig } from '../../../components/shared/FilterFormBuilder';
 import { useWindowManager } from '../../../hooks/useWindowManager';
-import { useTableFilters } from '../../../hooks';
+import { useTableFilters, type TableFilters } from '../../../hooks';
 import QTFormModal from '../qt/components/QTFormModal';
 
 // Services & Types
@@ -33,21 +34,27 @@ const RFQ_STATUS_OPTIONS = [
 ];
 
 // ====================================================================================
+// FILTER CONFIG
+// ====================================================================================
+
+type RFQFilterKeys = keyof TableFilters<RFQStatus>;
+
+const RFQ_FILTER_CONFIG: FilterFieldConfig<RFQFilterKeys>[] = [
+    { name: 'search', label: 'เลขที่ RFQ', type: 'text', placeholder: 'RFQ2024-xxx' },
+    { name: 'search2', label: 'เลขที่ PR อ้างอิง', type: 'text', placeholder: 'PR2024-xxx' },
+    { name: 'search3', label: 'ผู้สร้าง RFQ', type: 'text', placeholder: 'ชื่อผู้สร้าง' },
+    { name: 'status', label: 'สถานะ', type: 'select', options: RFQ_STATUS_OPTIONS },
+    { name: 'dateFrom', label: 'วันที่เริ่มต้น', type: 'date' },
+    { name: 'dateTo', label: 'วันที่สิ้นสุด', type: 'date' },
+];
+
+// ====================================================================================
 // MAIN COMPONENT
 // ====================================================================================
 
 export default function RFQListPage() {
     // URL-based Filter State
-    // search = เลขที่ RFQ, search2 = เลขที่ PR อ้างอิง, search3 = ผู้สร้าง RFQ
-    const { 
-        filters, 
-        handleSearchChange, 
-        handleSearch2Change,
-        handleSearch3Change,
-        handleStatusChange, 
-        handleDateRangeChange,
-        resetFilters 
-    } = useTableFilters<RFQStatus>({
+    const { filters, setFilters, resetFilters } = useTableFilters<RFQStatus>({
         defaultStatus: 'ALL',
     });
 
@@ -76,6 +83,10 @@ export default function RFQListPage() {
     const { openWindow } = useWindowManager();
 
     // Handlers
+    const handleFilterChange = (name: RFQFilterKeys, value: string) => {
+        setFilters({ [name]: value });
+    };
+
     const handleOpenQT = (rfq: RFQHeader) => {
         setSelectedRFQForQT(rfq);
         setIsQTModalOpen(true);
@@ -96,90 +107,15 @@ export default function RFQListPage() {
                 accentColor="teal"
                 isLoading={isLoading}
                 searchForm={
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {/* Row 1 */}
-                        {/* เลขที่ RFQ */}
-                        <FilterField
-                            label="เลขที่ RFQ"
-                            type="text"
-                            value={filters.search}
-                            onChange={handleSearchChange}
-                            placeholder="RFQ2024-xxx"
-                            accentColor="teal"
-                        />
-                        
-                        {/* เลขที่ PR อ้างอิง */}
-                        <FilterField
-                            label="เลขที่ PR อ้างอิง"
-                            type="text"
-                            value={filters.search2}
-                            onChange={handleSearch2Change}
-                            placeholder="PR2024-xxx"
-                            accentColor="teal"
-                        />
-
-                        {/* ผู้สร้าง RFQ */}
-                        <FilterField
-                            label="ผู้สร้าง RFQ"
-                            type="text"
-                            value={filters.search3}
-                            onChange={handleSearch3Change}
-                            placeholder="ชื่อผู้สร้าง"
-                            accentColor="teal"
-                        />
-
-                        {/* สถานะ */}
-                        <FilterField
-                            label="สถานะ"
-                            type="select"
-                            value={filters.status}
-                            onChange={(val) => handleStatusChange(val as RFQStatus | 'ALL')}
-                            options={RFQ_STATUS_OPTIONS}
-                            accentColor="teal"
-                        />
-
-                        {/* Row 2 */}
-                        {/* วันที่เริ่มต้น */}
-                        <FilterField
-                            label="วันที่เริ่มต้น"
-                            type="date"
-                            value={filters.dateFrom}
-                            onChange={(val) => handleDateRangeChange(val, filters.dateTo)}
-                            accentColor="teal"
-                        />
-
-                        {/* วันที่สิ้นสุด */}
-                        <FilterField
-                            label="วันที่สิ้นสุด"
-                            type="date"
-                            value={filters.dateTo}
-                            onChange={(val) => handleDateRangeChange(filters.dateFrom, val)}
-                            accentColor="teal"
-                        />
-
-                        {/* Action Buttons - inline */}
-                        <div className="lg:col-span-2 flex items-end justify-end gap-2 flex-wrap sm:flex-nowrap">
-                            {/* Search Button */}
-                            <button
-                                type="button"
-                                onClick={() => {}}
-                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg flex items-center gap-2 transition-colors whitespace-nowrap"
-                            >
-                                <Search size={16} />
-                                ค้นหา
-                            </button>
-
-                            {/* Clear Button */}
-                            <button
-                                type="button"
-                                onClick={resetFilters}
-                                className="px-4 py-2 bg-white hover:bg-gray-100 text-gray-700 font-medium rounded-lg border border-gray-300 flex items-center gap-2 transition-colors whitespace-nowrap"
-                            >
-                                <X size={16} />
-                                ล้างค่า
-                            </button>
-
-                            {/* Create Button */}
+                    <FilterFormBuilder
+                        config={RFQ_FILTER_CONFIG}
+                        filters={filters}
+                        onFilterChange={handleFilterChange}
+                        onSearch={() => {}} // React Query auto-fetches on filter change
+                        onReset={resetFilters}
+                        accentColor="teal"
+                        columns={{ sm: 2, md: 4, lg: 4 }}
+                        actionButtons={
                             <button
                                 onClick={() => openWindow('RFQ')}
                                 className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-lg flex items-center gap-2 transition-colors whitespace-nowrap"
@@ -187,8 +123,8 @@ export default function RFQListPage() {
                                 <Plus size={18} />
                                 สร้าง RFQ ใหม่
                             </button>
-                        </div>
-                    </div>
+                        }
+                    />
                 }
             >
                 {/* Results Section */}

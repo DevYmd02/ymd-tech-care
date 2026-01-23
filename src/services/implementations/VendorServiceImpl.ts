@@ -41,6 +41,16 @@ export class VendorServiceImpl implements IVendorService {
     }
   }
 
+  async getByTaxId(taxId: string): Promise<VendorMaster | null> {
+    try {
+      const response = await api.get<VendorMaster>(`/vendors/by-tax-id/${taxId}`);
+      return response.data;
+    } catch (error) {
+      logger.error('[VendorServiceImpl] getByTaxId error:', error);
+      return null;
+    }
+  }
+
   async getDropdown(): Promise<VendorDropdownItem[]> {
     try {
       const response = await api.get<VendorDropdownItem[]>('/vendors/dropdown');

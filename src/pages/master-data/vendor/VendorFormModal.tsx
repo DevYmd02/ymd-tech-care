@@ -8,9 +8,9 @@ import {
     FileText, Search, Info, MoreHorizontal, Star, AlignLeft, History, Check,
 } from 'lucide-react';
 import { vendorService } from '../../../services/vendorService';
-import type { VendorFormData } from '../../../types/vendor-types';
+import type { VendorFormData, VendorSearchItem } from '../../../types/vendor-types';
 import { toVendorCreateRequest } from '../../../types/vendor-types';
-import { WindowFormLayout, TabPanel } from '../../../components/shared';
+import { WindowFormLayout, TabPanel, VendorSearchModal } from '../../../components/shared';
 import { SystemAlert } from '../../../components/shared/SystemAlert';
 import { VendorFooter } from './VendorFooter';
 
@@ -76,6 +76,7 @@ export const VendorFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
     // Form State
     const [formData, setFormData] = useState<ModalFormData>(initialFormData);
     const [activeTab, setActiveTab] = useState<string>('detail');
+    const [isVendorSearchOpen, setIsVendorSearchOpen] = useState(false);
 
     // Reset form when modal opens
     useEffect(() => {
@@ -182,6 +183,22 @@ export const VendorFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
         }
     };
 
+    // Handle vendor selection from search modal
+    const handleVendorSelect = (vendor: VendorSearchItem) => {
+        setFormData(prev => ({
+            ...prev,
+            vendorCodeSearch: vendor.code,
+            vendorName: vendor.name,
+            vendorNameTh: vendor.name,
+            vendorNameEn: vendor.name_en || '',
+            taxId: vendor.taxId || '',
+            phone: vendor.phone || '',
+            email: vendor.email || '',
+            addressLine1: vendor.address || '',
+        }));
+        setIsVendorSearchOpen(false);
+    };
+
     // Shared styles matching RFQ/PR
     const cardClass = 'bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-sm overflow-hidden';
     const inputStyle = "w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white transition-all";
@@ -254,7 +271,10 @@ export const VendorFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                                         onChange={(e) => handleInputChange('vendorCodeSearch', e.target.value)}
                                         className={inputStyle} 
                                     />
-                                    <button className="absolute top-0 right-0 h-8 w-8 bg-purple-600 text-white rounded-r-lg flex items-center justify-center hover:bg-purple-700 transition-colors shadow-sm">
+                                    <button 
+                                        onClick={() => setIsVendorSearchOpen(true)}
+                                        className="absolute top-0 right-0 h-8 w-8 bg-purple-600 text-white rounded-r-lg flex items-center justify-center hover:bg-purple-700 transition-colors shadow-sm"
+                                    >
                                         <Search size={16} />
                                     </button>
                                 </div>
@@ -511,6 +531,13 @@ export const VendorFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 </div>
 
             </div>
+
+            {/* Vendor Search Modal */}
+            <VendorSearchModal
+                isOpen={isVendorSearchOpen}
+                onClose={() => setIsVendorSearchOpen(false)}
+                onSelect={handleVendorSelect}
+            />
         </WindowFormLayout>
     );
 };

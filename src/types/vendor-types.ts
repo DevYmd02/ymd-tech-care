@@ -50,10 +50,12 @@ export interface VendorMaster {
     payment_term_days?: number;
     credit_limit?: number;
     currency_code?: string;
+    vat_registered?: boolean;
     
     // Flags
     is_blocked: boolean;
     is_on_hold: boolean;
+    is_active?: boolean;
     
     // Audit
     created_at: string;
@@ -128,14 +130,20 @@ export interface VendorDropdownItem {
 
 /**
  * VendorSearchItem - สำหรับ SearchModal (รองรับทั้ง API และ legacy)
+ * Extended to include all fields needed for vendor selection
  */
 export interface VendorSearchItem {
+    vendor_id: string;
     code: string;
     name: string;
+    name_en?: string;
     address?: string;
-    contact?: string;
     phone?: string;
+    email?: string;
     taxId?: string;
+    payment_term_days?: number;
+    vat_registered?: boolean;
+    is_active?: boolean;
 }
 
 // ====================================================================================

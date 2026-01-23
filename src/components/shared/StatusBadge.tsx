@@ -1,30 +1,34 @@
 /**
  * @file StatusBadge.tsx
  * @description Unified Status Badge Component สำหรับแสดงสถานะเอกสารต่างๆ
- * @usage ใช้แสดง status เช่น PR, RFQ, PO และสถานะทั่วไป
+ * @usage ใช้แสดง status เช่น PR, RFQ, QT, QC และสถานะทั่วไป
  * 
  * @example
- * <StatusBadge status="APPROVED" colorMap={PR_STATUS_COLORS} labelMap={PR_STATUS_LABELS} />
+ * <StatusBadge type="PR" status="APPROVED" />
+ * <StatusBadge type="RFQ" status="SENT" />
+ * <StatusBadge type="QT" status="SUBMITTED" />
+ * <StatusBadge type="QC" status="WAITING_FOR_PO" />
  * <PRStatusBadge status="APPROVED" />
  * <RFQStatusBadge status="SENT" />
+ * <QTStatusBadge status="SUBMITTED" />
+ * <QCStatusBadge status="WAITING_FOR_PO" />
  * <ActiveStatusBadge isActive={true} />
  */
 
 import React from 'react';
-import {
-  PR_STATUS_COLORS,
-  PR_STATUS_LABELS,
-  RFQ_STATUS_COLORS,
-  RFQ_STATUS_LABELS,
-  QT_STATUS_COLORS,
-  QT_STATUS_LABELS,
-} from '../../constants/statusConstants';
 
 // ====================================================================================
 // TYPE DEFINITIONS
 // ====================================================================================
 
+export type ModuleType = 'PR' | 'RFQ' | 'QT' | 'QC';
 export type StatusVariant = 'pending' | 'success' | 'error' | 'warning' | 'info' | 'neutral';
+
+export interface ModuleStatusBadgeProps {
+  type: ModuleType;
+  status: string;
+  className?: string;
+}
 
 export interface StatusBadgeProps {
   status: string;
@@ -36,7 +40,147 @@ export interface StatusBadgeProps {
 }
 
 // ====================================================================================
-// STATUS MAPPING - Map status text to variant (for generic usage)
+// MODULE-BASED STATUS CONFIGURATION
+// ====================================================================================
+
+interface StatusConfig {
+  label: string;
+  colorClass: string;
+}
+
+type ModuleStatusConfig = Record<string, StatusConfig>;
+
+const statusConfig: Record<ModuleType, ModuleStatusConfig> = {
+  PR: {
+    DRAFT: {
+      label: 'ร่าง',
+      colorClass: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+    },
+    SUBMITTED: {
+      label: 'ส่งแล้ว',
+      colorClass: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
+    },
+    IN_APPROVAL: {
+      label: 'รออนุมัติ',
+      colorClass: 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300',
+    },
+    APPROVED: {
+      label: 'อนุมัติแล้ว',
+      colorClass: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+    },
+    REJECTED: {
+      label: 'ปฏิเสธ',
+      colorClass: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
+    },
+    CANCELLED: {
+      label: 'ยกเลิก',
+      colorClass: 'bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-400',
+    },
+    PARTIALLY_CONVERTED: {
+      label: 'แปลงบางส่วน',
+      colorClass: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300',
+    },
+    CONVERTED: {
+      label: 'แปลงแล้ว',
+      colorClass: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300',
+    },
+    CLOSED: {
+      label: 'ปิด',
+      colorClass: 'bg-gray-200 text-gray-600 dark:bg-gray-600 dark:text-gray-300',
+    },
+  },
+  RFQ: {
+    DRAFT: {
+      label: 'แบบร่าง',
+      colorClass: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+    },
+    SENT: {
+      label: 'ส่งแล้ว',
+      colorClass: 'bg-pink-100 text-pink-700 dark:bg-pink-900 dark:text-pink-300',
+    },
+    IN_PROGRESS: {
+      label: 'กำลังดำเนินการ',
+      colorClass: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
+    },
+    CLOSED: {
+      label: 'ปิดแล้ว',
+      colorClass: 'bg-emerald-700 text-white dark:bg-emerald-800 dark:text-emerald-100',
+    },
+    CANCELLED: {
+      label: 'ยกเลิก',
+      colorClass: 'bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-400',
+    },
+    WAITING_FOR_PO: {
+      label: 'รอเปิดใบสั่งซื้อ',
+      colorClass: 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300',
+    },
+    PO_CREATED: {
+      label: 'เปิดใบสั่งซื้อแล้ว',
+      colorClass: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+    },
+  },
+  QT: {
+    DRAFT: {
+      label: 'ร่าง',
+      colorClass: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+    },
+    SUBMITTED: {
+      label: 'ได้รับแล้ว',
+      colorClass: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
+    },
+    SELECTED: {
+      label: 'เทียบราคาแล้ว',
+      colorClass: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+    },
+    REJECTED: {
+      label: 'ไม่เลือก',
+      colorClass: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
+    },
+  },
+  QC: {
+    WAITING_FOR_PO: {
+      label: 'รอเปิดใบสั่งซื้อ',
+      colorClass: 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300',
+    },
+    PO_CREATED: {
+      label: 'เปิดใบสั่งซื้อแล้ว',
+      colorClass: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+    },
+  },
+};
+
+// ====================================================================================
+// MAIN COMPONENT - Module-Based StatusBadge
+// ====================================================================================
+
+/**
+ * Module-based StatusBadge - ใช้ type เพื่อกำหนด module และแสดง status ที่เหมาะสม
+ */
+export const ModuleStatusBadge: React.FC<ModuleStatusBadgeProps> = ({
+  type,
+  status,
+  className = '',
+}) => {
+  const config = statusConfig[type]?.[status];
+  
+  // Fallback if status not found in config
+  if (!config) {
+    return (
+      <span className={`px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 ${className}`}>
+        {status}
+      </span>
+    );
+  }
+
+  return (
+    <span className={`px-3 py-1 rounded-full text-xs font-medium ${config.colorClass} ${className}`}>
+      {config.label}
+    </span>
+  );
+};
+
+// ====================================================================================
+// LEGACY COMPONENT - StatusBadge (for backward compatibility)
 // ====================================================================================
 
 const statusVariantMap: Record<string, StatusVariant> = {
@@ -70,10 +214,6 @@ const variantClasses: Record<StatusVariant, string> = {
   info: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700/50',
   neutral: 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-700/50 dark:text-gray-400 dark:border-gray-600/50',
 };
-
-// ====================================================================================
-// MAIN COMPONENT - StatusBadge
-// ====================================================================================
 
 export const StatusBadge: React.FC<StatusBadgeProps> = ({
   status,
@@ -117,32 +257,22 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
 
 /** StatusBadge สำหรับ Purchase Requisition */
 export const PRStatusBadge: React.FC<{ status: string; className?: string }> = ({ status, className }) => (
-  <StatusBadge
-    status={status}
-    colorMap={PR_STATUS_COLORS}
-    labelMap={PR_STATUS_LABELS}
-    className={className}
-  />
+  <ModuleStatusBadge type="PR" status={status} className={className} />
 );
 
 /** StatusBadge สำหรับ Request for Quotation */
 export const RFQStatusBadge: React.FC<{ status: string; className?: string }> = ({ status, className }) => (
-  <StatusBadge
-    status={status}
-    colorMap={RFQ_STATUS_COLORS}
-    labelMap={RFQ_STATUS_LABELS}
-    className={className}
-  />
+  <ModuleStatusBadge type="RFQ" status={status} className={className} />
 );
 
 /** StatusBadge สำหรับ Quotation */
 export const QTStatusBadge: React.FC<{ status: string; className?: string }> = ({ status, className }) => (
-  <StatusBadge
-    status={status}
-    colorMap={QT_STATUS_COLORS}
-    labelMap={QT_STATUS_LABELS}
-    className={className}
-  />
+  <ModuleStatusBadge type="QT" status={status} className={className} />
+);
+
+/** StatusBadge สำหรับ Quotation Comparison */
+export const QCStatusBadge: React.FC<{ status: string; className?: string }> = ({ status, className }) => (
+  <ModuleStatusBadge type="QC" status={status} className={className} />
 );
 
 // ====================================================================================

@@ -48,6 +48,13 @@ export class MockVendorService implements IVendorService {
     return this.vendors.find(v => v.vendor_id === vendorId) || null;
   }
 
+  async getByTaxId(taxId: string): Promise<VendorMaster | null> {
+    logger.log('[MockVendorService] getByTaxId', taxId);
+    await this.delay(200);
+    const vendor = this.vendors.find(v => v.tax_id === taxId);
+    return vendor ? structuredClone(vendor) : null;
+  }
+
   async getDropdown(): Promise<VendorDropdownItem[]> {
     return this.vendors.map(v => ({
       vendor_code: v.vendor_code,
