@@ -7,7 +7,7 @@
 
 import { useState } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { FileText, Plus, Eye, Send } from 'lucide-react';
+import { FileText, Plus, Eye, Send, AlertCircle } from 'lucide-react';
 import { formatThaiDate } from '../../../utils/dateUtils';
 import { styles } from '../../../constants';
 import { PageListLayout, FilterFormBuilder, RFQStatusBadge } from '../../../components/shared';
@@ -28,7 +28,7 @@ const RFQ_STATUS_OPTIONS = [
     { value: 'ALL', label: 'ทั้งหมด' },
     { value: 'DRAFT', label: 'แบบร่าง' },
     { value: 'SENT', label: 'ส่งแล้ว' },
-    { value: 'IN_PROGRESS', label: 'กำลังดำเนินการ' },
+
     { value: 'CLOSED', label: 'ปิดแล้ว' },
     { value: 'CANCELLED', label: 'ยกเลิก' },
 ];
@@ -69,10 +69,11 @@ export default function RFQListPage() {
     };
 
     // Data Fetching with React Query
-    const { data, isLoading, isFetching } = useQuery({
+    const { data, isLoading, isFetching, isError, error } = useQuery({
         queryKey: ['rfqs', apiFilters],
         queryFn: () => rfqService.getList(apiFilters),
         placeholderData: keepPreviousData,
+        retry: 1, // Fail fast on backend error
     });
 
     // QT Modal State
@@ -127,6 +128,21 @@ export default function RFQListPage() {
                     />
                 }
             >
+                {/* Error State */}
+                {isError && (
+                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6 flex items-center gap-3">
+                        <div className="text-red-500 bg-red-100 dark:bg-red-900/50 p-2 rounded-full">
+                            <AlertCircle size={20} />
+                        </div>
+                        <div>
+                            <h3 className="text-red-800 dark:text-red-200 font-semibold">ไม่สามารถโหลดข้อมูลได้</h3>
+                            <p className="text-red-600 dark:text-red-300 text-sm">
+                                {error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์ กรุณาลองใหม่ในภายหลัง'}
+                            </p>
+                        </div>
+                    </div>
+                )}
+
                 {/* Results Section */}
                 <div className={`${styles.tableContainer} relative`}>
                     {/* Fetching indicator */}

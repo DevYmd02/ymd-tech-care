@@ -20,8 +20,8 @@
 
 import { useState, useCallback } from 'react';
 import { vendorService } from '../services/vendorService';
-import type { VendorFormData, VendorType } from '../types/vendor-types';
-import { toVendorCreateRequest } from '../types/vendor-types';
+import type { VendorFormData } from '../types/vendor-types';
+import { toVendorCreateRequest, initialVendorFormData } from '../types/vendor-types';
 
 // ====================================================================================
 // TYPE DEFINITIONS
@@ -92,44 +92,15 @@ export interface UseVendorFormReturn {
  * ค่าเริ่มต้นของ Vendor Form
  */
 export const initialVendorFormState: VendorFormState = {
-  vendorCode: '',
-  vendorCodeSearch: '',
-  vendorName: '',
-  vendorNameTh: '',
-  vendorNameEn: '',
-  taxId: '',
-  vendorType: 'COMPANY' as VendorType,
-  // PP20 address
-  addressLine1: '',
-  addressLine2: '',
-  subDistrict: '',
-  district: '',
-  province: '',
-  postalCode: '',
+  ...initialVendorFormData,
+  // PP20 address specific fields
   addressPP20Line1: '',
   addressPP20Line2: '',
   subDistrictPP20: '',
   districtPP20: '',
   provincePP20: '',
   postalCodePP20: '',
-  // Contact address
-  useAddressPP20: false,
-  contactAddressLine1: '',
-  contactAddressLine2: '',
-  contactSubDistrict: '',
-  contactDistrict: '',
-  contactProvince: '',
-  contactPostalCode: '',
   contactEmail: '',
-  // Contact info
-  phone: '',
-  phoneExt: '',
-  email: '',
-  remarks: '',
-  // Status
-  onHold: false,
-  blocked: false,
-  inactive: false,
 };
 
 // ====================================================================================

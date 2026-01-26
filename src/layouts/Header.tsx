@@ -12,7 +12,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { Bell, Settings, Moon, Sun, ChevronDown } from 'lucide-react';
+import { Bell, Settings, Moon, Sun, ChevronDown, Menu, ChevronLeft } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -20,7 +20,12 @@ import { useTheme } from '../contexts/ThemeContext';
 // COMPONENT - Header
 // ====================================================================================
 
-export default function Header() {
+interface HeaderProps {
+    isSidebarOpen: boolean;
+    onToggleSidebar: () => void;
+}
+
+export default function Header({ isSidebarOpen, onToggleSidebar }: HeaderProps) {
     // ==================== HOOKS ====================
     const location = useLocation();
     const { theme, setTheme } = useTheme();
@@ -67,12 +72,22 @@ export default function Header() {
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 transition-colors duration-200">
 
             {/* ========== LEFT SECTION: Page Title & Breadcrumb ========== */}
-            <div className="min-w-0 flex-1">
-                <h1 className="text-lg sm:text-xl font-semibold text-gray-800 dark:text-white truncate">{getPageTitle()}</h1>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
-                    <span className="hidden sm:inline">Current Path: </span>
-                    <span className="font-mono">{getBreadcrumb()}</span>
-                </p>
+            <div className="min-w-0 flex-1 flex items-center gap-3">
+                {/* Sidebar Toggle Button */}
+                <button 
+                    onClick={onToggleSidebar}
+                    className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 transition-colors"
+                >
+                    {isSidebarOpen ? <ChevronLeft size={20} /> : <Menu size={20} />}
+                </button>
+
+                <div>
+                    <h1 className="text-lg sm:text-xl font-semibold text-gray-800 dark:text-white truncate">{getPageTitle()}</h1>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
+                        <span className="hidden sm:inline">Current Path: </span>
+                        <span className="font-mono">{getBreadcrumb()}</span>
+                    </p>
+                </div>
             </div>
 
             {/* ========== RIGHT SECTION: Action Buttons ========== */}

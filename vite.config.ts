@@ -9,24 +9,44 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            // Core libs: React + Router (รวมกันเพื่อแก้ circular dependency)
+            // ============================================================
+            // VENDOR CHUNKING STRATEGY
+            // ============================================================
+            // IMPORTANT: Do NOT separate React-dependent libraries into
+            // different chunks from React core, as this causes circular
+            // dependency warnings (vendor-core ↔ vendor-charts loop).
+            //
+            // Solution: Group React + all React-dependent UI libraries
+            // (recharts, lucide-react) into a single vendor-react chunk.
+            // ============================================================
+            
+            // React ecosystem: Core + UI libraries that depend on React
+            // This prevents circular dependency between vendor-core and vendor-charts
             if (
-              id.includes('react-dom') || 
-              id.includes('node_modules/react/') || 
-              id.includes('react-router') || 
-              id.includes('scheduler')
+              id.includes('react-dom') ||
+              id.includes('node_modules/react/') ||
+              id.includes('react-router') ||
+              id.includes('scheduler') ||
+              id.includes('recharts') ||      // Charts library (React-dependent)
+              id.includes('lucide-react')     // Icons library (React-dependent)
             ) {
-              return 'vendor-core';
+              return 'vendor-react';
             }
             
-            if (id.includes('lucide-react')) return 'vendor-lucide';
+            // Form handling libraries (standalone, no React runtime dependency)
             if (id.includes('react-hook-form')) return 'vendor-form';
-            if (id.includes('zod')) return 'vendor-zod';
-            if (id.includes('axios')) return 'vendor-axios';
-            if (id.includes('recharts')) return 'vendor-charts';
             
-            // Other vendors - Let Vite/Rollup handle them to avoid circular dependencies
-            // return 'vendor';
+            // Validation library (standalone)
+            if (id.includes('zod')) return 'vendor-zod';
+            
+            // HTTP client (standalone)
+            if (id.includes('axios')) return 'vendor-axios';
+            
+            // TanStack Query (React-dependent but loaded separately for caching)
+            if (id.includes('@tanstack/react-query')) return 'vendor-query';
+            
+            // Let Vite/Rollup handle remaining vendors automatically
+            // to avoid creating additional circular dependencies
           }
         },
       },
