@@ -466,8 +466,30 @@ const _mockQCs: QCListItem[] = [
     created_at: '2026-01-25',
     status: 'WAITING_FOR_PO',
     vendor_count: 2,
-    lowest_bidder_name: undefined,
-    lowest_bid_amount: undefined,
+    lowest_bidder_name: 'บริษัท เฟอร์นิเจอร์พลัส จำกัด',
+    lowest_bid_amount: 25000.00,
+  },
+  {
+    qc_id: 'qc-003',
+    qc_no: 'QC-202512-0098',
+    pr_id: 'pr-003', // Assuming logical link
+    pr_no: 'PR-202512-0085',
+    created_at: '2025-12-15',
+    status: 'PO_CREATED',
+    vendor_count: 3,
+    lowest_bidder_name: 'บริษัท ออฟฟิศเมท จำกัด',
+    lowest_bid_amount: 45000.00,
+  },
+  {
+    qc_id: 'qc-004',
+    qc_no: 'QC-202512-0099',
+    pr_id: 'pr-004',
+    pr_no: 'PR-202512-0090',
+    created_at: '2025-12-20',
+    status: 'PO_CREATED',
+    vendor_count: 4,
+    lowest_bidder_name: 'บริษัท ไอทีซัพพลาย จำกัด',
+    lowest_bid_amount: 125000.00,
   },
 ];
 

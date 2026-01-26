@@ -5,12 +5,13 @@
  * @purpose กำหนดรหัสเจ้าหนี้ และจัดการข้อมูลผู้ขาย
  */
 
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FileText, Search, Plus, Save, Trash2, Copy, Eye, X, Loader2, Check, Home, ClipboardList, CreditCard, Settings, Phone, DollarSign, Building2 } from 'lucide-react';
 import { styles } from '../../../constants';
 import { vendorService } from '../../../services/vendorService';
-import { initialVendorFormData, toVendorCreateRequest, type VendorFormData } from '../../../types/vendor-types';
+import { initialVendorFormData, toVendorCreateRequest, type VendorFormData, type VendorSearchItem } from '../../../types/vendor-types';
+import { VendorSearchModal } from '../../../components/shared/VendorSearchModal';
 
 // ====================================================================================
 // LOCAL TYPES
@@ -53,15 +54,111 @@ const initialFormData: VendorPageFormData = {
 export default function VendorForm() {
     const navigate = useNavigate();
     
+    const [searchParams] = useSearchParams();
+    const vendorId = searchParams.get('id');
+    
     // Form state
     const [formData, setFormData] = useState<VendorPageFormData>(initialFormData);
     const [activeTab, setActiveTab] = useState<TabType>('branch');
+    const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
+    const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+
+    // Fetch vendor data if id exists
+    useEffect(() => {
+        const fetchVendor = async () => {
+            if (!vendorId) return;
+
+            setIsLoading(true);
+            try {
+                const vendor = await vendorService.getById(vendorId);
+                if (vendor) {
+                    setFormData(prev => ({
+                        ...prev,
+                        // Map snake_case from API to camelCase for form
+                        vendorCode: vendor.vendor_code,
+                        vendorName: vendor.vendor_name,
+                        vendorNameEn: vendor.vendor_name_en || '',
+                        taxId: vendor.tax_id || '',
+                        branchName: 'สำนักงานใหญ่', // Default as API doesn't provide yet
+                        // Address
+                        addressLine1: vendor.address_line1 || '',
+                        addressLine2: vendor.address_line2 || '',
+                        subDistrict: vendor.sub_district || '',
+                        district: vendor.district || '',
+                        province: vendor.province || '',
+                        postalCode: vendor.postal_code || '',
+                        country: vendor.country || 'Thailand',
+                        // Contact
+                        phone: vendor.phone || '',
+                        email: vendor.email || '',
+                        contactName: '', // Default as API doesn't provide yet
+                        
+                        // Search fields
+                        vendorCodeSearch: vendor.vendor_code,
+                        vendorNameTh: vendor.vendor_name,
+                        
+                        // Map specific fields if needed
+                        addressPP20Line1: vendor.address_line1 || '',
+                        addressPP20Line2: vendor.address_line2 || '',
+                        subDistrictPP20: vendor.sub_district || '',
+                        districtPP20: vendor.district || '',
+                        provincePP20: vendor.province || '',
+                        postalCodePP20: vendor.postal_code || '',
+                        contactEmail: vendor.email || '',
+                    }));
+                }
+            } catch (error) {
+                console.error('Error fetching vendor:', error);
+                setSaveError('ไม่สามารถโหลดข้อมูลผู้ขายได้');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchVendor();
+    }, [vendorId]);
 
     // Handle input change
     const handleInputChange = (field: keyof VendorPageFormData, value: string | boolean) => {
-        setFormData(prev => ({ ...prev, [field]: value }));
+        setFormData(prev => {
+            const newData = { ...prev, [field]: value };
+            
+            // Logic 1: Sync if useAddressPP20 is toggled
+            if (field === 'useAddressPP20') {
+                const isUsing = value as boolean;
+                if (isUsing) {
+                    // Copy PP20 to Contact
+                    newData.contactAddressLine1 = prev.addressPP20Line1;
+                    newData.contactAddressLine2 = prev.addressPP20Line2;
+                    newData.contactSubDistrict = prev.subDistrictPP20;
+                    newData.contactDistrict = prev.districtPP20;
+                    newData.contactProvince = prev.provincePP20;
+                    newData.contactPostalCode = prev.postalCodePP20;
+                } else {
+                    // Clear Contact
+                    newData.contactAddressLine1 = '';
+                    newData.contactAddressLine2 = '';
+                    newData.contactSubDistrict = '';
+                    newData.contactDistrict = '';
+                    newData.contactProvince = '';
+                    newData.contactPostalCode = '';
+                }
+            }
+            
+            // Logic 2: Sync if editing PP20 fields while useAddressPP20 is true
+            if (prev.useAddressPP20 && typeof value === 'string') {
+                 if (field === 'addressPP20Line1') newData.contactAddressLine1 = value;
+                 if (field === 'addressPP20Line2') newData.contactAddressLine2 = value;
+                 if (field === 'subDistrictPP20') newData.contactSubDistrict = value;
+                 if (field === 'districtPP20') newData.contactDistrict = value;
+                 if (field === 'provincePP20') newData.contactProvince = value;
+                 if (field === 'postalCodePP20') newData.contactPostalCode = value;
+            }
+
+            return newData;
+        });
     };
 
     // Handle form actions
@@ -93,10 +190,16 @@ export default function VendorForm() {
             };
 
             const request = toVendorCreateRequest(apiFormData);
-            const result = await vendorService.create(request);
+            
+            let result;
+            if (vendorId) {
+                result = await vendorService.update(vendorId, request);
+            } else {
+                result = await vendorService.create(request);
+            }
             
             if (result.success) {
-                navigate('/master-data');
+                navigate('/master-data/vendor');
             } else {
                 setSaveError(result.message || 'เกิดข้อผิดพลาดในการบันทึก');
             }
@@ -112,7 +215,37 @@ export default function VendorForm() {
     };
 
     const handleFind = () => {
-        // TODO: Implement find logic
+        setIsSearchModalOpen(true);
+    };
+
+    const handleVendorSelect = (vendor: VendorSearchItem) => {
+        setFormData(prev => ({
+            ...prev,
+            vendorCode: vendor.code,
+            vendorName: vendor.name,
+            vendorNameTh: vendor.name, // Assuming Thai Name is same if not separated
+            vendorNameEn: vendor.name_en || '',
+            taxId: vendor.taxId || '',
+            
+            // Map simple fields
+            phone: vendor.phone || '',
+            email: vendor.email || '',
+            
+            // Map address if available
+            addressLine1: (vendor.address && vendor.address !== '-') ? vendor.address : '',
+
+            // Update search fields
+            vendorCodeSearch: vendor.code,
+        }));
+    };
+
+    const handleStatusChange = (status: 'onHold' | 'blocked' | 'inactive', value: boolean) => {
+        setFormData(prev => ({
+            ...prev,
+            onHold: status === 'onHold' ? value : false,
+            blocked: status === 'blocked' ? value : false,
+            inactive: status === 'inactive' ? value : false,
+        }));
     };
 
     const handleCopy = () => {
@@ -124,7 +257,7 @@ export default function VendorForm() {
     };
 
     const handleSearchRevenue = () => {
-        // TODO: Implement Revenue Department search
+        window.open('https://vsinter.rd.go.th/rd-webcontent-web/#/vatsearch', '_blank');
     };
 
     // ====================================================================================
@@ -136,11 +269,19 @@ export default function VendorForm() {
             {/* ==================== HEADER BANNER ==================== */}
             <div className="bg-gradient-to-r from-blue-600 to-blue-400 rounded-lg p-4 flex items-center gap-3 shadow-md">
                 <FileText size={24} className="text-white" />
-                <h1 className="text-lg font-semibold text-white">กำหนดรหัสเจ้าหนี้</h1>
+                <h1 className="text-lg font-semibold text-white">แก้ไข/กำหนดรหัสเจ้าหนี้</h1>
             </div>
 
             {/* ==================== MAIN FORM CARD ==================== */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 relative">
+                {isLoading && (
+                    <div className="absolute inset-0 z-10 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm flex items-center justify-center rounded-lg">
+                        <div className="flex flex-col items-center">
+                            <Loader2 size={48} className="animate-spin text-blue-600" />
+                            <span className="mt-2 text-sm font-medium text-blue-600">กำลังโหลดข้อมูล...</span>
+                        </div>
+                    </div>
+                )}
                 {/* Quick Search Row */}
                 <div className="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row gap-4 sm:gap-6">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 flex-1 min-w-0">
@@ -218,7 +359,7 @@ export default function VendorForm() {
                                     <input
                                         type="checkbox"
                                         checked={formData.onHold}
-                                        onChange={(e) => handleInputChange('onHold', e.target.checked)}
+                                        onChange={(e) => handleStatusChange('onHold', e.target.checked)}
                                         className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
                                     />
                                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">On Hold</span>
@@ -227,7 +368,7 @@ export default function VendorForm() {
                                     <input
                                         type="checkbox"
                                         checked={formData.blocked}
-                                        onChange={(e) => handleInputChange('blocked', e.target.checked)}
+                                        onChange={(e) => handleStatusChange('blocked', e.target.checked)}
                                         className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
                                     />
                                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Block</span>
@@ -236,7 +377,7 @@ export default function VendorForm() {
                                     <input
                                         type="checkbox"
                                         checked={formData.inactive}
-                                        onChange={(e) => handleInputChange('inactive', e.target.checked)}
+                                        onChange={(e) => handleStatusChange('inactive', e.target.checked)}
                                         className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
                                     />
                                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Inactive</span>
@@ -574,13 +715,19 @@ export default function VendorForm() {
                     </div>
                     <button
                         type="button"
-                        onClick={() => navigate('/master-data')}
+                        onClick={() => navigate('/master-data/vendor')}
                         className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-red-500 hover:text-white hover:border-red-500 dark:hover:bg-red-600 dark:hover:border-red-600 transition-all duration-200"
                     >
                         <X size={16} />
                         Close
                     </button>
                 </div>
-            </div>
+                {/* Search Modal */}
+            <VendorSearchModal 
+                isOpen={isSearchModalOpen}
+                onClose={() => setIsSearchModalOpen(false)}
+                onSelect={handleVendorSelect}
+            />
+        </div>
     );
 }

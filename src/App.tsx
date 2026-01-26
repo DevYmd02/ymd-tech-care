@@ -22,8 +22,8 @@ import PRListPage from './pages/procurement/pr/PRListPage';
 import RFQListPage from './pages/procurement/rfq/RFQListPage';
 import QTListPage from './pages/procurement/qt/QTListPage';
 import QCListPage from './pages/procurement/qc/QCListPage';
+import POListPage from './pages/procurement/po/POListPage';
 import { 
-    PurchaseOrderListPage, 
     GoodsReceiptNoteListPage, 
     PurchaseReturnListPage 
 } from './pages/procurement/ProcurementComingSoon';
@@ -104,7 +104,7 @@ function App() {
         {/* Procurement - Coming Soon */}
         <Route path="procurement/qt" element={<QTListPage />} />
         <Route path="procurement/qc" element={<QCListPage />} />
-        <Route path="procurement/po" element={<PurchaseOrderListPage />} />
+        <Route path="procurement/po" element={<POListPage />} />
         <Route path="procurement/grn" element={<GoodsReceiptNoteListPage />} />
         <Route path="procurement/prt" element={<PurchaseReturnListPage />} />
 

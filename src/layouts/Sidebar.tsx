@@ -19,16 +19,16 @@ import type { MenuItem, SubMenuItem } from '../config/routes';
 // COMPONENT - Sidebar
 // ====================================================================================
 
-export default function Sidebar() {
+interface SidebarProps {
+    isOpen: boolean;
+}
+
+export default function Sidebar({ isOpen }: SidebarProps) {
     // ใช้ useLocation เพื่อตรวจสอบ active menu
     const location = useLocation();
 
     // State เก็บรายการเมนูที่กำลังเปิดอยู่ (expanded)
     const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
-
-    // ====================================================================================
-    // HANDLER FUNCTIONS
-    // ====================================================================================
 
     /**
      * Toggle การเปิด/ปิดเมนูย่อย
@@ -42,10 +42,6 @@ export default function Sidebar() {
         );
     };
 
-    // ====================================================================================
-    // UTILITY FUNCTIONS
-    // ====================================================================================
-
     /**
      * ตรวจสอบว่ามีเมนูย่อยใดกำลัง active หรือไม่
      * @param subItems - รายการเมนูย่อย
@@ -56,13 +52,15 @@ export default function Sidebar() {
         return subItems.some(sub => location.pathname === sub.path);
     };
 
-    // ====================================================================================
-    // RENDER
-    // ====================================================================================
-
     return (
-        // Sidebar Container - ขยายจาก 200px เป็น 300px เมื่อ hover
-        <div className="w-[200px] hover:w-[300px] bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 h-screen flex flex-col transition-all duration-300 ease-in-out group overflow-hidden">
+        // Sidebar Container - Controlled by isOpen prop
+        <div 
+            className={`
+                bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 h-screen flex flex-col 
+                transition-all duration-300 ease-in-out group overflow-hidden
+                ${isOpen ? 'w-[280px]' : 'w-0'}
+            `}
+        >
 
             {/* ==================== HEADER (Logo & Brand) ==================== */}
             <div className="bg-blue-600 text-white p-4 flex items-center space-x-3 flex-shrink-0">

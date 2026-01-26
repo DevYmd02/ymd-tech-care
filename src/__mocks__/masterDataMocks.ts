@@ -20,6 +20,8 @@ import type {
     ItemListItem,
     UOMConversionListItem,
     ItemBarcodeListItem,
+    CostCenter,
+    Project,
 } from '../types/master-data-types';
 
 // ====================================================================================
@@ -380,3 +382,92 @@ const _mockItemBarcodes: ItemBarcodeListItem[] = [
 
 /** Mock data สำหรับ Item Barcode List - เฉพาะ DEV mode */
 export const mockItemBarcodes: ItemBarcodeListItem[] = IS_DEV ? _mockItemBarcodes : [];
+
+// ====================================================================================
+// COST CENTER MOCK DATA
+// ====================================================================================
+
+const _mockCostCenters: CostCenter[] = [
+    {
+        cost_center_id: 'CC001',
+        cost_center_code: 'CC-IT',
+        cost_center_name: 'แผนกไอที',
+        description: 'Information Technology Department',
+        budget_amount: 5000000,
+        manager_name: 'Somchai IT',
+        is_active: true,
+    },
+    {
+        cost_center_id: 'CC002',
+        cost_center_code: 'CC-HR',
+        cost_center_name: 'แผนกทรัพยากรบุคคล',
+        description: 'Human Resources Department',
+        budget_amount: 2000000,
+        manager_name: 'Somsri HR',
+        is_active: true,
+    },
+    {
+        cost_center_id: 'CC003',
+        cost_center_code: 'CC-ACC',
+        cost_center_name: 'แผนกบัญชี',
+        description: 'Accounting Department',
+        budget_amount: 3000000,
+        manager_name: 'Somying ACC',
+        is_active: true,
+    },
+    {
+        cost_center_id: 'CC004',
+        cost_center_code: 'CC-MKT',
+        cost_center_name: 'แผนกการตลาด',
+        description: 'Marketing Department',
+        budget_amount: 8000000,
+        manager_name: 'Sompong MKT',
+        is_active: false,
+    },
+];
+
+/** Mock data สำหรับ Cost Center List - เฉพาะ DEV mode */
+export const mockCostCenters: CostCenter[] = IS_DEV ? _mockCostCenters : [];
+
+// ====================================================================================
+// PROJECT MOCK DATA
+// ====================================================================================
+
+const _mockProjects: Project[] = [
+    {
+        project_id: 'PRJ001',
+        project_code: 'PRJ-2024-001',
+        project_name: 'ปรับปรุงระบบ ERP Phase 1',
+        description: 'Implementation of Procurement Module',
+        cost_center_id: 'CC001',
+        budget_amount: 1500000,
+        start_date: '2024-01-01',
+        end_date: '2024-06-30',
+        status: 'ACTIVE',
+    },
+    {
+        project_id: 'PRJ002',
+        project_code: 'PRJ-2024-002',
+        project_name: 'ก่อสร้างอาคารใหม่',
+        description: 'New Office Building Construction',
+        cost_center_id: 'CC-GEN',
+        budget_amount: 20000000,
+        start_date: '2024-02-15',
+        end_date: '2024-12-31',
+        status: 'ON_HOLD',
+    },
+    {
+        project_id: 'PRJ003',
+        project_code: 'PRJ-2024-003',
+        project_name: 'จัดจ้างทำความสะอาดประจำปี',
+        description: 'Annual Cleaning Service Contract',
+        cost_center_id: 'CC002',
+        budget_amount: 500000,
+        start_date: '2024-01-01',
+        end_date: '2024-12-31',
+        status: 'ACTIVE',
+    },
+];
+
+/** Mock data สำหรับ Project List - เฉพาะ DEV mode */
+export const mockProjects: Project[] = IS_DEV ? _mockProjects : [];

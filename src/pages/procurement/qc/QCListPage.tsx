@@ -7,7 +7,7 @@
 
 import { useState } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { Scale } from 'lucide-react';
+import { Scale, FileText, Eye } from 'lucide-react';
 import { formatThaiDate } from '../../../utils/dateUtils';
 import { styles } from '../../../constants';
 import { PageListLayout, FilterFormBuilder, QCStatusBadge } from '../../../components/shared';
@@ -134,6 +134,7 @@ export default function QCListPage() {
                                     <th className="w-[10%] px-2 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Vendors</th>
                                     <th className="w-[18%] px-2 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">ผู้เสนอราคาต่ำสุด</th>
                                     <th className="w-[17%] px-2 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">ราคาต่ำสุด (บาท)</th>
+                                    <th className="w-[10%] px-2 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">จัดการ</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900 text-xs">
@@ -172,6 +173,25 @@ export default function QCListPage() {
 
                                             <td className="px-2 py-3 font-bold text-gray-800 dark:text-white text-right whitespace-nowrap">
                                                 {item.lowest_bid_amount?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                            </td>
+
+                                            <td className="px-2 py-3 text-center">
+                                                <div className="flex items-center justify-center gap-2">
+                                                    {item.status === 'WAITING_FOR_PO' && (
+                                                        <button 
+                                                            className="p-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                                                            title="เปิดใบสั่งซื้อ"
+                                                        >
+                                                            <FileText size={18} />
+                                                        </button>
+                                                    )}
+                                                    <button 
+                                                        className="p-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                                                        title="ดูรายละเอียด"
+                                                    >
+                                                        <Eye size={18} />
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))

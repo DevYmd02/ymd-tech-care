@@ -21,7 +21,7 @@ import React from 'react';
 // TYPE DEFINITIONS
 // ====================================================================================
 
-export type ModuleType = 'PR' | 'RFQ' | 'QT' | 'QC';
+export type ModuleType = 'PR' | 'RFQ' | 'QT' | 'QC' | 'PO';
 export type StatusVariant = 'pending' | 'success' | 'error' | 'warning' | 'info' | 'neutral';
 
 export interface ModuleStatusBadgeProps {
@@ -127,6 +127,24 @@ const statusConfig: Record<ModuleType, ModuleStatusConfig> = {
       colorClass: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
     },
   },
+  PO: {
+    DRAFT: {
+      label: 'แบบร่าง',
+      colorClass: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+    },
+    APPROVED: {
+      label: 'อนุมัติแล้ว',
+      colorClass: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
+    },
+    ISSUED: {
+      label: 'ออกแล้ว',
+      colorClass: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+    },
+    CANCELLED: {
+      label: 'ยกเลิก',
+      colorClass: 'bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-400',
+    },
+  },
 };
 
 // ====================================================================================
@@ -153,7 +171,7 @@ export const ModuleStatusBadge: React.FC<ModuleStatusBadgeProps> = ({
   }
 
   return (
-    <span className={`px-3 py-1 rounded-full text-xs font-medium ${config.colorClass} ${className}`}>
+    <span className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${config.colorClass} ${className}`}>
       {config.label}
     </span>
   );
@@ -254,6 +272,13 @@ export const QTStatusBadge: React.FC<{ status: string; className?: string }> = (
 export const QCStatusBadge: React.FC<{ status: string; className?: string }> = ({ status, className }) => (
   <ModuleStatusBadge type="QC" status={status} className={className} />
 );
+
+/** StatusBadge สำหรับ Purchase Order */
+export const POStatusBadge: React.FC<{ status: string; className?: string }> = ({ status, className }) => (
+  <ModuleStatusBadge type="PO" status={status} className={className} />
+);
+
+
 
 // ====================================================================================
 // ACTIVE/INACTIVE STATUS BADGE - สำหรับ Master Data Lists

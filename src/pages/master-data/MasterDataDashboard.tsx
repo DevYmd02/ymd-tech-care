@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { 
     Database, Users, Package, Building2, Warehouse as WarehouseIcon, 
     DollarSign, FolderKanban, Plus, Search, Filter, Edit2, Trash2,
@@ -14,10 +14,11 @@ import {
 import { styles } from '../../constants';
 
 // Import mock data
-import { mockBranches, mockWarehouses, mockItemTypes } from '../../__mocks__/masterDataMocks';
+import { mockBranches, mockWarehouses, mockItems, mockCostCenters, mockProjects } from '../../__mocks__/masterDataMocks';
 import { vendorService } from '../../services/vendorService';
 
 // Import Form Modals
+
 import { VendorFormModal } from './vendor';
 import { BranchFormModal } from './branch';
 import { WarehouseFormModal } from './warehouse';
@@ -26,8 +27,11 @@ import { ItemMasterList } from './item-master';
 // Import types
 import type { VendorListItem } from '../../types/vendor-types';
 import type { 
-    BranchListItem, 
+    BranchListItem,
     WarehouseListItem, 
+    ItemListItem,
+    CostCenter,
+    Project
 } from '../../types/master-data-types';
 
 // ====================================================================================
@@ -90,6 +94,7 @@ const DB_RELATIONS: Record<TabType, { dbTable: string; relations: string[]; fk: 
 
 export default function MasterDataDashboard() {
     const [searchParams, setSearchParams] = useSearchParams();
+    const navigate = useNavigate();
     
     // Get initial tab from URL or default to 'vendor'
     const initialTab = (searchParams.get('tab') as TabType) || 'vendor';
@@ -101,21 +106,26 @@ export default function MasterDataDashboard() {
     const [searchTerm, setSearchTerm] = useState('');
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
     
     // Data states
     const [vendors, setVendors] = useState<VendorListItem[]>([]);
     const [branches, setBranches] = useState<BranchListItem[]>([]);
     const [warehouses, setWarehouses] = useState<WarehouseListItem[]>([]);
+    const [items, setItems] = useState<ItemListItem[]>([]);
+    const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
+    const [projects, setProjects] = useState<Project[]>([]);
 
 
     // Tab configs with record counts
     const tabs: TabConfig[] = [
         { id: 'vendor', label: 'Vendor', labelEn: 'ผู้ขาย', icon: Users, recordCount: vendors.length, ...DB_RELATIONS['vendor'] },
-        { id: 'item', label: 'Item', labelEn: 'สินค้า', icon: Package, recordCount: mockItemTypes.length, ...DB_RELATIONS['item'] },
+        { id: 'item', label: 'Item', labelEn: 'สินค้า', icon: Package, recordCount: mockItems.length, ...DB_RELATIONS['item'] },
         { id: 'branch', label: 'Branch', labelEn: 'สาขา', icon: Building2, recordCount: mockBranches.length, ...DB_RELATIONS['branch'] },
         { id: 'warehouse', label: 'Warehouse', labelEn: 'คลัง', icon: WarehouseIcon, recordCount: mockWarehouses.length, ...DB_RELATIONS['warehouse'] },
-        { id: 'cost-center', label: 'Cost Center', labelEn: '', icon: DollarSign, recordCount: 4, ...DB_RELATIONS['cost-center'] },
-        { id: 'project', label: 'Project', labelEn: 'โครงการ', icon: FolderKanban, recordCount: 3, ...DB_RELATIONS['project'] },
+        { id: 'cost-center', label: 'Cost Center', labelEn: 'ศูนย์ต้นทุน', icon: DollarSign, recordCount: mockCostCenters.length, ...DB_RELATIONS['cost-center'] },
+        { id: 'project', label: 'Project', labelEn: 'โครงการ', icon: FolderKanban, recordCount: mockProjects.length, ...DB_RELATIONS['project'] },
     ];
 
     // Fetch Data
@@ -138,11 +148,13 @@ export default function MasterDataDashboard() {
                 setWarehouses([...mockWarehouses]);
                 break;
             case 'item':
-                // Item Master uses its own list component for now
+                setItems([...mockItems]);
                 break;
             case 'cost-center':
+                setCostCenters([...mockCostCenters]);
+                break;
             case 'project':
-                // Mock data for now
+                setProjects([...mockProjects]);
                 break;
         }
         
@@ -157,6 +169,7 @@ export default function MasterDataDashboard() {
         setSearchParams({ tab: activeTab });
         setSearchTerm('');
         setExpandedId(null);
+        setCurrentPage(1);
     }, [activeTab, setSearchParams]);
 
     // Handlers
@@ -170,6 +183,10 @@ export default function MasterDataDashboard() {
     };
 
     const handleEdit = (id: string) => {
+        if (activeTab === 'vendor') {
+            navigate(`/master-data/vendor/form?id=${id}`);
+            return;
+        }
         setEditingId(id);
         setIsModalOpen(true);
     };
@@ -230,10 +247,34 @@ export default function MasterDataDashboard() {
                     w.warehouse_code.toLowerCase().includes(term) ||
                     w.warehouse_name.toLowerCase().includes(term)
                 );
+            case 'item':
+                return items.filter(i =>
+                    i.item_code.toLowerCase().includes(term) ||
+                    i.item_name.toLowerCase().includes(term)
+                );
+            case 'cost-center':
+                return costCenters.filter(c =>
+                    c.cost_center_code.toLowerCase().includes(term) ||
+                    c.cost_center_name.toLowerCase().includes(term)
+                );
+            case 'project':
+                return projects.filter(p =>
+                    p.project_code.toLowerCase().includes(term) ||
+                    p.project_name.toLowerCase().includes(term)
+                );
             default:
                 return [];
         }
     };
+
+    // Calculate pagination
+    const filteredData = getFilteredData();
+    const totalItems = filteredData.length;
+    const totalPages = Math.ceil(totalItems / rowsPerPage);
+    const paginatedData = filteredData.slice(
+        (currentPage - 1) * rowsPerPage,
+        currentPage * rowsPerPage
+    );
 
     // ====================================================================================
     // RENDER HELPERS
@@ -453,6 +494,221 @@ export default function MasterDataDashboard() {
         </div>
     );
 
+    const renderWarehouseCard = (warehouse: WarehouseListItem, isExpanded: boolean) => (
+        <div key={warehouse.warehouse_id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div 
+                className="p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                onClick={() => toggleExpand(warehouse.warehouse_id)}
+            >
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center">
+                            <WarehouseIcon size={24} className="text-indigo-600 dark:text-indigo-400" />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className="font-semibold text-gray-900 dark:text-white">
+                                    {warehouse.warehouse_name}
+                                </span>
+                                <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                                    warehouse.is_active 
+                                        ? 'bg-green-100 text-green-700' 
+                                        : 'bg-gray-100 text-gray-600'
+                                }`}>
+                                    {warehouse.is_active ? 'ACTIVE' : 'INACTIVE'}
+                                </span>
+                            </div>
+                            <p className="text-sm text-gray-500">
+                                Code: {warehouse.warehouse_code} | Branch: {warehouse.branch_name}
+                            </p>
+                        </div>
+                    </div>
+                    {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                </div>
+            </div>
+            {isExpanded && (
+                <div className="border-t border-gray-200 dark:border-gray-700 p-4">
+                    <div className="flex gap-2 mb-4">
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); handleEdit(warehouse.warehouse_id); }}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                        >
+                            <Edit2 size={16} /> Edit
+                        </button>
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); handleDelete(warehouse.warehouse_id); }}
+                            className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                        >
+                            <Trash2 size={16} /> Delete
+                        </button>
+                    </div>
+                    {/* Database Relations */}
+                    <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                        <div className="flex items-center gap-2 mb-3">
+                            <Database size={16} className="text-gray-500" />
+                            <span className="text-sm font-medium text-gray-600">Database Relations</span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-4 text-sm">
+                            <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <p className="text-xs text-gray-500 mb-1">Table:</p>
+                                <p className="text-blue-600 font-mono">{currentTab.dbTable}</p>
+                            </div>
+                            <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <p className="text-xs text-gray-500 mb-1">Relations:</p>
+                                <p className="text-blue-600 font-mono text-xs">{currentTab.relations.join(', ')}</p>
+                            </div>
+                            <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <p className="text-xs text-gray-500 mb-1">FK:</p>
+                                <p className="text-blue-600 font-mono">{currentTab.fk}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+
+    const renderCostCenterCard = (cc: CostCenter, isExpanded: boolean) => (
+        <div key={cc.cost_center_id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div 
+                className="p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                onClick={() => toggleExpand(cc.cost_center_id)}
+            >
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
+                            <DollarSign size={24} className="text-purple-600 dark:text-purple-400" />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className="font-semibold text-gray-900 dark:text-white">
+                                    {cc.cost_center_name}
+                                </span>
+                                <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                                    cc.is_active 
+                                        ? 'bg-green-100 text-green-700' 
+                                        : 'bg-gray-100 text-gray-600'
+                                }`}>
+                                    {cc.is_active ? 'ACTIVE' : 'INACTIVE'}
+                                </span>
+                            </div>
+                            <p className="text-sm text-gray-500">
+                                Code: {cc.cost_center_code} | Manager: {cc.manager_name}
+                            </p>
+                        </div>
+                    </div>
+                    {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                </div>
+            </div>
+            {isExpanded && (
+                <div className="border-t border-gray-200 dark:border-gray-700 p-4">
+                     <div className="mb-4">
+                        <p className="text-xs text-gray-500 mb-1">Description</p>
+                        <p className="text-sm text-gray-700 dark:text-gray-300">{cc.description}</p>
+                    </div>
+                    <div className="mb-4">
+                        <p className="text-xs text-gray-500 mb-1">Budget Amount</p>
+                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                            {cc.budget_amount.toLocaleString('en-US', { style: 'currency', currency: 'THB' })}
+                        </p>
+                    </div>
+                    {/* Database Relations */}
+                    <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                         <div className="flex items-center gap-2 mb-3">
+                            <Database size={16} className="text-gray-500" />
+                            <span className="text-sm font-medium text-gray-600">Database Relations</span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-4 text-sm">
+                            <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <p className="text-xs text-gray-500 mb-1">Table:</p>
+                                <p className="text-blue-600 font-mono">{currentTab.dbTable}</p>
+                            </div>
+                             <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <p className="text-xs text-gray-500 mb-1">Relations:</p>
+                                <p className="text-blue-600 font-mono text-xs">{currentTab.relations.join(', ')}</p>
+                            </div>
+                            <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <p className="text-xs text-gray-500 mb-1">FK:</p>
+                                <p className="text-blue-600 font-mono">{currentTab.fk}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+
+    const renderProjectCard = (project: Project, isExpanded: boolean) => (
+        <div key={project.project_id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+             <div 
+                className="p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                onClick={() => toggleExpand(project.project_id)}
+            >
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center">
+                            <FolderKanban size={24} className="text-orange-600 dark:text-orange-400" />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className="font-semibold text-gray-900 dark:text-white">
+                                    {project.project_name}
+                                </span>
+                                <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                                    project.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
+                                    project.status === 'COMPLETED' ? 'bg-blue-100 text-blue-700' :
+                                    project.status === 'ON_HOLD' ? 'bg-yellow-100 text-yellow-700' :
+                                    'bg-red-100 text-red-700'
+                                }`}>
+                                    {project.status}
+                                </span>
+                            </div>
+                            <p className="text-sm text-gray-500">
+                                Code: {project.project_code} | Duration: {project.start_date} - {project.end_date}
+                            </p>
+                        </div>
+                    </div>
+                     {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                </div>
+            </div>
+             {isExpanded && (
+                <div className="border-t border-gray-200 dark:border-gray-700 p-4">
+                    <div className="mb-4">
+                        <p className="text-xs text-gray-500 mb-1">Description</p>
+                        <p className="text-sm text-gray-700 dark:text-gray-300">{project.description}</p>
+                    </div>
+                     <div className="mb-4">
+                        <p className="text-xs text-gray-500 mb-1">Budget Amount</p>
+                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                            {project.budget_amount.toLocaleString('en-US', { style: 'currency', currency: 'THB' })}
+                        </p>
+                    </div>
+                    {/* Database Relations */}
+                    <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                         <div className="flex items-center gap-2 mb-3">
+                            <Database size={16} className="text-gray-500" />
+                            <span className="text-sm font-medium text-gray-600">Database Relations</span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-4 text-sm">
+                             <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <p className="text-xs text-gray-500 mb-1">Table:</p>
+                                <p className="text-blue-600 font-mono">{currentTab.dbTable}</p>
+                            </div>
+                             <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <p className="text-xs text-gray-500 mb-1">Relations:</p>
+                                <p className="text-blue-600 font-mono text-xs">{currentTab.relations.join(', ')}</p>
+                            </div>
+                            <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <p className="text-xs text-gray-500 mb-1">FK:</p>
+                                <p className="text-blue-600 font-mono">{currentTab.fk}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+
     // ====================================================================================
     // RENDER
     // ====================================================================================
@@ -528,7 +784,6 @@ export default function MasterDataDashboard() {
                         </p>
                     </div>
                 </div>
-                {activeTab !== 'item' && (
                 <button
                     onClick={handleAddNew}
                     className={`${styles.btnPrimary} flex items-center gap-2`}
@@ -536,11 +791,9 @@ export default function MasterDataDashboard() {
                     <Plus size={20} />
                     Add New
                 </button>
-                )}
             </div>
 
-            {/* Search & Filter - Hide for Item tab as it has its own */}
-            {activeTab !== 'item' && (
+            {/* Search & Filter */}
             <div className="flex gap-4 mb-4">
                 <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
@@ -557,7 +810,12 @@ export default function MasterDataDashboard() {
                     <span className="text-gray-700 dark:text-gray-300">Filter</span>
                 </button>
             </div>
-            )}
+
+            {/* Filter Summary */}
+            <div className="flex items-center gap-2 mb-4 text-sm text-gray-500 dark:text-gray-400">
+                <Filter size={16} />
+                <span>พบ {totalItems} รายการ จาก {currentTab.recordCount} รายการ</span>
+            </div>
 
             {/* Data Cards */}
             <div className="space-y-4">
@@ -567,8 +825,8 @@ export default function MasterDataDashboard() {
                         <span className="ml-3 text-gray-600">กำลังโหลดข้อมูล...</span>
                     </div>
                 ) : activeTab === 'vendor' ? (
-                    getFilteredData().length > 0 ? (
-                        (getFilteredData() as VendorListItem[]).map(vendor => 
+                    paginatedData.length > 0 ? (
+                        (paginatedData as VendorListItem[]).map(vendor => 
                             renderVendorCard(vendor, expandedId === vendor.vendor_id)
                         )
                     ) : (
@@ -577,8 +835,8 @@ export default function MasterDataDashboard() {
                         </div>
                     )
                 ) : activeTab === 'branch' ? (
-                    getFilteredData().length > 0 ? (
-                        (getFilteredData() as BranchListItem[]).map(branch => 
+                    paginatedData.length > 0 ? (
+                        (paginatedData as BranchListItem[]).map(branch => 
                             renderBranchCard(branch, expandedId === branch.branch_id)
                         )
                     ) : (
@@ -586,8 +844,38 @@ export default function MasterDataDashboard() {
                             ไม่พบข้อมูล {currentTab.label}
                         </div>
                     )
+                ) : activeTab === 'warehouse' ? (
+                    paginatedData.length > 0 ? (
+                        (paginatedData as WarehouseListItem[]).map(warehouse => 
+                            renderWarehouseCard(warehouse, expandedId === warehouse.warehouse_id)
+                        )
+                    ) : (
+                        <div className="text-center py-12 text-gray-500">
+                             ไม่พบข้อมูล {currentTab.label}
+                        </div>
+                    )
                 ) : activeTab === 'item' ? (
-                     <ItemMasterList />
+                     <ItemMasterList data={paginatedData as ItemListItem[]} />
+                ) : activeTab === 'cost-center' ? (
+                    paginatedData.length > 0 ? (
+                        (paginatedData as CostCenter[]).map(cc => 
+                            renderCostCenterCard(cc, expandedId === cc.cost_center_id)
+                        )
+                    ) : (
+                        <div className="text-center py-12 text-gray-500">
+                             ไม่พบข้อมูล {currentTab.label}
+                         </div>
+                    )
+                ) : activeTab === 'project' ? (
+                     paginatedData.length > 0 ? (
+                        (paginatedData as Project[]).map(project => 
+                            renderProjectCard(project, expandedId === project.project_id)
+                        )
+                    ) : (
+                        <div className="text-center py-12 text-gray-500">
+                             ไม่พบข้อมูล {currentTab.label}
+                         </div>
+                    )
                 ) : (
                     <div className="text-center py-12 text-gray-500">
                         <p>{currentTab.label} - Coming Soon</p>
@@ -595,8 +883,67 @@ export default function MasterDataDashboard() {
                 )}
             </div>
 
+            {/* Pagination Footer */}
+            {!isLoading && totalItems > 0 && (
+                <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                        <span>แสดง</span>
+                        <select
+                            value={rowsPerPage}
+                            onChange={(e) => {
+                                setRowsPerPage(Number(e.target.value));
+                                setCurrentPage(1);
+                            }}
+                            className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value={5}>5</option>
+                            <option value={10}>10</option>
+                            <option value={20}>20</option>
+                            <option value={50}>50</option>
+                        </select>
+                        <span>รายการ จาก {totalItems}</span>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                        <button
+                            onClick={() => setCurrentPage(1)}
+                            disabled={currentPage === 1}
+                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-gray-600 dark:text-white"
+                        >
+                            <span className="text-lg">«</span>
+                        </button>
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                            disabled={currentPage === 1}
+                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-gray-600 dark:text-white"
+                        >
+                            <span className="text-lg">‹</span>
+                        </button>
+                        
+                        <span className="px-4 text-sm font-medium text-gray-700 dark:text-white">
+                            หน้า {currentPage} / {totalPages}
+                        </span>
+                        
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                            disabled={currentPage === totalPages}
+                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-gray-600 dark:text-white"
+                        >
+                            <span className="text-lg">›</span>
+                        </button>
+                        <button
+                            onClick={() => setCurrentPage(totalPages)}
+                            disabled={currentPage === totalPages}
+                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-gray-600 dark:text-white"
+                        >
+                            <span className="text-lg">»</span>
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Form Modals */}
-            <VendorFormModal isOpen={isModalOpen && activeTab === 'vendor'} onClose={handleModalClose} />
+            <VendorFormModal isOpen={isModalOpen && activeTab === 'vendor'} onClose={handleModalClose} vendorId={editingId || undefined} />
             <BranchFormModal isOpen={isModalOpen && activeTab === 'branch'} onClose={handleModalClose} editId={editingId} />
             <WarehouseFormModal isOpen={isModalOpen && activeTab === 'warehouse'} onClose={handleModalClose} editId={editingId} />
             {/* Item Master modals are handled within ItemMasterList */}

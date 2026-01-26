@@ -21,7 +21,7 @@ import {
     AlertCircle
 } from 'lucide-react';
 import { styles } from '../../../constants';
-import { VendorFormModal } from './VendorFormModal';
+
 import { vendorService } from '../../../services/vendorService';
 import type { VendorListItem, VendorStatus, VendorListParams } from '../../../types/vendor-types';
 import { VendorStatusBadge } from '../../../components/shared';
@@ -40,7 +40,7 @@ export default function VendorList() {
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalItems, setTotalItems] = useState(0);
-    const [isModalOpen, setIsModalOpen] = useState(false);
+
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -85,7 +85,7 @@ export default function VendorList() {
 
     // ==================== HANDLERS ====================
     const handleCreateNew = () => {
-        setIsModalOpen(true);
+        navigate('/master-data/vendor/form');
     };
 
     const handleEdit = (vendorId: string) => {
@@ -107,10 +107,7 @@ export default function VendorList() {
         fetchVendors();
     };
 
-    const handleModalClose = () => {
-        setIsModalOpen(false);
-        fetchVendors(); // Refresh after modal close
-    };
+
 
 
 
@@ -321,11 +318,7 @@ export default function VendorList() {
                 )}
             </div>
 
-            {/* Render Modal */}
-            <VendorFormModal 
-                isOpen={isModalOpen} 
-                onClose={handleModalClose} 
-            />
+
         </div>
     );
 }
