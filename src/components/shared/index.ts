@@ -24,6 +24,7 @@ export {
   RFQStatusBadge,
   QTStatusBadge,
   QCStatusBadge,
+  POStatusBadge,
   ActiveStatusBadge,
   VendorStatusBadge,
   ModuleStatusBadge,

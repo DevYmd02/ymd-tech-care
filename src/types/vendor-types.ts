@@ -15,6 +15,9 @@ export type VendorStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'BLACKLISTED';
 /** ประเภท Vendor */
 export type VendorType = 'COMPANY' | 'INDIVIDUAL' | 'GOVERNMENT';
 
+/** ประเภทที่อยู่ */
+export type VendorAddressType = 'REGISTERED' | 'CONTACT' | 'BILLING' | 'SHIPPING';
+
 /** Bank Account Interface */
 export interface VendorBankAccount {
     id: string;
@@ -38,6 +41,26 @@ export interface VendorContactPerson {
     isMain: boolean;
 }
 
+/**
+ * Vendor Address Structure (Matches Backend Schema)
+ */
+export interface VendorAddress {
+    vendor_address_id: number;      // Int @id
+    vendor_id: number;              // Int
+    address_type: VendorAddressType;
+    address: string;                // Text
+    district?: string | null;       // VarChar(100)
+    province?: string | null;       // VarChar(100)
+    postal_code?: string | null;    // VarChar(10)
+    country: string;                // VarChar(100)
+    contact_person?: string | null; // VarChar(255)
+    phone?: string | null;          // VarChar(20)
+    phone_extension?: string | null;// VarChar(20)
+    email?: string | null;          // VarChar(255)
+    is_default: boolean;            // Boolean @default(false)
+    is_active: boolean;             // Boolean @default(true)
+}
+
 // ====================================================================================
 // MAIN INTERFACES - ตาม Database Schema
 // ====================================================================================
@@ -54,7 +77,13 @@ export interface VendorMaster {
     vendor_type: VendorType;
     status: VendorStatus;
     
-    // Address PP.20
+    vendor_type_id?: string;    // UUID (FK)
+    vendor_group_id?: string;   // UUID (FK)
+
+    // New Address Structure
+    vendor_addresses?: VendorAddress[];
+
+    // Address PP.20 (Deprecated - use vendor_addresses)
     address_line1?: string;
     address_line2?: string;
     sub_district?: string;
@@ -215,6 +244,12 @@ export interface VendorCreateRequest {
     vendor_name_en?: string;
     tax_id?: string;
     vendor_type: VendorType;
+    
+    vendor_type_id?: string;
+    vendor_group_id?: string;
+    vendor_addresses?: Partial<VendorAddress>[];
+
+    // Deprecated flat fields (kept for backward compatibility)
     address_line1?: string;
     address_line2?: string;
     sub_district?: string;
@@ -242,11 +277,30 @@ export interface VendorResponse {
  * แปลง VendorFormData (frontend) → VendorCreateRequest (API)
  */
 export function toVendorCreateRequest(form: VendorFormData): VendorCreateRequest {
+    const address: Partial<VendorAddress> = {
+        address_type: 'REGISTERED', // Default to REGISTERED for the main address
+        address: `${form.addressLine1} ${form.addressLine2 || ''}`.trim(),
+        district: form.district,
+        province: form.province,
+        postal_code: form.postalCode,
+        country: form.country,
+        phone: form.phone,
+        phone_extension: form.phoneExt,
+        email: form.email,
+        is_default: true,
+        is_active: true
+    };
+
     return {
         vendor_name: form.vendorName,
         vendor_name_en: form.vendorNameEn || undefined,
         tax_id: form.taxId || undefined,
         vendor_type: form.vendorType,
+        
+        // Map to new structure
+        vendor_addresses: [address],
+        
+        // Keep flat structure for legacy backend support if needed
         address_line1: form.addressLine1 || undefined,
         address_line2: form.addressLine2 || undefined,
         sub_district: form.subDistrict || undefined,
