@@ -69,20 +69,22 @@ export default function Header({ isSidebarOpen, onToggleSidebar }: HeaderProps) 
 
     // ==================== RENDER ====================
     return (
-        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 transition-colors duration-200">
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-3 sm:py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4 transition-colors duration-200">
 
             {/* ========== LEFT SECTION: Page Title & Breadcrumb ========== */}
             <div className="min-w-0 flex-1 flex items-center gap-3">
                 {/* Sidebar Toggle Button */}
                 <button 
                     onClick={onToggleSidebar}
-                    className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 transition-colors"
+                    className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 transition-colors shrink-0"
                 >
                     {isSidebarOpen ? <ChevronLeft size={20} /> : <Menu size={20} />}
                 </button>
 
-                <div>
-                    <h1 className="text-lg sm:text-xl font-semibold text-gray-800 dark:text-white truncate">{getPageTitle()}</h1>
+                <div className="min-w-0 flex-1">
+                    <h1 className="text-lg sm:text-xl font-semibold text-gray-800 dark:text-white truncate" title={getPageTitle()}>
+                        {getPageTitle()}
+                    </h1>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
                         <span className="hidden sm:inline">Current Path: </span>
                         <span className="font-mono">{getBreadcrumb()}</span>
@@ -91,12 +93,12 @@ export default function Header({ isSidebarOpen, onToggleSidebar }: HeaderProps) 
             </div>
 
             {/* ========== RIGHT SECTION: Action Buttons ========== */}
-            <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
+            <div className="flex items-center justify-end space-x-2 sm:space-x-3 shrink-0">
 
                 {/* Notifications Button */}
                 <button className="px-2 sm:px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex items-center space-x-1 transition-colors">
-                    <Bell size={16} />
-                    <span className="hidden sm:inline">Notifications</span>
+                    <Bell size={18} />
+                    <span className="hidden lg:inline">Notifications</span>
                 </button>
 
                 {/* Settings Button with Dropdown */}
@@ -105,8 +107,8 @@ export default function Header({ isSidebarOpen, onToggleSidebar }: HeaderProps) 
                         onClick={() => setIsSettingsOpen(!isSettingsOpen)}
                         className="px-2 sm:px-4 py-1.5 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded transition-colors flex items-center gap-1"
                     >
-                        <Settings size={16} />
-                        <span className="hidden sm:inline">Settings</span>
+                        <Settings size={18} />
+                        <span className="hidden lg:inline">Settings</span>
                         <ChevronDown size={14} className={`hidden sm:block transition-transform ${isSettingsOpen ? 'rotate-180' : ''}`} />
                     </button>
 

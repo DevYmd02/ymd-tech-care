@@ -114,7 +114,7 @@ export default function QCListPage() {
                     )}
 
                     {/* Results Header */}
-                    <div className="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-indigo-600">
+                    <div className="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-indigo-600">
                         <h2 className="text-lg font-bold text-white">รายการใบเปรียบเทียบราคา</h2>
                         <span className="text-sm text-indigo-100">
                             พบทั้งหมด <span className="font-semibold">{data?.total ?? 0}</span> รายการ
@@ -122,8 +122,8 @@ export default function QCListPage() {
                     </div>
 
                     {/* Table - Responsive Fixed Layout */}
-                    <div className="overflow-hidden">
-                        <table className="w-full table-fixed">
+                    <div className="overflow-x-auto">
+                        <table className="w-full min-w-[1000px] table-fixed">
                             <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                                 <tr>
                                     <th className="w-[5%] px-2 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">ลำดับ</th>

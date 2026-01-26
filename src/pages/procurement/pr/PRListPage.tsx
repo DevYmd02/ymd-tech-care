@@ -168,7 +168,7 @@ export default function PRListPage() {
                     )}
 
                     {/* Results Header */}
-                    <div className="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-blue-600">
+                    <div className="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-blue-600">
                         <h2 className="text-lg font-bold text-white">รายการใบขอซื้อ</h2>
                         <span className="text-sm text-blue-100">
                             พบทั้งหมด <span className="font-semibold">{data?.total ?? 0}</span> รายการ
@@ -176,8 +176,8 @@ export default function PRListPage() {
                     </div>
 
                     {/* Table - Responsive Fixed Layout */}
-                    <div className="overflow-hidden">
-                        <table className="w-full table-fixed">
+                    <div className="overflow-x-auto">
+                        <table className="w-full min-w-[1000px] table-fixed">
                             <thead className="bg-gray-50 dark:bg-gray-700">
                                 <tr>
                                     <th className="w-[4%] px-2 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">ลำดับ</th>
@@ -273,7 +273,7 @@ export default function PRListPage() {
                     </div>
 
                     {/* Table Footer - Total */}
-                    <div className="flex justify-between items-center px-4 py-3 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 px-4 py-3 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600">
                         <span className="text-sm font-semibold text-gray-600 dark:text-gray-300">ยอดรวมทั้งหมด:</span>
                         <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
                             {totalAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท

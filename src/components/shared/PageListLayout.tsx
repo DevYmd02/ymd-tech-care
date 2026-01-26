@@ -116,18 +116,18 @@ export const PageListLayout: React.FC<PageListLayoutProps> = ({
         <div className={styles.pageContainerCompact}>
             {/* ==================== PAGE HEADER ==================== */}
             <div className={`bg-gradient-to-r ${colors.header} rounded-lg p-4 shadow-lg mb-6`}>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
-                        <Icon size={24} className="text-white" />
+                        <Icon size={24} className="text-white shrink-0" />
                         <div>
-                            <h1 className="text-xl font-bold text-white">{title}</h1>
+                            <h1 className="text-xl font-bold text-white break-words">{title}</h1>
                             {subtitle && (
-                                <p className="text-white/80 text-sm">{subtitle}</p>
+                                <p className="text-white/80 text-sm break-words">{subtitle}</p>
                             )}
                         </div>
                     </div>
                     {actionButtons && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                             {actionButtons}
                         </div>
                     )}

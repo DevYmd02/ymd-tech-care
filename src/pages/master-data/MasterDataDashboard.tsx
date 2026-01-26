@@ -9,7 +9,8 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { 
     Database, Users, Package, Building2, Warehouse as WarehouseIcon, 
     DollarSign, FolderKanban, Plus, Search, Filter, Edit2, Trash2,
-    ChevronDown, ChevronUp, Phone, Mail, MapPin
+    ChevronDown, ChevronUp, Phone, Mail, MapPin, 
+    ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { styles } from '../../constants';
 
@@ -282,22 +283,21 @@ export default function MasterDataDashboard() {
 
     const renderVendorCard = (vendor: VendorListItem, isExpanded: boolean) => (
         <div key={vendor.vendor_id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-            {/* Card Header */}
             <div 
                 className="p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                 onClick={() => toggleExpand(vendor.vendor_id)}
             >
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
+                <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+                        <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center shrink-0">
                             <Users size={24} className="text-blue-600 dark:text-blue-400" />
                         </div>
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <span className="font-semibold text-gray-900 dark:text-white">
+                        <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-start gap-x-2 gap-y-1 mb-0.5">
+                                <span className="font-semibold text-gray-900 dark:text-white break-words">
                                     {vendor.vendor_name}
                                 </span>
-                                <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                                <span className={`px-2 py-0.5 text-xs font-medium rounded-full shrink-0 ${
                                     vendor.status === 'ACTIVE' 
                                         ? 'bg-green-100 text-green-700' 
                                         : 'bg-gray-100 text-gray-600'
@@ -305,18 +305,14 @@ export default function MasterDataDashboard() {
                                     {vendor.status}
                                 </span>
                             </div>
-                            <p className="text-sm text-gray-500">
-                                Code: {vendor.vendor_code} | Tax ID: {vendor.tax_id || '-'}
-                            </p>
+                            <div className="text-sm text-gray-500 flex flex-wrap gap-x-2">
+                                <span className="whitespace-nowrap">Code: {vendor.vendor_code}</span>
+                                <span className="hidden sm:inline text-gray-300">|</span>
+                                <span className="whitespace-nowrap">Tax ID: {vendor.tax_id || '-'}</span>
+                            </div>
                         </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                        <div className="text-right">
-                            <p className="text-lg font-semibold text-gray-700 dark:text-gray-300">30 days</p>
-                            <p className="text-xs text-gray-500">Payment Term</p>
-                        </div>
-                        {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                    </div>
+                    {isExpanded ? <ChevronUp size={20} className="shrink-0 text-gray-400 mt-1" /> : <ChevronDown size={20} className="shrink-0 text-gray-400 mt-1" />}
                 </div>
             </div>
 
@@ -378,14 +374,14 @@ export default function MasterDataDashboard() {
                     <div className="px-4 pb-4 flex gap-2">
                         <button 
                             onClick={(e) => { e.stopPropagation(); handleEdit(vendor.vendor_id); }}
-                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                         >
                             <Edit2 size={16} />
                             Edit
                         </button>
                         <button 
                             onClick={(e) => { e.stopPropagation(); handleDelete(vendor.vendor_id); }}
-                            className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
                         >
                             <Trash2 size={16} />
                             Delete
@@ -398,7 +394,7 @@ export default function MasterDataDashboard() {
                             <Database size={16} className="text-gray-500" />
                             <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Database Relations</span>
                         </div>
-                        <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                             <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                                 <p className="text-xs text-gray-500 mb-1">Table:</p>
                                 <p className="text-blue-600 font-mono">{currentTab.dbTable}</p>
@@ -426,17 +422,17 @@ export default function MasterDataDashboard() {
                 className="p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                 onClick={() => toggleExpand(branch.branch_id)}
             >
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center">
+                <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+                        <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center shrink-0">
                             <Building2 size={24} className="text-emerald-600 dark:text-emerald-400" />
                         </div>
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <span className="font-semibold text-gray-900 dark:text-white">
+                        <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-start gap-x-2 gap-y-1 mb-0.5">
+                                <span className="font-semibold text-gray-900 dark:text-white break-words">
                                     {branch.branch_name}
                                 </span>
-                                <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                                <span className={`px-2 py-0.5 text-xs font-medium rounded-full shrink-0 ${
                                     branch.is_active 
                                         ? 'bg-green-100 text-green-700' 
                                         : 'bg-gray-100 text-gray-600'
@@ -444,12 +440,12 @@ export default function MasterDataDashboard() {
                                     {branch.is_active ? 'ACTIVE' : 'INACTIVE'}
                                 </span>
                             </div>
-                            <p className="text-sm text-gray-500">
+                            <p className="text-sm text-gray-500 truncate">
                                 Code: {branch.branch_code}
                             </p>
                         </div>
                     </div>
-                    {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                    {isExpanded ? <ChevronUp size={20} className="shrink-0 text-gray-400 mt-1" /> : <ChevronDown size={20} className="shrink-0 text-gray-400 mt-1" />}
                 </div>
             </div>
             {isExpanded && (
@@ -457,13 +453,13 @@ export default function MasterDataDashboard() {
                     <div className="flex gap-2 mb-4">
                         <button 
                             onClick={(e) => { e.stopPropagation(); handleEdit(branch.branch_id); }}
-                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                         >
                             <Edit2 size={16} /> Edit
                         </button>
                         <button 
                             onClick={(e) => { e.stopPropagation(); handleDelete(branch.branch_id); }}
-                            className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
                         >
                             <Trash2 size={16} /> Delete
                         </button>
@@ -500,17 +496,17 @@ export default function MasterDataDashboard() {
                 className="p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                 onClick={() => toggleExpand(warehouse.warehouse_id)}
             >
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center">
+                <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+                        <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center shrink-0">
                             <WarehouseIcon size={24} className="text-indigo-600 dark:text-indigo-400" />
                         </div>
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <span className="font-semibold text-gray-900 dark:text-white">
+                        <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-start gap-x-2 gap-y-1 mb-0.5">
+                                <span className="font-semibold text-gray-900 dark:text-white break-words">
                                     {warehouse.warehouse_name}
                                 </span>
-                                <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                                <span className={`px-2 py-0.5 text-xs font-medium rounded-full shrink-0 ${
                                     warehouse.is_active 
                                         ? 'bg-green-100 text-green-700' 
                                         : 'bg-gray-100 text-gray-600'
@@ -518,12 +514,14 @@ export default function MasterDataDashboard() {
                                     {warehouse.is_active ? 'ACTIVE' : 'INACTIVE'}
                                 </span>
                             </div>
-                            <p className="text-sm text-gray-500">
-                                Code: {warehouse.warehouse_code} | Branch: {warehouse.branch_name}
-                            </p>
+                            <div className="text-sm text-gray-500 flex flex-wrap gap-x-2">
+                                <span className="whitespace-nowrap">Code: {warehouse.warehouse_code}</span>
+                                <span className="hidden sm:inline text-gray-300">|</span>
+                                <span className="truncate">Branch: {warehouse.branch_name}</span>
+                            </div>
                         </div>
                     </div>
-                    {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                    {isExpanded ? <ChevronUp size={20} className="shrink-0 text-gray-400 mt-1" /> : <ChevronDown size={20} className="shrink-0 text-gray-400 mt-1" />}
                 </div>
             </div>
             {isExpanded && (
@@ -531,13 +529,13 @@ export default function MasterDataDashboard() {
                     <div className="flex gap-2 mb-4">
                         <button 
                             onClick={(e) => { e.stopPropagation(); handleEdit(warehouse.warehouse_id); }}
-                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                         >
                             <Edit2 size={16} /> Edit
                         </button>
                         <button 
                             onClick={(e) => { e.stopPropagation(); handleDelete(warehouse.warehouse_id); }}
-                            className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
                         >
                             <Trash2 size={16} /> Delete
                         </button>
@@ -574,17 +572,17 @@ export default function MasterDataDashboard() {
                 className="p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                 onClick={() => toggleExpand(cc.cost_center_id)}
             >
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
+                <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+                        <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center shrink-0">
                             <DollarSign size={24} className="text-purple-600 dark:text-purple-400" />
                         </div>
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <span className="font-semibold text-gray-900 dark:text-white">
+                        <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-start gap-x-2 gap-y-1 mb-0.5">
+                                <span className="font-semibold text-gray-900 dark:text-white break-words">
                                     {cc.cost_center_name}
                                 </span>
-                                <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                                <span className={`px-2 py-0.5 text-xs font-medium rounded-full shrink-0 ${
                                     cc.is_active 
                                         ? 'bg-green-100 text-green-700' 
                                         : 'bg-gray-100 text-gray-600'
@@ -592,12 +590,14 @@ export default function MasterDataDashboard() {
                                     {cc.is_active ? 'ACTIVE' : 'INACTIVE'}
                                 </span>
                             </div>
-                            <p className="text-sm text-gray-500">
-                                Code: {cc.cost_center_code} | Manager: {cc.manager_name}
-                            </p>
+                            <div className="text-sm text-gray-500 flex flex-wrap gap-x-2">
+                                <span className="whitespace-nowrap">Code: {cc.cost_center_code}</span>
+                                <span className="hidden sm:inline text-gray-300">|</span>
+                                <span className="truncate">Manager: {cc.manager_name}</span>
+                            </div>
                         </div>
                     </div>
-                    {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                    {isExpanded ? <ChevronUp size={20} className="shrink-0 text-gray-400 mt-1" /> : <ChevronDown size={20} className="shrink-0 text-gray-400 mt-1" />}
                 </div>
             </div>
             {isExpanded && (
@@ -618,7 +618,7 @@ export default function MasterDataDashboard() {
                             <Database size={16} className="text-gray-500" />
                             <span className="text-sm font-medium text-gray-600">Database Relations</span>
                         </div>
-                        <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                             <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                                 <p className="text-xs text-gray-500 mb-1">Table:</p>
                                 <p className="text-blue-600 font-mono">{currentTab.dbTable}</p>
@@ -644,17 +644,17 @@ export default function MasterDataDashboard() {
                 className="p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                 onClick={() => toggleExpand(project.project_id)}
             >
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center">
+                <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+                        <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center shrink-0">
                             <FolderKanban size={24} className="text-orange-600 dark:text-orange-400" />
                         </div>
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <span className="font-semibold text-gray-900 dark:text-white">
+                        <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-start gap-x-2 gap-y-1 mb-0.5">
+                                <span className="font-semibold text-gray-900 dark:text-white break-words">
                                     {project.project_name}
                                 </span>
-                                <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                                <span className={`px-2 py-0.5 text-xs font-medium rounded-full shrink-0 ${
                                     project.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
                                     project.status === 'COMPLETED' ? 'bg-blue-100 text-blue-700' :
                                     project.status === 'ON_HOLD' ? 'bg-yellow-100 text-yellow-700' :
@@ -663,12 +663,14 @@ export default function MasterDataDashboard() {
                                     {project.status}
                                 </span>
                             </div>
-                            <p className="text-sm text-gray-500">
-                                Code: {project.project_code} | Duration: {project.start_date} - {project.end_date}
-                            </p>
+                            <div className="text-sm text-gray-500 flex flex-col sm:flex-row sm:items-center sm:gap-2">
+                                <span className="whitespace-nowrap">Code: {project.project_code}</span>
+                                <span className="hidden sm:inline text-gray-300">|</span>
+                                <span className="text-xs sm:text-sm">{project.start_date} - {project.end_date}</span>
+                            </div>
                         </div>
                     </div>
-                     {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                    {isExpanded ? <ChevronUp size={20} className="shrink-0 text-gray-400 mt-1" /> : <ChevronDown size={20} className="shrink-0 text-gray-400 mt-1" />}
                 </div>
             </div>
              {isExpanded && (
@@ -689,7 +691,7 @@ export default function MasterDataDashboard() {
                             <Database size={16} className="text-gray-500" />
                             <span className="text-sm font-medium text-gray-600">Database Relations</span>
                         </div>
-                        <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                              <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                                 <p className="text-xs text-gray-500 mb-1">Table:</p>
                                 <p className="text-blue-600 font-mono">{currentTab.dbTable}</p>
@@ -714,7 +716,7 @@ export default function MasterDataDashboard() {
     // ====================================================================================
 
     return (
-        <div className="p-6 min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="p-4 sm:p-6 min-h-screen bg-gray-50 dark:bg-gray-900">
             {/* Header */}
             <div className="mb-6">
                 <div className="flex items-center gap-3">
@@ -734,34 +736,36 @@ export default function MasterDataDashboard() {
 
             {/* Tab Navigation */}
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
-                <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
                             onClick={() => handleTabChange(tab.id)}
-                            className={`p-4 rounded-xl flex flex-col items-center gap-2 transition-all ${
+                            className={`p-3 sm:p-4 rounded-xl flex flex-col items-center gap-2 transition-all ${
                                 activeTab === tab.id
                                     ? 'bg-blue-50 dark:bg-blue-900/30 border-2 border-blue-500'
                                     : 'bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600'
                             }`}
                         >
-                            <div className={`p-3 rounded-xl ${
+                            <div className={`p-2 sm:p-3 rounded-xl ${
                                 activeTab === tab.id
                                     ? 'bg-blue-600 text-white'
                                     : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
                             }`}>
-                                <tab.icon size={24} />
+                                <tab.icon size={20} className="sm:w-6 sm:h-6" />
                             </div>
-                            <div className="text-center">
-                                <p className={`text-sm font-medium ${
+                            <div className="text-center w-full">
+                                <p className={`text-xs sm:text-sm font-medium truncate ${
                                     activeTab === tab.id
                                         ? 'text-blue-600 dark:text-blue-400'
                                         : 'text-gray-700 dark:text-gray-300'
                                 }`}>
-                                    {tab.label} {tab.labelEn && `(${tab.labelEn})`}
+                                    {tab.label}
                                 </p>
-                                <p className="text-xs text-gray-500">
-                                    {tab.recordCount} records
+                                <p className={`text-[10px] sm:text-xs truncate ${
+                                    activeTab === tab.id ? 'text-blue-500/80' : 'text-gray-500'
+                                }`}>
+                                    {tab.labelEn}
                                 </p>
                             </div>
                         </button>
@@ -770,23 +774,23 @@ export default function MasterDataDashboard() {
             </div>
 
             {/* Content Section Header */}
-            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 mb-4 flex items-center justify-between">
+            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/50 rounded-xl flex items-center justify-center">
+                    <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/50 rounded-xl flex items-center justify-center shrink-0">
                         <currentTab.icon size={24} className="text-blue-600 dark:text-blue-400" />
                     </div>
                     <div>
                         <h2 className="text-lg font-semibold text-blue-800 dark:text-blue-300">
                             {getTabLabel().main}
                         </h2>
-                        <p className="text-sm text-blue-600 dark:text-blue-400">
+                        <p className="text-sm text-blue-600 dark:text-blue-400 line-clamp-1">
                             {getTabLabel().desc}
                         </p>
                     </div>
                 </div>
                 <button
                     onClick={handleAddNew}
-                    className={`${styles.btnPrimary} flex items-center gap-2`}
+                    className={`${styles.btnPrimary} w-full sm:w-auto flex items-center justify-center gap-2`}
                 >
                     <Plus size={20} />
                     Add New
@@ -794,7 +798,7 @@ export default function MasterDataDashboard() {
             </div>
 
             {/* Search & Filter */}
-            <div className="flex gap-4 mb-4">
+            <div className="flex flex-col sm:flex-row gap-4 mb-4">
                 <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                     <input
@@ -886,8 +890,8 @@ export default function MasterDataDashboard() {
             {/* Pagination Footer */}
             {!isLoading && totalItems > 0 && (
                 <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
-                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                        <span>แสดง</span>
+                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 w-full sm:w-auto justify-center sm:justify-start">
+                        <span className="whitespace-nowrap">แสดง</span>
                         <select
                             value={rowsPerPage}
                             onChange={(e) => {
@@ -901,42 +905,42 @@ export default function MasterDataDashboard() {
                             <option value={20}>20</option>
                             <option value={50}>50</option>
                         </select>
-                        <span>รายการ จาก {totalItems}</span>
+                        <span className="whitespace-nowrap">รายการ จาก {totalItems}</span>
                     </div>
 
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center justify-center gap-1 w-full sm:w-auto">
                         <button
                             onClick={() => setCurrentPage(1)}
                             disabled={currentPage === 1}
-                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-gray-600 dark:text-white"
+                            className="p-2 aspect-square flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-gray-600 dark:text-white"
                         >
-                            <span className="text-lg">«</span>
+                            <ChevronsLeft size={18} />
                         </button>
                         <button
                             onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                             disabled={currentPage === 1}
-                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-gray-600 dark:text-white"
+                            className="p-2 aspect-square flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-gray-600 dark:text-white"
                         >
-                            <span className="text-lg">‹</span>
+                            <ChevronLeft size={18} />
                         </button>
                         
-                        <span className="px-4 text-sm font-medium text-gray-700 dark:text-white">
+                        <span className="px-4 text-sm font-medium text-gray-700 dark:text-white whitespace-nowrap">
                             หน้า {currentPage} / {totalPages}
                         </span>
                         
                         <button
                             onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                             disabled={currentPage === totalPages}
-                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-gray-600 dark:text-white"
+                            className="p-2 aspect-square flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-gray-600 dark:text-white"
                         >
-                            <span className="text-lg">›</span>
+                            <ChevronRight size={18} />
                         </button>
                         <button
                             onClick={() => setCurrentPage(totalPages)}
                             disabled={currentPage === totalPages}
-                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-gray-600 dark:text-white"
+                            className="p-2 aspect-square flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-gray-600 dark:text-white"
                         >
-                            <span className="text-lg">»</span>
+                            <ChevronsRight size={18} />
                         </button>
                     </div>
                 </div>

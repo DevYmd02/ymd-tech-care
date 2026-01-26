@@ -1,6 +1,7 @@
 /**
  * @file MockRFQService.ts
  * @description Mock implementation for RFQ Service
+ * @refactored Enforce immutable state management with structuredClone
  */
 
 import type { IRFQService } from '../interfaces/IRFQService';
@@ -12,14 +13,18 @@ import type { RFQHeader, RFQListResponse, RFQCreateData, RFQFilterCriteria } fro
 import { logger } from '../../utils/logger';
 
 export class MockRFQService implements IRFQService {
-  private rfqs: RFQHeader[] = structuredClone(MOCK_RFQS);
+  private rfqs: RFQHeader[];
+
+  constructor() {
+    this.rfqs = structuredClone(MOCK_RFQS);
+  }
 
   async getList(params?: RFQFilterCriteria): Promise<RFQListResponse> {
     logger.log('[MockRFQService] getList', params);
     await this.delay(300);
 
     // Apply filtering (mimicking server-side behavior)
-    let filteredData = [...this.rfqs];
+    let filteredData = this.rfqs; // Start with reference, clone at return
 
     if (params) {
       // Filter by RFQ number (partial match)
@@ -61,7 +66,7 @@ export class MockRFQService implements IRFQService {
     }
 
     return {
-      data: filteredData,
+      data: structuredClone(filteredData),
       total: filteredData.length,
       page: 1,
       limit: 20
@@ -74,12 +79,15 @@ export class MockRFQService implements IRFQService {
     const rfq = this.rfqs.find(r => r.rfq_id === id);
     if (!rfq) return null;
     
+    // Create a copy to modify
+    const rfqCopy = structuredClone(rfq);
+
     // Simulate joining PR data if missing (though MOCK_RFQS usually has it)
-    if (!rfq.pr_no && rfq.pr_id) {
-        const pr = MOCK_PRS.find(p => p.pr_id === rfq.pr_id);
-        if (pr) rfq.pr_no = pr.pr_no;
+    if (!rfqCopy.pr_no && rfqCopy.pr_id) {
+        const pr = MOCK_PRS.find(p => p.pr_id === rfqCopy.pr_id);
+        if (pr) rfqCopy.pr_no = pr.pr_no;
     }
-    return rfq || null;
+    return rfqCopy;
   }
 
   async create(data: RFQCreateData): Promise<{ success: boolean; data?: RFQHeader; message?: string }> {
@@ -111,8 +119,11 @@ export class MockRFQService implements IRFQService {
         remarks: data.remarks
     };
 
-    this.rfqs = [newRFQ, ...this.rfqs];
-    return { success: true, data: newRFQ };
+    // Store immutable copy
+    this.rfqs = [structuredClone(newRFQ), ...this.rfqs];
+    
+    // Return immutable copy
+    return { success: true, data: structuredClone(newRFQ) };
   }
 
   async update(id: string, data: Partial<RFQCreateData>): Promise<{ success: boolean; message?: string }> {
@@ -121,7 +132,10 @@ export class MockRFQService implements IRFQService {
     const index = this.rfqs.findIndex(r => r.rfq_id === id);
     if (index === -1) return { success: false, message: 'RFQ not found' };
 
-    this.rfqs[index] = { ...this.rfqs[index], ...data, updated_at: new Date().toISOString() };
+    // Update state immutably
+    const updatedRFQ = { ...this.rfqs[index], ...data, updated_at: new Date().toISOString() };
+    this.rfqs[index] = structuredClone(updatedRFQ);
+    
     return { success: true };
   }
 
@@ -136,10 +150,14 @@ export class MockRFQService implements IRFQService {
   async sendToVendors(rfqId: string, vendorIds: string[]): Promise<{ success: boolean; message?: string }> {
     logger.log('[MockRFQService] sendToVendors', rfqId, vendorIds);
     await this.delay(500);
-    const rfq = this.rfqs.find(r => r.rfq_id === rfqId);
-    if (rfq) {
-        rfq.status = 'SENT';
-        rfq.vendor_count = vendorIds.length;
+    
+    const index = this.rfqs.findIndex(r => r.rfq_id === rfqId);
+    
+    if (index !== -1) {
+        const updatedRFQ = structuredClone(this.rfqs[index]);
+        updatedRFQ.status = 'SENT';
+        updatedRFQ.vendor_count = vendorIds.length;
+        this.rfqs[index] = updatedRFQ;
     }
     return { success: true };
   }

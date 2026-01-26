@@ -114,10 +114,10 @@ export default function QTListPage() {
                         actionButtons={
                             <button
                                 onClick={() => setIsCreateModalOpen(true)}
-                                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-lg flex items-center gap-2 transition-colors whitespace-nowrap"
+                                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-lg flex items-center gap-2 transition-colors shadow-sm"
                             >
                                 <Plus size={18} />
-                                สร้างใบเสนอราคาใหม่
+                                <span>สร้างใบเสนอราคาใหม่</span>
                             </button>
                         }
                     />
@@ -133,7 +133,7 @@ export default function QTListPage() {
                     )}
 
                     {/* Results Header */}
-                    <div className="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-blue-600">
+                    <div className="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-blue-600">
                         <h2 className="text-lg font-bold text-white">รายการใบเสนอราคา</h2>
                         <span className="text-sm text-blue-100">
                             พบทั้งหมด <span className="font-semibold">{data?.total ?? 0}</span> รายการ
@@ -141,19 +141,19 @@ export default function QTListPage() {
                     </div>
 
                     {/* Table - Responsive Fixed Layout */}
-                    <div className="overflow-hidden">
-                        <table className="w-full table-fixed">
+                    <div className="overflow-x-auto">
+                        <table className="w-full min-w-[1000px] table-fixed">
                             <thead className="bg-gray-50 dark:bg-gray-700">
                                 <tr>
-                                    <th className="w-[4%] px-2 py-3 text-center text-xs font-bold  text-gray-600 dark:text-gray-300 uppercase">ลำดับ</th>
-                                    <th className="w-[14%] px-2 py-3 text-left text-xs font-bold  text-gray-600 dark:text-gray-300 uppercase">เลขที่ QT</th>
+                                    <th className="w-[5%] px-2 py-3 text-center text-xs font-bold  text-gray-600 dark:text-gray-300 uppercase">ลำดับ</th>
+                                    <th className="w-[12%] px-2 py-3 text-left text-xs font-bold  text-gray-600 dark:text-gray-300 uppercase">เลขที่ QT</th>
                                     <th className="w-[9%] px-2 py-3 text-left text-xs font-bold  text-gray-600 dark:text-gray-300 uppercase">วันที่</th>
-                                    <th className="w-[16%] px-2 py-3 text-left text-xs font-bold  text-gray-600 dark:text-gray-300 uppercase">ผู้ขาย</th>
-                                    <th className="w-[12%] px-2 py-3 text-left text-xs font-bold  text-gray-600 dark:text-gray-300 uppercase">RFQ อ้างอิง</th>
-                                    <th className="w-[11%] px-2 py-3 text-right text-xs font-bold  text-gray-600 dark:text-gray-300 uppercase">ยอดรวม</th>
+                                    <th className="w-[15%] px-2 py-3 text-left text-xs font-bold  text-gray-600 dark:text-gray-300 uppercase">ผู้ขาย</th>
+                                    <th className="w-[11%] px-2 py-3 text-left text-xs font-bold  text-gray-600 dark:text-gray-300 uppercase">RFQ อ้างอิง</th>
+                                    <th className="w-[10%] px-2 py-3 text-right text-xs font-bold  text-gray-600 dark:text-gray-300 uppercase">ยอดรวม</th>
                                     <th className="w-[8%] px-2 py-3 text-center text-xs font-bold  text-gray-600 dark:text-gray-300 uppercase">ใช้ได้ถึง</th>
-                                    <th className="w-[11%] px-2 py-3 text-center text-xs font-bold  text-gray-600 dark:text-gray-300 uppercase whitespace-nowrap">สถานะ</th>
-                                    <th className="w-[15%] px-2 py-3 text-center text-xs font-bold  text-gray-600 dark:text-gray-300 uppercase">จัดการ</th>
+                                    <th className="w-[10%] px-2 py-3 text-center text-xs font-bold  text-gray-600 dark:text-gray-300 uppercase whitespace-nowrap">สถานะ</th>
+                                    <th className="w-[20%] px-2 py-3 text-center text-xs font-bold  text-gray-600 dark:text-gray-300 uppercase">จัดการ</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900 text-xs">

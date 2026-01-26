@@ -1,6 +1,7 @@
 /**
  * @file MockQTService.ts
  * @description Mock implementation for QT Service
+ * @refactored Enforce immutable state management with structuredClone
  */
 
 import type { IQTService, QTListParams, QTListResponse, QTCreateData } from '../interfaces/IQTService';
@@ -9,13 +10,17 @@ import type { QTListItem } from '../../types/qt-types';
 import { logger } from '../../utils/logger';
 
 export class MockQTService implements IQTService {
-  private qts: QTListItem[] = [...MOCK_QTS];
+  private qts: QTListItem[];
+
+  constructor() {
+    this.qts = structuredClone(MOCK_QTS);
+  }
 
   async getList(params?: QTListParams): Promise<QTListResponse> {
     logger.log('[MockQTService] getList', params);
     await this.delay(500);
 
-    let data = [...this.qts];
+    let data = this.qts;
 
     if (params) {
       if (params.quotation_no) {
@@ -42,7 +47,7 @@ export class MockQTService implements IQTService {
     }
 
     return {
-      data,
+      data: structuredClone(data),
       total: data.length,
       page: 1,
       limit: 20,
@@ -60,7 +65,8 @@ export class MockQTService implements IQTService {
       vendor_name: 'Vendor Mock',
       status: 'SUBMITTED',
     } as QTListItem;
-    this.qts = [newItem, ...this.qts];
+    
+    this.qts.unshift(structuredClone(newItem));
   }
 
   private delay(ms: number) {

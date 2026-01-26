@@ -1,6 +1,7 @@
 /**
  * @file MockPRService.ts
  * @description Mock implementation for PR Service
+ * @refactored Enforce immutable state management with structuredClone
  */
 
 import type {
@@ -17,13 +18,17 @@ import { getMockFlowWithSteps, MOCK_APPROVERS } from '../../__mocks__/approvalFl
 import { logger } from '../../utils/logger';
 
 export class MockPRService implements IPRService {
-  private prs: PRHeader[] = structuredClone(MOCK_PRS);
+  private prs: PRHeader[];
+
+  constructor() {
+    this.prs = structuredClone(MOCK_PRS);
+  }
 
   async getList(params?: PRListParams): Promise<PRListResponse> {
     logger.log('[MockPRService] getList', params);
     await this.delay(300);
 
-    let filteredPRs = [...this.prs];
+    let filteredPRs = this.prs; // Works with reference initially
 
     if (params) {
       // Filter by status
@@ -56,8 +61,9 @@ export class MockPRService implements IPRService {
       }
     }
 
+    // Return deep copy
     return {
-      data: filteredPRs,
+      data: structuredClone(filteredPRs),
       total: filteredPRs.length,
       page: params?.page || 1,
       limit: params?.limit || 20,
@@ -67,7 +73,8 @@ export class MockPRService implements IPRService {
   async getById(prId: string): Promise<PRHeader | null> {
     logger.log('[MockPRService] getById', prId);
     await this.delay(200);
-    return this.prs.find(pr => pr.pr_id === prId) || null;
+    const pr = this.prs.find(pr => pr.pr_id === prId);
+    return pr ? structuredClone(pr) : null;
   }
 
   async create(data: PRFormData): Promise<PRHeader | null> {
@@ -93,16 +100,22 @@ export class MockPRService implements IPRService {
       updated_by_user_id: 'user-001',
     };
 
-    this.prs.unshift(newPR);
-    return newPR;
+    // Store copy
+    this.prs.unshift(structuredClone(newPR));
+    
+    // Return copy
+    return structuredClone(newPR);
   }
 
   async update(prId: string, data: Partial<PRFormData>): Promise<PRHeader | null> {
     logger.log('[MockPRService] update', prId, data);
     const index = this.prs.findIndex(pr => pr.pr_id === prId);
     if (index !== -1) {
+      // Create fresh object with merged data
       const updatedPR = { ...this.prs[index], ...(data as unknown as Partial<PRHeader>) };
-      this.prs[index] = updatedPR;
+      // Save deep copy to internal state (just in case data props are refs)
+      this.prs[index] = structuredClone(updatedPR);
+      // Return fresh deep copy
       return structuredClone(updatedPR);
     }
     return null;
@@ -146,11 +159,13 @@ export class MockPRService implements IPRService {
       created_at: new Date().toISOString(),
     };
 
-    this.prs[prIndex] = {
+    const updatedPR = {
       ...pr,
-      status: 'PENDING',
+      status: 'PENDING' as const,
       approval_tasks: [newTask],
     };
+
+    this.prs[prIndex] = structuredClone(updatedPR);
 
     return { success: true, message: `ส่งอนุมัติเรียบร้อย (เสนอ: ${approverName})` };
   }
@@ -161,7 +176,8 @@ export class MockPRService implements IPRService {
     const prIndex = this.prs.findIndex(pr => pr.pr_id === request.pr_id);
     if (prIndex === -1) return { success: false, message: 'PR not found' };
 
-    const pr = this.prs[prIndex];
+    // Work on a deep copy to ensure atomic update
+    const pr = structuredClone(this.prs[prIndex]);
     const currentTasks = [...(pr.approval_tasks || [])];
     const pendingTaskIndex = currentTasks.findIndex(t => t.status === 'PENDING');
 
@@ -180,11 +196,14 @@ export class MockPRService implements IPRService {
     newTasks[pendingTaskIndex] = updatedTask;
 
     if (request.action === 'REJECT') {
-      this.prs[prIndex] = {
+      const rejectedPR = {
         ...pr,
-        status: 'CANCELLED',
+        status: 'CANCELLED' as const,
         approval_tasks: newTasks,
       };
+      
+      this.prs[prIndex] = rejectedPR; // Save
+      
       return { success: true, message: 'ไม่อนุมัติเอกสารเรียบร้อย', approval_task: structuredClone(updatedTask) };
     }
 
@@ -209,23 +228,35 @@ export class MockPRService implements IPRService {
           created_at: new Date().toISOString(),
         };
 
-        this.prs[prIndex] = {
+        const progressingPR = {
           ...pr,
-          status: 'PENDING',
+          status: 'PENDING' as const,
           approval_tasks: [...newTasks, nextTask],
         };
+
+        this.prs[prIndex] = progressingPR;
 
         return { success: true, message: `อนุมัติเรียบร้อย (ส่งต่อ: ${approverName})`, approval_task: structuredClone(updatedTask) };
       }
 
-      this.prs[prIndex] = {
+      const approvedPR = {
         ...pr,
-        status: 'APPROVED',
+        status: 'APPROVED' as const,
         approval_tasks: newTasks,
       };
+
+      this.prs[prIndex] = approvedPR;
+      
       return { success: true, message: 'อนุมัติเอกสารเสร็จสมบูรณ์', approval_task: structuredClone(updatedTask) };
     }
 
+    // Default case (should not happen if flow exists)
+    const defaultPR = { 
+        ...pr, 
+        approval_tasks: newTasks 
+    };
+    this.prs[prIndex] = defaultPR;
+    
     return { success: true, message: 'บันทึกเรียบร้อย', approval_task: structuredClone(updatedTask) };
   }
 

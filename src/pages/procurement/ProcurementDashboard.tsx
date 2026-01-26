@@ -230,12 +230,12 @@ export default function ProcurementDashboard() {
     return (
         <div className="p-6 space-y-6">
             {/* Header */}
-            <div className="flex justify-between items-start">
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Procurement Dashboard</h1>
                     <p className="text-sm text-gray-500 dark:text-gray-400">Dashboard ระบบจัดซื้อ - ภาพรวมและสถานะการดำเนินงาน</p>
                 </div>
-                <div className="text-right">
+                <div className="text-left sm:text-right">
                     <p className="text-lg font-semibold text-gray-900 dark:text-white">{thaiDate}</p>
                     <p className="text-2xl font-bold text-gray-700 dark:text-gray-300">{timeString}</p>
                 </div>
@@ -261,28 +261,30 @@ export default function ProcurementDashboard() {
                 {/* Pie Chart - Vendor Distribution */}
                 <Card>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">ยอดซื้อแยกตามผู้ขาย (YTD)</h3>
-                    <div className="flex items-center">
-                        <ResponsiveContainer width="60%" height={250}>
-                            <PieChart>
-                                <Pie
-                                    data={vendorPieData}
-                                    cx="50%"
-                                    cy="50%"
-                                    outerRadius={90}
-                                    dataKey="value"
-                                    isAnimationActive={true}
-                                    animationDuration={600}
-                                    animationEasing="ease-in-out"
-                                >
-                                    {vendorPieData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.color} />
-                                    ))}
-                                </Pie>
-                                <Tooltip formatter={(value) => [`${value}%`, 'สัดส่วน']} />
-                            </PieChart>
-                        </ResponsiveContainer>
+                    <div className="flex flex-col sm:flex-row items-center gap-6">
+                        <div className="w-full sm:w-[60%] h-[250px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={vendorPieData}
+                                        cx="50%"
+                                        cy="50%"
+                                        outerRadius={90}
+                                        dataKey="value"
+                                        isAnimationActive={true}
+                                        animationDuration={600}
+                                        animationEasing="ease-in-out"
+                                    >
+                                        {vendorPieData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={entry.color} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip formatter={(value) => [`${value}%`, 'สัดส่วน']} />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
                         {/* Custom Legend */}
-                        <div className="w-[40%] space-y-2">
+                        <div className="w-full sm:w-[40%] space-y-2">
                             {vendorPieData.map((item, index) => (
                                 <div key={index} className="flex items-center gap-2">
                                     <div 
