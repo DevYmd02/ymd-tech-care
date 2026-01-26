@@ -91,10 +91,10 @@ export default function POListPage() {
                     onSearch={() => {}} // React Query auto-fetches
                     onReset={resetFilters}
                     accentColor="blue"
-                    columns={{ sm: 2, md: 3, lg: 3 }}
+                    columns={{ sm: 2, md: 3, lg: 4 }}
                     actionButtons={
                         <button
-                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm font-medium w-full sm:w-auto mt-7 whitespace-nowrap"
+                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm font-medium w-full sm:w-auto whitespace-nowrap"
                         >
                             <Plus size={20} />
                             สร้างใบสั่งซื้อใหม่
@@ -113,7 +113,7 @@ export default function POListPage() {
                 )}
 
                 {/* Results Header */}
-                <div className="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-blue-600">
+                <div className="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-blue-600">
                     <h2 className="text-lg font-bold text-white">รายการใบสั่งซื้อ</h2>
                     <span className="text-sm text-blue-100">
                         พบทั้งหมด <span className="font-semibold">{data?.total ?? 0}</span> รายการ
@@ -122,7 +122,7 @@ export default function POListPage() {
 
                 {/* Table */}
                 <div className="overflow-x-auto">
-                    <table className="w-full">
+                    <table className="w-full min-w-[1000px] table-fixed">
                         <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                             <tr>
                                 <th className="w-[5%] px-4 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ลำดับ</th>

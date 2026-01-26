@@ -1,6 +1,7 @@
 /**
  * @file MockPOService.ts
  * @description Mock implementation for Purchase Order (PO) Service
+ * @refactored Enforce immutable state management with structuredClone
  */
 
 import type { IPOService } from '../interfaces/IPOService';
@@ -67,11 +68,17 @@ const MOCK_POS: POListItem[] = [
 ];
 
 export class MockPOService implements IPOService {
+    private pos: POListItem[];
+
+    constructor() {
+        this.pos = structuredClone(MOCK_POS);
+    }
+
     async getList(params?: POListParams): Promise<POListResponse> {
         // Simulate API delay
         await new Promise(resolve => setTimeout(resolve, 500));
 
-        let data = [...MOCK_POS];
+        let data = this.pos; // Reference to internal state
 
         if (params?.status && params.status !== 'ALL') {
             data = data.filter(item => item.status === params.status);
@@ -93,7 +100,7 @@ export class MockPOService implements IPOService {
         }
 
         return {
-            data,
+            data: structuredClone(data), // Return deep copy
             total: data.length,
             page: params?.page || 1,
             limit: params?.limit || 10

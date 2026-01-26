@@ -275,7 +275,7 @@ export default function VendorDashboard() {
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
-                        <table className="w-full">
+                        <table className="w-full min-w-[1000px]">
                             <thead className="bg-blue-600 text-white">
                                 <tr>
                                     <th className="px-4 py-3 text-left text-xs font-bold uppercase">รหัสเจ้าหนี้</th>

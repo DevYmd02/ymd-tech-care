@@ -1,18 +1,26 @@
 /**
  * @file MockQCService.ts
  * @description Mock implementation for QC Service
+ * @refactored Enforce immutable state management with structuredClone
  */
 
 import type { IQCService, QCListParams, QCListResponse, QCCreateData } from '../interfaces/IQCService';
 import { MOCK_QCS } from '../../__mocks__/procurementMocks';
 import { logger } from '../../utils/logger';
+import type { QCListItem } from '../../types/qc-types';
 
 export class MockQCService implements IQCService {
+  private qcs: QCListItem[]; 
+
+  constructor() {
+    this.qcs = structuredClone(MOCK_QCS) as unknown as QCListItem[];
+  }
+
   async getList(params?: QCListParams): Promise<QCListResponse> {
     logger.log('[MockQCService] getList', params);
     await this.delay(500);
 
-    let data = [...MOCK_QCS];
+    let data = this.qcs;
 
     if (params) {
       if (params.qc_no) {
@@ -33,7 +41,7 @@ export class MockQCService implements IQCService {
     }
 
     return {
-      data,
+      data: structuredClone(data),
       total: data.length,
       page: 1,
       limit: 20,
@@ -44,8 +52,21 @@ export class MockQCService implements IQCService {
     logger.log('[MockQCService] create', data);
     await this.delay(800);
 
-    // Simulate successful creation
     const newQCId = `qc-${Date.now()}`;
+    const newQC = {
+        qc_id: newQCId,
+        qc_no: `QC-${new Date().getFullYear()}-${String(this.qcs.length + 1).padStart(4, '0')}`,
+        pr_id: 'pr-temp-id', // Placeholder as create data doesn't have it
+        vendor_count: data.vendor_lines?.length || 0,
+        ...data,
+        status: 'WAITING_FOR_PO' as const,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    };
+
+    // Cast to QCListItem to allow excess properties (like vendor_lines) to persist in runtime mock store
+    this.qcs.unshift(structuredClone(newQC) as unknown as QCListItem);
+
     return {
       success: true,
       qc_id: newQCId,

@@ -1,6 +1,7 @@
 /**
  * @file MockVendorService.ts
  * @description Mock implementation for Vendor Service
+ * @refactored Enforce immutable state management with structuredClone
  */
 
 import type { IVendorService } from '../interfaces/IVendorService';
@@ -16,13 +17,17 @@ import { MOCK_VENDORS } from '../../__mocks__/vendorMocks';
 import { logger } from '../../utils/logger';
 
 export class MockVendorService implements IVendorService {
-  private vendors: VendorMaster[] = structuredClone(MOCK_VENDORS);
+  private vendors: VendorMaster[];
+
+  constructor() {
+    this.vendors = structuredClone(MOCK_VENDORS);
+  }
 
   async getList(params?: VendorListParams): Promise<VendorListResponse> {
     logger.log('[MockVendorService] getList', params);
     await this.delay(300);
 
-    let filteredVendors = [...this.vendors];
+    let filteredVendors = this.vendors; // Start with reference, but we will clone at the end
 
     if (params?.status && params.status !== 'ALL') {
       filteredVendors = filteredVendors.filter(v => v.status === params.status);
@@ -36,8 +41,9 @@ export class MockVendorService implements IVendorService {
       );
     }
 
+    // Return deep copy of the filtered result to prevent mutation of internal state
     return {
-      data: filteredVendors,
+      data: structuredClone(filteredVendors),
       total: filteredVendors.length,
       page: params?.page || 1,
       limit: params?.limit || 20,
@@ -45,7 +51,8 @@ export class MockVendorService implements IVendorService {
   }
 
   async getById(vendorId: string): Promise<VendorMaster | null> {
-    return this.vendors.find(v => v.vendor_id === vendorId) || null;
+    const vendor = this.vendors.find(v => v.vendor_id === vendorId);
+    return vendor ? structuredClone(vendor) : null;
   }
 
   async getByTaxId(taxId: string): Promise<VendorMaster | null> {
@@ -56,6 +63,8 @@ export class MockVendorService implements IVendorService {
   }
 
   async getDropdown(): Promise<VendorDropdownItem[]> {
+    // primitive mapping is safe, but technically if keys were objects we'd need deep copy. 
+    // Here it creates new objects, so it's safe.
     return this.vendors.map(v => ({
       vendor_code: v.vendor_code,
       vendor_name: v.vendor_name,
@@ -90,8 +99,11 @@ export class MockVendorService implements IVendorService {
       updated_at: new Date().toISOString(),
     };
 
+    // Push to internal state
     this.vendors.unshift(newVendor);
-    return { success: true, message: 'สร้าง Vendor สำเร็จ (Mock)', data: newVendor };
+
+    // Return a COPY
+    return { success: true, message: 'สร้าง Vendor สำเร็จ (Mock)', data: structuredClone(newVendor) };
   }
 
   async update(vendorId: string, data: Partial<VendorCreateRequest>): Promise<VendorResponse> {
@@ -103,56 +115,84 @@ export class MockVendorService implements IVendorService {
       return { success: false, message: 'ไม่พบ Vendor ที่ต้องการอัปเดต' };
     }
 
-    this.vendors[index] = {
+    // Create a new object for immutability within the array
+    const updatedVendor = {
       ...this.vendors[index],
       ...data,
       updated_at: new Date().toISOString(),
     } as VendorMaster;
+    
+    // Replace in internal state
+    this.vendors[index] = updatedVendor;
 
-    return { success: true, message: 'อัปเดต Vendor สำเร็จ (Mock)', data: this.vendors[index] };
+    return { success: true, message: 'อัปเดต Vendor สำเร็จ (Mock)', data: structuredClone(updatedVendor) };
   }
 
   async delete(vendorId: string): Promise<{ success: boolean; message?: string }> {
     logger.log('[MockVendorService] delete', vendorId);
     await this.delay(200);
 
+    const initialLength = this.vendors.length;
     this.vendors = this.vendors.filter(v => v.vendor_id !== vendorId);
+    
+    if (this.vendors.length === initialLength) {
+         return { success: false, message: 'ไม่พบ Vendor ที่ต้องการลบ' };
+    }
+
     return { success: true };
   }
 
   async block(vendorId: string, remark?: string): Promise<VendorResponse> {
     logger.log('[MockVendorService] block', vendorId, remark);
-    const vendor = this.vendors.find(v => v.vendor_id === vendorId);
-    if (!vendor) return { success: false, message: 'ไม่พบ Vendor' };
+    
+    const index = this.vendors.findIndex(v => v.vendor_id === vendorId);
+    if (index === -1) return { success: false, message: 'ไม่พบ Vendor' };
 
-    vendor.status = 'BLACKLISTED';
-    vendor.is_blocked = true;
-    vendor.updated_at = new Date().toISOString();
+    const updatedVendor = {
+        ...this.vendors[index],
+        status: 'BLACKLISTED' as const,
+        is_blocked: true,
+        updated_at: new Date().toISOString()
+    };
+    
+    this.vendors[index] = updatedVendor;
 
-    return { success: true, message: 'Block Vendor สำเร็จ (Mock)', data: vendor };
+    return { success: true, message: 'Block Vendor สำเร็จ (Mock)', data: structuredClone(updatedVendor) };
   }
 
   async unblock(vendorId: string): Promise<VendorResponse> {
     logger.log('[MockVendorService] unblock', vendorId);
-    const vendor = this.vendors.find(v => v.vendor_id === vendorId);
-    if (!vendor) return { success: false, message: 'ไม่พบ Vendor' };
+    
+    const index = this.vendors.findIndex(v => v.vendor_id === vendorId);
+    if (index === -1) return { success: false, message: 'ไม่พบ Vendor' };
 
-    vendor.status = 'ACTIVE';
-    vendor.is_blocked = false;
-    vendor.updated_at = new Date().toISOString();
+    const updatedVendor = {
+        ...this.vendors[index],
+        status: 'ACTIVE' as const,
+        is_blocked: false,
+        updated_at: new Date().toISOString()
+    };
+    
+    this.vendors[index] = updatedVendor;
 
-    return { success: true, message: 'Unblock Vendor สำเร็จ (Mock)', data: vendor };
+    return { success: true, message: 'Unblock Vendor สำเร็จ (Mock)', data: structuredClone(updatedVendor) };
   }
 
   async setOnHold(vendorId: string, onHold: boolean): Promise<VendorResponse> {
     logger.log('[MockVendorService] setOnHold', vendorId, onHold);
-    const vendor = this.vendors.find(v => v.vendor_id === vendorId);
-    if (!vendor) return { success: false, message: 'ไม่พบ Vendor' };
+    
+    const index = this.vendors.findIndex(v => v.vendor_id === vendorId);
+    if (index === -1) return { success: false, message: 'ไม่พบ Vendor' };
 
-    vendor.is_on_hold = onHold;
-    vendor.updated_at = new Date().toISOString();
+    const updatedVendor = {
+        ...this.vendors[index],
+        is_on_hold: onHold,
+        updated_at: new Date().toISOString()
+    };
+    
+    this.vendors[index] = updatedVendor;
 
-    return { success: true, message: `Set Hold=${onHold} สำเร็จ (Mock)`, data: vendor };
+    return { success: true, message: `Set Hold=${onHold} สำเร็จ (Mock)`, data: structuredClone(updatedVendor) };
   }
 
   private delay(ms: number) {

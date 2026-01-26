@@ -119,10 +119,10 @@ export default function RFQListPage() {
                         actionButtons={
                             <button
                                 onClick={() => openWindow('RFQ')}
-                                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-lg flex items-center gap-2 transition-colors whitespace-nowrap"
+                                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-lg flex items-center gap-2 transition-colors shadow-sm"
                             >
                                 <Plus size={18} />
-                                สร้าง RFQ ใหม่
+                                <span>สร้าง RFQ ใหม่</span>
                             </button>
                         }
                     />
@@ -153,7 +153,7 @@ export default function RFQListPage() {
                     )}
 
                     {/* Results Header */}
-                    <div className="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-teal-600">
+                    <div className="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-teal-600">
                         <h2 className="text-lg font-bold text-white">ผลลัพธ์การค้นหา</h2>
                         <span className="text-sm text-teal-100">
                             พบทั้งหมด <span className="font-semibold">{data?.total ?? 0}</span> รายการ
@@ -161,8 +161,8 @@ export default function RFQListPage() {
                     </div>
 
                     {/* Table - Responsive Fixed Layout */}
-                    <div className="overflow-hidden">
-                        <table className="w-full table-fixed">
+                    <div className="overflow-x-auto">
+                        <table className="w-full min-w-[1000px] table-fixed">
                             <thead className="bg-gray-50 dark:bg-gray-700">
                                 <tr>
                                     <th className="w-[4%] px-2 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">ลำดับ</th>

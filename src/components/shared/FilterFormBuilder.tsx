@@ -193,12 +193,12 @@ export function FilterFormBuilder<
                     );
                 })}
 
-                {/* Action Buttons - inline with last field row */}
-                <div className="flex items-end gap-2 flex-nowrap min-w-0">
+                {/* Action Buttons - inline with last field row on desktop, full width/wrapped on mobile */}
+                <div className="flex flex-wrap items-end gap-2 min-w-0 col-span-1 sm:col-span-full md:col-span-1 lg:col-span-1">
                     {/* Search Button */}
                     <button
                         type="submit"
-                        className={`px-4 py-2 ${buttonColors[accentColor]} text-white font-semibold rounded-lg flex items-center gap-2 transition-colors whitespace-nowrap shadow-sm`}
+                        className={`flex-1 md:flex-none px-4 py-2 ${buttonColors[accentColor]} text-white font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors whitespace-nowrap shadow-sm`}
                     >
                         <Search size={16} />
                         {searchLabel}
@@ -208,7 +208,7 @@ export function FilterFormBuilder<
                     <button
                         type="button"
                         onClick={onReset}
-                        className="px-4 py-2 bg-white hover:bg-gray-100 text-gray-700 font-medium rounded-lg border border-gray-300 flex items-center gap-2 transition-colors whitespace-nowrap"
+                        className="flex-1 md:flex-none px-4 py-2 bg-white hover:bg-gray-100 text-gray-700 font-medium rounded-lg border border-gray-300 flex items-center justify-center gap-2 transition-colors whitespace-nowrap"
                     >
                         <X size={16} />
                         {resetLabel}
@@ -219,7 +219,7 @@ export function FilterFormBuilder<
                         <button
                             type="button"
                             onClick={onCreate}
-                            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-lg flex items-center gap-2 transition-colors whitespace-nowrap shadow-sm"
+                            className="w-full md:w-auto px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors whitespace-nowrap shadow-sm"
                         >
                             <Plus size={18} />
                             {createLabel}
@@ -227,7 +227,11 @@ export function FilterFormBuilder<
                     )}
 
                     {/* Additional Action Buttons */}
-                    {actionButtons}
+                    {actionButtons && (
+                         <div className="w-full md:w-auto flex flex-wrap gap-2">
+                            {actionButtons}
+                         </div>
+                    )}
                 </div>
             </div>
         </form>
