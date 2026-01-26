@@ -5,8 +5,8 @@
  * @purpose กำหนดรหัสเจ้าหนี้ และจัดการข้อมูลผู้ขาย
  */
 
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FileText, Search, Plus, Save, Trash2, Copy, Eye, X, Loader2, Check, Home, ClipboardList, CreditCard, Settings, Phone, DollarSign, Building2 } from 'lucide-react';
 import { styles } from '../../../constants';
 import { vendorService } from '../../../services/vendorService';
@@ -53,11 +53,70 @@ const initialFormData: VendorPageFormData = {
 export default function VendorForm() {
     const navigate = useNavigate();
     
+    const [searchParams] = useSearchParams();
+    const vendorId = searchParams.get('id');
+    
     // Form state
     const [formData, setFormData] = useState<VendorPageFormData>(initialFormData);
     const [activeTab, setActiveTab] = useState<TabType>('branch');
+    const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
+
+    // Fetch vendor data if id exists
+    useEffect(() => {
+        const fetchVendor = async () => {
+            if (!vendorId) return;
+
+            setIsLoading(true);
+            try {
+                const vendor = await vendorService.getById(vendorId);
+                if (vendor) {
+                    setFormData(prev => ({
+                        ...prev,
+                        // Map snake_case from API to camelCase for form
+                        vendorCode: vendor.vendor_code,
+                        vendorName: vendor.vendor_name,
+                        vendorNameEn: vendor.vendor_name_en || '',
+                        taxId: vendor.tax_id || '',
+                        branchName: 'สำนักงานใหญ่', // Default as API doesn't provide yet
+                        // Address
+                        addressLine1: vendor.address_line1 || '',
+                        addressLine2: vendor.address_line2 || '',
+                        subDistrict: vendor.sub_district || '',
+                        district: vendor.district || '',
+                        province: vendor.province || '',
+                        postalCode: vendor.postal_code || '',
+                        country: vendor.country || 'Thailand',
+                        // Contact
+                        phone: vendor.phone || '',
+                        email: vendor.email || '',
+                        contactName: '', // Default as API doesn't provide yet
+                        
+                        // Search fields
+                        vendorCodeSearch: vendor.vendor_code,
+                        vendorNameTh: vendor.vendor_name,
+                        
+                        // Map specific fields if needed
+                        addressPP20Line1: vendor.address_line1 || '',
+                        addressPP20Line2: vendor.address_line2 || '',
+                        subDistrictPP20: vendor.sub_district || '',
+                        districtPP20: vendor.district || '',
+                        provincePP20: vendor.province || '',
+                        postalCodePP20: vendor.postal_code || '',
+                        contactEmail: vendor.email || '',
+                    }));
+                }
+            } catch (error) {
+                console.error('Error fetching vendor:', error);
+                setSaveError('ไม่สามารถโหลดข้อมูลผู้ขายได้');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchVendor();
+    }, [vendorId]);
 
     // Handle input change
     const handleInputChange = (field: keyof VendorPageFormData, value: string | boolean) => {
@@ -93,10 +152,16 @@ export default function VendorForm() {
             };
 
             const request = toVendorCreateRequest(apiFormData);
-            const result = await vendorService.create(request);
+            
+            let result;
+            if (vendorId) {
+                result = await vendorService.update(vendorId, request);
+            } else {
+                result = await vendorService.create(request);
+            }
             
             if (result.success) {
-                navigate('/master-data');
+                navigate('/master-data/vendor');
             } else {
                 setSaveError(result.message || 'เกิดข้อผิดพลาดในการบันทึก');
             }
@@ -136,11 +201,19 @@ export default function VendorForm() {
             {/* ==================== HEADER BANNER ==================== */}
             <div className="bg-gradient-to-r from-blue-600 to-blue-400 rounded-lg p-4 flex items-center gap-3 shadow-md">
                 <FileText size={24} className="text-white" />
-                <h1 className="text-lg font-semibold text-white">กำหนดรหัสเจ้าหนี้</h1>
+                <h1 className="text-lg font-semibold text-white">แก้ไข/กำหนดรหัสเจ้าหนี้</h1>
             </div>
 
             {/* ==================== MAIN FORM CARD ==================== */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 relative">
+                {isLoading && (
+                    <div className="absolute inset-0 z-10 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm flex items-center justify-center rounded-lg">
+                        <div className="flex flex-col items-center">
+                            <Loader2 size={48} className="animate-spin text-blue-600" />
+                            <span className="mt-2 text-sm font-medium text-blue-600">กำลังโหลดข้อมูล...</span>
+                        </div>
+                    </div>
+                )}
                 {/* Quick Search Row */}
                 <div className="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row gap-4 sm:gap-6">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 flex-1 min-w-0">
@@ -574,7 +647,7 @@ export default function VendorForm() {
                     </div>
                     <button
                         type="button"
-                        onClick={() => navigate('/master-data')}
+                        onClick={() => navigate('/master-data/vendor')}
                         className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-red-500 hover:text-white hover:border-red-500 dark:hover:bg-red-600 dark:hover:border-red-600 transition-all duration-200"
                     >
                         <X size={16} />

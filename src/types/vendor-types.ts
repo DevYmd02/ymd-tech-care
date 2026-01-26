@@ -12,7 +12,31 @@
 export type VendorStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'BLACKLISTED';
 
 /** ประเภท Vendor */
+/** ประเภท Vendor */
 export type VendorType = 'COMPANY' | 'INDIVIDUAL' | 'GOVERNMENT';
+
+/** Bank Account Interface */
+export interface VendorBankAccount {
+    id: string;
+    bankName: string;
+    branchName: string;
+    accountNumber: string;
+    accountName: string;
+    accountType: string;
+    swiftCode: string;
+    isMain: boolean;
+}
+
+/** Additional Contact Interface */
+export interface VendorContactPerson {
+    id: string;
+    name: string;
+    position: string;
+    phone: string;
+    mobile: string;
+    email: string;
+    isMain: boolean;
+}
 
 // ====================================================================================
 // MAIN INTERFACES - ตาม Database Schema
@@ -73,18 +97,46 @@ export interface VendorFormData {
     vendorName: string;
     vendorNameTh: string; // Thai name (alias for vendorName)
     vendorNameEn: string;
-    taxId: string;
     vendorType: VendorType;
+    businessCategory: string; // New
+    taxId: string;
+    branchName: string; // New
+    currency: string; // New
+    vatRegistered: boolean; // New
+    whtRegistered: boolean; // New
     
     // Address PP.20
     addressLine1: string;
-    addressLine2: string;
-    subDistrict: string;
     district: string;
     province: string;
     postalCode: string;
+    country: string; // New
     
-    // Contact Address (same as PP.20 or different)
+    // Contact Info
+    contactName: string; // New
+    phone: string;
+    mobile: string; // New
+    email: string;
+    website: string; // New
+    
+    // Payment
+    paymentTerms: string; // New
+    creditLimit: number; // New
+    
+    // Lists
+    bankAccounts: VendorBankAccount[]; // New
+    additionalContacts: VendorContactPerson[]; // New
+    
+    remarks: string;
+    
+    // Status flags
+    onHold: boolean;
+    blocked: boolean;
+    inactive: boolean;
+
+    // Deprecated / Backwards Compat (Keep optional/hidden if needed or remove if unused in new form)
+    addressLine2: string;
+    subDistrict: string;
     useAddressPP20: boolean;
     contactAddressLine1: string;
     contactAddressLine2: string;
@@ -92,17 +144,7 @@ export interface VendorFormData {
     contactDistrict: string;
     contactProvince: string;
     contactPostalCode: string;
-    
-    // Contact Info
-    phone: string;
     phoneExt: string;
-    email: string;
-    remarks: string;
-    
-    // Status flags
-    onHold: boolean;
-    blocked: boolean;
-    inactive: boolean;
 }
 
 /**
@@ -230,12 +272,39 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
         vendorNameEn: vendor.vendor_name_en || '',
         taxId: vendor.tax_id || '',
         vendorType: vendor.vendor_type,
+        businessCategory: '', // API not provided yet
+        branchName: 'สำนักงานใหญ่', // API not provided yet
+        currency: vendor.currency_code || 'THB',
+        vatRegistered: vendor.vat_registered || false,
+        whtRegistered: false, // API not provided yet
+        
         addressLine1: vendor.address_line1 || '',
         addressLine2: vendor.address_line2 || '',
         subDistrict: vendor.sub_district || '',
         district: vendor.district || '',
         province: vendor.province || '',
         postalCode: vendor.postal_code || '',
+        country: vendor.country || 'Thailand',
+        
+        contactName: '', // API not provided yet
+        phone: vendor.phone || '',
+        mobile: '', // API not provided yet
+        email: vendor.email || '',
+        website: vendor.website || '',
+        
+        paymentTerms: `${vendor.payment_term_days ? 'Net ' + vendor.payment_term_days + ' Days' : 'Net 30 Days'}`,
+        creditLimit: vendor.credit_limit || 0,
+        
+        bankAccounts: [], // API not provided yet
+        additionalContacts: [], // API not provided yet
+        
+        remarks: vendor.remarks || '',
+        
+        onHold: vendor.is_on_hold,
+        blocked: vendor.is_blocked,
+        inactive: vendor.status === 'INACTIVE',
+
+        // Deprecated mapping
         useAddressPP20: false,
         contactAddressLine1: vendor.address_line1 || '',
         contactAddressLine2: vendor.address_line2 || '',
@@ -243,13 +312,7 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
         contactDistrict: vendor.district || '',
         contactProvince: vendor.province || '',
         contactPostalCode: vendor.postal_code || '',
-        phone: vendor.phone || '',
         phoneExt: vendor.phone_ext || '',
-        email: vendor.email || '',
-        remarks: vendor.remarks || '',
-        onHold: vendor.is_on_hold,
-        blocked: vendor.is_blocked,
-        inactive: vendor.status === 'INACTIVE',
     };
 }
 
@@ -262,14 +325,41 @@ export const initialVendorFormData: VendorFormData = {
     vendorName: '',
     vendorNameTh: '',
     vendorNameEn: '',
-    taxId: '',
     vendorType: 'COMPANY',
+    businessCategory: '',
+    taxId: '',
+    branchName: 'สำนักงานใหญ่',
+    currency: 'THB',
+    vatRegistered: true,
+    whtRegistered: false,
+    
     addressLine1: '',
     addressLine2: '',
     subDistrict: '',
     district: '',
     province: '',
     postalCode: '',
+    country: 'Thailand',
+    
+    contactName: '',
+    phone: '',
+    mobile: '',
+    email: '',
+    website: '',
+    
+    paymentTerms: 'Net 30 Days',
+    creditLimit: 0,
+    
+    bankAccounts: [],
+    additionalContacts: [],
+    
+    remarks: '',
+    
+    onHold: false,
+    blocked: false,
+    inactive: false,
+
+    // Deprecated defaults
     useAddressPP20: false,
     contactAddressLine1: '',
     contactAddressLine2: '',
@@ -277,11 +367,5 @@ export const initialVendorFormData: VendorFormData = {
     contactDistrict: '',
     contactProvince: '',
     contactPostalCode: '',
-    phone: '',
     phoneExt: '',
-    email: '',
-    remarks: '',
-    onHold: false,
-    blocked: false,
-    inactive: false,
 };

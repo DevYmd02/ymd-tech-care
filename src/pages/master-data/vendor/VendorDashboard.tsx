@@ -23,7 +23,7 @@ import {
     ChevronsRight
 } from 'lucide-react';
 import { styles } from '../../../constants';
-import { VendorFormModal } from './VendorFormModal';
+
 import { vendorService } from '../../../services/vendorService';
 import type { VendorListItem, VendorStatus } from '../../../types/vendor-types';
 import { VendorStatusBadge } from '../../../components/shared';
@@ -38,7 +38,7 @@ export default function VendorDashboard() {
     // States
     const [vendors, setVendors] = useState<VendorListItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [isModalOpen, setIsModalOpen] = useState(false);
+
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<'ALL' | VendorStatus>('ALL');
     const [typeFilter, setTypeFilter] = useState<'ALL' | 'COMPANY' | 'INDIVIDUAL' | 'GOVERNMENT'>('ALL');
@@ -93,13 +93,10 @@ export default function VendorDashboard() {
 
     // Handlers
     const handleCreateNew = () => {
-        setIsModalOpen(true);
+        navigate('/master-data/vendor/form');
     };
 
-    const handleModalClose = () => {
-        setIsModalOpen(false);
-        fetchVendors();
-    };
+
 
     const handleEdit = (vendorId: string) => {
         navigate(`/master-data/vendor/form?id=${vendorId}`);
@@ -405,8 +402,7 @@ export default function VendorDashboard() {
                 )}
             </div>
 
-            {/* Vendor Form Modal */}
-            <VendorFormModal isOpen={isModalOpen} onClose={handleModalClose} />
+
         </div>
     );
 }

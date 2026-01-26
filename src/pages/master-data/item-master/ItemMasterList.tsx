@@ -1,30 +1,20 @@
 // ItemMasterList.tsx
-
 import { useState } from 'react';
 import { 
-    Search, Plus, Edit2, Trash2, Filter
+    Edit2, Trash2
 } from 'lucide-react';
 import { styles } from '../../../constants/styles';
 import { ItemMasterFormModal } from './ItemMasterFormModal';
-import { mockItems } from '../../../__mocks__/masterDataMocks';
+import type { ItemListItem } from '../../../types/master-data-types';
 
-export default function ItemMasterList() {
-    const [searchTerm, setSearchTerm] = useState('');
-    
+interface ItemMasterListProps {
+    data: ItemListItem[];
+}
+
+export default function ItemMasterList({ data }: ItemMasterListProps) {
     // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editId, setEditId] = useState<string | null>(null);
-
-    // Filter items
-    const filteredItems = mockItems.filter(item => 
-        item.item_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.item_name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    const handleAddNew = () => {
-        setEditId(null);
-        setIsModalOpen(true);
-    };
 
     const handleEdit = (id: string) => {
         setEditId(id);
@@ -38,33 +28,6 @@ export default function ItemMasterList() {
 
     return (
         <div className="space-y-4">
-             {/* Toolbar */}
-             <div className="flex flex-col sm:flex-row justify-between gap-4">
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                    <input 
-                        type="text" 
-                        placeholder="ค้นหารหัสสินค้า, ชื่อสินค้า..." 
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className={styles.input + " pl-10"}
-                    />
-                </div>
-                <div className="flex gap-2">
-                    <button className={styles.btnSecondary + " flex items-center gap-2"}>
-                        <Filter size={18} />
-                        Filter
-                    </button>
-                    <button 
-                        onClick={handleAddNew}
-                        className={styles.btnPrimary + " flex items-center gap-2"}
-                    >
-                        <Plus size={18} />
-                        Add New
-                    </button>
-                </div>
-            </div>
-
             {/* Table */}
             <div className={styles.tableContainer}>
                 <table className="w-full">
@@ -79,8 +42,8 @@ export default function ItemMasterList() {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                        {filteredItems.length > 0 ? (
-                            filteredItems.map((item) => (
+                        {data.length > 0 ? (
+                            data.map((item) => (
                                 <tr key={item.item_id} className={styles.tableTr}>
                                     <td className={styles.tableTd}>
                                         <span className="font-medium text-blue-600 cursor-pointer hover:underline" onClick={() => handleEdit(item.item_id)}>

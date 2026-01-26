@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { 
     Database, Users, Package, Building2, Warehouse as WarehouseIcon, 
     DollarSign, FolderKanban, Plus, Search, Filter, Edit2, Trash2,
@@ -14,10 +14,11 @@ import {
 import { styles } from '../../constants';
 
 // Import mock data
-import { mockBranches, mockWarehouses, mockItemTypes } from '../../__mocks__/masterDataMocks';
+import { mockBranches, mockWarehouses, mockItems } from '../../__mocks__/masterDataMocks';
 import { vendorService } from '../../services/vendorService';
 
 // Import Form Modals
+
 import { VendorFormModal } from './vendor';
 import { BranchFormModal } from './branch';
 import { WarehouseFormModal } from './warehouse';
@@ -26,8 +27,9 @@ import { ItemMasterList } from './item-master';
 // Import types
 import type { VendorListItem } from '../../types/vendor-types';
 import type { 
-    BranchListItem, 
+    BranchListItem,
     WarehouseListItem, 
+    ItemListItem
 } from '../../types/master-data-types';
 
 // ====================================================================================
@@ -90,6 +92,7 @@ const DB_RELATIONS: Record<TabType, { dbTable: string; relations: string[]; fk: 
 
 export default function MasterDataDashboard() {
     const [searchParams, setSearchParams] = useSearchParams();
+    const navigate = useNavigate();
     
     // Get initial tab from URL or default to 'vendor'
     const initialTab = (searchParams.get('tab') as TabType) || 'vendor';
@@ -101,17 +104,20 @@ export default function MasterDataDashboard() {
     const [searchTerm, setSearchTerm] = useState('');
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
     
     // Data states
     const [vendors, setVendors] = useState<VendorListItem[]>([]);
     const [branches, setBranches] = useState<BranchListItem[]>([]);
     const [warehouses, setWarehouses] = useState<WarehouseListItem[]>([]);
+    const [items, setItems] = useState<ItemListItem[]>([]);
 
 
     // Tab configs with record counts
     const tabs: TabConfig[] = [
         { id: 'vendor', label: 'Vendor', labelEn: 'ผู้ขาย', icon: Users, recordCount: vendors.length, ...DB_RELATIONS['vendor'] },
-        { id: 'item', label: 'Item', labelEn: 'สินค้า', icon: Package, recordCount: mockItemTypes.length, ...DB_RELATIONS['item'] },
+        { id: 'item', label: 'Item', labelEn: 'สินค้า', icon: Package, recordCount: mockItems.length, ...DB_RELATIONS['item'] },
         { id: 'branch', label: 'Branch', labelEn: 'สาขา', icon: Building2, recordCount: mockBranches.length, ...DB_RELATIONS['branch'] },
         { id: 'warehouse', label: 'Warehouse', labelEn: 'คลัง', icon: WarehouseIcon, recordCount: mockWarehouses.length, ...DB_RELATIONS['warehouse'] },
         { id: 'cost-center', label: 'Cost Center', labelEn: '', icon: DollarSign, recordCount: 4, ...DB_RELATIONS['cost-center'] },
@@ -138,7 +144,7 @@ export default function MasterDataDashboard() {
                 setWarehouses([...mockWarehouses]);
                 break;
             case 'item':
-                // Item Master uses its own list component for now
+                setItems([...mockItems]);
                 break;
             case 'cost-center':
             case 'project':
@@ -157,6 +163,7 @@ export default function MasterDataDashboard() {
         setSearchParams({ tab: activeTab });
         setSearchTerm('');
         setExpandedId(null);
+        setCurrentPage(1);
     }, [activeTab, setSearchParams]);
 
     // Handlers
@@ -170,6 +177,10 @@ export default function MasterDataDashboard() {
     };
 
     const handleEdit = (id: string) => {
+        if (activeTab === 'vendor') {
+            navigate(`/master-data/vendor/form?id=${id}`);
+            return;
+        }
         setEditingId(id);
         setIsModalOpen(true);
     };
@@ -230,10 +241,24 @@ export default function MasterDataDashboard() {
                     w.warehouse_code.toLowerCase().includes(term) ||
                     w.warehouse_name.toLowerCase().includes(term)
                 );
+            case 'item':
+                return items.filter(i =>
+                    i.item_code.toLowerCase().includes(term) ||
+                    i.item_name.toLowerCase().includes(term)
+                );
             default:
                 return [];
         }
     };
+
+    // Calculate pagination
+    const filteredData = getFilteredData();
+    const totalItems = filteredData.length;
+    const totalPages = Math.ceil(totalItems / rowsPerPage);
+    const paginatedData = filteredData.slice(
+        (currentPage - 1) * rowsPerPage,
+        currentPage * rowsPerPage
+    );
 
     // ====================================================================================
     // RENDER HELPERS
@@ -528,7 +553,6 @@ export default function MasterDataDashboard() {
                         </p>
                     </div>
                 </div>
-                {activeTab !== 'item' && (
                 <button
                     onClick={handleAddNew}
                     className={`${styles.btnPrimary} flex items-center gap-2`}
@@ -536,11 +560,9 @@ export default function MasterDataDashboard() {
                     <Plus size={20} />
                     Add New
                 </button>
-                )}
             </div>
 
-            {/* Search & Filter - Hide for Item tab as it has its own */}
-            {activeTab !== 'item' && (
+            {/* Search & Filter */}
             <div className="flex gap-4 mb-4">
                 <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
@@ -557,7 +579,12 @@ export default function MasterDataDashboard() {
                     <span className="text-gray-700 dark:text-gray-300">Filter</span>
                 </button>
             </div>
-            )}
+
+            {/* Filter Summary */}
+            <div className="flex items-center gap-2 mb-4 text-sm text-gray-500 dark:text-gray-400">
+                <Filter size={16} />
+                <span>พบ {totalItems} รายการ จาก {currentTab.recordCount} รายการ</span>
+            </div>
 
             {/* Data Cards */}
             <div className="space-y-4">
@@ -567,8 +594,8 @@ export default function MasterDataDashboard() {
                         <span className="ml-3 text-gray-600">กำลังโหลดข้อมูล...</span>
                     </div>
                 ) : activeTab === 'vendor' ? (
-                    getFilteredData().length > 0 ? (
-                        (getFilteredData() as VendorListItem[]).map(vendor => 
+                    paginatedData.length > 0 ? (
+                        (paginatedData as VendorListItem[]).map(vendor => 
                             renderVendorCard(vendor, expandedId === vendor.vendor_id)
                         )
                     ) : (
@@ -577,8 +604,8 @@ export default function MasterDataDashboard() {
                         </div>
                     )
                 ) : activeTab === 'branch' ? (
-                    getFilteredData().length > 0 ? (
-                        (getFilteredData() as BranchListItem[]).map(branch => 
+                    paginatedData.length > 0 ? (
+                        (paginatedData as BranchListItem[]).map(branch => 
                             renderBranchCard(branch, expandedId === branch.branch_id)
                         )
                     ) : (
@@ -587,7 +614,7 @@ export default function MasterDataDashboard() {
                         </div>
                     )
                 ) : activeTab === 'item' ? (
-                     <ItemMasterList />
+                     <ItemMasterList data={paginatedData as ItemListItem[]} />
                 ) : (
                     <div className="text-center py-12 text-gray-500">
                         <p>{currentTab.label} - Coming Soon</p>
@@ -595,8 +622,67 @@ export default function MasterDataDashboard() {
                 )}
             </div>
 
+            {/* Pagination Footer */}
+            {!isLoading && totalItems > 0 && (
+                <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                        <span>แสดง</span>
+                        <select
+                            value={rowsPerPage}
+                            onChange={(e) => {
+                                setRowsPerPage(Number(e.target.value));
+                                setCurrentPage(1);
+                            }}
+                            className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value={5}>5</option>
+                            <option value={10}>10</option>
+                            <option value={20}>20</option>
+                            <option value={50}>50</option>
+                        </select>
+                        <span>รายการ จาก {totalItems}</span>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                        <button
+                            onClick={() => setCurrentPage(1)}
+                            disabled={currentPage === 1}
+                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-gray-600 dark:text-white"
+                        >
+                            <span className="text-lg">«</span>
+                        </button>
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                            disabled={currentPage === 1}
+                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-gray-600 dark:text-white"
+                        >
+                            <span className="text-lg">‹</span>
+                        </button>
+                        
+                        <span className="px-4 text-sm font-medium text-gray-700 dark:text-white">
+                            หน้า {currentPage} / {totalPages}
+                        </span>
+                        
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                            disabled={currentPage === totalPages}
+                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-gray-600 dark:text-white"
+                        >
+                            <span className="text-lg">›</span>
+                        </button>
+                        <button
+                            onClick={() => setCurrentPage(totalPages)}
+                            disabled={currentPage === totalPages}
+                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-gray-600 dark:text-white"
+                        >
+                            <span className="text-lg">»</span>
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Form Modals */}
-            <VendorFormModal isOpen={isModalOpen && activeTab === 'vendor'} onClose={handleModalClose} />
+            <VendorFormModal isOpen={isModalOpen && activeTab === 'vendor'} onClose={handleModalClose} vendorId={editingId || undefined} />
             <BranchFormModal isOpen={isModalOpen && activeTab === 'branch'} onClose={handleModalClose} editId={editingId} />
             <WarehouseFormModal isOpen={isModalOpen && activeTab === 'warehouse'} onClose={handleModalClose} editId={editingId} />
             {/* Item Master modals are handled within ItemMasterList */}
