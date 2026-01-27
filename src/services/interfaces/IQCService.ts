@@ -11,6 +11,8 @@ export interface QCListParams {
   status?: string;
   date_from?: string;
   date_to?: string;
+  page?: number;
+  limit?: number;
 }
 
 export interface QCListResponse {

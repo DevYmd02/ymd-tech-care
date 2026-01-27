@@ -6,13 +6,13 @@
 
 import { useState } from 'react';
 import { Tag } from 'lucide-react';
-import { GenericMasterDataList } from '../../../components/master-data';
-import { useGenericMasterDataList } from '../../../hooks/useGenericMasterDataList';
+import { GenericMasterDataList } from '@components/master-data';
+import { useGenericMasterDataList } from '@hooks/useGenericMasterDataList';
 import { ProductCategoryFormModal } from './ProductCategoryFormModal';
-import { mockProductCategories } from '../../../__mocks__/masterDataMocks';
-import { ActiveStatusBadge } from '../../../components/shared';
-import type { ProductCategoryListItem } from '../../../types/master-data-types';
-import type { GenericMasterDataListConfig } from '../../../types/generic-master-data-types';
+import { mockProductCategories } from '@/__mocks__/masterDataMocks';
+import { ActiveStatusBadge } from '@shared';
+import type { ProductCategoryListItem } from '@project-types/master-data-types';
+import type { GenericMasterDataListConfig } from '@project-types/generic-master-data-types';
 
 /**
  * Configuration for Product Category List

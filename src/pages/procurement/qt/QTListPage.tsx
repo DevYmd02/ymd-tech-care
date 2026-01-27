@@ -2,22 +2,23 @@
  * @file QTListPage.tsx
  * @description หน้ารายการใบเสนอราคา (Quotation List)
  * @route /procurement/qt
- * @refactored Uses PageListLayout, FilterFormBuilder, useTableFilters, React Query
+ * @refactored Uses PageListLayout, FilterFormBuilder, useTableFilters, React Query, SmartTable
  */
 
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { FileText, Plus, Eye, Edit, RefreshCw } from 'lucide-react';
-import { formatThaiDate } from '../../../utils/dateUtils';
-import { styles } from '../../../constants';
-import { PageListLayout, FilterFormBuilder, QTStatusBadge } from '../../../components/shared';
-import type { FilterFieldConfig } from '../../../components/shared/FilterFormBuilder';
-import { useTableFilters, type TableFilters } from '../../../hooks';
+import { formatThaiDate } from '@utils/dateUtils';
+import { PageListLayout, FilterFormBuilder, QTStatusBadge, SmartTable } from '@shared';
+import type { FilterFieldConfig } from '@shared/FilterFormBuilder';
+import { useTableFilters, type TableFilters } from '@hooks';
+import type { ColumnDef } from '@tanstack/react-table';
+import { createColumnHelper } from '@tanstack/react-table';
 
 // Services & Types
-import { qtService } from '../../../services/qtService';
-import type { QTListParams } from '../../../services/qtService';
-import type { QTListItem, QTStatus } from '../../../types/qt-types';
+import { qtService } from '@services/qtService';
+import type { QTListParams } from '@services/qtService';
+import type { QTListItem, QTStatus } from '@project-types/qt-types';
 import QTFormModal from './components/QTFormModal';
 import { QCFormModal } from '../qc/components/QCFormModal';
 
@@ -35,7 +36,7 @@ const QT_STATUS_OPTIONS = [
 // FILTER CONFIG
 // ====================================================================================
 
-type QTFilterKeys = keyof TableFilters<QTStatus>;
+type QTFilterKeys = Extract<keyof TableFilters<QTStatus>, string>;
 
 const QT_FILTER_CONFIG: FilterFieldConfig<QTFilterKeys>[] = [
     { name: 'search', label: 'เลขที่ใบเสนอราคา', type: 'text', placeholder: 'QT-xxx' },
@@ -52,7 +53,7 @@ const QT_FILTER_CONFIG: FilterFieldConfig<QTFilterKeys>[] = [
 
 export default function QTListPage() {
     // URL-based Filter State
-    const { filters, setFilters, resetFilters } = useTableFilters<QTStatus>({
+    const { filters, setFilters, resetFilters, handlePageChange } = useTableFilters<QTStatus>({
         defaultStatus: 'ALL',
     });
 
@@ -64,16 +65,16 @@ export default function QTListPage() {
         status: filters.status === 'ALL' ? undefined : filters.status,
         date_from: filters.dateFrom || undefined,
         date_to: filters.dateTo || undefined,
+        page: filters.page,
+        limit: filters.limit
     };
 
     // Data Fetching with React Query
-    const { data, isLoading, isFetching, refetch } = useQuery({
+    const { data, isLoading, refetch } = useQuery({
         queryKey: ['quotations', apiFilters],
         queryFn: () => qtService.getList(apiFilters),
         placeholderData: keepPreviousData,
     });
-
-    const qtList = data?.data ?? [];
 
     // Modal States
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -85,10 +86,137 @@ export default function QTListPage() {
         setFilters({ [name]: value });
     };
 
-    const handleOpenQCModal = (qt: QTListItem) => {
+    const handleOpenQCModal = useCallback((qt: QTListItem) => {
         setSelectedQTForQC(qt);
         setIsQCModalOpen(true);
-    };
+    }, []);
+
+    // Columns Definition
+    const columnHelper = createColumnHelper<QTListItem>();
+
+    const columns = useMemo(() => [
+        columnHelper.display({
+            id: 'index',
+            header: 'ลำดับ',
+            cell: (info) => info.row.index + 1 + (filters.page - 1) * filters.limit,
+            size: 35,
+            enableSorting: false,
+        }),
+        columnHelper.accessor('quotation_no', {
+            header: 'เลขที่ QT',
+            cell: (info) => (
+                <span className="font-semibold text-blue-600 dark:text-blue-400 cursor-pointer hover:underline truncate block tracking-tight" title={info.getValue()}>
+                    {info.getValue()}
+                </span>
+            ),
+            size: 155,
+            enableSorting: true,
+        }),
+        columnHelper.accessor('quotation_date', {
+            header: 'วันที่',
+            cell: (info) => (
+                <span className="text-gray-600 dark:text-gray-300 whitespace-nowrap">
+                    {formatThaiDate(info.getValue())}
+                </span>
+            ),
+            size: 90,
+            enableSorting: true,
+        }),
+        columnHelper.accessor('vendor_name', {
+            header: 'ผู้ขาย',
+            cell: (info) => {
+                const item = info.row.original;
+                return (
+                    <div>
+                        <div className="font-medium text-gray-800 dark:text-gray-200 truncate" title={info.getValue()}>{info.getValue()}</div>
+                        <div className="text-[10px] text-gray-500 dark:text-gray-400 truncate" title={`เครดิต ${item.payment_term_days || '-'} วัน | Lead ${item.lead_time_days || '-'} วัน`}>
+                            เครดิต {item.payment_term_days || '-'} วัน | Lead {item.lead_time_days || '-'} วัน
+                        </div>
+                    </div>
+                );
+            },
+            size: 200,
+            enableSorting: false,
+        }),
+        columnHelper.accessor('rfq_no', {
+            header: 'RFQ อ้างอิง',
+            cell: (info) => (
+                <span className="text-purple-600 dark:text-purple-400 cursor-pointer hover:underline truncate block tracking-tight" title={info.getValue()}>
+                    {info.getValue()}
+                </span>
+            ),
+            size: 155,
+            enableSorting: false,
+        }),
+        columnHelper.accessor('total_amount', {
+            header: () => <div className="text-right">ยอดรวม</div>,
+            cell: (info) => {
+                const item = info.row.original;
+                return (
+                    <div className="text-right">
+                        <div className="font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                            {info.getValue().toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                        <div className="text-[10px] text-gray-500 font-normal">{item.currency_code || 'THB'}</div>
+                    </div>
+                );
+            },
+            size: 90,
+            enableSorting: true,
+        }),
+        columnHelper.accessor('valid_until', {
+            header: () => <div className="text-center">ใช้ได้ถึง</div>,
+            cell: (info) => (
+                <div className="text-center text-gray-600 dark:text-gray-300 whitespace-nowrap">
+                    {info.getValue() ? formatThaiDate(info.getValue()!) : '-'}
+                </div>
+            ),
+            size: 90,
+            enableSorting: true,
+        }),
+        columnHelper.accessor(row => row.status, {
+            id: 'status',
+            header: () => <div className="text-center">สถานะ</div>,
+            cell: (info) => (
+                <div className="flex justify-center">
+                    <QTStatusBadge status={info.getValue()} />
+                </div>
+            ),
+            size: 85,
+            enableSorting: false,
+        }),
+        columnHelper.display({
+            id: 'actions',
+            header: () => <div className="text-center">จัดการ</div>,
+            cell: ({ row }) => {
+                const item = row.original;
+                return (
+                    <div className="flex items-center justify-center gap-1.5">
+                        <button className="p-1 text-gray-500 hover:text-blue-600 transition-colors" title="ดูรายละเอียด">
+                            <Eye size={16} />
+                        </button>
+                        
+                        {item.status === 'SUBMITTED' && (
+                            <>
+                                <button className="p-1 text-blue-500 hover:text-blue-700 transition-colors" title="แก้ไข">
+                                    <Edit size={16} />
+                                </button>
+                                <button 
+                                    onClick={() => handleOpenQCModal(item)}
+                                    className="flex items-center gap-0.5 px-2 py-1 bg-[#a855f7] hover:bg-[#9333ea] text-white text-[10px] font-bold rounded shadow transition-colors whitespace-nowrap"
+                                    title="ส่งเปรียบเทียบราคา"
+                                >
+                                    <RefreshCw size={12} /> ส่งเปรียบเทียบราคา
+                                </button>
+                            </>
+                        )}
+                    </div>
+                );
+            },
+            size: 165,
+            enableSorting: false,
+        }),
+    ], [columnHelper, filters.page, filters.limit, handleOpenQCModal]);
 
     // ====================================================================================
     // RENDER
@@ -123,98 +251,21 @@ export default function QTListPage() {
                     />
                 }
             >
-                {/* Results Section */}
-                <div className={`${styles.tableContainer} relative`}>
-                    {/* Fetching indicator */}
-                    {isFetching && !isLoading && (
-                        <div className="absolute top-2 right-2 z-10">
-                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600" />
-                        </div>
-                    )}
-
-                    {/* Results Header */}
-                    <div className="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-blue-600">
-                        <h2 className="text-lg font-bold text-white">รายการใบเสนอราคา</h2>
-                        <span className="text-sm text-blue-100">
-                            พบทั้งหมด <span className="font-semibold">{data?.total ?? 0}</span> รายการ
-                        </span>
-                    </div>
-
-                    {/* Table - Responsive Fixed Layout */}
-                    <div className="overflow-x-auto">
-                        <table className="w-full min-w-[1000px] table-fixed">
-                            <thead className="bg-gray-50 dark:bg-gray-700">
-                                <tr>
-                                    <th className="w-[5%] px-2 py-3 text-center text-xs font-bold  text-gray-600 dark:text-gray-300 uppercase">ลำดับ</th>
-                                    <th className="w-[12%] px-2 py-3 text-left text-xs font-bold  text-gray-600 dark:text-gray-300 uppercase">เลขที่ QT</th>
-                                    <th className="w-[9%] px-2 py-3 text-left text-xs font-bold  text-gray-600 dark:text-gray-300 uppercase">วันที่</th>
-                                    <th className="w-[15%] px-2 py-3 text-left text-xs font-bold  text-gray-600 dark:text-gray-300 uppercase">ผู้ขาย</th>
-                                    <th className="w-[11%] px-2 py-3 text-left text-xs font-bold  text-gray-600 dark:text-gray-300 uppercase">RFQ อ้างอิง</th>
-                                    <th className="w-[10%] px-2 py-3 text-right text-xs font-bold  text-gray-600 dark:text-gray-300 uppercase">ยอดรวม</th>
-                                    <th className="w-[8%] px-2 py-3 text-center text-xs font-bold  text-gray-600 dark:text-gray-300 uppercase">ใช้ได้ถึง</th>
-                                    <th className="w-[10%] px-2 py-3 text-center text-xs font-bold  text-gray-600 dark:text-gray-300 uppercase whitespace-nowrap">สถานะ</th>
-                                    <th className="w-[20%] px-2 py-3 text-center text-xs font-bold  text-gray-600 dark:text-gray-300 uppercase">จัดการ</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900 text-xs">
-                                {qtList.length > 0 ? (
-                                    qtList.map((item, index) => (
-                                        <tr key={item.quotation_id} className="hover:bg-blue-50 dark:hover:bg-gray-800 transition-colors">
-                                            <td className="px-2 py-3 text-gray-600 dark:text-gray-300 text-center">{index + 1}</td>
-                                            <td className="px-2 py-3">
-                                                <span className="font-semibold text-blue-600 dark:text-blue-400 cursor-pointer hover:underline truncate block" title={item.quotation_no}>
-                                                    {item.quotation_no}
-                                                </span>
-                                            </td>
-                                            <td className="px-2 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">{formatThaiDate(item.quotation_date)}</td>
-                                            <td className="px-2 py-3">
-                                                <div className="font-medium text-gray-800 dark:text-gray-200 truncate" title={item.vendor_name}>{item.vendor_name}</div>
-                                                <div className="text-[10px] text-gray-500 dark:text-gray-400 truncate" title={`เครดิต ${item.payment_term_days || '-'} วัน | Lead ${item.lead_time_days || '-'} วัน`}>
-                                                    เครดิต {item.payment_term_days || '-'} วัน | Lead {item.lead_time_days || '-'} วัน
-                                                </div>
-                                            </td>
-                                            <td className="px-2 py-3">
-                                                <span className="text-purple-600 dark:text-purple-400 cursor-pointer hover:underline truncate block" title={item.rfq_no}>{item.rfq_no}</span>
-                                            </td>
-                                            <td className="px-2 py-3 font-bold text-emerald-600 dark:text-emerald-400 text-right whitespace-nowrap">
-                                                {item.total_amount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                <div className="text-[10px] text-gray-500 font-normal">{item.currency_code || 'THB'}</div>
-                                            </td>
-                                            <td className="px-2 py-3 text-gray-600 dark:text-gray-300 text-center whitespace-nowrap">{item.valid_until ? formatThaiDate(item.valid_until) : '-'}</td>
-                                            <td className="px-2 py-3 text-center">
-                                                <QTStatusBadge status={item.status} />
-                                            </td>
-                                            <td className="px-2 py-3 text-center">
-                                                <div className="flex items-center justify-center gap-1.5">
-                                                    <button className="p-1 text-gray-500 hover:text-blue-600 transition-colors" title="ดูรายละเอียด"><Eye size={16} /></button>
-                                                    
-                                                    {/* Actions for SUBMITTED (Received) */}
-                                                    {item.status === 'SUBMITTED' && (
-                                                        <>
-                                                            <button className="p-1 text-blue-500 hover:text-blue-700 transition-colors" title="แก้ไข"><Edit size={16} /></button>
-                                                            <button 
-                                                                onClick={() => handleOpenQCModal(item)}
-                                                                className="flex items-center gap-0.5 px-2 py-1 bg-[#a855f7] hover:bg-[#9333ea] text-white text-[10px] font-bold rounded shadow transition-colors whitespace-nowrap"
-                                                                title="ส่งเปรียบเทียบราคา"
-                                                            >
-                                                                <RefreshCw size={12} /> ส่งเปรียบเทียบราคา
-                                                            </button>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan={9} className="px-4 py-12 text-center text-gray-500">
-                                            ไม่พบข้อมูลใบเสนอราคา
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                <div className="h-full flex flex-col">
+                    <SmartTable
+                        data={data?.data ?? []}
+                        columns={columns as ColumnDef<QTListItem>[]}
+                        isLoading={isLoading}
+                        pagination={{
+                            pageIndex: filters.page,
+                            pageSize: filters.limit,
+                            totalCount: data?.total ?? 0,
+                            onPageChange: handlePageChange,
+                            onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 })
+                        }}
+                        rowIdField="quotation_id"
+                        className="flex-1"
+                    />
                 </div>
             </PageListLayout>
 

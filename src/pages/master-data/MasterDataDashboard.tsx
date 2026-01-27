@@ -5,18 +5,18 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { 
     Database, Users, Package, Building2, Warehouse as WarehouseIcon, 
     DollarSign, FolderKanban, Plus, Search, Filter, Edit2, Trash2,
     ChevronDown, ChevronUp, Phone, Mail, MapPin, 
     ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight
 } from 'lucide-react';
-import { styles } from '../../constants';
+import { styles } from '@/constants';
 
 // Import mock data
-import { mockBranches, mockWarehouses, mockItems, mockCostCenters, mockProjects } from '../../__mocks__/masterDataMocks';
-import { vendorService } from '../../services/vendorService';
+import { mockBranches, mockWarehouses, mockItems, mockCostCenters, mockProjects } from '@/__mocks__/masterDataMocks';
+import { vendorService } from '@services/vendorService';
 
 // Import Form Modals
 
@@ -26,14 +26,14 @@ import { WarehouseFormModal } from './warehouse';
 import { ItemMasterList } from './item-master';
 
 // Import types
-import type { VendorListItem } from '../../types/vendor-types';
+import type { VendorListItem, VendorMaster } from '@project-types/vendor-types';
 import type { 
     BranchListItem,
     WarehouseListItem, 
     ItemListItem,
     CostCenter,
     Project
-} from '../../types/master-data-types';
+} from '@project-types/master-data-types';
 
 // ====================================================================================
 // TYPES
@@ -95,7 +95,6 @@ const DB_RELATIONS: Record<TabType, { dbTable: string; relations: string[]; fk: 
 
 export default function MasterDataDashboard() {
     const [searchParams, setSearchParams] = useSearchParams();
-    const navigate = useNavigate();
     
     // Get initial tab from URL or default to 'vendor'
     const initialTab = (searchParams.get('tab') as TabType) || 'vendor';
@@ -104,6 +103,7 @@ export default function MasterDataDashboard() {
     // Modal & UI states
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
+    const [selectedVendor, setSelectedVendor] = useState<VendorMaster | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -119,15 +119,35 @@ export default function MasterDataDashboard() {
     const [projects, setProjects] = useState<Project[]>([]);
 
 
+    // Master Data Menu Configuration
+    const MASTER_DATA_MENU = [
+        { id: 'vendor', label: 'Vendor', labelEn: 'ผู้ขาย', icon: Users, dbRelation: DB_RELATIONS['vendor'] },
+        { id: 'item', label: 'Item', labelEn: 'สินค้า', icon: Package, dbRelation: DB_RELATIONS['item'] },
+        { id: 'branch', label: 'Branch', labelEn: 'สาขา', icon: Building2, dbRelation: DB_RELATIONS['branch'] },
+        { id: 'warehouse', label: 'Warehouse', labelEn: 'คลัง', icon: WarehouseIcon, dbRelation: DB_RELATIONS['warehouse'] },
+        { id: 'cost-center', label: 'Cost Center', labelEn: 'ศูนย์ต้นทุน', icon: DollarSign, dbRelation: DB_RELATIONS['cost-center'] },
+        { id: 'project', label: 'Project', labelEn: 'โครงการ', icon: FolderKanban, dbRelation: DB_RELATIONS['project'] },
+    ] as const;
+
     // Tab configs with record counts
-    const tabs: TabConfig[] = [
-        { id: 'vendor', label: 'Vendor', labelEn: 'ผู้ขาย', icon: Users, recordCount: vendors.length, ...DB_RELATIONS['vendor'] },
-        { id: 'item', label: 'Item', labelEn: 'สินค้า', icon: Package, recordCount: mockItems.length, ...DB_RELATIONS['item'] },
-        { id: 'branch', label: 'Branch', labelEn: 'สาขา', icon: Building2, recordCount: mockBranches.length, ...DB_RELATIONS['branch'] },
-        { id: 'warehouse', label: 'Warehouse', labelEn: 'คลัง', icon: WarehouseIcon, recordCount: mockWarehouses.length, ...DB_RELATIONS['warehouse'] },
-        { id: 'cost-center', label: 'Cost Center', labelEn: 'ศูนย์ต้นทุน', icon: DollarSign, recordCount: mockCostCenters.length, ...DB_RELATIONS['cost-center'] },
-        { id: 'project', label: 'Project', labelEn: 'โครงการ', icon: FolderKanban, recordCount: mockProjects.length, ...DB_RELATIONS['project'] },
-    ];
+    const tabs: TabConfig[] = MASTER_DATA_MENU.map(menu => ({
+        id: menu.id,
+        label: menu.label,
+        labelEn: menu.labelEn,
+        icon: menu.icon,
+        recordCount: (() => {
+            switch (menu.id) {
+                case 'vendor': return vendors.length;
+                case 'branch': return mockBranches.length;
+                case 'warehouse': return mockWarehouses.length;
+                case 'item': return mockItems.length;
+                case 'cost-center': return mockCostCenters.length;
+                case 'project': return mockProjects.length;
+                default: return 0;
+            }
+        })(),
+        ...menu.dbRelation
+    }));
 
     // Fetch Data
     const fetchData = useCallback(async () => {
@@ -183,9 +203,18 @@ export default function MasterDataDashboard() {
         setIsModalOpen(true);
     };
 
-    const handleEdit = (id: string) => {
+    const handleEdit = async (id: string) => {
         if (activeTab === 'vendor') {
-            navigate(`/master-data/vendor/form?id=${id}`);
+            try {
+                // Fetch full vendor data before opening modal
+                const vendor = await vendorService.getById(id);
+                if (vendor) {
+                    setSelectedVendor(vendor);
+                    setIsModalOpen(true);
+                }
+            } catch (error) {
+                console.error('Error fetching vendor for edit:', error);
+            }
             return;
         }
         setEditingId(id);
@@ -204,6 +233,7 @@ export default function MasterDataDashboard() {
     const handleModalClose = () => {
         setIsModalOpen(false);
         setEditingId(null);
+        setSelectedVendor(null);
         fetchData();
     };
 
@@ -314,7 +344,8 @@ export default function MasterDataDashboard() {
                     </div>
                     {isExpanded ? <ChevronUp size={20} className="shrink-0 text-gray-400 mt-1" /> : <ChevronDown size={20} className="shrink-0 text-gray-400 mt-1" />}
                 </div>
-            </div>
+                </div>
+
 
             {/* Expanded Content */}
             {isExpanded && (
@@ -325,9 +356,16 @@ export default function MasterDataDashboard() {
                             <p className="text-xs text-gray-500 mb-1">Address</p>
                             <div className="flex items-start gap-2">
                                 <MapPin size={16} className="text-gray-400 mt-0.5" />
-                                <p className="text-sm text-gray-700 dark:text-gray-300">
-                                    789 ถนนสุขุมวิท กรุงเทพฯ
-                                </p>
+                                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                                        {[
+                                            vendor.address_line1,
+                                            vendor.sub_district,
+                                            vendor.district,
+                                            vendor.province,
+                                            vendor.postal_code,
+                                            vendor.country
+                                        ].filter(Boolean).join(' ') || '-'}
+                                    </p>
                             </div>
                         </div>
                         
@@ -741,32 +779,35 @@ export default function MasterDataDashboard() {
                         <button
                             key={tab.id}
                             onClick={() => handleTabChange(tab.id)}
-                            className={`p-3 sm:p-4 rounded-xl flex flex-col items-center gap-2 transition-all ${
+                            className={`p-3 sm:p-4 rounded-xl flex flex-col items-center gap-2 transition-all h-full ${
                                 activeTab === tab.id
                                     ? 'bg-blue-50 dark:bg-blue-900/30 border-2 border-blue-500'
-                                    : 'bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600'
+                                    : 'bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 border border-transparent'
                             }`}
                         >
-                            <div className={`p-2 sm:p-3 rounded-xl ${
+                            <div className={`p-2 sm:p-3 rounded-xl shrink-0 ${
                                 activeTab === tab.id
                                     ? 'bg-blue-600 text-white'
                                     : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
                             }`}>
                                 <tab.icon size={20} className="sm:w-6 sm:h-6" />
                             </div>
-                            <div className="text-center w-full">
-                                <p className={`text-xs sm:text-sm font-medium truncate ${
+                            <div className="text-center w-full min-w-0 flex-1 flex flex-col justify-center">
+                                <p className={`text-xs sm:text-sm font-medium truncate w-full ${
                                     activeTab === tab.id
                                         ? 'text-blue-600 dark:text-blue-400'
                                         : 'text-gray-700 dark:text-gray-300'
                                 }`}>
                                     {tab.label}
                                 </p>
-                                <p className={`text-[10px] sm:text-xs truncate ${
+                                <p className={`text-[10px] sm:text-xs truncate w-full mb-1 ${
                                     activeTab === tab.id ? 'text-blue-500/80' : 'text-gray-500'
                                 }`}>
                                     {tab.labelEn}
                                 </p>
+                                <span className="inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-medium rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                                    {tab.recordCount} รายการ
+                                </span>
                             </div>
                         </button>
                     ))}
@@ -947,7 +988,14 @@ export default function MasterDataDashboard() {
             )}
 
             {/* Form Modals */}
-            <VendorFormModal isOpen={isModalOpen && activeTab === 'vendor'} onClose={handleModalClose} vendorId={editingId || undefined} />
+            <VendorFormModal 
+                isOpen={isModalOpen && activeTab === 'vendor'} 
+                onClose={handleModalClose} 
+                vendorId={editingId || undefined}
+                initialData={selectedVendor}
+                onSuccess={fetchData} 
+                predictedVendorId={!editingId && activeTab === 'vendor' ? `V${String((currentTab.recordCount || 0) + 1).padStart(3, '0')} - Auto Generated` : undefined}
+            />
             <BranchFormModal isOpen={isModalOpen && activeTab === 'branch'} onClose={handleModalClose} editId={editingId} />
             <WarehouseFormModal isOpen={isModalOpen && activeTab === 'warehouse'} onClose={handleModalClose} editId={editingId} />
             {/* Item Master modals are handled within ItemMasterList */}

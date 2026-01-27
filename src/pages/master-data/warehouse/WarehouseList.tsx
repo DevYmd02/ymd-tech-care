@@ -16,12 +16,12 @@ import {
     ChevronsRight,
     RefreshCw
 } from 'lucide-react';
-import { styles } from '../../../constants';
-import { logger } from '../../../utils/logger';
+import { styles } from '@/constants';
+import { logger } from '@utils/logger';
 import { WarehouseFormModal } from './WarehouseFormModal';
-import { mockWarehouses } from '../../../__mocks__/masterDataMocks';
-import type { WarehouseListItem } from '../../../types/master-data-types';
-import { ActiveStatusBadge } from '../../../components/shared';
+import { mockWarehouses } from '@/__mocks__/masterDataMocks';
+import type { WarehouseListItem } from '@project-types/master-data-types';
+import { ActiveStatusBadge } from '@shared';
 
 // ====================================================================================
 // COMPONENT

@@ -5,11 +5,11 @@
 
 import { useState, useEffect } from 'react';
 import { X, Layers, Search, Save, RotateCcw } from 'lucide-react';
-import { styles } from '../../../constants';
-import { logger } from '../../../utils/logger';
-import { mockItemTypes } from '../../../__mocks__/masterDataMocks';
-import type { ItemTypeFormData } from '../../../types/master-data-types';
-import { initialItemTypeFormData } from '../../../types/master-data-types';
+import { styles } from '@/constants';
+import { logger } from '@utils/logger';
+import { mockItemTypes } from '@/__mocks__/masterDataMocks';
+import type { ItemTypeFormData } from '@project-types/master-data-types';
+import { initialItemTypeFormData } from '@project-types/master-data-types';
 
 interface Props { isOpen: boolean; onClose: () => void; editId?: string | null; }
 

@@ -4,18 +4,6 @@
  * @module hooks/useVendorForm
  * 
  * @purpose Share form logic ระหว่าง VendorForm (page) และ VendorFormModal (modal)
- * 
- * @example
- * ```tsx
- * const {
- *   formData,
- *   handleInputChange,
- *   handleSave,
- *   handleReset,
- *   isSaving,
- *   saveError,
- * } = useVendorForm({ onSuccess: () => navigate('/master-data') });
- * ```
  */
 
 import { useState, useCallback } from 'react';
@@ -29,25 +17,12 @@ import { toVendorCreateRequest, initialVendorFormData } from '../types/vendor-ty
 
 /**
  * Extended form data สำหรับ Vendor form
- * รวม fields พิเศษที่ใช้ใน UI เช่น PP20 address aliases
  */
 export interface VendorFormState extends VendorFormData {
   /** รหัสผู้ขายสำหรับค้นหา */
   vendorCodeSearch: string;
   /** ชื่อผู้ขาย (ภาษาไทย) - alias */
   vendorNameTh: string;
-  /** ที่อยู่ ภพ.20 บรรทัดที่ 1 */
-  addressPP20Line1: string;
-  /** ที่อยู่ ภพ.20 บรรทัดที่ 2 */
-  addressPP20Line2: string;
-  /** แขวง/ตำบล (ภพ.20) */
-  subDistrictPP20: string;
-  /** เขต/อำเภอ (ภพ.20) */
-  districtPP20: string;
-  /** จังหวัด (ภพ.20) */
-  provincePP20: string;
-  /** รหัสไปรษณีย์ (ภพ.20) */
-  postalCodePP20: string;
   /** Email ที่ติดต่อ */
   contactEmail: string;
 }
@@ -74,8 +49,6 @@ export interface UseVendorFormReturn {
   saveError: string | null;
   /** เปลี่ยนค่าใน form field */
   handleInputChange: (field: keyof VendorFormState, value: string | boolean) => void;
-  /** Toggle checkbox ใช้ที่อยู่ ภพ.20 */
-  handleUseAddressPP20Toggle: () => void;
   /** Reset form */
   handleReset: () => void;
   /** บันทึกข้อมูล */
@@ -93,14 +66,9 @@ export interface UseVendorFormReturn {
  */
 export const initialVendorFormState: VendorFormState = {
   ...initialVendorFormData,
-  // PP20 address specific fields
-  addressPP20Line1: '',
-  addressPP20Line2: '',
-  subDistrictPP20: '',
-  districtPP20: '',
-  provincePP20: '',
-  postalCodePP20: '',
   contactEmail: '',
+  vendorCodeSearch: '',
+  vendorNameTh: '',
 };
 
 // ====================================================================================
@@ -109,44 +77,6 @@ export const initialVendorFormState: VendorFormState = {
 
 /**
  * Custom hook สำหรับจัดการ Vendor Form
- * 
- * @description ใช้ share logic ระหว่าง VendorForm.tsx และ VendorFormModal.tsx
- * ประกอบด้วย:
- * - Form state management
- * - Input change handlers
- * - Address sync logic (PP20 → Contact)
- * - Save/validation logic
- * - Error handling
- * 
- * @param options - Configuration options
- * @returns Form state และ handlers
- * 
- * @example
- * ```tsx
- * function VendorCreatePage() {
- *   const navigate = useNavigate();
- *   const {
- *     formData,
- *     handleInputChange,
- *     handleSave,
- *     isSaving,
- *     saveError,
- *   } = useVendorForm({ onSuccess: () => navigate('/master-data') });
- *   
- *   return (
- *     <form>
- *       <input 
- *         value={formData.vendorName} 
- *         onChange={(e) => handleInputChange('vendorName', e.target.value)} 
- *       />
- *       <button onClick={handleSave} disabled={isSaving}>
- *         {isSaving ? 'Saving...' : 'Save'}
- *       </button>
- *       {saveError && <p className="error">{saveError}</p>}
- *     </form>
- *   );
- * }
- * ```
  */
 export function useVendorForm(options: UseVendorFormOptions = {}): UseVendorFormReturn {
   const { onSuccess } = options;
@@ -157,69 +87,13 @@ export function useVendorForm(options: UseVendorFormOptions = {}): UseVendorForm
   const [saveError, setSaveError] = useState<string | null>(null);
 
   /**
-   * Handle input change พร้อม auto-sync contact address
+   * Handle input change
    */
   const handleInputChange = useCallback((
     field: keyof VendorFormState, 
     value: string | boolean
   ) => {
-    setFormData(prev => {
-      const updated = { ...prev, [field]: value };
-
-      // Auto-sync contact address if useAddressPP20 is checked
-      if (prev.useAddressPP20) {
-        if (field === 'addressLine1' || field === 'addressPP20Line1') {
-          updated.contactAddressLine1 = value as string;
-        } else if (field === 'addressLine2' || field === 'addressPP20Line2') {
-          updated.contactAddressLine2 = value as string;
-        } else if (field === 'subDistrict' || field === 'subDistrictPP20') {
-          updated.contactSubDistrict = value as string;
-        } else if (field === 'district' || field === 'districtPP20') {
-          updated.contactDistrict = value as string;
-        } else if (field === 'province' || field === 'provincePP20') {
-          updated.contactProvince = value as string;
-        } else if (field === 'postalCode' || field === 'postalCodePP20') {
-          updated.contactPostalCode = value as string;
-        }
-      }
-
-      return updated;
-    });
-  }, []);
-
-  /**
-   * Toggle ใช้ที่อยู่ ภพ.20 เป็นที่อยู่ติดต่อ
-   */
-  const handleUseAddressPP20Toggle = useCallback(() => {
-    setFormData(prev => {
-      const newUseAddressPP20 = !prev.useAddressPP20;
-      
-      if (newUseAddressPP20) {
-        // Copy PP20 address to contact address
-        return {
-          ...prev,
-          useAddressPP20: newUseAddressPP20,
-          contactAddressLine1: prev.addressPP20Line1 || prev.addressLine1,
-          contactAddressLine2: prev.addressPP20Line2 || prev.addressLine2,
-          contactSubDistrict: prev.subDistrictPP20 || prev.subDistrict,
-          contactDistrict: prev.districtPP20 || prev.district,
-          contactProvince: prev.provincePP20 || prev.province,
-          contactPostalCode: prev.postalCodePP20 || prev.postalCode,
-        };
-      } else {
-        // Clear contact address
-        return {
-          ...prev,
-          useAddressPP20: newUseAddressPP20,
-          contactAddressLine1: '',
-          contactAddressLine2: '',
-          contactSubDistrict: '',
-          contactDistrict: '',
-          contactProvince: '',
-          contactPostalCode: '',
-        };
-      }
-    });
+    setFormData(prev => ({ ...prev, [field]: value }));
   }, []);
 
   /**
@@ -254,12 +128,6 @@ export function useVendorForm(options: UseVendorFormOptions = {}): UseVendorForm
       // Map PP20 fields to standard fields for API
       const apiFormData: VendorFormData = {
         ...formData,
-        addressLine1: formData.addressPP20Line1 || formData.addressLine1,
-        addressLine2: formData.addressPP20Line2 || formData.addressLine2,
-        subDistrict: formData.subDistrictPP20 || formData.subDistrict,
-        district: formData.districtPP20 || formData.district,
-        province: formData.provincePP20 || formData.province,
-        postalCode: formData.postalCodePP20 || formData.postalCode,
         email: formData.contactEmail || formData.email,
       };
 
@@ -283,7 +151,6 @@ export function useVendorForm(options: UseVendorFormOptions = {}): UseVendorForm
     isSaving,
     saveError,
     handleInputChange,
-    handleUseAddressPP20Toggle,
     handleReset,
     handleSave,
     clearError,

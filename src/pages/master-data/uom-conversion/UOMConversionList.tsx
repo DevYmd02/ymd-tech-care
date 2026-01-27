@@ -5,9 +5,9 @@
 
 import { useState } from 'react';
 import { Search, Plus, Edit2, Trash2, Filter } from 'lucide-react';
-import { styles } from '../../../constants/styles';
+import { styles } from '@/constants/styles';
 import { UOMConversionFormModal } from './UOMConversionFormModal';
-import { mockUOMConversions } from '../../../__mocks__/masterDataMocks';
+import { mockUOMConversions } from '@/__mocks__/masterDataMocks';
 
 export default function UOMConversionList() {
     const [searchTerm, setSearchTerm] = useState('');

@@ -99,11 +99,18 @@ export class MockPOService implements IPOService {
             data = data.filter(item => item.vendor_name && item.vendor_name.toLowerCase().includes(term));
         }
 
+        // Pagination logic
+        const page = params?.page || 1;
+        const limit = params?.limit || 10;
+        const startIndex = (page - 1) * limit;
+        const endIndex = startIndex + limit;
+        const paginatedData = data.slice(startIndex, endIndex);
+
         return {
-            data: structuredClone(data), // Return deep copy
+            data: structuredClone(paginatedData), // Return deep copy
             total: data.length,
-            page: params?.page || 1,
-            limit: params?.limit || 10
+            page,
+            limit
         };
     }
 }

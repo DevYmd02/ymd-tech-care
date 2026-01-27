@@ -20,11 +20,11 @@ import {
     RefreshCw,
     AlertCircle
 } from 'lucide-react';
-import { styles } from '../../../constants';
+import { styles } from '@/constants';
 
-import { vendorService } from '../../../services/vendorService';
-import type { VendorListItem, VendorStatus, VendorListParams } from '../../../types/vendor-types';
-import { VendorStatusBadge } from '../../../components/shared';
+import { vendorService } from '@services/vendorService';
+import type { VendorListItem, VendorStatus, VendorListParams } from '@project-types/vendor-types';
+import { VendorStatusBadge } from '@shared';
 
 // ====================================================================================
 // COMPONENT

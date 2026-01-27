@@ -7,11 +7,11 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { FileText, Search, Plus, Save, Trash2, Copy, Eye, X, Loader2, Check, Home, ClipboardList, CreditCard, Settings, Phone, DollarSign, Building2 } from 'lucide-react';
-import { styles } from '../../../constants';
-import { vendorService } from '../../../services/vendorService';
-import { initialVendorFormData, toVendorCreateRequest, type VendorFormData, type VendorSearchItem } from '../../../types/vendor-types';
-import { VendorSearchModal } from '../../../components/shared/VendorSearchModal';
+import { FileText, Search, Plus, Save, Trash2, Copy, Eye, X, Loader2, Home, ClipboardList, CreditCard, Settings, Phone, DollarSign, Building2 } from 'lucide-react';
+import { styles } from '@/constants';
+import { vendorService } from '@services/vendorService';
+import { initialVendorFormData, toVendorCreateRequest, type VendorFormData, type VendorSearchItem } from '@project-types/vendor-types';
+import { VendorSearchModal } from '@shared/VendorSearchModal';
 
 // ====================================================================================
 // LOCAL TYPES
@@ -20,12 +20,6 @@ import { VendorSearchModal } from '../../../components/shared/VendorSearchModal'
 type TabType = 'address' | 'detail' | 'credit' | 'general' | 'contact' | 'account' | 'branch';
 
 interface VendorPageFormData extends VendorFormData {
-    addressPP20Line1: string;
-    addressPP20Line2: string;
-    subDistrictPP20: string;
-    districtPP20: string;
-    provincePP20: string;
-    postalCodePP20: string;
     contactEmail: string;
     vendorCodeSearch: string;
     vendorNameTh: string;
@@ -33,15 +27,7 @@ interface VendorPageFormData extends VendorFormData {
 
 const initialFormData: VendorPageFormData = {
     ...initialVendorFormData,
-    // PP20 aliases
-    addressPP20Line1: '',
-    addressPP20Line2: '',
-    subDistrictPP20: '',
-    districtPP20: '',
-    provincePP20: '',
-    postalCodePP20: '',
     contactEmail: '',
-    // Additional UI fields
     vendorCodeSearch: '',
     vendorNameTh: '',
 };
@@ -82,14 +68,7 @@ export default function VendorForm() {
                         vendorNameEn: vendor.vendor_name_en || '',
                         taxId: vendor.tax_id || '',
                         branchName: 'สำนักงานใหญ่', // Default as API doesn't provide yet
-                        // Address
-                        addressLine1: vendor.address_line1 || '',
-                        addressLine2: vendor.address_line2 || '',
-                        subDistrict: vendor.sub_district || '',
-                        district: vendor.district || '',
-                        province: vendor.province || '',
-                        postalCode: vendor.postal_code || '',
-                        country: vendor.country || 'Thailand',
+                        
                         // Contact
                         phone: vendor.phone || '',
                         email: vendor.email || '',
@@ -100,12 +79,6 @@ export default function VendorForm() {
                         vendorNameTh: vendor.vendor_name,
                         
                         // Map specific fields if needed
-                        addressPP20Line1: vendor.address_line1 || '',
-                        addressPP20Line2: vendor.address_line2 || '',
-                        subDistrictPP20: vendor.sub_district || '',
-                        districtPP20: vendor.district || '',
-                        provincePP20: vendor.province || '',
-                        postalCodePP20: vendor.postal_code || '',
                         contactEmail: vendor.email || '',
                     }));
                 }
@@ -122,43 +95,39 @@ export default function VendorForm() {
 
     // Handle input change
     const handleInputChange = (field: keyof VendorPageFormData, value: string | boolean) => {
-        setFormData(prev => {
-            const newData = { ...prev, [field]: value };
-            
-            // Logic 1: Sync if useAddressPP20 is toggled
-            if (field === 'useAddressPP20') {
-                const isUsing = value as boolean;
-                if (isUsing) {
-                    // Copy PP20 to Contact
-                    newData.contactAddressLine1 = prev.addressPP20Line1;
-                    newData.contactAddressLine2 = prev.addressPP20Line2;
-                    newData.contactSubDistrict = prev.subDistrictPP20;
-                    newData.contactDistrict = prev.districtPP20;
-                    newData.contactProvince = prev.provincePP20;
-                    newData.contactPostalCode = prev.postalCodePP20;
-                } else {
-                    // Clear Contact
-                    newData.contactAddressLine1 = '';
-                    newData.contactAddressLine2 = '';
-                    newData.contactSubDistrict = '';
-                    newData.contactDistrict = '';
-                    newData.contactProvince = '';
-                    newData.contactPostalCode = '';
-                }
-            }
-            
-            // Logic 2: Sync if editing PP20 fields while useAddressPP20 is true
-            if (prev.useAddressPP20 && typeof value === 'string') {
-                 if (field === 'addressPP20Line1') newData.contactAddressLine1 = value;
-                 if (field === 'addressPP20Line2') newData.contactAddressLine2 = value;
-                 if (field === 'subDistrictPP20') newData.contactSubDistrict = value;
-                 if (field === 'districtPP20') newData.contactDistrict = value;
-                 if (field === 'provincePP20') newData.contactProvince = value;
-                 if (field === 'postalCodePP20') newData.contactPostalCode = value;
-            }
+        setFormData(prev => ({ ...prev, [field]: value }));
+    };
 
-            return newData;
-        });
+    // Address Handlers
+    const addAddress = () => {
+        setFormData(prev => ({ 
+            ...prev, 
+            addresses: [
+                ...prev.addresses, 
+                {
+                    id: Date.now().toString(),
+                    address: '',
+                    district: '',
+                    province: '',
+                    postalCode: '',
+                    country: 'Thailand',
+                    isMain: prev.addresses.length === 0
+                }
+            ] 
+        }));
+    };
+
+    const removeAddress = (id: string) => {
+        setFormData(prev => ({ ...prev, addresses: prev.addresses.filter(a => a.id !== id) }));
+    };
+
+    const updateAddress = (id: string, field: string, value: string | boolean) => {
+        setFormData(prev => ({
+            ...prev,
+            addresses: prev.addresses.map(a => 
+                a.id === id ? { ...a, [field]: value } : a
+            )
+        }));
     };
 
     // Handle form actions
@@ -180,12 +149,6 @@ export default function VendorForm() {
             // Map PP20 fields to standard fields for API
             const apiFormData = {
                 ...formData,
-                addressLine1: formData.addressPP20Line1 || formData.addressLine1,
-                addressLine2: formData.addressPP20Line2 || formData.addressLine2,
-                subDistrict: formData.subDistrictPP20 || formData.subDistrict,
-                district: formData.districtPP20 || formData.district,
-                province: formData.provincePP20 || formData.province,
-                postalCode: formData.postalCodePP20 || formData.postalCode,
                 email: formData.contactEmail || formData.email,
             };
 
@@ -397,196 +360,94 @@ export default function VendorForm() {
                     {/* ==================== DIVIDER ==================== */}
                     <hr className="my-6 border-gray-200 dark:border-gray-700" />
 
-                    {/* ==================== PP.20 Address Section ==================== */}
+                    {/* ==================== Addresses Section ==================== */}
                     <div>
-                        <h3 className="text-base font-semibold text-gray-800 dark:text-white mb-4">ที่อยู่ ภพ.20</h3>
-                        
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                            {/* Address Line 1 */}
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:w-28 shrink-0">ที่อยู่</label>
-                                <input
-                                    type="text"
-                                    value={formData.addressPP20Line1}
-                                    onChange={(e) => handleInputChange('addressPP20Line1', e.target.value)}
-                                    className={styles.inputFlex}
-                                />
-                            </div>
-                            <div className="hidden lg:block"></div>
-
-                            {/* Address Line 2 */}
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:w-28 shrink-0"></label>
-                                <input
-                                    type="text"
-                                    value={formData.addressPP20Line2}
-                                    onChange={(e) => handleInputChange('addressPP20Line2', e.target.value)}
-                                    className={styles.inputFlex}
-                                />
-                            </div>
-                            <div className="hidden lg:block"></div>
-
-                            {/* แขวง/ตำบล */}
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:w-28 shrink-0">แขวง/ตำบล</label>
-                                <input
-                                    type="text"
-                                    value={formData.subDistrictPP20}
-                                    onChange={(e) => handleInputChange('subDistrictPP20', e.target.value)}
-                                    className={styles.inputFlex}
-                                />
-                            </div>
-                            {/* เขต/อำเภอ */}
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:w-28 shrink-0">เขต/อำเภอ</label>
-                                <input
-                                    type="text"
-                                    value={formData.districtPP20}
-                                    onChange={(e) => handleInputChange('districtPP20', e.target.value)}
-                                    className={styles.inputFlex}
-                                />
-                            </div>
-
-                            {/* จังหวัด */}
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:w-28 shrink-0">จังหวัด</label>
-                                <input
-                                    type="text"
-                                    value={formData.provincePP20}
-                                    onChange={(e) => handleInputChange('provincePP20', e.target.value)}
-                                    className={styles.inputFlex}
-                                />
-                            </div>
-                            {/* รหัสไปรษณีย์ */}
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:w-28 shrink-0">รหัสไปรษณีย์</label>
-                                <input
-                                    type="text"
-                                    value={formData.postalCodePP20}
-                                    onChange={(e) => handleInputChange('postalCodePP20', e.target.value)}
-                                    className={styles.inputFlex}
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* ==================== DIVIDER ==================== */}
-                    <hr className="my-6 border-gray-200 dark:border-gray-700" />
-
-                    {/* ==================== Contact Address Section ==================== */}
-                    <div>
-                        <div className="flex flex-wrap items-center gap-3 mb-4">
-                            <h3 className="text-base font-semibold text-gray-800 dark:text-white">ที่อยู่ที่ติดต่อ (ตามที่อยู่ ภพ.20)</h3>
-                            <button
-                                onClick={() => handleInputChange('useAddressPP20', !formData.useAddressPP20)}
-                                className={`w-7 h-7 rounded flex items-center justify-center text-white transition-colors ${formData.useAddressPP20 ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-300 hover:bg-gray-400'}`}
+                         <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-base font-semibold text-gray-800 dark:text-white">ข้อมูลที่อยู่</h3>
+                            <button 
+                                type="button" 
+                                onClick={addAddress}
+                                className="text-sm flex items-center gap-1 text-blue-600 hover:text-blue-700 font-medium"
                             >
-                                {formData.useAddressPP20 && <Check size={16} />}
+                                <Plus size={16} /> เพิ่มที่อยู่
                             </button>
                         </div>
+                        
+                        <div className="space-y-4">
+                            {formData.addresses.map((address, index) => (
+                                <div key={address.id} className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm relative">
+                                    <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-3 block">ที่อยู่ {index + 1} {address.isMain && '(หลัก)'}</h4>
+                                    
+                                    <button 
+                                        type="button"
+                                        onClick={() => removeAddress(address.id)}
+                                        className="absolute top-4 right-4 text-gray-400 hover:text-red-500"
+                                    >
+                                        <Trash2 size={18} />
+                                    </button>
 
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                            {/* Contact Address Line 1 */}
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:w-28 shrink-0">ที่อยู่</label>
-                                <input
-                                    type="text"
-                                    value={formData.contactAddressLine1}
-                                    onChange={(e) => handleInputChange('contactAddressLine1', e.target.value)}
-                                    className={styles.inputDisabled}
-                                    disabled={formData.useAddressPP20}
-                                />
-                            </div>
-                            <div className="hidden lg:block"></div>
-
-                            {/* Contact Address Line 2 */}
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:w-28 shrink-0"></label>
-                                <input
-                                    type="text"
-                                    value={formData.contactAddressLine2}
-                                    onChange={(e) => handleInputChange('contactAddressLine2', e.target.value)}
-                                    className={styles.inputDisabled}
-                                    disabled={formData.useAddressPP20}
-                                />
-                            </div>
-                            <div className="hidden lg:block"></div>
-
-                            {/* แขวง/ตำบล */}
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:w-28 shrink-0">แขวง/ตำบล</label>
-                                <input
-                                    type="text"
-                                    value={formData.contactSubDistrict}
-                                    onChange={(e) => handleInputChange('contactSubDistrict', e.target.value)}
-                                    className={styles.inputDisabled}
-                                    disabled={formData.useAddressPP20}
-                                />
-                            </div>
-                            {/* เขต/อำเภอ */}
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:w-28 shrink-0">เขต/อำเภอ</label>
-                                <input
-                                    type="text"
-                                    value={formData.contactDistrict}
-                                    onChange={(e) => handleInputChange('contactDistrict', e.target.value)}
-                                    className={styles.inputDisabled}
-                                    disabled={formData.useAddressPP20}
-                                />
-                            </div>
-
-                            {/* จังหวัด */}
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:w-28 shrink-0">จังหวัด</label>
-                                <input
-                                    type="text"
-                                    value={formData.contactProvince}
-                                    onChange={(e) => handleInputChange('contactProvince', e.target.value)}
-                                    className={styles.inputDisabled}
-                                    disabled={formData.useAddressPP20}
-                                />
-                            </div>
-                            {/* รหัสไปรษณีย์ */}
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:w-28 shrink-0">รหัสไปรษณีย์</label>
-                                <input
-                                    type="text"
-                                    value={formData.contactPostalCode}
-                                    onChange={(e) => handleInputChange('contactPostalCode', e.target.value)}
-                                    className={styles.inputDisabled}
-                                    disabled={formData.useAddressPP20}
-                                />
-                            </div>
-
-                            {/* โทรศัพท์ */}
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:w-28 shrink-0">โทรศัพท์</label>
-                                <div className="flex gap-2 min-w-0 flex-1">
-                                    <input
-                                        type="text"
-                                        value={formData.phone}
-                                        onChange={(e) => handleInputChange('phone', e.target.value)}
-                                        className={styles.inputFlex}
-                                    />
-                                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 shrink-0 self-center">ต่อ</label>
-                                    <input
-                                        type="text"
-                                        value={formData.phoneExt}
-                                        onChange={(e) => handleInputChange('phoneExt', e.target.value)}
-                                        className="w-16 sm:w-20 h-9 px-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    />
+                                    <div className="grid grid-cols-1 gap-4">
+                                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:w-28 shrink-0">ที่อยู่</label>
+                                            <input 
+                                                value={address.address} 
+                                                onChange={(e) => updateAddress(address.id, 'address', e.target.value)} 
+                                                className={styles.inputFlex} 
+                                                placeholder="123 ถนนสุขุมวิท" 
+                                            />
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:w-28 shrink-0">เขต/อำเภอ</label>
+                                                <input 
+                                                    value={address.district} 
+                                                    onChange={(e) => updateAddress(address.id, 'district', e.target.value)} 
+                                                    className={styles.inputFlex} 
+                                                    placeholder="คลองเตย" 
+                                                />
+                                            </div>
+                                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:w-28 shrink-0">จังหวัด</label>
+                                                <input 
+                                                    value={address.province} 
+                                                    onChange={(e) => updateAddress(address.id, 'province', e.target.value)} 
+                                                    className={styles.inputFlex} 
+                                                    placeholder="กรุงเทพมหานคร" 
+                                                />
+                                            </div>
+                                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:w-28 shrink-0">รหัสไปรษณีย์</label>
+                                                <input 
+                                                    value={address.postalCode} 
+                                                    onChange={(e) => updateAddress(address.id, 'postalCode', e.target.value)} 
+                                                    className={styles.inputFlex} 
+                                                    placeholder="10110" 
+                                                />
+                                            </div>
+                                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:w-28 shrink-0">ประเทศ</label>
+                                                <input 
+                                                    value={address.country} 
+                                                    onChange={(e) => updateAddress(address.id, 'country', e.target.value)} 
+                                                    className={styles.inputFlex} 
+                                                    placeholder="Thailand" 
+                                                />
+                                            </div>
+                                        </div>
+                                        
+                                         <div className="mt-2 flex items-center gap-2">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={address.isMain}
+                                                onChange={(e) => updateAddress(address.id, 'isMain', e.target.checked)}
+                                                className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
+                                            />
+                                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">ตั้งเป็นที่อยู่หลัก</span>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                            {/* E-mail */}
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:w-28 shrink-0">E-mail</label>
-                                <input
-                                    type="email"
-                                    value={formData.contactEmail}
-                                    onChange={(e) => handleInputChange('contactEmail', e.target.value)}
-                                    className={styles.inputFlex}
-                                />
-                            </div>
+                            ))}
                         </div>
                     </div>
                 </div>

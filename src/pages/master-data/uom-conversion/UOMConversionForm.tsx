@@ -7,11 +7,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRightLeft, Search, Plus, Save, Trash2, X, Loader2 } from 'lucide-react';
-import { styles } from '../../../constants';
-import { logger } from '../../../utils/logger';
-import { mockItems, mockUnits, mockUOMConversions } from '../../../__mocks__/masterDataMocks';
-import type { UOMConversionFormData } from '../../../types/master-data-types';
-import { initialUOMConversionFormData } from '../../../types/master-data-types';
+import { styles } from '@/constants';
+import { logger } from '@utils/logger';
+import { mockItems, mockUnits, mockUOMConversions } from '@/__mocks__/masterDataMocks';
+import type { UOMConversionFormData } from '@project-types/master-data-types';
+import { initialUOMConversionFormData } from '@project-types/master-data-types';
 
 export default function UOMConversionForm() {
     const navigate = useNavigate();

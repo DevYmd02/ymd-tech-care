@@ -15,6 +15,7 @@ import type {
 import type { PRHeader, PRFormData, ApprovalTask } from '../../types/pr-types';
 import { MOCK_PRS } from '../../__mocks__/procurementMocks';
 import { getMockFlowWithSteps, MOCK_APPROVERS } from '../../__mocks__/approvalFlowMocks';
+
 import { logger } from '../../utils/logger';
 
 export class MockPRService implements IPRService {
@@ -59,14 +60,25 @@ export class MockPRService implements IPRService {
       if (params.project_id) {
         filteredPRs = filteredPRs.filter(pr => pr.project_id === params.project_id);
       }
+      // Filter by project
+      if (params.project_id) {
+        filteredPRs = filteredPRs.filter(pr => pr.project_id === params.project_id);
+      }
     }
+
+    // Pagination logic
+    const page = params?.page || 1;
+    const limit = params?.limit || 20;
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+    const paginatedPRs = filteredPRs.slice(startIndex, endIndex);
 
     // Return deep copy
     return {
-      data: structuredClone(filteredPRs),
+      data: structuredClone(paginatedPRs),
       total: filteredPRs.length,
-      page: params?.page || 1,
-      limit: params?.limit || 20,
+      page,
+      limit,
     };
   }
 

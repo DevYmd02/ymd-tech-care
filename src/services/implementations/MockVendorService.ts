@@ -82,22 +82,86 @@ export class MockVendorService implements IVendorService {
       vendor_name_en: data.vendor_name_en,
       tax_id: data.tax_id,
       vendor_type: data.vendor_type,
-      address_line1: data.address_line1,
-      address_line2: data.address_line2,
-      sub_district: data.sub_district,
-      district: data.district,
-      province: data.province,
-      postal_code: data.postal_code,
-      phone: data.phone,
-      phone_ext: data.phone_ext,
-      email: data.email,
-      remarks: data.remarks,
+      
+      // Sync numeric IDs from request
+      vendor_type_id: data.vendor_type_id || 1,
+      vendor_group_id: data.vendor_group_id || 1,
+      currency_id: data.currency_id || 1,
+
       status: 'ACTIVE',
       is_blocked: false,
       is_on_hold: false,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      
+      addresses: (data.addresses || []).map((addr, idx) => ({
+          vendor_address_id: Date.now() + idx,
+          vendor_id: 0,
+          address_type: addr.address_type || 'REGISTERED',
+          address: addr.address || '',
+          sub_district: addr.sub_district || '',
+          district: addr.district || '',
+          province: addr.province || '',
+          postal_code: addr.postal_code || '',
+          country: addr.country || 'Thailand',
+          is_default: addr.is_default || false,
+          is_active: true,
+          
+          // Address Contact Details
+          contact_person: addr.contact_person || '',
+          phone: addr.phone || '',
+          phone_extension: addr.phone_extension || '',
+          email: addr.email || ''
+      })),
+      contacts: (data.contacts || []).map((c, idx) => ({
+          contact_id: Date.now() + idx + 100,
+          vendor_id: 0,
+          contact_name: c.contact_name || '',
+          position: c.position || '',
+          phone: c.phone || '',
+          mobile: c.mobile || '',
+          email: c.email || '',
+          is_primary: c.is_primary || false
+      })),
+      bank_accounts: (data.bank_accounts || []).map((b, idx) => ({
+          bank_account_id: Date.now() + idx + 200,
+          vendor_id: 0,
+          bank_name: b.bank_name || '',
+          branch_name: b.branch_name || '',
+          account_number: b.account_number || '',
+          account_name: b.account_name || '',
+          account_type: b.account_type || 'SAVING',
+          swift_code: b.swift_code || '',
+          is_primary: b.is_primary || false
+      })),
+
+      phone: data.phone,
+      email: data.email,
+      remarks: data.remarks,
+      
+      payment_term_days: data.payment_term_days,
+      credit_limit: data.credit_limit,
+      currency_code: data.currency_code,
+      vat_registered: data.vat_registered,
     };
+
+    // Fix: Map address fields for legacy flat structure display if available
+    if (newVendor.addresses && newVendor.addresses.length > 0) {
+        const primaryAddr = newVendor.addresses.find(a => a.address_type === 'REGISTERED') || newVendor.addresses[0];
+        if (primaryAddr) {
+             // These are legacy fields that might be used for display in the grid
+             // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             (newVendor as any).address_line1 = primaryAddr.address;
+             // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             (newVendor as any).district = primaryAddr.district;
+             // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             (newVendor as any).province = primaryAddr.province;
+             // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             (newVendor as any).postal_code = primaryAddr.postal_code;
+             // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             (newVendor as any).country = primaryAddr.country;
+        }
+    }
 
     // Push to internal state
     this.vendors.unshift(newVendor);
@@ -121,6 +185,26 @@ export class MockVendorService implements IVendorService {
       ...data,
       updated_at: new Date().toISOString(),
     } as VendorMaster;
+
+    // Fix: Map address fields for legacy flat structure display if available
+    if (updatedVendor.addresses && updatedVendor.addresses.length > 0) {
+        const primaryAddr = updatedVendor.addresses.find(a => a.address_type === 'REGISTERED') || updatedVendor.addresses[0];
+        if (primaryAddr) {
+             // These are legacy fields that might be used for display in the grid
+             // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             (updatedVendor as any).address_line1 = primaryAddr.address;
+             // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             (updatedVendor as any).sub_district = primaryAddr.sub_district;
+             // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             (updatedVendor as any).district = primaryAddr.district;
+             // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             (updatedVendor as any).province = primaryAddr.province;
+             // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             (updatedVendor as any).postal_code = primaryAddr.postal_code;
+             // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             (updatedVendor as any).country = primaryAddr.country;
+        }
+    }
     
     // Replace in internal state
     this.vendors[index] = updatedVendor;

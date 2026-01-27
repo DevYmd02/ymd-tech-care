@@ -7,11 +7,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Ruler, Search, Plus, Save, Trash2, X, Loader2 } from 'lucide-react';
-import { styles } from '../../../constants';
-import { logger } from '../../../utils/logger';
-import { mockUnits } from '../../../__mocks__/masterDataMocks';
-import type { UnitFormData } from '../../../types/master-data-types';
-import { initialUnitFormData } from '../../../types/master-data-types';
+import { styles } from '@/constants';
+import { logger } from '@utils/logger';
+import { mockUnits } from '@/__mocks__/masterDataMocks';
+import type { UnitFormData } from '@project-types/master-data-types';
+import { initialUnitFormData } from '@project-types/master-data-types';
 
 export default function UnitForm() {
     const navigate = useNavigate();

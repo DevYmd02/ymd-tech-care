@@ -65,11 +65,18 @@ export class MockRFQService implements IRFQService {
       }
     }
 
+    // Pagination logic
+    const page = params?.page || 1;
+    const limit = params?.limit || 20;
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+    const paginatedData = filteredData.slice(startIndex, endIndex);
+
     return {
-      data: structuredClone(filteredData),
+      data: structuredClone(paginatedData),
       total: filteredData.length,
-      page: 1,
-      limit: 20
+      page,
+      limit
     };
   }
 

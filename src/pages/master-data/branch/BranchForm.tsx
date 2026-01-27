@@ -8,11 +8,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Building2, Search, Plus, Save, Trash2, X, Loader2 } from 'lucide-react';
-import { styles } from '../../../constants';
-import { logger } from '../../../utils/logger';
-import { mockBranches } from '../../../__mocks__/masterDataMocks';
-import type { BranchFormData } from '../../../types/master-data-types';
-import { initialBranchFormData } from '../../../types/master-data-types';
+import { styles } from '@/constants';
+import { logger } from '@utils/logger';
+import { mockBranches } from '@/__mocks__/masterDataMocks';
+import type { BranchFormData } from '@project-types/master-data-types';
+import { initialBranchFormData } from '@project-types/master-data-types';
 
 // ====================================================================================
 // MAIN COMPONENT

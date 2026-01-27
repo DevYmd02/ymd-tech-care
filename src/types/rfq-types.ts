@@ -189,6 +189,9 @@ export interface RFQFilterCriteria {
     status?: RFQStatus | 'ALL';
     date_from?: string;
     date_to?: string;
+    page?: number;
+    limit?: number;
+    sort?: string;
 }
 
 // ====================================================================================
@@ -209,6 +212,3 @@ export interface RFQCreateData extends Omit<RFQFormData, 'lines'> {
     vendor_ids?: string[];
     terms_and_conditions?: string;
 }
-
-
-

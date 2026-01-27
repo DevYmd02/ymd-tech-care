@@ -5,12 +5,12 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Search, Edit2, Trash2, Layers, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, RefreshCw } from 'lucide-react';
-import { styles } from '../../../constants';
-import { logger } from '../../../utils/logger';
+import { styles } from '@/constants';
+import { logger } from '@utils/logger';
 import { ItemTypeFormModal } from './ItemTypeFormModal';
-import { mockItemTypes } from '../../../__mocks__/masterDataMocks';
-import type { ItemTypeListItem } from '../../../types/master-data-types';
-import { ActiveStatusBadge } from '../../../components/shared';
+import { mockItemTypes } from '@/__mocks__/masterDataMocks';
+import type { ItemTypeListItem } from '@project-types/master-data-types';
+import { ActiveStatusBadge } from '@shared';
 
 export default function ItemTypeList() {
     const [items, setItems] = useState<ItemTypeListItem[]>([]);

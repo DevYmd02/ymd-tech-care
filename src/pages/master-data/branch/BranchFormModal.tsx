@@ -5,11 +5,11 @@
 
 import { useState, useEffect } from 'react';
 import { X, Building2, Search, Save, RotateCcw } from 'lucide-react';
-import { styles } from '../../../constants';
-import { logger } from '../../../utils/logger';
-import { mockBranches } from '../../../__mocks__/masterDataMocks';
-import type { BranchFormData } from '../../../types/master-data-types';
-import { initialBranchFormData } from '../../../types/master-data-types';
+import { styles } from '@/constants';
+import { logger } from '@utils/logger';
+import { mockBranches } from '@/__mocks__/masterDataMocks';
+import type { BranchFormData } from '@project-types/master-data-types';
+import { initialBranchFormData } from '@project-types/master-data-types';
 
 // ====================================================================================
 // COMPONENT PROPS

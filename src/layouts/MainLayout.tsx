@@ -7,12 +7,13 @@
  *   - Center: Main content area (renders child routes via Outlet)
  */
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { WindowManagerProvider } from '../contexts/WindowManagerContext';
 import { WindowManager } from '../components/shared/WindowManager';
+import { PageLoader } from '../components/shared';
 
 export default function MainLayout() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -33,7 +34,9 @@ export default function MainLayout() {
 
                     {/* Page Content */}
                     <main className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
-                        <Outlet />
+                        <Suspense fallback={<PageLoader />}>
+                            <Outlet />
+                        </Suspense>
                     </main>
                 </div>
 
