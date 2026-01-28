@@ -23,4 +23,5 @@ export interface IVendorService {
   block(vendorId: string, remark?: string): Promise<VendorResponse>;
   unblock(vendorId: string): Promise<VendorResponse>;
   setOnHold(vendorId: string, onHold: boolean): Promise<VendorResponse>;
+  search(query: string): Promise<VendorMaster[]>;
 }

@@ -324,7 +324,7 @@ export default function MasterDataDashboard() {
                         </div>
                         <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-start gap-x-2 gap-y-1 mb-0.5">
-                                <span className="font-semibold text-gray-900 dark:text-white break-words">
+                                <span className="font-semibold text-gray-900 dark:text-white line-clamp-2" title={vendor.vendor_name}>
                                     {vendor.vendor_name}
                                 </span>
                                 <span className={`px-2 py-0.5 text-xs font-medium rounded-full shrink-0 ${
@@ -467,7 +467,7 @@ export default function MasterDataDashboard() {
                         </div>
                         <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-start gap-x-2 gap-y-1 mb-0.5">
-                                <span className="font-semibold text-gray-900 dark:text-white break-words">
+                                <span className="font-semibold text-gray-900 dark:text-white line-clamp-2" title={branch.branch_name}>
                                     {branch.branch_name}
                                 </span>
                                 <span className={`px-2 py-0.5 text-xs font-medium rounded-full shrink-0 ${
@@ -541,7 +541,7 @@ export default function MasterDataDashboard() {
                         </div>
                         <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-start gap-x-2 gap-y-1 mb-0.5">
-                                <span className="font-semibold text-gray-900 dark:text-white break-words">
+                                <span className="font-semibold text-gray-900 dark:text-white line-clamp-2" title={warehouse.warehouse_name}>
                                     {warehouse.warehouse_name}
                                 </span>
                                 <span className={`px-2 py-0.5 text-xs font-medium rounded-full shrink-0 ${
@@ -617,7 +617,7 @@ export default function MasterDataDashboard() {
                         </div>
                         <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-start gap-x-2 gap-y-1 mb-0.5">
-                                <span className="font-semibold text-gray-900 dark:text-white break-words">
+                                <span className="font-semibold text-gray-900 dark:text-white line-clamp-2" title={cc.cost_center_name}>
                                     {cc.cost_center_name}
                                 </span>
                                 <span className={`px-2 py-0.5 text-xs font-medium rounded-full shrink-0 ${
@@ -689,7 +689,7 @@ export default function MasterDataDashboard() {
                         </div>
                         <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-start gap-x-2 gap-y-1 mb-0.5">
-                                <span className="font-semibold text-gray-900 dark:text-white break-words">
+                                <span className="font-semibold text-gray-900 dark:text-white line-clamp-2" title={project.project_name}>
                                     {project.project_name}
                                 </span>
                                 <span className={`px-2 py-0.5 text-xs font-medium rounded-full shrink-0 ${
@@ -754,7 +754,7 @@ export default function MasterDataDashboard() {
     // ====================================================================================
 
     return (
-        <div className="p-4 sm:p-6 min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="p-4 sm:p-6 min-h-screen bg-gray-50 dark:bg-gray-900 min-w-[320px]">
             {/* Header */}
             <div className="mb-6">
                 <div className="flex items-center gap-3">

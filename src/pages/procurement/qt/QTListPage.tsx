@@ -97,9 +97,9 @@ export default function QTListPage() {
     const columns = useMemo(() => [
         columnHelper.display({
             id: 'index',
-            header: 'ลำดับ',
-            cell: (info) => info.row.index + 1 + (filters.page - 1) * filters.limit,
-            size: 35,
+            header: () => <div className="text-center w-full">ลำดับ</div>,
+            cell: (info) => <div className="text-center">{info.row.index + 1 + (filters.page - 1) * filters.limit}</div>,
+            size: 40,
             enableSorting: false,
         }),
         columnHelper.accessor('quotation_no', {

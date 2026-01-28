@@ -279,6 +279,18 @@ export class MockVendorService implements IVendorService {
     return { success: true, message: `Set Hold=${onHold} สำเร็จ (Mock)`, data: structuredClone(updatedVendor) };
   }
 
+  async search(query: string): Promise<VendorMaster[]> {
+    logger.log('[MockVendorService] search', query);
+    await this.delay(200);
+    const search = query.toLowerCase();
+    const result = this.vendors.filter(v =>
+      v.vendor_name.toLowerCase().includes(search) ||
+      v.vendor_code.toLowerCase().includes(search) ||
+      v.tax_id?.toLowerCase().includes(search)
+    );
+    return structuredClone(result);
+  }
+
   private delay(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }

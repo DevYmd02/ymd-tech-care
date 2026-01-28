@@ -20,6 +20,7 @@ import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';
 import { prService } from '@services/prService';
 import type { PRListParams } from '@services/prService';
 import type { PRHeader, PRStatus } from '@project-types/pr-types';
+import { mockCostCenters } from '../../../__mocks__/masterDataMocks';
 
 // ====================================================================================
 // STATUS OPTIONS
@@ -103,9 +104,9 @@ export default function PRListPage() {
     const columns = useMemo(() => [
         columnHelper.display({
             id: 'index',
-            header: 'ลำดับ',
-            cell: (info) => info.row.index + 1 + (filters.page - 1) * filters.limit,
-            size: 60,
+            header: () => <div className="text-center w-full">ลำดับ</div>,
+            cell: (info) => <div className="text-center">{info.row.index + 1 + (filters.page - 1) * filters.limit}</div>,
+            size: 40,
             enableSorting: false,
         }),
         columnHelper.accessor('pr_no', {
@@ -115,7 +116,7 @@ export default function PRListPage() {
                     {info.getValue()}
                 </span>
             ),
-            size: 140,
+            size: 110,
             enableSorting: true,
         }),
         columnHelper.accessor('request_date', {
@@ -125,7 +126,7 @@ export default function PRListPage() {
                     {formatThaiDate(info.getValue())}
                 </span>
             ),
-            size: 110,
+            size: 90,
             enableSorting: true,
         }),
         columnHelper.accessor('requester_name', {
@@ -135,21 +136,26 @@ export default function PRListPage() {
                     {info.getValue()}
                 </div>
             ),
+            size: 100,
             enableSorting: false,
         }),
-        columnHelper.accessor('purpose', {
-            header: 'วัตถุประสงค์',
-            cell: (info) => (
-                <span className="truncate block text-gray-600 dark:text-gray-300 text-xs" title={info.getValue() || '-'}>
-                    {info.getValue() || '-'}
-                </span>
-            ),
-            size: 280,
+        columnHelper.accessor('cost_center_id', {
+            header: 'แผนก',
+            cell: (info) => {
+                const id = info.getValue()?.toLowerCase();
+                const department = mockCostCenters.find(c => c.cost_center_id.toLowerCase() === id)?.cost_center_name;
+                return (
+                    <span className="truncate block text-gray-600 dark:text-gray-300 text-xs" title={department || '-'}>
+                        {department || '-'}
+                    </span>
+                );
+            },
+            size: 140,
             enableSorting: false,
         }),
         columnHelper.accessor(row => row.status, {
             id: 'status',
-            header: () => <div className="text-center">สถานะ</div>,
+            header: () => <div className="text-center w-full">สถานะ</div>,
             cell: (info) => (
                 <div className="flex justify-center">
                     <PRStatusBadge status={info.getValue()} />
@@ -160,24 +166,24 @@ export default function PRListPage() {
         }),
         columnHelper.accessor(row => row.lines?.length || 0, {
             id: 'items',
-            header: () => <div className="text-center">รายการ</div>,
+            header: () => <div className="text-center w-full">รายการ</div>,
             cell: (info) => <div className="text-center text-gray-600 dark:text-gray-300 text-xs">{info.getValue()}</div>,
-            size: 80,
+            size: 60,
             enableSorting: false,
         }),
         columnHelper.accessor('total_amount', {
-            header: () => <div className="text-center w-full min-w-[120px]">ยอดรวม</div>,
+            header: () => <div className="text-right w-full">ยอดรวม</div>,
             cell: (info) => (
                 <div className="font-semibold text-gray-800 dark:text-gray-200 text-right text-xs whitespace-nowrap">
                     {info.getValue().toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </div>
             ),
-            size: 120,
+            size: 100,
             enableSorting: true,
         }),
         columnHelper.display({
             id: 'actions',
-            header: () => <div className="text-center w-full min-w-[120px]">จัดการ</div>,
+            header: () => <div className="text-center w-full min-w-[100px]">จัดการ</div>,
             cell: ({ row }) => {
                 const item = row.original;
                 return (
@@ -217,7 +223,7 @@ export default function PRListPage() {
                     </div>
                 );
             },
-            size: 180,
+            size: 100,
             enableSorting: false,
         }),
     ], [columnHelper, filters.page, filters.limit]); // Re-calculate index when page changes

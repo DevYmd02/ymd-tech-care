@@ -114,7 +114,10 @@ export function SmartTable<TData>({
         <div className={`flex flex-col h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 ${className}`}>
             {/* Table Container */}
             <div className="flex-1 overflow-auto relative">
-                <table className="w-full min-w-[1000px] table-fixed text-left text-sm">
+                <table 
+                    className="w-full table-fixed text-left text-sm"
+                    style={{ minWidth: table.getTotalSize() }}
+                >
                     <thead className="bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-200 uppercase text-xs sticky top-0 z-10">
                         {table.getHeaderGroups().map(headerGroup => (
                             <tr key={headerGroup.id} className="border-b border-gray-200 dark:border-gray-600">
@@ -125,7 +128,7 @@ export function SmartTable<TData>({
                                             style={{ width: header.getSize() !== 150 ? header.getSize() : undefined }} // Use size if specifically set
                                             className="px-4 py-3 font-semibold select-none group"
                                         >
-                                            <div className="flex items-center gap-1">
+                                            <div className="flex items-center gap-1 w-full">
                                                 {flexRender(
                                                     header.column.columnDef.header,
                                                     header.getContext()
