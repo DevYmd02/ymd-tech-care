@@ -5,14 +5,15 @@
  * @refactored Uses PageListLayout, FilterFormBuilder, useTableFilters, React Query, SmartTable
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { FileText, Eye, Edit, Send } from 'lucide-react';
 import { PageListLayout, FilterFormBuilder, PRStatusBadge, SmartTable } from '@shared';
 import type { FilterFieldConfig } from '@shared/FilterFormBuilder';
-import { useWindowManager } from '@hooks/useWindowManager';
+// import { useWindowManager } from '@hooks/useWindowManager';
 import { useTableFilters, type TableFilters } from '@hooks';
 import RFQFormModal from '../rfq/components/RFQFormModal';
+import { PRFormModal } from './components/PRFormModal';
 import { formatThaiDate } from '@utils/dateUtils';
 import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';
 
@@ -28,7 +29,6 @@ import { mockCostCenters } from '../../../__mocks__/masterDataMocks';
 
 const PR_STATUS_OPTIONS = [
     { value: 'ALL', label: 'ทั้งหมด' },
-    { value: 'DRAFT', label: 'ร่าง' },
     { value: 'PENDING', label: 'รออนุมัติ' },
     { value: 'APPROVED', label: 'อนุมัติแล้ว' },
     { value: 'CANCELLED', label: 'ยกเลิก' },
@@ -72,18 +72,22 @@ export default function PRListPage() {
     };
 
     // Data Fetching with React Query
-    const { data, isLoading } = useQuery({
+    const { data, isLoading, refetch } = useQuery({
         queryKey: ['prs', apiFilters],
         queryFn: () => prService.getList(apiFilters),
         placeholderData: keepPreviousData,
     });
 
     // Window Manager
-    const { openWindow } = useWindowManager();
+    // const { openWindow } = useWindowManager();
 
     // Modal States
     const [isRFQModalOpen, setIsRFQModalOpen] = useState(false);
     const [selectedPR, setSelectedPR] = useState<PRHeader | null>(null);
+    
+    // PR Form Modal Local State
+    const [isPRModalOpen, setIsPRModalOpen] = useState(false);
+    const [selectedPRId, setSelectedPRId] = useState<string | undefined>(undefined);
 
 
     // Handlers
@@ -95,6 +99,37 @@ export default function PRListPage() {
         setSelectedPR(pr);
         setIsRFQModalOpen(true);
     };
+
+    const handleCreate = () => {
+        setSelectedPRId(undefined);
+        setIsPRModalOpen(true);
+    };
+
+    const handleEdit = (id: string) => {
+        setSelectedPRId(id);
+        setIsPRModalOpen(true);
+    };
+
+    const handleClosePRModal = () => {
+        setIsPRModalOpen(false);
+        setSelectedPRId(undefined);
+    };
+
+    const handleQuickApprove = useCallback(async (id: string) => {
+        if (!window.confirm("คุณต้องการอนุมัติเอกสารนี้ใช่หรือไม่?")) return;
+        try {
+            const success = await prService.approve(id);
+            if (success) {
+                window.alert("อนุมัติเอกสารเรียบร้อยแล้ว");
+                refetch();
+            } else {
+                window.alert("อนุมัติเอกสารไม่สำเร็จ");
+            }
+        } catch (error) {
+            console.error('Quick approve failed', error);
+            window.alert("เกิดข้อผิดพลาดในการอนุมัติเอกสาร");
+        }
+    }, [refetch]);
 
 
 
@@ -144,7 +179,7 @@ export default function PRListPage() {
             header: 'แผนก',
             cell: (info) => {
                 const id = info.getValue()?.toLowerCase();
-                const department = mockCostCenters.find(c => c.cost_center_id.toLowerCase() === id)?.cost_center_name;
+                const department = mockCostCenters.find(c => c.cost_center_id.toLowerCase() === id)?.cost_center_name?.replace('แผนก', '');
                 return (
                     <span className="truncate block text-gray-600 dark:text-gray-300" title={department || '-'}>
                         {department || '-'}
@@ -197,21 +232,35 @@ export default function PRListPage() {
                 const item = row.original;
                 return (
                     <div className="flex items-center justify-center gap-1.5">
+                        {/* Always show View button */}
                         <button className="p-1 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors" title="ดูรายละเอียด">
                             <Eye size={16} />
                         </button>
                         
-                        {item.status === 'DRAFT' && (
-                            <>
-                                <button className="p-1 text-orange-500 hover:text-orange-700 transition-colors" title="แก้ไข">
-                                    <Edit size={16} />
+                        {/* Edit & Approve Buttons: ONLY for PENDING */}
+                        {item.status === 'PENDING' && (
+                            <div className="flex items-center gap-1.5">
+                                <button 
+                                    type="button"
+                                    onClick={() => handleEdit(item.pr_id)}
+                                    className="group flex items-center justify-center gap-1.5 px-2 py-1 bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded transition-colors text-xs font-semibold border border-orange-200 dark:border-orange-800"
+                                    title="แก้ไข"
+                                >
+                                    <Edit size={12} strokeWidth={2.5} /> แก้ไข
                                 </button>
-                                <button className="p-1 text-blue-500 hover:text-blue-700 transition-colors" title="ส่งอนุมัติ">
-                                    <Send size={16} />
+                                
+                                <button 
+                                    type="button"
+                                    onClick={() => handleQuickApprove(item.pr_id)}
+                                    className="flex items-center justify-center gap-0.5 px-1.5 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded transition-colors text-[10px] font-bold shadow-sm whitespace-nowrap"
+                                    title="ส่งอนุมัติ"
+                                >
+                                    <Send size={11} /> ส่งอนุมัติ
                                 </button>
-                            </>
+                            </div>
                         )}
                         
+                        {/* Create RFQ Button: ONLY for APPROVED */}
                         {item.status === 'APPROVED' ? (
                             <button 
                                 onClick={() => handleCreateRFQ(item)}
@@ -220,22 +269,14 @@ export default function PRListPage() {
                             >
                                 <FileText size={12} /> สร้าง RFQ
                             </button>
-                        ) : item.status !== 'DRAFT' && item.status !== 'CANCELLED' ? (
-                            <button 
-                                disabled
-                                className="bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 text-[10px] font-bold px-2 py-1 rounded shadow-sm cursor-not-allowed flex items-center gap-0.5 whitespace-nowrap"
-                                title="ต้องอนุมัติก่อนจึงจะสร้าง RFQ ได้"
-                            >
-                                <FileText size={12} /> สร้าง RFQ
-                            </button>
                         ) : null}
                     </div>
                 );
             },
-            size: 100,
+            size: 130,
             enableSorting: false,
         }),
-    ], [columnHelper, filters.page, filters.limit, data?.data]); // Re-calculate index when page changes
+    ], [columnHelper, filters.page, filters.limit, data?.data, handleQuickApprove]); // Re-calculate index when page changes
 
     // ====================================================================================
     // RENDER
@@ -258,7 +299,7 @@ export default function PRListPage() {
                         onReset={resetFilters}
                         accentColor="blue"
                         columns={{ sm: 2, md: 4, lg: 4 }}
-                        onCreate={() => openWindow('PR')}
+                        onCreate={handleCreate}
                         createLabel="สร้างใบขอซื้อใหม่"
                     />
                 }
@@ -289,6 +330,13 @@ export default function PRListPage() {
                     setSelectedPR(null);
                 }}
                 initialPR={selectedPR}
+            />
+
+            <PRFormModal
+                isOpen={isPRModalOpen}
+                onClose={handleClosePRModal}
+                id={selectedPRId}
+                onSuccess={() => refetch()}
             />
         </>
     );

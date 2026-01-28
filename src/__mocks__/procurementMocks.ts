@@ -151,7 +151,7 @@ const _mockPRs: PRHeader[] = [
     required_date: '2026-02-10',
     cost_center_id: 'CC001',
     purpose: 'จัดซื้ออุปกรณ์ IT เพิ่มเติม',
-    status: 'DRAFT', // 📝 ร่าง
+    status: 'PENDING', // ⏳ รออนุมัติ
     currency_code: 'THB',
     total_amount: 45000,
     attachment_count: 0,

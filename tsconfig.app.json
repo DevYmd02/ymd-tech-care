@@ -39,7 +39,9 @@
       "@project-types": ["./src/types"],
       "@project-types/*": ["./src/types/*"],
       "@utils": ["./src/utils"],
-      "@utils/*": ["./src/utils/*"]
+      "@utils/*": ["./src/utils/*"],
+      "@pr": ["./src/pages/procurement/pr"],
+      "@pr/*": ["./src/pages/procurement/pr/*"]
     }
   },
   "include": ["src"]
