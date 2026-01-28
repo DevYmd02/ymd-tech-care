@@ -5,7 +5,7 @@
 
 import React from 'react';
 import type { UseFormRegister, UseFormSetValue, UseFormWatch } from 'react-hook-form';
-import { Search, Calendar, Building2, FolderKanban, User } from 'lucide-react';
+import { Search, Building2, FolderKanban, User } from 'lucide-react';
 import type { PRFormData } from '../../../../types/pr-types';
 import type { CostCenter, Project } from '../../../../types/master-data-types';
 import { VendorSearch } from '../../../../components/shared/VendorSearch';
@@ -26,7 +26,7 @@ export const PRHeader: React.FC<Props> = ({ register, setValue, watch, costCente
   const vendorName = watch("vendor_name");
 
   // Style classes (คงสไตล์เดิม + dark mode)
-  const inputClass = "h-8 w-full px-2 text-sm border border-gray-300 dark:border-gray-600 rounded-l-md focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white";
+  const inputClass = "h-8 w-full px-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white";
   const selectClass = "h-8 w-full px-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white";
   const labelClass = "block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1";
   const searchButtonClass = "h-8 w-8 bg-blue-600 text-white rounded-r-md flex items-center justify-center hover:bg-blue-700 transition-colors border border-blue-600";
@@ -54,29 +54,19 @@ export const PRHeader: React.FC<Props> = ({ register, setValue, watch, costCente
         <div className="col-span-12 md:col-span-3">
           <label className={labelClass}>เลขที่เอกสาร</label>
           <div className="flex">
-            <input {...register("pr_no")} className={`${inputClass} bg-gray-100`} readOnly />
+            <input {...register("pr_no")} className={`${inputClass} bg-gray-100 rounded-r-none`} readOnly />
             <button type="button" className={searchButtonClass}><Search size={14} /></button>
           </div>
         </div>
 
         <div className="col-span-12 md:col-span-3">
           <label className={labelClass}>วันที่ขอซื้อ</label>
-          <div className="flex">
-            <input {...register("request_date")} type="date" className={inputClass} />
-            <div className="h-8 w-8 border border-l-0 border-gray-300 dark:border-gray-600 bg-blue-50 dark:bg-blue-900/30 text-blue-500 dark:text-blue-400 rounded-r-md flex items-center justify-center pointer-events-none">
-              <Calendar size={14} />
-            </div>
-          </div>
+          <input {...register("request_date")} type="date" className={inputClass} />
         </div>
 
         <div className="col-span-12 md:col-span-3">
           <label className={labelClass}>วันที่ต้องการใช้ <span className="text-red-500">*</span></label>
-          <div className="flex">
-            <input {...register("required_date")} type="date" className={inputClass} />
-            <div className="h-8 w-8 border border-l-0 border-gray-300 dark:border-gray-600 bg-blue-50 dark:bg-blue-900/30 text-blue-500 dark:text-blue-400 rounded-r-md flex items-center justify-center pointer-events-none">
-              <Calendar size={14} />
-            </div>
-          </div>
+          <input {...register("required_date")} type="date" className={inputClass} />
         </div>
 
         <div className="col-span-12 md:col-span-3">
