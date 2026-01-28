@@ -5,11 +5,11 @@
 
 import { useState, useEffect } from 'react';
 import { X, Warehouse, Search, Save, RotateCcw } from 'lucide-react';
-import { styles } from '../../../constants';
-import { logger } from '../../../utils/logger';
-import { mockWarehouses, mockBranchDropdown } from '../../../__mocks__/masterDataMocks';
-import type { WarehouseFormData } from '../../../types/master-data-types';
-import { initialWarehouseFormData } from '../../../types/master-data-types';
+import { styles } from '@/constants';
+import { logger } from '@utils/logger';
+import { mockWarehouses, mockBranchDropdown } from '@/__mocks__/masterDataMocks';
+import type { WarehouseFormData } from '@project-types/master-data-types';
+import { initialWarehouseFormData } from '@project-types/master-data-types';
 
 // ====================================================================================
 // COMPONENT PROPS

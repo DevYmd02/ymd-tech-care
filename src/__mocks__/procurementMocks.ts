@@ -90,7 +90,7 @@ const _mockPRs: PRHeader[] = [
     requester_name: 'สมชาย ใจดี',
     request_date: '2026-01-15',
     required_date: '2026-02-01',
-    cost_center_id: 'cc-001',
+    cost_center_id: 'CC001',
     purpose: 'จัดซื้ออุปกรณ์ IT สำหรับพนักงานใหม่',
     status: 'APPROVED', // ✅ Ready for RFQ
     currency_code: 'THB',
@@ -110,7 +110,7 @@ const _mockPRs: PRHeader[] = [
     requester_name: 'สมหญิง รักงาน',
     request_date: '2026-01-20',
     required_date: '2026-02-15',
-    cost_center_id: 'cc-002',
+    cost_center_id: 'CC002',
     purpose: 'จัดซื้อวัสดุสำนักงานประจำเดือน',
     status: 'APPROVED', // ✅ Ready for RFQ
     currency_code: 'THB',
@@ -130,7 +130,7 @@ const _mockPRs: PRHeader[] = [
     requester_name: 'วิชัย มากมี',
     request_date: '2026-01-22',
     required_date: '2026-03-01',
-    cost_center_id: 'cc-003',
+    cost_center_id: 'CC003',
     purpose: 'จัดซื้อเฟอร์นิเจอร์สำนักงาน',
     status: 'PENDING', // ⏳ รออนุมัติ
     currency_code: 'THB',
@@ -149,7 +149,7 @@ const _mockPRs: PRHeader[] = [
     requester_name: 'สมชาย ใจดี',
     request_date: '2026-01-18',
     required_date: '2026-02-10',
-    cost_center_id: 'cc-001',
+    cost_center_id: 'CC001',
     purpose: 'จัดซื้ออุปกรณ์ IT เพิ่มเติม',
     status: 'DRAFT', // 📝 ร่าง
     currency_code: 'THB',
@@ -169,7 +169,7 @@ const _mockPRs: PRHeader[] = [
     requester_name: 'นภา สวยงาม',
     request_date: '2026-01-10',
     required_date: '2026-01-25',
-    cost_center_id: 'cc-002',
+    cost_center_id: 'CC002',
     purpose: 'จัดซื้ออุปกรณ์สำนักงาน (ยกเลิก - เปลี่ยนแผน)',
     status: 'CANCELLED', // ❌ ยกเลิก
     currency_code: 'THB',
@@ -188,7 +188,7 @@ const _mockPRs: PRHeader[] = [
     requester_name: 'ประสิทธิ์ ทำดี',
     request_date: '2026-01-08',
     required_date: '2026-01-20',
-    cost_center_id: 'cc-003',
+    cost_center_id: 'CC003',
     purpose: 'จัดซื้อวัสดุก่อสร้าง (ยกเลิก - งบไม่ผ่าน)',
     status: 'CANCELLED', // ❌ ยกเลิก
     currency_code: 'THB',

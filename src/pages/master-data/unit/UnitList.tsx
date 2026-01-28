@@ -5,12 +5,12 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Search, Edit2, Trash2, Ruler, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, RefreshCw } from 'lucide-react';
-import { styles } from '../../../constants';
-import { logger } from '../../../utils/logger';
+import { styles } from '@/constants';
+import { logger } from '@utils/logger';
 import { UnitFormModal } from './UnitFormModal';
-import { mockUnits } from '../../../__mocks__/masterDataMocks';
-import type { UnitListItem } from '../../../types/master-data-types';
-import { ActiveStatusBadge } from '../../../components/shared';
+import { mockUnits } from '@/__mocks__/masterDataMocks';
+import type { UnitListItem } from '@project-types/master-data-types';
+import { ActiveStatusBadge } from '@shared';
 
 export default function UnitList() {
     const [items, setItems] = useState<UnitListItem[]>([]);

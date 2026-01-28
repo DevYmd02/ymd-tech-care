@@ -4,19 +4,27 @@
  */
 
 import React from 'react';
-import type { UseFormRegister, UseFormSetValue } from 'react-hook-form';
+import type { UseFormRegister, UseFormSetValue, UseFormWatch } from 'react-hook-form';
 import { Search, Calendar, Building2, FolderKanban, User } from 'lucide-react';
 import type { PRFormData } from '../../../../types/pr-types';
 import type { CostCenter, Project } from '../../../../types/master-data-types';
+import { VendorSearch } from '../../../../components/shared/VendorSearch';
+import type { VendorMaster } from '../../../../types/vendor-types';
 
 interface Props {
   register: UseFormRegister<PRFormData>;
   setValue: UseFormSetValue<PRFormData>;
+  watch: UseFormWatch<PRFormData>;
   costCenters: CostCenter[];
   projects: Project[];
+  onVendorSelect: (vendor: VendorMaster | null) => void;
 }
 
-export const PRHeader: React.FC<Props> = ({ register, setValue, costCenters, projects }) => {
+export const PRHeader: React.FC<Props> = ({ register, setValue, watch, costCenters, projects, onVendorSelect }) => {
+  // Watch for vendor values to display in the selector
+  const preferredVendorId = watch("preferred_vendor_id");
+  const vendorName = watch("vendor_name");
+
   // Style classes (คงสไตล์เดิม + dark mode)
   const inputClass = "h-8 w-full px-2 text-sm border border-gray-300 dark:border-gray-600 rounded-l-md focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white";
   const selectClass = "h-8 w-full px-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white";
@@ -110,14 +118,27 @@ export const PRHeader: React.FC<Props> = ({ register, setValue, costCenters, pro
           </select>
         </div>
 
-        {/* Row 3: วัตถุประสงค์ */}
-        <div className="col-span-12">
+        {/* Row 3: วัตถุประสงค์ , ผู้ขายที่แนะนำ */}
+        <div className="col-span-12 md:col-span-8">
           <label className={labelClass}>วัตถุประสงค์ในการขอซื้อ <span className="text-red-500">*</span></label>
-          <textarea 
-            {...register("purpose")}
-            placeholder="ระบุเหตุผลและวัตถุประสงค์ในการขอซื้อ..."
-            className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white resize-none"
-            rows={2}
+          <div className="flex items-center gap-2">
+             <textarea 
+                {...register("purpose")}
+                placeholder="ระบุเหตุผลและวัตถุประสงค์ในการขอซื้อ..."
+                className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white resize-none"
+                rows={1}
+              />
+          </div>
+         
+        </div>
+
+        <div className="col-span-12 md:col-span-4">
+          <VendorSearch 
+              onVendorSelect={onVendorSelect}
+              selectedVendorId={preferredVendorId}
+              selectedVendorName={vendorName}
+              label="ผู้ขายที่แนะนำ (Preferred Vendor)"
+              placeholder="ค้นหาผู้ขาย..."
           />
         </div>
       </div>

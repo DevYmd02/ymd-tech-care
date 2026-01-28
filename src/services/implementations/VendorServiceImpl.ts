@@ -120,4 +120,14 @@ export class VendorServiceImpl implements IVendorService {
       return { success: false, message: 'เกิดข้อผิดพลาดในการเปลี่ยนสถานะ Hold' };
     }
   }
+
+  async search(query: string): Promise<VendorMaster[]> {
+    try {
+      const response = await api.get<VendorMaster[]>('/vendors/search', { params: { q: query } });
+      return response.data;
+    } catch (error) {
+      logger.error('[VendorServiceImpl] search error:', error);
+      return [];
+    }
+  }
 }

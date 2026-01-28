@@ -77,6 +77,12 @@ export interface FilterFormBuilderProps<
         md?: number;
         lg?: number;
     };
+    /** Column span for the action buttons container */
+    actionColSpan?: {
+        sm?: number | 'full';
+        md?: number | 'full';
+        lg?: number | 'full';
+    };
 }
 
 // ====================================================================================
@@ -134,17 +140,66 @@ export function FilterFormBuilder<
     searchLabel = 'ค้นหา',
     resetLabel = 'ล้างค่า',
     columns = { sm: 2, md: 4, lg: 5 },
+    actionColSpan = { sm: 'full', md: 2, lg: 2 },
 }: FilterFormBuilderProps<TFilters, TFilterKeys>): React.ReactElement {
+    // Grid column mappings to ensure Tailwind scanner picks them up
+    // This eliminates the need for safelisting in tailwind.config.js
+    const gridColsMap: Record<number, string> = {
+        1: 'grid-cols-1',
+        2: 'grid-cols-2',
+        3: 'grid-cols-3',
+        4: 'grid-cols-4',
+        5: 'grid-cols-5',
+        6: 'grid-cols-6',
+        7: 'grid-cols-7',
+        8: 'grid-cols-8',
+        9: 'grid-cols-9',
+        10: 'grid-cols-10',
+        11: 'grid-cols-11',
+        12: 'grid-cols-12',
+    };
+
+    const smCols = columns.sm && gridColsMap[columns.sm] ? `sm:${gridColsMap[columns.sm]}` : 'sm:grid-cols-2';
+    const mdCols = columns.md && gridColsMap[columns.md] ? `md:${gridColsMap[columns.md]}` : 'md:grid-cols-4';
+    const lgCols = columns.lg && gridColsMap[columns.lg] ? `lg:${gridColsMap[columns.lg]}` : 'lg:grid-cols-5';
+
     // Build responsive grid classes
     const gridClasses = [
         'grid',
         'grid-cols-1',
-        columns.sm ? `sm:grid-cols-${columns.sm}` : 'sm:grid-cols-2',
-        columns.md ? `md:grid-cols-${columns.md}` : 'md:grid-cols-4',
-        columns.lg ? `lg:grid-cols-${columns.lg}` : 'lg:grid-cols-5',
+        smCols,
+        mdCols,
+        lgCols,
         'gap-4',
         'w-full',
     ].join(' ');
+
+    // Column span mapping for fields
+    const colSpanMap: Record<number, string> = {
+        1: 'col-span-1',
+        2: 'col-span-2',
+        3: 'col-span-3',
+        4: 'col-span-4',
+        5: 'col-span-5',
+        6: 'col-span-6',
+        7: 'col-span-7',
+        8: 'col-span-8',
+        9: 'col-span-9',
+        10: 'col-span-10',
+        11: 'col-span-11',
+        12: 'col-span-12',
+    };
+
+    // Helper to generate col-span classes for action buttons
+    const getActionColSpanClass = (span: number | 'full' | undefined, prefix: string) => {
+        if (!span) return '';
+        if (span === 'full') return `${prefix}col-span-full`;
+        return colSpanMap[span] ? `${prefix}${colSpanMap[span]}` : '';
+    };
+
+    const actionSmSpan = getActionColSpanClass(actionColSpan.sm, 'sm:');
+    const actionMdSpan = getActionColSpanClass(actionColSpan.md, 'md:');
+    const actionLgSpan = getActionColSpanClass(actionColSpan.lg, 'lg:');
 
     // Handle form submission (prevent default and trigger search)
     const handleSubmit = (e: React.FormEvent) => {
@@ -169,8 +224,8 @@ export function FilterFormBuilder<
                     const stringValue = value !== undefined && value !== null ? String(value) : '';
                     
                     // Handle column span
-                    const colSpanClass = field.colSpan && field.colSpan > 1 
-                        ? `col-span-${field.colSpan}` 
+                    const colSpanClass = field.colSpan && field.colSpan > 1 && colSpanMap[field.colSpan]
+                        ? colSpanMap[field.colSpan]
                         : '';
 
                     return (
@@ -193,8 +248,8 @@ export function FilterFormBuilder<
                     );
                 })}
 
-                {/* Action Buttons - inline with last field row on desktop, full width/wrapped on mobile */}
-                <div className="flex flex-wrap items-end gap-2 min-w-0 col-span-1 sm:col-span-full md:col-span-1 lg:col-span-1">
+                {/* Action Buttons */}
+                <div className={`flex flex-wrap items-end gap-2 min-w-0 col-span-1 ${actionSmSpan} ${actionMdSpan} ${actionLgSpan}`}>
                     {/* Search Button */}
                     <button
                         type="submit"
@@ -219,7 +274,7 @@ export function FilterFormBuilder<
                         <button
                             type="button"
                             onClick={onCreate}
-                            className="w-full md:w-auto px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors whitespace-nowrap shadow-sm"
+                            className="flex-1 md:flex-none px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors whitespace-nowrap shadow-sm"
                         >
                             <Plus size={18} />
                             {createLabel}

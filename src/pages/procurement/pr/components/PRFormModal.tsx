@@ -15,6 +15,7 @@ import { WindowFormLayout } from '../../../../components/shared/WindowFormLayout
 import { masterDataService } from '../../../../services/masterDataService';
 import { prService } from '../../../../services/prService';
 import type { ItemMaster, CostCenter, Project, UnitMaster } from '../../../../types/master-data-types';
+import type { VendorMaster } from '../../../../types/vendor-types';
 import { SystemAlert } from '../../../../components/shared/SystemAlert';
 
 interface Props {
@@ -87,7 +88,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
 
   
-  const { register, handleSubmit, setValue, reset } = useForm<PRFormData>({
+  const { register, handleSubmit, setValue, reset, watch } = useForm<PRFormData>({
     defaultValues: getDefaultFormValues()
   });
 
@@ -219,6 +220,16 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const vatAmount = afterDiscount * (vatRate / 100);
   const grandTotal = afterDiscount + vatAmount;
 
+  const handleVendorSelect = (vendor: VendorMaster | null) => {
+    if (vendor) {
+      setValue("preferred_vendor_id", vendor.vendor_id);
+      setValue("vendor_name", vendor.vendor_name);
+    } else {
+      setValue("preferred_vendor_id", undefined);
+      setValue("vendor_name", '');
+    }
+  };
+
   const onSubmit: SubmitHandler<PRFormData> = async (data) => {
     if (!data.required_date) { showAlert('กรุณาระบุวันที่ต้องการใช้'); return; }
     if (!data.requester_name) { showAlert('กรุณาระบุชื่อผู้ขอซื้อ'); return; }
@@ -343,8 +354,10 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
           <PRHeader 
             register={register} 
             setValue={setValue} 
+            watch={watch}
             costCenters={costCenters} 
             projects={projects} 
+            onVendorSelect={handleVendorSelect}
           />
         </div>
 

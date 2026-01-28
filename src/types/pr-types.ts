@@ -110,6 +110,10 @@ export interface PRFormData {
   purpose: string;                  // วัตถุประสงค์
   currency_code: string;            // สกุลเงิน (THB, USD)
   
+  // Vendor Info
+  preferred_vendor_id?: string;     // ผู้ขายที่แนะนำ
+  vendor_name?: string;             // ชื่อผู้ขาย (สำหรับแสดงผล)
+  
   // Line items
   lines: PRLineFormData[];
   

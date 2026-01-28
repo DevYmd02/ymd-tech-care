@@ -16,12 +16,12 @@ import {
     ChevronsRight,
     RefreshCw
 } from 'lucide-react';
-import { styles } from '../../../constants';
-import { logger } from '../../../utils/logger';
+import { styles } from '@/constants';
+import { logger } from '@utils/logger';
 import { BranchFormModal } from './BranchFormModal';
-import { mockBranches } from '../../../__mocks__/masterDataMocks';
-import type { BranchListItem } from '../../../types/master-data-types';
-import { ActiveStatusBadge } from '../../../components/shared';
+import { mockBranches } from '@/__mocks__/masterDataMocks';
+import type { BranchListItem } from '@project-types/master-data-types';
+import { ActiveStatusBadge } from '@shared';
 
 // ====================================================================================
 // COMPONENT

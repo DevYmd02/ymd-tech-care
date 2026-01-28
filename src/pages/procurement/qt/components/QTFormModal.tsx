@@ -235,31 +235,31 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ }
       titleIcon={<div className="bg-emerald-500 p-1 rounded-md shadow-sm"><FileText size={14} strokeWidth={3} className="text-white" /></div>}
       headerColor="bg-emerald-600"
       footer={
-          <div className="flex items-center gap-1 p-2 bg-[#1e293b]">
-               <button className="flex items-center gap-1 px-3 py-1.5 bg-transparent hover:bg-white/10 text-gray-300 border border-gray-600 rounded text-xs font-bold transition-colors">
+          <div className="flex items-center gap-1 p-2 bg-gray-100 dark:bg-[#1e293b] border-t border-gray-200 dark:border-gray-800">
+               <button className="flex items-center gap-1 px-3 py-1.5 bg-white dark:bg-transparent hover:bg-gray-200 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded text-xs font-bold transition-colors shadow-sm dark:shadow-none">
                   <Plus size={14} /> NEW
                </button>
-               <button onClick={handleSave} className="flex items-center gap-1 px-3 py-1.5 bg-[#1e40af] hover:bg-blue-700 text-white border border-blue-600 rounded text-xs font-bold transition-colors">
+               <button onClick={handleSave} className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white border border-blue-600 rounded text-xs font-bold transition-colors shadow-sm">
                   <Save size={14} /> SAVE
                </button>
-               <button className="flex items-center gap-1 px-3 py-1.5 bg-transparent hover:bg-emerald-900/30 text-emerald-500 border border-emerald-600 rounded text-xs font-bold transition-colors">
+               <button className="flex items-center gap-1 px-3 py-1.5 bg-white dark:bg-transparent hover:bg-emerald-50 dark:hover:bg-emerald-900/30 text-emerald-600 dark:text-emerald-500 border border-emerald-500 dark:border-emerald-600 rounded text-xs font-bold transition-colors shadow-sm dark:shadow-none">
                   <CheckCircle size={14} /> APPROVE
                </button>
-               <button className="flex items-center gap-1 px-3 py-1.5 bg-transparent hover:bg-red-900/30 text-red-500 border border-red-600 rounded text-xs font-bold transition-colors">
+               <button className="flex items-center gap-1 px-3 py-1.5 bg-white dark:bg-transparent hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-500 border border-red-500 dark:border-red-600 rounded text-xs font-bold transition-colors shadow-sm dark:shadow-none">
                   <Trash2 size={14} /> DELETE
                </button>
-               <div className="w-px h-6 bg-gray-600 mx-1"></div>
-               <button className="flex items-center gap-1 px-3 py-1.5 bg-transparent hover:bg-white/10 text-gray-300 border border-gray-600 rounded text-xs font-bold transition-colors">
+               <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+               <button className="flex items-center gap-1 px-3 py-1.5 bg-white dark:bg-transparent hover:bg-gray-200 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded text-xs font-bold transition-colors shadow-sm dark:shadow-none">
                   <Search size={14} /> FIND
                </button>
-               <button className="flex items-center gap-1 px-3 py-1.5 bg-transparent hover:bg-white/10 text-gray-300 border border-gray-600 rounded text-xs font-bold transition-colors">
+               <button className="flex items-center gap-1 px-3 py-1.5 bg-white dark:bg-transparent hover:bg-gray-200 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded text-xs font-bold transition-colors shadow-sm dark:shadow-none">
                   <Copy size={14} /> COPY
                </button>
-               <button className="flex items-center gap-1 px-3 py-1.5 bg-transparent hover:bg-white/10 text-gray-300 border border-gray-600 rounded text-xs font-bold transition-colors">
+               <button className="flex items-center gap-1 px-3 py-1.5 bg-white dark:bg-transparent hover:bg-gray-200 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded text-xs font-bold transition-colors shadow-sm dark:shadow-none">
                   <Printer size={14} /> PRINT
                </button>
                <div className="flex-1"></div>
-               <button onClick={onClose} className="flex items-center gap-1 px-3 py-1.5 bg-transparent hover:bg-red-900/30 text-red-500 border border-red-600 rounded text-xs font-bold transition-colors">
+               <button onClick={onClose} className="flex items-center gap-1 px-3 py-1.5 bg-white dark:bg-transparent hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-500 border border-red-500 dark:border-red-600 rounded text-xs font-bold transition-colors shadow-sm dark:shadow-none">
                   <X size={14} /> CLOSE
                </button>
           </div>
@@ -437,34 +437,34 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ }
                       <span className="font-bold text-lg">รายการสินค้า - Vendor Quotation Lines</span>
                   </div>
                   
-                  <div className="overflow-x-auto bg-[#1e1e1e] p-4 rounded-lg border border-gray-800">
-                     <table className="w-full min-w-[1000px] border-collapse bg-[#1e1e1e] text-sm">
-                         <thead className="bg-[#4c1d95] text-white">
+                  <div className="overflow-x-auto bg-white dark:bg-[#1e1e1e] p-4 rounded-lg border border-gray-200 dark:border-gray-800">
+                     <table className="w-full min-w-[1000px] border-collapse bg-white dark:bg-[#1e1e1e] text-sm">
+                         <thead className="bg-gray-100 dark:bg-[#4c1d95] text-gray-700 dark:text-white">
                              <tr>
-                                 <th className="p-3 w-12 text-center border-r border-purple-800 font-normal">#</th>
-                                 <th className="p-3 w-48 text-center border-r border-purple-800 font-normal">รหัสสินค้า</th>
-                                 <th className="p-3 min-w-[200px] text-center border-r border-purple-800 font-normal">รายละเอียดสินค้า</th>
-                                 <th className="p-3 w-24 text-center border-r border-purple-800 font-normal">จำนวน</th>
-                                 <th className="p-3 w-28 text-center border-r border-purple-800 font-normal">หน่วยนับ</th>
-                                 <th className="p-3 w-32 text-center border-r border-purple-800 font-normal">ราคา/หน่วย</th>
-                                 <th className="p-3 w-24 text-center border-r border-purple-800 font-normal">ส่วนลด</th>
-                                 <th className="p-3 w-28 text-center border-r border-purple-800 font-normal">ลดยอด (บาท)</th>
-                                 <th className="p-3 w-32 text-center border-r border-purple-800 font-normal">ยอดรวม</th>
-                                 <th className="p-3 w-24 text-center font-normal">จัดการ</th>
+                                 <th className="p-3 w-12 text-center border-r border-gray-200 dark:border-purple-800 font-semibold dark:font-normal">#</th>
+                                 <th className="p-3 w-48 text-center border-r border-gray-200 dark:border-purple-800 font-semibold dark:font-normal">รหัสสินค้า</th>
+                                 <th className="p-3 min-w-[200px] text-center border-r border-gray-200 dark:border-purple-800 font-semibold dark:font-normal">รายละเอียดสินค้า</th>
+                                 <th className="p-3 w-24 text-center border-r border-gray-200 dark:border-purple-800 font-semibold dark:font-normal">จำนวน</th>
+                                 <th className="p-3 w-28 text-center border-r border-gray-200 dark:border-purple-800 font-semibold dark:font-normal">หน่วยนับ</th>
+                                 <th className="p-3 w-32 text-center border-r border-gray-200 dark:border-purple-800 font-semibold dark:font-normal">ราคา/หน่วย</th>
+                                 <th className="p-3 w-24 text-center border-r border-gray-200 dark:border-purple-800 font-semibold dark:font-normal">ส่วนลด</th>
+                                 <th className="p-3 w-28 text-center border-r border-gray-200 dark:border-purple-800 font-semibold dark:font-normal">ลดยอด (บาท)</th>
+                                 <th className="p-3 w-32 text-center border-r border-gray-200 dark:border-purple-800 font-semibold dark:font-normal">ยอดรวม</th>
+                                 <th className="p-3 w-24 text-center font-semibold dark:font-normal">จัดการ</th>
                              </tr>
                          </thead>
-                         <tbody className="divide-y divide-gray-800">
+                         <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
                              {lines.map((line, idx) => (
-                                 <tr key={idx} className="hover:bg-[#2d2d2d] transition-colors">
-                                     <td className="p-2 text-center text-gray-400 border-r border-gray-800">{idx + 1}</td>
+                                 <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-[#2d2d2d] transition-colors">
+                                     <td className="p-2 text-center text-gray-500 dark:text-gray-400 border-r border-gray-200 dark:border-gray-800">{idx + 1}</td>
                                      
                                      {/* Product Code: Input + Square Teal Button */}
-                                     <td className="p-2 border-r border-gray-800">
+                                     <td className="p-2 border-r border-gray-200 dark:border-gray-800">
                                          <div className="flex items-center gap-1">
                                             <input 
                                                 value={line.item_code} 
                                                 onChange={e => updateLine(idx, 'item_code', e.target.value)} 
-                                                className="w-full h-9 px-3 bg-[#2d2d2d] border border-gray-700 rounded text-gray-200 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition-all placeholder-gray-500" 
+                                                className="w-full h-9 px-3 bg-white dark:bg-[#2d2d2d] border border-gray-300 dark:border-gray-700 rounded text-gray-900 dark:text-gray-200 focus:border-blue-500 dark:focus:border-purple-500 focus:ring-1 focus:ring-blue-500 dark:focus:ring-purple-500 outline-none transition-all placeholder-gray-400 dark:placeholder-gray-500" 
                                             />
                                             <button 
                                                 onClick={() => openProductSearch(idx)} 
@@ -475,70 +475,70 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ }
                                          </div>
                                      </td>
 
-                                     <td className="p-2 border-r border-gray-800">
+                                     <td className="p-2 border-r border-gray-200 dark:border-gray-800">
                                          <input 
                                             value={line.item_name} 
                                             onChange={e => updateLine(idx, 'item_name', e.target.value)} 
-                                            className="w-full h-9 px-3 bg-[#2d2d2d] border border-gray-700 rounded text-gray-200 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition-all placeholder-gray-500" 
+                                            className="w-full h-9 px-3 bg-white dark:bg-[#2d2d2d] border border-gray-300 dark:border-gray-700 rounded text-gray-900 dark:text-gray-200 focus:border-blue-500 dark:focus:border-purple-500 focus:ring-1 focus:ring-blue-500 dark:focus:ring-purple-500 outline-none transition-all placeholder-gray-400 dark:placeholder-gray-500" 
                                          />
                                      </td>
                                      
-                                     <td className="p-2 border-r border-gray-800">
+                                     <td className="p-2 border-r border-gray-200 dark:border-gray-800">
                                          <input 
                                             type="number" 
                                             value={line.qty || ''} 
                                             onChange={e => updateLine(idx, 'qty', parseFloat(e.target.value))} 
-                                            className="w-full h-9 px-3 bg-[#2d2d2d] border border-gray-700 rounded text-center text-teal-400 font-medium focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition-all placeholder-gray-500" 
+                                            className="w-full h-9 px-3 bg-white dark:bg-[#2d2d2d] border border-gray-300 dark:border-gray-700 rounded text-center text-teal-600 dark:text-teal-400 font-medium focus:border-blue-500 dark:focus:border-purple-500 focus:ring-1 focus:ring-blue-500 dark:focus:ring-purple-500 outline-none transition-all placeholder-gray-400 dark:placeholder-gray-500" 
                                          />
                                      </td>
                                      
                                      {/* Unit Dropdown */}
-                                     <td className="p-2 border-r border-gray-800">
+                                     <td className="p-2 border-r border-gray-200 dark:border-gray-800">
                                         <select 
                                             value={line.uom_name} 
                                             onChange={e => updateLine(idx, 'uom_name', e.target.value)} 
-                                            className="w-full h-9 px-2 bg-[#2d2d2d] border border-gray-700 rounded text-center text-gray-200 cursor-pointer focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none appearance-none"
+                                            className="w-full h-9 px-2 bg-white dark:bg-[#2d2d2d] border border-gray-300 dark:border-gray-700 rounded text-center text-gray-900 dark:text-gray-200 cursor-pointer focus:border-blue-500 dark:focus:border-purple-500 focus:ring-1 focus:ring-blue-500 dark:focus:ring-purple-500 outline-none appearance-none"
                                         >
                                             <option value="" hidden>เลือก</option>
                                             {units.map(u => (
-                                                <option key={u.unit_id} value={u.unit_name} className="bg-[#2d2d2d] text-center">{u.unit_name}</option>
+                                                <option key={u.unit_id} value={u.unit_name} className="bg-white dark:bg-[#2d2d2d] text-gray-900 dark:text-gray-200">{u.unit_name}</option>
                                             ))}
                                         </select>
                                      </td>
 
-                                     <td className="p-2 border-r border-gray-800">
+                                     <td className="p-2 border-r border-gray-200 dark:border-gray-800">
                                          <input 
                                             type="number" 
                                             value={line.unit_price || ''} 
                                             onChange={e => updateLine(idx, 'unit_price', parseFloat(e.target.value))} 
                                             placeholder="0.00" 
-                                            className="w-full h-9 px-3 bg-[#2d2d2d] border border-gray-700 rounded text-right text-gray-200 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition-all placeholder-gray-500" 
+                                            className="w-full h-9 px-3 bg-white dark:bg-[#2d2d2d] border border-gray-300 dark:border-gray-700 rounded text-right text-gray-900 dark:text-gray-200 focus:border-blue-500 dark:focus:border-purple-500 focus:ring-1 focus:ring-blue-500 dark:focus:ring-purple-500 outline-none transition-all placeholder-gray-400 dark:placeholder-gray-500" 
                                          />
                                      </td>
                                      
-                                     <td className="p-2 border-r border-gray-800">
+                                     <td className="p-2 border-r border-gray-200 dark:border-gray-800">
                                          <input 
                                             type="number" 
                                             placeholder="0" 
-                                            className="w-full h-9 px-3 bg-[#2d2d2d] border border-gray-700 rounded text-center text-gray-400 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition-all placeholder-gray-500" 
+                                            className="w-full h-9 px-3 bg-white dark:bg-[#2d2d2d] border border-gray-300 dark:border-gray-700 rounded text-center text-gray-900 dark:text-gray-400 focus:border-blue-500 dark:focus:border-purple-500 focus:ring-1 focus:ring-blue-500 dark:focus:ring-purple-500 outline-none transition-all placeholder-gray-400 dark:placeholder-gray-500" 
                                          />
                                      </td>
 
-                                     <td className="p-2 border-r border-gray-800">
+                                     <td className="p-2 border-r border-gray-200 dark:border-gray-800">
                                          <input 
                                             type="number" 
                                             value={line.discount_amount || ''} 
                                             onChange={e => updateLine(idx, 'discount_amount', parseFloat(e.target.value))} 
                                             placeholder="0.00" 
-                                            className="w-full h-9 px-3 bg-[#2d2d2d] border border-gray-700 rounded text-right text-gray-200 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition-all placeholder-gray-500" 
+                                            className="w-full h-9 px-3 bg-white dark:bg-[#2d2d2d] border border-gray-300 dark:border-gray-700 rounded text-right text-gray-900 dark:text-gray-200 focus:border-blue-500 dark:focus:border-purple-500 focus:ring-1 focus:ring-blue-500 dark:focus:ring-purple-500 outline-none transition-all placeholder-gray-400 dark:placeholder-gray-500" 
                                          />
                                      </td>
                                      
-                                     <td className="p-2 border-r border-gray-800">
+                                     <td className="p-2 border-r border-gray-200 dark:border-gray-800">
                                          <input 
                                             value={(line.net_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})} 
                                             readOnly 
-                                            className="w-full h-9 px-3 bg-[#1e1e1e] border border-transparent rounded text-right text-emerald-500 font-bold focus:outline-none" 
+                                            className="w-full h-9 px-3 bg-gray-50 dark:bg-[#1e1e1e] border border-transparent rounded text-right text-emerald-600 dark:text-emerald-500 font-bold focus:outline-none" 
                                          />
                                      </td>
                                      
@@ -567,7 +567,7 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ }
                      </table>
                      
                      <div className="mt-4 flex justify-between items-center px-1">
-                        <button onClick={addLine} className="flex items-center gap-2 px-4 py-2 bg-[#2d2d2d] hover:bg-[#3d3d3d] text-teal-500 font-bold rounded border border-gray-700 transition-all text-xs uppercase tracking-wider">
+                        <button onClick={addLine} className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-[#2d2d2d] hover:bg-gray-200 dark:hover:bg-[#3d3d3d] text-teal-600 dark:text-teal-500 font-bold rounded border border-gray-300 dark:border-gray-700 transition-all text-xs uppercase tracking-wider">
                             <Plus size={14} strokeWidth={3}/> Add Line
                         </button>
                         

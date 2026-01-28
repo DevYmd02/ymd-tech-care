@@ -7,11 +7,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Barcode, Search, Plus, Save, Trash2, X, Loader2 } from 'lucide-react';
-import { styles } from '../../../constants';
-import { logger } from '../../../utils/logger';
-import { mockItems, mockUnits, mockItemBarcodes } from '../../../__mocks__/masterDataMocks';
-import type { ItemBarcodeFormData } from '../../../types/master-data-types';
-import { initialItemBarcodeFormData } from '../../../types/master-data-types';
+import { styles } from '@/constants';
+import { logger } from '@utils/logger';
+import { mockItems, mockUnits, mockItemBarcodes } from '@/__mocks__/masterDataMocks';
+import type { ItemBarcodeFormData } from '@project-types/master-data-types';
+import { initialItemBarcodeFormData } from '@project-types/master-data-types';
 
 export default function ItemBarcodeForm() {
     const navigate = useNavigate();

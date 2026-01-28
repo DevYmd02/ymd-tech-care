@@ -3,9 +3,9 @@ import { useState } from 'react';
 import { 
     Edit2, Trash2
 } from 'lucide-react';
-import { styles } from '../../../constants/styles';
+import { styles } from '@/constants/styles';
 import { ItemMasterFormModal } from './ItemMasterFormModal';
-import type { ItemListItem } from '../../../types/master-data-types';
+import type { ItemListItem } from '@project-types/master-data-types';
 
 interface ItemMasterListProps {
     data: ItemListItem[];

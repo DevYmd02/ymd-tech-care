@@ -60,3 +60,7 @@ export { ErrorBoundary } from './ErrorBoundary';
 export { default as TabPanel } from './TabPanel';
 export type { TabItem, TabPanelProps } from './TabPanel';
 export { DOCUMENT_FORM_TABS } from './tabConstants';
+
+// Base UI
+export { PageLoader } from './PageLoader';
+export { SmartTable } from './SmartTable';

@@ -2,58 +2,56 @@
  * @file App.tsx
  * @description Main application component with routing configuration
  * @purpose Defines all routes for the ERP system
- * @refactored Uses placeholderRoutes from centralized routes.ts config
+ * @refactored Uses React.lazy for code splitting and placeholderRoutes from centralized routes.ts config
  */
 
+import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from './layouts/MainLayout';
 import { placeholderRoutes } from './config/routes';
 
 // ====================================================================================
-// PAGE IMPORTS - Actual implemented pages
+// PAGE IMPORTS - Lazy Loaded
 // ====================================================================================
 
 // Admin Pages
-import AdminDashboard from './pages/admin/AdminDashboard';
+const AdminDashboard = React.lazy(() => import('./pages/admin/AdminDashboard'));
 
 // Procurement Pages
-import ProcurementDashboard from './pages/procurement/ProcurementDashboard';
-import PRListPage from './pages/procurement/pr/PRListPage';
-import RFQListPage from './pages/procurement/rfq/RFQListPage';
-import QTListPage from './pages/procurement/qt/QTListPage';
-import QCListPage from './pages/procurement/qc/QCListPage';
-import POListPage from './pages/procurement/po/POListPage';
-import { 
-    GoodsReceiptNoteListPage, 
-    PurchaseReturnListPage 
-} from './pages/procurement/ProcurementComingSoon';
+const ProcurementDashboard = React.lazy(() => import('./pages/procurement/ProcurementDashboard'));
+const PRListPage = React.lazy(() => import('./pages/procurement/pr/PRListPage'));
+const RFQListPage = React.lazy(() => import('./pages/procurement/rfq/RFQListPage'));
+const QTListPage = React.lazy(() => import('./pages/procurement/qt/QTListPage'));
+const QCListPage = React.lazy(() => import('./pages/procurement/qc/QCListPage'));
+const POListPage = React.lazy(() => import('./pages/procurement/po/POListPage'));
+
+const GoodsReceiptNoteListPage = React.lazy(() => import('./pages/procurement/ProcurementComingSoon').then(module => ({ default: module.GoodsReceiptNoteListPage })));
+const PurchaseReturnListPage = React.lazy(() => import('./pages/procurement/ProcurementComingSoon').then(module => ({ default: module.PurchaseReturnListPage })));
 
 // Roles Pages
-import RolesDashboard from './pages/roles/RolesDashboard';
+const RolesDashboard = React.lazy(() => import('./pages/roles/RolesDashboard'));
 
 // IT Governance Pages
-import ITGCDashboard from './pages/it-governance/ITGCDashboard';
+const ITGCDashboard = React.lazy(() => import('./pages/it-governance/ITGCDashboard'));
 
-// Master Data Pages - Import from module index files
-import {
-    MasterDataDashboard,
-    VendorForm,
-    VendorDashboard,
-    VendorList,
-    BranchForm,
-    WarehouseForm,
-    ProductCategoryForm,
-    ItemTypeForm,
-    UnitForm,
-    ItemMasterForm,
-    UOMConversionForm,
-    ItemBarcodeForm
-} from './pages/master-data';
+// Master Data Pages
+const MasterDataDashboard = React.lazy(() => import('./pages/master-data').then(module => ({ default: module.MasterDataDashboard })));
+const VendorForm = React.lazy(() => import('./pages/master-data').then(module => ({ default: module.VendorForm })));
+const VendorDashboard = React.lazy(() => import('./pages/master-data').then(module => ({ default: module.VendorDashboard })));
+const VendorList = React.lazy(() => import('./pages/master-data').then(module => ({ default: module.VendorList })));
+const BranchForm = React.lazy(() => import('./pages/master-data').then(module => ({ default: module.BranchForm })));
+const WarehouseForm = React.lazy(() => import('./pages/master-data').then(module => ({ default: module.WarehouseForm })));
+const ProductCategoryForm = React.lazy(() => import('./pages/master-data').then(module => ({ default: module.ProductCategoryForm })));
+const ItemTypeForm = React.lazy(() => import('./pages/master-data').then(module => ({ default: module.ItemTypeForm })));
+const UnitForm = React.lazy(() => import('./pages/master-data').then(module => ({ default: module.UnitForm })));
+const ItemMasterForm = React.lazy(() => import('./pages/master-data').then(module => ({ default: module.ItemMasterForm })));
+const UOMConversionForm = React.lazy(() => import('./pages/master-data').then(module => ({ default: module.UOMConversionForm })));
+const ItemBarcodeForm = React.lazy(() => import('./pages/master-data').then(module => ({ default: module.ItemBarcodeForm })));
 
 // Auth Pages
-import LoginPage from './pages/auth/LoginPage';
-import RegisterPage from './pages/auth/RegisterPage';
-import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
+const LoginPage = React.lazy(() => import('./pages/auth/LoginPage'));
+const RegisterPage = React.lazy(() => import('./pages/auth/RegisterPage'));
+const ForgotPasswordPage = React.lazy(() => import('./pages/auth/ForgotPasswordPage'));
 
 // ====================================================================================
 // PLACEHOLDER COMPONENT - For routes not yet implemented
@@ -82,9 +80,21 @@ function App() {
   return (
     <Routes>
       {/* Standalone Route - Login (No Sidebar/Header) */}
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/login" element={
+        <React.Suspense fallback={<div className="h-screen flex items-center justify-center">Loading...</div>}>
+          <LoginPage />
+        </React.Suspense>
+      } />
+      <Route path="/register" element={
+        <React.Suspense fallback={<div className="h-screen flex items-center justify-center">Loading...</div>}>
+          <RegisterPage />
+        </React.Suspense>
+      } />
+      <Route path="/forgot-password" element={
+        <React.Suspense fallback={<div className="h-screen flex items-center justify-center">Loading...</div>}>
+          <ForgotPasswordPage />
+        </React.Suspense>
+      } />
 
       {/* Main Layout Routes - With Sidebar & Header */}
       <Route path="/" element={<MainLayout />}>

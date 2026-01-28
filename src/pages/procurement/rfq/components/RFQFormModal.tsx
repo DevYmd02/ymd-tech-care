@@ -25,6 +25,7 @@ import type { PRHeader } from '../../../../types/pr-types';
 interface Props {
     isOpen: boolean;
     onClose: () => void;
+    onSuccess?: () => void;
     editId?: string | null;
     initialPR?: PRHeader | null; // Add initialPR prop
 }
@@ -42,7 +43,7 @@ interface VendorSelection {
 // COMPONENT
 // ====================================================================================
 
-export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose, initialPR }) => {
+export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialPR }) => {
     const prevIsOpenRef = useRef(false);
 
     const [formData, setFormData] = useState<RFQFormData>({
@@ -193,6 +194,7 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose, initialPR }) =>
             await new Promise(resolve => setTimeout(resolve, 1000));
             logger.log('Save RFQ:', formData);
             logger.log('Selected Vendors:', selectedVendors);
+            if (onSuccess) onSuccess();
             onClose();
         } catch (error) {
             logger.error('Failed to save RFQ:', error);
