@@ -60,7 +60,7 @@ export interface IPRService {
   update(prId: string, data: Partial<PRFormData>): Promise<PRHeader | null>;
   delete(prId: string): Promise<boolean>;
   submit(prId: string): Promise<{ success: boolean; message: string }>;
-  approve(request: ApprovalRequest): Promise<ApprovalResponse>;
+  approve(prId: string): Promise<boolean>;
   cancel(prId: string, remark?: string): Promise<{ success: boolean; message: string }>;
   convert(request: ConvertPRRequest): Promise<{ success: boolean; document_id?: string; document_no?: string }>;
   uploadAttachment(prId: string, file: File): Promise<{ success: boolean; attachment_id?: string }>;

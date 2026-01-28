@@ -6,21 +6,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import type { SubmitHandler } from 'react-hook-form';
-import type { PRFormData, PRLineFormData } from '../../../../types/pr-types';
-import { FileText, Plus, Trash2, Search, Eraser, Triangle, FileBox, MoreHorizontal, Flame, FileBarChart, History as HistoryIcon } from 'lucide-react';
+import type { PRFormData, PRLineFormData } from '@/types/pr-types';
+import { FileText, Plus, Trash2, Search, Eraser, FileBox, MoreHorizontal, Flame, FileBarChart, History as HistoryIcon, Printer, Copy, CheckCircle } from 'lucide-react';
 
 import { PRHeader } from './PRHeader';
-import { PRFooter } from './PRFooter';
-import { WindowFormLayout } from '../../../../components/shared/WindowFormLayout';
-import { masterDataService } from '../../../../services/masterDataService';
-import { prService } from '../../../../services/prService';
-import type { ItemMaster, CostCenter, Project, UnitMaster } from '../../../../types/master-data-types';
-import type { VendorMaster } from '../../../../types/vendor-types';
-import { SystemAlert } from '../../../../components/shared/SystemAlert';
+
+import { WindowFormLayout } from '@/components/shared/WindowFormLayout';
+import { masterDataService } from '@/services/masterDataService';
+import { prService } from '@/services/prService';
+import type { ItemMaster, CostCenter, Project } from '@/types/master-data-types';
+import type { VendorMaster } from '@/types/vendor-types';
+import { SystemAlert } from '@/components/shared/SystemAlert';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
+  id?: string;
+  onSuccess?: () => void;
 }
 
 // ====================================================================================
@@ -59,13 +61,16 @@ const createEmptyLine = (): ExtendedLine => ({
 const getInitialLines = () => Array(PR_CONFIG.INITIAL_LINES).fill(null).map(() => createEmptyLine());
 
 const getDefaultFormValues = (): PRFormData => ({
-  pr_no: generatePRNumber(), request_date: getTodayDate(), required_date: '', requester_name: '',
+  pr_no: generatePRNumber(), request_date: getTodayDate(), required_date: '', requester_name: 'นางสาว กรรลิกา สารมาท',
   cost_center_id: '', project_id: undefined, purpose: '', currency_code: 'THB', lines: [], total_amount: 0,
+  delivery_date: '', credit_days: 30, vendor_quote_no: '', shipping_method: 'รถยนต์', remarks: '',
 });
 
-export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
+export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess }) => {
+  const isEditMode = !!id;
   const prevIsOpenRef = useRef(false);
   
+  const [isActionLoading, setIsActionLoading] = useState(false);
   const [alertState, setAlertState] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
   const [lines, setLines] = useState<ExtendedLine[]>(getInitialLines);
   const [activeTab, setActiveTab] = useState('detail');
@@ -74,11 +79,15 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const [remarks, setRemarks] = useState('');
   
   // Info Bar state
-  const [deliveryDate, setDeliveryDate] = useState('');
-  const [creditDays, setCreditDays] = useState(7);
-  const [vendorQuoteNo, setVendorQuoteNo] = useState('QC5203-00005');
-  const [shippingMethod, setShippingMethod] = useState('รถยนต์');
-  const [requesterName, setRequesterName] = useState('นางสาว กรรลิกา สารมาท');
+  const [deliveryDate, setDeliveryDate] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() + 7);
+    return date.toISOString().split('T')[0];
+  });
+  const [creditDays, setCreditDays] = useState(30);
+  const [vendorQuoteNo, setVendorQuoteNo] = useState('');
+  const [shippingMethod, setShippingMethod] = useState('');
+  const [requesterName] = useState('นางสาว กรรลิกา สารมาท');
   
   // Product Search Modal
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -88,7 +97,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
 
   
-  const { register, handleSubmit, setValue, reset, watch } = useForm<PRFormData>({
+  const { register, handleSubmit, setValue, reset, watch, formState: { isSubmitting } } = useForm<PRFormData>({
     defaultValues: getDefaultFormValues()
   });
 
@@ -96,22 +105,18 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const [products, setProducts] = useState<ItemMaster[]>([]);
   const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [units, setUnits] = useState<UnitMaster[]>([]);
-
   // Fetch Master Data
   useEffect(() => {
     const fetchMasterData = async () => {
       try {
-        const [items, cc, prj, uom] = await Promise.all([
+        const [items, cc, prj] = await Promise.all([
           masterDataService.getItems(),
           masterDataService.getCostCenters(),
-          masterDataService.getProjects(),
-          masterDataService.getUnits()
+          masterDataService.getProjects()
         ]);
         setProducts(items);
         setCostCenters(cc);
         setProjects(prj);
-        setUnits(uom);
       } catch (error) {
         console.error('Failed to fetch master data:', error);
       }
@@ -119,24 +124,35 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
     fetchMasterData();
   }, []);
 
+
   // Reset form when modal opens (only when transitioning from closed to open)
   useEffect(() => {
     if (isOpen && !prevIsOpenRef.current) {
       // Using setTimeout to avoid calling setState synchronously in effect
       const timer = setTimeout(() => {
-        setLines(getInitialLines());
-        setDiscountPercent(0);
-        setVatRate(7);
-        setRemarks('');
-        setActiveTab('detail');
-        reset(getDefaultFormValues());
-        setActiveTab('detail');
-        reset(getDefaultFormValues());
+        // Reset ALL local states in Create Mode (!id)
+        if (!id) {
+          setLines(getInitialLines());
+          setDiscountPercent(0);
+          setVatRate(7);
+          setRemarks('');
+          
+          const nextWeek = new Date();
+          nextWeek.setDate(nextWeek.getDate() + 7);
+          setDeliveryDate(nextWeek.toISOString().split('T')[0]);
+          setCreditDays(30);
+          setVendorQuoteNo('');
+          setShippingMethod('');
+          
+          setActiveTab('detail');
+          reset(getDefaultFormValues());
+        }
       }, 0);
       return () => clearTimeout(timer);
     }
     prevIsOpenRef.current = isOpen;
-  }, [isOpen, reset]);
+  }, [isOpen, reset, id]);
+
 
   const showAlert = (message: string) => {
     setAlertState({ show: true, message });
@@ -185,6 +201,14 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
   };
 
   // Product Search
+
+
+  const handleClearLines = () => {
+    if (window.confirm("คุณต้องการล้างรายการสินค้าทั้งหมดใช่หรือไม่?")) {
+        setLines(getInitialLines());
+    }
+  };
+
   const openProductSearch = (index: number) => {
     setActiveRowIndex(index);
     setSearchTerm('');
@@ -200,14 +224,29 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
           item_id: product.item_id,
           item_code: product.item_code,
           item_name: product.item_name,
-          warehouse: '', // Default as ItemMaster doesn't have default warehouse
-          location: '',  // Default
+          warehouse: product.warehouse || '', 
+          location: product.location || '', 
           uom: product.unit_name || '',
-          est_unit_price: 0, // Default to 0
+          est_unit_price: product.standard_cost || 0,
           quantity: 1,
-          est_amount: 0,
+          est_amount: (product.standard_cost || 0) * 1,
         };
         return newLines;
+      });
+    } else {
+      // Append Mode
+      setLines(prev => {
+        const newLine = createEmptyLine();
+        newLine.item_id = product.item_id;
+        newLine.item_code = product.item_code;
+        newLine.item_name = product.item_name;
+        newLine.warehouse = product.warehouse || '';
+        newLine.location = product.location || '';
+        newLine.uom = product.unit_name || '';
+        newLine.est_unit_price = product.standard_cost || 0;
+        newLine.est_amount = (product.standard_cost || 0) * 1;
+        newLine.quantity = 1;
+        return [...prev, newLine];
       });
     }
     setIsProductModalOpen(false);
@@ -224,20 +263,55 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
     if (vendor) {
       setValue("preferred_vendor_id", vendor.vendor_id);
       setValue("vendor_name", vendor.vendor_name);
+      
+      // Update Credit Days from Vendor Master
+      const terms = vendor.payment_term_days;
+      setCreditDays(terms !== undefined ? terms : 30);
     } else {
       setValue("preferred_vendor_id", undefined);
       setValue("vendor_name", '');
+      
+      // Reset Credit Days to default
+      setCreditDays(30);
     }
   };
 
   const onSubmit: SubmitHandler<PRFormData> = async (data) => {
+    if (!window.confirm(isEditMode ? "คุณต้องการบันทึกการแก้ไขเอกสารนี้ใช่หรือไม่?" : "คุณต้องการบันทึกสร้างเอกสารใหม่ใช่หรือไม่?")) return;
+
+    // 1. Validation Logic
     if (!data.required_date) { showAlert('กรุณาระบุวันที่ต้องการใช้'); return; }
     if (!data.requester_name) { showAlert('กรุณาระบุชื่อผู้ขอซื้อ'); return; }
     if (!data.cost_center_id) { showAlert('กรุณาเลือกศูนย์ต้นทุน'); return; }
     if (!data.purpose) { showAlert('กรุณาระบุวัตถุประสงค์'); return; }
+    if (!shippingMethod) { showAlert('กรุณาเลือกประเภทการขนส่ง'); return; }
+
+    // Check for incomplete lines (has data but no item_code)
+    const incompleteLines = lines.filter(l => !l.item_code && (l.quantity > 0 || l.remark));
+    if (incompleteLines.length > 0) {
+      showAlert('กรุณาเลือกรายการสินค้าให้ครบทุกแถวที่มีข้อมูล');
+      return;
+    }
+
+    const activeLines = lines.filter(l => l.item_code);
+    if (activeLines.length === 0) {
+      showAlert('กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ');
+      return;
+    }
     
-    // 1. Prepare Payload
-    const payload = { ...data, lines: lines.filter(l => l.item_code), total_amount: grandTotal };
+    // 2. Prepare Payload
+    const payload: PRFormData = { 
+      ...data, 
+      lines: activeLines, 
+      total_amount: grandTotal,
+      // Merge Info Bar & Remarks local states
+      delivery_date: deliveryDate,
+      credit_days: creditDays,
+      vendor_quote_no: vendorQuoteNo,
+      shipping_method: shippingMethod,
+      remarks: remarks,
+      requester_name: requesterName // Sync with hardcoded mock name
+    };
 
     try {
         // 2. Create PR
@@ -247,9 +321,11 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
             const submitResult = await prService.submit(newPR.pr_id);
             if (submitResult.success) {
                 window.alert(`บันทึกและส่งอนุมัติสำเร็จ!\nเลขที่: ${newPR.pr_no}\nสถานะ: รออนุมัติ (In Approval)`);
+                onSuccess?.();
                 onClose();
             } else {
                 window.alert(`บันทึกสำเร็จแต่ส่งอนุมัติไม่ผ่าน: ${submitResult.message}`);
+                onSuccess?.();
                 onClose();
             }
         } else {
@@ -258,6 +334,59 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
     } catch (error) {
         console.error('Create PR failed', error);
         showAlert('เกิดข้อผิดพลาดในการเชื่อมต่อระบบ');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!id) return;
+    if (!window.confirm("คุณต้องการลบเอกสารนี้ใช่หรือไม่? (Are you sure you want to delete this PR?)")) return;
+
+    setIsActionLoading(true);
+    try {
+      const success = await prService.delete(id);
+      if (success) {
+        onSuccess?.();
+        onClose();
+      } else {
+        showAlert("ลบเอกสารไม่สำเร็จ");
+      }
+    } catch (error) {
+      console.error(error);
+      showAlert("เกิดข้อผิดพลาดในการลบเอกสาร");
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const handlePrint = () => {
+    console.log("Printing PR:", id);
+    // window.open(`/procurement/pr/print/${id}`, '_blank');
+  };
+
+  const handleCopy = () => {
+    console.log("Copying PR:", id);
+  };
+
+  const handleApprove = async () => {
+    if (!id) return;
+    
+    if (!window.confirm("คุณต้องการอนุมัติเอกสารนี้ใช่หรือไม่?")) return;
+    
+    setIsActionLoading(true);
+    try {
+      const success = await prService.approve(id);
+      if (success) {
+        window.alert("อนุมัติเอกสารเรียบร้อยแล้ว");
+        onSuccess?.(); // Trigger refresh in parent
+        onClose();     // Close modal
+      } else {
+        showAlert("ไม่อนุมัติเอกสารไม่สำเร็จ");
+      }
+    } catch (error) {
+      console.error('Approve PR failed', error);
+      showAlert("เกิดข้อผิดพลาดในการอนุมัติเอกสาร");
+    } finally {
+      setIsActionLoading(false);
     }
   };
 
@@ -277,10 +406,75 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
     <WindowFormLayout
       isOpen={isOpen}
       onClose={onClose}
-      title="ใบขอซื้อ (Purchase Requisition)"
+      title={isEditMode ? "แก้ไขใบขอซื้อ (Edit Purchase Requisition)" : "สร้างใบขอซื้อ (Create Purchase Requisition)"}
       titleIcon={<div className="bg-red-500 p-1 rounded-md shadow-sm"><FileText size={14} strokeWidth={3} /></div>}
-      headerColor="bg-blue-600"
-      footer={<PRFooter onSave={handleSubmit(onSubmit)} onClose={onClose} />}
+      headerColor="bg-blue-600 [&_div.flex.items-center.space-x-1>button:not(:last-child)]:hidden"
+      footer={
+        <div className="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-between items-center bg-white dark:bg-gray-900 sticky bottom-0 z-10 gap-x-2">
+            {/* Left Side: Document Actions */}
+            <div className="flex items-center gap-2">
+                 {isEditMode && (
+                    <>
+                        <button 
+                            type="button" 
+                            onClick={handleDelete}
+                            disabled={isSubmitting || isActionLoading}
+                            className="flex items-center justify-center px-4 py-2 border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md text-sm font-medium transition-colors disabled:opacity-50"
+                        >
+                            <Trash2 size={16} className="mr-2" /> ลบเอกสาร
+                        </button>
+                        <button 
+                            type="button" 
+                            onClick={handlePrint}
+                            disabled={isSubmitting || isActionLoading}
+                            className="flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md text-sm font-medium transition-colors disabled:opacity-50"
+                        >
+                            <Printer size={16} className="mr-2" /> พิมพ์
+                        </button>
+                        <button 
+                            type="button" 
+                            onClick={handleCopy}
+                            disabled={isSubmitting || isActionLoading}
+                            className="flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md text-sm font-medium transition-colors disabled:opacity-50"
+                        >
+                            <Copy size={16} className="mr-2" /> คัดลอก
+                        </button>
+                    </>
+                 )}
+            </div>
+
+            {/* Right Side: Form Controls */}
+            <div className="flex items-center gap-2">
+                <button 
+                    type="button" 
+                    onClick={onClose}
+                    disabled={isSubmitting || isActionLoading}
+                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md text-sm font-medium transition-colors disabled:opacity-50"
+                >
+                    ยกเลิก
+                </button>
+                {isEditMode && (
+                    <button 
+                        type="button" 
+                        onClick={handleApprove}
+                        disabled={isSubmitting || isActionLoading}
+                        className="px-6 py-2 bg-green-600 text-white hover:bg-green-700 rounded-md text-sm font-medium shadow-sm transition-colors disabled:opacity-50 flex items-center gap-2"
+                    >
+                        <CheckCircle size={16} />
+                        อนุมัติ
+                    </button>
+                )}
+                <button 
+                    type="button" 
+                    onClick={handleSubmit(onSubmit)}
+                    disabled={isSubmitting || isActionLoading}
+                    className="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md text-sm font-medium shadow-sm transition-colors disabled:opacity-50"
+                >
+                    บันทึก
+                </button>
+            </div>
+        </div>
+      }
     >
       {alertState.show && (
         <SystemAlert 
@@ -334,11 +528,11 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                       </td>
                       <td className="px-3 py-3 font-medium text-gray-900 dark:text-cyan-100">{p.item_code}</td>
                       <td className="px-3 py-3 text-gray-700 dark:text-gray-300">{p.item_name}</td>
-                      <td className="px-3 py-3 text-gray-500 dark:text-gray-400 text-xs"></td>
-                      <td className="px-3 py-3 text-center text-gray-600 dark:text-gray-400"></td>
-                      <td className="px-3 py-3 text-center text-gray-600 dark:text-gray-400"></td>
+                      <td className="px-3 py-3 text-gray-500 dark:text-gray-400 text-xs">{p.description}</td>
+                      <td className="px-3 py-3 text-center text-gray-600 dark:text-gray-400">{p.warehouse}</td>
+                      <td className="px-3 py-3 text-center text-gray-600 dark:text-gray-400">{p.location}</td>
                       <td className="px-3 py-3 text-center text-gray-600 dark:text-gray-400">{p.unit_name}</td>
-                      <td className="px-3 py-3 text-right text-emerald-600 dark:text-emerald-400 font-medium">0.00</td>
+                      <td className="px-3 py-3 text-right text-emerald-600 dark:text-emerald-400 font-medium">{p.standard_cost?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -348,8 +542,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
         </div>
       )}
 
-      {/* Form Content */}
-      <form className="flex-1 overflow-auto bg-gray-100 dark:bg-gray-800 p-1.5 space-y-1">
+      <div className="flex-1 overflow-auto bg-gray-100 dark:bg-gray-800 p-1.5 space-y-1">
         <div className={cardClass}>
           <PRHeader 
             register={register} 
@@ -370,23 +563,38 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                   <th className="px-2 py-1.5 text-left font-normal border-r border-blue-500 whitespace-nowrap w-48">วันที่กำหนดส่ง</th>
                   <th className="px-2 py-1.5 text-left font-normal border-r border-blue-500 whitespace-nowrap w-24">เครดิต (วัน)</th>
                   <th className="px-2 py-1.5 text-left font-normal border-r border-blue-500 whitespace-nowrap">Vendor Quote No.</th>
-                  <th className="px-2 py-1.5 text-left font-normal border-r border-blue-500 whitespace-nowrap">ขนส่งโดย</th>
+                  <th className="px-2 py-1.5 text-left font-normal border-r border-blue-500 whitespace-nowrap">ขนส่งโดย <span className="text-red-300">*</span></th>
                   <th className="px-2 py-1.5 text-left font-normal whitespace-nowrap">ผู้ขอซื้อ</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
                   <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700">
-                    <input type="date" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)} className="bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-sm w-full h-6 text-xs focus:outline-none focus:border-blue-500" />
+                    <input type="date" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)} className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-sm w-full h-6 text-xs focus:outline-none focus:border-blue-500" />
                   </td>
                   <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700 text-center">
-                    <input type="number" value={creditDays} onChange={(e) => setCreditDays(parseInt(e.target.value) || 0)} className="bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-sm w-full h-6 text-xs text-center focus:outline-none focus:border-blue-500" />
+                    <input 
+                      type="number" 
+                      value={creditDays} 
+                      readOnly
+                      className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded-sm w-full h-6 text-xs text-center focus:outline-none cursor-not-allowed" 
+                    />
                   </td>
                   <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700 font-bold">
-                    <input value={vendorQuoteNo} onChange={(e) => setVendorQuoteNo(e.target.value)} className="bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-sm w-full h-6 text-xs focus:outline-none focus:border-blue-500" />
+                    <input 
+                      value={vendorQuoteNo} 
+                      onChange={(e) => setVendorQuoteNo(e.target.value)} 
+                      placeholder="ระบุเลขที่ใบเสนอราคา"
+                      className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-sm w-full h-6 text-xs focus:outline-none focus:border-blue-500" 
+                    />
                   </td>
                   <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700 font-bold">
-                    <select value={shippingMethod} onChange={(e) => setShippingMethod(e.target.value)} className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-sm w-full h-6 text-xs focus:outline-none focus:border-blue-500">
+                    <select 
+                      value={shippingMethod} 
+                      onChange={(e) => setShippingMethod(e.target.value)} 
+                      className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-sm w-full h-6 text-xs focus:outline-none focus:border-blue-500"
+                    >
+                      <option value="">-- เลือก --</option>
                       <option value="รถยนต์">รถยนต์</option>
                       <option value="รถบรรทุก">รถบรรทุก</option>
                       <option value="ไปรษณีย์">ไปรษณีย์</option>
@@ -394,7 +602,12 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                     </select>
                   </td>
                   <td className="px-2 py-1 font-bold">
-                    <input value={requesterName} onChange={(e) => setRequesterName(e.target.value)} className="bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-sm w-full h-6 text-xs focus:outline-none focus:border-blue-500" />
+                    <input 
+                      value={requesterName} 
+                      readOnly
+                      title="ชื่อผู้ขอซื้อ (ดึงจากระบบอัตโนมัติ)"
+                      className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded-sm w-full h-6 text-xs focus:outline-none cursor-not-allowed" 
+                    />
                   </td>
                 </tr>
               </tbody>
@@ -403,12 +616,26 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
         </div>
 
         {/* Item Table */}
-        <div className={cardClass}>
-          <div className="px-4 py-4 overflow-x-auto bg-blue-50 dark:bg-gray-800 min-h-[250px]">
-            <table className="w-full min-w-[1200px] border-collapse bg-white dark:bg-gray-900 shadow-sm text-sm border border-gray-200 dark:border-gray-700">
+        {/* Item Table */}
+        {/* Unified Card Section (Product Items) */}
+        <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800 shadow-sm">
+          
+          {/* 1. Top Section: Toolbar (Header) */}
+          <div className="flex justify-between items-center px-4 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+             <div className="flex items-center font-bold text-gray-700 dark:text-gray-200">
+               <FileBox className="text-blue-600 mr-2" size={20} />
+               รายการสินค้า (Products)
+             </div>
+             <div className="flex items-center gap-2">
+             </div>
+          </div>
+
+          {/* 2. Bottom Section: Table (Body) */}
+          <div className="p-0 overflow-x-auto">
+            <table className="w-full min-w-[1200px] border-collapse bg-white dark:bg-gray-900 text-sm">
               <thead className="bg-blue-600 text-white text-xs">
                 <tr>
-                  <th className="p-2 w-12 text-center border-r border-blue-600/50 sticky left-0 z-10 bg-blue-700">No.</th>
+                  <th className="p-2 w-12 text-center border-r border-blue-500 sticky left-0 z-10 bg-blue-600">No.</th>
                   <th className="p-2 w-24 text-center border-r border-blue-500">รหัสสินค้า</th>
                   <th className="p-2 min-w-[180px] text-center border-r border-blue-500">ชื่อสินค้า</th>
                   <th className="p-2 w-16 text-center border-r border-blue-500">คลัง</th>
@@ -418,7 +645,16 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                   <th className="p-2 w-24 text-center border-r border-blue-500">ราคา/หน่วย</th>
                   <th className="p-2 w-20 text-center border-r border-blue-500">ส่วนลด</th>
                   <th className="p-2 w-24 text-center border-r border-blue-500">จำนวนเงิน</th>
-                  <th className="p-2 w-24 text-center"><Triangle size={12} fill="white" className="inline transform rotate-180" /></th>
+                  <th className="p-2 w-24 text-center">
+                    <button 
+                        type="button" 
+                        onClick={handleClearLines} 
+                        className="text-white hover:text-red-200 transition-colors"
+                        title="ล้างค่าทั้งหมด"
+                    >
+                        <Eraser size={14} />
+                    </button>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -426,35 +662,29 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                   const lineDiscount = line.discount || 0;
                   const lineTotal = (line.quantity * line.est_unit_price) - lineDiscount;
                   return (
-                    <tr key={index} className="border-b border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-800">
+                    <tr key={index} className="border-b border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-800 transition-colors">
                       <td className="p-1 text-center bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold border-r border-gray-300 dark:border-gray-600 sticky left-0 z-10">{index + 1}</td>
                       <td className={tdBaseClass}><input value={line.item_code} onChange={(e) => updateLine(index, 'item_code', e.target.value)} className={`${tableInputClass} text-center`} /></td>
                       <td className={tdBaseClass}><input value={line.item_name} onChange={(e) => updateLine(index, 'item_name', e.target.value)} className={tableInputClass} /></td>
                       <td className={tdBaseClass}><input value={line.warehouse || ''} onChange={(e) => updateLine(index, 'warehouse', e.target.value)} className={`${tableInputClass} text-center`} /></td>
                       <td className={tdBaseClass}><input value={line.location || ''} onChange={(e) => updateLine(index, 'location', e.target.value)} className={`${tableInputClass} text-center`} /></td>
                       <td className={tdBaseClass}>
-                        <select 
+                        <input 
+                          type="text"
                           value={line.uom} 
                           onChange={(e) => updateLine(index, 'uom', e.target.value)} 
-                          className={`${tableInputClass} text-center !px-1`}
-                        >
-                          <option value="">เลือก</option>
-                          {units.map(unit => (
-                            <option key={unit.unit_id} value={unit.unit_name}>
-                              {unit.unit_name}
-                            </option>
-                          ))}
-                        </select>
+                          className={`${tableInputClass} text-center`}
+                        />
                       </td>
                       <td className={tdBaseClass}><input type="number" value={line.quantity || ''} onChange={(e) => updateLine(index, 'quantity', parseFloat(e.target.value) || 0)} className={`${tableInputClass} text-center`} /></td>
                       <td className={tdBaseClass}><input type="number" value={line.est_unit_price || ''} onChange={(e) => updateLine(index, 'est_unit_price', parseFloat(e.target.value) || 0)} className={`${tableInputClass} text-center`} /></td>
                       <td className={tdBaseClass}><input type="number" value={line.discount || ''} onChange={(e) => updateLine(index, 'discount', parseFloat(e.target.value) || 0)} className={`${tableInputClass} text-center`} /></td>
                       <td className={`${tdBaseClass} text-right font-bold pr-2 text-gray-700 dark:text-gray-300`}>{lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                       <td className="p-1">
-                        <div className="flex justify-center items-center space-x-1 h-8">
-                          <button type="button" className="text-green-600 hover:text-green-800" title="ค้นหา" onClick={() => openProductSearch(index)}><Search size={16} /></button>
-                          <button type="button" className="text-orange-500 hover:text-orange-700" onClick={() => clearLine(index)} title="ล้าง"><Eraser size={16} /></button>
-                          <button type="button" className="text-red-500 hover:text-red-700" onClick={() => removeLine(index)} title="ลบ"><Trash2 size={16} /></button>
+                        <div className="flex justify-center items-center space-x-2 h-8">
+                          <button type="button" className="text-blue-600 hover:text-blue-800 transition-colors" title="ค้นหา" onClick={() => openProductSearch(index)}><Search size={16} /></button>
+                          <button type="button" className="text-orange-500 hover:text-orange-700 transition-colors" onClick={() => clearLine(index)} title="ล้างค่า"><Eraser size={16} /></button>
+                          <button type="button" className="text-red-500 hover:text-red-700 transition-colors" onClick={() => removeLine(index)} title="ลบ"><Trash2 size={16} /></button>
                         </div>
                       </td>
                     </tr>
@@ -462,7 +692,11 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 })}
               </tbody>
             </table>
-            <button type="button" onClick={addLine} className="mt-2 flex items-center px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-sm hover:bg-gray-200 dark:hover:bg-gray-600 text-xs font-bold border border-gray-300 dark:border-gray-600"><Plus size={14} className="mr-1" /> เพิ่มรายการ</button>
+          </div>
+
+          {/* 3. Footer Section: Add Button */}
+          <div className="p-2 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+            <button type="button" onClick={addLine} className="flex items-center px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-sm hover:bg-gray-50 dark:hover:bg-gray-600 text-xs font-bold shadow-sm transition-colors"><Plus size={14} className="mr-1" /> เพิ่มรายการ</button>
           </div>
         </div>
 
@@ -522,7 +756,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose }) => {
             {activeTab === 'history' && <div className="text-gray-500 dark:text-gray-400 text-sm">ประวัติการแก้ไข...</div>}
           </div>
         </div>
-      </form>
+      </div>
     </WindowFormLayout>
   );
 };

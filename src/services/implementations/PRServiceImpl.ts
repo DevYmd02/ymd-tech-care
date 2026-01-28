@@ -8,8 +8,6 @@ import type {
   IPRService,
   PRListParams,
   PRListResponse,
-  ApprovalRequest,
-  ApprovalResponse,
   ConvertPRRequest,
 } from '../interfaces/IPRService';
 import type { PRHeader, PRFormData } from '../../types/pr-types';
@@ -92,16 +90,13 @@ export class PRServiceImpl implements IPRService {
     }
   }
 
-  async approve(request: ApprovalRequest): Promise<ApprovalResponse> {
+  async approve(prId: string): Promise<boolean> {
     try {
-      const response = await api.post<ApprovalResponse>(ENDPOINTS.approve(request.pr_id), {
-        action: request.action,
-        remark: request.remark,
-      });
-      return response.data;
+      await api.post(ENDPOINTS.approve(prId), { action: 'APPROVE' });
+      return true;
     } catch (error) {
       logger.error('[PRServiceImpl] approve error:', error);
-      return { success: false, message: 'เกิดข้อผิดพลาดในการอนุมัติ' };
+      return false;
     }
   }
 

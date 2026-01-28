@@ -1,18 +1,16 @@
 /**
  * @file MockPRService.ts
- * @description Mock implementation for PR Service
- * @refactored Enforce immutable state management with structuredClone
+ * @description Mock implementation for PR Service with full data persistence.
+ * @refactored Enforce immutable state management with structuredClone and full field preservation.
  */
 
 import type {
   IPRService,
   PRListParams,
   PRListResponse,
-  ApprovalRequest,
-  ApprovalResponse,
   ConvertPRRequest,
 } from '../interfaces/IPRService';
-import type { PRHeader, PRFormData, ApprovalTask } from '../../types/pr-types';
+import type { PRHeader, PRFormData, PRLine, ApprovalTask } from '../../types/pr-types';
 import { MOCK_PRS } from '../../__mocks__/procurementMocks';
 import { getMockFlowWithSteps, MOCK_APPROVERS } from '../../__mocks__/approvalFlowMocks';
 
@@ -22,6 +20,7 @@ export class MockPRService implements IPRService {
   private prs: PRHeader[];
 
   constructor() {
+    // Initialize with a deep copy of mock data
     this.prs = structuredClone(MOCK_PRS);
   }
 
@@ -29,21 +28,18 @@ export class MockPRService implements IPRService {
     logger.log('[MockPRService] getList', params);
     await this.delay(300);
 
-    let filteredPRs = this.prs; // Works with reference initially
+    let filteredPRs = [...this.prs];
 
     if (params) {
-      // Filter by status
       if (params.status && params.status !== 'ALL') {
         filteredPRs = filteredPRs.filter(pr => pr.status === params.status);
       }
 
-      // Filter by requester name (partial match)
       if (params.requester_name) {
         const search = params.requester_name.toLowerCase();
         filteredPRs = filteredPRs.filter(pr => pr.requester_name?.toLowerCase().includes(search));
       }
 
-      // Filter by date range
       if (params.date_from) {
         filteredPRs = filteredPRs.filter(pr => pr.request_date >= params.date_from!);
       }
@@ -51,29 +47,21 @@ export class MockPRService implements IPRService {
         filteredPRs = filteredPRs.filter(pr => pr.request_date <= params.date_to!);
       }
 
-      // Filter by cost center
       if (params.cost_center_id) {
         filteredPRs = filteredPRs.filter(pr => pr.cost_center_id === params.cost_center_id);
       }
 
-      // Filter by project
-      if (params.project_id) {
-        filteredPRs = filteredPRs.filter(pr => pr.project_id === params.project_id);
-      }
-      // Filter by project
       if (params.project_id) {
         filteredPRs = filteredPRs.filter(pr => pr.project_id === params.project_id);
       }
     }
 
-    // Pagination logic
     const page = params?.page || 1;
     const limit = params?.limit || 20;
     const startIndex = (page - 1) * limit;
     const endIndex = startIndex + limit;
     const paginatedPRs = filteredPRs.slice(startIndex, endIndex);
 
-    // Return deep copy
     return {
       data: structuredClone(paginatedPRs),
       total: filteredPRs.length,
@@ -91,46 +79,80 @@ export class MockPRService implements IPRService {
 
   async create(data: PRFormData): Promise<PRHeader | null> {
     logger.log('[MockPRService] create', data);
+    await this.delay(500);
 
+    const now = new Date();
+    const prId = `pr-${Date.now()}`;
+    const prNo = data.pr_no || `PR-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}-${String(this.prs.length + 1).padStart(4, '0')}`;
+
+    // Map lines from PRLineFormData to PRLine (including system fields)
+    const lines: PRLine[] = data.lines.map((l, idx) => ({
+      ...l,
+      pr_line_id: `line-${Date.now()}-${idx}`,
+      pr_id: prId,
+      line_no: idx + 1
+    }));
+
+    // Create the rich PR object preserving ALL incoming fields via spread
     const newPR: PRHeader = {
-      pr_id: `pr-${Date.now()}`,
-      pr_no: `PR-202601-${String(this.prs.length + 1).padStart(4, '0')}`,
+      // 1. Spread all form data first
+      ...data,
+
+      // 2. Mandatory Header System Fields (Overrides fields from data if necessary)
+      pr_id: prId,
+      pr_no: prNo,
       branch_id: 'branch-001',
       requester_user_id: 'user-001',
-      requester_name: 'ผู้ใช้ปัจจุบัน',
-      request_date: new Date().toISOString().split('T')[0],
-      required_date: data.required_date || '',
-      cost_center_id: data.cost_center_id || '',
-      purpose: data.purpose || '',
-      status: 'DRAFT',
-      currency_code: 'THB',
-      total_amount: data.total_amount || 0,
+      requester_name: data.requester_name || 'Anonymous',
+      status: 'PENDING', // Requirement: Default to PENDING
       attachment_count: 0,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      created_at: now.toISOString(),
+      updated_at: now.toISOString(),
       created_by_user_id: 'user-001',
       updated_by_user_id: 'user-001',
+      
+      // 3. Set hydrated lines
+      lines: lines
     };
 
-    // Store copy
+    // Store in internal array
     this.prs.unshift(structuredClone(newPR));
     
-    // Return copy
     return structuredClone(newPR);
   }
 
   async update(prId: string, data: Partial<PRFormData>): Promise<PRHeader | null> {
     logger.log('[MockPRService] update', prId, data);
+    await this.delay(500);
+
     const index = this.prs.findIndex(pr => pr.pr_id === prId);
-    if (index !== -1) {
-      // Create fresh object with merged data
-      const updatedPR = { ...this.prs[index], ...(data as unknown as Partial<PRHeader>) };
-      // Save deep copy to internal state (just in case data props are refs)
-      this.prs[index] = structuredClone(updatedPR);
-      // Return fresh deep copy
-      return structuredClone(updatedPR);
+    if (index === -1) return null;
+
+    const existingPR = this.prs[index];
+
+    // Handle lines update specifically if provided
+    let updatedLines = existingPR.lines;
+    if (data.lines) {
+      updatedLines = data.lines.map((l, idx) => ({
+        ...l,
+        pr_line_id: (l as typeof l & { pr_line_id?: string }).pr_line_id || `line-${Date.now()}-${idx}`,
+        pr_id: prId,
+        line_no: idx + 1
+      })) as PRLine[];
     }
-    return null;
+
+    // Merge existing object with updates using spread
+    const updatedPR: PRHeader = {
+      ...existingPR,
+      ...data,
+      requester_name: data.requester_name || existingPR.requester_name,
+      lines: updatedLines,
+      updated_at: new Date().toISOString()
+    };
+
+    // Save and return
+    this.prs[index] = structuredClone(updatedPR);
+    return structuredClone(updatedPR);
   }
 
   async delete(prId: string): Promise<boolean> {
@@ -171,9 +193,9 @@ export class MockPRService implements IPRService {
       created_at: new Date().toISOString(),
     };
 
-    const updatedPR = {
+    const updatedPR: PRHeader = {
       ...pr,
-      status: 'PENDING' as const,
+      status: 'PENDING',
       approval_tasks: [newTask],
     };
 
@@ -182,101 +204,33 @@ export class MockPRService implements IPRService {
     return { success: true, message: `ส่งอนุมัติเรียบร้อย (เสนอ: ${approverName})` };
   }
 
-  async approve(request: ApprovalRequest): Promise<ApprovalResponse> {
-    logger.log('[MockPRService] approve', request);
+  async approve(prId: string): Promise<boolean> {
+    logger.log('[MockPRService] approve', prId);
+    await this.delay(500);
 
-    const prIndex = this.prs.findIndex(pr => pr.pr_id === request.pr_id);
-    if (prIndex === -1) return { success: false, message: 'PR not found' };
+    const prIndex = this.prs.findIndex(pr => pr.pr_id === prId);
+    if (prIndex === -1) return false;
 
-    // Work on a deep copy to ensure atomic update
-    const pr = structuredClone(this.prs[prIndex]);
-    const currentTasks = [...(pr.approval_tasks || [])];
-    const pendingTaskIndex = currentTasks.findIndex(t => t.status === 'PENDING');
-
-    if (pendingTaskIndex === -1) {
-      return { success: false, message: 'ไม่พบงานที่รออนุมัติ' };
-    }
-
-    const updatedTask: ApprovalTask = {
-      ...currentTasks[pendingTaskIndex],
-      status: request.action === 'APPROVE' ? 'APPROVED' : 'REJECTED',
-      approved_at: new Date().toISOString(),
-      remark: request.remark,
-    };
-
-    const newTasks = [...currentTasks];
-    newTasks[pendingTaskIndex] = updatedTask;
-
-    if (request.action === 'REJECT') {
-      const rejectedPR = {
-        ...pr,
-        status: 'CANCELLED' as const,
-        approval_tasks: newTasks,
-      };
-      
-      this.prs[prIndex] = rejectedPR; // Save
-      
-      return { success: true, message: 'ไม่อนุมัติเอกสารเรียบร้อย', approval_task: structuredClone(updatedTask) };
-    }
-
-    const flowConfig = getMockFlowWithSteps('PR', pr.total_amount);
-    if (flowConfig && flowConfig.approval_flow_steps) {
-      const currentStepSeq = pendingTaskIndex + 1;
-      const nextStep = flowConfig.approval_flow_steps.find(s => s.sequence_no === currentStepSeq + 1);
-
-      if (nextStep) {
-        const approverName = Object.values(MOCK_APPROVERS).find(u => u.id === nextStep.approver_user_id)?.name || 'Unknown';
-        const approverPos = Object.values(MOCK_APPROVERS).find(u => u.id === nextStep.approver_user_id)?.position || 'Unknown';
-
-        const nextTask: ApprovalTask = {
-          task_id: `task-${Date.now()}-next`,
-          document_type: 'PR',
-          document_id: pr.pr_id,
-          document_no: pr.pr_no,
-          approver_user_id: nextStep.approver_user_id,
-          approver_name: approverName,
-          approver_position: approverPos,
-          status: 'PENDING',
-          created_at: new Date().toISOString(),
-        };
-
-        const progressingPR = {
-          ...pr,
-          status: 'PENDING' as const,
-          approval_tasks: [...newTasks, nextTask],
-        };
-
-        this.prs[prIndex] = progressingPR;
-
-        return { success: true, message: `อนุมัติเรียบร้อย (ส่งต่อ: ${approverName})`, approval_task: structuredClone(updatedTask) };
-      }
-
-      const approvedPR = {
-        ...pr,
-        status: 'APPROVED' as const,
-        approval_tasks: newTasks,
-      };
-
-      this.prs[prIndex] = approvedPR;
-      
-      return { success: true, message: 'อนุมัติเอกสารเสร็จสมบูรณ์', approval_task: structuredClone(updatedTask) };
-    }
-
-    // Default case (should not happen if flow exists)
-    const defaultPR = { 
-        ...pr, 
-        approval_tasks: newTasks 
-    };
-    this.prs[prIndex] = defaultPR;
+    const pr = this.prs[prIndex];
     
-    return { success: true, message: 'บันทึกเรียบร้อย', approval_task: structuredClone(updatedTask) };
+    // Update status to APPROVED
+    const updatedPR: PRHeader = {
+      ...pr,
+      status: 'APPROVED',
+      updated_at: new Date().toISOString()
+    };
+
+    // Update internal state
+    this.prs[prIndex] = structuredClone(updatedPR);
+    
+    return true;
   }
 
   async cancel(prId: string, remark?: string): Promise<{ success: boolean; message: string }> {
     logger.log('[MockPRService] cancel', prId, remark);
     const index = this.prs.findIndex(pr => pr.pr_id === prId);
     if (index !== -1) {
-      const cancelledPR = { ...this.prs[index], status: 'CANCELLED' as const };
+      const cancelledPR: PRHeader = { ...this.prs[index], status: 'CANCELLED' };
       this.prs[index] = cancelledPR;
     }
     return { success: true, message: 'ยกเลิกสำเร็จ (Mock)' };

@@ -38,6 +38,15 @@ export interface PRHeader {
   created_by_user_id: string;       // UUID FK
   updated_by_user_id: string;       // UUID FK
   
+  // New Fields (Info Bar & Remarks & Vendor)
+  delivery_date?: string;           // DATE - วันที่กำหนดส่ง
+  credit_days?: number;             // INTEGER
+  vendor_quote_no?: string;         // VARCHAR(100)
+  shipping_method?: string;         // VARCHAR(100)
+  remarks?: string;                 // TEXT
+  preferred_vendor_id?: string;     // UUID FK → vendor
+  vendor_name?: string;             // VARCHAR(200)
+
   // Relations (populated by API)
   lines?: PRLine[];
   approval_tasks?: ApprovalTask[];
@@ -104,7 +113,7 @@ export interface PRFormData {
   pr_no: string;                    // Auto-generated
   request_date: string;             // วันที่ขอซื้อ
   required_date: string;            // วันที่ต้องการใช้
-  requester_name: string;           // ชื่อผู้ขอ
+  requester_name?: string;           // ชื่อผู้ขอ
   cost_center_id: string;           // ศูนย์ต้นทุน
   project_id?: string;              // โครงการ (optional)
   purpose: string;                  // วัตถุประสงค์
@@ -113,6 +122,13 @@ export interface PRFormData {
   // Vendor Info
   preferred_vendor_id?: string;     // ผู้ขายที่แนะนำ
   vendor_name?: string;             // ชื่อผู้ขาย (สำหรับแสดงผล)
+
+  // New Fields (Info Bar & Remarks)
+  delivery_date?: string;
+  credit_days?: number;
+  vendor_quote_no?: string;
+  shipping_method?: string;
+  remarks?: string;
   
   // Line items
   lines: PRLineFormData[];

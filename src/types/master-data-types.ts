@@ -271,6 +271,10 @@ export interface ItemMaster extends BaseMasterData {
     item_id: string;
     item_code: string;
     item_name: string;
+    description?: string;
+    warehouse?: string;
+    location?: string;
+    standard_cost?: number;
     barcode?: string;
     category_id?: string;
     category_name: string;
@@ -310,6 +314,10 @@ export interface ItemListItem {
     item_id: string;
     item_code: string;
     item_name: string;
+    description?: string;
+    warehouse?: string;
+    location?: string;
+    standard_cost?: number;
     category_name: string;
     unit_name: string;
     is_active: boolean;
