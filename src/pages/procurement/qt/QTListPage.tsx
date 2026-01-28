@@ -99,13 +99,14 @@ export default function QTListPage() {
             id: 'index',
             header: () => <div className="text-center w-full">ลำดับ</div>,
             cell: (info) => <div className="text-center">{info.row.index + 1 + (filters.page - 1) * filters.limit}</div>,
+            footer: () => <div className="absolute left-4 top-1/2 -translate-y-1/2 whitespace-nowrap font-bold text-sm text-gray-700 dark:text-gray-200">ยอดรวมทั้งหมด :</div>,
             size: 40,
             enableSorting: false,
         }),
         columnHelper.accessor('quotation_no', {
             header: 'เลขที่ QT',
             cell: (info) => (
-                <span className="font-semibold text-blue-600 dark:text-blue-400 cursor-pointer hover:underline truncate block tracking-tight" title={info.getValue()}>
+                <span className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline cursor-pointer block" title={info.getValue()}>
                     {info.getValue()}
                 </span>
             ),
@@ -128,7 +129,7 @@ export default function QTListPage() {
                 const item = info.row.original;
                 return (
                     <div>
-                        <div className="font-medium text-gray-800 dark:text-gray-200 truncate" title={info.getValue()}>{info.getValue()}</div>
+                        <span className="text-gray-700 dark:text-gray-200 block truncate" title={info.getValue()}>{info.getValue()}</span>
                         <div className="text-[10px] text-gray-500 dark:text-gray-400 truncate" title={`เครดิต ${item.payment_term_days || '-'} วัน | Lead ${item.lead_time_days || '-'} วัน`}>
                             เครดิต {item.payment_term_days || '-'} วัน | Lead {item.lead_time_days || '-'} วัน
                         </div>
@@ -141,7 +142,7 @@ export default function QTListPage() {
         columnHelper.accessor('rfq_no', {
             header: 'RFQ อ้างอิง',
             cell: (info) => (
-                <span className="text-purple-600 dark:text-purple-400 cursor-pointer hover:underline truncate block tracking-tight" title={info.getValue()}>
+                <span className="text-purple-600 dark:text-purple-400 hover:underline cursor-pointer" title={info.getValue() || ''}>
                     {info.getValue()}
                 </span>
             ),
@@ -161,13 +162,21 @@ export default function QTListPage() {
                     </div>
                 );
             },
+            footer: () => {
+                 const total = data?.data.reduce((sum, item) => sum + item.total_amount, 0) || 0;
+                 return (
+                     <div className="text-right font-bold text-base text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                         {total.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} THB
+                     </div>
+                 );
+            },
             size: 90,
             enableSorting: true,
         }),
         columnHelper.accessor('valid_until', {
             header: () => <div className="text-center">ใช้ได้ถึง</div>,
             cell: (info) => (
-                <div className="text-center text-gray-600 dark:text-gray-300 whitespace-nowrap">
+                <div className="text-gray-600 dark:text-gray-300 whitespace-nowrap">
                     {info.getValue() ? formatThaiDate(info.getValue()!) : '-'}
                 </div>
             ),
@@ -176,7 +185,7 @@ export default function QTListPage() {
         }),
         columnHelper.accessor(row => row.status, {
             id: 'status',
-            header: () => <div className="text-center">สถานะ</div>,
+            header: () => <div className="text-center w-full">สถานะ</div>,
             cell: (info) => (
                 <div className="flex justify-center">
                     <QTStatusBadge status={info.getValue()} />
@@ -187,7 +196,7 @@ export default function QTListPage() {
         }),
         columnHelper.display({
             id: 'actions',
-            header: () => <div className="text-center">จัดการ</div>,
+            header: () => <div className="text-center w-full">จัดการ</div>,
             cell: ({ row }) => {
                 const item = row.original;
                 return (
@@ -216,7 +225,7 @@ export default function QTListPage() {
             size: 165,
             enableSorting: false,
         }),
-    ], [columnHelper, filters.page, filters.limit, handleOpenQCModal]);
+    ], [columnHelper, filters.page, filters.limit, handleOpenQCModal, data?.data]);
 
     // ====================================================================================
     // RENDER
@@ -265,6 +274,7 @@ export default function QTListPage() {
                         }}
                         rowIdField="quotation_id"
                         className="flex-1"
+                        showFooter={true}
                     />
                 </div>
             </PageListLayout>

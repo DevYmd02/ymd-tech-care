@@ -89,13 +89,14 @@ export default function QCListPage() {
             id: 'index',
             header: () => <div className="text-center w-full">ลำดับ</div>,
             cell: (info) => <div className="text-center">{info.row.index + 1 + (filters.page - 1) * filters.limit}</div>,
+            footer: () => <div className="absolute left-4 top-1/2 -translate-y-1/2 whitespace-nowrap font-bold text-sm text-gray-700 dark:text-gray-200">ยอดรวมราคาต่ำสุดทั้งหมด :</div>,
             size: 40,
             enableSorting: false,
         }),
         columnHelper.accessor('qc_no', {
             header: 'เลขที่ใบ QC',
             cell: (info) => (
-                <span className="font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 hover:underline cursor-pointer truncate block" title={info.getValue()}>
+                <span className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline cursor-pointer block" title={info.getValue()}>
                     {info.getValue()}
                 </span>
             ),
@@ -103,13 +104,13 @@ export default function QCListPage() {
             enableSorting: true,
         }),
         columnHelper.accessor('created_at', {
-            header: 'วันที่สร้าง',
+            header: () => <div className="text-left">วันที่สร้าง</div>,
             cell: (info) => (
-                <span className="text-gray-600 dark:text-gray-300 whitespace-nowrap">
+                <div className="text-gray-600 dark:text-gray-300 text-left whitespace-nowrap">
                     {formatThaiDate(info.getValue())}
-                </span>
+                </div>
             ),
-            size: 120,
+            size: 130,
             enableSorting: true,
         }),
         columnHelper.accessor('pr_no', {
@@ -124,13 +125,13 @@ export default function QCListPage() {
         }),
         columnHelper.accessor(row => row.status, {
             id: 'status',
-            header: () => <div className="text-center">สถานะ</div>,
+            header: () => <div className="text-center w-full">สถานะ</div>,
             cell: (info) => (
                 <div className="flex justify-center">
                     <QCStatusBadge status={info.getValue()} />
                 </div>
             ),
-            size: 100,
+            size: 120,
             enableSorting: false,
         }),
         columnHelper.accessor('vendor_count', {
@@ -146,25 +147,33 @@ export default function QCListPage() {
         columnHelper.accessor('lowest_bidder_name', {
             header: 'ผู้เสนอราคาต่ำสุด',
             cell: (info) => (
-                <span className="text-gray-700 dark:text-gray-200 truncate block" title={info.getValue()}>
+                <span className="hover:underline cursor-pointer text-gray-600 dark:text-gray-300 truncate block" title={info.getValue() || ''}>
                     {info.getValue()}
                 </span>
             ),
             enableSorting: false,
         }),
         columnHelper.accessor('lowest_bid_amount', {
-            header: () => <div className="text-right">ราคาต่ำสุด (บาท)</div>,
+            header: () => <div className="text-center w-full">ราคาต่ำสุด (บาท)</div>,
             cell: (info) => (
-                <div className="font-bold text-gray-800 dark:text-white text-right whitespace-nowrap">
+                <div className="font-semibold text-gray-800 dark:text-gray-200 text-center whitespace-nowrap">
                     {info.getValue()?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </div>
             ),
-            size: 120,
+            footer: () => {
+                 const total = data?.data.reduce((sum, item) => sum + (item.lowest_bid_amount || 0), 0) || 0;
+                 return (
+                     <div className="text-center font-bold text-base text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
+                         {total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                     </div>
+                 );
+            },
+            size: 140,
             enableSorting: true,
         }),
         columnHelper.display({
             id: 'actions',
-            header: () => <div className="text-center">จัดการ</div>,
+            header: () => <div className="text-center w-full">จัดการ</div>,
             cell: ({ row }) => {
                 const item = row.original;
                 return (
@@ -189,7 +198,7 @@ export default function QCListPage() {
             size: 100,
             enableSorting: false,
         }),
-    ], [columnHelper, filters.page, filters.limit]);
+    ], [columnHelper, filters.page, filters.limit, data?.data]);
 
     // ====================================================================================
     // RENDER
@@ -230,6 +239,7 @@ export default function QCListPage() {
                         }}
                         rowIdField="qc_id"
                         className="flex-1"
+                        showFooter={true}
                     />
                 </div>
             </PageListLayout>

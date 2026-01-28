@@ -7,18 +7,19 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { FileText, Plus, Eye, Edit, Trash2 } from 'lucide-react';
+import { FileText, Plus, Eye, Send } from 'lucide-react';
 import { formatThaiDate } from '@utils/dateUtils';
 import { PageListLayout, FilterFormBuilder, RFQStatusBadge, SmartTable } from '@shared';
 import type { FilterFieldConfig } from '@shared/FilterFormBuilder';
 import { useTableFilters, type TableFilters } from '@hooks';
 import { createColumnHelper } from '@tanstack/react-table';
 import type { ColumnDef } from '@tanstack/react-table';
+import QTFormModal from '../qt/components/QTFormModal';
 
 // Services & Types
 import { rfqService } from '@services/rfqService';
-import type { RFQFilterCriteria } from '@project-types/rfq-types';
-import type { RFQHeader, RFQStatus } from '@project-types/rfq-types';
+import type { RFQFilterCriteria, RFQHeader } from '@project-types/rfq-types';
+import type { RFQStatus } from '@project-types/rfq-types';
 import RFQFormModal from './components/RFQFormModal';
 
 // ====================================================================================
@@ -80,11 +81,19 @@ export default function RFQListPage() {
         placeholderData: keepPreviousData,
     });
 
+    // Modal States
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isQTModalOpen, setIsQTModalOpen] = useState(false);
+    const [selectedRFQForQT, setSelectedRFQForQT] = useState<RFQHeader | null>(null);
 
     // Handlers
     const handleFilterChange = (name: RFQFilterKeys, value: string) => {
         setFilters({ [name]: value });
+    };
+
+    const handleOpenQTModal = (rfq: RFQHeader) => {
+        setSelectedRFQForQT(rfq);
+        setIsQTModalOpen(true);
     };
 
     // Columns
@@ -94,7 +103,7 @@ export default function RFQListPage() {
         columnHelper.display({
             id: 'index',
             header: () => <div className="text-center w-full">ลำดับ</div>,
-            cell: (info) => <div className="text-center">{info.row.index + 1 + (filters.page - 1) * filters.limit}</div>,
+            cell: (info) => <div className="text-center w-full">{info.row.index + 1 + (filters.page - 1) * filters.limit}</div>,
             size: 40,
             enableSorting: false,
         }),
@@ -149,7 +158,7 @@ export default function RFQListPage() {
             enableSorting: true,
         }),
         columnHelper.accessor('vendor_count', {
-            header: () => <div className="text-center">Vendors</div>,
+            header: () => <div className="text-center w-full">Vendors</div>,
             cell: (info) => (
                 <div className="text-center text-gray-700 dark:text-gray-200">
                     <span className="font-semibold">{info.getValue() ?? 0}</span> ราย
@@ -160,7 +169,7 @@ export default function RFQListPage() {
         }),
         columnHelper.accessor(row => row.status, {
             id: 'status',
-            header: () => <div className="text-center">สถานะ</div>,
+            header: () => <div className="text-center w-full">สถานะ</div>,
             cell: (info) => (
                 <div className="flex justify-center">
                     <RFQStatusBadge status={info.getValue()} />
@@ -171,7 +180,7 @@ export default function RFQListPage() {
         }),
         columnHelper.display({
             id: 'actions',
-            header: () => <div className="text-center">จัดการ</div>,
+            header: () => <div className="text-center w-full">จัดการ</div>,
             cell: ({ row }) => {
                 const item = row.original;
                 return (
@@ -179,20 +188,45 @@ export default function RFQListPage() {
                         <button className="p-1 text-gray-500 hover:text-blue-600 transition-colors" title="ดูรายละเอียด">
                             <Eye size={18} />
                         </button>
+                        
                         {item.status === 'DRAFT' && (
-                            <>
-                                <button className="p-1 text-blue-500 hover:text-blue-700 transition-colors" title="แก้ไข">
-                                    <Edit size={18} />
-                                </button>
-                                <button className="p-1 text-red-500 hover:text-red-700 transition-colors" title="ลบ">
-                                    <Trash2 size={18} />
-                                </button>
-                            </>
+                            <button 
+                                className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1 transition-colors shadow-sm"
+                                title="ส่ง RFQ"
+                            >
+                                <Send size={14} />
+                                ส่ง RFQ
+                            </button>
                         )}
+
+                        {item.status === 'SENT' && (
+                            <button 
+                                onClick={() => handleOpenQTModal(item)}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1 transition-colors shadow-sm"
+                                title="บันทึกราคา"
+                            >
+                                <FileText size={14} />
+                                บันทึกราคา
+                            </button>
+                        )}
+
+                         {/* Debug/Legacy actions if needed, or remove them as per new design */}
+                         {/* 
+                         {item.status === 'DRAFT' && (
+                             <>
+                                 <button className="p-1 text-blue-500 hover:text-blue-700 transition-colors" title="แก้ไข">
+                                     <Edit size={18} />
+                                 </button>
+                                 <button className="p-1 text-red-500 hover:text-red-700 transition-colors" title="ลบ">
+                                     <Trash2 size={18} />
+                                 </button>
+                             </>
+                         )}
+                         */}
                     </div>
                 );
             },
-            size: 100,
+            size: 160,
             enableSorting: false,
         }),
     ], [columnHelper, filters.page, filters.limit]);
@@ -253,6 +287,19 @@ export default function RFQListPage() {
                 onClose={() => setIsCreateModalOpen(false)}
                 onSuccess={() => {
                     refetch();
+                }}
+            />
+
+            <QTFormModal
+                isOpen={isQTModalOpen}
+                onClose={() => {
+                    setIsQTModalOpen(false);
+                    setSelectedRFQForQT(null);
+                }}
+                initialRFQ={selectedRFQForQT}
+                onSuccess={() => {
+                   refetch();
+                   setIsQTModalOpen(false);
                 }}
             />
         </>

@@ -32,6 +32,7 @@ interface SmartTableProps<TData> {
     onRowSelectionChange?: (selectedIds: string[]) => void;
     rowIdField?: keyof TData; // Field to use as ID for selection (default: 'id')
     hoverable?: boolean; // Enable/disable hover effect (default: true)
+    showFooter?: boolean; // Enable/disable footer row (default: false)
 }
 
 export function SmartTable<TData>({
@@ -45,6 +46,7 @@ export function SmartTable<TData>({
     onRowSelectionChange,
     rowIdField = 'id' as keyof TData,
     hoverable = true,
+    showFooter = false,
 }: SmartTableProps<TData>) {
     const [rowSelection, setRowSelection] = React.useState<Record<string, boolean>>({});
 
@@ -118,7 +120,7 @@ export function SmartTable<TData>({
                     className="w-full table-fixed text-left text-sm"
                     style={{ minWidth: table.getTotalSize() }}
                 >
-                    <thead className="bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-200 uppercase text-xs sticky top-0 z-10">
+                    <thead className="bg-blue-50 dark:bg-gray-700 text-gray-600 dark:text-gray-200 uppercase text-xs sticky top-0 z-10">
                         {table.getHeaderGroups().map(headerGroup => (
                             <tr key={headerGroup.id} className="border-b border-gray-200 dark:border-gray-600">
                                 {headerGroup.headers.map(header => {
@@ -158,9 +160,9 @@ export function SmartTable<TData>({
                                     key={row.id}
                                     onClick={() => onRowClick && onRowClick(row.original)}
                                     className={`
-                                        group transition-colors border-b border-gray-50 dark:border-gray-800 last:border-none
+                                        group transition-colors duration-150 border-b border-gray-50 dark:border-gray-800 last:border-none
                                         ${onRowClick ? 'cursor-pointer' : ''}
-                                        ${hoverable ? (onRowClick ? 'hover:bg-blue-50 dark:hover:bg-blue-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-750') : ''}
+                                        ${hoverable ? 'hover:bg-blue-50 dark:hover:bg-gray-700' : ''}
                                     `}
                                 >
                                     {row.getVisibleCells().map(cell => (
@@ -188,6 +190,24 @@ export function SmartTable<TData>({
                             </tr>
                         )}
                     </tbody>
+                    {showFooter && (
+                        <tfoot className="bg-blue-50 dark:bg-gray-700 font-bold text-gray-700 dark:text-gray-200 sticky bottom-0 z-10 border-t-2 border-gray-300 dark:border-gray-600 shadow-sm">
+                            {table.getFooterGroups().map(footerGroup => (
+                                <tr key={footerGroup.id}>
+                                    {footerGroup.headers.map(header => (
+                                        <td key={header.id} className="px-4 py-2 relative">
+                                            {header.isPlaceholder
+                                                ? null
+                                                : flexRender(
+                                                    header.column.columnDef.footer,
+                                                    header.getContext()
+                                                )}
+                                        </td>
+                                    ))}
+                                </tr>
+                            ))}
+                        </tfoot>
+                    )}
                 </table>
             </div>
 

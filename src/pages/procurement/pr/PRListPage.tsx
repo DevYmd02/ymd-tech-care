@@ -106,13 +106,14 @@ export default function PRListPage() {
             id: 'index',
             header: () => <div className="text-center w-full">ลำดับ</div>,
             cell: (info) => <div className="text-center">{info.row.index + 1 + (filters.page - 1) * filters.limit}</div>,
+            footer: () => <div className="absolute left-4 top-1/2 -translate-y-1/2 whitespace-nowrap font-bold text-sm text-gray-700 dark:text-gray-200">ยอดรวมทั้งหมด :</div>,
             size: 40,
             enableSorting: false,
         }),
         columnHelper.accessor('pr_no', {
             header: 'เลขที่เอกสาร',
             cell: (info) => (
-                <span className="font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer text-xs truncate block" title={info.getValue()}>
+                <span className="font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer truncate block" title={info.getValue()}>
                     {info.getValue()}
                 </span>
             ),
@@ -122,7 +123,7 @@ export default function PRListPage() {
         columnHelper.accessor('request_date', {
             header: 'วันที่',
             cell: (info) => (
-                <span className="text-gray-600 dark:text-gray-300 text-xs whitespace-nowrap">
+                <span className="text-gray-600 dark:text-gray-300 whitespace-nowrap">
                     {formatThaiDate(info.getValue())}
                 </span>
             ),
@@ -132,7 +133,7 @@ export default function PRListPage() {
         columnHelper.accessor('requester_name', {
             header: 'ผู้ขอ',
             cell: (info) => (
-                <div className="font-medium text-gray-700 dark:text-gray-200 text-xs truncate" title={info.getValue()}>
+                <div className="font-medium text-gray-700 dark:text-gray-200 truncate" title={info.getValue()}>
                     {info.getValue()}
                 </div>
             ),
@@ -145,7 +146,7 @@ export default function PRListPage() {
                 const id = info.getValue()?.toLowerCase();
                 const department = mockCostCenters.find(c => c.cost_center_id.toLowerCase() === id)?.cost_center_name;
                 return (
-                    <span className="truncate block text-gray-600 dark:text-gray-300 text-xs" title={department || '-'}>
+                    <span className="truncate block text-gray-600 dark:text-gray-300" title={department || '-'}>
                         {department || '-'}
                     </span>
                 );
@@ -167,17 +168,25 @@ export default function PRListPage() {
         columnHelper.accessor(row => row.lines?.length || 0, {
             id: 'items',
             header: () => <div className="text-center w-full">รายการ</div>,
-            cell: (info) => <div className="text-center text-gray-600 dark:text-gray-300 text-xs">{info.getValue()}</div>,
+            cell: (info) => <div className="text-center text-gray-600 dark:text-gray-300">{info.getValue()}</div>,
             size: 60,
             enableSorting: false,
         }),
         columnHelper.accessor('total_amount', {
-            header: () => <div className="text-right w-full">ยอดรวม</div>,
+            header: () => <div className="text-right w-full">ยอดรวม (บาท)</div>,
             cell: (info) => (
-                <div className="font-semibold text-gray-800 dark:text-gray-200 text-right text-xs whitespace-nowrap">
+                <div className="font-semibold text-gray-800 dark:text-gray-200 text-right whitespace-nowrap">
                     {info.getValue().toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </div>
             ),
+            footer: () => {
+                const total = data?.data.reduce((sum, item) => sum + item.total_amount, 0) || 0;
+                return (
+                    <div className="text-right font-bold text-base text-blue-600 dark:text-blue-400 whitespace-nowrap">
+                        {total.toLocaleString('en-US', { minimumFractionDigits: 2 })} บาท
+                    </div>
+                );
+            },
             size: 100,
             enableSorting: true,
         }),
@@ -211,11 +220,11 @@ export default function PRListPage() {
                             >
                                 <FileText size={12} /> สร้าง RFQ
                             </button>
-                        ) : item.status !== 'DRAFT' ? (
+                        ) : item.status !== 'DRAFT' && item.status !== 'CANCELLED' ? (
                             <button 
                                 disabled
                                 className="bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 text-[10px] font-bold px-2 py-1 rounded shadow-sm cursor-not-allowed flex items-center gap-0.5 whitespace-nowrap"
-                                title={item.status === 'PENDING' ? 'ต้องอนุมัติก่อนจึงจะสร้าง RFQ ได้' : 'ไม่สามารถสร้าง RFQ ได้ (สถานะ: ยกเลิก)'}
+                                title="ต้องอนุมัติก่อนจึงจะสร้าง RFQ ได้"
                             >
                                 <FileText size={12} /> สร้าง RFQ
                             </button>
@@ -226,7 +235,7 @@ export default function PRListPage() {
             size: 100,
             enableSorting: false,
         }),
-    ], [columnHelper, filters.page, filters.limit]); // Re-calculate index when page changes
+    ], [columnHelper, filters.page, filters.limit, data?.data]); // Re-calculate index when page changes
 
     // ====================================================================================
     // RENDER
@@ -267,8 +276,8 @@ export default function PRListPage() {
                             onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 })
                         }}
                         rowIdField="pr_id"
-                        hoverable={false}
                         className="flex-1"
+                        showFooter={true}
                     />
                 </div>
             </PageListLayout>

@@ -87,6 +87,7 @@ export default function POListPage() {
             id: 'index',
             header: () => <div className="text-center w-full">ลำดับ</div>,
             cell: (info) => <div className="text-center">{info.row.index + 1 + (filters.page - 1) * filters.limit}</div>,
+            footer: () => <div className="absolute left-4 top-1/2 -translate-y-1/2 whitespace-nowrap font-bold text-sm text-gray-700 dark:text-gray-200">ยอดรวมทั้งหมด :</div>,
             size: 40,
             enableSorting: false,
         }),
@@ -113,7 +114,7 @@ export default function POListPage() {
         columnHelper.accessor('pr_no', {
             header: 'เลขที่ PR',
             cell: (info) => (
-                <span className="text-gray-600 dark:text-gray-300">
+                <span className="text-purple-600 dark:text-purple-400 hover:underline cursor-pointer" title={info.getValue() || ''}>
                     {info.getValue() || '-'}
                 </span>
             ),
@@ -123,15 +124,15 @@ export default function POListPage() {
         columnHelper.accessor('vendor_name', {
             header: 'ชื่อผู้ขาย',
             cell: (info) => (
-                <div className="font-medium text-gray-700 dark:text-gray-200 truncate max-w-[200px]" title={info.getValue()}>
-                    {info.getValue()}
+                <div className="font-semibold text-gray-800 dark:text-gray-200 text-left whitespace-nowrap" title={info.getValue() || '-'}>
+                    {info.getValue() || '-'}
                 </div>
             ),
             enableSorting: false,
         }),
         columnHelper.accessor(row => row.status, {
             id: 'status',
-            header: () => <div className="text-center">สถานะ</div>,
+            header: () => <div className="text-center w-full">สถานะ</div>,
             cell: (info) => (
                 <div className="flex justify-center">
                     <POStatusBadge status={info.getValue()} className="whitespace-nowrap" />
@@ -141,28 +142,36 @@ export default function POListPage() {
             enableSorting: false,
         }),
         columnHelper.accessor('item_count', {
-            header: () => <div className="text-center">จำนวน<br/>รายการ</div>,
+            header: () => <div className="text-center w-full whitespace-nowrap">จำนวนรายการ</div>,
             cell: (info) => (
                 <div className="text-center text-gray-600 dark:text-gray-300">
                     {info.getValue()}
                 </div>
             ),
-            size: 80,
+            size: 100,
             enableSorting: false,
         }),
         columnHelper.accessor('total_amount', {
-            header: () => <div className="text-right">ยอดรวม<br/>(บาท)</div>,
+            header: () => <div className="text-center w-full whitespace-nowrap">ยอดรวม (บาท)</div>,
             cell: (info) => (
-                <div className="text-right font-bold text-gray-800 dark:text-white whitespace-nowrap">
+                <div className="text-center font-bold text-gray-800 dark:text-white whitespace-nowrap">
                     {info.getValue()?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </div>
             ),
-            size: 120,
+            footer: () => {
+                 const total = data?.data.reduce((sum, item) => sum + item.total_amount, 0) || 0;
+                 return (
+                     <div className="text-center font-bold text-base text-blue-600 dark:text-blue-400 whitespace-nowrap">
+                         {total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                     </div>
+                 );
+            },
+            size: 140,
             enableSorting: true,
         }),
         columnHelper.display({
             id: 'actions',
-            header: () => <div className="text-center">จัดการ</div>,
+            header: () => <div className="text-center w-full">จัดการ</div>,
             cell: ({ row }) => {
                 const item = row.original;
                 return (
@@ -225,7 +234,7 @@ export default function POListPage() {
             size: 160,
             enableSorting: false,
         }),
-    ], [columnHelper, filters.page, filters.limit]);
+    ], [columnHelper, filters.page, filters.limit, data?.data]);
 
     return (
         <PageListLayout
@@ -268,6 +277,7 @@ export default function POListPage() {
                     }}
                     rowIdField="po_id"
                     className="flex-1"
+                    showFooter={true}
                 />
             </div>
         </PageListLayout>

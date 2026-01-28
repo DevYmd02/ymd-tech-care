@@ -72,31 +72,31 @@ const statusConfig: Record<ModuleType, ModuleStatusConfig> = {
   RFQ: {
     DRAFT: {
       label: 'แบบร่าง',
-      colorClass: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+      colorClass: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
     },
     SENT: {
       label: 'ส่งแล้ว',
-      colorClass: 'bg-pink-100 text-pink-700 dark:bg-pink-900 dark:text-pink-300',
+      colorClass: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
     },
     IN_PROGRESS: {
       label: 'กำลังดำเนินการ',
-      colorClass: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
+      colorClass: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
     },
     CLOSED: {
       label: 'ปิดแล้ว',
-      colorClass: 'bg-emerald-700 text-white dark:bg-emerald-800 dark:text-emerald-100',
+      colorClass: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
     },
     CANCELLED: {
       label: 'ยกเลิก',
-      colorClass: 'bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-400',
+      colorClass: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-400',
     },
     WAITING_FOR_PO: {
       label: 'รอเปิดใบสั่งซื้อ',
-      colorClass: 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300',
+      colorClass: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
     },
     PO_CREATED: {
       label: 'เปิดใบสั่งซื้อแล้ว',
-      colorClass: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+      colorClass: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
     },
   },
   QT: {
