@@ -10,7 +10,6 @@ import { RFQFooter } from './RFQFooter';
 import { WindowFormLayout, TabPanel, VendorSearchModal } from '../../../../components/shared';
 import { SystemAlert } from '../../../../components/shared/SystemAlert';
 import { masterDataService } from '../../../../services/masterDataService';
-import { vendorService } from '../../../../services/vendorService';
 import type { BranchMaster, ItemMaster, UnitMaster } from '../../../../types/master-data-types';
 import type { RFQFormData, RFQLineFormData } from '../../../../types/rfq-types';
 import { initialRFQFormData, initialRFQLineFormData } from '../../../../types/rfq-types';
@@ -34,9 +33,6 @@ interface VendorSelection {
     vendor_code: string;
     vendor_name: string;
     vendor_name_display: string;
-    tax_id?: string;
-    address?: string;
-    payment_term_days?: number;
 }
 
 // ====================================================================================
@@ -62,9 +58,9 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, init
     
     // Vendor Selection State
     const [selectedVendors, setSelectedVendors] = useState<VendorSelection[]>([
-        { vendor_code: '', vendor_name: '', vendor_name_display: '', tax_id: '', address: '', payment_term_days: undefined },
-        { vendor_code: '', vendor_name: '', vendor_name_display: '', tax_id: '', address: '', payment_term_days: undefined },
-        { vendor_code: '', vendor_name: '', vendor_name_display: '', tax_id: '', address: '', payment_term_days: undefined },
+        { vendor_code: '', vendor_name: '', vendor_name_display: '' },
+        { vendor_code: '', vendor_name: '', vendor_name_display: '' },
+        { vendor_code: '', vendor_name: '', vendor_name_display: '' },
     ]);
     const [activeVendorIndex, setActiveVendorIndex] = useState<number | null>(null);
     const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
@@ -142,9 +138,9 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, init
                 }
                 
                 setSelectedVendors([
-                    { vendor_code: '', vendor_name: '', vendor_name_display: '', tax_id: '', address: '', payment_term_days: undefined },
-                    { vendor_code: '', vendor_name: '', vendor_name_display: '', tax_id: '', address: '', payment_term_days: undefined },
-                    { vendor_code: '', vendor_name: '', vendor_name_display: '', tax_id: '', address: '', payment_term_days: undefined },
+                    { vendor_code: '', vendor_name: '', vendor_name_display: '' },
+                    { vendor_code: '', vendor_name: '', vendor_name_display: '' },
+                    { vendor_code: '', vendor_name: '', vendor_name_display: '' },
                 ]);
             }, 0);
             return () => clearTimeout(timer);
@@ -591,83 +587,29 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, init
                     <div className="space-y-4">
                         {selectedVendors.map((vendor, index) => (
                             <div key={index} className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                    {/* Tax ID Search - Purple Button */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {/* Vendor Code Column */}
                                     <div>
-                                        <label className={labelStyle}>เลขประจำตัวผู้เสียภาษี (Tax ID) {index + 1}</label>
+                                        <label className={labelStyle}>รหัสผู้ขาย {index + 1}</label>
                                         <div className="flex gap-2">
                                             <input
                                                 type="text"
-                                                placeholder="0105562012345"
-                                                value={vendor.tax_id || ''}
-                                                onChange={(e) => {
-                                                    const newVendors = [...selectedVendors];
-                                                    newVendors[index] = { ...newVendors[index], tax_id: e.target.value };
-                                                    setSelectedVendors(newVendors);
-                                                }}
-                                                className={`${inputStyle} flex-1 font-mono`}
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={async () => {
-                                                    const taxId = vendor.tax_id;
-                                                    if (!taxId) {
-                                                        setAlert({ show: true, message: 'กรุณากรอกเลขผู้เสียภาษีก่อนค้นหา' });
-                                                        return;
-                                                    }
-                                                    try {
-                                                        const result = await vendorService.getByTaxId(taxId);
-                                                        if (result) {
-                                                            const newVendors = [...selectedVendors];
-                                                            newVendors[index] = {
-                                                                ...newVendors[index],
-                                                                vendor_code: result.vendor_code,
-                                                                vendor_name: result.vendor_name,
-                                                                vendor_name_display: `${result.vendor_code} - ${result.vendor_name}`,
-                                                                tax_id: result.tax_id || '',
-                                                                address: result.address_line1 || '',
-                                                                payment_term_days: result.payment_term_days || 30,
-                                                            };
-                                                            setSelectedVendors(newVendors);
-                                                        } else {
-                                                            setAlert({ show: true, message: `ไม่พบผู้ขายที่มีเลขผู้เสียภาษี: ${taxId}` });
-                                                        }
-                                                    } catch {
-                                                        setAlert({ show: true, message: 'เกิดข้อผิดพลาดในการค้นหา' });
-                                                    }
-                                                }}
-                                                className="px-4 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors shrink-0 font-medium text-sm flex items-center gap-2 shadow-sm"
-                                            >
-                                                <Search size={16} />
-                                                ค้นหา
-                                            </button>
-                                        </div>
-                                        <p className={hintStyle}>กรอกเลข 13 หลัก แล้วกด "ค้นหา"</p>
-                                    </div>
-
-                                    {/* Vendor Code */}
-                                    <div>
-                                        <label className={labelStyle}>รหัสผู้ขาย</label>
-                                        <div className="flex gap-2">
-                                            <input
-                                                type="text"
-                                                placeholder="รหัสผู้ขาย"
+                                                placeholder="เลือกรหัสผู้ขาย"
                                                 value={vendor.vendor_code}
                                                 readOnly
-                                                className={`${inputStyle} flex-1 bg-gray-100 dark:bg-gray-700 cursor-not-allowed`}
+                                                className={`${inputStyle} flex-1 bg-white dark:bg-gray-800`}
                                             />
                                             <button
                                                 type="button"
                                                 onClick={() => handleOpenVendorModal(index)}
-                                                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors shrink-0 font-medium text-sm flex items-center gap-2"
+                                                className="h-8 w-10 flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shrink-0 shadow-sm"
                                             >
-                                                <Users size={16} />
-                                                เลือก
+                                                <Search size={16} />
                                             </button>
                                         </div>
                                     </div>
 
-                                    {/* Vendor Name */}
+                                    {/* Vendor Name Column */}
                                     <div>
                                         <label className={labelStyle}>ชื่อผู้ขาย</label>
                                         <input
@@ -678,32 +620,7 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, init
                                             className={`${inputStyle} bg-gray-100 dark:bg-gray-700 cursor-not-allowed`}
                                         />
                                     </div>
-
-                                    {/* Payment Terms */}
-                                    <div>
-                                        <label className={labelStyle}>เครดิต (วัน)</label>
-                                        <input
-                                            type="number"
-                                            placeholder="30"
-                                            value={vendor.payment_term_days || ''}
-                                            readOnly
-                                            className={`${inputStyle} bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-center`}
-                                        />
-                                    </div>
                                 </div>
-
-                                {/* Address Row - Shows after search */}
-                                {vendor.address && (
-                                    <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
-                                        <label className={labelStyle}>ที่อยู่</label>
-                                        <input
-                                            type="text"
-                                            value={vendor.address}
-                                            readOnly
-                                            className={`${inputStyle} bg-gray-100 dark:bg-gray-700 cursor-not-allowed`}
-                                        />
-                                    </div>
-                                )}
                             </div>
                         ))}
                     </div>

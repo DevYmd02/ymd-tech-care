@@ -176,12 +176,12 @@ export default function PRListPage() {
             enableSorting: false,
         }),
         columnHelper.accessor('cost_center_id', {
-            header: 'แผนก',
+            header: () => <div className="pl-4">แผนก</div>,
             cell: (info) => {
                 const id = info.getValue()?.toLowerCase();
                 const department = mockCostCenters.find(c => c.cost_center_id.toLowerCase() === id)?.cost_center_name?.replace('แผนก', '');
                 return (
-                    <span className="truncate block text-gray-600 dark:text-gray-300" title={department || '-'}>
+                    <span className="truncate block text-gray-600 dark:text-gray-300 pl-4" title={department || '-'}>
                         {department || '-'}
                     </span>
                 );

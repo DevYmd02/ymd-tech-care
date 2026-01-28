@@ -218,9 +218,15 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
   const selectProduct = (product: ItemMaster) => {
     if (activeRowIndex !== null) {
       setLines(prev => {
+        // Find the first empty row to fill gaps
+        const firstEmptyIndex = prev.findIndex(l => !l.item_id);
+        const targetIndex = (firstEmptyIndex !== -1 && firstEmptyIndex < activeRowIndex) 
+          ? firstEmptyIndex 
+          : activeRowIndex;
+
         const newLines = [...prev];
-        newLines[activeRowIndex] = {
-          ...newLines[activeRowIndex],
+        newLines[targetIndex] = {
+          ...newLines[targetIndex],
           item_id: product.item_id,
           item_code: product.item_code,
           item_name: product.item_name,
@@ -277,8 +283,6 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
   };
 
   const onSubmit: SubmitHandler<PRFormData> = async (data) => {
-    if (!window.confirm(isEditMode ? "คุณต้องการบันทึกการแก้ไขเอกสารนี้ใช่หรือไม่?" : "คุณต้องการบันทึกสร้างเอกสารใหม่ใช่หรือไม่?")) return;
-
     // 1. Validation Logic
     if (!data.required_date) { showAlert('กรุณาระบุวันที่ต้องการใช้'); return; }
     if (!data.requester_name) { showAlert('กรุณาระบุชื่อผู้ขอซื้อ'); return; }
@@ -298,8 +302,11 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
       showAlert('กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ');
       return;
     }
+
+    // 2. Confirmation Logic (After Validation)
+    if (!window.confirm(isEditMode ? "คุณต้องการบันทึกการแก้ไขเอกสารนี้ใช่หรือไม่?" : "คุณต้องการบันทึกสร้างเอกสารใหม่ใช่หรือไม่?")) return;
     
-    // 2. Prepare Payload
+    // 3. Prepare Payload
     const payload: PRFormData = { 
       ...data, 
       lines: activeLines, 

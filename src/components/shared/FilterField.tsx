@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { Calendar, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { styles } from '../../constants';
 
 // ====================================================================================
@@ -97,10 +97,6 @@ export const FilterField: React.FC<FilterFieldProps> = ({
                         onChange={(e) => onChange(e.target.value)}
                         disabled={disabled}
                         className={inputClass}
-                    />
-                    <Calendar
-                        size={16}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
                     />
                 </div>
             ) : (
