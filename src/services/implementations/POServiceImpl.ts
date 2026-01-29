@@ -7,9 +7,21 @@ import api from '../api';
 import type { IPOService } from '../interfaces/IPOService';
 import type { POListParams, POListResponse } from '../../types/po-types';
 
+import { logger } from '../../utils/logger';
+
 export class POServiceImpl implements IPOService {
   async getList(params?: POListParams): Promise<POListResponse> {
-    const response = await api.get<POListResponse>('/purchase-orders', { params });
-    return response.data;
+    try {
+      const response = await api.get<POListResponse>('/purchase-orders', { params });
+      return response.data;
+    } catch (error) {
+      logger.error('[POServiceImpl] getList error:', error);
+      return {
+        data: [],
+        total: 0,
+        page: params?.page || 1,
+        limit: params?.limit || 20,
+      };
+    }
   }
 }

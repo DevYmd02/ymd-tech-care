@@ -71,7 +71,7 @@ export interface VendorAddress {
     vendor_id: number;
     address_type: VendorAddressType;
     address: string;
-    sub_district?: string | null;
+    // sub_district?: string | null; // Backend doesn't support this
     district?: string | null;
     province?: string | null;
     postal_code?: string | null;
@@ -106,12 +106,12 @@ export interface VendorBankAccountData {
     bank_account_id: number;
     vendor_id: number;
     bank_name: string;
-    branch_name?: string;
-    account_number: string;
+    bank_branch?: string; // Renamed from branch_name
+    account_no: string;   // Renamed from account_number
     account_name: string;
     account_type: 'SAVING' | 'CURRENT';
     swift_code?: string;
-    is_primary: boolean;
+    is_default: boolean;  // Renamed from is_primary
 }
 
 /**
@@ -226,13 +226,18 @@ export interface VendorListItem {
     tax_id?: string;
     status: VendorStatus;
     
-    // Address Display Fields
+    // Flat Address Display Fields (legacy/mock)
     address_line1?: string;
     sub_district?: string;
     district?: string;
     province?: string;
     postal_code?: string;
     country?: string;
+    
+    // Nested arrays (from backend API)
+    addresses?: VendorAddress[];
+    contacts?: VendorContact[];
+    bank_accounts?: VendorBankAccountData[];
     
     phone?: string;
     email?: string;
@@ -292,7 +297,7 @@ export interface VendorCreateRequest {
     vendor_name: string;
     vendor_name_en?: string;
     tax_id?: string;
-    vendor_type: VendorType;
+    vendor_type?: VendorType; // Backend uses vendor_type_id instead
     
     vendor_type_id: number;
     vendor_group_id: number;
@@ -333,29 +338,30 @@ export function toVendorCreateRequest(form: VendorFormData): VendorCreateRequest
     // Map Addresses
     const addresses: Partial<VendorAddress>[] = form.addresses.map(addr => ({
         address_type: addr.addressType || 'REGISTERED', 
-        address: addr.address,
-        sub_district: addr.subDistrict,
-        district: addr.district,
-        province: addr.province,
-        postal_code: addr.postalCode,
-        country: addr.country,
+        address: addr.address || "",
+        // sub_district: Backend doesn't support this
+        district: addr.district || "",
+        province: addr.province || "",
+        postal_code: addr.postalCode || "",
+        country: addr.country || "Thailand",
         is_default: addr.isMain,
         is_active: true,
         
         // Map Address Contact Info (Backend JSON Alignment)
-        contact_person: addr.contactPerson || undefined,
-        phone: addr.phone || undefined,
-        phone_extension: addr.phoneExtension || undefined,
-        email: addr.email || undefined
+        contact_person: addr.contactPerson || "",
+        phone: addr.phone || "",
+        phone_extension: addr.phoneExtension || "",
+        // Use address-specific email OR fallback to main email if it's the main address
+        email: addr.email || (addr.isMain ? form.email : "") || "" 
     }));
 
     // Map Contacts
     const additionalContacts: Partial<VendorContact>[] = form.additionalContacts.map((c) => ({
         contact_name: c.name,
-        position: c.position,
-        phone: c.phone,
-        mobile: c.mobile,
-        email: c.email,
+        position: c.position || "",
+        phone: c.phone || "",
+        mobile: c.mobile || "",
+        email: c.email || "",
         is_primary: false
     }));
 
@@ -363,9 +369,9 @@ export function toVendorCreateRequest(form: VendorFormData): VendorCreateRequest
     const mainContact: Partial<VendorContact> = {
         contact_name: form.contactName,
         position: 'Main Contact',
-        phone: form.phone,
-        mobile: form.mobile,
-        email: form.email,
+        phone: form.phone || "",
+        mobile: form.mobile || "",
+        email: form.email || "",
         is_primary: true
     };
 
@@ -377,12 +383,12 @@ export function toVendorCreateRequest(form: VendorFormData): VendorCreateRequest
     // Map Bank Accounts
     const bank_accounts: Partial<VendorBankAccountData>[] = form.bankAccounts.map((b, index) => ({
         bank_name: b.bankName,
-        branch_name: b.branchName,
-        account_number: b.accountNumber,
+        bank_branch: b.branchName || "", // Renamed and defaulted
+        account_no: b.accountNumber, // Renamed
         account_name: b.accountName,
         account_type: b.accountType as 'SAVING' | 'CURRENT',
-        swift_code: b.swiftCode,
-        is_primary: b.isMain || index === 0
+        swift_code: b.swiftCode || "",
+        is_default: b.isMain || index === 0 // Renamed
     }));
 
     // Payment Term logic
@@ -395,9 +401,9 @@ export function toVendorCreateRequest(form: VendorFormData): VendorCreateRequest
     return {
         vendor_code: form.vendorCode || undefined,
         vendor_name: form.vendorName,
-        vendor_name_en: form.vendorNameEn || undefined,
+        // vendor_name_en: Backend doesn't support this field
         tax_id: form.taxId || undefined,
-        vendor_type: form.vendorType,
+        // vendor_type: Backend doesn't support this field (use vendor_type_id instead)
         
         // Numeric Conversion as requested (string from <select> to number)
         vendor_type_id: Number(form.vendorTypeId) || 1,
@@ -410,13 +416,14 @@ export function toVendorCreateRequest(form: VendorFormData): VendorCreateRequest
         
         phone: form.phone || undefined,
         email: form.email || undefined,
-        website: form.website || undefined,
-        remarks: form.remarks || undefined,
+        // website: Backend doesn't support this field
+        // remarks: Backend doesn't support
         
-        payment_term_days,
-        credit_limit: form.creditLimit,
-        currency_code: form.currency,
-        vat_registered: form.vatRegistered,
+        payment_term_days, // Re-added
+        
+        // credit_limit: Backend doesn't support
+        // currency_code: Backend doesn't support
+        // vat_registered: Backend doesn't support
     };
 }
 
@@ -463,14 +470,19 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
         addressType: 'CONTACT'
     };
     
-    if (vendor.addresses && vendor.addresses.length > 0) {
+    // Handle both frontend 'addresses' and backend 'vendorAddresses' field names
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const vendorAny = vendor as any;
+    const addressesArray = vendor.addresses || vendorAny.vendorAddresses || [];
+    
+    if (addressesArray.length > 0) {
         // Find REGISTERED address
-        const regAddr = vendor.addresses.find(a => a.address_type === 'REGISTERED');
+        const regAddr = addressesArray.find((a: { address_type?: string }) => a.address_type === 'REGISTERED');
         if (regAddr) {
             registeredAddress = {
                 id: regAddr.vendor_address_id?.toString() || '1',
                 address: regAddr.address || '',
-                subDistrict: regAddr.sub_district || '',
+                subDistrict: '', // Backend doesn't support this
                 district: regAddr.district || '',
                 province: regAddr.province || '',
                 postalCode: regAddr.postal_code || '',
@@ -484,13 +496,13 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
                 phoneExtension: regAddr.phone_extension || '',
                 email: regAddr.email || ''
             };
-        } else if (vendor.addresses[0]) {
+        } else if (addressesArray[0]) {
             // Fallback: use first address as REGISTERED
-            const firstAddr = vendor.addresses[0];
+            const firstAddr = addressesArray[0];
             registeredAddress = {
                 id: firstAddr.vendor_address_id?.toString() || '1',
                 address: firstAddr.address || '',
-                subDistrict: firstAddr.sub_district || '',
+                subDistrict: '', // Backend doesn't support
                 district: firstAddr.district || '',
                 province: firstAddr.province || '',
                 postalCode: firstAddr.postal_code || '',
@@ -505,12 +517,12 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
         }
         
         // Find CONTACT address
-        const contAddr = vendor.addresses.find(a => a.address_type === 'CONTACT');
+        const contAddr = addressesArray.find((a: { address_type?: string }) => a.address_type === 'CONTACT');
         if (contAddr) {
             contactAddress = {
                 id: contAddr.vendor_address_id?.toString() || '2',
                 address: contAddr.address || '',
-                subDistrict: contAddr.sub_district || '',
+                subDistrict: '', // Backend doesn't support
                 district: contAddr.district || '',
                 province: contAddr.province || '',
                 postalCode: contAddr.postal_code || '',
@@ -522,13 +534,13 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
                 phoneExtension: contAddr.phone_extension || '',
                 email: contAddr.email || ''
             };
-        } else if (vendor.addresses[1]) {
+        } else if (addressesArray[1]) {
             // Fallback: use second address as CONTACT
-            const secondAddr = vendor.addresses[1];
+            const secondAddr = addressesArray[1];
             contactAddress = {
                 id: secondAddr.vendor_address_id?.toString() || '2',
                 address: secondAddr.address || '',
-                subDistrict: secondAddr.sub_district || '',
+                subDistrict: '', // Backend doesn't support
                 district: secondAddr.district || '',
                 province: secondAddr.province || '',
                 postalCode: secondAddr.postal_code || '',
@@ -539,6 +551,14 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
                 phone: secondAddr.phone || '',
                 phoneExtension: secondAddr.phone_extension || '',
                 email: secondAddr.email || ''
+            };
+        } else {
+            // No CONTACT address found - copy REGISTERED to CONTACT (same address)
+            contactAddress = {
+                ...registeredAddress,
+                id: '2',
+                isMain: false,
+                addressType: 'CONTACT'
             };
         }
     } else if (vendor.address_line1) {
@@ -569,9 +589,18 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
     // Determine if "Same as Primary" should be checked
     const sameAsRegistered = areAddressesEqual(registeredAddress, contactAddress);
 
-    // Map Contacts
-    const formContacts: VendorContactPerson[] = (vendor.contacts && vendor.contacts.length > 0)
-        ? vendor.contacts.map(c => ({
+    // Map Contacts - handle both frontend 'contacts' and backend 'vendorContacts' field names
+    const contactsArray = vendor.contacts || vendorAny.vendorContacts || [];
+    const formContacts: VendorContactPerson[] = (contactsArray.length > 0)
+        ? contactsArray.map((c: {
+            contact_id?: number;
+            contact_name: string;
+            position?: string;
+            phone?: string;
+            mobile?: string;
+            email?: string;
+            is_primary?: boolean;
+        }) => ({
             id: c.contact_id?.toString() || Math.random().toString(),
             name: c.contact_name,
             position: c.position || '',
@@ -582,17 +611,27 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
         }))
         : [];
 
-    // Map Bank Accounts
-    const formBankAccounts: VendorBankAccount[] = (vendor.bank_accounts && vendor.bank_accounts.length > 0)
-        ? vendor.bank_accounts.map(b => ({
+    // Map Bank Accounts - handle both frontend 'bank_accounts' and backend 'vendorBankAccounts' field names
+    const bankAccountsArray = vendor.bank_accounts || vendorAny.vendorBankAccounts || [];
+    const formBankAccounts: VendorBankAccount[] = (bankAccountsArray.length > 0)
+        ? bankAccountsArray.map((b: {
+            bank_account_id?: number;
+            bank_name: string;
+            bank_branch?: string; // New field name
+            account_no: string;   // New field name
+            account_name: string;
+            account_type: string;
+            swift_code?: string;
+            is_default: boolean;  // New field name
+        }) => ({
             id: b.bank_account_id?.toString() || Math.random().toString(),
             bankName: b.bank_name,
-            branchName: b.branch_name || '',
-            accountNumber: b.account_number,
+            branchName: b.bank_branch || '',
+            accountNumber: b.account_no,
             accountName: b.account_name,
             accountType: b.account_type,
             swiftCode: b.swift_code || '',
-            isMain: b.is_primary || false
+            isMain: b.is_default || false
         }))
         : [];
 

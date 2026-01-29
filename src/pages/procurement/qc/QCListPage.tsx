@@ -244,15 +244,17 @@ export default function QCListPage() {
                 </div>
             </PageListLayout>
 
-            {/* Modals */}
-            <QCFormModal
-                isOpen={isCreateModalOpen}
-                onClose={() => setIsCreateModalOpen(false)}
-                onSuccess={() => {
-                    // Refetch data is handled by React Query invalidation in the modal or parent
-                    // But here we can just close
-                }}
-            />
+            {/* Modals - Only mount when open */}
+            {isCreateModalOpen && (
+                <QCFormModal
+                    isOpen={isCreateModalOpen}
+                    onClose={() => setIsCreateModalOpen(false)}
+                    onSuccess={() => {
+                        // Refetch data is handled by React Query invalidation in the modal or parent
+                        // But here we can just close
+                    }}
+                />
+            )}
         </>
     );
 }

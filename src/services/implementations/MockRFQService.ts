@@ -21,7 +21,7 @@ export class MockRFQService implements IRFQService {
 
   async getList(params?: RFQFilterCriteria): Promise<RFQListResponse> {
     logger.log('[MockRFQService] getList', params);
-    await this.delay(300);
+    // No delay for instant loading
 
     // Apply filtering (mimicking server-side behavior)
     let filteredData = this.rfqs; // Start with reference, clone at return

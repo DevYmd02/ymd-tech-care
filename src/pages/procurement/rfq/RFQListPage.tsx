@@ -282,26 +282,30 @@ export default function RFQListPage() {
                 </div>
             </PageListLayout>
 
-            <RFQFormModal 
-                isOpen={isCreateModalOpen}
-                onClose={() => setIsCreateModalOpen(false)}
-                onSuccess={() => {
-                    refetch();
-                }}
-            />
+            {isCreateModalOpen && (
+                <RFQFormModal 
+                    isOpen={isCreateModalOpen}
+                    onClose={() => setIsCreateModalOpen(false)}
+                    onSuccess={() => {
+                        refetch();
+                    }}
+                />
+            )}
 
-            <QTFormModal
-                isOpen={isQTModalOpen}
-                onClose={() => {
-                    setIsQTModalOpen(false);
-                    setSelectedRFQForQT(null);
-                }}
-                initialRFQ={selectedRFQForQT}
-                onSuccess={() => {
-                   refetch();
-                   setIsQTModalOpen(false);
-                }}
-            />
+            {isQTModalOpen && (
+                <QTFormModal
+                    isOpen={isQTModalOpen}
+                    onClose={() => {
+                        setIsQTModalOpen(false);
+                        setSelectedRFQForQT(null);
+                    }}
+                    initialRFQ={selectedRFQForQT}
+                    onSuccess={() => {
+                       refetch();
+                       setIsQTModalOpen(false);
+                    }}
+                />
+            )}
         </>
     );
 }

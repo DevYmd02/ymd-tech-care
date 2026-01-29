@@ -41,9 +41,32 @@ export class MockVendorService implements IVendorService {
       );
     }
 
-    // Return deep copy of the filtered result to prevent mutation of internal state
+    // Map vendors to flatten address structure for Valid fields (VendorListItem)
+    const mappedVendors = filteredVendors.map(v => {
+        const primaryAddr = v.addresses?.find(a => a.address_type === 'REGISTERED') || v.addresses?.[0];
+        // Clone to avoid mutating original
+        const vClone = structuredClone(v); 
+        
+        if (primaryAddr) {
+            // Force cast to any to assign flat fields that might be missing in VendorMaster type but exist in VendorListItem
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (vClone as any).address_line1 = primaryAddr.address;
+            // sub_district removed
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (vClone as any).district = primaryAddr.district;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (vClone as any).province = primaryAddr.province;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (vClone as any).postal_code = primaryAddr.postal_code;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (vClone as any).country = primaryAddr.country;
+        }
+        return vClone;
+    });
+
+    // Return deep copy of the filtered result
     return {
-      data: structuredClone(filteredVendors),
+      data: mappedVendors,
       total: filteredVendors.length,
       page: params?.page || 1,
       limit: params?.limit || 20,
@@ -81,7 +104,7 @@ export class MockVendorService implements IVendorService {
       vendor_name: data.vendor_name,
       vendor_name_en: data.vendor_name_en,
       tax_id: data.tax_id,
-      vendor_type: data.vendor_type,
+      vendor_type: data.vendor_type || 'COMPANY', // Default fallback
       
       // Sync numeric IDs from request
       vendor_type_id: data.vendor_type_id || 1,
@@ -99,7 +122,7 @@ export class MockVendorService implements IVendorService {
           vendor_id: 0,
           address_type: addr.address_type || 'REGISTERED',
           address: addr.address || '',
-          sub_district: addr.sub_district || '',
+          // sub_district removed
           district: addr.district || '',
           province: addr.province || '',
           postal_code: addr.postal_code || '',
@@ -127,12 +150,12 @@ export class MockVendorService implements IVendorService {
           bank_account_id: Date.now() + idx + 200,
           vendor_id: 0,
           bank_name: b.bank_name || '',
-          branch_name: b.branch_name || '',
-          account_number: b.account_number || '',
+          bank_branch: b.bank_branch || '', // Renamed
+          account_no: b.account_no || '',   // Renamed
           account_name: b.account_name || '',
           account_type: b.account_type || 'SAVING',
           swift_code: b.swift_code || '',
-          is_primary: b.is_primary || false
+          is_default: b.is_default || false // Renamed
       })),
 
       phone: data.phone,
@@ -193,8 +216,7 @@ export class MockVendorService implements IVendorService {
              // These are legacy fields that might be used for display in the grid
              // eslint-disable-next-line @typescript-eslint/no-explicit-any
              (updatedVendor as any).address_line1 = primaryAddr.address;
-             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-             (updatedVendor as any).sub_district = primaryAddr.sub_district;
+             // sub_district removed
              // eslint-disable-next-line @typescript-eslint/no-explicit-any
              (updatedVendor as any).district = primaryAddr.district;
              // eslint-disable-next-line @typescript-eslint/no-explicit-any

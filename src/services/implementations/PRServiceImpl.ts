@@ -148,4 +148,38 @@ export class PRServiceImpl implements IPRService {
       return false;
     }
   }
+  async generateNextDocumentNo(): Promise<string> {
+    try {
+      // Attempt to get the latest PR to determine the next number
+      // This relies on the API supporting sorting. If not, this might need adjustment.
+      const response = await this.getList({ page: 1, limit: 1, sort: 'pr_no:desc' });
+      
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const prefix = `PR-${year}${month}-`;
+
+      if (response.data && response.data.length > 0) {
+        const latestPR = response.data[0];
+        if (latestPR.pr_no && latestPR.pr_no.startsWith(prefix)) {
+           const parts = latestPR.pr_no.split('-');
+           if (parts.length === 3) {
+             const sequence = parseInt(parts[2], 10);
+             if (!isNaN(sequence)) {
+               return `${prefix}${String(sequence + 1).padStart(4, '0')}`;
+             }
+           }
+        }
+      }
+      
+      // Default if no PRs found for this month or API fails to return matching data
+      return `${prefix}0001`;
+
+    } catch (error) {
+      logger.error('[PRServiceImpl] generateNextDocumentNo error:', error);
+      // Fallback in case of error
+      const now = new Date();
+      return `PR-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}-0001`;
+    }
+  }
 }

@@ -211,18 +211,10 @@ export default function PRListPage() {
             header: () => <div className="text-right w-full">ยอดรวม (บาท)</div>,
             cell: (info) => (
                 <div className="font-semibold text-gray-800 dark:text-gray-200 text-right whitespace-nowrap">
-                    {info.getValue().toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    {info.getValue().toLocaleString('en-US', { minimumFractionDigits: 2 })} บาท
                 </div>
             ),
-            footer: () => {
-                const total = data?.data.reduce((sum, item) => sum + item.total_amount, 0) || 0;
-                return (
-                    <div className="text-right font-bold text-base text-blue-600 dark:text-blue-400 whitespace-nowrap">
-                        {total.toLocaleString('en-US', { minimumFractionDigits: 2 })} บาท
-                    </div>
-                );
-            },
-            size: 100,
+            size: 130,
             enableSorting: true,
         }),
         columnHelper.display({
@@ -270,6 +262,14 @@ export default function PRListPage() {
                                 <FileText size={12} /> สร้าง RFQ
                             </button>
                         ) : null}
+                    </div>
+                );
+            },
+            footer: () => {
+                const total = data?.data.reduce((sum, item) => sum + item.total_amount, 0) || 0;
+                return (
+                    <div className="text-right font-bold text-base text-blue-600 dark:text-blue-400 whitespace-nowrap pr-2">
+                        {total.toLocaleString('en-US', { minimumFractionDigits: 2 })} บาท
                     </div>
                 );
             },
@@ -323,21 +323,25 @@ export default function PRListPage() {
                 </div>
             </PageListLayout>
 
-            <RFQFormModal
-                isOpen={isRFQModalOpen}
-                onClose={() => {
-                    setIsRFQModalOpen(false);
-                    setSelectedPR(null);
-                }}
-                initialPR={selectedPR}
-            />
+            {isRFQModalOpen && (
+                <RFQFormModal
+                    isOpen={isRFQModalOpen}
+                    onClose={() => {
+                        setIsRFQModalOpen(false);
+                        setSelectedPR(null);
+                    }}
+                    initialPR={selectedPR}
+                />
+            )}
 
-            <PRFormModal
-                isOpen={isPRModalOpen}
-                onClose={handleClosePRModal}
-                id={selectedPRId}
-                onSuccess={() => refetch()}
-            />
+            {isPRModalOpen && (
+                <PRFormModal
+                    isOpen={isPRModalOpen}
+                    onClose={handleClosePRModal}
+                    id={selectedPRId}
+                    onSuccess={() => refetch()}
+                />
+            )}
         </>
     );
 }
