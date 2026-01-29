@@ -18,7 +18,12 @@ export class RFQServiceImpl implements IRFQService {
       return response.data;
     } catch (error) {
       logger.error('[RFQServiceImpl] getList error:', error);
-      throw error;
+      return {
+        data: [],
+        total: 0,
+        page: params?.page || 1,
+        limit: params?.limit || 20,
+      };
     }
   }
 

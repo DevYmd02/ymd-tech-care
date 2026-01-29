@@ -37,12 +37,6 @@ const PR_CONFIG = {
   INITIAL_LINES: 5,
 } as const;
 
- 
-const generatePRNumber = (): string => {
-  const now = new Date();
-  return `PR-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
-};
-
 const getTodayDate = (): string => new Date().toISOString().split('T')[0];
 
 // Extended line with warehouse, location, discount for UI display
@@ -61,7 +55,7 @@ const createEmptyLine = (): ExtendedLine => ({
 const getInitialLines = () => Array(PR_CONFIG.INITIAL_LINES).fill(null).map(() => createEmptyLine());
 
 const getDefaultFormValues = (): PRFormData => ({
-  pr_no: generatePRNumber(), request_date: getTodayDate(), required_date: '', requester_name: 'นางสาว กรรลิกา สารมาท',
+  pr_no: '', request_date: getTodayDate(), required_date: '', requester_name: 'นางสาว กรรลิกา สารมาท',
   cost_center_id: '', project_id: undefined, purpose: '', currency_code: 'THB', lines: [], total_amount: 0,
   delivery_date: '', credit_days: 30, vendor_quote_no: '', shipping_method: 'รถยนต์', remarks: '',
 });
@@ -94,9 +88,6 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
   const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-
-
-  
   const { register, handleSubmit, setValue, reset, watch, formState: { isSubmitting } } = useForm<PRFormData>({
     defaultValues: getDefaultFormValues()
   });
@@ -124,12 +115,11 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
     fetchMasterData();
   }, []);
 
-
   // Reset form when modal opens (only when transitioning from closed to open)
   useEffect(() => {
     if (isOpen && !prevIsOpenRef.current) {
       // Using setTimeout to avoid calling setState synchronously in effect
-      const timer = setTimeout(() => {
+      const timer = setTimeout(async () => {
         // Reset ALL local states in Create Mode (!id)
         if (!id) {
           setLines(getInitialLines());
@@ -145,7 +135,14 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
           setShippingMethod('');
           
           setActiveTab('detail');
-          reset(getDefaultFormValues());
+
+          // Generate Next PR Number
+          const nextPRNo = await prService.generateNextDocumentNo();
+          
+          reset({
+            ...getDefaultFormValues(),
+            pr_no: nextPRNo
+          });
         }
       }, 0);
       return () => clearTimeout(timer);

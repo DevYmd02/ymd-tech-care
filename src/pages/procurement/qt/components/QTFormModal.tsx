@@ -96,9 +96,10 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ }
   // -- Effects --
 
   useEffect(() => {
-    // Fetch Units for dropdown
+    // Fetch Units for dropdown - ONLY when modal is open
+    if (!isOpen) return;
     masterDataService.getUnits().then(setUnits);
-  }, []);
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen && !prevIsOpenRef.current) {
@@ -232,8 +233,8 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ }
       isOpen={isOpen}
       onClose={onClose}
       title="สร้างใบเสนอราคา (Create Quotation) - Manual"
-      titleIcon={<div className="bg-emerald-500 p-1 rounded-md shadow-sm"><FileText size={14} strokeWidth={3} className="text-white" /></div>}
-      headerColor="bg-emerald-600"
+      titleIcon={<div className="bg-blue-500 p-1 rounded-md shadow-sm"><FileText size={14} strokeWidth={3} className="text-white" /></div>}
+      headerColor="bg-blue-600"
       footer={
           <div className="flex items-center gap-1 p-2 bg-gray-100 dark:bg-[#1e293b] border-t border-gray-200 dark:border-gray-800">
                <button className="flex items-center gap-1 px-3 py-1.5 bg-white dark:bg-transparent hover:bg-gray-200 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded text-xs font-bold transition-colors shadow-sm dark:shadow-none">
@@ -269,65 +270,69 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ }
 
       {/* Product Search Modal */}
       {isProductModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setIsProductModalOpen(false)}>
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-[900px] max-h-[85vh] overflow-hidden flex flex-col border border-gray-200 dark:border-gray-700" onClick={e => e.stopPropagation()}>
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-               <div className="flex justify-between items-center mb-4">
-                 <h2 className="text-xl font-bold text-gray-800 dark:text-white">ค้นหาสินค้า</h2>
-                 <button onClick={() => setIsProductModalOpen(false)} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"><X /></button>
-               </div>
-               <div className="relative">
-                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                   <input 
-                      value={searchTerm} 
-                      onChange={e => setSearchTerm(e.target.value)}
-                      placeholder="ค้นหารหัส หรือ ชื่อสินค้า..."
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                      autoFocus
-                   />
-               </div>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 backdrop-blur-sm" onClick={() => setIsProductModalOpen(false)}>
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-[900px] max-h-[85vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-800 dark:text-white">ค้นหาสินค้า</h2>
+                  <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">กรอกข้อมูลเพื่อค้นหาสินค้าในระบบ</p>
+                </div>
+                <button onClick={() => setIsProductModalOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xl">×</button>
+              </div>
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">รหัสสินค้าหรือชื่อสินค้า</label>
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <input 
+                    value={searchTerm} 
+                    onChange={(e) => setSearchTerm(e.target.value)} 
+                    placeholder="รหัสสินค้าหรือชื่อสินค้า" 
+                    className="w-full h-10 pl-10 pr-4 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800" 
+                    autoFocus 
+                    />
+                </div>
+              </div>
             </div>
-            <div className="flex-1 overflow-auto p-0 bg-white dark:bg-gray-900">
-               <table className="w-full text-sm text-left">
-                   <thead className="bg-blue-600 sticky top-0 z-10">
-                       <tr>
-                           <th className="p-3 font-semibold text-white border-b border-blue-700 w-28">รหัส</th>
-                           <th className="p-3 font-semibold text-white border-b border-blue-700">ชื่อสินค้า</th>
-                           <th className="p-3 font-semibold text-white border-b border-blue-700 w-24 text-center">หน่วย</th>
-                           <th className="p-3 font-semibold text-white border-b border-blue-700 w-32 text-right">ราคา/หน่วย</th>
-                           <th className="p-3 font-semibold text-white border-b border-blue-700 w-24 text-center">เลือก</th>
-                       </tr>
-                   </thead>
-                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-gray-900">
-                       {filteredProducts.map(p => (
-                           <tr key={p.item_code} className="hover:bg-blue-50 dark:hover:bg-gray-800 transition-colors">
-                               <td className="p-3 font-medium text-blue-600 dark:text-blue-400">{p.item_code}</td>
-                               <td className="p-3 text-gray-700 dark:text-gray-300">{p.item_name}</td>
-                               <td className="p-3 text-gray-600 dark:text-gray-400 text-center">{p.unit}</td>
-                               <td className="p-3 text-gray-800 dark:text-gray-200 text-right">{p.unit_price.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท</td>
-                               <td className="p-3 text-center">
-                                   <button onClick={() => selectProduct(p)} className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-bold shadow-sm transition-colors">
-                                       เลือก
-                                   </button>
-                               </td>
-                           </tr>
-                       ))}
-                       {filteredProducts.length === 0 && (
-                           <tr>
-                               <td colSpan={5} className="p-8 text-center text-gray-500 dark:text-gray-400 italic">
-                                   ไม่พบข้อมูลสินค้า
-                               </td>
-                           </tr>
-                       )}
-                   </tbody>
-               </table>
+            <div className="max-h-[450px] overflow-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 border-b border-gray-200 dark:border-gray-700">
+                  <tr className="text-gray-600 dark:text-gray-300">
+                    <th className="px-3 py-3 text-center font-medium w-20">เลือก</th>
+                    <th className="px-3 py-3 text-left font-medium">รหัสสินค้า</th>
+                    <th className="px-3 py-3 text-left font-medium">ชื่อสินค้า</th>
+                    <th className="px-3 py-3 text-center font-medium">หน่วยนับ</th>
+                    <th className="px-3 py-3 text-right font-medium">ราคา/หน่วย</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-900">
+                  {filteredProducts.map((p) => (
+                    <tr key={p.item_code} className="border-b border-gray-100 dark:border-gray-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                      <td className="px-3 py-3 text-center">
+                        <button onClick={() => selectProduct(p)} className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs transition-colors shadow-sm">เลือก</button>
+                      </td>
+                      <td className="px-3 py-3 font-medium text-gray-900 dark:text-blue-100">{p.item_code}</td>
+                      <td className="px-3 py-3 text-gray-700 dark:text-gray-300">{p.item_name}</td>
+                      <td className="px-3 py-3 text-center text-gray-600 dark:text-gray-400">{p.unit}</td>
+                      <td className="px-3 py-3 text-right text-emerald-600 dark:text-emerald-400 font-medium">{p.unit_price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                    </tr>
+                  ))}
+                  {filteredProducts.length === 0 && (
+                        <tr>
+                            <td colSpan={5} className="p-8 text-center text-gray-500 dark:text-gray-400 italic">
+                                ไม่พบข้อมูลสินค้า
+                            </td>
+                        </tr>
+                    )}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
       )}
 
       {/* MAIN FORM */}
-      <div className="flex-1 overflow-auto bg-gray-100 dark:bg-gray-800 p-2 space-y-2">
+      <div className="flex-1 overflow-auto bg-gray-50 dark:bg-[#0b1120] p-4 space-y-4">
           
           {/* 1. Header Card - Vendor Quotation Header */}
           {/* 1. Header Card - Vendor Quotation Header */}
@@ -439,17 +444,17 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ }
                   
                   <div className="overflow-x-auto bg-white dark:bg-[#1e1e1e] p-4 rounded-lg border border-gray-200 dark:border-gray-800">
                      <table className="w-full min-w-[1000px] border-collapse bg-white dark:bg-[#1e1e1e] text-sm">
-                         <thead className="bg-gray-100 dark:bg-[#4c1d95] text-gray-700 dark:text-white">
+                         <thead className="bg-gray-100 dark:bg-blue-900 border-b-2 border-blue-600/50 text-gray-700 dark:text-blue-100">
                              <tr>
-                                 <th className="p-3 w-12 text-center border-r border-gray-200 dark:border-purple-800 font-semibold dark:font-normal">#</th>
-                                 <th className="p-3 w-48 text-center border-r border-gray-200 dark:border-purple-800 font-semibold dark:font-normal">รหัสสินค้า</th>
-                                 <th className="p-3 min-w-[200px] text-center border-r border-gray-200 dark:border-purple-800 font-semibold dark:font-normal">รายละเอียดสินค้า</th>
-                                 <th className="p-3 w-24 text-center border-r border-gray-200 dark:border-purple-800 font-semibold dark:font-normal">จำนวน</th>
-                                 <th className="p-3 w-28 text-center border-r border-gray-200 dark:border-purple-800 font-semibold dark:font-normal">หน่วยนับ</th>
-                                 <th className="p-3 w-32 text-center border-r border-gray-200 dark:border-purple-800 font-semibold dark:font-normal">ราคา/หน่วย</th>
-                                 <th className="p-3 w-24 text-center border-r border-gray-200 dark:border-purple-800 font-semibold dark:font-normal">ส่วนลด</th>
-                                 <th className="p-3 w-28 text-center border-r border-gray-200 dark:border-purple-800 font-semibold dark:font-normal">ลดยอด (บาท)</th>
-                                 <th className="p-3 w-32 text-center border-r border-gray-200 dark:border-purple-800 font-semibold dark:font-normal">ยอดรวม</th>
+                                 <th className="p-3 w-12 text-center border-r border-gray-200 dark:border-blue-800 font-semibold dark:font-normal">#</th>
+                                 <th className="p-3 w-48 text-center border-r border-gray-200 dark:border-blue-800 font-semibold dark:font-normal">รหัสสินค้า</th>
+                                 <th className="p-3 min-w-[200px] text-center border-r border-gray-200 dark:border-blue-800 font-semibold dark:font-normal">รายละเอียดสินค้า</th>
+                                 <th className="p-3 w-24 text-center border-r border-gray-200 dark:border-blue-800 font-semibold dark:font-normal">จำนวน</th>
+                                 <th className="p-3 w-28 text-center border-r border-gray-200 dark:border-blue-800 font-semibold dark:font-normal">หน่วยนับ</th>
+                                 <th className="p-3 w-32 text-center border-r border-gray-200 dark:border-blue-800 font-semibold dark:font-normal">ราคา/หน่วย</th>
+                                 <th className="p-3 w-24 text-center border-r border-gray-200 dark:border-blue-800 font-semibold dark:font-normal">ส่วนลด</th>
+                                 <th className="p-3 w-28 text-center border-r border-gray-200 dark:border-blue-800 font-semibold dark:font-normal">ลดยอด (บาท)</th>
+                                 <th className="p-3 w-32 text-center border-r border-gray-200 dark:border-blue-800 font-semibold dark:font-normal">ยอดรวม</th>
                                  <th className="p-3 w-24 text-center font-semibold dark:font-normal">จัดการ</th>
                              </tr>
                          </thead>
@@ -468,7 +473,7 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ }
                                             />
                                             <button 
                                                 onClick={() => openProductSearch(idx)} 
-                                                className="h-9 w-9 flex items-center justify-center bg-teal-600 hover:bg-teal-500 text-white rounded shadow-sm transition-colors"
+                                                className="h-9 w-9 flex items-center justify-center bg-blue-600 hover:bg-blue-500 text-white rounded shadow-sm transition-colors"
                                             >
                                                 <Search size={16} />
                                             </button>
@@ -488,7 +493,7 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ }
                                             type="number" 
                                             value={line.qty || ''} 
                                             onChange={e => updateLine(idx, 'qty', parseFloat(e.target.value))} 
-                                            className="w-full h-9 px-3 bg-white dark:bg-[#2d2d2d] border border-gray-300 dark:border-gray-700 rounded text-center text-teal-600 dark:text-teal-400 font-medium focus:border-blue-500 dark:focus:border-purple-500 focus:ring-1 focus:ring-blue-500 dark:focus:ring-purple-500 outline-none transition-all placeholder-gray-400 dark:placeholder-gray-500" 
+                                            className="w-full h-9 px-3 bg-white dark:bg-[#2d2d2d] border border-gray-300 dark:border-gray-700 rounded text-center text-blue-600 dark:text-blue-400 font-medium focus:border-blue-500 outline-none transition-all placeholder-gray-400 dark:placeholder-gray-500" 
                                          />
                                      </td>
                                      
@@ -501,7 +506,7 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ }
                                         >
                                             <option value="" hidden>เลือก</option>
                                             {units.map(u => (
-                                                <option key={u.unit_id} value={u.unit_name} className="bg-white dark:bg-[#2d2d2d] text-gray-900 dark:text-gray-200">{u.unit_name}</option>
+                                                <option key={u.unit_id} value={u.unit_name} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200">{u.unit_name}</option>
                                             ))}
                                         </select>
                                      </td>
@@ -567,7 +572,7 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ }
                      </table>
                      
                      <div className="mt-4 flex justify-between items-center px-1">
-                        <button onClick={addLine} className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-[#2d2d2d] hover:bg-gray-200 dark:hover:bg-[#3d3d3d] text-teal-600 dark:text-teal-500 font-bold rounded border border-gray-300 dark:border-gray-700 transition-all text-xs uppercase tracking-wider">
+                        <button onClick={addLine} className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-blue-900/30 hover:bg-gray-200 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 font-bold rounded border border-gray-300 dark:border-blue-800 transition-all text-xs uppercase tracking-wider">
                             <Plus size={14} strokeWidth={3}/> Add Line
                         </button>
                         

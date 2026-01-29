@@ -81,8 +81,10 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, init
     const [items, setItems] = useState<ItemMaster[]>([]);
     const [units, setUnits] = useState<UnitMaster[]>([]);
 
-    // Fetch Master Data
+    // Fetch Master Data - ONLY when modal is open
     useEffect(() => {
+        if (!isOpen) return; // Don't fetch if modal is not open
+        
         const fetchMasterData = async () => {
             try {
                 const [branchesData, itemsData, unitsData] = await Promise.all([
@@ -98,7 +100,7 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, init
             }
         };
         fetchMasterData();
-    }, []);
+    }, [isOpen]);
 
     // Reset form when modal opens or initialPR changes
     useEffect(() => {

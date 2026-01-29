@@ -279,22 +279,26 @@ export default function QTListPage() {
                 </div>
             </PageListLayout>
 
-            {/* Modals */}
-            <QTFormModal 
-                isOpen={isCreateModalOpen} 
-                onClose={() => setIsCreateModalOpen(false)} 
-                onSuccess={() => refetch()}
-            />
+            {/* Modals - Only mount when open */}
+            {isCreateModalOpen && (
+                <QTFormModal 
+                    isOpen={isCreateModalOpen} 
+                    onClose={() => setIsCreateModalOpen(false)} 
+                    onSuccess={() => refetch()}
+                />
+            )}
 
-            <QCFormModal
-                isOpen={isQCModalOpen}
-                onClose={() => {
-                    setIsQCModalOpen(false);
-                    setSelectedQTForQC(null);
-                }}
-                initialRFQNo={selectedQTForQC?.rfq_no}
-                onSuccess={() => refetch()}
-            />
+            {isQCModalOpen && (
+                <QCFormModal
+                    isOpen={isQCModalOpen}
+                    onClose={() => {
+                        setIsQCModalOpen(false);
+                        setSelectedQTForQC(null);
+                    }}
+                    initialRFQNo={selectedQTForQC?.rfq_no}
+                    onSuccess={() => refetch()}
+                />
+            )}
         </>
     );
 }

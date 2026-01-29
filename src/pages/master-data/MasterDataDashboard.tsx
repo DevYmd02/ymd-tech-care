@@ -14,9 +14,9 @@ import {
 } from 'lucide-react';
 import { styles } from '@/constants';
 
-// Import mock data
-import { mockBranches, mockWarehouses, mockItems, mockCostCenters, mockProjects } from '@/__mocks__/masterDataMocks';
+// Import services (NOT static mock data - services handle mock/real switching internally)
 import { vendorService } from '@services/vendorService';
+import { masterDataService } from '@services/masterDataService';
 
 // Import Form Modals
 
@@ -137,50 +137,89 @@ export default function MasterDataDashboard() {
         icon: menu.icon,
         recordCount: (() => {
             switch (menu.id) {
-                case 'vendor': return vendors.length;
-                case 'branch': return mockBranches.length;
-                case 'warehouse': return mockWarehouses.length;
-                case 'item': return mockItems.length;
-                case 'cost-center': return mockCostCenters.length;
-                case 'project': return mockProjects.length;
+                case 'vendor': return vendors?.length || 0;
+                case 'branch': return branches?.length || 0;
+                case 'warehouse': return warehouses?.length || 0;
+                case 'item': return items?.length || 0;
+                case 'cost-center': return costCenters?.length || 0;
+                case 'project': return projects?.length || 0;
                 default: return 0;
             }
         })(),
         ...menu.dbRelation
     }));
 
-    // Fetch Data
+    // Fetch Data - uses services which internally switch between mock/real API
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         
-        switch (activeTab) {
-            case 'vendor':
-                try {
+        try {
+            switch (activeTab) {
+                case 'vendor': {
                     const response = await vendorService.getList({ page: 1, limit: 100 });
-                    setVendors(response.data);
-                } catch {
-                    setVendors([]);
+                    setVendors(response.data || []);
+                    break;
                 }
-                break;
-            case 'branch':
-                setBranches([...mockBranches]);
-                break;
-            case 'warehouse':
-                setWarehouses([...mockWarehouses]);
-                break;
-            case 'item':
-                setItems([...mockItems]);
-                break;
-            case 'cost-center':
-                setCostCenters([...mockCostCenters]);
-                break;
-            case 'project':
-                setProjects([...mockProjects]);
-                break;
+                case 'branch': {
+                    const data = await masterDataService.getBranches();
+                    setBranches(data || []);
+                    break;
+                }
+                case 'warehouse': {
+                    const data = await masterDataService.getWarehouses();
+                    setWarehouses(data || []);
+                    break;
+                }
+                case 'item': {
+                    const data = await masterDataService.getItems();
+                    setItems(data || []);
+                    break;
+                }
+                case 'cost-center': {
+                    const data = await masterDataService.getCostCenters();
+                    setCostCenters(data || []);
+                    break;
+                }
+                case 'project': {
+                    const data = await masterDataService.getProjects();
+                    setProjects(data || []);
+                    break;
+                }
+            }
+        } catch (error) {
+            console.error('[MasterDataDashboard] fetchData error:', error);
         }
         
-        setTimeout(() => setIsLoading(false), 200);
+        setIsLoading(false);
     }, [activeTab]);
+
+    // Pre-fetch ALL tab counts on initial mount (so tab headers show correct counts)
+    useEffect(() => {
+        const fetchAllCounts = async () => {
+            try {
+                // Fetch all data in parallel for tab counts
+                const [vendorRes, branchRes, warehouseRes, itemRes, costCenterRes, projectRes] = await Promise.all([
+                    vendorService.getList({ page: 1, limit: 100 }),
+                    masterDataService.getBranches(),
+                    masterDataService.getWarehouses(),
+                    masterDataService.getItems(),
+                    masterDataService.getCostCenters(),
+                    masterDataService.getProjects()
+                ]);
+                
+                setVendors(vendorRes.data || []);
+                setBranches(branchRes || []);
+                setWarehouses(warehouseRes || []);
+                setItems(itemRes || []);
+                setCostCenters(costCenterRes || []);
+                setProjects(projectRes || []);
+            } catch (error) {
+                console.error('[MasterDataDashboard] fetchAllCounts error:', error);
+            }
+        };
+        
+        fetchAllCounts();
+    }, []); // Run once on mount
 
     useEffect(() => {
         fetchData();
@@ -224,7 +263,11 @@ export default function MasterDataDashboard() {
     const handleDelete = async (id: string) => {
         if (confirm('ต้องการลบข้อมูลนี้หรือไม่?')) {
             if (activeTab === 'vendor') {
-                await vendorService.delete(id);
+                const result = await vendorService.delete(id);
+                if (!result.success) {
+                    alert(result.message || 'เกิดข้อผิดพลาดในการลบข้อมูล');
+                    return;
+                }
             }
             fetchData();
         }
@@ -257,51 +300,61 @@ export default function MasterDataDashboard() {
         }
     };
 
-    // Filter data based on search
+ // Filter data based on search
     const getFilteredData = () => {
         const term = searchTerm.toLowerCase();
         
+        // ใช้ (array || []) เพื่อรับประกันว่าจะเป็นอาเรย์เสมอ แม้ข้อมูลยังไม่มา
         switch (activeTab) {
             case 'vendor':
-                return vendors.filter(v => 
-                    v.vendor_code.toLowerCase().includes(term) ||
-                    v.vendor_name.toLowerCase().includes(term) ||
+                return (vendors || []).filter(v => 
+                    v.vendor_code?.toLowerCase().includes(term) ||
+                    v.vendor_name?.toLowerCase().includes(term) ||
                     v.tax_id?.toLowerCase().includes(term)
                 );
             case 'branch':
-                return branches.filter(b =>
-                    b.branch_code.toLowerCase().includes(term) ||
-                    b.branch_name.toLowerCase().includes(term)
+                return (branches || []).filter(b =>
+                    b.branch_code?.toLowerCase().includes(term) ||
+                    b.branch_name?.toLowerCase().includes(term)
                 );
             case 'warehouse':
-                return warehouses.filter(w =>
-                    w.warehouse_code.toLowerCase().includes(term) ||
-                    w.warehouse_name.toLowerCase().includes(term)
+                return (warehouses || []).filter(w =>
+                    w.warehouse_code?.toLowerCase().includes(term) ||
+                    w.warehouse_name?.toLowerCase().includes(term)
                 );
             case 'item':
-                return items.filter(i =>
-                    i.item_code.toLowerCase().includes(term) ||
-                    i.item_name.toLowerCase().includes(term)
+                return (items || []).filter(i =>
+                    i.item_code?.toLowerCase().includes(term) ||
+                    i.item_name?.toLowerCase().includes(term)
                 );
             case 'cost-center':
-                return costCenters.filter(c =>
-                    c.cost_center_code.toLowerCase().includes(term) ||
-                    c.cost_center_name.toLowerCase().includes(term)
+                return (costCenters || []).filter(c =>
+                    c.cost_center_code?.toLowerCase().includes(term) ||
+                    c.cost_center_name?.toLowerCase().includes(term)
                 );
             case 'project':
-                return projects.filter(p =>
-                    p.project_code.toLowerCase().includes(term) ||
-                    p.project_name.toLowerCase().includes(term)
+                return (projects || []).filter(p =>
+                    p.project_code?.toLowerCase().includes(term) ||
+                    p.project_name?.toLowerCase().includes(term)
                 );
             default:
                 return [];
         }
     };
 
-    // Calculate pagination
-    const filteredData = getFilteredData();
-    const totalItems = filteredData.length;
-    const totalPages = Math.ceil(totalItems / rowsPerPage);
+    // --- ส่วนนี้คือจุดที่ต้องระวังเป็นพิเศษ ---
+    
+    // ตรวจสอบให้แน่ใจว่าได้อาเรย์ออกมาเสมอ
+    const filteredData = getFilteredData() || []; 
+    
+    // totalItems จะไม่อ่านค่าจาก undefined อีกต่อไป
+    const totalItems = filteredData.length; 
+    
+    const totalPages = Math.ceil(totalItems / rowsPerPage) || 1;
+    
+    // ป้องกันค่า NaN หรือการหารด้วย 0
+    const safeTotalPages = totalPages;
+
     const paginatedData = filteredData.slice(
         (currentPage - 1) * rowsPerPage,
         currentPage * rowsPerPage
@@ -310,6 +363,49 @@ export default function MasterDataDashboard() {
     // ====================================================================================
     // RENDER HELPERS
     // ====================================================================================
+
+    /**
+     * Helper to format vendor address
+     * Handles both flat fields (legacy) and nested addresses array (backend API)
+     */
+    const formatVendorAddress = (vendor: VendorListItem): string => {
+        // First try nested addresses array (from backend API)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const vendorAny = vendor as any;
+        const addresses = vendor.addresses || vendorAny.vendorAddresses || [];
+        
+        if (addresses && addresses.length > 0) {
+            // Find REGISTERED address or use first one
+            const primaryAddr = addresses.find((a: { address_type?: string }) => a.address_type === 'REGISTERED') || addresses[0];
+            if (primaryAddr) {
+                const parts = [
+                    primaryAddr.address,
+                    primaryAddr.sub_district,
+                    primaryAddr.district,
+                    primaryAddr.province,
+                    primaryAddr.postal_code
+                ];
+                const validParts = parts.filter(part => part && String(part).trim() !== '');
+                if (validParts.length > 0) {
+                    return validParts.join(' ');
+                }
+            }
+        }
+        
+        // Fallback to flat fields (legacy/mock data)
+        const addressParts = [
+            vendor.address_line1,
+            vendor.sub_district,
+            vendor.district,
+            vendor.province,
+            vendor.postal_code
+        ];
+
+        // Filter out null, undefined, or empty strings
+        const validParts = addressParts.filter(part => part && part.trim() !== '');
+
+        return validParts.length > 0 ? validParts.join(' ') : '';
+    };
 
     const renderVendorCard = (vendor: VendorListItem, isExpanded: boolean) => (
         <div key={vendor.vendor_id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -327,13 +423,15 @@ export default function MasterDataDashboard() {
                                 <span className="font-semibold text-gray-900 dark:text-white line-clamp-2" title={vendor.vendor_name}>
                                     {vendor.vendor_name}
                                 </span>
-                                <span className={`px-2 py-0.5 text-xs font-medium rounded-full shrink-0 ${
-                                    vendor.status === 'ACTIVE' 
-                                        ? 'bg-green-100 text-green-700' 
-                                        : 'bg-gray-100 text-gray-600'
-                                }`}>
-                                    {vendor.status}
-                                </span>
+                                {vendor.status && (
+                                    <span className={`px-2 py-0.5 text-xs font-medium rounded-full shrink-0 ${
+                                        vendor.status === 'ACTIVE' 
+                                            ? 'bg-green-100 text-green-700' 
+                                            : 'bg-gray-100 text-gray-600'
+                                    }`}>
+                                        {vendor.status}
+                                    </span>
+                                )}
                             </div>
                             <div className="text-sm text-gray-500 flex flex-wrap gap-x-2">
                                 <span className="whitespace-nowrap">Code: {vendor.vendor_code}</span>
@@ -357,14 +455,7 @@ export default function MasterDataDashboard() {
                             <div className="flex items-start gap-2">
                                 <MapPin size={16} className="text-gray-400 mt-0.5" />
                                     <p className="text-sm text-gray-700 dark:text-gray-300">
-                                        {[
-                                            vendor.address_line1,
-                                            vendor.sub_district,
-                                            vendor.district,
-                                            vendor.province,
-                                            vendor.postal_code,
-                                            vendor.country
-                                        ].filter(Boolean).join(' ') || '-'}
+                                        {formatVendorAddress(vendor) || '-'}
                                     </p>
                             </div>
                         </div>
@@ -966,19 +1057,19 @@ export default function MasterDataDashboard() {
                         </button>
                         
                         <span className="px-4 text-sm font-medium text-gray-700 dark:text-white whitespace-nowrap">
-                            หน้า {currentPage} / {totalPages}
+                            หน้า {currentPage} / {safeTotalPages}
                         </span>
                         
                         <button
-                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                            disabled={currentPage === totalPages}
+                            onClick={() => setCurrentPage(prev => Math.min(safeTotalPages, prev + 1))}
+                            disabled={currentPage === safeTotalPages}
                             className="p-2 aspect-square flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-gray-600 dark:text-white"
                         >
                             <ChevronRight size={18} />
                         </button>
                         <button
-                            onClick={() => setCurrentPage(totalPages)}
-                            disabled={currentPage === totalPages}
+                            onClick={() => setCurrentPage(safeTotalPages)}
+                            disabled={currentPage === safeTotalPages}
                             className="p-2 aspect-square flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-gray-600 dark:text-white"
                         >
                             <ChevronsRight size={18} />
@@ -994,7 +1085,7 @@ export default function MasterDataDashboard() {
                 vendorId={editingId || undefined}
                 initialData={selectedVendor}
                 onSuccess={fetchData} 
-                predictedVendorId={!editingId && activeTab === 'vendor' ? `V${String((currentTab.recordCount || 0) + 1).padStart(3, '0')} - Auto Generated` : undefined}
+                predictedVendorId={!editingId && activeTab === 'vendor' ? `V${String((currentTab.recordCount || 0) + 1).padStart(3, '0')}` : undefined}
             />
             <BranchFormModal isOpen={isModalOpen && activeTab === 'branch'} onClose={handleModalClose} editId={editingId} />
             <WarehouseFormModal isOpen={isModalOpen && activeTab === 'warehouse'} onClose={handleModalClose} editId={editingId} />

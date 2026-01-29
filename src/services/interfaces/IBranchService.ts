@@ -8,9 +8,9 @@ import type { BranchListItem, BranchDropdownItem } from '../../types/master-data
 export interface BranchCreateRequest {
   branch_code: string;
   branch_name: string;
-  address?: string;
-  phone?: string;
-  is_active?: boolean;
+  // address?: string;
+  // phone?: string;
+  // is_active?: boolean;
 }
 
 export interface BranchUpdateRequest extends Partial<BranchCreateRequest> {

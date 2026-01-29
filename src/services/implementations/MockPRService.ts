@@ -251,6 +251,36 @@ export class MockPRService implements IPRService {
     return true;
   }
 
+  async generateNextDocumentNo(): Promise<string> {
+    logger.log('[MockPRService] generateNextDocumentNo');
+    await this.delay(300);
+
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const prefix = `PR-${year}${month}-`;
+
+    // Filter existing PRs that match the current month's prefix
+    const existingPRs = this.prs.filter(pr => pr.pr_no && pr.pr_no.startsWith(prefix));
+
+    if (existingPRs.length === 0) {
+      return `${prefix}0001`;
+    }
+
+    // Find the highest sequence number
+    const maxSequence = existingPRs.reduce((max, pr) => {
+      const parts = pr.pr_no.split('-');
+      if (parts.length === 3) {
+        const sequence = parseInt(parts[2], 10);
+        return !isNaN(sequence) && sequence > max ? sequence : max;
+      }
+      return max;
+    }, 0);
+
+    // Increment and pad with zeros
+    return `${prefix}${String(maxSequence + 1).padStart(4, '0')}`;
+  }
+
   private delay(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }

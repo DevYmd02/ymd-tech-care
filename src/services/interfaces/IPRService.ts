@@ -65,4 +65,5 @@ export interface IPRService {
   convert(request: ConvertPRRequest): Promise<{ success: boolean; document_id?: string; document_no?: string }>;
   uploadAttachment(prId: string, file: File): Promise<{ success: boolean; attachment_id?: string }>;
   deleteAttachment(prId: string, attachmentId: string): Promise<boolean>;
+  generateNextDocumentNo(): Promise<string>;
 }

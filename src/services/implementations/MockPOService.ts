@@ -75,8 +75,7 @@ export class MockPOService implements IPOService {
     }
 
     async getList(params?: POListParams): Promise<POListResponse> {
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // No delay for instant loading
 
         let data = this.pos; // Reference to internal state
 
