@@ -15,7 +15,9 @@ import { placeholderRoutes } from './config/routes';
 // ====================================================================================
 
 // Admin Pages
+// Admin Pages
 const AdminDashboard = React.lazy(() => import('./pages/admin/AdminDashboard'));
+const EmployeePage = React.lazy(() => import('./pages/admin/employees/EmployeePage').then(module => ({ default: module.EmployeePage })));
 
 // Procurement Pages
 const ProcurementDashboard = React.lazy(() => import('./pages/procurement/ProcurementDashboard'));
@@ -104,7 +106,10 @@ function App() {
         {/* ==================== IMPLEMENTED ROUTES ==================== */}
 
         {/* Admin Dashboard */}
+        {/* Admin Dashboard */}
         <Route path="admin" element={<AdminDashboard />} />
+        <Route path="admin/employees" element={<EmployeePage />} />
+        <Route path="admin/roles" element={<RolesDashboard />} />
 
         {/* Procurement - Implemented */}
         <Route path="procurement/dashboard" element={<ProcurementDashboard />} />

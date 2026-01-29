@@ -218,15 +218,12 @@ export const sidebarMenuItems: MenuItem[] = [
         path: '/admin'
     },
     {
-        id: 'roles',
-        label: 'บทบาทและสิทธิ์ (Roles)',
+        id: 'user-management',
+        label: 'จัดการผู้ใช้งาน (User Management)',
         icon: Users,
         subItems: [
-            { id: 'roles-dashboard', label: 'Roles Dashboard', path: '/roles/dashboard' },
-            { id: 'user-management', label: 'จัดการผู้ใช้ (User Management)', path: '/roles/users' },
-            { id: 'role-management', label: 'จัดการบทบาท (Role Management)', path: '/roles/management' },
-            { id: 'permissions', label: 'สิทธิ์การเข้าถึง (Permissions)', path: '/roles/permissions' },
-            { id: 'user-groups', label: 'กลุ่มผู้ใช้ (User Groups)', path: '/roles/groups' },
+            { id: 'employees', label: 'จัดการพนักงาน', path: '/admin/employees' },
+            { id: 'roles-permissions', label: 'บทบาทและสิทธิ์', path: '/admin/roles' },
             { id: 'login-history', label: 'ประวัติการเข้าสู่ระบบ', path: '/roles/login-history' },
         ]
     },

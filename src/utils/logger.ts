@@ -1,42 +1,60 @@
 /**
  * @file logger.ts
- * @description Centralized logging utility
- * @usage Use this instead of console.log/error to allow better control over logging
+ * @description Centralized logging utility with environment checks and consistent formatting.
+ * @usage Use this instead of console.log/error to allow better control over logging.
  */
 
 // Check if we are in development mode
 const isDev = import.meta.env.DEV;
 
+// Reusable timestamp formatter
+const getTimestamp = () => new Date().toISOString();
+
 export const logger = {
   /**
-   * Log info message (only in dev)
+   * Log info message (only in dev).
+   * Compatible with existing `logger.log` calls.
    */
   log: (message: string, ...args: unknown[]) => {
     if (isDev) {
-      console.log(`[INFO] ${message}`, ...args);
+      console.log(`ℹ️ [INFO] [${getTimestamp()}] ${message}`, ...args);
     }
   },
 
   /**
-   * Log warning message (only in dev)
+   * Log debug message (only in dev).
+   */
+  debug: (message: string, ...args: unknown[]) => {
+    if (isDev) {
+      console.debug(`🔍 [DEBUG] [${getTimestamp()}] ${message}`, ...args);
+    }
+  },
+
+  /**
+   * Log info message (only in dev).
+   * Alias for log, but explicit semantics.
+   */
+  info: (message: string, ...args: unknown[]) => {
+    if (isDev) {
+      console.info(`ℹ️ [INFO] [${getTimestamp()}] ${message}`, ...args);
+    }
+  },
+
+  /**
+   * Log warning message (only in dev).
    */
   warn: (message: string, ...args: unknown[]) => {
     if (isDev) {
-      console.warn(`[WARN] ${message}`, ...args);
+      console.warn(`⚠️ [WARN] [${getTimestamp()}] ${message}`, ...args);
     }
   },
 
   /**
-   * Log error message (always log, but formatted)
-   * TODO: connect to Sentry/monitoring service in production
+   * Log error message (always logs).
+   * In production, this could be connected to monitoring services (Sentry, etc.).
    */
   error: (message: string, error?: unknown) => {
     // Always log errors, but format them nicely
-    if (isDev) {
-      console.error(`[ERROR] ${message}`, error);
-    } else {
-      // In production, might want to send to Sentry
-      console.error(message); // Keep minimal log for now
-    }
-  }
+    console.error(`❌ [ERROR] [${getTimestamp()}] ${message}`, error);
+  },
 };
