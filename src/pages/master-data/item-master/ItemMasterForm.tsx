@@ -260,7 +260,7 @@ export default function ItemMasterForm() {
                         </button>
                         {saveError && <span className="text-red-500 text-sm ml-2">{saveError}</span>}
                     </div>
-                    <button type="button" onClick={() => navigate('/master-data')} className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-red-500 hover:text-white hover:border-red-500 transition-all">
+                    <button type="button" onClick={() => navigate('/master-data?tab=item')} className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-red-500 hover:text-white hover:border-red-500 transition-all">
                         <X size={16} />Close
                     </button>
                 </div>

@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { 
     Database, Users, Package, Building2, Warehouse as WarehouseIcon, 
     DollarSign, FolderKanban, Plus, Search, Filter, Edit2, Trash2,
@@ -95,6 +95,7 @@ const DB_RELATIONS: Record<TabType, { dbTable: string; relations: string[]; fk: 
 
 export default function MasterDataDashboard() {
     const [searchParams, setSearchParams] = useSearchParams();
+    const navigate = useNavigate();
     
     // Get initial tab from URL or default to 'vendor'
     const initialTab = (searchParams.get('tab') as TabType) || 'vendor';
@@ -238,6 +239,10 @@ export default function MasterDataDashboard() {
     };
 
     const handleAddNew = () => {
+        if (activeTab === 'item') {
+            navigate('/master-data/item');
+            return;
+        }
         setEditingId(null);
         setIsModalOpen(true);
     };
