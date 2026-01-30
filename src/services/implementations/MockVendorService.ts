@@ -41,35 +41,34 @@ export class MockVendorService implements IVendorService {
       );
     }
 
-    // Map vendors to flatten address structure for Valid fields (VendorListItem)
-    const mappedVendors = filteredVendors.map(v => {
-        const primaryAddr = v.addresses?.find(a => a.address_type === 'REGISTERED') || v.addresses?.[0];
-        // Clone to avoid mutating original
-        const vClone = structuredClone(v); 
-        
-        if (primaryAddr) {
-            // Force cast to any to assign flat fields that might be missing in VendorMaster type but exist in VendorListItem
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (vClone as any).address_line1 = primaryAddr.address;
-            // sub_district removed
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (vClone as any).district = primaryAddr.district;
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (vClone as any).province = primaryAddr.province;
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (vClone as any).postal_code = primaryAddr.postal_code;
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (vClone as any).country = primaryAddr.country;
-        }
-        return vClone;
-    });
-
     // Return deep copy of the filtered result
+    const page = params?.page || 1;
+    const limit = params?.limit || 50;
+    const startIndex = (page - 1) * limit;
+    const paginatedData = filteredVendors.slice(startIndex, startIndex + limit);
+
     return {
-      data: mappedVendors,
+      data: paginatedData.map(v => {
+          const vClone = structuredClone(v); 
+          const primaryAddr = v.addresses?.find(a => a.address_type === 'REGISTERED') || v.addresses?.[0];
+          
+          if (primaryAddr) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (vClone as any).address_line1 = primaryAddr.address;
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (vClone as any).district = primaryAddr.district;
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (vClone as any).province = primaryAddr.province;
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (vClone as any).postal_code = primaryAddr.postal_code;
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (vClone as any).country = primaryAddr.country;
+          }
+          return vClone;
+      }),
       total: filteredVendors.length,
-      page: params?.page || 1,
-      limit: params?.limit || 20,
+      page,
+      limit,
     };
   }
 

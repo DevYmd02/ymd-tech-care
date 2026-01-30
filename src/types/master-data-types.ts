@@ -271,6 +271,9 @@ export interface ItemMaster extends BaseMasterData {
     item_id: string;
     item_code: string;
     item_name: string;
+    item_name_en?: string; // Added for bilingual support
+    marketing_name?: string; // Legacy: ชื่อทางการตลาด
+    billing_name?: string;   // Legacy: ชื่อในการออกบิล
     description?: string;
     warehouse?: string;
     location?: string;
@@ -279,6 +282,7 @@ export interface ItemMaster extends BaseMasterData {
     category_id?: string;
     category_name: string;
     item_type_id?: string;
+    item_type_code?: string; // Added for type badge
     item_type_name?: string;
     unit_id?: string;
     unit_name: string;
@@ -294,17 +298,41 @@ export interface ItemMaster extends BaseMasterData {
  * ItemMasterFormData - สำหรับ Frontend Form
  */
 export interface ItemMasterFormData {
-    itemCode: string;
-    itemCodeSearch: string;
-    itemName: string;
-    barcode: string;
-    mainUnit: string;
-    productCategory: string;
-    itemType: string;
-    purchasingUnit: string;
-    salesUnit: string;
-    taxCode: string;
-    isActive: boolean;
+    // Primary Identifiers
+    item_code: string;       // Map to: item_code
+    item_name: string;       // Map to: item_name
+    item_name_en: string;    // Legacy requirement (Handle as optional if not in DB yet)
+    marketing_name: string;  // Legacy: ชื่อทางการตลาด
+    billing_name: string;    // Legacy: ชื่อในการออกบิล
+    category_id: string;     // Map to: category_id
+
+    // Attributes (Cols 1)
+    good_class_id: string;   // Group
+    good_brand_id: string;   // Brand (Schema: good_brand_id)
+    good_pattern_id: string; // Pattern (Schema: good_pattern_id)
+    good_design_id: string;  // Design (Schema: good_design_id)
+    good_size_id: string;    // Size (Schema: good_size_id)
+    good_model_id?: string;  // Legacy (Warning: May not exist in DB Schema)
+    good_grade_id?: string;  // Legacy (Warning: May not exist in DB Schema)
+    good_color_id?: string;  // Legacy (Warning: May not exist in DB Schema)
+
+    // Stock & Cost (Cols 2)
+    base_uom_id: string;     // Map to: base_uom_id
+    item_type_code: string;  // Map to: item_type_code
+    costing_method?: string; // Legacy
+
+    // Financial & Status (Cols 3)
+    default_tax_code: string; // Map to: default_tax_code
+    tax_rate?: number;
+    barcode?: string;         // Map to: barcode
+    is_active: boolean;       // Map to: is_active
+    is_on_hold?: boolean;     // Legacy
+    nature_id?: string;       // Legacy (Nature/ลักษณะสินค้า)
+    product_subtype_id?: string; // Legacy (Group Item/รายการกลุ่มสินค้า)
+    commission_type?: string; // Legacy (Commission/การคิดคอมมิชชั่น)
+    std_amount?: number;      // Legacy (Amount/กำหนดจำนวน)
+    discount_amount?: string; // Legacy (Discount/ส่วนลดสินค้า)
+    is_buddy?: boolean;       // Legacy (Buddy)
 }
 
 /**
@@ -314,11 +342,15 @@ export interface ItemListItem {
     item_id: string;
     item_code: string;
     item_name: string;
+    item_name_en?: string; // Added for bilingual support
+    marketing_name?: string; // Legacy: ชื่อทางการตลาด
+    billing_name?: string;   // Legacy: ชื่อในการออกบิล
     description?: string;
     warehouse?: string;
     location?: string;
     standard_cost?: number;
     category_name: string;
+    item_type_code?: string; // Added for type badge
     unit_name: string;
     is_active: boolean;
     created_at: string;
@@ -326,17 +358,40 @@ export interface ItemListItem {
 
 /** Initial form data สำหรับ new item master */
 export const initialItemMasterFormData: ItemMasterFormData = {
-    itemCode: '',
-    itemCodeSearch: '',
-    itemName: '',
+    // Primary Identifiers
+    item_code: '',
+    item_name: '',
+    item_name_en: '',
+    marketing_name: '',
+    billing_name: '',
+    category_id: '',
+
+    // Attributes
+    good_class_id: '',
+    good_brand_id: '',
+    good_pattern_id: '',
+    good_design_id: '',
+    good_size_id: '',
+    good_model_id: '',
+    good_grade_id: '',
+    good_color_id: '',
+
+    // Stock & Cost
+    base_uom_id: '',
+    item_type_code: '',
+    costing_method: '',
+
+    // Financial & Status
+    default_tax_code: 'VAT7',
     barcode: '',
-    mainUnit: '',
-    productCategory: '',
-    itemType: '',
-    purchasingUnit: '',
-    salesUnit: '',
-    taxCode: '',
-    isActive: true,
+    is_active: true,
+    is_on_hold: false,
+    nature_id: '',
+    product_subtype_id: '',
+    commission_type: '',
+    std_amount: 0,
+    discount_amount: '',
+    is_buddy: false,
 };
 
 // ====================================================================================

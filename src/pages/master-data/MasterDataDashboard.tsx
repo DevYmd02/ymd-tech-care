@@ -157,7 +157,7 @@ export default function MasterDataDashboard() {
         try {
             switch (activeTab) {
                 case 'vendor': {
-                    const response = await vendorService.getList({ page: 1, limit: 100 });
+                    const response = await vendorService.getList({ page: 1, limit: 50 });
                     setVendors(response.data || []);
                     break;
                 }
@@ -200,7 +200,7 @@ export default function MasterDataDashboard() {
             try {
                 // Fetch all data in parallel for tab counts
                 const [vendorRes, branchRes, warehouseRes, itemRes, costCenterRes, projectRes] = await Promise.all([
-                    vendorService.getList({ page: 1, limit: 100 }),
+                    vendorService.getList({ page: 1, limit: 50 }),
                     masterDataService.getBranches(),
                     masterDataService.getWarehouses(),
                     masterDataService.getItems(),
@@ -996,7 +996,7 @@ export default function MasterDataDashboard() {
                         </div>
                     )
                 ) : activeTab === 'item' ? (
-                     <ItemMasterList data={paginatedData as ItemListItem[]} />
+                     <ItemMasterList />
                 ) : activeTab === 'cost-center' ? (
                     paginatedData.length > 0 ? (
                         (paginatedData as CostCenter[]).map(cc => 
