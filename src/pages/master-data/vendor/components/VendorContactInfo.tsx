@@ -80,10 +80,11 @@ export const VendorContactInfo: React.FC<VendorContactInfoProps> = ({ formData, 
                         type="email"
                         value={formData.email} 
                         onChange={onChange} 
-                        className={styles.input} 
+                        className={`${styles.input} ${errors.email ? 'border-red-500 focus:ring-red-500' : ''}`} 
                         placeholder="contact@example.com" 
                         required
                     />
+                    {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
                 </div>
                 <div className="md:col-span-2 space-y-1">
                     <label className={styles.label}>เว็บไซต์</label>

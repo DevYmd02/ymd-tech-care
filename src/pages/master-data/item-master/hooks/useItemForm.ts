@@ -5,6 +5,7 @@ import Swal from 'sweetalert2';
 import { logger } from '@utils/logger';
 import { ItemMasterService } from '@/services/ItemMasterService';
 import { ITEM_CATEGORIES, ITEM_UOMS } from '@/constants';
+import { useConfirmation } from '@/hooks/useConfirmation';
 
 // Zod Schema for Item Master
 export const itemMasterSchema = z.object({
@@ -80,6 +81,7 @@ const initialFormData: ItemFormData = {
  */
 export function useItemForm(editId: string | null) {
     const navigate = useNavigate();
+    const { confirm } = useConfirmation();
     const [formData, setFormData] = useState<ItemFormData>(initialFormData);
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
@@ -178,20 +180,15 @@ export function useItemForm(editId: string | null) {
     const handleSave = async () => {
         if (!validate()) return;
 
-        const result = await Swal.fire({
+        const isConfirmed = await confirm({
             title: editId ? 'ยืนยันการแก้ไข?' : 'ยืนยันการบันทึก?',
-            text: editId ? 'ข้อมูลสินค้าจะถูกแก้ไขในระบบ' : 'ข้อมูลสินค้าจะถูกบันทึกในระบบ',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: editId ? 'บันทึกการแก้ไข (Update)' : 'บันทึก (Save)',
-            cancelButtonText: 'ยกเลิก (Cancel)',
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
-            background: '#1f2937',
-            color: '#ffffff'
+            description: editId ? 'ข้อมูลสินค้าจะถูกแก้ไขในระบบ' : 'ข้อมูลสินค้าจะถูกบันทึกในระบบ',
+            confirmText: editId ? 'บันทึกการแก้ไข' : 'บันทึก',
+            cancelText: 'ยกเลิก',
+            variant: 'info'
         });
 
-        if (!result.isConfirmed) return;
+        if (!isConfirmed) return;
 
         setIsSaving(true);
         setSaveError(null);

@@ -9,6 +9,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '../contexts/ThemeContext';
 import { ErrorBoundary } from '@system/ErrorBoundary';
+import { ConfirmationProvider } from '@system/ConfirmationContext';
 
 // Create React Query client with default options
 const queryClient = new QueryClient({
@@ -41,11 +42,13 @@ export function AppProvider({ children }: AppProviderProps) {
     <StrictMode>
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
-          <ThemeProvider>
-            <BrowserRouter>
-              {children}
-            </BrowserRouter>
-          </ThemeProvider>
+          <ConfirmationProvider>
+            <ThemeProvider>
+              <BrowserRouter>
+                {children}
+              </BrowserRouter>
+            </ThemeProvider>
+          </ConfirmationProvider>
         </QueryClientProvider>
       </ErrorBoundary>
     </StrictMode>

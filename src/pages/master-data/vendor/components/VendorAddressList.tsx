@@ -49,6 +49,7 @@ export const VendorAddressList: React.FC<VendorAddressListProps> = ({
                         <div className="md:col-span-2 space-y-1">
                             <label className={styles.label}>ที่อยู่ <span className="text-red-500">*</span></label>
                             <textarea 
+                                name="addresses[0].address"
                                 value={formData.addresses[0].address}
                                 onChange={(e) => updateAddress(0, 'address', e.target.value)}
                                 className={styles.input} 
@@ -59,6 +60,7 @@ export const VendorAddressList: React.FC<VendorAddressListProps> = ({
                         <div className="space-y-1">
                             <label className={styles.label}>แขวง/ตำบล</label>
                             <input 
+                                name="addresses[0].subDistrict"
                                 value={formData.addresses[0].subDistrict}
                                 onChange={(e) => updateAddress(0, 'subDistrict', e.target.value)}
                                 className={styles.input}
@@ -67,6 +69,7 @@ export const VendorAddressList: React.FC<VendorAddressListProps> = ({
                         <div className="space-y-1">
                             <label className={styles.label}>เขต/อำเภอ</label>
                             <input 
+                                name="addresses[0].district"
                                 value={formData.addresses[0].district}
                                 onChange={(e) => updateAddress(0, 'district', e.target.value)}
                                 className={styles.input}
@@ -75,6 +78,7 @@ export const VendorAddressList: React.FC<VendorAddressListProps> = ({
                         <div className="space-y-1">
                             <label className={styles.label}>จังหวัด <span className="text-red-500">*</span></label>
                             <input 
+                                name="addresses[0].province"
                                 value={formData.addresses[0].province}
                                 onChange={(e) => updateAddress(0, 'province', e.target.value)}
                                 className={styles.input} 
@@ -84,19 +88,14 @@ export const VendorAddressList: React.FC<VendorAddressListProps> = ({
                         <div className="space-y-1">
                             <label className={styles.label}>รหัสไปรษณีย์ <span className="text-red-500">*</span></label>
                             <input 
+                                name="addresses[0].postalCode"
                                 value={formData.addresses[0].postalCode}
-                                onChange={(e) => updateAddress(0, 'postalCode', e.target.value)}
-                                onInput={(e) => {
-                                    const target = e.currentTarget;
-                                    if (/[^0-9]/.test(target.value)) {
-                                        target.setCustomValidity("กรอกได้เฉพาะตัวเลข");
-                                        target.reportValidity();
-                                        target.value = target.value.replace(/[^0-9]/g, "");
-                                        target.setCustomValidity("");
-                                    } else {
-                                        target.setCustomValidity("");
-                                    }
+                                onChange={(e) => {
+                                    const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 5);
+                                    updateAddress(0, 'postalCode', val);
                                 }}
+                                maxLength={5}
+                                inputMode="numeric"
                                 className={`${styles.input} ${errors['addresses[0].postalCode'] ? 'border-red-500 focus:ring-red-500' : ''}`} 
                                 required
                             />
@@ -108,6 +107,7 @@ export const VendorAddressList: React.FC<VendorAddressListProps> = ({
                             <div className="space-y-1">
                                 <label className={styles.label}>ผู้ติดต่อสาขา</label>
                                 <input 
+                                    name="addresses[0].contactPerson"
                                     value={formData.addresses[0].contactPerson || ''}
                                     onChange={(e) => updateAddress(0, 'contactPerson', e.target.value)}
                                     className={styles.input} 
@@ -118,6 +118,7 @@ export const VendorAddressList: React.FC<VendorAddressListProps> = ({
                                 <div className="flex gap-2">
                                     <div className="flex-1">
                                         <input 
+                                            name="addresses[0].phone"
                                             value={formData.addresses[0].phone || ''}
                                             onChange={(e) => updateAddress(0, 'phone', e.target.value)}
                                             onInput={(e) => {
@@ -137,6 +138,7 @@ export const VendorAddressList: React.FC<VendorAddressListProps> = ({
                                     </div>
                                     <div className="w-24">
                                         <input 
+                                            name="addresses[0].phoneExtension"
                                             value={formData.addresses[0].phoneExtension || ''}
                                             onChange={(e) => updateAddress(0, 'phoneExtension', e.target.value)}
                                             onInput={(e) => {
@@ -160,6 +162,7 @@ export const VendorAddressList: React.FC<VendorAddressListProps> = ({
                         <div className="md:col-span-2 space-y-1">
                             <label className={styles.label}>ประเทศ</label>
                                 <input 
+                                    name="addresses[0].country"
                                     value={formData.addresses[0].country}
                                     onChange={(e) => updateAddress(0, 'country', e.target.value)}
                                     className={styles.input} 
@@ -197,6 +200,7 @@ export const VendorAddressList: React.FC<VendorAddressListProps> = ({
                         <div className="md:col-span-2 space-y-1">
                             <label className={styles.label}>ที่อยู่ <span className="text-red-500">*</span></label>
                             <textarea 
+                                name="addresses[1].address"
                                 value={formData.addresses[1].address}
                                 onChange={(e) => updateAddress(1, 'address', e.target.value)}
                                 className={styles.input} 
@@ -208,6 +212,7 @@ export const VendorAddressList: React.FC<VendorAddressListProps> = ({
                         <div className="space-y-1">
                             <label className={styles.label}>แขวง/ตำบล</label>
                             <input 
+                                name="addresses[1].subDistrict"
                                 value={formData.addresses[1].subDistrict}
                                 onChange={(e) => updateAddress(1, 'subDistrict', e.target.value)}
                                 className={styles.input} 
@@ -217,6 +222,7 @@ export const VendorAddressList: React.FC<VendorAddressListProps> = ({
                         <div className="space-y-1">
                             <label className={styles.label}>เขต/อำเภอ</label>
                             <input 
+                                name="addresses[1].district"
                                 value={formData.addresses[1].district}
                                 onChange={(e) => updateAddress(1, 'district', e.target.value)}
                                 className={styles.input} 
@@ -226,6 +232,7 @@ export const VendorAddressList: React.FC<VendorAddressListProps> = ({
                         <div className="space-y-1">
                             <label className={styles.label}>จังหวัด <span className="text-red-500">*</span></label>
                             <input 
+                                name="addresses[1].province"
                                 value={formData.addresses[1].province}
                                 onChange={(e) => updateAddress(1, 'province', e.target.value)}
                                 className={styles.input} 
@@ -236,19 +243,14 @@ export const VendorAddressList: React.FC<VendorAddressListProps> = ({
                         <div className="space-y-1">
                             <label className={styles.label}>รหัสไปรษณีย์ <span className="text-red-500">*</span></label>
                             <input 
+                                name="addresses[1].postalCode"
                                 value={formData.addresses[1].postalCode}
-                                onChange={(e) => updateAddress(1, 'postalCode', e.target.value)}
-                                onInput={(e) => {
-                                    const target = e.currentTarget;
-                                    if (/[^0-9]/.test(target.value)) {
-                                        target.setCustomValidity("กรอกได้เฉพาะตัวเลข");
-                                        target.reportValidity();
-                                        target.value = target.value.replace(/[^0-9]/g, "");
-                                        target.setCustomValidity("");
-                                    } else {
-                                        target.setCustomValidity("");
-                                    }
+                                onChange={(e) => {
+                                    const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 5);
+                                    updateAddress(1, 'postalCode', val);
                                 }}
+                                maxLength={5}
+                                inputMode="numeric"
                                 className={`${styles.input} ${errors['addresses[1].postalCode'] ? 'border-red-500 focus:ring-red-500' : ''}`} 
                                 disabled={formData.sameAsRegistered}
                                 required
@@ -261,6 +263,7 @@ export const VendorAddressList: React.FC<VendorAddressListProps> = ({
                             <div className="space-y-1">
                                 <label className={styles.label}>ผู้ติดต่อสาขา</label>
                                 <input 
+                                    name="addresses[1].contactPerson"
                                     value={formData.addresses[1].contactPerson || ''}
                                     onChange={(e) => updateAddress(1, 'contactPerson', e.target.value)}
                                     className={styles.input} 
@@ -272,6 +275,7 @@ export const VendorAddressList: React.FC<VendorAddressListProps> = ({
                                 <div className="flex gap-2">
                                     <div className="flex-1">
                                         <input 
+                                            name="addresses[1].phone"
                                             value={formData.addresses[1].phone || ''}
                                             onChange={(e) => updateAddress(1, 'phone', e.target.value)}
                                             onInput={(e) => {
@@ -292,6 +296,7 @@ export const VendorAddressList: React.FC<VendorAddressListProps> = ({
                                     </div>
                                     <div className="w-24">
                                         <input 
+                                            name="addresses[1].phoneExtension"
                                             value={formData.addresses[1].phoneExtension || ''}
                                             onChange={(e) => updateAddress(1, 'phoneExtension', e.target.value)}
                                             onInput={(e) => {
@@ -316,6 +321,7 @@ export const VendorAddressList: React.FC<VendorAddressListProps> = ({
                         <div className="md:col-span-2 space-y-1">
                             <label className={styles.label}>ประเทศ</label>
                                 <input 
+                                    name="addresses[1].country"
                                     value={formData.addresses[1].country}
                                     onChange={(e) => updateAddress(1, 'country', e.target.value)}
                                     className={styles.input} 
@@ -354,6 +360,7 @@ export const VendorAddressList: React.FC<VendorAddressListProps> = ({
                                 <div className="flex items-center gap-2">
                                     <label className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider">ประเภท:</label>
                                     <select
+                                        name={`addresses[${actualIndex}].addressType`}
                                         value={addr.addressType}
                                         onChange={(e) => updateAddress(actualIndex, 'addressType', e.target.value)}
                                         className="text-sm bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-900 dark:text-white"
@@ -369,6 +376,7 @@ export const VendorAddressList: React.FC<VendorAddressListProps> = ({
                                 <div className="md:col-span-2 space-y-1">
                                     <label className={styles.label}>ที่อยู่ <span className="text-red-500">*</span></label>
                                     <textarea 
+                                        name={`addresses[${actualIndex}].address`}
                                         value={addr.address}
                                         onChange={(e) => updateAddress(actualIndex, 'address', e.target.value)}
                                         className={styles.input} 
@@ -379,6 +387,7 @@ export const VendorAddressList: React.FC<VendorAddressListProps> = ({
                                 <div className="space-y-1">
                                     <label className={styles.label}>แขวง/ตำบล</label>
                                     <input 
+                                        name={`addresses[${actualIndex}].subDistrict`}
                                         value={addr.subDistrict}
                                         onChange={(e) => updateAddress(actualIndex, 'subDistrict', e.target.value)}
                                         className={styles.input}
@@ -387,6 +396,7 @@ export const VendorAddressList: React.FC<VendorAddressListProps> = ({
                                 <div className="space-y-1">
                                     <label className={styles.label}>เขต/อำเภอ</label>
                                     <input 
+                                        name={`addresses[${actualIndex}].district`}
                                         value={addr.district}
                                         onChange={(e) => updateAddress(actualIndex, 'district', e.target.value)}
                                         className={styles.input}
@@ -395,6 +405,7 @@ export const VendorAddressList: React.FC<VendorAddressListProps> = ({
                                 <div className="space-y-1">
                                     <label className={styles.label}>จังหวัด <span className="text-red-500">*</span></label>
                                     <input 
+                                        name={`addresses[${actualIndex}].province`}
                                         value={addr.province}
                                         onChange={(e) => updateAddress(actualIndex, 'province', e.target.value)}
                                         className={styles.input} 
@@ -404,19 +415,14 @@ export const VendorAddressList: React.FC<VendorAddressListProps> = ({
                                 <div className="space-y-1">
                                     <label className={styles.label}>รหัสไปรษณีย์ <span className="text-red-500">*</span></label>
                                     <input 
+                                        name={`addresses[${actualIndex}].postalCode`}
                                         value={addr.postalCode}
-                                        onChange={(e) => updateAddress(actualIndex, 'postalCode', e.target.value)}
-                                        onInput={(e) => {
-                                            const target = e.currentTarget;
-                                            if (/[^0-9]/.test(target.value)) {
-                                                target.setCustomValidity("กรอกได้เฉพาะตัวเลข");
-                                                target.reportValidity();
-                                                target.value = target.value.replace(/[^0-9]/g, "");
-                                                target.setCustomValidity("");
-                                            } else {
-                                                target.setCustomValidity("");
-                                            }
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 5);
+                                            updateAddress(actualIndex, 'postalCode', val);
                                         }}
+                                        maxLength={5}
+                                        inputMode="numeric"
                                         className={`${styles.input} ${errors[`addresses[${actualIndex}].postalCode`] ? 'border-red-500 focus:ring-red-500' : ''}`} 
                                         required
                                     />
@@ -428,6 +434,7 @@ export const VendorAddressList: React.FC<VendorAddressListProps> = ({
                                     <div className="space-y-1">
                                         <label className={styles.label}>ผู้ติดต่อสาขา</label>
                                         <input 
+                                            name={`addresses[${actualIndex}].contactPerson`}
                                             value={addr.contactPerson || ''}
                                             onChange={(e) => updateAddress(actualIndex, 'contactPerson', e.target.value)}
                                             className={styles.input} 
@@ -438,6 +445,7 @@ export const VendorAddressList: React.FC<VendorAddressListProps> = ({
                                         <div className="flex gap-2">
                                             <div className="flex-1">
                                                 <input 
+                                                    name={`addresses[${actualIndex}].phone`}
                                                     value={addr.phone || ''}
                                                     onChange={(e) => updateAddress(actualIndex, 'phone', e.target.value)}
                                                     onInput={(e) => {
@@ -457,6 +465,7 @@ export const VendorAddressList: React.FC<VendorAddressListProps> = ({
                                             </div>
                                             <div className="w-24">
                                                 <input 
+                                                    name={`addresses[${actualIndex}].phoneExtension`}
                                                     value={addr.phoneExtension || ''}
                                                     onChange={(e) => updateAddress(actualIndex, 'phoneExtension', e.target.value)}
                                                     onInput={(e) => {

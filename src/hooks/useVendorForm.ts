@@ -20,13 +20,14 @@ const vendorSchema = z.object({
     vendorTypeId: z.string().min(1, 'กรุณาเลือกประเภทเจ้าหนี้'),
     vendorGroupId: z.string().min(1, 'กรุณาเลือกกลุ่มเจ้าหนี้'),
     currencyId: z.string().min(1, 'กรุณาเลือกสกุลเงิน'),
-    taxId: z.string().regex(/^[0-9]{13}$/, 'เลขประจำตัวผู้เสียภาษีต้องมี 13 หลัก').optional().or(z.literal('')),
-    email: z.string().email('รูปแบบอีเมลไม่ถูกต้อง').optional().or(z.literal('')),
+    taxId: z.string().length(13, 'เลขประจำตัวผู้เสียภาษีต้องมี 13 หลัก').regex(/^\d+$/, 'กรอกได้เฉพาะตัวเลข').optional().or(z.literal('')),
+    email: z.string().email('รูปแบบอีเมลไม่ถูกต้อง (เช่น user@example.com)').optional().or(z.literal('')),
     addresses: z.array(z.object({
         address: z.string().min(1, 'กรุณากรอกที่อยู่'),
-        district: z.string().min(1, 'กรุณากรอกเขต/อำเภอ'),
+        subDistrict: z.string().optional().or(z.literal('')),
+        district: z.string().optional().or(z.literal('')),
         province: z.string().min(1, 'กรุณากรอกจังหวัด'),
-        postalCode: z.string().regex(/^[0-9]{5}$/, 'รหัสไปรษณีย์ต้องมี 5 หลัก'),
+        postalCode: z.string().length(5, 'รหัสไปรษณีย์ต้องมี 5 หลัก').regex(/^\d+$/, 'กรอกได้เฉพาะตัวเลข'),
     })).min(1),
     bankAccounts: z.array(z.object({
         bankName: z.string().min(1, 'กรุณากรอกชื่อธนาคาร'),
@@ -58,6 +59,7 @@ export function useVendorForm({
     const [headerTitle, setHeaderTitle] = useState('เพิ่มเจ้าหนี้ใหม่');
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
     const [showConfirmModal, setShowConfirmModal] = useState(false);
+    const [systemAlert, setSystemAlert] = useState<{ message: string; type: 'error' | 'success' } | null>(null);
     const prevIsOpenRef = useRef(isOpen);
 
     // Fetch/Reset data when modal opens
@@ -296,12 +298,23 @@ export function useVendorForm({
             });
             setErrors(newErrors);
             
-            // Scroll to the first error
-            const element = document.getElementsByName(result.error.issues[0].path[result.error.issues[0].path.length - 1] as string)[0];
-            if (element) {
-                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                (element as HTMLElement).focus();
-            }
+            // Trigger System Alert for Feedback
+            setSystemAlert({
+                message: 'กรุณาตรวจสอบข้อมูลสีแดงในแบบฟอร์ม',
+                type: 'error'
+            });
+            
+            // Scroll to the first error (using name selector with 100ms delay for reliability)
+            setTimeout(() => {
+                const firstErrorKey = Object.keys(newErrors)[0];
+                if (firstErrorKey) {
+                    const element = document.querySelector(`[name="${firstErrorKey}"]`);
+                    if (element) {
+                        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        (element as HTMLElement).focus();
+                    }
+                }
+            }, 100);
             
             return;
         }
@@ -322,12 +335,18 @@ export function useVendorForm({
                 await vendorService.create(request);
             }
 
-            alert('บันทึกข้อมูลสำเร็จ');
+            // Success Alert is handled by onSuccess or parent usually, but we can do it here too if we want a Toast.
+            // But usually we close the modal.
+            // For now, removing the invasive window.alert calls.
+            
             onSuccess?.();
             onClose();
         } catch (error) {
             console.error('Error saving vendor:', error);
-            alert('บันทึกข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+            setSystemAlert({
+                message: 'บันทึกข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง',
+                type: 'error'
+            });
         } finally {
             setIsSubmitting(false);
             setShowConfirmModal(false);
@@ -347,6 +366,8 @@ export function useVendorForm({
         headerTitle,
         showConfirmModal,
         setShowConfirmModal,
+        systemAlert,
+        setSystemAlert,
         handleChange,
         addBankAccount,
         removeBankAccount,

@@ -51,6 +51,7 @@ export const VendorAdditionalContacts: React.FC<VendorAdditionalContactsProps> =
                             <div className="space-y-1">
                                 <label className={styles.label}>ชื่อผู้ติดต่อ</label>
                                 <input 
+                                    name={`additionalContacts[${index}].name`}
                                     value={contact.name} 
                                     onChange={(e) => updateContactPerson(contact.id, 'name', e.target.value)} 
                                     className={`${styles.input} ${errors[`additionalContacts[${index}].name`] ? 'border-red-500 focus:ring-red-500' : ''}`} 
@@ -60,6 +61,7 @@ export const VendorAdditionalContacts: React.FC<VendorAdditionalContactsProps> =
                             <div className="space-y-1">
                                 <label className={styles.label}>ตำแหน่ง</label>
                                 <input 
+                                    name={`additionalContacts[${index}].position`}
                                     value={contact.position} 
                                     onChange={(e) => updateContactPerson(contact.id, 'position', e.target.value)} 
                                     className={styles.input} 
@@ -68,6 +70,7 @@ export const VendorAdditionalContacts: React.FC<VendorAdditionalContactsProps> =
                             <div className="space-y-1">
                                 <label className={styles.label}>โทรศัพท์</label>
                                 <input 
+                                    name={`additionalContacts[${index}].phone`}
                                     value={contact.phone} 
                                     onChange={(e) => updateContactPerson(contact.id, 'phone', e.target.value)} 
                                     className={styles.input} 
@@ -76,6 +79,7 @@ export const VendorAdditionalContacts: React.FC<VendorAdditionalContactsProps> =
                             <div className="space-y-1">
                                 <label className={styles.label}>มือถือ</label>
                                 <input 
+                                    name={`additionalContacts[${index}].mobile`}
                                     value={contact.mobile} 
                                     onChange={(e) => updateContactPerson(contact.id, 'mobile', e.target.value)} 
                                     className={styles.input} 
@@ -84,6 +88,7 @@ export const VendorAdditionalContacts: React.FC<VendorAdditionalContactsProps> =
                             <div className="md:col-span-2 space-y-1">
                                 <label className={styles.label}>อีเมล</label>
                                 <input 
+                                    name={`additionalContacts[${index}].email`}
                                     value={contact.email} 
                                     onChange={(e) => updateContactPerson(contact.id, 'email', e.target.value)} 
                                     className={`${styles.input} ${errors[`additionalContacts[${index}].email`] ? 'border-red-500 focus:ring-red-500' : ''}`} 

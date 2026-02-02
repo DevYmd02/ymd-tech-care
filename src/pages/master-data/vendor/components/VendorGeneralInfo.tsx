@@ -95,7 +95,14 @@ export const VendorGeneralInfo: React.FC<VendorGeneralInfoProps> = ({ formData, 
                     <input 
                         name="taxId" 
                         value={formData.taxId} 
-                        onChange={onChange} 
+                        onChange={(e) => {
+                            // Strict Input Masking
+                            const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 13);
+                            e.target.value = val;
+                            onChange(e); 
+                        }}
+                        maxLength={13}
+                        inputMode="numeric"
                         className={`${styles.input} ${errors.taxId ? 'border-red-500 focus:ring-red-500' : ''}`} 
                         placeholder="010555888xxxxx" 
                         required

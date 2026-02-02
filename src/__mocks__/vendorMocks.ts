@@ -48,6 +48,7 @@ const _mockVendors: VendorMaster[] = [
         province: 'กรุงเทพมหานคร',
         postal_code: '10110',
         country: 'Thailand',
+        contact_person: 'คุณสมชาย ใจดี',
         is_default: true,
         is_active: true
       }
@@ -85,6 +86,7 @@ const _mockVendors: VendorMaster[] = [
         address_type: 'REGISTERED',
         address: '456 ถนนพระราม 4 แขวงปทุมวัน เขตปทุมวัน กรุงเทพฯ 10330',
         country: 'Thailand',
+        contact_person: 'คุณวิภา รักงาน',
         is_default: true,
         is_active: true
       }

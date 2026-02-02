@@ -14,6 +14,8 @@ import type {
     VendorMaster
 } from '@project-types/vendor-types';
 
+import { SystemAlert } from '@components/ui/SystemAlert';
+
 import { VendorGeneralInfo } from './components/VendorGeneralInfo';
 import { VendorContactInfo } from './components/VendorContactInfo';
 import { VendorAddressList } from './components/VendorAddressList';
@@ -35,7 +37,8 @@ interface VendorFormModalProps {
 }
 
 export function VendorFormModal(props: VendorFormModalProps) {
-    const { isOpen, onClose, initialData } = props;
+    const { isOpen, onClose, initialData, vendorId } = props;
+    const isEdit = !!vendorId || !!initialData;
     
     const {
         formData,
@@ -58,13 +61,25 @@ export function VendorFormModal(props: VendorFormModalProps) {
         handleSameAsRegisteredChange,
         handleCreditLimitChange,
         handleSubmit,
-        handleConfirmSave
+        handleConfirmSave,
+        systemAlert,
+        setSystemAlert
     } = useVendorForm(props);
 
     if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            
+            {/* Validation Feedback Toast */}
+            {systemAlert && (
+                <SystemAlert
+                    message={systemAlert.message}
+                    onClose={() => setSystemAlert(null)}
+                    duration={5000}
+                />
+            )}
+
             <div className="bg-white dark:bg-gray-800 w-full max-w-4xl max-h-[90vh] rounded-xl shadow-2xl flex flex-col overflow-hidden">
                 
                 {/* Header */}
@@ -181,7 +196,7 @@ export function VendorFormModal(props: VendorFormModalProps) {
                         className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-lg hover:shadow-blue-500/30 transition flex items-center gap-2"
                     >
                         <Save size={18} />
-                        {isSubmitting ? 'กำลังบันทึก...' : 'บันทึก'}
+                        {isSubmitting ? 'กำลังบันทึก...' : (isEdit ? 'บันทึกการแก้ไข' : 'บันทึก')}
                     </button>
                 </div>
 
@@ -196,10 +211,10 @@ export function VendorFormModal(props: VendorFormModalProps) {
                                 <Save size={24} />
                             </div>
                             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
-                                ยืนยันการบันทึก
+                                {isEdit ? 'ยืนยันการแก้ไข' : 'ยืนยันการบันทึก'}
                             </h3>
                             <p className="text-gray-600 dark:text-gray-400 mb-6">
-                                คุณต้องการบันทึกข้อมูลเจ้าหนี้ใช่หรือไม่?
+                                {isEdit ? 'คุณต้องการบันทึกการแก้ไขข้อมูลเจ้าหนี้ใช่หรือไม่?' : 'คุณต้องการบันทึกข้อมูลเจ้าหนี้ใช่หรือไม่?'}
                             </p>
                             <div className="flex items-center gap-3 justify-center">
                                 <button
@@ -221,7 +236,7 @@ export function VendorFormModal(props: VendorFormModalProps) {
                                             กำลังบันทึก...
                                         </>
                                     ) : (
-                                        'ยืนยัน'
+                                        isEdit ? 'ยืนยันการแก้ไข' : 'ยืนยัน'
                                     )}
                                 </button>
                             </div>

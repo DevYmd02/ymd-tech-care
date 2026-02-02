@@ -28,7 +28,8 @@ import axios from 'axios';
  * Base URL สำหรับ API
  * @default 'http://localhost:3000/api'
  */
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+// Force relative path to use Vite Proxy (Bypass CORS)
+export const API_BASE_URL = '/api';
 
 /**
  * Flag บอกว่าใช้ Mock Data หรือไม่
@@ -70,7 +71,7 @@ export const AUTH_TOKEN_KEY = 'auth_token';
  */
 const api = axios.create({
   baseURL: API_BASE_URL.endsWith('/api') ? API_BASE_URL : `${API_BASE_URL}/api`,
-  timeout: 10000, // 10 seconds timeout (Fail fast)
+  timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
   },

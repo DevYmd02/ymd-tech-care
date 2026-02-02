@@ -20,6 +20,15 @@ export default defineConfig({
       '@pr': path.resolve(__dirname, './src/pages/procurement/pr'),
     },
   },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
   build: {
     rollupOptions: {
       output: {

@@ -77,6 +77,7 @@ export default function Header({ isSidebarOpen, onToggleSidebar }: HeaderProps) 
                 <button 
                     onClick={onToggleSidebar}
                     className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 transition-colors shrink-0"
+                    aria-label="Toggle sidebar"
                 >
                     {isSidebarOpen ? <ChevronLeft size={20} /> : <Menu size={20} />}
                 </button>
@@ -96,7 +97,10 @@ export default function Header({ isSidebarOpen, onToggleSidebar }: HeaderProps) 
             <div className="flex items-center justify-end space-x-2 sm:space-x-3 shrink-0">
 
                 {/* Notifications Button */}
-                <button className="px-2 sm:px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex items-center space-x-1 transition-colors">
+                <button 
+                    className="px-2 sm:px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex items-center space-x-1 transition-colors"
+                    aria-label="Notifications"
+                >
                     <Bell size={18} />
                     <span className="hidden lg:inline">Notifications</span>
                 </button>
@@ -106,6 +110,7 @@ export default function Header({ isSidebarOpen, onToggleSidebar }: HeaderProps) 
                     <button
                         onClick={() => setIsSettingsOpen(!isSettingsOpen)}
                         className="px-2 sm:px-4 py-1.5 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded transition-colors flex items-center gap-1"
+                        aria-label="Settings"
                     >
                         <Settings size={18} />
                         <span className="hidden lg:inline">Settings</span>

@@ -50,8 +50,9 @@ export const VendorBankInfo: React.FC<VendorBankInfoProps> = ({
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-1">
-                                <label className={styles.label}>ชื่อธนาคาร</label>
+                                <label className={styles.label}>ชื่อธนาคาร <span className="text-red-500">*</span></label>
                                 <input 
+                                    name={`bankAccounts[${index}].bankName`}
                                     value={account.bankName} 
                                     onChange={(e) => updateBankAccount(account.id, 'bankName', e.target.value)} 
                                     className={`${styles.input} ${errors[`bankAccounts[${index}].bankName`] ? 'border-red-500 focus:ring-red-500' : ''}`} 
@@ -61,14 +62,16 @@ export const VendorBankInfo: React.FC<VendorBankInfoProps> = ({
                             <div className="space-y-1">
                                 <label className={styles.label}>สาขา</label>
                                 <input 
+                                    name={`bankAccounts[${index}].branchName`}
                                     value={account.branchName} 
                                     onChange={(e) => updateBankAccount(account.id, 'branchName', e.target.value)} 
                                     className={styles.input} 
                                 />
                             </div>
                             <div className="space-y-1">
-                                <label className={styles.label}>เลขที่บัญชี</label>
+                                <label className={styles.label}>เลขที่บัญชี <span className="text-red-500">*</span></label>
                                 <input 
+                                    name={`bankAccounts[${index}].accountNumber`}
                                     value={account.accountNumber} 
                                     onChange={(e) => updateBankAccount(account.id, 'accountNumber', e.target.value)} 
                                     className={`${styles.input} ${errors[`bankAccounts[${index}].accountNumber`] ? 'border-red-500 focus:ring-red-500' : ''}`} 
@@ -78,6 +81,7 @@ export const VendorBankInfo: React.FC<VendorBankInfoProps> = ({
                             <div className="space-y-1">
                                 <label className={styles.label}>ชื่อบัญชี</label>
                                 <input 
+                                    name={`bankAccounts[${index}].accountName`}
                                     value={account.accountName} 
                                     onChange={(e) => updateBankAccount(account.id, 'accountName', e.target.value)} 
                                     className={`${styles.input} ${errors[`bankAccounts[${index}].accountName`] ? 'border-red-500 focus:ring-red-500' : ''}`} 
@@ -87,6 +91,7 @@ export const VendorBankInfo: React.FC<VendorBankInfoProps> = ({
                             <div className="space-y-1">
                                 <label className={styles.label}>ประเภทบัญชี</label>
                                 <select 
+                                    name={`bankAccounts[${index}].accountType`}
                                     value={account.accountType} 
                                     onChange={(e) => updateBankAccount(account.id, 'accountType', e.target.value)} 
                                     className={styles.inputSelect}
@@ -99,6 +104,7 @@ export const VendorBankInfo: React.FC<VendorBankInfoProps> = ({
                             <div className="space-y-1">
                                 <label className={styles.label}>SWIFT Code</label>
                                 <input 
+                                    name={`bankAccounts[${index}].swiftCode`}
                                     value={account.swiftCode} 
                                     onChange={(e) => updateBankAccount(account.id, 'swiftCode', e.target.value)} 
                                     className={styles.input} 
