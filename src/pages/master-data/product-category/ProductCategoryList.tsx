@@ -6,11 +6,11 @@
 
 import { useState } from 'react';
 import { Tag } from 'lucide-react';
-import { GenericMasterDataList } from '@components/master-data';
+import { GenericMasterDataList } from '../components/GenericMasterDataList';
 import { useGenericMasterDataList } from '@hooks/useGenericMasterDataList';
 import { ProductCategoryFormModal } from './ProductCategoryFormModal';
 import { mockProductCategories } from '@/__mocks__/masterDataMocks';
-import { ActiveStatusBadge } from '@shared';
+import { ActiveStatusBadge } from '@ui/StatusBadge';
 import type { ProductCategoryListItem } from '@project-types/master-data-types';
 import type { GenericMasterDataListConfig } from '@project-types/generic-master-data-types';
 
@@ -88,10 +88,8 @@ export default function ProductCategoryListRefactored() {
     };
 
     const handleDelete = (id: string) => {
-        void id; // Will be used when delete API is implemented
-        // TODO: Implement productCategoryService.delete(id)
-        // After delete, refresh the list
-        listState.refresh();
+        void id; 
+        window.alert("Coming Soon: Delete Product Category");
     };
 
     const handleModalClose = () => {

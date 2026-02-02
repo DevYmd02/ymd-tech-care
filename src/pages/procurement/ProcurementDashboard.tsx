@@ -34,7 +34,7 @@ import {
     ResponsiveContainer,
     Legend,
 } from 'recharts';
-import { Card } from '../../components/ui/Card';
+import { Card } from '@ui/Card';
 
 // ====================================================================================
 // MOCK DATA

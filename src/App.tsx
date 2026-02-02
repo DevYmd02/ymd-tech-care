@@ -7,7 +7,12 @@
 
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import MainLayout from './layouts/MainLayout';
+// Main Layout - Lazy Loaded to prevent bundle bloat (admin dashboard code in login page)
+const MainLayout = React.lazy(() => import('./layouts/MainLayout'));
+import { ErrorBoundary } from 'react-error-boundary';
+import { ErrorFallback } from '@system/ErrorBoundary';
+import { GlobalLoading } from '@system/GlobalLoading';
+
 import { placeholderRoutes } from './config/routes';
 import { AuthProvider } from './contexts/AuthContext';
 
@@ -82,23 +87,22 @@ function App() {
   return (
     <AuthProvider>
       <Routes>
-        {/* ==================== AUTH ROUTES ==================== */}
-        {/* Grouping auth routes under /auth/ for better structure */}
+        {/* ... (Auth Routes) ... */}
         
         <Route path="/auth/login" element={
-          <React.Suspense fallback={<div className="h-screen flex items-center justify-center">Loading...</div>}>
+          <React.Suspense fallback={<GlobalLoading message="Loading Login..." />}>
             <LoginPage />
           </React.Suspense>
         } />
         
         <Route path="/auth/register" element={
-          <React.Suspense fallback={<div className="h-screen flex items-center justify-center">Loading...</div>}>
+          <React.Suspense fallback={<GlobalLoading message="Loading Register..." />}>
             <RegisterPage />
           </React.Suspense>
         } />
 
         <Route path="/auth/forgot-password" element={
-          <React.Suspense fallback={<div className="h-screen flex items-center justify-center">Loading...</div>}>
+          <React.Suspense fallback={<GlobalLoading message="Loading..." />}>
             <ForgotPasswordPage />
           </React.Suspense>
         } />
@@ -110,7 +114,13 @@ function App() {
 
 
         {/* Main Layout Routes - With Sidebar & Header */}
-        <Route path="/" element={<MainLayout />}>
+        <Route path="/" element={
+           <ErrorBoundary FallbackComponent={ErrorFallback} onReset={() => window.location.reload()}>
+             <React.Suspense fallback={<GlobalLoading />}>
+                <MainLayout />
+             </React.Suspense>
+           </ErrorBoundary>
+        }>
           {/* Redirect root to admin (or login if we had logic) */}
           <Route index element={<Navigate to="/admin" replace />} />
 

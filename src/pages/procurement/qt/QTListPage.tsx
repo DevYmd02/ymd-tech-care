@@ -9,15 +9,18 @@ import { useState, useMemo, useCallback } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { FileText, Plus, Eye, Edit, RefreshCw } from 'lucide-react';
 import { formatThaiDate } from '@utils/dateUtils';
-import { PageListLayout, FilterFormBuilder, QTStatusBadge, SmartTable } from '@shared';
+import { FilterFormBuilder } from '@shared';
+import { SmartTable } from '@ui/SmartTable';
+import { PageListLayout } from '@layout/PageListLayout';
+import { QTStatusBadge } from '@ui/StatusBadge';
 import type { FilterFieldConfig } from '@shared/FilterFormBuilder';
 import { useTableFilters, type TableFilters } from '@hooks';
 import type { ColumnDef } from '@tanstack/react-table';
 import { createColumnHelper } from '@tanstack/react-table';
 
 // Services & Types
-import { qtService } from '@services/qtService';
-import type { QTListParams } from '@services/qtService';
+import { qtService } from '@services/QTService';
+import type { QTListParams } from '@services/QTService';
 import type { QTListItem, QTStatus } from '@project-types/qt-types';
 import QTFormModal from './components/QTFormModal';
 import { QCFormModal } from '../qc/components/QCFormModal';

@@ -5,8 +5,8 @@
  */
 
 import { Search, Edit2, Trash2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, RefreshCw, Plus } from 'lucide-react';
-import { styles } from '../../constants';
-import type { GenericMasterDataListProps, GenericMasterDataItem } from '../../types/generic-master-data-types';
+import { styles } from '../../../constants';
+import type { GenericMasterDataListProps, GenericMasterDataItem } from '../../../types/generic-master-data-types';
 
 /**
  * Generic Master Data List Component

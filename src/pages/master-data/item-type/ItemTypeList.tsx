@@ -10,7 +10,7 @@ import { logger } from '@utils/logger';
 import { ItemTypeFormModal } from './ItemTypeFormModal';
 import { mockItemTypes } from '@/__mocks__/masterDataMocks';
 import type { ItemTypeListItem } from '@project-types/master-data-types';
-import { ActiveStatusBadge } from '@shared';
+import { ActiveStatusBadge } from '@ui/StatusBadge';
 
 export default function ItemTypeList() {
     const [items, setItems] = useState<ItemTypeListItem[]>([]);

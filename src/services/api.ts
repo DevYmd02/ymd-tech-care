@@ -70,7 +70,7 @@ export const AUTH_TOKEN_KEY = 'auth_token';
  */
 const api = axios.create({
   baseURL: API_BASE_URL.endsWith('/api') ? API_BASE_URL : `${API_BASE_URL}/api`,
-  timeout: 15000,
+  timeout: 10000, // 10 seconds timeout (Fail fast)
   headers: {
     'Content-Type': 'application/json',
   },

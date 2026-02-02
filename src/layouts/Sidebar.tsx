@@ -12,8 +12,8 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ChevronRight, ChevronDown } from 'lucide-react';
-import { sidebarMenuItems } from '../config/routes';
-import type { MenuItem, SubMenuItem } from '../config/routes';
+import { sidebarMenuItems } from '../config/navigation.config';
+import type { MenuItem, SubMenuItem } from '../config/navigation.config';
 
 // ====================================================================================
 // COMPONENT - Sidebar

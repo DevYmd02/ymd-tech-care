@@ -4,8 +4,9 @@
  * @purpose แสดงรายการเจ้าหนี้ในรูปแบบตาราง พร้อมค้นหา กรอง และจัดการข้อมูล
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { 
     Plus, 
     Search, 
@@ -22,9 +23,9 @@ import {
 } from 'lucide-react';
 import { styles } from '@/constants';
 
-import { vendorService } from '@services/vendorService';
-import type { VendorListItem, VendorStatus, VendorListParams } from '@project-types/vendor-types';
-import { VendorStatusBadge } from '@shared';
+import { vendorService } from '@services/VendorService';
+import type { VendorStatus, VendorListParams } from '@project-types/vendor-types';
+import { VendorStatusBadge } from '@ui/StatusBadge';
 
 // ====================================================================================
 // COMPONENT
@@ -34,50 +35,36 @@ export default function VendorList() {
     const navigate = useNavigate();
     
     // ==================== STATE ====================
-    const [vendors, setVendors] = useState<VendorListItem[]>([]);
+    // Note: 'vendors' state is removed in favor of React Query 'data'
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<'ALL' | VendorStatus>('ALL');
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
-    const [totalItems, setTotalItems] = useState(0);
 
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    // ==================== QUERY PARAMS ====================
+    const queryParams: VendorListParams = {
+        page: currentPage,
+        limit: rowsPerPage,
+        status: statusFilter !== 'ALL' ? statusFilter : undefined,
+        search: searchTerm || undefined,
+    };
 
-    // ==================== API CALLS ====================
-    
-    const fetchVendors = useCallback(async () => {
-        setIsLoading(true);
-        setError(null);
-        
-        try {
-            const params: VendorListParams = {
-                page: currentPage,
-                limit: rowsPerPage,
-                status: statusFilter !== 'ALL' ? statusFilter : undefined,
-                search: searchTerm || undefined,
-            };
-            
-            const response = await vendorService.getList(params);
-            setVendors(response.data);
-            setTotalItems(response.total);
-        } catch {
-            setError('ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่อีกครั้ง');
-            setVendors([]);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [currentPage, rowsPerPage, statusFilter, searchTerm]);
+    // ==================== DATA FETCHING (React Query) ====================
+    const { 
+        data, 
+        isLoading, 
+        isError, 
+        error: queryError, 
+        refetch 
+    } = useQuery({
+        queryKey: ['vendors', queryParams],
+        queryFn: () => vendorService.getList(queryParams),
+        placeholderData: keepPreviousData,
+        staleTime: 1000 * 60 * 5, // 5 minutes cache
+    });
 
-    // Fetch on mount and when filters change
-    useEffect(() => {
-        fetchVendors();
-    }, [fetchVendors]);
-
-    // Reset page when filters change
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [statusFilter, searchTerm, rowsPerPage]);
+    const vendors = data?.data || [];
+    const totalItems = data?.total || 0;
 
     // ==================== PAGINATION ====================
     const totalPages = Math.ceil(totalItems / rowsPerPage);
@@ -94,22 +81,51 @@ export default function VendorList() {
 
     const handleDelete = async (vendorId: string) => {
         if (confirm('คุณต้องการลบข้อมูลเจ้าหนี้นี้หรือไม่?')) {
-            const result = await vendorService.delete(vendorId);
-            if (result.success) {
-                fetchVendors(); // Refresh list
-            } else {
-                alert(result.message || 'เกิดข้อผิดพลาดในการลบ');
+            try {
+                const result = await vendorService.delete(vendorId);
+                if (result.success) {
+                    refetch(); // Refresh list via React Query
+                } else {
+                    alert(result.message || 'เกิดข้อผิดพลาดในการลบ');
+                }
+            } catch (err) {
+                console.error('Delete failed', err);
+                alert('เกิดข้อผิดพลาดในการลบ');
             }
         }
     };
 
     const handleRefresh = () => {
-        fetchVendors();
+        refetch();
     };
 
+    // Reset page when filters change (Handled manually or by effect if strict separation needed, 
+    // but often safer to just set page to 1 on filter change directly in UI)
+    // Keeping simple effect for now to match previous behavior safely
+    /* 
+       Note: In a pure "golden standard", we'd update page=1 directly in the onChange of filters. 
+       But keeping this simple effect is acceptable for this refactor scope.
+    */
+    // useEffect(() => {
+    //     setCurrentPage(1);
+    // }, [statusFilter, searchTerm, rowsPerPage]); 
+    // ^ Commented out to avoid double fetch? 
+    // Actually, React Query handles keys changing, so we just need to reset page when filters change.
+    
+    const handleSearchChange = (val: string) => {
+        setSearchTerm(val);
+        setCurrentPage(1);
+    };
 
+    const handleStatusChange = (val: 'ALL' | VendorStatus) => {
+        setStatusFilter(val);
+        setCurrentPage(1);
+    };
 
-
+    const handleRowsPerPageChange = (val: number) => {
+        setRowsPerPage(val);
+        setCurrentPage(1);
+    };
 
     // ==================== RENDER ====================
     return (
@@ -153,7 +169,7 @@ export default function VendorList() {
                             type="text"
                             placeholder="ค้นหาชื่อ, รหัส, หรือเลขภาษี..."
                             value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
+                            onChange={(e) => handleSearchChange(e.target.value)}
                             className={`${styles.input} pl-10 dark:text-white`}
                         />
                     </div>
@@ -161,7 +177,7 @@ export default function VendorList() {
                         <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                         <select
                             value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value as 'ALL' | VendorStatus)}
+                            onChange={(e) => handleStatusChange(e.target.value as 'ALL' | VendorStatus)}
                             className={`${styles.inputSelect} pl-10`}
                         >
                             <option value="ALL">สถานะทั้งหมด</option>
@@ -175,10 +191,12 @@ export default function VendorList() {
             </div>
 
             {/* Error Message */}
-            {error && (
+            {isError && (
                 <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-center gap-3">
                     <AlertCircle className="text-red-500" size={20} />
-                    <span className="text-red-700 dark:text-red-400">{error}</span>
+                    <span className="text-red-700 dark:text-red-400">
+                        {queryError instanceof Error ? queryError.message : 'ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่อีกครั้ง'}
+                    </span>
                     <button
                         onClick={handleRefresh}
                         className="ml-auto text-red-600 hover:text-red-700 font-medium"
@@ -251,7 +269,7 @@ export default function VendorList() {
                             ) : (
                                 <tr>
                                     <td colSpan={6} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
-                                        {error ? 'เกิดข้อผิดพลาดในการโหลดข้อมูล' : 'ไม่พบข้อมูลเจ้าหนี้'}
+                                        {isError ? 'เกิดข้อผิดพลาดในการโหลดข้อมูล' : 'ไม่พบข้อมูลเจ้าหนี้'}
                                     </td>
                                 </tr>
                             )}
@@ -267,7 +285,7 @@ export default function VendorList() {
                         <span>แสดง</span>
                         <select
                             value={rowsPerPage}
-                            onChange={(e) => setRowsPerPage(Number(e.target.value))}
+                            onChange={(e) => handleRowsPerPageChange(Number(e.target.value))}
                             className={styles.inputSm}
                         >
                             <option value={5}>5</option>

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/AuthService';
@@ -28,7 +28,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(false);
   }, []);
 
-  const login = async (data: LoginPayload) => {
+  const login = useCallback(async (data: LoginPayload) => {
     try {
       const response = await authService.login(data);
       
@@ -51,17 +51,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setIsAuthenticated(false);
       throw error;
     }
-  };
+  }, [navigate]);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     localStorage.removeItem('token');
     localStorage.removeItem('access_token');
     setIsAuthenticated(false);
     navigate('/auth/login');
-  };
+  }, [navigate]);
+
+  const value = React.useMemo(() => ({
+    isAuthenticated,
+    isLoading,
+    login,
+    logout
+  }), [isAuthenticated, isLoading, login, logout]);
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, isLoading, login, logout }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

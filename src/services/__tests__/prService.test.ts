@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { prService } from '../prService';
+import { prService } from '../PRService';
 import api from '../api';
 
 // Mock the api module

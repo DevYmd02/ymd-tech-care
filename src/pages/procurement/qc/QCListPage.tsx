@@ -9,7 +9,10 @@ import { useState, useMemo } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { Scale, FileText, Eye } from 'lucide-react';
 import { formatThaiDate } from '@utils/dateUtils';
-import { PageListLayout, FilterFormBuilder, QCStatusBadge, SmartTable } from '@shared';
+import { FilterFormBuilder } from '@shared';
+import { SmartTable } from '@ui/SmartTable';
+import { PageListLayout } from '@layout/PageListLayout';
+import { QCStatusBadge } from '@ui/StatusBadge';
 import type { FilterFieldConfig } from '@shared/FilterFormBuilder';
 import { useTableFilters, type TableFilters } from '@hooks';
 import { QCFormModal } from './components/QCFormModal';
@@ -17,8 +20,8 @@ import { createColumnHelper } from '@tanstack/react-table';
 import type { ColumnDef } from '@tanstack/react-table';
 
 // Services & Types
-import { qcService } from '@services/qcService';
-import type { QCListParams } from '@services/qcService';
+import { qcService } from '@services/QCService';
+import type { QCListParams } from '@services/QCService';
 import type { QCStatus, QCListItem } from '@project-types/qc-types';
 
 // ====================================================================================

@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { FileText, Plus, Trash2, Search, X, Save, CheckCircle, Copy, Printer, FileBox, MoreHorizontal } from 'lucide-react';
 
-import { WindowFormLayout } from '../../../../components/shared/WindowFormLayout';
-import { SystemAlert } from '../../../../components/shared/SystemAlert';
+import { WindowFormLayout } from '@layout/WindowFormLayout';
+import { SystemAlert } from '@ui/SystemAlert';
 import type { QuotationHeader, QuotationLine } from '../../../../types/qt-types';
-import { masterDataService } from '../../../../services/masterDataService';
+import { masterDataService } from '../../../../services/MasterDataService';
 import { qtService } from '../../../../services';
 import type { UnitMaster } from '../../../../types/master-data-types';
 import type { ProductLookup } from '../../../../__mocks__';

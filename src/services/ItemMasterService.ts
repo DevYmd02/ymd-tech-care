@@ -1,155 +1,19 @@
+/**
+ * @file ItemMasterService.ts
+ * @description Service Entry Point for Item Master Module
+ * Uses Factory Pattern to switch between Mock and Real API implementations
+ */
 
-import { mockItems } from '@/__mocks__/masterDataMocks';
-import { MOCK_PRODUCTS } from '@/__mocks__/products';
-import type { ItemMasterFormData, ItemMaster } from '@/types/master-data-types';
-import { logger } from '@utils/logger';
+import { USE_MOCK } from './api';
+import type { IItemMasterService } from './interfaces/IItemMasterService';
+import { MockItemMasterService } from './implementations/MockItemMasterService';
+import { ItemMasterServiceImpl } from './implementations/ItemMasterServiceImpl';
 
-// Persistent in-memory storage (Local to this service module)
-// We initialize it with mockItems but modifications happen here
-const internalItems: ItemMaster[] = mockItems.map(item => ({
-    ...item,
-    updated_at: item.created_at || new Date().toISOString()
-}));
-
-export const ItemMasterService = {
-
-    /**
-     * Get all items (simulates API)
-     */
-    getAll: async (): Promise<ItemMaster[]> => {
-        // Simulate network delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-        return [...internalItems];
-    },
-
-    /**
-     * Get item by ID or Code
-     */
-    getById: async (id: string): Promise<ItemMaster | undefined> => {
-        await new Promise(resolve => setTimeout(resolve, 300));
-        return internalItems.find(i => i.item_id === id || i.item_code === id);
-    },
-
-    /**
-     * Create new item
-     */
-    create: async (formData: ItemMasterFormData): Promise<ItemMaster> => {
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
-        // Helper to find Names
-        // Note: In a real app the backend would do this or we'd just send IDs
-        // For mock, we rely on what was passed or derived in form, but here 
-        // we'll mainly map the FormData to ItemMaster
-        
-        const newItem: ItemMaster = {
-            item_id: `IT${String(internalItems.length + 1).padStart(3, '0')}`,
-            item_code: formData.item_code,
-            item_name: formData.item_name,
-            item_name_en: formData.item_name_en,
-            description: `${formData.marketing_name} ${formData.billing_name}`,
-            
-            // Attributes
-            category_name: 'Unknown', // Ideally should look up category name by ID if we had access to categories here
-            category_id: formData.category_id,
-            item_type_code: formData.item_type_code,
-            
-            // Units
-            unit_name: 'Unknown', // Same here
-            unit_id: formData.base_uom_id,
-            
-            // Status
-            is_active: formData.is_active,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            
-            // Costing
-            standard_cost: formData.std_amount || 0,
-            
-            // Warehouse (Defaults)
-            warehouse: '1001',
-            location: 'A-01'
-        };
-
-        // Add to internal storage (Top of list)
-        internalItems.unshift(newItem);
-        logger.info('[ItemMasterService] Created item:', newItem);
-
-        // SYNC: Update MOCK_PRODUCTS (Global Lookup)
-        const pIndex = MOCK_PRODUCTS.findIndex(p => p.item_code === formData.item_code);
-        if(pIndex === -1) {
-            MOCK_PRODUCTS.push({
-                item_code: formData.item_code,
-                item_name: formData.item_name,
-                item_name_en: formData.item_name_en || '',
-                category_name: newItem.category_name,
-                unit_name: newItem.unit_name,
-                item_type_code: formData.item_type_code,
-                unit_price: formData.std_amount || 0,
-                unit: newItem.unit_name
-            });
-        }
-
-        return newItem;
-    },
-
-    /**
-     * Update existing item
-     */
-    update: async (id: string, formData: ItemMasterFormData): Promise<ItemMaster | null> => {
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
-        const index = internalItems.findIndex(i => i.item_id === id || i.item_code === id);
-        
-        if (index !== -1) {
-            // Update fields
-            internalItems[index] = {
-                ...internalItems[index],
-                
-                item_code: formData.item_code,
-                item_name: formData.item_name,
-                item_name_en: formData.item_name_en,
-                
-                category_id: formData.category_id,
-                item_type_code: formData.item_type_code,
-                unit_id: formData.base_uom_id,
-                
-                standard_cost: formData.std_amount || 0,
-                is_active: formData.is_active,
-                updated_at: new Date().toISOString()
-            };
-            
-            logger.info('[ItemMasterService] Updated item:', internalItems[index]);
-
-            // SYNC: Update MOCK_PRODUCTS
-            const pIndex = MOCK_PRODUCTS.findIndex(p => p.item_code === formData.item_code || p.item_code === id);
-            if (pIndex !== -1) {
-                MOCK_PRODUCTS[pIndex] = {
-                    ...MOCK_PRODUCTS[pIndex],
-                    item_code: formData.item_code,
-                    item_name: formData.item_name,
-                    item_name_en: formData.item_name_en || '',
-                    item_type_code: formData.item_type_code,
-                    unit_price: formData.std_amount || 0
-                };
-            }
-
-            return internalItems[index];
-        }
-
-        return null;
-    },
-
-    /**
-     * Delete item
-     */
-    delete: async (id: string): Promise<boolean> => {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        const index = internalItems.findIndex(i => i.item_id === id || i.item_code === id);
-        if(index !== -1) {
-             internalItems.splice(index, 1);
-             return true;
-        }
-        return false;
+const getItemMasterService = (): IItemMasterService => {
+    if (USE_MOCK) {
+        return new MockItemMasterService();
     }
-}
+    return new ItemMasterServiceImpl();
+};
+
+export const ItemMasterService = getItemMasterService();

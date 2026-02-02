@@ -2,10 +2,13 @@ import { useMemo } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { FileText, Plus, Eye, Send, CheckCircle, Package, Edit } from 'lucide-react';
 import { formatThaiDate } from '@utils/dateUtils';
-import { PageListLayout, FilterFormBuilder, POStatusBadge, SmartTable } from '@shared';
+import { FilterFormBuilder } from '@shared';
+import { SmartTable } from '@ui/SmartTable';
+import { PageListLayout } from '@layout/PageListLayout';
+import { POStatusBadge } from '@ui/StatusBadge';
 import type { FilterFieldConfig } from '@shared/FilterFormBuilder';
 import { useTableFilters, type TableFilters } from '@hooks';
-import { poService } from '@services/poService';
+import { poService } from '@services/POService';
 import type { POListParams, POStatus, POListItem } from '@project-types/po-types';
 import { createColumnHelper } from '@tanstack/react-table';
 import type { ColumnDef } from '@tanstack/react-table';
@@ -73,8 +76,8 @@ export default function POListPage() {
     };
 
     // Action Handlers (Mock)
-    const handleView = (id: string) => console.log('ดูรายละเอียด PO:', id);
-    const handleEdit = (id: string) => console.log('แก้ไข PO:', id);
+    const handleView = (id: string) => window.alert(`Coming Soon: View PO ${id}`);
+    const handleEdit = (id: string) => window.alert(`Coming Soon: Edit PO ${id}`);
     const handleApprove = (id: string) => alert(`ส่งอนุมัติ PO: ${id}`);
     const handleIssue = (id: string) => alert(`ออก PO: ${id}`);
     const handleGRN = (id: string) => alert(`เปิด GRN สำหรับ PO: ${id}`);

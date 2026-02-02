@@ -7,9 +7,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FileText, Plus, Trash2, Info, MoreHorizontal, Star, AlignLeft, History, Search, Users } from 'lucide-react';
 import { RFQFooter } from './RFQFooter';
-import { WindowFormLayout, TabPanel, VendorSearchModal } from '../../../../components/shared';
-import { SystemAlert } from '../../../../components/shared/SystemAlert';
-import { masterDataService } from '../../../../services/masterDataService';
+import { VendorSearchModal } from '@shared/VendorSearchModal';
+import { WindowFormLayout } from '@layout/WindowFormLayout';
+import TabPanel from '@layout/TabPanel';
+import { SystemAlert } from '@ui/SystemAlert';
+import { masterDataService } from '../../../../services/MasterDataService';
 import type { BranchMaster, ItemMaster, UnitMaster } from '../../../../types/master-data-types';
 import type { RFQFormData, RFQLineFormData } from '../../../../types/rfq-types';
 import { initialRFQFormData, initialRFQLineFormData } from '../../../../types/rfq-types';

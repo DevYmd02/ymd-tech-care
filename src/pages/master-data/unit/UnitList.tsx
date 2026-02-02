@@ -10,7 +10,7 @@ import { logger } from '@utils/logger';
 import { UnitFormModal } from './UnitFormModal';
 import { mockUnits } from '@/__mocks__/masterDataMocks';
 import type { UnitListItem } from '@project-types/master-data-types';
-import { ActiveStatusBadge } from '@shared';
+import { ActiveStatusBadge } from '@ui/StatusBadge';
 
 export default function UnitList() {
     const [items, setItems] = useState<UnitListItem[]>([]);

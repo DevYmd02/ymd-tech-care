@@ -24,9 +24,9 @@ import {
 } from 'lucide-react';
 import { styles } from '../../../constants';
 
-import { vendorService } from '../../../services/vendorService';
+import { vendorService } from '../../../services/VendorService';
 import type { VendorListItem, VendorStatus } from '../../../types/vendor-types';
-import { VendorStatusBadge } from '../../../components/shared';
+import { VendorStatusBadge } from '@ui/StatusBadge';
 
 // ====================================================================================
 // MAIN COMPONENT

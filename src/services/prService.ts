@@ -9,6 +9,7 @@ import type { IPRService } from './interfaces/IPRService';
 import { MockPRService } from './implementations/MockPRService';
 import { PRServiceImpl } from './implementations/PRServiceImpl';
 
+// Factory function with strict return type
 const getPRService = (): IPRService => {
   if (USE_MOCK) {
     console.log('🔧 [PR Service] Using Mock Implementation');

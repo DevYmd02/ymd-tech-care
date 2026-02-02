@@ -9,7 +9,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FileText, Search, Plus, Save, Trash2, Copy, Eye, X, Loader2, Home, ClipboardList, CreditCard, Settings, Phone, DollarSign, Building2 } from 'lucide-react';
 import { styles } from '@/constants';
-import { vendorService } from '@services/vendorService';
+import { vendorService } from '@services/VendorService';
 import { initialVendorFormData, toVendorCreateRequest, type VendorFormData, type VendorSearchItem } from '@project-types/vendor-types';
 import { VendorSearchModal } from '@shared/VendorSearchModal';
 
@@ -174,7 +174,7 @@ export default function VendorForm() {
     };
 
     const handleDelete = () => {
-        // TODO: Implement delete logic with API call
+        window.alert("Coming Soon: Delete Vendor");
     };
 
     const handleFind = () => {
@@ -212,11 +212,11 @@ export default function VendorForm() {
     };
 
     const handleCopy = () => {
-        // TODO: Implement copy logic
+        window.alert("Coming Soon: Copy Vendor");
     };
 
     const handlePreview = () => {
-        // TODO: Implement preview logic
+        window.alert("Coming Soon: Preview Vendor");
     };
 
     const handleSearchRevenue = () => {

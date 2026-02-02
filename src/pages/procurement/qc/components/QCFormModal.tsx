@@ -6,9 +6,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { FileText, Search, Trash2, Scale } from 'lucide-react';
-import { WindowFormLayout } from '../../../../components/shared/WindowFormLayout';
+import { WindowFormLayout } from '@layout/WindowFormLayout';
 import { QCFooter } from './QCFooter';
-import { VendorSearchModal } from '../../../../components/shared/VendorSearchModal';
+import { VendorSearchModal } from '@shared/VendorSearchModal';
 import { qcService } from '../../../../services';
 import type { VendorSearchItem } from '../../../../types/vendor-types';
 import type { QCCreateData } from '../../../../services/interfaces/IQCService';

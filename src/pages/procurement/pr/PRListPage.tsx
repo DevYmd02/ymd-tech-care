@@ -8,7 +8,10 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { FileText, Eye, Edit, Send } from 'lucide-react';
-import { PageListLayout, FilterFormBuilder, PRStatusBadge, SmartTable } from '@shared';
+import { FilterFormBuilder } from '@shared';
+import { SmartTable } from '@ui/SmartTable';
+import { PageListLayout } from '@layout/PageListLayout';
+import { PRStatusBadge } from '@ui/StatusBadge';
 import type { FilterFieldConfig } from '@shared/FilterFormBuilder';
 // import { useWindowManager } from '@hooks/useWindowManager';
 import { useTableFilters, type TableFilters } from '@hooks';
@@ -18,8 +21,8 @@ import { formatThaiDate } from '@utils/dateUtils';
 import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';
 
 // Services & Types
-import { prService } from '@services/prService';
-import type { PRListParams } from '@services/prService';
+import { prService } from '@services/PRService';
+import type { PRListParams } from '@services/PRService';
 import type { PRHeader, PRStatus } from '@project-types/pr-types';
 import { mockCostCenters } from '../../../__mocks__/masterDataMocks';
 
@@ -76,6 +79,8 @@ export default function PRListPage() {
         queryKey: ['prs', apiFilters],
         queryFn: () => prService.getList(apiFilters),
         placeholderData: keepPreviousData,
+        staleTime: 0, // Ensure data is considered stale immediately
+        refetchOnWindowFocus: true, // Refetch when window gains focus
     });
 
     // Window Manager

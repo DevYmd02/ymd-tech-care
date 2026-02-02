@@ -10,6 +10,9 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
       '@components': path.resolve(__dirname, './src/components'),
       '@shared': path.resolve(__dirname, './src/components/shared'),
+      '@layout': path.resolve(__dirname, './src/components/layout'),
+      '@system': path.resolve(__dirname, './src/components/system'),
+      '@ui': path.resolve(__dirname, './src/components/ui'),
       '@services': path.resolve(__dirname, './src/services'),
       '@hooks': path.resolve(__dirname, './src/hooks'),
       '@project-types': path.resolve(__dirname, './src/types'),
@@ -72,4 +75,3 @@ export default defineConfig({
     setupFiles: './src/test/setup.ts',
   },
 })
-

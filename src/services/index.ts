@@ -17,16 +17,16 @@ export { default as api, USE_MOCK, API_BASE_URL, logApiMode } from './api';
 // =============================================================================
 
 // Core Services
-export { prService } from './prService';
-export { vendorService } from './vendorService';
-export { rfqService } from './rfqService';
-export { qtService } from './qtService';
-export { qcService } from './qcService';
+export { prService } from './PRService';
+export { vendorService } from './VendorService';
+export { rfqService } from './RFQService';
+export { qtService } from './QTService';
+export { qcService } from './QCService';
 
 // Master Data Services
-export { branchService } from './branchService';
-export { warehouseService } from './warehouseService';
-export { unitService } from './unitService';
-export { productCategoryService } from './productCategoryService';
-export { itemTypeService } from './itemTypeService';
-export { masterDataService } from './masterDataService';
+export { branchService } from './BranchService';
+export { warehouseService } from './WarehouseService';
+export { unitService } from './UnitService';
+export { productCategoryService } from './ProductCategoryService';
+export { itemTypeService } from './ItemTypeService';
+export { masterDataService } from './MasterDataService';

@@ -11,12 +11,12 @@ import { FileText, Plus, Trash2, Search, Eraser, FileBox, MoreHorizontal, Flame,
 
 import { PRHeader } from './PRHeader';
 
-import { WindowFormLayout } from '@/components/shared/WindowFormLayout';
-import { masterDataService } from '@/services/masterDataService';
-import { prService } from '@/services/prService';
+import { WindowFormLayout } from '@layout/WindowFormLayout';
+import { masterDataService } from '@/services/MasterDataService';
+import { prService } from '@/services/PRService';
 import type { ItemMaster, CostCenter, Project } from '@/types/master-data-types';
 import type { VendorMaster } from '@/types/vendor-types';
-import { SystemAlert } from '@/components/shared/SystemAlert';
+import { SystemAlert } from '@ui/SystemAlert';
 
 interface Props {
   isOpen: boolean;
@@ -363,12 +363,12 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
   };
 
   const handlePrint = () => {
-    console.log("Printing PR:", id);
     // window.open(`/procurement/pr/print/${id}`, '_blank');
+    window.alert(`Coming Soon: Print PR ${id}`);
   };
 
   const handleCopy = () => {
-    console.log("Copying PR:", id);
+    window.alert(`Coming Soon: Copy PR ${id}`);
   };
 
   const handleApprove = async () => {
