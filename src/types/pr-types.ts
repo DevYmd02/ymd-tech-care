@@ -245,3 +245,50 @@ export interface CreatePRPayload {
     preferred_vendor_id?: string;
     vendor_name?: string;
 }
+
+// ====================================================================================
+// SERVICE TYPES - REQUEST/RESPONSE
+// ====================================================================================
+
+export interface PRListParams {
+  pr_no?: string;
+  status?: PRStatus | 'ALL';
+  cost_center_id?: string;
+  project_id?: string;
+  requester_name?: string;
+  department?: string;
+  date_from?: string;
+  date_to?: string;
+  page?: number;
+  limit?: number;
+  sort?: string;
+}
+
+export interface PRListResponse {
+  data: PRHeader[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface SubmitPRRequest {
+  pr_id: string;
+}
+
+export interface ApprovalRequest {
+  pr_id: string;
+  action: 'APPROVE' | 'REJECT';
+  remark?: string;
+}
+
+export interface ApprovalResponse {
+  success: boolean;
+  message: string;
+  approval_task?: ApprovalTask;
+}
+
+export interface ConvertPRRequest {
+  pr_id: string;
+  convert_to: 'RFQ' | 'PO';
+  line_ids?: string[];
+}

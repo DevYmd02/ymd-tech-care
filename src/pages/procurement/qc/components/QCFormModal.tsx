@@ -9,9 +9,8 @@ import { FileText, Search, Trash2, Scale } from 'lucide-react';
 import { WindowFormLayout } from '@layout/WindowFormLayout';
 
 import { VendorSearchModal } from '@shared/VendorSearchModal';
-import { qcService } from '@services/index';
+import { QCService, type QCCreateData } from '@/services/procurement/qc.service';
 import type { VendorSearchItem } from '@project-types/vendor-types';
-import type { QCCreateData } from '@services/interfaces/IQCService';
 
 interface QCFormModalProps {
   isOpen: boolean;
@@ -152,7 +151,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
         })),
       };
 
-      const result = await qcService.create(qcData);
+      const result = await QCService.create(qcData);
       
       if (result.success) {
         window.alert(result.message || 'บันทึกใบเปรียบเทียบราคาสำเร็จ!');

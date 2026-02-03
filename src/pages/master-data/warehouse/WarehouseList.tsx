@@ -17,9 +17,9 @@ import {
     RefreshCw
 } from 'lucide-react';
 import { styles } from '@/constants';
-import { logger } from '@utils/logger';
+
 import { WarehouseFormModal } from './WarehouseFormModal';
-import { mockWarehouses } from '@/__mocks__/masterDataMocks';
+import { WarehouseService } from '@/services/inventory/warehouse.service';
 import type { WarehouseListItem } from '@project-types/master-data-types';
 import { ActiveStatusBadge } from '@ui/StatusBadge';
 
@@ -41,8 +41,9 @@ export default function WarehouseList() {
     // ==================== DATA FETCHING ====================
     const fetchData = useCallback(() => {
         setIsLoading(true);
-        setTimeout(() => {
-            let filtered = [...mockWarehouses];
+        const fetchWarehouses = async () => {
+            const data = await WarehouseService.getList();
+            let filtered = [...data];
             
             if (statusFilter !== 'ALL') {
                 filtered = filtered.filter(w => 
@@ -60,8 +61,10 @@ export default function WarehouseList() {
             }
             
             setWarehouses(filtered);
+            setWarehouses(filtered);
             setIsLoading(false);
-        }, 300);
+        };
+        fetchWarehouses();
     }, [statusFilter, searchTerm]);
 
     useEffect(() => {
@@ -91,8 +94,7 @@ export default function WarehouseList() {
 
     const handleDelete = (id: string) => {
         if (confirm('คุณต้องการลบข้อมูลคลังสินค้านี้หรือไม่?')) {
-            logger.log('Delete warehouse:', id);
-            fetchData();
+            WarehouseService.delete(id).then(() => fetchData());
         }
     };
 

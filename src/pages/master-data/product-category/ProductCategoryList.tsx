@@ -9,7 +9,7 @@ import { Tag } from 'lucide-react';
 import { GenericMasterDataList } from '../components/GenericMasterDataList';
 import { useGenericMasterDataList } from '@hooks/useGenericMasterDataList';
 import { ProductCategoryFormModal } from './ProductCategoryFormModal';
-import { mockProductCategories } from '@/__mocks__/masterDataMocks';
+import { ProductCategoryService } from '@/services/inventory/product-category.service';
 import { ActiveStatusBadge } from '@ui/StatusBadge';
 import type { ProductCategoryListItem } from '@project-types/master-data-types';
 import type { GenericMasterDataListConfig } from '@project-types/generic-master-data-types';
@@ -68,9 +68,7 @@ export default function ProductCategoryListRefactored() {
     // Use the generic hook for list management
     const listState = useGenericMasterDataList<ProductCategoryListItem>({
         fetchData: async () => {
-            // Simulate API call with delay
-            await new Promise((resolve) => setTimeout(resolve, 300));
-            return mockProductCategories;
+            return await ProductCategoryService.getList();
         },
         searchFields: ['category_code', 'category_name'],
         initialRowsPerPage: 10,
@@ -88,8 +86,9 @@ export default function ProductCategoryListRefactored() {
     };
 
     const handleDelete = (id: string) => {
-        void id; 
-        window.alert("Coming Soon: Delete Product Category");
+        if (confirm('คุณต้องการลบข้อมูลหมวดสินค้านี้หรือไม่?')) {
+            ProductCategoryService.delete(id).then(() => listState.refresh());
+        }
     };
 
     const handleModalClose = () => {

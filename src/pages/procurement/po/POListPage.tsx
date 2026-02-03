@@ -9,7 +9,7 @@ import { PageListLayout } from '@layout/PageListLayout';
 import { POStatusBadge } from '@ui/StatusBadge';
 import type { FilterFieldConfig } from '@shared/FilterFormBuilder';
 import { useTableFilters, type TableFilters } from '@hooks';
-import { poService } from '@services/POService';
+import { POService } from '@/services/procurement/po.service';
 import type { POListParams, POStatus, POListItem, POFormData } from '@project-types/po-types';
 import { createColumnHelper } from '@tanstack/react-table';
 import type { ColumnDef } from '@tanstack/react-table';
@@ -101,7 +101,7 @@ export default function POListPage() {
     // Data Fetching with React Query
     const { data, isLoading } = useQuery({
         queryKey: ['purchase-orders', apiFilters],
-        queryFn: () => poService.getList(apiFilters),
+        queryFn: () => POService.getList(apiFilters),
         placeholderData: keepPreviousData,
     });
 

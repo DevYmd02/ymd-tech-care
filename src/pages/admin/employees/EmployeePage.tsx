@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Users, AlertCircle, RefreshCw } from 'lucide-react';
 import { EmployeeCreateModal } from './EmployeeCreateModal';
-import { employeeService } from '@/services/EmployeeService';
+import { EmployeeService } from '@/services/core/employee.service';
 import type { IEmployee } from '@/interfaces/IEmployee';
 import { logger } from '@/utils/logger';
 
@@ -16,7 +16,7 @@ export const EmployeePage: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await employeeService.getAll();
+      const data = await EmployeeService.getAll();
       logger.info('[EmployeePage] Data received:', data);
       setEmployees(data || []);
     } catch (err) {

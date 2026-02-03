@@ -67,3 +67,27 @@ export type QTListItem = QuotationHeader;
 /** Alias for QuotationStatus (for backward compatibility) */
 export type QTStatus = QuotationStatus;
 
+
+// ====================================================================================
+// SERVICE TYPES - REQUEST/RESPONSE
+// ====================================================================================
+
+export interface QTListParams {
+  quotation_no?: string;
+  vendor_name?: string;
+  rfq_no?: string;
+  status?: string;
+  date_from?: string;
+  date_to?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface QTListResponse {
+  data: QTListItem[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export type QTCreateData = Partial<QTListItem> & { lines?: Partial<QuotationLine>[] };

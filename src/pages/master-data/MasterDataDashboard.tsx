@@ -15,9 +15,9 @@ import {
 } from 'lucide-react';
 
 // Import services (NOT static mock data - services handle mock/real switching internally)
-import { vendorService } from '@services/VendorService';
-import { masterDataService } from '@services/MasterDataService';
-import { ItemMasterService } from '@services/ItemMasterService';
+import { ItemMasterService } from '@/services/inventory/item-master.service';
+import { MasterDataService } from '@/services/core/master-data.service';
+import { VendorService } from '@/services/procurement/vendor.service';
 
 // Import Form Modals
 import { VendorFormModal } from './vendor';
@@ -151,28 +151,28 @@ export default function MasterDataDashboard() {
         try {
             switch (activeTab) {
                 case 'vendor': {
-                    const response = await vendorService.getList();
+                    const response = await VendorService.getList();
                     setVendors(response.data || []);
                     break;
                 }
                 case 'branch': {
-                    const data = await masterDataService.getBranches();
+                    const data = await MasterDataService.getBranches();
                     setBranches(data || []);
                     break;
                 }
                 case 'warehouse': {
-                    const data = await masterDataService.getWarehouses();
+                    const data = await MasterDataService.getWarehouses();
                     setWarehouses(data || []);
                     break;
                 }
                 // Case 'item' handled by useQuery
                 case 'cost-center': {
-                    const data = await masterDataService.getCostCenters();
+                    const data = await MasterDataService.getCostCenters();
                     setCostCenters(data || []);
                     break;
                 }
                 case 'project': {
-                    const data = await masterDataService.getProjects();
+                    const data = await MasterDataService.getProjects();
                     setProjects(data || []);
                     break;
                 }
@@ -190,12 +190,12 @@ export default function MasterDataDashboard() {
             try {
                 // Fetch all data in parallel for tab counts
                 const [vendorRes, branchRes, warehouseRes, costCenterRes, projectRes] = await Promise.all([
-                    vendorService.getList(),
-                    masterDataService.getBranches(),
-                    masterDataService.getWarehouses(),
+                    VendorService.getList(),
+                    MasterDataService.getBranches(),
+                    MasterDataService.getWarehouses(),
                     // Items handled by useQuery
-                    masterDataService.getCostCenters(),
-                    masterDataService.getProjects()
+                    MasterDataService.getCostCenters(),
+                    MasterDataService.getProjects()
                 ]);
                 
                 setVendors(vendorRes.data || []);
@@ -241,7 +241,7 @@ export default function MasterDataDashboard() {
         if (activeTab === 'vendor') {
             try {
                 // Fetch full vendor data before opening modal
-                const vendor = await vendorService.getById(id);
+                const vendor = await VendorService.getById(id);
                 if (vendor) {
                     setSelectedVendor(vendor);
                     setIsModalOpen(true);
@@ -258,7 +258,7 @@ export default function MasterDataDashboard() {
     const handleDelete = async (id: string) => {
         if (confirm('ต้องการลบข้อมูลนี้หรือไม่?')) {
             if (activeTab === 'vendor') {
-                const result = await vendorService.delete(id);
+                const result = await VendorService.delete(id);
                 if (!result.success) {
                     alert(result.message || 'เกิดข้อผิดพลาดในการลบข้อมูล');
                     return;

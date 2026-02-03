@@ -12,8 +12,8 @@ import { FileText, Plus, Trash2, Search, Eraser, FileBox, MoreHorizontal, Flame,
 import { PRHeader } from './PRHeader';
 
 import { WindowFormLayout } from '@layout/WindowFormLayout';
-import { masterDataService } from '@/services/MasterDataService';
-import { prService } from '@/services/PRService';
+import { MasterDataService } from '@/services/core/master-data.service';
+import { PRService } from '@/services/procurement/pr.service';
 import type { ItemMaster, CostCenter, Project } from '@/types/master-data-types';
 import type { VendorMaster } from '@/types/vendor-types';
 import { SystemAlert } from '@ui/SystemAlert';
@@ -101,9 +101,9 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
     const fetchMasterData = async () => {
       try {
         const [items, cc, prj] = await Promise.all([
-          masterDataService.getItems(),
-          masterDataService.getCostCenters(),
-          masterDataService.getProjects()
+          MasterDataService.getItems(),
+          MasterDataService.getCostCenters(),
+          MasterDataService.getProjects()
         ]);
         setProducts(items);
         setCostCenters(cc);
@@ -137,7 +137,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
           setActiveTab('detail');
 
           // Generate Next PR Number
-          const nextPRNo = await prService.generateNextDocumentNo();
+          const nextPRNo = await PRService.generateNextDocumentNo();
           
           reset({
             ...getDefaultFormValues(),
@@ -336,10 +336,10 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
 
     try {
         // 2. Create PR
-        const newPR = await prService.create(payload);
+        const newPR = await PRService.create(payload);
         if (newPR?.pr_id) {
             // 3. Auto Submit for Testing
-            const submitResult = await prService.submit(newPR.pr_id);
+            const submitResult = await PRService.submit(newPR.pr_id);
             if (submitResult.success) {
                 window.alert(`บันทึกและส่งอนุมัติสำเร็จ!\nเลขที่: ${newPR.pr_no}\nสถานะ: รออนุมัติ (In Approval)`);
                 onSuccess?.();
@@ -364,7 +364,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
 
     setIsActionLoading(true);
     try {
-      const success = await prService.delete(id);
+      const success = await PRService.delete(id);
       if (success) {
         onSuccess?.();
         onClose();
@@ -395,7 +395,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
     
     setIsActionLoading(true);
     try {
-      const success = await prService.approve(id);
+      const success = await PRService.approve(id);
       if (success) {
         window.alert("อนุมัติเอกสารเรียบร้อยแล้ว");
         onSuccess?.(); // Trigger refresh in parent

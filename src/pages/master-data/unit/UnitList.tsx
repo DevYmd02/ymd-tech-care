@@ -6,9 +6,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Search, Edit2, Trash2, Ruler, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, RefreshCw } from 'lucide-react';
 import { styles } from '@/constants';
-import { logger } from '@utils/logger';
+
 import { UnitFormModal } from './UnitFormModal';
-import { mockUnits } from '@/__mocks__/masterDataMocks';
+import { UnitService } from '@/services/inventory/unit.service';
 import type { UnitListItem } from '@project-types/master-data-types';
 import { ActiveStatusBadge } from '@ui/StatusBadge';
 
@@ -24,16 +24,19 @@ export default function UnitList() {
 
     const fetchData = useCallback(() => {
         setIsLoading(true);
-        setTimeout(() => {
-            let filtered = [...mockUnits];
+        const fetchUnits = async () => {
+            const data = await UnitService.getList();
+            let filtered = [...data];
             if (statusFilter !== 'ALL') filtered = filtered.filter(u => statusFilter === 'ACTIVE' ? u.is_active : !u.is_active);
             if (searchTerm) {
                 const term = searchTerm.toLowerCase();
                 filtered = filtered.filter(u => u.unit_code.toLowerCase().includes(term) || u.unit_name.toLowerCase().includes(term));
             }
             setItems(filtered);
+            setItems(filtered);
             setIsLoading(false);
-        }, 300);
+        };
+        fetchUnits();
     }, [statusFilter, searchTerm]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
@@ -46,7 +49,7 @@ export default function UnitList() {
 
     const handleCreateNew = () => { setEditingId(null); setIsModalOpen(true); };
     const handleEdit = (id: string) => { setEditingId(id); setIsModalOpen(true); };
-    const handleDelete = (id: string) => { if (confirm('คุณต้องการลบข้อมูลหน่วยนับนี้หรือไม่?')) { logger.log('Delete:', id); fetchData(); } };
+    const handleDelete = (id: string) => { if (confirm('คุณต้องการลบข้อมูลหน่วยนับนี้หรือไม่?')) { UnitService.delete(id).then(() => fetchData()); } };
     const handleModalClose = () => { setIsModalOpen(false); setEditingId(null); fetchData(); };
 
 

@@ -11,7 +11,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { X, Check, Building2 } from 'lucide-react';
-import { vendorService } from '../../services/VendorService';
+import { VendorService } from '@/services/procurement/vendor.service';
 import type { VendorMaster, VendorSearchItem } from '../../types/vendor-types';
 import { MOCK_VENDORS } from '../../__mocks__';
 
@@ -341,7 +341,7 @@ export const VendorSearchModal: React.FC<VendorSearchModalProps> = ({ isOpen, on
             setIsLoading(true);
             try {
                 // Try getting from service first
-                const response = await vendorService.getList();
+                const response = await VendorService.getList();
                 if (!isMounted) return;
 
                 if (response.data.length > 0) {

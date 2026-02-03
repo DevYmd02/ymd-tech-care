@@ -254,8 +254,8 @@ export default function ProcurementDashboard() {
                 <Card>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">ยอดซื้อแยกตามผู้ขาย (YTD)</h3>
                     <div className="flex flex-col sm:flex-row items-center gap-6">
-                        <div className="w-full sm:w-[60%] h-[250px]">
-                            <ResponsiveContainer width="100%" height="100%">
+                    <div className="w-full sm:w-[60%] min-w-0" style={{ width: '100%', height: 350 }}>
+                        <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
                                     <Pie
                                         data={vendorPieData}
@@ -295,27 +295,29 @@ export default function ProcurementDashboard() {
                 {/* Line Chart - Monthly Trend */}
                 <Card>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">แนวโน้มยอดซื้อ (7 เดือนล่าสุด)</h3>
-                    <ResponsiveContainer width="100%" height={280}>
-                        <LineChart data={trendData}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
-                            <XAxis dataKey="month" tick={{ fill: '#9ca3af' }} />
-                            <YAxis tick={{ fill: '#9ca3af' }} tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`} />
-                            <Tooltip 
-                                formatter={(value) => [`฿${Number(value).toLocaleString()}`, 'ยอดซื้อ']}
-                                contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
-                                labelStyle={{ color: '#fff' }}
-                            />
-                            <Legend />
-                            <Line 
-                                type="monotone" 
-                                dataKey="value" 
-                                stroke="#8b5cf6" 
-                                strokeWidth={3}
-                                dot={{ fill: '#8b5cf6', strokeWidth: 2, r: 4 }}
-                                name="ยอดซื้อ"
-                            />
-                        </LineChart>
-                    </ResponsiveContainer>
+                    <div style={{ width: '100%', height: 350 }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={trendData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
+                                <XAxis dataKey="month" tick={{ fill: '#9ca3af' }} />
+                                <YAxis tick={{ fill: '#9ca3af' }} tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`} />
+                                <Tooltip 
+                                    formatter={(value) => [`฿${Number(value).toLocaleString()}`, 'ยอดซื้อ']}
+                                    contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
+                                    labelStyle={{ color: '#fff' }}
+                                />
+                                <Legend />
+                                <Line 
+                                    type="monotone" 
+                                    dataKey="value" 
+                                    stroke="#8b5cf6" 
+                                    strokeWidth={3}
+                                    dot={{ fill: '#8b5cf6', strokeWidth: 2, r: 4 }}
+                                    name="ยอดซื้อ"
+                                />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
                 </Card>
             </div>
 
@@ -324,19 +326,21 @@ export default function ProcurementDashboard() {
                 {/* Bar Chart - Lead Time Analysis */}
                 <Card>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">วิเคราะห์ Lead Time (วัน)</h3>
-                    <ResponsiveContainer width="100%" height={280}>
-                        <BarChart data={leadTimeData}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
-                            <XAxis dataKey="process" tick={{ fill: '#9ca3af' }} />
-                            <YAxis tick={{ fill: '#9ca3af' }} />
-                            <Tooltip 
-                                contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
-                                labelStyle={{ color: '#fff' }}
-                            />
-                            <Legend />
-                            <Bar dataKey="days" fill="#22c55e" name="จำนวนวัน" radius={[4, 4, 0, 0]} />
-                        </BarChart>
-                    </ResponsiveContainer>
+                    <div style={{ width: '100%', height: 350 }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={leadTimeData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
+                                <XAxis dataKey="process" tick={{ fill: '#9ca3af' }} />
+                                <YAxis tick={{ fill: '#9ca3af' }} />
+                                <Tooltip 
+                                    contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }}
+                                    labelStyle={{ color: '#fff' }}
+                                />
+                                <Legend />
+                                <Bar dataKey="days" fill="#22c55e" name="จำนวนวัน" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
                 </Card>
 
                 {/* Pending Approvals */}

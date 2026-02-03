@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, Loader2, X, Building2 } from 'lucide-react';
-import { vendorService } from '../../services/VendorService';
+import { VendorService } from '@/services/procurement/vendor.service';
 import type { VendorMaster } from '../../types/vendor-types';
 import { VendorSearchModal } from './VendorSearchModal';
 
@@ -56,7 +56,7 @@ export const VendorSearch: React.FC<VendorSearchProps> = ({
 
     setIsLoading(true);
     try {
-      const data = await vendorService.search(searchQuery);
+      const data = await VendorService.search(searchQuery);
       setResults(data);
     } catch (err) {
       console.error('Failed to search vendors:', err);

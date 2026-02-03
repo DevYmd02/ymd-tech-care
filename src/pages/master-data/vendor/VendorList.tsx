@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { styles } from '@/constants';
 
-import { vendorService } from '@services/VendorService';
+import { VendorService } from '@/services/procurement/vendor.service';
 import type { VendorStatus, VendorListParams } from '@project-types/vendor-types';
 import { VendorStatusBadge } from '@ui/StatusBadge';
 
@@ -58,7 +58,7 @@ export default function VendorList() {
         refetch 
     } = useQuery({
         queryKey: ['vendors', queryParams],
-        queryFn: () => vendorService.getList(),
+        queryFn: () => VendorService.getList(),
         placeholderData: keepPreviousData,
         staleTime: 1000 * 60 * 5, // 5 minutes cache
     });
@@ -116,7 +116,7 @@ export default function VendorList() {
     const handleDelete = async (vendorId: string) => {
         if (confirm('คุณต้องการลบข้อมูลเจ้าหนี้นี้หรือไม่?')) {
             try {
-                const result = await vendorService.delete(vendorId);
+                const result = await VendorService.delete(vendorId);
                 if (result.success) {
                     refetch(); // Refresh list via React Query
                 } else {

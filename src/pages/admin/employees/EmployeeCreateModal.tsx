@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Save, UserPlus, MapPin, Building, User } from 'lucide-react';
 import type { IEmployeeCreateRequest, IEmployeeAddress } from '@/interfaces/IEmployee';
-import { employeeService } from '@/services/EmployeeService';
+import { EmployeeService } from '@/services/core/employee.service';
 
 interface Props {
   isOpen: boolean;
@@ -88,7 +88,7 @@ export const EmployeeCreateModal: React.FC<Props> = ({ isOpen, onClose, onSucces
     };
 
     try {
-      await employeeService.createEmployee(payload);
+      await EmployeeService.createEmployee(payload);
       alert('สร้างพนักงานสำเร็จ');
       if (onSuccess) onSuccess();
       onClose();

@@ -9,7 +9,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FileText, Search, Plus, Save, Trash2, Copy, Eye, X, Loader2, Home, ClipboardList, CreditCard, Settings, Phone, DollarSign, Building2 } from 'lucide-react';
 import { styles } from '@/constants';
-import { vendorService } from '@services/VendorService';
+import { VendorService } from '@/services/procurement/vendor.service';
 import { initialVendorFormData, toVendorCreateRequest, type VendorFormData, type VendorSearchItem } from '@project-types/vendor-types';
 import { VendorSearchModal } from '@shared/VendorSearchModal';
 
@@ -58,7 +58,7 @@ export default function VendorForm() {
 
             setIsLoading(true);
             try {
-                const vendor = await vendorService.getById(vendorId);
+                const vendor = await VendorService.getById(vendorId);
                 if (vendor) {
                     setFormData(prev => ({
                         ...prev,
@@ -156,9 +156,9 @@ export default function VendorForm() {
             
             let result;
             if (vendorId) {
-                result = await vendorService.update(vendorId, request);
+                result = await VendorService.update(vendorId, request);
             } else {
-                result = await vendorService.create(request);
+                result = await VendorService.create(request);
             }
             
             if (result.success) {

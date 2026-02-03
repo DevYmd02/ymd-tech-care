@@ -11,8 +11,8 @@ import { VendorSearchModal } from '@shared/VendorSearchModal';
 import { WindowFormLayout } from '@layout/WindowFormLayout';
 import TabPanel from '@layout/TabPanel';
 import { SystemAlert } from '@ui/SystemAlert';
-import { masterDataService } from '@services/MasterDataService';
-import type { BranchMaster, ItemMaster, UnitMaster } from '@project-types/master-data-types';
+import { MasterDataService } from '@/services/core/master-data.service';
+import type { BranchListItem, ItemMaster, UnitListItem } from '@project-types/master-data-types';
 import type { RFQFormData, RFQLineFormData } from '@project-types/rfq-types';
 import { initialRFQFormData, initialRFQLineFormData } from '@project-types/rfq-types';
 import type { VendorSearchItem } from '@project-types/vendor-types';
@@ -79,9 +79,9 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, init
 
 
     // Master Data State
-    const [branches, setBranches] = useState<BranchMaster[]>([]);
+    const [branches, setBranches] = useState<BranchListItem[]>([]);
     const [items, setItems] = useState<ItemMaster[]>([]);
-    const [units, setUnits] = useState<UnitMaster[]>([]);
+    const [units, setUnits] = useState<UnitListItem[]>([]);
 
     // Fetch Master Data - ONLY when modal is open
     useEffect(() => {
@@ -90,9 +90,9 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, init
         const fetchMasterData = async () => {
             try {
                 const [branchesData, itemsData, unitsData] = await Promise.all([
-                    masterDataService.getBranches(),
-                    masterDataService.getItems(),
-                    masterDataService.getUnits()
+                    MasterDataService.getBranches(),
+                    MasterDataService.getItems(),
+                    MasterDataService.getUnits()
                 ]);
                 setBranches(branchesData);
                 setItems(itemsData);

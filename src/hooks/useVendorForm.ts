@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { vendorService } from '@services/VendorService';
+import { VendorService } from '@/services/procurement/vendor.service';
 import type { 
     VendorFormData,
     VendorBankAccount,
@@ -78,7 +78,7 @@ export function useVendorForm({
                 const fetchData = async () => {
                     setIsLoading(true);
                     try {
-                        const vendor = await vendorService.getById(vendorId);
+                        const vendor = await VendorService.getById(vendorId);
                         if (vendor) {
                             const apiData = mapToFormData(vendor);
                             setFormData({
@@ -330,9 +330,9 @@ export function useVendorForm({
             const targetId = vendorId || initialData?.vendor_id;
 
             if (targetId) {
-                await vendorService.update(targetId, request);
+                await VendorService.update(targetId, request);
             } else {
-                await vendorService.create(request);
+                await VendorService.create(request);
             }
 
             // Success Alert is handled by onSuccess or parent usually, but we can do it here too if we want a Toast.

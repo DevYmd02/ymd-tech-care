@@ -7,7 +7,7 @@ import { SmartTable } from '@ui/SmartTable';
 import { PageListLayout } from '@layout/PageListLayout';
 import type { FilterFieldConfig } from '@shared/FilterFormBuilder';
 import { useTableFilters } from '@hooks';
-import { grnService } from '@services/GRNService';
+import { GRNService } from '@/services/procurement/grn.service';
 import type { GRNListParams, GRNStatus, GRNListItem, GRNSummaryCounts } from '@/types/grn-types';
 import { createColumnHelper } from '@tanstack/react-table';
 import type { ColumnDef } from '@tanstack/react-table';
@@ -64,13 +64,13 @@ export default function GRNListPage() {
     // 2. Data Fetching
     const { data, isLoading, refetch } = useQuery({
         queryKey: ['grn-list', apiFilters],
-        queryFn: () => grnService.getList(apiFilters),
+        queryFn: () => GRNService.getList(apiFilters),
         placeholderData: keepPreviousData,
     });
 
     const { data: summaryCounts } = useQuery({
         queryKey: ['grn-summary'],
-        queryFn: () => grnService.getSummaryCounts(),
+        queryFn: () => GRNService.getSummaryCounts(),
         initialData: { DRAFT: 0, POSTED: 0, REVERSED: 0, RETURNED: 0 } as GRNSummaryCounts
     });
 

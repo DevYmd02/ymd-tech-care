@@ -7,12 +7,13 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { FileText, Eye, Edit, Send } from 'lucide-react';
-import { FilterFormBuilder } from '@shared';
+import { FileText, Eye, Edit, Send, Plus, Search } from 'lucide-react';
+// import { FilterFormBuilder } from '@shared';
 import { SmartTable } from '@ui/SmartTable';
 import { PageListLayout } from '@layout/PageListLayout';
 import { PRStatusBadge } from '@ui/StatusBadge';
-import type { FilterFieldConfig } from '@shared/FilterFormBuilder';
+import { FilterField } from '@ui/FilterField';
+// import type { FilterFieldConfig } from '@shared/FilterFormBuilder';
 // import { useWindowManager } from '@hooks/useWindowManager';
 import { useTableFilters, type TableFilters } from '@hooks';
 import RFQFormModal from '../rfq/components/RFQFormModal';
@@ -21,8 +22,7 @@ import { formatThaiDate } from '@utils/dateUtils';
 import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';
 
 // Services & Types
-import { prService } from '@services/PRService';
-import type { PRListParams } from '@services/PRService';
+import { PRService, type PRListParams } from '@/services/procurement/pr.service';
 import type { PRHeader, PRStatus } from '@project-types/pr-types';
 import { mockCostCenters } from '../../../__mocks__/masterDataMocks';
 
@@ -43,14 +43,6 @@ const PR_STATUS_OPTIONS = [
 
 type PRFilterKeys = Extract<keyof TableFilters<PRStatus>, string>;
 
-const PR_FILTER_CONFIG: FilterFieldConfig<PRFilterKeys>[] = [
-    { name: 'search', label: 'เลขที่เอกสาร', type: 'text', placeholder: 'PR2024-xxx' },
-    { name: 'search2', label: 'ผู้ขอ', type: 'text', placeholder: 'ชื่อผู้ขอ' },
-    { name: 'search3', label: 'แผนก', type: 'text', placeholder: 'แผนก' },
-    { name: 'status', label: 'สถานะ', type: 'select', options: PR_STATUS_OPTIONS },
-    { name: 'dateFrom', label: 'วันที่เอกสาร จาก', type: 'date' },
-    { name: 'dateTo', label: 'ถึงวันที่', type: 'date' },
-];
 
 // ====================================================================================
 // MAIN COMPONENT
@@ -77,7 +69,7 @@ export default function PRListPage() {
     // Data Fetching with React Query
     const { data, isLoading, refetch } = useQuery({
         queryKey: ['prs', apiFilters],
-        queryFn: () => prService.getList(apiFilters),
+        queryFn: () => PRService.getList(apiFilters),
         placeholderData: keepPreviousData,
         staleTime: 0, // Ensure data is considered stale immediately
         refetchOnWindowFocus: true, // Refetch when window gains focus
@@ -123,7 +115,7 @@ export default function PRListPage() {
     const handleQuickApprove = useCallback(async (id: string) => {
         if (!window.confirm("คุณต้องการอนุมัติเอกสารนี้ใช่หรือไม่?")) return;
         try {
-            const success = await prService.approve(id);
+            const success = await PRService.approve(id);
             if (success) {
                 window.alert("อนุมัติเอกสารเรียบร้อยแล้ว");
                 refetch();
@@ -296,17 +288,76 @@ export default function PRListPage() {
                 accentColor="blue"
                 isLoading={isLoading}
                 searchForm={
-                    <FilterFormBuilder
-                        config={PR_FILTER_CONFIG}
-                        filters={filters}
-                        onFilterChange={handleFilterChange}
-                        onSearch={() => {}} // React Query auto-fetches
-                        onReset={resetFilters}
-                        accentColor="blue"
-                        columns={{ sm: 2, md: 4, lg: 4 }}
-                        onCreate={handleCreate}
-                        createLabel="สร้างใบขอซื้อใหม่"
-                    />
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                        <FilterField
+                            label="เลขที่เอกสาร"
+                            value={filters.search}
+                            onChange={(val: string) => handleFilterChange('search', val)}
+                            placeholder="PR2024-xxx"
+                            accentColor="blue"
+                        />
+                        <FilterField
+                            label="ผู้ขอ"
+                            value={filters.search2}
+                            onChange={(val: string) => handleFilterChange('search2', val)}
+                            placeholder="ชื่อผู้ขอ"
+                            accentColor="blue"
+                        />
+                        <FilterField
+                            label="แผนก"
+                            value={filters.search3}
+                            onChange={(val: string) => handleFilterChange('search3', val)}
+                            placeholder="แผนก"
+                            accentColor="blue"
+                        />
+                        <FilterField
+                            label="สถานะ"
+                            type="select"
+                            value={filters.status}
+                            onChange={(val: string) => handleFilterChange('status', val)}
+                            options={PR_STATUS_OPTIONS}
+                            accentColor="blue"
+                        />
+                        <FilterField
+                            label="วันที่เอกสาร จาก"
+                            type="date"
+                            value={filters.dateFrom || ''}
+                            onChange={(val: string) => handleFilterChange('dateFrom', val)}
+                            accentColor="blue"
+                        />
+                        <FilterField
+                            label="ถึงวันที่"
+                            type="date"
+                            value={filters.dateTo || ''}
+                            onChange={(val: string) => handleFilterChange('dateTo', val)}
+                            accentColor="blue"
+                        />
+                        
+                        {/* Action Buttons Group */}
+                        <div className="lg:col-span-2 flex justify-end gap-2 flex-wrap">
+                            <button
+                                onClick={resetFilters}
+                                className="h-10 px-6 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg font-medium transition-colors border border-gray-300"
+                            >
+                                ล้างค่า
+                            </button>
+                            {/* React Query automatically handles fetching, so this button is visual mostly, or triggers refetch if needed manually */}
+                            <button
+                                onClick={() => refetch()}
+                                className="h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2"
+                            >
+                                <Search size={18} />
+                                ค้นหา
+                            </button>
+                            <button
+                                onClick={handleCreate}
+                                className="h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2"
+                            >
+                                <Plus size={16} strokeWidth={2.5} />
+                                สร้างใบขอซื้อใหม่
+                            </button>
+                        </div>
+                    </div>
                 }
             >
                 <div className="h-full flex flex-col">

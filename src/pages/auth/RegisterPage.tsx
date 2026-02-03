@@ -9,7 +9,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff, Lock, User, ArrowRight, LayoutDashboard, Briefcase, AlertCircle } from 'lucide-react';
 import { AxiosError } from 'axios';
 import { AuthLayout, AuthInput, AuthLabel, AuthButton } from '../../layouts/AuthLayout';
-import { authService } from '../../services/AuthService';
+import { AuthService } from '@/services/core/auth.service';
 import { logger } from '../../utils/logger';
 
 interface ApiErrorResponse {
@@ -53,7 +53,7 @@ const RegisterPage = () => {
                 throw new Error('Employee ID must be a valid number');
             }
 
-            await authService.register(payload);
+            await AuthService.register(payload);
             
             alert('Registration Successful! Please sign in.');
             navigate('/login');

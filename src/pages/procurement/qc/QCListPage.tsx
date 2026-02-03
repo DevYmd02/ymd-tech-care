@@ -20,8 +20,8 @@ import { createColumnHelper } from '@tanstack/react-table';
 import type { ColumnDef } from '@tanstack/react-table';
 
 // Services & Types
-import { qcService } from '@services/QCService';
-import type { QCListParams } from '@services/QCService';
+import { QCService } from '@/services/procurement/qc.service';
+import type { QCListParams } from '@/services/procurement/qc.service';
 import type { QCStatus, QCListItem } from '@project-types/qc-types';
 import type { POFormData } from '@project-types/po-types';
 import POFormModal from '../po/components/POFormModal';
@@ -74,7 +74,7 @@ export default function QCListPage() {
     // Data Fetching with React Query
     const { data, isLoading } = useQuery({
         queryKey: ['quote-comparisons', apiFilters],
-        queryFn: () => qcService.getList(apiFilters),
+        queryFn: () => QCService.getList(apiFilters),
         placeholderData: keepPreviousData,
     });
 

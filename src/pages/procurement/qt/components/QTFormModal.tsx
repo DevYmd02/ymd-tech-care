@@ -4,9 +4,9 @@ import { FileText, Plus, Trash2, Search, MoreHorizontal, FileBox } from 'lucide-
 import { WindowFormLayout } from '@layout/WindowFormLayout';
 import { SystemAlert } from '@ui/SystemAlert';
 import type { QuotationHeader, QuotationLine } from '@project-types/qt-types';
-import { masterDataService } from '@services/MasterDataService';
-import { qtService } from '@services/index';
-import type { UnitMaster } from '@project-types/master-data-types';
+import { MasterDataService } from '@/services/core/master-data.service';
+import { QTService } from '@/services/procurement/qt.service';
+import type { UnitListItem } from '@project-types/master-data-types';
 import type { ProductLookup } from '../../../../__mocks__';
 import { MOCK_PRODUCTS } from '../../../../__mocks__';
 import type { RFQHeader } from '@project-types/rfq-types';
@@ -86,7 +86,7 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ }
   
   // Master Data
   const [products] = useState<ProductLookup[]>(MOCK_PRODUCTS);
-  const [units, setUnits] = useState<UnitMaster[]>([]); // Add units state
+  const [units, setUnits] = useState<UnitListItem[]>([]); // Add units state
 
   // Product Search Modal
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -98,7 +98,7 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ }
   useEffect(() => {
     // Fetch Units for dropdown - ONLY when modal is open
     if (!isOpen) return;
-    masterDataService.getUnits().then(setUnits);
+    MasterDataService.getUnits().then(setUnits);
   }, [isOpen]);
 
   useEffect(() => {
@@ -212,7 +212,7 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ }
       };
       
       // Call Service directly (static import)
-      qtService.create(payload).then(() => {
+      QTService.create(payload).then(() => {
          window.alert('บันทึกใบเสนอราคาเรียบร้อย');
          if (onSuccess) onSuccess();
          onClose();

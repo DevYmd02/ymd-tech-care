@@ -1,8 +1,8 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Save, FileText, Plus, Trash2 } from 'lucide-react';
 import { WindowFormLayout } from '@layout/WindowFormLayout';
-import { poService } from '@services/POService';
-import { vendorService } from '@services/VendorService';
+import { POService } from '@/services/procurement/po.service';
+import { VendorService } from '@/services/procurement/vendor.service';
 import type { POLineItemInput, CreatePOPayload, POFormData } from '@/types/po-types';
 import type { VendorDropdownItem } from '@/types/vendor-types';
 import { SmartTable } from '@ui/SmartTable';
@@ -53,7 +53,7 @@ export default function POFormModal({ isOpen, onClose, onSuccess, initialValues 
     useEffect(() => {
         const fetchVendors = async () => {
             try {
-                const data = await vendorService.getDropdown();
+                const data = await VendorService.getDropdown();
                 setVendorOptions(data);
             } catch (error) {
                 console.error('Failed to fetch vendor dropdown:', error);
@@ -157,7 +157,7 @@ export default function POFormModal({ isOpen, onClose, onSuccess, initialValues 
         };
 
         try {
-            await poService.create(payload);
+            await POService.create(payload);
             window.alert('บันทึกใบสั่งซื้อเรียบร้อยแล้ว');
             if (onSuccess) onSuccess();
             onClose();

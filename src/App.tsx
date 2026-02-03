@@ -43,18 +43,18 @@ const RolesDashboard = React.lazy(() => import('./pages/roles/RolesDashboard'));
 const ITGCDashboard = React.lazy(() => import('./pages/it-governance/ITGCDashboard'));
 
 // Master Data Pages
-const MasterDataDashboard = React.lazy(() => import('./pages/master-data').then(module => ({ default: module.MasterDataDashboard })));
-const VendorForm = React.lazy(() => import('./pages/master-data').then(module => ({ default: module.VendorForm })));
-const VendorDashboard = React.lazy(() => import('./pages/master-data').then(module => ({ default: module.VendorDashboard })));
-const VendorList = React.lazy(() => import('./pages/master-data').then(module => ({ default: module.VendorList })));
-const BranchForm = React.lazy(() => import('./pages/master-data').then(module => ({ default: module.BranchForm })));
-const WarehouseForm = React.lazy(() => import('./pages/master-data').then(module => ({ default: module.WarehouseForm })));
-const ProductCategoryForm = React.lazy(() => import('./pages/master-data').then(module => ({ default: module.ProductCategoryForm })));
-const ItemTypeForm = React.lazy(() => import('./pages/master-data').then(module => ({ default: module.ItemTypeForm })));
-const UnitForm = React.lazy(() => import('./pages/master-data').then(module => ({ default: module.UnitForm })));
-const ItemMasterForm = React.lazy(() => import('./pages/master-data').then(module => ({ default: module.ItemMasterForm })));
-const UOMConversionForm = React.lazy(() => import('./pages/master-data').then(module => ({ default: module.UOMConversionForm })));
-const ItemBarcodeForm = React.lazy(() => import('./pages/master-data').then(module => ({ default: module.ItemBarcodeForm })));
+const MasterDataDashboard = React.lazy(() => import('./pages/master-data/MasterDataDashboard'));
+const VendorForm = React.lazy(() => import('./pages/master-data/vendor/VendorForm'));
+const VendorDashboard = React.lazy(() => import('./pages/master-data/vendor/VendorDashboard'));
+const VendorList = React.lazy(() => import('./pages/master-data/vendor/VendorList'));
+const BranchForm = React.lazy(() => import('./pages/master-data/branch/BranchForm'));
+const WarehouseForm = React.lazy(() => import('./pages/master-data/warehouse/WarehouseForm'));
+const ProductCategoryForm = React.lazy(() => import('./pages/master-data/product-category/ProductCategoryForm'));
+const ItemTypeForm = React.lazy(() => import('./pages/master-data/item-type/ItemTypeForm'));
+const UnitForm = React.lazy(() => import('./pages/master-data/unit/UnitForm'));
+const ItemMasterForm = React.lazy(() => import('./pages/master-data/item-master/ItemMasterForm'));
+const UOMConversionForm = React.lazy(() => import('./pages/master-data/uom-conversion/UOMConversionForm'));
+const ItemBarcodeForm = React.lazy(() => import('./pages/master-data/item-barcode/ItemBarcodeForm'));
 
 // Auth Pages
 const LoginPage = React.lazy(() => import('./pages/auth/LoginPage'));

@@ -10,7 +10,7 @@ import {
     Edit2, Trash2
 } from 'lucide-react';
 import Swal from 'sweetalert2';
-import { ItemMasterService } from '@/services/ItemMasterService';
+import { ItemMasterService } from '@/services/inventory/item-master.service';
 import type { ItemListItem } from '@project-types/master-data-types';
 import { SmartTable } from '@ui/SmartTable';
 import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';

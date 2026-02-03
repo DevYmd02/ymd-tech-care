@@ -6,9 +6,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Search, Edit2, Trash2, Layers, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, RefreshCw } from 'lucide-react';
 import { styles } from '@/constants';
-import { logger } from '@utils/logger';
+
 import { ItemTypeFormModal } from './ItemTypeFormModal';
-import { mockItemTypes } from '@/__mocks__/masterDataMocks';
+import { ItemTypeService } from '@/services/inventory/item-type.service';
 import type { ItemTypeListItem } from '@project-types/master-data-types';
 import { ActiveStatusBadge } from '@ui/StatusBadge';
 
@@ -24,16 +24,19 @@ export default function ItemTypeList() {
 
     const fetchData = useCallback(() => {
         setIsLoading(true);
-        setTimeout(() => {
-            let filtered = [...mockItemTypes];
+        const fetchItemTypes = async () => {
+            const data = await ItemTypeService.getList();
+            let filtered = [...data];
             if (statusFilter !== 'ALL') filtered = filtered.filter(i => statusFilter === 'ACTIVE' ? i.is_active : !i.is_active);
             if (searchTerm) {
                 const term = searchTerm.toLowerCase();
                 filtered = filtered.filter(i => i.item_type_code.toLowerCase().includes(term) || i.item_type_name.toLowerCase().includes(term));
             }
             setItems(filtered);
+            setItems(filtered);
             setIsLoading(false);
-        }, 300);
+        };
+        fetchItemTypes();
     }, [statusFilter, searchTerm]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
@@ -46,7 +49,7 @@ export default function ItemTypeList() {
 
     const handleCreateNew = () => { setEditingId(null); setIsModalOpen(true); };
     const handleEdit = (id: string) => { setEditingId(id); setIsModalOpen(true); };
-    const handleDelete = (id: string) => { if (confirm('คุณต้องการลบข้อมูลประเภทสินค้านี้หรือไม่?')) { logger.log('Delete:', id); fetchData(); } };
+    const handleDelete = (id: string) => { if (confirm('คุณต้องการลบข้อมูลประเภทสินค้านี้หรือไม่?')) { ItemTypeService.delete(id).then(() => fetchData()); } };
     const handleModalClose = () => { setIsModalOpen(false); setEditingId(null); fetchData(); };
 
 

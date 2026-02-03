@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authService } from '../services/AuthService';
-import type { LoginPayload } from '../services/AuthService';
+import { AuthService } from '@/services/core/auth.service';
+import type { LoginPayload } from '@/services/core/auth.service';
 import { logger } from '../utils/logger';
 
 interface AuthContextType {
@@ -30,7 +30,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = useCallback(async (data: LoginPayload) => {
     try {
-      const response = await authService.login(data);
+      const response = await AuthService.login(data);
       
       // Handle various common token field names since API specs are unclear
       const token = response.token || response.accessToken || response.access_token;

@@ -511,11 +511,134 @@ export const MOCK_RFQ_VENDORS: RFQVendor[] = IS_DEV ? _rfqVendors : [];
 export const MOCK_QTS: QTListItem[] = IS_DEV ? _mockQTs : [];
 export const MOCK_QCS: QCListItem[] = IS_DEV ? _mockQCs : [];
 
+
 // =============================================================================
-// HELPER FUNCTIONS
+// 5. PURCHASE ORDER (PO)
 // =============================================================================
 
-/** ดึง PRs ที่พร้อมสร้าง RFQ (status = APPROVED) */
+import type { POListItem } from '../types/po-types';
+import type { GRNListItem } from '../types/grn-types';
+
+const _mockPOs: POListItem[] = [
+  {
+    po_id: 'po-001',
+    po_no: 'PO-202601-0001',
+    po_date: '2026-01-26',
+    pr_id: 'pr-001',
+    pr_no: 'PR-202601-0001',
+    vendor_id: MOCK_VENDORS[4]?.vendor_id || 'vendor-005',
+    vendor_name: MOCK_VENDORS[4]?.vendor_name || 'บริษัท สมาร์ทเทค โซลูชั่นส์ จำกัด',
+    branch_id: 'BR001',
+    branch_name: 'สำนักงานใหญ่',
+    status: 'ISSUED',
+    currency_code: 'THB',
+    exchange_rate: 1.0,
+    payment_term_days: 60,
+    subtotal: 178500.00,
+    tax_amount: 12495.00,
+    total_amount: 190995.00,
+    created_by: 'user-purchase-001',
+    created_by_name: 'นายจัดซื้อ หนึ่ง',
+    created_at: '2026-01-26T10:00:00Z', 
+    item_count: 2
+  },
+  {
+    po_id: 'po-002',
+    po_no: 'PO-202601-0002',
+    po_date: '2026-01-27',
+    pr_id: 'pr-002',
+    pr_no: 'PR-202601-0002',
+    vendor_id: 'vendor-006',
+    vendor_name: 'บริษัท เฟอร์นิเจอร์พลัส จำกัด',
+    branch_id: 'BR001',
+    branch_name: 'สำนักงานใหญ่',
+    status: 'ISSUED',
+    currency_code: 'THB',
+    exchange_rate: 1.0,
+    payment_term_days: 30,
+    subtotal: 25000.00,
+    tax_amount: 1750.00,
+    total_amount: 26750.00,
+    created_by: 'user-purchase-001',
+    created_by_name: 'นายจัดซื้อ หนึ่ง',
+    created_at: '2026-01-27T14:00:00Z',
+    item_count: 5
+  },
+  {
+    po_id: 'po-003',
+    po_no: 'PO-202512-0098',
+    po_date: '2025-12-16',
+    pr_id: 'pr-003',
+    pr_no: 'PR-202512-0085',
+    vendor_id: MOCK_VENDORS[1]?.vendor_id || 'vendor-002',
+    vendor_name: MOCK_VENDORS[1]?.vendor_name || 'บริษัท ออฟฟิศเมท จำกัด',
+    branch_id: 'BR002',
+    branch_name: 'สาขาเชียงใหม่',
+    status: 'CLOSED',
+    currency_code: 'THB',
+    exchange_rate: 1.0,
+    payment_term_days: 30,
+    subtotal: 45000.00,
+    tax_amount: 3150.00,
+    total_amount: 48150.00,
+    created_by: 'user-purchase-002',
+    created_by_name: 'นางสาวจัดซื้อ สอง',
+    created_at: '2025-12-16T09:00:00Z',
+    item_count: 10
+  }
+];
+
+// =============================================================================
+// 6. GOODS RECEIPT NOTE (GRN)
+// =============================================================================
+
+const _mockGRNs: GRNListItem[] = [
+  {
+    grn_id: 'grn-001',
+    grn_no: 'GRN-202601-0001',
+    po_id: 'po-001',
+    po_no: 'PO-202601-0001',
+    received_date: '2026-01-28',
+    warehouse_id: 'WH001',
+    warehouse_name: 'คลังสินค้าหลัก (Main)',
+    received_by: 'user-store-001',
+    received_by_name: 'นายคลังสินค้า หนึ่ง',
+    status: 'POSTED',
+    item_count: 2,
+    total_amount: 190995.00
+  },
+  {
+    grn_id: 'grn-002',
+    grn_no: 'GRN-202601-0002',
+    po_id: 'po-002',
+    po_no: 'PO-202601-0002',
+    received_date: '2026-01-29',
+    warehouse_id: 'WH001',
+    warehouse_name: 'คลังสินค้าหลัก (Main)',
+    received_by: 'user-store-001',
+    received_by_name: 'นายคลังสินค้า หนึ่ง',
+    status: 'DRAFT',
+    item_count: 5,
+    total_amount: 0 // Draft might not calculate yet
+  },
+  {
+    grn_id: 'grn-003',
+    grn_no: 'GRN-202512-0050',
+    po_id: 'po-003',
+    po_no: 'PO-202512-0098',
+    received_date: '2025-12-18',
+    warehouse_id: 'WH002',
+    warehouse_name: 'คลังสินค้าเชียงใหม่',
+    received_by: 'user-store-002',
+    received_by_name: 'นางสาวคลังสินค้า สอง',
+    status: 'POSTED',
+    item_count: 10,
+    total_amount: 48150.00
+  }
+];
+
+export const MOCK_POS: POListItem[] = IS_DEV ? _mockPOs : [];
+export const MOCK_GRNS: GRNListItem[] = IS_DEV ? _mockGRNs : [];
 export const getApprovedPRs = (): PRHeader[] => {
   return MOCK_PRS.filter(pr => pr.status === 'APPROVED');
 };

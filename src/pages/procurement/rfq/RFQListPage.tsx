@@ -7,20 +7,21 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { FileText, Plus, Eye, Send } from 'lucide-react';
+import { FileText, Plus, Eye, Send, Search } from 'lucide-react';
 import { formatThaiDate } from '@utils/dateUtils';
-import { FilterFormBuilder } from '@shared';
+// import { FilterFormBuilder } from '@shared';
+import { FilterField } from '@ui/FilterField';
 import { SmartTable } from '@ui/SmartTable';
 import { PageListLayout } from '@layout/PageListLayout';
 import { RFQStatusBadge } from '@ui/StatusBadge';
-import type { FilterFieldConfig } from '@shared/FilterFormBuilder';
+// import type { FilterFieldConfig } from '@shared/FilterFormBuilder';
 import { useTableFilters, type TableFilters } from '@hooks';
 import { createColumnHelper } from '@tanstack/react-table';
 import type { ColumnDef } from '@tanstack/react-table';
 import QTFormModal from '../qt/components/QTFormModal';
 
 // Services & Types
-import { rfqService } from '@services/RFQService';
+import { RFQService } from '@/services/procurement/rfq.service';
 import type { RFQFilterCriteria, RFQHeader } from '@project-types/rfq-types';
 import type { RFQStatus } from '@project-types/rfq-types';
 import RFQFormModal from './components/RFQFormModal';
@@ -44,14 +45,14 @@ const RFQ_STATUS_OPTIONS = [
 
 type RFQFilterKeys = Extract<keyof TableFilters<RFQStatus>, string> | 'creator';
 
-const RFQ_FILTER_CONFIG: FilterFieldConfig<RFQFilterKeys>[] = [
-    { name: 'search', label: 'เลขที่ RFQ', type: 'text', placeholder: 'RFQ-xxx' },
-    { name: 'search2', label: 'PR อ้างอิง', type: 'text', placeholder: 'PR-xxx' },
-    { name: 'creator', label: 'ผู้สร้าง RFQ', type: 'text', placeholder: 'ชื่อผู้สร้าง' },
-    { name: 'status', label: 'สถานะ', type: 'select', options: RFQ_STATUS_OPTIONS },
-    { name: 'dateFrom', label: 'วันที่เริ่มต้น', type: 'date' },
-    { name: 'dateTo', label: 'วันที่สิ้นสุด', type: 'date' },
-];
+// const RFQ_FILTER_CONFIG: FilterFieldConfig<RFQFilterKeys>[] = [
+//     { name: 'search', label: 'เลขที่ RFQ', type: 'text', placeholder: 'RFQ-xxx' },
+//     { name: 'search2', label: 'PR อ้างอิง', type: 'text', placeholder: 'PR-xxx' },
+//     { name: 'creator', label: 'ผู้สร้าง RFQ', type: 'text', placeholder: 'ชื่อผู้สร้าง' },
+//     { name: 'status', label: 'สถานะ', type: 'select', options: RFQ_STATUS_OPTIONS },
+//     { name: 'dateFrom', label: 'วันที่เริ่มต้น', type: 'date' },
+//     { name: 'dateTo', label: 'วันที่สิ้นสุด', type: 'date' },
+// ];
 
 // ====================================================================================
 // MAIN COMPONENT
@@ -80,7 +81,7 @@ export default function RFQListPage() {
     // Data Fetching with React Query
     const { data, isLoading, refetch } = useQuery({
         queryKey: ['rfqs', apiFilters],
-        queryFn: () => rfqService.getList(apiFilters),
+        queryFn: () => RFQService.getList(apiFilters),
         placeholderData: keepPreviousData,
     });
 
@@ -247,24 +248,75 @@ export default function RFQListPage() {
                 accentColor="blue"
                 isLoading={isLoading}
                 searchForm={
-                    <FilterFormBuilder
-                        config={RFQ_FILTER_CONFIG}
-                        filters={filters}
-                        onFilterChange={handleFilterChange}
-                        onSearch={() => {}} // React Query auto-fetches
-                        onReset={resetFilters}
-                        accentColor="blue"
-                        columns={{ sm: 2, md: 4, lg: 4 }}
-                        actionButtons={
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                        <FilterField
+                            label="เลขที่ RFQ"
+                            value={filters.search}
+                            onChange={(val: string) => handleFilterChange('search', val)}
+                            placeholder="RFQ-xxx"
+                            accentColor="blue"
+                        />
+                        <FilterField
+                            label="PR อ้างอิง"
+                            value={filters.search2}
+                            onChange={(val: string) => handleFilterChange('search2', val)}
+                            placeholder="PR-xxx"
+                            accentColor="blue"
+                        />
+                        <FilterField
+                            label="ผู้สร้าง RFQ"
+                            value={extendedFilters.creator || ''}
+                            onChange={(val: string) => handleFilterChange('creator', val)}
+                            placeholder="ชื่อผู้สร้าง"
+                            accentColor="blue"
+                        />
+                        <FilterField
+                            label="สถานะ"
+                            type="select"
+                            value={filters.status}
+                            onChange={(val: string) => handleFilterChange('status', val)}
+                            options={RFQ_STATUS_OPTIONS}
+                            accentColor="blue"
+                        />
+                         <FilterField
+                            label="วันที่เริ่มต้น"
+                            type="date"
+                            value={filters.dateFrom || ''}
+                            onChange={(val: string) => handleFilterChange('dateFrom', val)}
+                            accentColor="blue"
+                        />
+                         <FilterField
+                            label="วันที่สิ้นสุด"
+                            type="date"
+                            value={filters.dateTo || ''}
+                            onChange={(val: string) => handleFilterChange('dateTo', val)}
+                            accentColor="blue"
+                        />
+
+                        {/* Action Buttons Group */}
+                        <div className="lg:col-span-2 flex justify-end gap-2 flex-wrap">
+                            <button
+                                onClick={resetFilters}
+                                className="h-10 px-6 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg font-medium transition-colors border border-gray-300"
+                            >
+                                ล้างค่า
+                            </button>
+                            <button
+                                onClick={() => refetch()}
+                                className="h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2"
+                            >
+                                <Search size={18} />
+                                ค้นหา
+                            </button>
                             <button
                                 onClick={() => setIsCreateModalOpen(true)}
-                                className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm font-medium whitespace-nowrap flex-none"
+                                className="h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2"
                             >
-                                <Plus size={20} />
+                                <Plus size={16} strokeWidth={2.5} />
                                 สร้าง RFQ
                             </button>
-                        }
-                    />
+                        </div>
+                    </div>
                 }
             >
                 <div className="h-full flex flex-col">

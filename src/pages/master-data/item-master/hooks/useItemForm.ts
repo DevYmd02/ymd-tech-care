@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { logger } from '@utils/logger';
-import { ItemMasterService } from '@/services/ItemMasterService';
+import { ItemMasterService } from '@/services/inventory/item-master.service';
 import { ITEM_CATEGORIES, ITEM_UOMS, ITEM_TAX_CODES } from '@/constants';
 import { useConfirmation } from '@/hooks/useConfirmation';
 

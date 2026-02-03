@@ -17,9 +17,9 @@ import {
     RefreshCw
 } from 'lucide-react';
 import { styles } from '@/constants';
-import { logger } from '@utils/logger';
+
 import { BranchFormModal } from './BranchFormModal';
-import { mockBranches } from '@/__mocks__/masterDataMocks';
+import { BranchService } from '@/services/core/branch.service';
 import type { BranchListItem } from '@project-types/master-data-types';
 import { ActiveStatusBadge } from '@ui/StatusBadge';
 
@@ -43,9 +43,9 @@ export default function BranchList() {
     // ==================== DATA FETCHING ====================
     const fetchData = useCallback(() => {
         setIsLoading(true);
-        // Mock API call
-        setTimeout(() => {
-            let filtered = [...mockBranches];
+        const fetchBranches = async () => {
+             const data = await BranchService.getList();
+             let filtered = [...data];
             
             // Filter by status
             if (statusFilter !== 'ALL') {
@@ -65,7 +65,8 @@ export default function BranchList() {
             
             setBranches(filtered);
             setIsLoading(false);
-        }, 300);
+        };
+        fetchBranches();
     }, [statusFilter, searchTerm]);
 
     useEffect(() => {
@@ -103,9 +104,7 @@ export default function BranchList() {
 
     const handleDelete = (id: string) => {
         if (confirm('คุณต้องการลบข้อมูลสาขานี้หรือไม่?')) {
-            // Mock delete
-            logger.log('Delete branch:', id);
-            fetchData();
+            BranchService.delete(id).then(() => fetchData());
         }
     };
 

@@ -608,3 +608,61 @@ export interface ApprovalFlowStep {
     approver_user_id: string;       // User ที่ต้องอนุมัติในขั้นตอนนี้
     sequence_no: number;            // ลำดับการอนุมัติ (1, 2, 3...)
 }
+
+// ====================================================================================
+// REQUEST / RESPONSE TYPES for Services
+// ====================================================================================
+
+export interface BranchCreateRequest {
+  branch_code: string;
+  branch_name: string;
+}
+
+export interface BranchUpdateRequest extends Partial<BranchCreateRequest> {
+  branch_id: string;
+}
+
+export interface WarehouseCreateRequest {
+  warehouse_code: string;
+  warehouse_name: string;
+  branch_id: string;
+  address?: string;
+  is_active?: boolean;
+}
+
+export interface WarehouseUpdateRequest extends Partial<WarehouseCreateRequest> {
+  warehouse_id: string;
+}
+
+export interface ProductCategoryCreateRequest {
+  category_code: string;
+  category_name: string;
+  category_name_en?: string;
+  is_active?: boolean;
+}
+
+export interface ProductCategoryUpdateRequest extends Partial<ProductCategoryCreateRequest> {
+  category_id: string;
+}
+
+export interface ItemTypeCreateRequest {
+  item_type_code: string;
+  item_type_name: string;
+  item_type_name_en?: string;
+  is_active?: boolean;
+}
+
+export interface ItemTypeUpdateRequest extends Partial<ItemTypeCreateRequest> {
+  item_type_id: string;
+}
+
+export interface UnitCreateRequest {
+  unit_code: string;
+  unit_name: string;
+  unit_name_en?: string;
+  is_active?: boolean;
+}
+
+export interface UnitUpdateRequest extends Partial<UnitCreateRequest> {
+  unit_id: string;
+}

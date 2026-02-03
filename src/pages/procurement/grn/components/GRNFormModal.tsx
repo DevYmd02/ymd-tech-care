@@ -1,8 +1,8 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Save, Package, AlertCircle } from 'lucide-react';
 import { WindowFormLayout } from '@layout/WindowFormLayout';
-import { poService } from '@services/POService';
-import { grnService } from '@services/GRNService';
+import { POService } from '@/services/procurement/po.service';
+import { GRNService } from '@/services/procurement/grn.service';
 import type { POListItem } from '@/types/po-types';
 import type { CreateGRNPayload, GRNLineItemInput } from '@/types/grn-types';
 import { SmartTable } from '@ui/SmartTable';
@@ -52,7 +52,7 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess }: Props) {
             setRemark('');
             
             // Load POs
-            poService.getList({ status: 'ISSUED', limit: 100 }).then(res => {
+            POService.getList({ status: 'ISSUED', limit: 100 }).then(res => {
                 setPoList(res.data);
             });
         }
@@ -62,7 +62,7 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess }: Props) {
     // -- Handle PO Selection --
     useEffect(() => {
         if (selectedPOId) {
-            poService.getById(selectedPOId).then(po => {
+            POService.getById(selectedPOId).then(po => {
                 if (po) {
                     setSelectedPO(po);
                     // Mock items from PO (since getById might not return lines in this mock setup)
@@ -130,7 +130,7 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess }: Props) {
         };
 
         try {
-            await grnService.create(payload);
+            await GRNService.create(payload);
             window.alert('บันทึกใบรับสินค้าเรียบร้อยแล้ว');
             if (onSuccess) onSuccess();
             onClose();
