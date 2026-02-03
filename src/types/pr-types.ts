@@ -212,3 +212,36 @@ export interface PRFormValues {
   shipping_method: string;
   requester_name: string;
 }
+
+// ====================================================================================
+// CREATE PR PAYLOAD (BATCH PATTERN)
+// ====================================================================================
+
+export interface CreatePRLineItem {
+    item_id?: string;
+    item_code: string;
+    item_name: string;
+    qty: number;
+    uom: string;
+    price: number;
+    needed_date?: string;
+    remark?: string;
+}
+
+export interface CreatePRPayload {
+    pr_date: string;
+    remark?: string;
+    department_id?: string; // Maps to cost_center_id
+    project_id?: string;
+    requester_name?: string;
+    required_date?: string;
+    items: CreatePRLineItem[];
+    
+    // Additional fields supported by UI
+    delivery_date?: string;
+    credit_days?: number;
+    vendor_quote_no?: string;
+    shipping_method?: string;
+    preferred_vendor_id?: string;
+    vendor_name?: string;
+}

@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import type { SubmitHandler } from 'react-hook-form';
-import type { PRFormData, PRLineFormData } from '@/types/pr-types';
+import type { PRFormData, PRLineFormData, CreatePRPayload } from '@/types/pr-types';
 import { FileText, Plus, Trash2, Search, Eraser, FileBox, MoreHorizontal, Flame, FileBarChart, History as HistoryIcon, Printer, Copy, CheckCircle } from 'lucide-react';
 
 import { PRHeader } from './PRHeader';
@@ -304,17 +304,34 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
     if (!window.confirm(isEditMode ? "คุณต้องการบันทึกการแก้ไขเอกสารนี้ใช่หรือไม่?" : "คุณต้องการบันทึกสร้างเอกสารใหม่ใช่หรือไม่?")) return;
     
     // 3. Prepare Payload
-    const payload: PRFormData = { 
-      ...data, 
-      lines: activeLines, 
-      total_amount: grandTotal,
-      // Merge Info Bar & Remarks local states
-      delivery_date: deliveryDate,
-      credit_days: creditDays,
-      vendor_quote_no: vendorQuoteNo,
-      shipping_method: shippingMethod,
-      remarks: remarks,
-      requester_name: requesterName // Sync with hardcoded mock name
+    // 3. Prepare Payload (Map to strict CreatePRPayload)
+    const payload: CreatePRPayload = { 
+        pr_date: data.request_date, // Map request_date -> pr_date
+        remark: remarks || data.purpose, // Map purpose/remarks
+        department_id: data.cost_center_id, // Map cost_center -> department
+        project_id: data.project_id,
+        requester_name: requesterName,
+        required_date: data.required_date,
+        
+        // Items
+        items: activeLines.map(line => ({
+           item_id: line.item_id,
+           item_code: line.item_code,
+           item_name: line.item_name,
+           qty: line.quantity,
+           uom: line.uom,
+           price: line.est_unit_price,
+           needed_date: line.needed_date,
+           remark: line.remark
+        })),
+
+        // Additional UI fields
+        delivery_date: deliveryDate,
+        credit_days: creditDays,
+        vendor_quote_no: vendorQuoteNo,
+        shipping_method: shippingMethod,
+        preferred_vendor_id: data.preferred_vendor_id,
+        vendor_name: data.vendor_name
     };
 
     try {

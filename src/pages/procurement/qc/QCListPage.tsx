@@ -23,6 +23,8 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { qcService } from '@services/QCService';
 import type { QCListParams } from '@services/QCService';
 import type { QCStatus, QCListItem } from '@project-types/qc-types';
+import type { POFormData } from '@project-types/po-types';
+import POFormModal from '../po/components/POFormModal';
 
 // ====================================================================================
 // STATUS OPTIONS
@@ -78,6 +80,10 @@ export default function QCListPage() {
 
     // Modal State (for future create functionality)
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    
+    // PO Modal State
+    const [isPOModalOpen, setIsPOModalOpen] = useState(false);
+    const [poInitialValues, setPoInitialValues] = useState<Partial<POFormData> | undefined>(undefined);
 
     // Handlers
     const handleFilterChange = (name: QCFilterKeys, value: string) => {
@@ -103,7 +109,7 @@ export default function QCListPage() {
                     {info.getValue()}
                 </span>
             ),
-            size: 140,
+            size: 120, // Reduced from 140
             enableSorting: true,
         }),
         columnHelper.accessor('created_at', {
@@ -113,7 +119,7 @@ export default function QCListPage() {
                     {formatThaiDate(info.getValue())}
                 </div>
             ),
-            size: 130,
+            size: 110, // Reduced from 130
             enableSorting: true,
         }),
         columnHelper.accessor('pr_no', {
@@ -123,7 +129,7 @@ export default function QCListPage() {
                     {info.getValue()}
                 </span>
             ),
-            size: 140,
+            size: 120, // Reduced from 140
             enableSorting: false,
         }),
         columnHelper.accessor(row => row.status, {
@@ -144,16 +150,19 @@ export default function QCListPage() {
                     {info.getValue()}
                 </div>
             ),
-            size: 80,
+            size: 70, // Reduced from 80
             enableSorting: false,
         }),
         columnHelper.accessor('lowest_bidder_name', {
             header: 'ผู้เสนอราคาต่ำสุด',
             cell: (info) => (
-                <span className="hover:underline cursor-pointer text-gray-600 dark:text-gray-300 truncate block" title={info.getValue() || ''}>
-                    {info.getValue()}
-                </span>
+                <div className="max-w-[150px] truncate" title={info.getValue() || ''}>
+                    <span className="hover:underline cursor-pointer text-gray-600 dark:text-gray-300">
+                        {info.getValue()}
+                    </span>
+                </div>
             ),
+            size: 160, // Reduced from 200
             enableSorting: false,
         }),
         columnHelper.accessor('lowest_bid_amount', {
@@ -171,7 +180,7 @@ export default function QCListPage() {
                      </div>
                  );
             },
-            size: 140,
+            size: 120, // Reduced from 140
             enableSorting: true,
         }),
         columnHelper.display({
@@ -183,22 +192,30 @@ export default function QCListPage() {
                     <div className="flex items-center justify-center gap-2">
                         {item.status === 'WAITING_FOR_PO' && (
                             <button 
-                                className="p-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                                onClick={() => {
+                                    setPoInitialValues({
+                                        vendor_id: item.lowest_bidder_vendor_id || '',
+                                        remarks: `Refer from QC: ${item.qc_no}`
+                                    });
+                                    setIsPOModalOpen(true);
+                                }}
+                                className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors text-xs font-medium whitespace-nowrap h-8"
                                 title="เปิดใบสั่งซื้อ"
                             >
-                                <FileText size={18} />
+                                <FileText size={14} />
+                                <span>เปิดใบสั่งซื้อ</span>
                             </button>
                         )}
                         <button 
-                            className="p-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                            className="p-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded transition-colors flex items-center justify-center h-8 w-8"
                             title="ดูรายละเอียด"
                         >
-                            <Eye size={18} />
+                            <Eye size={16} />
                         </button>
                     </div>
                 );
             },
-            size: 100,
+            size: 130, // Optimized for text button
             enableSorting: false,
         }),
     ], [columnHelper, filters.page, filters.limit, data?.data]);
@@ -247,7 +264,6 @@ export default function QCListPage() {
                 </div>
             </PageListLayout>
 
-            {/* Modals - Only mount when open */}
             {isCreateModalOpen && (
                 <QCFormModal
                     isOpen={isCreateModalOpen}
@@ -258,6 +274,23 @@ export default function QCListPage() {
                     }}
                 />
             )}
+            
+            <POFormModal
+                isOpen={isPOModalOpen}
+                onClose={() => setIsPOModalOpen(false)}
+                initialValues={poInitialValues}
+                onSuccess={() => {
+                     // Maybe navigate to PO list or just refresh?
+                     // User said they haven't saved, so after save maybe we SHOULD go to PO list?
+                     // Or just stay here. Let's stay here for now or alert.
+                     // Actually standard flow after create is often to view it.
+                     // Let's just reload strictly for now as per previous pattern or do nothing?
+                     // The previous pattern was window.location.reload() in POListPage.
+                     // Let's do nothing but close, and maybe show success.
+                     // POFormModal handles success alert.
+                     window.location.href = '/procurement/po'; // Navigate to PO List to see the result
+                }}
+            />
         </>
     );
 }

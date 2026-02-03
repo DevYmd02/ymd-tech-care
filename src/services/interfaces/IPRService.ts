@@ -8,6 +8,7 @@ import type {
   PRFormData,
   PRStatus,
   ApprovalTask,
+  CreatePRPayload,
 } from '../../types/pr-types';
 
 export interface PRListParams {
@@ -56,7 +57,7 @@ export interface ConvertPRRequest {
 export interface IPRService {
   getList(params?: PRListParams): Promise<PRListResponse>;
   getById(prId: string): Promise<PRHeader | null>;
-  create(data: PRFormData): Promise<PRHeader | null>;
+  create(data: CreatePRPayload): Promise<PRHeader | null>;
   update(prId: string, data: Partial<PRFormData>): Promise<PRHeader | null>;
   delete(prId: string): Promise<boolean>;
   submit(prId: string): Promise<{ success: boolean; message: string }>;

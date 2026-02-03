@@ -17,7 +17,8 @@ import {
 
 interface SmartTableProps<TData> {
     data: TData[];
-    columns: ColumnDef<TData, unknown>[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    columns: ColumnDef<TData, any>[];
     isLoading?: boolean;
     pagination: {
         pageIndex: number;

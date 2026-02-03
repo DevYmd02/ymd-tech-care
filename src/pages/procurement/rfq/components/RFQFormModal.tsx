@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { FileText, Plus, Trash2, Info, MoreHorizontal, Star, AlignLeft, History, Search, Users } from 'lucide-react';
-import { RFQFooter } from './RFQFooter';
+
 import { VendorSearchModal } from '@shared/VendorSearchModal';
 import { WindowFormLayout } from '@layout/WindowFormLayout';
 import TabPanel from '@layout/TabPanel';
@@ -263,8 +263,27 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, init
             onClose={onClose}
             title="สร้างใบขอเสนอราคา (RFQ) - Request for Quotation"
             titleIcon={<div className="bg-white/20 p-1 rounded-md shadow-sm"><FileText size={14} strokeWidth={3} /></div>}
-            headerColor="bg-teal-600"
-            footer={<RFQFooter onSave={handleSave} onClose={onClose} isSaving={isSaving} />}
+            headerColor="bg-teal-600 [&_div.flex.items-center.space-x-1>button:not(:last-child)]:hidden"
+            footer={
+                <div className="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-end items-center bg-white dark:bg-gray-900 sticky bottom-0 z-10 gap-x-2">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        disabled={isSaving}
+                        className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md text-sm font-medium transition-colors disabled:opacity-50"
+                    >
+                        ยกเลิก
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleSave}
+                        disabled={isSaving}
+                        className="px-6 py-2 bg-teal-600 text-white hover:bg-teal-700 rounded-md text-sm font-medium shadow-sm transition-colors disabled:opacity-50"
+                    >
+                        บันทึก
+                    </button>
+                </div>
+            }
         >
             {/* System Alert */}
             {alert.show && (

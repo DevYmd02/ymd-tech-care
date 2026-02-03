@@ -10,7 +10,7 @@ import type {
   PRListResponse,
   ConvertPRRequest,
 } from '../interfaces/IPRService';
-import type { PRHeader, PRFormData, PRLine, ApprovalTask } from '../../types/pr-types';
+import type { PRHeader, PRFormData, PRLine, ApprovalTask, CreatePRPayload } from '../../types/pr-types';
 import { MOCK_PRS } from '../../__mocks__/procurementMocks';
 import { getMockFlowWithSteps, MOCK_APPROVERS } from '../../__mocks__/approvalFlowMocks';
 
@@ -77,41 +77,68 @@ export class MockPRService implements IPRService {
     return pr ? structuredClone(pr) : null;
   }
 
-  async create(data: PRFormData): Promise<PRHeader | null> {
-    logger.log('[MockPRService] create', data);
+  async create(payload: CreatePRPayload): Promise<PRHeader | null> {
+    logger.log('[MockPRService] create (batch)', payload);
     await this.delay(500);
 
     const now = new Date();
     const prId = `pr-${Date.now()}`;
-    const prNo = data.pr_no || `PR-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}-${String(this.prs.length + 1).padStart(4, '0')}`;
+    // Auto-generate PR NO
+    const prNo = `PR-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}-${String(this.prs.length + 1).padStart(4, '0')}`;
 
-    // Map lines from PRLineFormData to PRLine (including system fields)
-    const lines: PRLine[] = data.lines.map((l, idx) => ({
-      ...l,
-      pr_line_id: `line-${Date.now()}-${idx}`,
+    // Map items -> PRLine
+    const lines: PRLine[] = payload.items.map((item, idx) => ({
       pr_id: prId,
-      line_no: idx + 1
+      pr_line_id: `line-${Date.now()}-${idx}`,
+      line_no: idx + 1,
+      item_id: item.item_id || `temp-item-${idx}`, // Fallback if no ID
+      item_code: item.item_code,
+      item_name: item.item_name,
+      item_description: '', // Optional in payload, default empty
+      quantity: item.qty,
+      uom: item.uom,
+      est_unit_price: item.price,
+      est_amount: item.qty * item.price,
+      needed_date: item.needed_date || payload.required_date || now.toISOString().split('T')[0],
+      remark: item.remark
     }));
 
-    // Create the rich PR object preserving ALL incoming fields via spread
-    const newPR: PRHeader = {
-      // 1. Spread all form data first
-      ...data,
+    // Calculate total
+    const totalAmount = lines.reduce((sum, line) => sum + line.est_amount, 0);
 
-      // 2. Mandatory Header System Fields (Overrides fields from data if necessary)
+    // Create Header
+    const newPR: PRHeader = {
       pr_id: prId,
       pr_no: prNo,
+      // Map Payload Fields
+      request_date: payload.pr_date,
+      purpose: payload.remark || '', // map remark -> purpose
+      cost_center_id: payload.department_id || 'cc-default', // map department_id -> cost_center_id
+      project_id: payload.project_id,
+      requester_name: payload.requester_name || 'Anonymous',
+      required_date: payload.required_date || '',
+      
+      // Additional UI Fields
+      delivery_date: payload.delivery_date,
+      credit_days: payload.credit_days,
+      vendor_quote_no: payload.vendor_quote_no,
+      shipping_method: payload.shipping_method,
+      remarks: payload.remark, // Also store in remarks
+      preferred_vendor_id: payload.preferred_vendor_id,
+      vendor_name: payload.vendor_name,
+
+      // System Fields
       branch_id: 'branch-001',
       requester_user_id: 'user-001',
-      requester_name: data.requester_name || 'Anonymous',
-      status: 'PENDING', // Requirement: Default to PENDING
+      status: 'PENDING',
+      currency_code: 'THB',
+      total_amount: totalAmount,
       attachment_count: 0,
       created_at: now.toISOString(),
       updated_at: now.toISOString(),
       created_by_user_id: 'user-001',
       updated_by_user_id: 'user-001',
       
-      // 3. Set hydrated lines
       lines: lines
     };
 

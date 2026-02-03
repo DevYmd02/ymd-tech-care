@@ -31,6 +31,7 @@ const RFQListPage = React.lazy(() => import('./pages/procurement/rfq/RFQListPage
 const QTListPage = React.lazy(() => import('./pages/procurement/qt/QTListPage'));
 const QCListPage = React.lazy(() => import('./pages/procurement/qc/QCListPage'));
 const POListPage = React.lazy(() => import('./pages/procurement/po/POListPage'));
+const GRNListPage = React.lazy(() => import('./pages/procurement/grn/GRNListPage'));
 
 const GoodsReceiptNoteListPage = React.lazy(() => import('./pages/procurement/ProcurementComingSoon').then(module => ({ default: module.GoodsReceiptNoteListPage })));
 const PurchaseReturnListPage = React.lazy(() => import('./pages/procurement/ProcurementComingSoon').then(module => ({ default: module.PurchaseReturnListPage })));
@@ -131,17 +132,18 @@ function App() {
           <Route path="admin/employees" element={<EmployeePage />} />
           <Route path="admin/roles" element={<RolesDashboard />} />
 
-          {/* Procurement - Implemented */}
-          <Route path="procurement/dashboard" element={<ProcurementDashboard />} />
-          <Route path="procurement/pr" element={<PRListPage />} />
-          <Route path="procurement/rfq" element={<RFQListPage />} />
-          
-          {/* Procurement - Coming Soon */}
-          <Route path="procurement/qt" element={<QTListPage />} />
-          <Route path="procurement/qc" element={<QCListPage />} />
-          <Route path="procurement/po" element={<POListPage />} />
-          <Route path="procurement/grn" element={<GoodsReceiptNoteListPage />} />
-          <Route path="procurement/prt" element={<PurchaseReturnListPage />} />
+          {/* Procurement */}
+          <Route path="procurement">
+            <Route path="dashboard" element={<ProcurementDashboard />} />
+            <Route path="pr" element={<PRListPage />} />
+            <Route path="rfq" element={<RFQListPage />} />
+            <Route path="qt" element={<QTListPage />} />
+            <Route path="qc" element={<QCListPage />} />
+            <Route path="po" element={<POListPage />} />
+            <Route path="grn" element={<GRNListPage />} />
+            <Route path="grn-coming-soon" element={<GoodsReceiptNoteListPage />} /> {/* Keep old GRN route as coming soon */}
+            <Route path="prt" element={<PurchaseReturnListPage />} />
+          </Route>
 
           {/* Roles - Implemented */}
           <Route path="roles/dashboard" element={<RolesDashboard />} />
