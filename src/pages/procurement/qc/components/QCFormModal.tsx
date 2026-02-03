@@ -6,12 +6,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { FileText, Search, Trash2, Scale } from 'lucide-react';
-import { WindowFormLayout } from '../../../../components/shared/WindowFormLayout';
-import { QCFooter } from './QCFooter';
-import { VendorSearchModal } from '../../../../components/shared/VendorSearchModal';
-import { qcService } from '../../../../services';
-import type { VendorSearchItem } from '../../../../types/vendor-types';
-import type { QCCreateData } from '../../../../services/interfaces/IQCService';
+import { WindowFormLayout } from '@layout/WindowFormLayout';
+
+import { VendorSearchModal } from '@shared/VendorSearchModal';
+import { qcService } from '@services/index';
+import type { VendorSearchItem } from '@project-types/vendor-types';
+import type { QCCreateData } from '@services/interfaces/IQCService';
 
 interface QCFormModalProps {
   isOpen: boolean;
@@ -181,8 +181,27 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
         onClose={onClose}
         title="สร้างใบเปรียบเทียบราคา (Quote Comparison)"
         titleIcon={<div className="bg-blue-500 p-1.5 rounded-md"><Scale size={16} strokeWidth={2.5} /></div>}
-        headerColor="bg-blue-600"
-        footer={<QCFooter onSave={handleSave} onCancel={onClose} isLoading={isLoading} />}
+        headerColor="bg-blue-600 [&_div.flex.items-center.space-x-1>button:not(:last-child)]:hidden"
+        footer={
+            <div className="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-end items-center bg-white dark:bg-gray-900 sticky bottom-0 z-10 gap-x-2">
+                <button
+                    type="button"
+                    onClick={onClose}
+                    disabled={isLoading}
+                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md text-sm font-medium transition-colors disabled:opacity-50"
+                >
+                    ยกเลิก
+                </button>
+                <button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={isLoading}
+                    className="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md text-sm font-medium shadow-sm transition-colors disabled:opacity-50"
+                >
+                    บันทึก
+                </button>
+            </div>
+        }
       >
         <div className="flex-1 overflow-auto bg-gray-100 dark:bg-gray-800 p-4 space-y-4">
           

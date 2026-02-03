@@ -11,7 +11,7 @@ import { logger } from '../../utils/logger';
 export class WarehouseServiceImpl implements IWarehouseService {
   async getList(): Promise<WarehouseListItem[]> {
     try {
-      const response = await api.get<WarehouseListItem[]>('/warehouses');
+      const response = await api.get<WarehouseListItem[]>('/warehouse');
       return response.data;
     } catch (error) {
       logger.error('[WarehouseServiceImpl] getList error:', error);
@@ -21,7 +21,7 @@ export class WarehouseServiceImpl implements IWarehouseService {
 
   async getById(id: string): Promise<WarehouseListItem | null> {
     try {
-      const response = await api.get<WarehouseListItem>(`/warehouses/${id}`);
+      const response = await api.get<WarehouseListItem>(`/warehouse/${id}`);
       return response.data;
     } catch (error) {
       logger.error('[WarehouseServiceImpl] getById error:', error);
@@ -31,7 +31,7 @@ export class WarehouseServiceImpl implements IWarehouseService {
 
   async create(data: WarehouseCreateRequest): Promise<{ success: boolean; message?: string }> {
     try {
-      await api.post('/warehouses', data);
+      await api.post('/warehouse', data);
       return { success: true };
     } catch (error) {
       logger.error('[WarehouseServiceImpl] create error:', error);
@@ -41,7 +41,7 @@ export class WarehouseServiceImpl implements IWarehouseService {
 
   async update(data: WarehouseUpdateRequest): Promise<{ success: boolean; message?: string }> {
     try {
-      await api.put(`/warehouses/${data.warehouse_id}`, data);
+      await api.put(`/warehouse/${data.warehouse_id}`, data);
       return { success: true };
     } catch (error) {
       logger.error('[WarehouseServiceImpl] update error:', error);
@@ -51,7 +51,7 @@ export class WarehouseServiceImpl implements IWarehouseService {
 
   async delete(id: string): Promise<boolean> {
     try {
-      await api.delete(`/warehouses/${id}`);
+      await api.delete(`/warehouse/${id}`);
       return true;
     } catch (error) {
       logger.error('[WarehouseServiceImpl] delete error:', error);

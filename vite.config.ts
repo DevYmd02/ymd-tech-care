@@ -10,11 +10,23 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
       '@components': path.resolve(__dirname, './src/components'),
       '@shared': path.resolve(__dirname, './src/components/shared'),
+      '@layout': path.resolve(__dirname, './src/components/layout'),
+      '@system': path.resolve(__dirname, './src/components/system'),
+      '@ui': path.resolve(__dirname, './src/components/ui'),
       '@services': path.resolve(__dirname, './src/services'),
       '@hooks': path.resolve(__dirname, './src/hooks'),
       '@project-types': path.resolve(__dirname, './src/types'),
       '@utils': path.resolve(__dirname, './src/utils'),
       '@pr': path.resolve(__dirname, './src/pages/procurement/pr'),
+    },
+  },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
   build: {
@@ -72,4 +84,3 @@ export default defineConfig({
     setupFiles: './src/test/setup.ts',
   },
 })
-

@@ -5,9 +5,9 @@
 
 import api from '../api';
 import type { IPOService } from '../interfaces/IPOService';
-import type { POListParams, POListResponse } from '../../types/po-types';
+import type { POListParams, POListResponse, CreatePOPayload } from '@project-types/po-types';
 
-import { logger } from '../../utils/logger';
+import { logger } from '@utils/logger';
 
 export class POServiceImpl implements IPOService {
   async getList(params?: POListParams): Promise<POListResponse> {
@@ -23,5 +23,19 @@ export class POServiceImpl implements IPOService {
         limit: params?.limit || 20,
       };
     }
+  }
+
+  async getById(id: string): Promise<import("../../types/po-types").POListItem | null> {
+      try {
+          const response = await api.get(`/purchase-orders/${id}`);
+          return response.data;
+      } catch (error) {
+          logger.error('[POServiceImpl] getById error:', error);
+          return null;
+      }
+  }
+
+  async create(data: CreatePOPayload): Promise<void> {
+      await api.post('/purchase-orders', data);
   }
 }

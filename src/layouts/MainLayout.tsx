@@ -12,8 +12,8 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { WindowManagerProvider } from '../contexts/WindowManagerContext';
-import { WindowManager } from '../components/shared/WindowManager';
-import { PageLoader } from '../components/shared';
+import { WindowManager } from '@system/WindowManager';
+import { PageLoader } from '@layout/PageLoader';
 
 export default function MainLayout() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);

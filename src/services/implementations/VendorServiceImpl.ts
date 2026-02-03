@@ -8,7 +8,6 @@ import api from '../api';
 import type { IVendorService } from '../interfaces/IVendorService';
 import type {
   VendorMaster,
-  VendorListParams,
   VendorListResponse,
   VendorCreateRequest,
   VendorResponse,
@@ -17,9 +16,10 @@ import type {
 import { logger } from '../../utils/logger';
 
 export class VendorServiceImpl implements IVendorService {
-  async getList(params?: VendorListParams): Promise<VendorListResponse> {
+  async getList(): Promise<VendorListResponse> {
     try {
-      const response = await api.get('/vendors', { params });
+      // FIX: Changed endpoint to plural '/vendors' and removed params to fetch all data
+      const response = await api.get('/vendors');
       
       // Debug: Log raw response to understand backend format
       logger.log('[VendorServiceImpl] getList raw response:', response.data);
@@ -56,16 +56,16 @@ export class VendorServiceImpl implements IVendorService {
       return {
         data: vendors,
         total: total,
-        page: params?.page || 1,
-        limit: params?.limit || 20,
+        page: 1, // Default to 1 as we are not using pagination
+        limit: total, // specific limit as total
       };
     } catch (error) {
       logger.error('[VendorServiceImpl] getList error:', error);
       return {
         data: [],
         total: 0,
-        page: params?.page || 1,
-        limit: params?.limit || 20,
+        page: 1,
+        limit: 20,
       };
     }
   }

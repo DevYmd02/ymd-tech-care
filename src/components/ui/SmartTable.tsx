@@ -17,7 +17,8 @@ import {
 
 interface SmartTableProps<TData> {
     data: TData[];
-    columns: ColumnDef<TData, unknown>[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    columns: ColumnDef<TData, any>[];
     isLoading?: boolean;
     pagination: {
         pageIndex: number;
@@ -246,6 +247,7 @@ export function SmartTable<TData>({
                         onClick={() => pagination.onPageChange(1)}
                         disabled={pagination.pageIndex === 1 || isLoading}
                         title="หน้าแรก"
+                        aria-label="Go to first page"
                     >
                         <ChevronsLeft size={20} />
                     </button>
@@ -254,6 +256,7 @@ export function SmartTable<TData>({
                         onClick={() => pagination.onPageChange(Math.max(1, pagination.pageIndex - 1))}
                         disabled={pagination.pageIndex === 1 || isLoading}
                         title="ก่อนหน้า"
+                        aria-label="Go to previous page"
                     >
                         <ChevronLeft size={20} />
                     </button>
@@ -267,6 +270,7 @@ export function SmartTable<TData>({
                         onClick={() => pagination.onPageChange(Math.min(totalPages, pagination.pageIndex + 1))}
                         disabled={pagination.pageIndex === totalPages || totalPages === 0 || isLoading}
                         title="ถัดไป"
+                        aria-label="Go to next page"
                     >
                         <ChevronRight size={20} />
                     </button>
@@ -275,6 +279,7 @@ export function SmartTable<TData>({
                         onClick={() => pagination.onPageChange(totalPages)}
                         disabled={pagination.pageIndex === totalPages || totalPages === 0 || isLoading}
                         title="หน้าสุดท้าย"
+                        aria-label="Go to last page"
                     >
                         <ChevronsRight size={20} />
                     </button>

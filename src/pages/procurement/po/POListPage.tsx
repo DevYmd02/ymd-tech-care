@@ -1,14 +1,19 @@
 import { useMemo } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { FileText, Plus, Eye, Send, CheckCircle, Package, Edit } from 'lucide-react';
 import { formatThaiDate } from '@utils/dateUtils';
-import { PageListLayout, FilterFormBuilder, POStatusBadge, SmartTable } from '@shared';
+import { FilterFormBuilder } from '@shared';
+import { SmartTable } from '@ui/SmartTable';
+import { PageListLayout } from '@layout/PageListLayout';
+import { POStatusBadge } from '@ui/StatusBadge';
 import type { FilterFieldConfig } from '@shared/FilterFormBuilder';
 import { useTableFilters, type TableFilters } from '@hooks';
-import { poService } from '@services/poService';
-import type { POListParams, POStatus, POListItem } from '@project-types/po-types';
+import { poService } from '@services/POService';
+import type { POListParams, POStatus, POListItem, POFormData } from '@project-types/po-types';
 import { createColumnHelper } from '@tanstack/react-table';
 import type { ColumnDef } from '@tanstack/react-table';
+import POFormModal from './components/POFormModal';
 
 // ====================================================================================
 // STATUS OPTIONS
@@ -37,12 +42,45 @@ const PO_FILTER_CONFIG: FilterFieldConfig<POFilterKeys>[] = [
     { name: 'dateTo', label: 'ถึงวันที่', type: 'date' },
 ];
 
-// ====================================================================================
-// MAIN COMPONENT
-// ====================================================================================
-
 export default function POListPage() {
-    // URL-based Filter State
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    // -- Modal State (URL Driven) --
+    // derived directly from URL search params
+    const isCreateModalOpen = searchParams.get('mode') === 'create';
+    const createFromQC = searchParams.get('createFromQC') === 'true';
+    const vendorIdParam = searchParams.get('vendorId');
+    const remarksParam = searchParams.get('remarks');
+
+    // Derive initial values from URL params
+    const initialCreateValues = useMemo<Partial<POFormData> | undefined>(() => {
+        if (createFromQC) {
+            return {
+                vendor_id: vendorIdParam || undefined,
+                remarks: remarksParam || undefined,
+                items: [] 
+            };
+        }
+        // Fallback or simple create mode
+        if (vendorIdParam) {
+            return { vendor_id: vendorIdParam };
+        }
+        return undefined;
+    }, [createFromQC, vendorIdParam, remarksParam]);
+
+    // Handle closing the modal by updating URL params
+    const handleCloseCreateModal = () => {
+        setSearchParams(prev => {
+            const newParams = new URLSearchParams(prev);
+            newParams.delete('mode');
+            newParams.delete('createFromQC');
+            newParams.delete('vendorId');
+            newParams.delete('qcNo');
+            newParams.delete('remarks');
+            return newParams;
+        });
+    };
+
     const { filters, setFilters, resetFilters, handlePageChange } = useTableFilters<POStatus>({
         defaultStatus: 'ALL',
     });
@@ -73,15 +111,14 @@ export default function POListPage() {
     };
 
     // Action Handlers (Mock)
-    const handleView = (id: string) => console.log('ดูรายละเอียด PO:', id);
-    const handleEdit = (id: string) => console.log('แก้ไข PO:', id);
+    const handleView = (id: string) => window.alert(`Coming Soon: View PO ${id}`);
+    const handleEdit = (id: string) => window.alert(`Coming Soon: Edit PO ${id}`);
     const handleApprove = (id: string) => alert(`ส่งอนุมัติ PO: ${id}`);
     const handleIssue = (id: string) => alert(`ออก PO: ${id}`);
     const handleGRN = (id: string) => alert(`เปิด GRN สำหรับ PO: ${id}`);
 
-    // Columns
     const columnHelper = createColumnHelper<POListItem>();
-
+    
     const columns = useMemo(() => [
         columnHelper.display({
             id: 'index',
@@ -118,7 +155,7 @@ export default function POListPage() {
                     {info.getValue() || '-'}
                 </span>
             ),
-            size: 140,
+            size: 125,
             enableSorting: false,
         }),
         columnHelper.accessor('vendor_name', {
@@ -138,7 +175,7 @@ export default function POListPage() {
                     <POStatusBadge status={info.getValue()} className="whitespace-nowrap" />
                 </div>
             ),
-            size: 100,
+            size: 90,
             enableSorting: false,
         }),
         columnHelper.accessor('item_count', {
@@ -148,7 +185,7 @@ export default function POListPage() {
                     {info.getValue()}
                 </div>
             ),
-            size: 100,
+            size: 80,
             enableSorting: false,
         }),
         columnHelper.accessor('total_amount', {
@@ -166,7 +203,7 @@ export default function POListPage() {
                      </div>
                  );
             },
-            size: 140,
+            size: 130,
             enableSorting: true,
         }),
         columnHelper.display({
@@ -231,55 +268,68 @@ export default function POListPage() {
                     </div>
                 );
             },
-            size: 160,
+            size: 150,
             enableSorting: false,
         }),
     ], [columnHelper, filters.page, filters.limit, data?.data]);
 
     return (
-        <PageListLayout
-            title="รายการใบสั่งซื้อ"
-            subtitle="Purchase Order (PO) Master"
-            icon={FileText}
-            accentColor="blue"
-            isLoading={isLoading}
-            searchForm={
-                <FilterFormBuilder
-                    config={PO_FILTER_CONFIG}
-                    filters={filters}
-                    onFilterChange={handleFilterChange}
-                    onSearch={() => {}} // React Query auto-fetches
-                    onReset={resetFilters}
-                    accentColor="blue"
-                    columns={{ sm: 2, md: 3, lg: 4 }}
-                    actionButtons={
-                        <button
-                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm font-medium w-full sm:w-auto whitespace-nowrap"
-                        >
-                            <Plus size={20} />
-                            สร้างใบสั่งซื้อใหม่
-                        </button>
-                    }
-                />
-            }
-        >
-            <div className="h-full flex flex-col">
-                <SmartTable
-                    data={data?.data ?? []}
-                    columns={columns as ColumnDef<POListItem>[]}
-                    isLoading={isLoading}
-                    pagination={{
-                        pageIndex: filters.page,
-                        pageSize: filters.limit,
-                        totalCount: data?.total ?? 0,
-                        onPageChange: handlePageChange,
-                        onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 })
-                    }}
-                    rowIdField="po_id"
-                    className="flex-1"
-                    showFooter={true}
-                />
-            </div>
-        </PageListLayout>
+        <>
+            <PageListLayout
+                title="รายการใบสั่งซื้อ"
+                subtitle="Purchase Order (PO) Master"
+                icon={FileText}
+                accentColor="blue"
+                isLoading={isLoading}
+                searchForm={
+                    <FilterFormBuilder
+                        config={PO_FILTER_CONFIG}
+                        filters={filters}
+                        onFilterChange={handleFilterChange}
+                        onSearch={() => {}} // React Query auto-fetches
+                        onReset={resetFilters}
+                        accentColor="blue"
+                        columns={{ sm: 2, md: 3, lg: 4 }}
+                        actionButtons={
+                            <button
+                                onClick={() => setSearchParams({ mode: 'create' })}
+                                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm font-medium w-full sm:w-auto whitespace-nowrap"
+                            >
+                                <Plus size={20} />
+                                สร้างใบสั่งซื้อใหม่
+                            </button>
+                        }
+                    />
+                }
+            >
+                <div className="h-full flex flex-col">
+                    <SmartTable
+                        data={data?.data ?? []}
+                        columns={columns as ColumnDef<POListItem>[]}
+                        isLoading={isLoading}
+                        pagination={{
+                            pageIndex: filters.page,
+                            pageSize: filters.limit,
+                            totalCount: data?.total ?? 0,
+                            onPageChange: handlePageChange,
+                            onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 })
+                        }}
+                        rowIdField="po_id"
+                        className="flex-1"
+                        showFooter={true}
+                    />
+                </div>
+            </PageListLayout>
+            
+            <POFormModal 
+                isOpen={isCreateModalOpen} 
+                onClose={handleCloseCreateModal} 
+                onSuccess={() => { 
+                    handleCloseCreateModal();
+                    window.location.reload(); 
+                }} 
+                initialValues={initialCreateValues}
+            />
+        </>
     );
 }

@@ -21,7 +21,7 @@ import { logger } from '@utils/logger';
 import { WarehouseFormModal } from './WarehouseFormModal';
 import { mockWarehouses } from '@/__mocks__/masterDataMocks';
 import type { WarehouseListItem } from '@project-types/master-data-types';
-import { ActiveStatusBadge } from '@shared';
+import { ActiveStatusBadge } from '@ui/StatusBadge';
 
 // ====================================================================================
 // COMPONENT

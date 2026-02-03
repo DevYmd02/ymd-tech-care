@@ -24,9 +24,9 @@ import {
 } from 'lucide-react';
 import { styles } from '../../../constants';
 
-import { vendorService } from '../../../services/vendorService';
+import { vendorService } from '../../../services/VendorService';
 import type { VendorListItem, VendorStatus } from '../../../types/vendor-types';
-import { VendorStatusBadge } from '../../../components/shared';
+import { VendorStatusBadge } from '@ui/StatusBadge';
 
 // ====================================================================================
 // MAIN COMPONENT
@@ -58,7 +58,7 @@ export default function VendorDashboard() {
     const fetchVendors = useCallback(async () => {
         setIsLoading(true);
         try {
-            const response = await vendorService.getList({ page: 1, limit: 100 });
+            const response = await vendorService.getList();
             setVendors(response.data);
         } catch {
             setVendors([]);

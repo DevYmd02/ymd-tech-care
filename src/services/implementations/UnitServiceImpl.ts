@@ -11,7 +11,7 @@ import { logger } from '../../utils/logger';
 export class UnitServiceImpl implements IUnitService {
   async getList(): Promise<UnitListItem[]> {
     try {
-      const response = await api.get<UnitListItem[]>('/units');
+      const response = await api.get<UnitListItem[]>('/unit');
       return response.data;
     } catch (error) {
       logger.error('[UnitServiceImpl] getList error:', error);
@@ -21,7 +21,7 @@ export class UnitServiceImpl implements IUnitService {
 
   async getById(id: string): Promise<UnitListItem | null> {
     try {
-      const response = await api.get<UnitListItem>(`/units/${id}`);
+      const response = await api.get<UnitListItem>(`/unit/${id}`);
       return response.data;
     } catch (error) {
       logger.error('[UnitServiceImpl] getById error:', error);
@@ -31,7 +31,7 @@ export class UnitServiceImpl implements IUnitService {
 
   async create(data: UnitCreateRequest): Promise<{ success: boolean; message?: string }> {
     try {
-      await api.post('/units', data);
+      await api.post('/unit', data);
       return { success: true };
     } catch (error) {
       logger.error('[UnitServiceImpl] create error:', error);
@@ -41,7 +41,7 @@ export class UnitServiceImpl implements IUnitService {
 
   async update(data: UnitUpdateRequest): Promise<{ success: boolean; message?: string }> {
     try {
-      await api.put(`/units/${data.unit_id}`, data);
+      await api.put(`/unit/${data.unit_id}`, data);
       return { success: true };
     } catch (error) {
       logger.error('[UnitServiceImpl] update error:', error);
@@ -51,7 +51,7 @@ export class UnitServiceImpl implements IUnitService {
 
   async delete(id: string): Promise<boolean> {
     try {
-      await api.delete(`/units/${id}`);
+      await api.delete(`/unit/${id}`);
       return true;
     } catch (error) {
       logger.error('[UnitServiceImpl] delete error:', error);

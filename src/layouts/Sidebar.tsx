@@ -12,8 +12,8 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ChevronRight, ChevronDown } from 'lucide-react';
-import { sidebarMenuItems } from '../config/routes';
-import type { MenuItem, SubMenuItem } from '../config/routes';
+import { sidebarMenuItems } from '../config/navigation.config';
+import type { MenuItem, SubMenuItem } from '../config/navigation.config';
 
 // ====================================================================================
 // COMPONENT - Sidebar
@@ -64,12 +64,12 @@ export default function Sidebar({ isOpen }: SidebarProps) {
 
             {/* ==================== HEADER (Logo & Brand) ==================== */}
             <div className="bg-blue-600 text-white p-4 flex items-center space-x-3 flex-shrink-0">
-                <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center font-bold text-sm flex-shrink-0">
+                <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center font-bold text-sm text-blue-600 flex-shrink-0">
                     YMD
                 </div>
                 <div className="flex-1 min-w-0">
                     <div className="text-sm font-bold whitespace-nowrap">YMD Tech Care</div>
-                    <div className="text-xs text-blue-100 whitespace-nowrap truncate">ERP System v1.0</div>
+                    <div className="text-xs text-blue-50 whitespace-nowrap truncate">ERP System v1.0</div>
                 </div>
             </div>
 
@@ -133,6 +133,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                                                 : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
                                             }
                                         `}
+                                        aria-label={`Toggle ${item.label} submenu`}
                                     >
                                         <div className="flex items-center space-x-3 min-w-0 flex-1">
                                             {/* Icon */}

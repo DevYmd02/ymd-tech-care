@@ -1,31 +1,58 @@
 /**
  * @file LoginPage.tsx
- * @description หน้าจัดการการเข้าสู่ระบบ (Login)
- * @purpose ให้ผู้ใช้งานยืนยันตัวตนก่อนเข้าสู่ระบบ
- * @refactored ใช้ AuthLayout เพื่อลด duplicate code
+ * @description Page for user authentication
+ * @refactored Integrated real API via AuthContext
  */
 
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Eye, EyeOff, Lock, Mail, ArrowRight } from 'lucide-react';
-import { LayoutDashboard } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Eye, EyeOff, Lock, User, ArrowRight, LayoutDashboard, AlertCircle } from 'lucide-react';
+import { AxiosError } from 'axios';
 import { AuthLayout, AuthInput, AuthLabel, AuthButton } from '../../layouts/AuthLayout';
+import { useAuth } from '../../contexts/AuthContext';
+
+interface ApiErrorResponse {
+    message: string;
+}
 
 const LoginPage = () => {
-    const navigate = useNavigate();
+    const { login } = useAuth();
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    // Mock Login Handler
-    const handleLogin = (e: React.FormEvent) => {
+    // Form State
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
+        setError(null);
 
-        // Simulate API call delay
-        setTimeout(() => {
+        try {
+            await login({ username, password });
+            // Navigation is handled in AuthProvider upon success
+        } catch (err: unknown) {
+            console.error(err); // Keep console for browser devtools
+            
+            let msg = 'Login failed. Please check your credentials.';
+            
+             // Check if it's an Axios Error with response data
+            if (err instanceof AxiosError && err.response?.data) {
+                // Try to extract message from common patterns
+                const data = err.response.data as ApiErrorResponse | unknown;
+                if (typeof data === 'object' && data !== null && 'message' in data) {
+                     msg = (data as ApiErrorResponse).message;
+                }
+            } else if (err instanceof Error) {
+                msg = err.message;
+            }
+
+            setError(msg);
+        } finally {
             setIsLoading(false);
-            navigate('/'); // Redirect to dashboard
-        }, 1500);
+        }
     };
 
     return (
@@ -48,15 +75,24 @@ const LoginPage = () => {
             }
         >
             <form onSubmit={handleLogin} className="space-y-5">
+                
+                {/* Error Banner */}
+                {error && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-600 text-sm">
+                        <AlertCircle size={16} />
+                        <span>{error}</span>
+                    </div>
+                )}
 
-                {/* Email Field */}
+                {/* Username Field */}
                 <div className="space-y-1.5">
-                    <AuthLabel>Email Address</AuthLabel>
+                    <AuthLabel>Username</AuthLabel>
                     <AuthInput
-                        icon={Mail}
-                        type="email"
-                        defaultValue="admin@company.com"
-                        placeholder="name@company.com"
+                        icon={User}
+                        type="text"
+                        placeholder="Enter your username"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
                         required
                     />
                 </div>
@@ -65,15 +101,14 @@ const LoginPage = () => {
                 <div className="space-y-1.5">
                     <div className="flex items-center justify-between pl-1">
                         <AuthLabel>Password</AuthLabel>
-                        <Link to="/forgot-password" className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
-                            Forgot password?
-                        </Link>
+                        {/* <Link to="/forgot-password" ... /> Removed for now/keep if needed */}
                     </div>
                     <AuthInput
                         icon={Lock}
                         type={showPassword ? 'text' : 'password'}
-                        defaultValue="password"
                         placeholder="Enter your password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
                         required
                         rightElement={
                             <button
@@ -85,18 +120,6 @@ const LoginPage = () => {
                             </button>
                         }
                     />
-                </div>
-
-                {/* Remember Me */}
-                <div className="flex items-center pl-1">
-                    <input
-                        id="remember-me"
-                        type="checkbox"
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600"
-                    />
-                    <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-600 dark:text-gray-400">
-                        Remember me
-                    </label>
                 </div>
 
                 {/* Submit Button */}

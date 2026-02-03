@@ -5,52 +5,40 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { 
     Database, Users, Package, Building2, Warehouse as WarehouseIcon, 
-    DollarSign, FolderKanban, Plus, Search, Filter, Edit2, Trash2,
+    DollarSign, FolderKanban, Edit2, Trash2,
     ChevronDown, ChevronUp, Phone, Mail, MapPin, 
     ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight
 } from 'lucide-react';
-import { styles } from '@/constants';
 
 // Import services (NOT static mock data - services handle mock/real switching internally)
-import { vendorService } from '@services/vendorService';
-import { masterDataService } from '@services/masterDataService';
+import { vendorService } from '@services/VendorService';
+import { masterDataService } from '@services/MasterDataService';
+import { ItemMasterService } from '@services/ItemMasterService';
 
 // Import Form Modals
-
 import { VendorFormModal } from './vendor';
 import { BranchFormModal } from './branch';
 import { WarehouseFormModal } from './warehouse';
 import { ItemMasterList } from './item-master';
+
+// Import sub-components
+import { MasterDataHeader } from './components/MasterDataHeader';
+import { MasterDataTabs } from './components/MasterDataTabs';
+import { MasterDataToolbar } from './components/MasterDataToolbar';
 
 // Import types
 import type { VendorListItem, VendorMaster } from '@project-types/vendor-types';
 import type { 
     BranchListItem,
     WarehouseListItem, 
-    ItemListItem,
     CostCenter,
     Project
 } from '@project-types/master-data-types';
-
-// ====================================================================================
-// TYPES
-// ====================================================================================
-
-type TabType = 'vendor' | 'item' | 'branch' | 'warehouse' | 'cost-center' | 'project';
-
-interface TabConfig {
-    id: TabType;
-    label: string;
-    labelEn: string;
-    icon: React.ElementType;
-    recordCount: number;
-    dbTable: string;
-    relations: string[];
-    fk: string;
-}
+import type { TabType, TabConfig, TabLabel } from './types';
 
 // ====================================================================================
 // DATABASE RELATIONS CONFIG
@@ -95,6 +83,7 @@ const DB_RELATIONS: Record<TabType, { dbTable: string; relations: string[]; fk: 
 
 export default function MasterDataDashboard() {
     const [searchParams, setSearchParams] = useSearchParams();
+    const navigate = useNavigate();
     
     // Get initial tab from URL or default to 'vendor'
     const initialTab = (searchParams.get('tab') as TabType) || 'vendor';
@@ -114,10 +103,16 @@ export default function MasterDataDashboard() {
     const [vendors, setVendors] = useState<VendorListItem[]>([]);
     const [branches, setBranches] = useState<BranchListItem[]>([]);
     const [warehouses, setWarehouses] = useState<WarehouseListItem[]>([]);
-    const [items, setItems] = useState<ItemListItem[]>([]);
+    // Items handled by useQuery below
     const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
 
+    // REFACTORED: Use useQuery for items (Cache Shared with ItemMasterList)
+    const { data: items = [] } = useQuery({
+        queryKey: ['items'],
+        queryFn: ItemMasterService.getAll,
+        staleTime: 1000 * 60 * 5,
+    });
 
     // Master Data Menu Configuration
     const MASTER_DATA_MENU = [
@@ -156,7 +151,7 @@ export default function MasterDataDashboard() {
         try {
             switch (activeTab) {
                 case 'vendor': {
-                    const response = await vendorService.getList({ page: 1, limit: 100 });
+                    const response = await vendorService.getList();
                     setVendors(response.data || []);
                     break;
                 }
@@ -170,11 +165,7 @@ export default function MasterDataDashboard() {
                     setWarehouses(data || []);
                     break;
                 }
-                case 'item': {
-                    const data = await masterDataService.getItems();
-                    setItems(data || []);
-                    break;
-                }
+                // Case 'item' handled by useQuery
                 case 'cost-center': {
                     const data = await masterDataService.getCostCenters();
                     setCostCenters(data || []);
@@ -198,11 +189,11 @@ export default function MasterDataDashboard() {
         const fetchAllCounts = async () => {
             try {
                 // Fetch all data in parallel for tab counts
-                const [vendorRes, branchRes, warehouseRes, itemRes, costCenterRes, projectRes] = await Promise.all([
-                    vendorService.getList({ page: 1, limit: 100 }),
+                const [vendorRes, branchRes, warehouseRes, costCenterRes, projectRes] = await Promise.all([
+                    vendorService.getList(),
                     masterDataService.getBranches(),
                     masterDataService.getWarehouses(),
-                    masterDataService.getItems(),
+                    // Items handled by useQuery
                     masterDataService.getCostCenters(),
                     masterDataService.getProjects()
                 ]);
@@ -210,7 +201,7 @@ export default function MasterDataDashboard() {
                 setVendors(vendorRes.data || []);
                 setBranches(branchRes || []);
                 setWarehouses(warehouseRes || []);
-                setItems(itemRes || []);
+                // items handled by useQuery
                 setCostCenters(costCenterRes || []);
                 setProjects(projectRes || []);
             } catch (error) {
@@ -238,6 +229,10 @@ export default function MasterDataDashboard() {
     };
 
     const handleAddNew = () => {
+        if (activeTab === 'item') {
+            navigate('/master-data/item');
+            return;
+        }
         setEditingId(null);
         setIsModalOpen(true);
     };
@@ -288,7 +283,7 @@ export default function MasterDataDashboard() {
     const currentTab = tabs.find(t => t.id === activeTab) || tabs[0];
 
     // Get tab label with Thai name
-    const getTabLabel = () => {
+    const getTabLabel = (): TabLabel => {
         switch (activeTab) {
             case 'vendor': return { main: 'Vendor (ผู้ขาย)', desc: 'ทะเบียนผู้ขายและข้อมูลการติดต่อ' };
             case 'item': return { main: 'Item (สินค้า)', desc: 'รายการสินค้าและวัตถุดิบ' };
@@ -846,112 +841,22 @@ export default function MasterDataDashboard() {
 
     return (
         <div className="p-4 sm:p-6 min-h-screen bg-gray-50 dark:bg-gray-900 min-w-[320px]">
-            {/* Header */}
-            <div className="mb-6">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-blue-500 rounded-lg flex items-center justify-center">
-                        <Database size={24} className="text-white" />
-                    </div>
-                    <div>
-                        <h1 className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                            Master Data Management
-                        </h1>
-                        <p className="text-sm text-gray-500">
-                            จัดการข้อมูลหลักสำหรับระบบจัดซื้อ - ครบถ้วนพร้อม Table Relationships
-                        </p>
-                    </div>
-                </div>
-            </div>
+            <MasterDataHeader />
 
-            {/* Tab Navigation */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-                    {tabs.map((tab) => (
-                        <button
-                            key={tab.id}
-                            onClick={() => handleTabChange(tab.id)}
-                            className={`p-3 sm:p-4 rounded-xl flex flex-col items-center gap-2 transition-all h-full ${
-                                activeTab === tab.id
-                                    ? 'bg-blue-50 dark:bg-blue-900/30 border-2 border-blue-500'
-                                    : 'bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 border border-transparent'
-                            }`}
-                        >
-                            <div className={`p-2 sm:p-3 rounded-xl shrink-0 ${
-                                activeTab === tab.id
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
-                            }`}>
-                                <tab.icon size={20} className="sm:w-6 sm:h-6" />
-                            </div>
-                            <div className="text-center w-full min-w-0 flex-1 flex flex-col justify-center">
-                                <p className={`text-xs sm:text-sm font-medium truncate w-full ${
-                                    activeTab === tab.id
-                                        ? 'text-blue-600 dark:text-blue-400'
-                                        : 'text-gray-700 dark:text-gray-300'
-                                }`}>
-                                    {tab.label}
-                                </p>
-                                <p className={`text-[10px] sm:text-xs truncate w-full mb-1 ${
-                                    activeTab === tab.id ? 'text-blue-500/80' : 'text-gray-500'
-                                }`}>
-                                    {tab.labelEn}
-                                </p>
-                                <span className="inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-medium rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
-                                    {tab.recordCount} รายการ
-                                </span>
-                            </div>
-                        </button>
-                    ))}
-                </div>
-            </div>
+            <MasterDataTabs 
+                tabs={tabs} 
+                activeTab={activeTab} 
+                onTabChange={handleTabChange} 
+            />
 
-            {/* Content Section Header */}
-            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/50 rounded-xl flex items-center justify-center shrink-0">
-                        <currentTab.icon size={24} className="text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <div>
-                        <h2 className="text-lg font-semibold text-blue-800 dark:text-blue-300">
-                            {getTabLabel().main}
-                        </h2>
-                        <p className="text-sm text-blue-600 dark:text-blue-400 line-clamp-1">
-                            {getTabLabel().desc}
-                        </p>
-                    </div>
-                </div>
-                <button
-                    onClick={handleAddNew}
-                    className={`${styles.btnPrimary} w-full sm:w-auto flex items-center justify-center gap-2`}
-                >
-                    <Plus size={20} />
-                    Add New
-                </button>
-            </div>
-
-            {/* Search & Filter */}
-            <div className="flex flex-col sm:flex-row gap-4 mb-4">
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                    <input
-                        type="text"
-                        placeholder={`Search ${currentTab.label} (${currentTab.labelEn})...`}
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white"
-                    />
-                </div>
-                <button className="flex items-center gap-2 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <Filter size={20} className="text-gray-500" />
-                    <span className="text-gray-700 dark:text-gray-300">Filter</span>
-                </button>
-            </div>
-
-            {/* Filter Summary */}
-            <div className="flex items-center gap-2 mb-4 text-sm text-gray-500 dark:text-gray-400">
-                <Filter size={16} />
-                <span>พบ {totalItems} รายการ จาก {currentTab.recordCount} รายการ</span>
-            </div>
+            <MasterDataToolbar 
+                currentTab={currentTab}
+                tabLabel={getTabLabel()}
+                searchTerm={searchTerm}
+                onSearchChange={setSearchTerm}
+                onAddNew={handleAddNew}
+                totalItems={totalItems}
+            />
 
             {/* Data Cards */}
             <div className="space-y-4">
@@ -991,7 +896,7 @@ export default function MasterDataDashboard() {
                         </div>
                     )
                 ) : activeTab === 'item' ? (
-                     <ItemMasterList data={paginatedData as ItemListItem[]} />
+                     <ItemMasterList />
                 ) : activeTab === 'cost-center' ? (
                     paginatedData.length > 0 ? (
                         (paginatedData as CostCenter[]).map(cc => 
@@ -1019,8 +924,8 @@ export default function MasterDataDashboard() {
                 )}
             </div>
 
-            {/* Pagination Footer */}
-            {!isLoading && totalItems > 0 && (
+            {/* Pagination Footer - Hide for Item Master (it has its own SmartTable pagination) */}
+            {!isLoading && totalItems > 0 && activeTab !== 'item' && (
                 <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
                     <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 w-full sm:w-auto justify-center sm:justify-start">
                         <span className="whitespace-nowrap">แสดง</span>

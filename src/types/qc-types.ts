@@ -22,6 +22,7 @@ export interface QCHeader {
     
     // Aggregated Data (For List View)
     vendor_count: number;
+    lowest_bidder_vendor_id?: string; // Add this field
     lowest_bidder_name?: string;
     lowest_bid_amount?: number;
     

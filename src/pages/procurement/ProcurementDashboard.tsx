@@ -34,7 +34,12 @@ import {
     ResponsiveContainer,
     Legend,
 } from 'recharts';
-import { Card } from '../../components/ui/Card';
+import { Card } from '@ui/Card';
+import { StatCard } from '@ui/StatCard';
+// ... (imports)
+
+// Remove local SummaryCard definition
+
 
 // ====================================================================================
 // MOCK DATA
@@ -48,9 +53,9 @@ const kpiData = [
 ];
 
 const summaryData = [
-    { label: 'ยอดซื้อเดือนนี้', value: '฿2,450,000', icon: TrendingUp, color: 'text-green-600', bgColor: 'bg-green-100 dark:bg-green-900/30' },
-    { label: 'ยอดซื้อปีนี้', value: '฿28,500,000', icon: TrendingUp, color: 'text-blue-600', bgColor: 'bg-blue-100 dark:bg-blue-900/30' },
-    { label: 'Lead Time เฉลี่ย', value: '5.2 วัน', icon: Clock, color: 'text-purple-600', bgColor: 'bg-purple-100 dark:bg-purple-900/30' },
+    { label: 'ยอดซื้อเดือนนี้', value: '฿2,450,000', icon: TrendingUp, color: 'green' as const },
+    { label: 'ยอดซื้อปีนี้', value: '฿28,500,000', icon: TrendingUp, color: 'blue' as const },
+    { label: 'Lead Time เฉลี่ย', value: '5.2 วัน', icon: Clock, color: 'purple' as const },
 ];
 
 const statusData = {
@@ -119,25 +124,6 @@ function KPICard({ label, value, icon: Icon, color, bgColor }: {
     );
 }
 
-function SummaryCard({ label, value, icon: Icon, color, bgColor }: {
-    label: string;
-    value: string;
-    icon: React.ElementType;
-    color: string;
-    bgColor: string;
-}) {
-    return (
-        <Card className="flex items-center justify-between">
-            <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{label}</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{value}</p>
-            </div>
-            <div className={`w-12 h-12 ${bgColor} rounded-xl flex items-center justify-center`}>
-                <Icon className={`w-6 h-6 ${color}`} />
-            </div>
-        </Card>
-    );
-}
 
 function StatusCard() {
     return (
@@ -251,7 +237,13 @@ export default function ProcurementDashboard() {
             {/* Summary Row 2 */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {summaryData.map((item, index) => (
-                    <SummaryCard key={index} {...item} />
+                    <StatCard 
+                        key={index} 
+                        label={item.label}
+                        value={item.value}
+                        color={item.color}
+                        icon={<item.icon className={`w-6 h-6 text-${item.color}-600`} />}
+                    />
                 ))}
                 <StatusCard />
             </div>

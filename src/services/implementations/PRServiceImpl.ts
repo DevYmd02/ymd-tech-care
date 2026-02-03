@@ -10,7 +10,7 @@ import type {
   PRListResponse,
   ConvertPRRequest,
 } from '../interfaces/IPRService';
-import type { PRHeader, PRFormData } from '../../types/pr-types';
+import type { PRHeader, PRFormData, CreatePRPayload } from '../../types/pr-types';
 import { logger } from '../../utils/logger';
 
 const ENDPOINTS = {
@@ -50,9 +50,41 @@ export class PRServiceImpl implements IPRService {
     }
   }
 
-  async create(data: PRFormData): Promise<PRHeader | null> {
+  async create(payload: CreatePRPayload): Promise<PRHeader | null> {
     try {
-      const response = await api.post<PRHeader>(ENDPOINTS.list, data);
+      // Map CreatePRPayload to API Payload (likely PRFormData structure)
+      const apiPayload = {
+        request_date: payload.pr_date,
+        cost_center_id: payload.department_id || '',
+        project_id: payload.project_id,
+        requester_name: payload.requester_name,
+        required_date: payload.required_date || '',
+        purpose: payload.remark || '',
+        
+        // Additional Fields
+        delivery_date: payload.delivery_date,
+        credit_days: payload.credit_days,
+        vendor_quote_no: payload.vendor_quote_no,
+        shipping_method: payload.shipping_method,
+        remarks: payload.remark,
+        preferred_vendor_id: payload.preferred_vendor_id,
+        vendor_name: payload.vendor_name,
+        
+        // Map Lines
+        lines: payload.items.map(item => ({
+          item_id: item.item_id || '', 
+          item_code: item.item_code,
+          item_name: item.item_name,
+          quantity: item.qty,
+          uom: item.uom,
+          est_unit_price: item.price,
+          est_amount: (item.qty || 0) * (item.price || 0),
+          needed_date: item.needed_date || payload.required_date || '',
+          remark: item.remark || ''
+        }))
+      };
+
+      const response = await api.post<PRHeader>(ENDPOINTS.list, apiPayload);
       return response.data;
     } catch (error) {
       logger.error('[PRServiceImpl] create error:', error);

@@ -5,9 +5,9 @@
  */
 
 import type { IQCService, QCListParams, QCListResponse, QCCreateData } from '../interfaces/IQCService';
-import { MOCK_QCS } from '../../__mocks__/procurementMocks';
-import { logger } from '../../utils/logger';
-import type { QCListItem } from '../../types/qc-types';
+import { MOCK_QCS } from '@/__mocks__/procurementMocks';
+import { logger } from '@utils/logger';
+import type { QCListItem } from '@project-types/qc-types';
 
 export class MockQCService implements IQCService {
   private qcs: QCListItem[]; 

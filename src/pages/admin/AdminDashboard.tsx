@@ -17,8 +17,8 @@ import {
     DollarSign,
     ChevronRight
 } from 'lucide-react';
-import { Card } from '../../components/ui/Card';
-import { StatCard, QuickAccessCard } from '../../components/shared/StatCard';
+import { Card } from '@ui/Card';
+import { StatCard, QuickAccessCard } from '@ui/StatCard';
 import { styles } from '../../constants';
 
 // ====================================================================================

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, Loader2, X, Building2 } from 'lucide-react';
-import { vendorService } from '../../services/vendorService';
+import { vendorService } from '../../services/VendorService';
 import type { VendorMaster } from '../../types/vendor-types';
 import { VendorSearchModal } from './VendorSearchModal';
 

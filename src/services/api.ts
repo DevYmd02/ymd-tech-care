@@ -26,9 +26,10 @@ import axios from 'axios';
 
 /**
  * Base URL สำหรับ API
- * @default 'http://localhost:3000/api'
+ * @default '/api' (Relative path via Vite Proxy)
  */
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+// Force relative path to use Vite Proxy (Bypass CORS)
+export const API_BASE_URL = '/api';
 
 /**
  * Flag บอกว่าใช้ Mock Data หรือไม่

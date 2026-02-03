@@ -400,8 +400,8 @@ export function toVendorCreateRequest(form: VendorFormData): VendorCreateRequest
 
     return {
         vendor_code: form.vendorCode || undefined,
-        vendor_name: form.vendorName,
-        // vendor_name_en: Backend doesn't support this field
+        vendor_name: form.vendorNameTh,
+        vendor_name_en: form.vendorNameEn,
         tax_id: form.taxId || undefined,
         // vendor_type: Backend doesn't support this field (use vendor_type_id instead)
         
@@ -638,7 +638,7 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
     return {
         vendorCode: vendor.vendor_code,
         vendorCodeSearch: '',
-        vendorName: vendor.vendor_name,
+        vendorName: vendor.vendor_name, // Keeping for backward compatibility
         vendorNameTh: vendor.vendor_name,
         vendorNameEn: vendor.vendor_name_en || '',
         taxId: vendor.tax_id || '',
@@ -658,9 +658,9 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
         addresses: formAddresses,
         sameAsRegistered,
         
-        contactName: formContacts.find(c => c.isMain)?.name || '',
+        contactName: formContacts.find(c => c.isMain)?.name || vendorAny.contactName || vendorAny.contactPerson || vendorAny.primaryContact || registeredAddress.contactPerson || '',
         phone: vendor.phone || '',
-        mobile: '',
+        mobile: vendorAny.mobile || vendorAny.phoneNumber || '',
         email: vendor.email || '',
         website: vendor.website || '',
         

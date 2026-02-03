@@ -4,9 +4,9 @@
  */
 
 import type { IItemTypeService, ItemTypeCreateRequest, ItemTypeUpdateRequest } from '../interfaces/IItemTypeService';
-import { mockItemTypes } from '../../__mocks__/masterDataMocks';
-import type { ItemTypeListItem } from '../../types/master-data-types';
-import { logger } from '../../utils/logger';
+import { mockItemTypes } from '@/__mocks__/masterDataMocks';
+import type { ItemTypeListItem } from '@project-types/master-data-types';
+import { logger } from '@utils/logger';
 
 export class MockItemTypeService implements IItemTypeService {
   async getList(): Promise<ItemTypeListItem[]> {

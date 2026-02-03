@@ -110,3 +110,52 @@ export interface POListResponse {
     page: number;
     limit: number;
 }
+export interface POLineItemInput {
+    item_id: string; // or item_code if searching
+    item_code: string;
+    item_name: string;
+    qty: number;
+    unit_price: number;
+    discount?: number;
+    uom_name?: string;
+    description?: string;
+    // Auto-calculated fields for display/db
+    line_total?: number;
+}
+
+// ====================================================================================
+// CREATE PO PAYLOAD (BATCH PATTERN)
+// ====================================================================================
+
+export interface CreatePOLineItem {
+    item_id: string; // or item_code
+    qty: number;
+    unit_price: number;
+    discount?: number;
+}
+
+export interface CreatePOPayload {
+    vendor_id: string;
+    ref_pr_id?: string; // Link back to PR
+    ref_qc_id?: string; // Link back to QC
+    order_date: string; // or Date
+    delivery_date?: string;
+    payment_term?: string;
+    items: CreatePOLineItem[]; // The Batch Array
+    
+    // Additional fields for UI compatibility if needed
+    remarks?: string;
+    subtotal?: number;
+    tax_amount?: number;
+    total_amount?: number;
+}
+
+export interface POFormData {
+    vendor_id?: string;
+    po_date?: string;
+    delivery_date?: string;
+    payment_term_days?: number;
+    remarks?: string;
+    items?: POLineItemInput[]; 
+    tax_rate?: number;
+}

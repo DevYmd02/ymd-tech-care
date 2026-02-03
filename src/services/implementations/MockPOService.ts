@@ -5,7 +5,7 @@
  */
 
 import type { IPOService } from '../interfaces/IPOService';
-import type { POListParams, POListResponse, POListItem } from '../../types/po-types';
+import type { POListParams, POListResponse, POListItem, CreatePOPayload, POLine } from '../../types/po-types';
 
 const MOCK_POS: POListItem[] = [
     {
@@ -69,6 +69,7 @@ const MOCK_POS: POListItem[] = [
 
 export class MockPOService implements IPOService {
     private pos: POListItem[];
+    private poLines: POLine[] = []; // Store lines separately to simulate DB
 
     constructor() {
         this.pos = structuredClone(MOCK_POS);
@@ -111,5 +112,61 @@ export class MockPOService implements IPOService {
             page,
             limit
         };
+    }
+
+    async getById(id: string): Promise<POListItem | null> {
+        const item = this.pos.find(p => p.po_id === id);
+        return item ? structuredClone(item) : null;
+    }
+
+    async create(payload: CreatePOPayload): Promise<void> {
+       const poId = `po-${Date.now()}`;
+       const poNo = `PO${new Date().getFullYear()}-${String(this.pos.length + 1).padStart(3, '0')}`;
+
+       // 1. Create Header
+       const newPO: POListItem = {
+           po_id: poId,
+           po_no: poNo,
+           po_date: payload.order_date,
+           pr_id: payload.ref_pr_id || '', 
+           pr_no: payload.ref_pr_id ? `PR-${payload.ref_pr_id}` : '',
+           vendor_id: payload.vendor_id,
+           vendor_name: 'Vendor Name (Mock)',
+           branch_id: '1',
+           status: 'DRAFT',
+           currency_code: 'THB',
+           exchange_rate: 1,
+           payment_term_days: payload.payment_term ? parseInt(payload.payment_term) : 30, // Map string to int if possible
+           subtotal: payload.subtotal || 0,
+           tax_amount: payload.tax_amount || 0,
+           total_amount: payload.total_amount || 0,
+           created_by: 'user-1',
+           created_at: new Date().toISOString(),
+           valid_until: payload.delivery_date, // Map delivery_date
+           remarks: payload.remarks || '',
+           item_count: payload.items.length
+       } as POListItem; // Cast to satisfy POListItem if needed, though structure should match
+
+       // 2. Loop Items -> Create Lines (Batch)
+       const newLines: POLine[] = payload.items.map((item, index) => ({
+           po_line_id: `pol-${Date.now()}-${index}`,
+           po_id: poId,
+           item_id: item.item_id,
+           item_code: item.item_id, // Mock: use id as code
+           qty_ordered: item.qty,
+           qty_received: 0,
+           unit_price: item.unit_price,
+           discount_amount: item.discount || 0,
+           line_total: (item.qty * item.unit_price) - (item.discount || 0),
+           uom_id: 'uom-1', // Mock
+           required_receipt_type: 'GOODS'
+       }));
+
+       // 3. Save to "DB"
+       this.poLines.push(...newLines);
+       this.pos.unshift(newPO);
+       
+       console.log('[MockPOService] Created PO:', newPO);
+       console.log('[MockPOService] Created Lines:', newLines);
     }
 }

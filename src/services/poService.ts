@@ -11,10 +11,10 @@ import { POServiceImpl } from './implementations/POServiceImpl';
 
 const getPOService = (): IPOService => {
   if (USE_MOCK) {
-    console.log('🔧 [PO Service] Using Mock Implementation');
+
     return new MockPOService();
   }
-  console.log('🔧 [PO Service] Using Real API Implementation');
+
   return new POServiceImpl();
 };
 

@@ -1,15 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
-import { FileText, Plus, Trash2, Search, X, Save, CheckCircle, Copy, Printer, FileBox, MoreHorizontal } from 'lucide-react';
+import { FileText, Plus, Trash2, Search, MoreHorizontal, FileBox } from 'lucide-react';
 
-import { WindowFormLayout } from '../../../../components/shared/WindowFormLayout';
-import { SystemAlert } from '../../../../components/shared/SystemAlert';
-import type { QuotationHeader, QuotationLine } from '../../../../types/qt-types';
-import { masterDataService } from '../../../../services/masterDataService';
-import { qtService } from '../../../../services';
-import type { UnitMaster } from '../../../../types/master-data-types';
+import { WindowFormLayout } from '@layout/WindowFormLayout';
+import { SystemAlert } from '@ui/SystemAlert';
+import type { QuotationHeader, QuotationLine } from '@project-types/qt-types';
+import { masterDataService } from '@services/MasterDataService';
+import { qtService } from '@services/index';
+import type { UnitMaster } from '@project-types/master-data-types';
 import type { ProductLookup } from '../../../../__mocks__';
 import { MOCK_PRODUCTS } from '../../../../__mocks__';
-import type { RFQHeader } from '../../../../types/rfq-types';
+import type { RFQHeader } from '@project-types/rfq-types';
 
 // ====================================================================================
 // TYPES & CONSTANTS
@@ -234,36 +234,24 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ }
       onClose={onClose}
       title="สร้างใบเสนอราคา (Create Quotation) - Manual"
       titleIcon={<div className="bg-blue-500 p-1 rounded-md shadow-sm"><FileText size={14} strokeWidth={3} className="text-white" /></div>}
-      headerColor="bg-blue-600"
+      headerColor="bg-blue-600 [&_div.flex.items-center.space-x-1>button:not(:last-child)]:hidden"
       footer={
-          <div className="flex items-center gap-1 p-2 bg-gray-100 dark:bg-[#1e293b] border-t border-gray-200 dark:border-gray-800">
-               <button className="flex items-center gap-1 px-3 py-1.5 bg-white dark:bg-transparent hover:bg-gray-200 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded text-xs font-bold transition-colors shadow-sm dark:shadow-none">
-                  <Plus size={14} /> NEW
-               </button>
-               <button onClick={handleSave} className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white border border-blue-600 rounded text-xs font-bold transition-colors shadow-sm">
-                  <Save size={14} /> SAVE
-               </button>
-               <button className="flex items-center gap-1 px-3 py-1.5 bg-white dark:bg-transparent hover:bg-emerald-50 dark:hover:bg-emerald-900/30 text-emerald-600 dark:text-emerald-500 border border-emerald-500 dark:border-emerald-600 rounded text-xs font-bold transition-colors shadow-sm dark:shadow-none">
-                  <CheckCircle size={14} /> APPROVE
-               </button>
-               <button className="flex items-center gap-1 px-3 py-1.5 bg-white dark:bg-transparent hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-500 border border-red-500 dark:border-red-600 rounded text-xs font-bold transition-colors shadow-sm dark:shadow-none">
-                  <Trash2 size={14} /> DELETE
-               </button>
-               <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1"></div>
-               <button className="flex items-center gap-1 px-3 py-1.5 bg-white dark:bg-transparent hover:bg-gray-200 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded text-xs font-bold transition-colors shadow-sm dark:shadow-none">
-                  <Search size={14} /> FIND
-               </button>
-               <button className="flex items-center gap-1 px-3 py-1.5 bg-white dark:bg-transparent hover:bg-gray-200 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded text-xs font-bold transition-colors shadow-sm dark:shadow-none">
-                  <Copy size={14} /> COPY
-               </button>
-               <button className="flex items-center gap-1 px-3 py-1.5 bg-white dark:bg-transparent hover:bg-gray-200 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded text-xs font-bold transition-colors shadow-sm dark:shadow-none">
-                  <Printer size={14} /> PRINT
-               </button>
-               <div className="flex-1"></div>
-               <button onClick={onClose} className="flex items-center gap-1 px-3 py-1.5 bg-white dark:bg-transparent hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-500 border border-red-500 dark:border-red-600 rounded text-xs font-bold transition-colors shadow-sm dark:shadow-none">
-                  <X size={14} /> CLOSE
-               </button>
-          </div>
+        <div className="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-end items-center bg-white dark:bg-gray-900 sticky bottom-0 z-10 gap-x-2">
+            <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md text-sm font-medium transition-colors"
+            >
+                ยกเลิก
+            </button>
+            <button
+                type="button"
+                onClick={handleSave}
+                className="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md text-sm font-medium shadow-sm transition-colors"
+            >
+                บันทึก
+            </button>
+        </div>
       }
     >
       {alertState.show && <SystemAlert message={alertState.message} onClose={() => setAlertState({ ...alertState, show: false })} />}

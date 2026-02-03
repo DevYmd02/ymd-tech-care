@@ -7,7 +7,6 @@
 import type { IVendorService } from '../interfaces/IVendorService';
 import type {
   VendorMaster,
-  VendorListParams,
   VendorListResponse,
   VendorCreateRequest,
   VendorResponse,
@@ -23,53 +22,35 @@ export class MockVendorService implements IVendorService {
     this.vendors = structuredClone(MOCK_VENDORS);
   }
 
-  async getList(params?: VendorListParams): Promise<VendorListResponse> {
-    logger.log('[MockVendorService] getList', params);
+  async getList(): Promise<VendorListResponse> {
+    logger.log('[MockVendorService] getList');
     await this.delay(300);
 
-    let filteredVendors = this.vendors; // Start with reference, but we will clone at the end
+    const filteredVendors = this.vendors; // Start with reference, but we will clone at the end
 
-    if (params?.status && params.status !== 'ALL') {
-      filteredVendors = filteredVendors.filter(v => v.status === params.status);
-    }
-
-    if (params?.search) {
-      const search = params.search.toLowerCase();
-      filteredVendors = filteredVendors.filter(v =>
-        v.vendor_name.toLowerCase().includes(search) ||
-        v.vendor_code.toLowerCase().includes(search)
-      );
-    }
-
-    // Map vendors to flatten address structure for Valid fields (VendorListItem)
-    const mappedVendors = filteredVendors.map(v => {
-        const primaryAddr = v.addresses?.find(a => a.address_type === 'REGISTERED') || v.addresses?.[0];
-        // Clone to avoid mutating original
-        const vClone = structuredClone(v); 
-        
-        if (primaryAddr) {
-            // Force cast to any to assign flat fields that might be missing in VendorMaster type but exist in VendorListItem
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (vClone as any).address_line1 = primaryAddr.address;
-            // sub_district removed
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (vClone as any).district = primaryAddr.district;
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (vClone as any).province = primaryAddr.province;
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (vClone as any).postal_code = primaryAddr.postal_code;
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (vClone as any).country = primaryAddr.country;
-        }
-        return vClone;
-    });
-
-    // Return deep copy of the filtered result
+    // Return deep copy of all results (Simulate returning ALL vendors)
     return {
-      data: mappedVendors,
+      data: filteredVendors.map(v => {
+          const vClone = structuredClone(v); 
+          const primaryAddr = v.addresses?.find(a => a.address_type === 'REGISTERED') || v.addresses?.[0];
+          
+          if (primaryAddr) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (vClone as any).address_line1 = primaryAddr.address;
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (vClone as any).district = primaryAddr.district;
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (vClone as any).province = primaryAddr.province;
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (vClone as any).postal_code = primaryAddr.postal_code;
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (vClone as any).country = primaryAddr.country;
+          }
+          return vClone;
+      }),
       total: filteredVendors.length,
-      page: params?.page || 1,
-      limit: params?.limit || 20,
+      page: 1,
+      limit: filteredVendors.length,
     };
   }
 

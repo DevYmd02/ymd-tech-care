@@ -22,7 +22,7 @@ import {
     CheckCircle,
     ExternalLink
 } from 'lucide-react';
-import { PageBanner } from '../../components/shared/PageBanner';
+import { PageBanner } from '@layout/PageBanner';
 import { styles } from '../../constants';
 
 // ====================================================================================

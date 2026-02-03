@@ -21,7 +21,7 @@ import { logger } from '@utils/logger';
 import { BranchFormModal } from './BranchFormModal';
 import { mockBranches } from '@/__mocks__/masterDataMocks';
 import type { BranchListItem } from '@project-types/master-data-types';
-import { ActiveStatusBadge } from '@shared';
+import { ActiveStatusBadge } from '@ui/StatusBadge';
 
 // ====================================================================================
 // COMPONENT

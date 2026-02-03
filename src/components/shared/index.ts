@@ -7,29 +7,22 @@
  */
 
 // Summary & Stats
-export { SummaryCard } from './SummaryCard';
-export type { SummaryCardProps } from './SummaryCard';
+// Basic UI Elements moved to @ui
+// export { StatCard } from './StatCard'; // Moved to @ui
+// export { SummaryCard } from './SummaryCard'; // Moved to @ui
 
-export { StatCard, QuickAccessCard } from './StatCard';
-export type { StatCardProps, QuickAccessCardProps } from './StatCard';
+// export { SummaryCard } from './SummaryCard'; // MOVED TO @ui
+// export type { SummaryCardProps } from './SummaryCard';
+
+// export { QuickAccessCard } from './StatCard'; // MOVED TO @ui
+// export type { StatCardProps, QuickAccessCardProps } from './StatCard';
 
 // Page Layout
-export { PageBanner } from './PageBanner';
-export type { PageBannerProps } from './PageBanner';
+// export { PageBanner } from './PageBanner'; // MOVED TO @layout
+// export type { PageBannerProps } from './PageBanner';
 
 // Status Badges
-export {
-  StatusBadge,
-  PRStatusBadge,
-  RFQStatusBadge,
-  QTStatusBadge,
-  QCStatusBadge,
-  POStatusBadge,
-  ActiveStatusBadge,
-  VendorStatusBadge,
-  ModuleStatusBadge,
-} from './StatusBadge';
-export type { StatusBadgeProps, ActiveStatusBadgeProps, VendorStatusBadgeProps, ModuleStatusBadgeProps } from './StatusBadge';
+// MOVED TO @ui/StatusBadge
 
 // Modals
 export { ApprovalModal } from './ApprovalModal';
@@ -38,14 +31,15 @@ export { SearchModal } from './SearchModal';
 export { VendorSearchModal } from './VendorSearchModal';
 
 // Layouts
-export { WindowFormLayout } from './WindowFormLayout';
-export { PageListLayout } from './PageListLayout';
-export type { PageListLayoutProps, AccentColor } from './PageListLayout';
-export { SystemAlert } from './SystemAlert';
+// export { WindowFormLayout } from './WindowFormLayout'; // Moved to @layout
+// export { PageListLayout } from './PageListLayout'; // MOVED TO @layout
+// export type { PageListLayoutProps, AccentColor } from './PageListLayout';
+// export { SystemAlert } from './SystemAlert'; // MOVED TO @ui
 
 // Filter Components
-export { FilterField, FilterActions } from './FilterField';
-export type { FilterFieldProps, FilterActionsProps, SelectOption } from './FilterField';
+// Filter Components
+// export { FilterField, FilterActions } from './FilterField'; // MOVED TO @ui
+// export type { FilterFieldProps, FilterActionsProps, SelectOption } from './FilterField';
 
 // Filter Form Builder
 export { FilterFormBuilder } from './FilterFormBuilder';
@@ -54,13 +48,14 @@ export { createFilterChangeHandler } from './filterFormUtils';
 export type { FilterChangeHandlers } from './filterFormUtils';
 
 // Utilities
-export { ErrorBoundary } from './ErrorBoundary';
+// export { ErrorFallback, ErrorBoundary } from './ErrorBoundary'; // MOVED TO @system
+// export { GlobalLoading } from './GlobalLoading'; // MOVED TO @system
 
 // Tab Panel
-export { default as TabPanel } from './TabPanel';
-export type { TabItem, TabPanelProps } from './TabPanel';
+// export { default as TabPanel } from './TabPanel'; // MOVED TO @layout
+// export type { TabItem, TabPanelProps } from './TabPanel';
 export { DOCUMENT_FORM_TABS } from './tabConstants';
 
 // Base UI
-export { PageLoader } from './PageLoader';
-export { SmartTable } from './SmartTable';
+// export { PageLoader } from './PageLoader'; // MOVED TO @layout
+// export { SmartTable } from './SmartTable'; // MOVED TO @ui
