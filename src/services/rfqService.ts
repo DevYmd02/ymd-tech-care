@@ -23,10 +23,10 @@ import { RFQServiceImpl } from './implementations/RFQServiceImpl';
  */
 const getRFQService = (): IRFQService => {
   if (USE_MOCK) {
-    console.log('🔧 [RFQ Service] Using Mock Implementation');
+
     return new MockRFQService();
   }
-  console.log('🔧 [RFQ Service] Using Real API Implementation');
+
   return new RFQServiceImpl();
 };
 

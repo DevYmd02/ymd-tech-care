@@ -11,10 +11,10 @@ import { QTServiceImpl } from './implementations/QTServiceImpl';
 
 const getQTService = (): IQTService => {
     if (USE_MOCK) {
-        console.log('🔧 [QT Service] Using Mock Implementation');
+
         return new MockQTService();
     }
-    console.log('🔧 [QT Service] Using Real API Implementation');
+
     return new QTServiceImpl();
 };
 

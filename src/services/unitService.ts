@@ -11,10 +11,10 @@ import { UnitServiceImpl } from './implementations/UnitServiceImpl';
 
 const getUnitService = (): IUnitService => {
   if (USE_MOCK) {
-    console.log('🔧 [Unit Service] Using Mock Implementation');
+
     return new MockUnitService();
   }
-  console.log('🔧 [Unit Service] Using Real API Implementation');
+
   return new UnitServiceImpl();
 };
 

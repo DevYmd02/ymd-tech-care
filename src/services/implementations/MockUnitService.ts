@@ -4,9 +4,9 @@
  */
 
 import type { IUnitService, UnitCreateRequest, UnitUpdateRequest } from '../interfaces/IUnitService';
-import { mockUnits } from '../../__mocks__/masterDataMocks';
-import type { UnitListItem } from '../../types/master-data-types';
-import { logger } from '../../utils/logger';
+import { mockUnits } from '@/__mocks__/masterDataMocks';
+import type { UnitListItem } from '@project-types/master-data-types';
+import { logger } from '@utils/logger';
 
 export class MockUnitService implements IUnitService {
   async getList(): Promise<UnitListItem[]> {

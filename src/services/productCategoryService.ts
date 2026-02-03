@@ -11,10 +11,10 @@ import { ProductCategoryServiceImpl } from './implementations/ProductCategorySer
 
 const getProductCategoryService = (): IProductCategoryService => {
   if (USE_MOCK) {
-    console.log('🔧 [ProductCategory Service] Using Mock Implementation');
+
     return new MockProductCategoryService();
   }
-  console.log('🔧 [ProductCategory Service] Using Real API Implementation');
+
   return new ProductCategoryServiceImpl();
 };
 

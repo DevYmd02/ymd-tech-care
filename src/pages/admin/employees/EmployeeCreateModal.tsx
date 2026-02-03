@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Save, UserPlus, MapPin, Building, User } from 'lucide-react';
-import type { IEmployeeCreateRequest, IEmployeeAddress } from '../../../interfaces/IEmployee';
-import { employeeService } from '../../../services/EmployeeService';
+import type { IEmployeeCreateRequest, IEmployeeAddress } from '@/interfaces/IEmployee';
+import { employeeService } from '@/services/EmployeeService';
 
 interface Props {
   isOpen: boolean;
@@ -72,7 +72,7 @@ export const EmployeeCreateModal: React.FC<Props> = ({ isOpen, onClose, onSucces
     setter: React.Dispatch<React.SetStateAction<IEmployeeAddress>>
   ) => {
     const { name, value } = e.target;
-    setter((prev) => ({ ...prev, [name]: value }));
+    setter((prev: IEmployeeAddress) => ({ ...prev, [name]: value }));
   };
 
   // Submit Logic

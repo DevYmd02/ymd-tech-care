@@ -5,9 +5,9 @@
 
 import api from '../api';
 import type { IPOService } from '../interfaces/IPOService';
-import type { POListParams, POListResponse } from '../../types/po-types';
+import type { POListParams, POListResponse } from '@project-types/po-types';
 
-import { logger } from '../../utils/logger';
+import { logger } from '@utils/logger';
 
 export class POServiceImpl implements IPOService {
   async getList(params?: POListParams): Promise<POListResponse> {

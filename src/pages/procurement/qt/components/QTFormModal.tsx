@@ -3,13 +3,13 @@ import { FileText, Plus, Trash2, Search, X, Save, CheckCircle, Copy, Printer, Fi
 
 import { WindowFormLayout } from '@layout/WindowFormLayout';
 import { SystemAlert } from '@ui/SystemAlert';
-import type { QuotationHeader, QuotationLine } from '../../../../types/qt-types';
-import { masterDataService } from '../../../../services/MasterDataService';
-import { qtService } from '../../../../services';
-import type { UnitMaster } from '../../../../types/master-data-types';
+import type { QuotationHeader, QuotationLine } from '@project-types/qt-types';
+import { masterDataService } from '@services/MasterDataService';
+import { qtService } from '@services/index';
+import type { UnitMaster } from '@project-types/master-data-types';
 import type { ProductLookup } from '../../../../__mocks__';
 import { MOCK_PRODUCTS } from '../../../../__mocks__';
-import type { RFQHeader } from '../../../../types/rfq-types';
+import type { RFQHeader } from '@project-types/rfq-types';
 
 // ====================================================================================
 // TYPES & CONSTANTS

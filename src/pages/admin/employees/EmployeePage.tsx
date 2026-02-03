@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Users, AlertCircle, RefreshCw } from 'lucide-react';
 import { EmployeeCreateModal } from './EmployeeCreateModal';
-import { employeeService } from '../../../services/EmployeeService';
-import type { IEmployee } from '../../../interfaces/IEmployee';
-import { logger } from '../../../utils/logger';
+import { employeeService } from '@/services/EmployeeService';
+import type { IEmployee } from '@/interfaces/IEmployee';
+import { logger } from '@/utils/logger';
 
 export const EmployeePage: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);

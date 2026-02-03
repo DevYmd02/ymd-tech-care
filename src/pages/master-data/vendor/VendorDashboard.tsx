@@ -58,14 +58,14 @@ export default function VendorDashboard() {
     const fetchVendors = useCallback(async () => {
         setIsLoading(true);
         try {
-            const response = await vendorService.getList({ page: 1, limit: rowsPerPage });
+            const response = await vendorService.getList();
             setVendors(response.data);
         } catch {
             setVendors([]);
         } finally {
             setIsLoading(false);
         }
-    }, [rowsPerPage]);
+    }, []);
 
     useEffect(() => {
         fetchVendors();

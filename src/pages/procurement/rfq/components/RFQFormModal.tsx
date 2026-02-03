@@ -11,13 +11,13 @@ import { VendorSearchModal } from '@shared/VendorSearchModal';
 import { WindowFormLayout } from '@layout/WindowFormLayout';
 import TabPanel from '@layout/TabPanel';
 import { SystemAlert } from '@ui/SystemAlert';
-import { masterDataService } from '../../../../services/MasterDataService';
-import type { BranchMaster, ItemMaster, UnitMaster } from '../../../../types/master-data-types';
-import type { RFQFormData, RFQLineFormData } from '../../../../types/rfq-types';
-import { initialRFQFormData, initialRFQLineFormData } from '../../../../types/rfq-types';
-import type { VendorSearchItem } from '../../../../types/vendor-types';
-import { logger } from '../../../../utils/logger';
-import type { PRHeader } from '../../../../types/pr-types';
+import { masterDataService } from '@services/MasterDataService';
+import type { BranchMaster, ItemMaster, UnitMaster } from '@project-types/master-data-types';
+import type { RFQFormData, RFQLineFormData } from '@project-types/rfq-types';
+import { initialRFQFormData, initialRFQLineFormData } from '@project-types/rfq-types';
+import type { VendorSearchItem } from '@project-types/vendor-types';
+import { logger } from '@utils/logger';
+import type { PRHeader } from '@project-types/pr-types';
 
 // ====================================================================================
 // TYPES

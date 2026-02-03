@@ -9,9 +9,9 @@ import { FileText, Search, Trash2, Scale } from 'lucide-react';
 import { WindowFormLayout } from '@layout/WindowFormLayout';
 import { QCFooter } from './QCFooter';
 import { VendorSearchModal } from '@shared/VendorSearchModal';
-import { qcService } from '../../../../services';
-import type { VendorSearchItem } from '../../../../types/vendor-types';
-import type { QCCreateData } from '../../../../services/interfaces/IQCService';
+import { qcService } from '@services/index';
+import type { VendorSearchItem } from '@project-types/vendor-types';
+import type { QCCreateData } from '@services/interfaces/IQCService';
 
 interface QCFormModalProps {
   isOpen: boolean;

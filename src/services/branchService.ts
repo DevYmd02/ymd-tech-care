@@ -11,10 +11,10 @@ import { BranchServiceImpl } from './implementations/BranchServiceImpl';
 
 const getBranchService = (): IBranchService => {
   if (USE_MOCK) {
-    console.log('🔧 [Branch Service] Using Mock Implementation');
+
     return new MockBranchService();
   }
-  console.log('🔧 [Branch Service] Using Real API Implementation');
+
   return new BranchServiceImpl();
 };
 

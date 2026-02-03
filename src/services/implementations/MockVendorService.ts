@@ -7,7 +7,6 @@
 import type { IVendorService } from '../interfaces/IVendorService';
 import type {
   VendorMaster,
-  VendorListParams,
   VendorListResponse,
   VendorCreateRequest,
   VendorResponse,
@@ -23,32 +22,15 @@ export class MockVendorService implements IVendorService {
     this.vendors = structuredClone(MOCK_VENDORS);
   }
 
-  async getList(params?: VendorListParams): Promise<VendorListResponse> {
-    logger.log('[MockVendorService] getList', params);
+  async getList(): Promise<VendorListResponse> {
+    logger.log('[MockVendorService] getList');
     await this.delay(300);
 
-    let filteredVendors = this.vendors; // Start with reference, but we will clone at the end
+    const filteredVendors = this.vendors; // Start with reference, but we will clone at the end
 
-    if (params?.status && params.status !== 'ALL') {
-      filteredVendors = filteredVendors.filter(v => v.status === params.status);
-    }
-
-    if (params?.search) {
-      const search = params.search.toLowerCase();
-      filteredVendors = filteredVendors.filter(v =>
-        v.vendor_name.toLowerCase().includes(search) ||
-        v.vendor_code.toLowerCase().includes(search)
-      );
-    }
-
-    // Return deep copy of the filtered result
-    const page = params?.page || 1;
-    const limit = params?.limit || 50;
-    const startIndex = (page - 1) * limit;
-    const paginatedData = filteredVendors.slice(startIndex, startIndex + limit);
-
+    // Return deep copy of all results (Simulate returning ALL vendors)
     return {
-      data: paginatedData.map(v => {
+      data: filteredVendors.map(v => {
           const vClone = structuredClone(v); 
           const primaryAddr = v.addresses?.find(a => a.address_type === 'REGISTERED') || v.addresses?.[0];
           
@@ -67,8 +49,8 @@ export class MockVendorService implements IVendorService {
           return vClone;
       }),
       total: filteredVendors.length,
-      page,
-      limit,
+      page: 1,
+      limit: filteredVendors.length,
     };
   }
 

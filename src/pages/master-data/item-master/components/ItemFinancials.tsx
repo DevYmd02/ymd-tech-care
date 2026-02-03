@@ -50,10 +50,10 @@ export const ItemFinancials: React.FC<ItemFinancialsProps> = ({
                     <label className="block text-xs text-gray-700 dark:text-gray-400 mb-0.5">กำหนดจำนวน (Amount)</label>
                     <input 
                         type="number" 
-                        value={formData.std_amount ?? 0} 
-                        onChange={(e) => onChange('std_amount', Number(e.target.value))} 
+                        value={formData.std_amount || ''} 
+                        onChange={(e) => onChange('std_amount', e.target.value === '' ? 0 : parseFloat(e.target.value))} 
+                        onFocus={(e) => e.target.select()}
                         className="w-full h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-purple-500 outline-none text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        placeholder="0.00"
                     />
                 </div>
 
@@ -67,15 +67,17 @@ export const ItemFinancials: React.FC<ItemFinancialsProps> = ({
                     />
                 </div>
 
-                <div>
-                    <label className="block text-xs text-gray-700 dark:text-gray-400 mb-0.5">Barcode (หลัก)</label>
+                <div className="flex items-center gap-2 pt-2">
                     <input 
-                        type="text" 
-                        value={formData.barcode || ''} 
-                        onChange={(e) => onChange('barcode', e.target.value)} 
-                        className="w-full h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-purple-500 outline-none"
-                        placeholder="EAN/UPC"
+                        type="checkbox" 
+                        id="has_barcode"
+                        checked={formData.has_barcode || false} 
+                        onChange={(e) => onChange('has_barcode', e.target.checked)} 
+                        className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 dark:focus:ring-purple-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 cursor-pointer"
                     />
+                    <label htmlFor="has_barcode" className="text-xs font-medium text-gray-900 dark:text-gray-300 select-none cursor-pointer">
+                        ใช้งานระบบบาร์โค้ด (Enable Barcode System)
+                    </label>
                 </div>
             </div>
         </div>

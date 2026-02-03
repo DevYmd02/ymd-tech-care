@@ -5,7 +5,6 @@
 
 import type {
   VendorMaster,
-  VendorListParams,
   VendorListResponse,
   VendorCreateRequest,
   VendorResponse,
@@ -13,7 +12,7 @@ import type {
 } from '../../types/vendor-types';
 
 export interface IVendorService {
-  getList(params?: VendorListParams): Promise<VendorListResponse>;
+  getList(): Promise<VendorListResponse>;
   getById(vendorId: string): Promise<VendorMaster | null>;
   getByTaxId(taxId: string): Promise<VendorMaster | null>;
   getDropdown(): Promise<VendorDropdownItem[]>;

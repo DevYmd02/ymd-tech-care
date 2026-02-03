@@ -6,10 +6,10 @@
 import React from 'react';
 import type { UseFormRegister, UseFormSetValue, UseFormWatch } from 'react-hook-form';
 import { Search, Building2, FolderKanban, User } from 'lucide-react';
-import type { PRFormData } from '../../../../types/pr-types';
-import type { CostCenter, Project } from '../../../../types/master-data-types';
-import { VendorSearch } from '../../../../components/shared/VendorSearch';
-import type { VendorMaster } from '../../../../types/vendor-types';
+import type { PRFormData } from '@project-types/pr-types';
+import type { CostCenter, Project } from '@project-types/master-data-types';
+import { VendorSearch } from '@shared/VendorSearch';
+import type { VendorMaster } from '@project-types/vendor-types';
 
 interface Props {
   register: UseFormRegister<PRFormData>;

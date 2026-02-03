@@ -11,10 +11,10 @@ import { QCServiceImpl } from './implementations/QCServiceImpl';
 
 const getQCService = (): IQCService => {
     if (USE_MOCK) {
-        console.log('🔧 [QC Service] Using Mock Implementation');
+
         return new MockQCService();
     }
-    console.log('🔧 [QC Service] Using Real API Implementation');
+
     return new QCServiceImpl();
 };
 

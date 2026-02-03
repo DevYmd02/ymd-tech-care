@@ -11,10 +11,10 @@ import { MasterDataServiceImpl } from './implementations/MasterDataServiceImpl';
 
 const getMasterDataService = (): IMasterDataService => {
     if (USE_MOCK) {
-        console.log('🔧 [MasterData Service] Using Mock Implementation');
+
         return new MockMasterDataService();
     }
-    console.log('🔧 [MasterData Service] Using Real API Implementation');
+
     return new MasterDataServiceImpl();
 };
 

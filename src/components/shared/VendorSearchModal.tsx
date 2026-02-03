@@ -341,7 +341,7 @@ export const VendorSearchModal: React.FC<VendorSearchModalProps> = ({ isOpen, on
             setIsLoading(true);
             try {
                 // Try getting from service first
-                const response = await vendorService.getList({ status: 'ACTIVE' });
+                const response = await vendorService.getList();
                 if (!isMounted) return;
 
                 if (response.data.length > 0) {

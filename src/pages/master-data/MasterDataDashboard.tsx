@@ -151,7 +151,7 @@ export default function MasterDataDashboard() {
         try {
             switch (activeTab) {
                 case 'vendor': {
-                    const response = await vendorService.getList({ page: 1, limit: 50 });
+                    const response = await vendorService.getList();
                     setVendors(response.data || []);
                     break;
                 }
@@ -190,7 +190,7 @@ export default function MasterDataDashboard() {
             try {
                 // Fetch all data in parallel for tab counts
                 const [vendorRes, branchRes, warehouseRes, costCenterRes, projectRes] = await Promise.all([
-                    vendorService.getList({ page: 1, limit: 50 }),
+                    vendorService.getList(),
                     masterDataService.getBranches(),
                     masterDataService.getWarehouses(),
                     // Items handled by useQuery

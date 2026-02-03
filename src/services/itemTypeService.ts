@@ -11,10 +11,10 @@ import { ItemTypeServiceImpl } from './implementations/ItemTypeServiceImpl';
 
 const getItemTypeService = (): IItemTypeService => {
   if (USE_MOCK) {
-    console.log('🔧 [ItemType Service] Using Mock Implementation');
+
     return new MockItemTypeService();
   }
-  console.log('🔧 [ItemType Service] Using Real API Implementation');
+
   return new ItemTypeServiceImpl();
 };
 

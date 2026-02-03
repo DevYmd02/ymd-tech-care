@@ -4,7 +4,7 @@ import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { logger } from '@utils/logger';
 import { ItemMasterService } from '@/services/ItemMasterService';
-import { ITEM_CATEGORIES, ITEM_UOMS } from '@/constants';
+import { ITEM_CATEGORIES, ITEM_UOMS, ITEM_TAX_CODES } from '@/constants';
 import { useConfirmation } from '@/hooks/useConfirmation';
 
 // Zod Schema for Item Master
@@ -28,7 +28,7 @@ export const itemMasterSchema = z.object({
     costing_method: z.string().optional().default(''),
     default_tax_code: z.string().optional().default('VAT7'),
     tax_rate: z.number().optional().default(7),
-    barcode: z.string().optional().default(''),
+    has_barcode: z.boolean().optional().default(false),
     is_active: z.boolean().default(true),
     is_on_hold: z.boolean().optional().default(false),
     nature_id: z.string().optional().default(''),
@@ -65,7 +65,7 @@ const initialFormData: ItemFormData = {
     costing_method: '',
     default_tax_code: 'VAT7',
     tax_rate: 7,
-    barcode: '',
+    has_barcode: false,
     is_active: true,
     is_on_hold: false,
     nature_id: '',
@@ -124,7 +124,7 @@ export function useItemForm(editId: string | null) {
                             good_color_id: '',
                             default_tax_code: 'VAT7',
                             tax_rate: 7,
-                            barcode: '',
+                            has_barcode: (existing as { has_barcode?: boolean }).has_barcode ?? false,
                             discount_amount: '',
                             is_buddy: false,
                             is_on_hold: false
@@ -141,7 +141,20 @@ export function useItemForm(editId: string | null) {
     }, [editId]);
 
     const handleInputChange: ItemFormChangeHandler = useCallback((field, value) => {
-        setFormData(prev => ({ ...prev, [field]: value }));
+        setFormData(prev => {
+            const updates: Partial<ItemFormData> = { [field]: value };
+
+            // Auto-sync Tax Rate when Tax Type changes
+            if (field === 'default_tax_code' && typeof value === 'string') {
+                const selectedTax = ITEM_TAX_CODES.find(t => t.code === value);
+                if (selectedTax) {
+                    updates.tax_rate = selectedTax.rate;
+                }
+            }
+
+            return { ...prev, ...updates };
+        });
+        
         // Clear error when user starts typing
         if (errors[field]) {
             setErrors(prev => {

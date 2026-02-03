@@ -58,15 +58,49 @@ export default function VendorList() {
         refetch 
     } = useQuery({
         queryKey: ['vendors', queryParams],
-        queryFn: () => vendorService.getList(queryParams),
+        queryFn: () => vendorService.getList(),
         placeholderData: keepPreviousData,
         staleTime: 1000 * 60 * 5, // 5 minutes cache
     });
 
-    const vendors = data?.data || [];
-    const totalItems = data?.total || 0;
+    const allVendors = data?.data || [];
+
+
+    // ==================== LOCAL FILTERING & PAGINATION ====================
+    const filteredVendors = allVendors.filter(v => {
+        // Search
+        if (searchTerm) {
+            const term = searchTerm.toLowerCase();
+            const matchesSearch = 
+                v.vendor_code.toLowerCase().includes(term) ||
+                v.vendor_name.toLowerCase().includes(term) ||
+                (v.tax_id && v.tax_id.toLowerCase().includes(term));
+            
+            if (!matchesSearch) return false;
+        }
+
+        // Status
+        if (statusFilter !== 'ALL') {
+             if (v.status !== statusFilter) return false;
+        }
+
+        return true;
+    });
+
+    const vendors = filteredVendors.slice(
+        (currentPage - 1) * rowsPerPage,
+        currentPage * rowsPerPage
+    );
+    // Recalculate total items based on filter for correct pagination count?
+    // Actually the mock returns `total` for ALL items. 
+    // If we handle filtering locally, we should ignore server `total` if it's just total count.
+    // The previous implementation of `MockVendorService.getList` DID return filtered total.
+    // Now `getList` returns EVERYTHING. 
+    // So `data.total` is total of everything.
+    // We should use `filteredVendors.length` as total for pagination.
 
     // ==================== PAGINATION ====================
+    const totalItems = filteredVendors.length;
     const totalPages = Math.ceil(totalItems / rowsPerPage);
     const startIndex = (currentPage - 1) * rowsPerPage;
 

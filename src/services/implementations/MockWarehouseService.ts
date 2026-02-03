@@ -4,9 +4,9 @@
  */
 
 import type { IWarehouseService, WarehouseCreateRequest, WarehouseUpdateRequest } from '../interfaces/IWarehouseService';
-import { mockWarehouses } from '../../__mocks__/masterDataMocks';
-import type { WarehouseListItem } from '../../types/master-data-types';
-import { logger } from '../../utils/logger';
+import { mockWarehouses } from '@/__mocks__/masterDataMocks';
+import type { WarehouseListItem } from '@project-types/master-data-types';
+import { logger } from '@utils/logger';
 
 export class MockWarehouseService implements IWarehouseService {
   async getList(): Promise<WarehouseListItem[]> {

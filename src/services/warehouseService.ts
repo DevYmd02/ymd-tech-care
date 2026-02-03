@@ -11,10 +11,10 @@ import { WarehouseServiceImpl } from './implementations/WarehouseServiceImpl';
 
 const getWarehouseService = (): IWarehouseService => {
   if (USE_MOCK) {
-    console.log('🔧 [Warehouse Service] Using Mock Implementation');
+
     return new MockWarehouseService();
   }
-  console.log('🔧 [Warehouse Service] Using Real API Implementation');
+
   return new WarehouseServiceImpl();
 };
 
