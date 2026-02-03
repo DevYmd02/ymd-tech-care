@@ -114,7 +114,6 @@ export const sidebarMenuItems: MenuItem[] = [
         icon: ShoppingBag,
         subItems: [
             { id: 'proc-dashboard', label: 'Procurement Dashboard', path: '/procurement/dashboard' },
-            { id: 'vendor-master', label: 'Vendor Master (ทะเบียนเจ้าหนี้)', path: '/procurement/vendors' },
             { id: 'pr', label: 'รายการใบขอซื้อ (PR)', path: '/procurement/pr' },
             { id: 'rfq', label: 'รายการขอใบเสนอราคา (RFQ)', path: '/procurement/rfq' },
             { id: 'qt', label: 'รายการใบเสนอราคา (QT)', path: '/procurement/qt' },
@@ -261,7 +260,7 @@ export const sidebarMenuItems: MenuItem[] = [
         path: '/master-data',
         subItems: [
             { id: 'master-data-dashboard', label: 'Master Data Dashboard', path: '/master-data' },
-            { id: 'vendor-management', label: 'กำหนดรหัสเจ้าหนี้', path: '/master-data/vendor/form' },
+            { id: 'vendor-management', label: 'กำหนดรหัสเจ้าหนี้', path: '/master-data/vendor' },
             { id: 'branch-code', label: 'กำหนดรหัสสาขา', path: '/master-data/branch' },
             { id: 'warehouse-code', label: 'กำหนดรหัสคลังสินค้า', path: '/master-data/warehouse' },
             { id: 'product-category', label: 'กำหนดรหัสหมวดสินค้า', path: '/master-data/product-category' },

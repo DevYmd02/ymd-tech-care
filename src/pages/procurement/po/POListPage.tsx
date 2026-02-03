@@ -155,7 +155,7 @@ export default function POListPage() {
                     {info.getValue() || '-'}
                 </span>
             ),
-            size: 140,
+            size: 125,
             enableSorting: false,
         }),
         columnHelper.accessor('vendor_name', {
@@ -175,7 +175,7 @@ export default function POListPage() {
                     <POStatusBadge status={info.getValue()} className="whitespace-nowrap" />
                 </div>
             ),
-            size: 100,
+            size: 90,
             enableSorting: false,
         }),
         columnHelper.accessor('item_count', {
@@ -185,7 +185,7 @@ export default function POListPage() {
                     {info.getValue()}
                 </div>
             ),
-            size: 100,
+            size: 80,
             enableSorting: false,
         }),
         columnHelper.accessor('total_amount', {
@@ -203,7 +203,7 @@ export default function POListPage() {
                      </div>
                  );
             },
-            size: 140,
+            size: 130,
             enableSorting: true,
         }),
         columnHelper.display({
@@ -268,7 +268,7 @@ export default function POListPage() {
                     </div>
                 );
             },
-            size: 160,
+            size: 150,
             enableSorting: false,
         }),
     ], [columnHelper, filters.page, filters.limit, data?.data]);

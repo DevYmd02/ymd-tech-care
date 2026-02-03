@@ -21,7 +21,7 @@ import { logger } from '../../utils/logger';
 const ENDPOINTS = {
   branches: '/org-branches',
   warehouses: '/warehouses',
-  items: '/items',
+  items: '/item-master',
   units: '/units',
   costCenters: '/cost-centers',
   projects: '/projects',

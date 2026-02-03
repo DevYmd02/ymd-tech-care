@@ -27,16 +27,16 @@ export const itemMasterSchema = z.object({
     item_type_code: z.string().optional().default(''),
     costing_method: z.string().optional().default(''),
     default_tax_code: z.string().optional().default('VAT7'),
-    tax_rate: z.number().optional().default(7),
-    has_barcode: z.boolean().optional().default(false),
-    is_active: z.boolean().default(true),
-    is_on_hold: z.boolean().optional().default(false),
+    tax_rate: z.preprocess((val) => (val === "" ? 7 : Number(val)), z.number().optional().default(7)),
+    has_barcode: z.preprocess((val) => (val === "" ? false : val), z.boolean().optional().default(false)),
+    is_active: z.preprocess((val) => (val === "" ? true : val), z.boolean().default(true)),
+    is_on_hold: z.preprocess((val) => (val === "" ? false : val), z.boolean().optional().default(false)),
     nature_id: z.string().optional().default(''),
     product_subtype_id: z.string().optional().default(''),
     commission_type: z.string().optional().default(''),
-    std_amount: z.number().optional().default(0),
+    std_amount: z.preprocess((val) => (val === "" ? 0 : Number(val)), z.number().optional().default(0)),
     discount_amount: z.string().optional().default(''),
-    is_buddy: z.boolean().optional().default(false),
+    is_buddy: z.preprocess((val) => (val === "" ? false : val), z.boolean().optional().default(false)),
 });
 
 // Derived Type using z.infer

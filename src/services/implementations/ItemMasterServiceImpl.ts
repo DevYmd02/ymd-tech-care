@@ -4,27 +4,27 @@ import api from '../api';
 
 export class ItemMasterServiceImpl implements IItemMasterService {
     async getAll(): Promise<ItemMaster[]> {
-        const response = await api.get<ItemMaster[]>('/items');
+        const response = await api.get<ItemMaster[]>('/item-master');
         return response.data;
     }
 
     async getById(id: string): Promise<ItemMaster | undefined> {
-        const response = await api.get<ItemMaster>(`/items/${id}`);
+        const response = await api.get<ItemMaster>(`/item-master/${id}`);
         return response.data;
     }
 
     async create(data: ItemMasterFormData): Promise<ItemMaster> {
-        const response = await api.post<ItemMaster>('/items', data);
+        const response = await api.post<ItemMaster>('/item-master', data);
         return response.data;
     }
 
     async update(id: string, data: ItemMasterFormData): Promise<ItemMaster | null> {
-        const response = await api.put<ItemMaster>(`/items/${id}`, data);
+        const response = await api.put<ItemMaster>(`/item-master/${id}`, data);
         return response.data;
     }
 
     async delete(id: string): Promise<boolean> {
-        await api.delete(`/items/${id}`);
+        await api.delete(`/item-master/${id}`);
         return true;
     }
 }

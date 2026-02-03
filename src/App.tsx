@@ -140,7 +140,6 @@ function App() {
             <Route path="qt" element={<QTListPage />} />
             <Route path="qc" element={<QCListPage />} />
             <Route path="po" element={<POListPage />} />
-            <Route path="vendors" element={<VendorList />} />
             <Route path="grn" element={<GRNListPage />} />
             <Route path="grn-coming-soon" element={<GoodsReceiptNoteListPage />} /> {/* Keep old GRN route as coming soon */}
             <Route path="prt" element={<PurchaseReturnListPage />} />

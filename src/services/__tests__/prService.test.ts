@@ -74,13 +74,20 @@ describe('prService', () => {
 
   describe('create', () => {
     it('should create PR and return it', async () => {
-      const newPR = { pr_no: 'PR-002', requester_name: 'Test' };
-      const mockCreated = { pr_id: '2', ...newPR };
+      const newPR = { 
+        pr_date: '2023-01-01', 
+        requester_name: 'Test',
+        items: [] 
+      };
+      const mockCreated = { pr_id: '2', pr_no: 'PR-002', ...newPR };
       vi.mocked(api.post).mockResolvedValueOnce({ data: mockCreated });
 
-      const result = await prService.create(newPR as Parameters<typeof prService.create>[0]);
+      const result = await prService.create(newPR);
 
-      expect(api.post).toHaveBeenCalledWith('/pr', newPR);
+      expect(api.post).toHaveBeenCalledWith('/pr', expect.objectContaining({
+        requester_name: 'Test',
+        request_date: '2023-01-01'
+      }));
       expect(result?.pr_id).toBe('2');
     });
 
