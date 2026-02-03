@@ -110,7 +110,7 @@ export default function VendorList() {
     };
 
     const handleEdit = (vendorId: string) => {
-        navigate(`/master-data/vendor?id=${vendorId}`);
+        navigate(`/master-data/vendor/form?id=${vendorId}`);
     };
 
     const handleDelete = async (vendorId: string) => {

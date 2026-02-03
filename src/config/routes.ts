@@ -24,6 +24,7 @@ export const implementedRoutes = {
         dashboard: '/procurement/dashboard',
         pr: '/procurement/pr',
         rfq: '/procurement/rfq',
+        vendors: '/procurement/vendors',
     },
     roles: {
         dashboard: '/roles/dashboard',
