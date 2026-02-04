@@ -11,7 +11,9 @@
 
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ChevronRight, ChevronDown } from 'lucide-react';
+import {
+    ChevronDown,
+} from 'lucide-react';
 import { sidebarMenuItems } from '../config/navigation.config';
 import type { MenuItem, SubMenuItem } from '../config/navigation.config';
 
@@ -43,13 +45,113 @@ export default function Sidebar({ isOpen }: SidebarProps) {
     };
 
     /**
-     * ตรวจสอบว่ามีเมนูย่อยใดกำลัง active หรือไม่
-     * @param subItems - รายการเมนูย่อย
-     * @returns true ถ้ามี subItem ที่ตรงกับ current path
+     * Check if any child is active (Recursive)
      */
-    const isActiveSubItem = (subItems?: SubMenuItem[]) => {
-        if (!subItems) return false;
-        return subItems.some(sub => location.pathname === sub.path);
+    const isChildActive = (item: MenuItem | SubMenuItem): boolean => {
+        if (item.path === location.pathname) return true;
+        if (item.subItems && item.subItems.length > 0) {
+            return item.subItems.some(sub => isChildActive(sub));
+        }
+        return false;
+    };
+
+    /**
+     * Render Menu Item (Recursive)
+     */
+    /**
+     * Render Menu Item (Recursive)
+     */
+    const renderMenuItem = (item: MenuItem | SubMenuItem, depth: number = 0) => {
+        const hasSubItems = item.subItems && item.subItems.length > 0;
+        const isExpanded = expandedMenus.includes(item.id);
+        const isActive = isChildActive(item);
+        const isCurrentPage = item.path === location.pathname;
+        
+        // Parse Label for Badges
+        const isComingSoon = item.label.includes('(Coming Soon)');
+        const displayLabel = item.label.replace('(Coming Soon)', '').trim();
+
+        return (
+            <div key={item.id} className="mb-0.5">
+                {/* ---------- MENU HEADER ---------- */}
+                {hasSubItems ? (
+                    // Menu with Subitems
+                    <div
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            toggleMenu(item.id);
+                        }}
+                        title={item.label}
+                        className={`
+                            w-full flex items-center justify-between ${depth > 0 ? 'py-1.5 px-3 text-xs font-normal' : 'py-2.5 px-4 text-xs font-medium'} cursor-pointer transition-colors select-none
+                            ${isActive
+                                ? 'text-blue-600 dark:text-blue-400'
+                                : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                            }
+                        `}
+                    >
+                        <div className="flex items-center space-x-2 min-w-0 flex-1 overflow-hidden">
+                            {/* Icon (Only for Top Level) */}
+                            {item.icon && (
+                                <div className={`flex-shrink-0 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-300'}`}>
+                                    <item.icon size={18} />
+                                </div>
+                            )}
+                            
+                            <span className="truncate flex-1 leading-snug">{displayLabel}</span>
+                            {isComingSoon && (
+                                <span className="flex-shrink-0 px-1.5 py-0.5 text-[9px] font-medium bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400 rounded border border-gray-200 dark:border-gray-600">
+                                    SOON
+                                </span>
+                            )}
+                        </div>
+                        <ChevronDown
+                            size={14}
+                            className={`flex-shrink-0 text-gray-400 dark:text-gray-300 transition-transform duration-200 ml-1 ${isExpanded ? 'rotate-0' : '-rotate-90'}`}
+                        />
+                    </div>
+                ) : (
+                    // Leaf Node (Link)
+                    <Link
+                        to={item.path || '#'}
+                        title={item.label}
+                        className={`
+                            flex items-center justify-between ${depth > 0 ? 'py-1.5 px-3 text-xs font-normal' : 'py-2.5 px-4 text-xs font-medium'} cursor-pointer transition-colors
+                            ${isCurrentPage
+                                ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-r-3 border-blue-600'
+                                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
+                            }
+                        `}
+                    >
+                        <div className="flex items-center space-x-2 min-w-0 flex-1 overflow-hidden">
+                           {item.icon && (
+                                <div className={`flex-shrink-0 ${isCurrentPage ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-300'}`}>
+                                    <item.icon size={18} />
+                                </div>
+                            )}
+                            <span className="truncate flex-1 leading-snug">{displayLabel}</span>
+                            {isComingSoon && (
+                                <span className="flex-shrink-0 px-1.5 py-0.5 text-[9px] font-medium bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400 rounded border border-gray-200 dark:border-gray-600">
+                                    SOON
+                                </span>
+                            )}
+                        </div>
+                    </Link>
+                )}
+
+                {/* ---------- SUBMENU ITEMS (Recursive) ---------- */}
+                {hasSubItems && (
+                    <div
+                        className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}
+                    >
+                         {/* Tree View Line: Left Border + Margin */}
+                        <div className="ml-6 border-l border-gray-300 dark:border-gray-600 my-1 pl-1"> 
+                            {item.subItems?.map((subItem) => renderMenuItem(subItem, depth + 1))}
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
     };
 
     return (
@@ -74,139 +176,8 @@ export default function Sidebar({ isOpen }: SidebarProps) {
             </div>
 
             {/* ==================== MENU ITEMS ==================== */}
-            <div className="flex-1 overflow-y-auto py-2">
-                {sidebarMenuItems.map((item: MenuItem) => {
-                    // ตรวจสอบสถานะต่างๆ ของเมนู
-                    const hasSubItems = item.subItems && item.subItems.length > 0;
-                    const isExpanded = expandedMenus.includes(item.id);
-                    const isActive = hasSubItems
-                        ? isActiveSubItem(item.subItems)              // เช็คจาก subItems
-                        : location.pathname === item.path;  // เช็คจาก path ตรง
-
-                    return (
-                        <div key={item.id} className="mb-0.5">
-                            {/* ---------- MENU HEADER ---------- */}
-                            {hasSubItems ? (
-                                // เมนูที่มี submenu
-                                item.path ? (
-                                    // มีทั้ง path และ subItems -> navigate และ expand ด้วย
-                                    <Link
-                                        to={item.path}
-                                        onClick={() => {
-                                            toggleMenu(item.id);
-                                        }}
-                                        className={`
-                                            w-full flex items-center justify-between px-4 py-2.5 text-sm cursor-pointer transition-colors
-                                            ${isActive
-                                                ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
-                                                : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
-                                            }
-                                        `}
-                                    >
-                                        <div className="flex items-center space-x-3 min-w-0 flex-1">
-                                            {/* Icon */}
-                                            <div className={`flex-shrink-0 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-300'}`}>
-                                                <item.icon size={16} />
-                                            </div>
-                                            {/* Label */}
-                                            <span className="text-xs font-semibold truncate">{item.label}</span>
-                                        </div>
-                                        {/* Chevron Icon - หมุนเมื่อเปิด/ปิด */}
-                                        <ChevronDown
-                                            size={14}
-                                            className={`flex-shrink-0 text-gray-400 dark:text-gray-300 transition-transform duration-200 ${isExpanded ? 'rotate-0' : '-rotate-90'}`}
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                                toggleMenu(item.id);
-                                            }}
-                                        />
-                                    </Link>
-                                ) : (
-                                    // มีแค่ subItems ไม่มี path -> ใช้ button เพื่อเปิด/ปิด
-                                    <button
-                                        onClick={() => toggleMenu(item.id)}
-                                        className={`
-                                            w-full flex items-center justify-between px-4 py-2.5 text-sm cursor-pointer transition-colors
-                                            ${isActive
-                                                ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
-                                                : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
-                                            }
-                                        `}
-                                        aria-label={`Toggle ${item.label} submenu`}
-                                    >
-                                        <div className="flex items-center space-x-3 min-w-0 flex-1">
-                                            {/* Icon */}
-                                            <div className={`flex-shrink-0 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-300'}`}>
-                                                <item.icon size={16} />
-                                            </div>
-                                            {/* Label */}
-                                            <span className="text-xs font-semibold truncate">{item.label}</span>
-                                        </div>
-                                        {/* Chevron Icon - หมุนเมื่อเปิด/ปิด */}
-                                        <ChevronDown
-                                            size={14}
-                                            className={`flex-shrink-0 text-gray-400 dark:text-gray-300 transition-transform duration-200 ${isExpanded ? 'rotate-0' : '-rotate-90'}`}
-                                        />
-                                    </button>
-                                )
-                            ) : (
-                                // เมนูที่ไม่มี submenu -> ใช้ Link ไปหน้าอื่น
-                                <Link
-                                    to={item.path || '#'}
-                                    className={`
-                    flex items-center justify-between px-4 py-2.5 text-sm cursor-pointer transition-colors
-                    ${isActive
-                                            ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-r-3 border-blue-600'
-                                            : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
-                                        }
-                  `}
-                                >
-                                    <div className="flex items-center space-x-3 min-w-0 flex-1">
-                                        <div className={`flex-shrink-0 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-300'}`}>
-                                            <item.icon size={16} />
-                                        </div>
-                                        <span className="text-xs font-semibold truncate">{item.label}</span>
-                                    </div>
-                                    <ChevronRight size={14} className="flex-shrink-0 text-gray-400 dark:text-gray-300" />
-                                </Link>
-                            )}
-
-                            {/* ---------- SUBMENU ITEMS ---------- */}
-                            {hasSubItems && (
-                                // Collapsible container with animation
-                                <div
-                                    className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'
-                                        }`}
-                                >
-                                    {/* Submenu container with left border */}
-                                    <div className="ml-6 border-l-2 border-blue-300 dark:border-blue-500">
-                                        {item.subItems?.map((subItem) => {
-                                            const isSubActive = location.pathname === subItem.path;
-                                            return (
-                                                <Link
-                                                    key={subItem.id}
-                                                    to={subItem.path}
-                                                    className={`
-                              flex items-center pl-6 pr-4 py-2 text-xs cursor-pointer transition-colors
-                              ${isSubActive
-                                                            ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-medium'
-                                                            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                                                        }
-                            `}
-                                                >
-                                                    {/* Bullet point - จุดหน้าเมนูย่อย */}
-                                                    <span className="w-1 h-1 bg-current rounded-full mr-2 flex-shrink-0"></span>
-                                                    <span className="truncate">{subItem.label}</span>
-                                                </Link>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    );
-                })}
+            <div className="flex-1 overflow-y-auto py-2 custom-scrollbar">
+                {sidebarMenuItems.map((item) => renderMenuItem(item, 0))}
             </div>
 
             {/* ==================== USER PROFILE SECTION ==================== */}

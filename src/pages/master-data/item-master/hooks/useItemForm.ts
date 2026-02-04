@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
-import Swal from 'sweetalert2';
+
 import { logger } from '@utils/logger';
 import { ItemMasterService } from '@/services/inventory/item-master.service';
 import { ITEM_CATEGORIES, ITEM_UOMS, ITEM_TAX_CODES } from '@/constants';
@@ -213,26 +213,25 @@ export function useItemForm(editId: string | null) {
                 await ItemMasterService.create(formData);
             }
             
-            await Swal.fire({
-                icon: 'success',
+            await confirm({
                 title: 'บันทึกสำเร็จ!',
-                text: 'ระบบได้ทำการบันทึกข้อมูลเรียบร้อยแล้ว',
-                timer: 1500,
-                showConfirmButton: false,
-                background: '#1f2937',
-                color: '#ffffff'
+                description: 'ระบบได้ทำการบันทึกข้อมูลเรียบร้อยแล้ว',
+                confirmText: 'ตกลง',
+                variant: 'success',
+                hideCancel: true
             });
             
             navigate('/master-data?tab=item');
-        } catch (error) {
+        } catch (error: unknown) {
             logger.error('Save item error:', error);
             setSaveError('เกิดข้อผิดพลาดในการบันทึก');
-            Swal.fire({
-                icon: 'error',
+            
+            await confirm({
                 title: 'เกิดข้อผิดพลาด',
-                text: 'ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง',
-                background: '#1f2937',
-                color: '#ffffff'
+                description: 'ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง',
+                confirmText: 'ตกลง',
+                variant: 'danger',
+                hideCancel: true
             });
         } finally {
             setIsSaving(false);

@@ -30,7 +30,9 @@ import type { LucideIcon } from 'lucide-react';
 export interface SubMenuItem {
     id: string;
     label: string;
-    path: string;
+    path?: string;
+    icon?: LucideIcon;
+    subItems?: SubMenuItem[];
 }
 
 export interface MenuItem {
@@ -260,15 +262,36 @@ export const sidebarMenuItems: MenuItem[] = [
         path: '/master-data',
         subItems: [
             { id: 'master-data-dashboard', label: 'Master Data Dashboard', path: '/master-data' },
-            { id: 'vendor-management', label: 'กำหนดรหัสเจ้าหนี้', path: '/master-data/vendor' },
-            { id: 'branch-code', label: 'กำหนดรหัสสาขา', path: '/master-data/branch' },
-            { id: 'warehouse-code', label: 'กำหนดรหัสคลังสินค้า', path: '/master-data/warehouse' },
-            { id: 'product-category', label: 'กำหนดรหัสหมวดสินค้า', path: '/master-data/product-category' },
-            { id: 'item-type', label: 'กำหนดรหัสประเภทสินค้า', path: '/master-data/item-type' },
-            { id: 'unit', label: 'กำหนดรหัสหน่วยนับ', path: '/master-data/unit' },
-            { id: 'item-master', label: 'กำหนดรหัสสินค้าและบริการ', path: '/master-data/item' },
-            { id: 'uom-conversion', label: 'แปลงหน่วย (หลายหน่วยนับ)', path: '/master-data/uom-conversion' },
-            { id: 'item-barcode', label: 'บาร์โค้ดหลายรายการ/หลายหน่วย', path: '/master-data/item-barcode' },
+            {
+                id: 'master-data-company',
+                label: 'Master Data Company',
+                subItems: [
+                    { id: 'branch-code', label: 'กำหนดรหัสสาขา', path: '/master-data/branch' },
+                    { id: 'warehouse-code', label: 'กำหนดรหัสคลังสินค้า', path: '/master-data/warehouse' },
+                    { id: 'company-placeholder-1', label: 'Company Structure (Coming Soon)', path: '/coming-soon' },
+                ]
+            },
+            {
+                id: 'master-data-vendor',
+                label: 'Master Data เจ้าหนี้',
+                subItems: [
+                    { id: 'vendor-management', label: 'กำหนดรหัสเจ้าหนี้', path: '/master-data/vendor' },
+                    { id: 'vendor-placeholder-1', label: 'Vendor Settings (Coming Soon)', path: '/coming-soon' },
+                ]
+            },
+            {
+                id: 'master-data-inventory',
+                label: 'Master Data คลังสินค้า',
+                subItems: [
+                    { id: 'product-category', label: 'กำหนดรหัสหมวดสินค้า', path: '/master-data/product-category' },
+                    { id: 'item-type', label: 'กำหนดรหัสประเภทสินค้า', path: '/master-data/item-type' },
+                    { id: 'unit', label: 'กำหนดรหัสหน่วยนับ', path: '/master-data/unit' },
+                    { id: 'item-master', label: 'กำหนดรหัสสินค้าและบริการ', path: '/master-data/item' },
+                    { id: 'uom-conversion', label: 'แปลงหน่วย (หลายหน่วยนับ)', path: '/master-data/uom-conversion' },
+                    { id: 'item-barcode', label: 'บาร์โค้ดหลายรายการ/หลายหน่วย', path: '/master-data/item-barcode' },
+                    { id: 'inventory-placeholder-1', label: 'Inventory Settings (Coming Soon)', path: '/coming-soon' },
+                ]
+            },
         ]
     },
 ];

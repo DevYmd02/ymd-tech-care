@@ -166,20 +166,12 @@ export default function QCListPage() {
             enableSorting: false,
         }),
         columnHelper.accessor('lowest_bid_amount', {
-            header: () => <div className="text-center w-full">ราคาต่ำสุด (บาท)</div>,
+            header: () => <div className="text-right w-full">ราคาต่ำสุด (บาท)</div>,
             cell: (info) => (
-                <div className="font-semibold text-gray-800 dark:text-gray-200 text-center whitespace-nowrap">
+                <div className="font-semibold text-gray-800 dark:text-gray-200 text-right whitespace-nowrap">
                     {info.getValue()?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </div>
             ),
-            footer: () => {
-                 const total = data?.data.reduce((sum, item) => sum + (item.lowest_bid_amount || 0), 0) || 0;
-                 return (
-                     <div className="text-center font-bold text-base text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
-                         {total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                     </div>
-                 );
-            },
             size: 120, // Reduced from 140
             enableSorting: true,
         }),
@@ -214,6 +206,14 @@ export default function QCListPage() {
                         </button>
                     </div>
                 );
+            },
+            footer: () => {
+                 const total = data?.data.reduce((sum, item) => sum + (item.lowest_bid_amount || 0), 0) || 0;
+                 return (
+                     <div className="text-right font-bold text-base text-emerald-600 dark:text-emerald-400 whitespace-nowrap pr-2">
+                         {total.toLocaleString('en-US', { minimumFractionDigits: 2 })} บาท
+                     </div>
+                 );
             },
             size: 130, // Optimized for text button
             enableSorting: false,

@@ -12,11 +12,13 @@ import { FileText, Plus, Trash2, Search, Eraser, FileBox, MoreHorizontal, Flame,
 import { PRHeader } from './PRHeader';
 
 import { WindowFormLayout } from '@layout/WindowFormLayout';
+import { useConfirmation } from '@/hooks/useConfirmation';
 import { MasterDataService } from '@/services/core/master-data.service';
 import { PRService } from '@/services/procurement/pr.service';
 import type { ItemMaster, CostCenter, Project } from '@/types/master-data-types';
 import type { VendorMaster } from '@/types/vendor-types';
 import { SystemAlert } from '@ui/SystemAlert';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface Props {
   isOpen: boolean;
@@ -25,6 +27,7 @@ interface Props {
   onSuccess?: () => void;
 }
 
+// ... (Configuration Constants same as before) ...
 // ====================================================================================
 // CONFIGURATION CONSTANTS
 // ====================================================================================
@@ -47,7 +50,7 @@ interface ExtendedLine extends PRLineFormData {
 }
 
 const createEmptyLine = (): ExtendedLine => ({
-  item_id: '', item_code: '', item_name: '', item_description: '', quantity: 0, uom: '',
+  item_id: '', item_code: '', item_name: '', item_description: '', quantity: 0, uom: '', uom_id: undefined,
   est_unit_price: 0, est_amount: 0, needed_date: getTodayDate(), preferred_vendor_id: undefined, remark: '',
   warehouse: '', location: '', discount: 0,
 });
@@ -63,6 +66,7 @@ const getDefaultFormValues = (): PRFormData => ({
 export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess }) => {
   const isEditMode = !!id;
   const prevIsOpenRef = useRef(false);
+  const queryClient = useQueryClient();
   
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [alertState, setAlertState] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
@@ -198,8 +202,6 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
   };
 
   // Product Search
-
-
   const handleClearLines = () => {
     if (window.confirm("คุณต้องการล้างรายการสินค้าทั้งหมดใช่หรือไม่?")) {
         setLines(getInitialLines());
@@ -230,6 +232,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
           warehouse: product.warehouse || '', 
           location: product.location || '', 
           uom: product.unit_name || '',
+          uom_id: product.unit_id, // Map uom_id
           est_unit_price: product.standard_cost || 0,
           quantity: 1,
           est_amount: (product.standard_cost || 0) * 1,
@@ -246,6 +249,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
         newLine.warehouse = product.warehouse || '';
         newLine.location = product.location || '';
         newLine.uom = product.unit_name || '';
+        newLine.uom_id = product.unit_id; // Map uom_id
         newLine.est_unit_price = product.standard_cost || 0;
         newLine.est_amount = (product.standard_cost || 0) * 1;
         newLine.quantity = 1;
@@ -266,18 +270,31 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
     if (vendor) {
       setValue("preferred_vendor_id", vendor.vendor_id);
       setValue("vendor_name", vendor.vendor_name);
-      
-      // Update Credit Days from Vendor Master
       const terms = vendor.payment_term_days;
       setCreditDays(terms !== undefined ? terms : 30);
     } else {
       setValue("preferred_vendor_id", undefined);
       setValue("vendor_name", '');
-      
-      // Reset Credit Days to default
       setCreditDays(30);
     }
   };
+  const { confirm } = useConfirmation();
+  
+  // React Query Mutation
+  const createPRMutation = useMutation({
+    mutationFn: async (payload: CreatePRPayload) => {
+        const newPR = await PRService.create(payload);
+        if (!newPR?.pr_id) throw new Error("ไม่สามารถสร้างเอกสารได้");
+        
+        // Auto Submit
+        const submitResult = await PRService.submit(newPR.pr_id);
+        return { newPR, submitResult };
+    },
+    onSuccess: () => {
+        // Critical: Invalidate Query to Refresh List
+        queryClient.invalidateQueries({ queryKey: ['prs'] });
+    }
+  });
 
   const onSubmit: SubmitHandler<PRFormData> = async (data) => {
     // 1. Validation Logic
@@ -287,7 +304,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
     if (!data.purpose) { showAlert('กรุณาระบุวัตถุประสงค์'); return; }
     if (!shippingMethod) { showAlert('กรุณาเลือกประเภทการขนส่ง'); return; }
 
-    // Check for incomplete lines (has data but no item_code)
+    // Check for incomplete lines
     const incompleteLines = lines.filter(l => !l.item_code && (l.quantity > 0 || l.remark));
     if (incompleteLines.length > 0) {
       showAlert('กรุณาเลือกรายการสินค้าให้ครบทุกแถวที่มีข้อมูล');
@@ -300,80 +317,143 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
       return;
     }
 
-    // 2. Confirmation Logic (After Validation)
-    if (!window.confirm(isEditMode ? "คุณต้องการบันทึกการแก้ไขเอกสารนี้ใช่หรือไม่?" : "คุณต้องการบันทึกสร้างเอกสารใหม่ใช่หรือไม่?")) return;
-    
-    // 3. Prepare Payload
-    // 3. Prepare Payload (Map to strict CreatePRPayload)
-    const payload: CreatePRPayload = { 
-        pr_date: data.request_date, // Map request_date -> pr_date
-        remark: remarks || data.purpose, // Map purpose/remarks
-        department_id: data.cost_center_id, // Map cost_center -> department
-        project_id: data.project_id,
-        requester_name: requesterName,
-        required_date: data.required_date,
-        
-        // Items
-        items: activeLines.map(line => ({
-           item_id: line.item_id,
-           item_code: line.item_code,
-           item_name: line.item_name,
-           qty: line.quantity,
-           uom: line.uom,
-           price: line.est_unit_price,
-           needed_date: line.needed_date,
-           remark: line.remark
-        })),
+    // 2. Confirmation Logic (Shared System)
+    const isConfirmed = await confirm({
+        title: isEditMode ? 'ยืนยันการแก้ไข' : 'ยืนยันการบันทึก',
+        description: isEditMode ? 'คุณต้องการบันทึกการแก้ไขเอกสารใบขอซื้อใช่หรือไม่?' : 'คุณต้องการบันทึกเอกสารใบขอซื้อใช่หรือไม่?',
+        confirmText: isEditMode ? 'ยืนยันการแก้ไข' : 'ยืนยัน',
+        cancelText: 'ยกเลิก',
+        variant: 'info'
+    });
 
-        // Additional UI fields
-        delivery_date: deliveryDate,
-        credit_days: creditDays,
-        vendor_quote_no: vendorQuoteNo,
-        shipping_method: shippingMethod,
-        preferred_vendor_id: data.preferred_vendor_id,
-        vendor_name: data.vendor_name
-    };
+    if (!isConfirmed) return;
 
+    // 3. Prepare Payload & Execute
+    await handleSaveData(data, activeLines);
+  };
+
+  const handleSaveData = async (data: PRFormData, activeLines: ExtendedLine[]) => {
+    setIsActionLoading(true);
     try {
-        // 2. Create PR
-        const newPR = await PRService.create(payload);
-        if (newPR?.pr_id) {
-            // 3. Auto Submit for Testing
-            const submitResult = await PRService.submit(newPR.pr_id);
-            if (submitResult.success) {
-                window.alert(`บันทึกและส่งอนุมัติสำเร็จ!\nเลขที่: ${newPR.pr_no}\nสถานะ: รออนุมัติ (In Approval)`);
-                onSuccess?.();
-                onClose();
-            } else {
-                window.alert(`บันทึกสำเร็จแต่ส่งอนุมัติไม่ผ่าน: ${submitResult.message}`);
-                onSuccess?.();
-                onClose();
-            }
+        const payload: CreatePRPayload = { 
+            pr_date: data.request_date,
+            remark: remarks || data.purpose,
+            department_id: data.cost_center_id,
+            project_id: data.project_id,
+            requester_name: requesterName,
+            required_date: data.required_date,
+            items: activeLines.map(line => ({
+               item_id: line.item_id,
+               item_code: line.item_code,
+               item_name: line.item_name,
+               qty: line.quantity,
+               uom: line.uom,
+               uom_id: line.uom_id,
+               price: line.est_unit_price,
+               needed_date: line.needed_date,
+               remark: line.remark
+            })),
+            delivery_date: deliveryDate,
+            credit_days: creditDays,
+            payment_term_days: creditDays,
+            vendor_quote_no: vendorQuoteNo,
+            shipping_method: shippingMethod,
+            preferred_vendor_id: data.preferred_vendor_id,
+            vendor_name: data.vendor_name,
+            requester_user_id: 1, 
+            branch_id: 1,         
+            warehouse_id: 1       
+        };
+    
+        // Use Mutation
+        const { newPR, submitResult } = await createPRMutation.mutateAsync(payload);
+
+        if (submitResult.success) {
+            // Success Feedback (Shared System)
+            await confirm({
+                title: 'บันทึกสำเร็จ!',
+                description: `เลขที่เอกสาร: ${newPR.pr_no}\nสถานะ: รออนุมัติ (In Approval)`,
+                confirmText: 'ตกลง',
+                hideCancel: true,
+                variant: 'success'
+            });
+            onSuccess?.();
+            onClose();
         } else {
-            showAlert('เกิดข้อผิดพลาดในการสร้างเอกสาร');
+            await confirm({
+                title: 'บันทึกสำเร็จแต่ส่งอนุมัติไม่ผ่าน',
+                description: submitResult.message,
+                confirmText: 'ตกลง',
+                hideCancel: true,
+                variant: 'warning'
+            });
+            onSuccess?.();
+            onClose();
         }
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('Create PR failed', error);
-        showAlert('เกิดข้อผิดพลาดในการเชื่อมต่อระบบ');
+        
+        let errorMessage = 'เกิดข้อผิดพลาดในการเชื่อมต่อระบบ';
+        if (error instanceof Error) {
+            errorMessage = error.message;
+        } else if (typeof error === 'string') {
+            errorMessage = error;
+        }
+
+        await confirm({
+            title: 'เกิดข้อผิดพลาด',
+            description: errorMessage,
+            confirmText: 'ตกลง',
+            hideCancel: true,
+            variant: 'danger'
+        });
+    } finally {
+        setIsActionLoading(false);
     }
   };
 
   const handleDelete = async () => {
     if (!id) return;
-    if (!window.confirm("คุณต้องการลบเอกสารนี้ใช่หรือไม่? (Are you sure you want to delete this PR?)")) return;
+    
+    const isConfirmed = await confirm({
+        title: 'ยืนยันการลบ',
+        description: 'คุณต้องการลบเอกสารนี้ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้',
+        confirmText: 'ลบเอกสาร',
+        cancelText: 'ยกเลิก',
+        variant: 'danger'
+    });
+
+    if (!isConfirmed) return;
 
     setIsActionLoading(true);
     try {
       const success = await PRService.delete(id);
       if (success) {
+        await confirm({
+            title: 'ลบสำเร็จ',
+            description: 'เอกสารถูกลบเรียบร้อยแล้ว',
+            confirmText: 'ตกลง',
+            variant: 'success'
+        });
         onSuccess?.();
         onClose();
       } else {
-        showAlert("ลบเอกสารไม่สำเร็จ");
+        await confirm({
+            title: 'ลบไม่สำเร็จ',
+            description: 'ไม่สามารถลบเอกสารได้',
+            confirmText: 'ตกลง',
+            variant: 'danger'
+        });
       }
     } catch (error) {
       console.error(error);
-      showAlert("เกิดข้อผิดพลาดในการลบเอกสาร");
+      await confirm({
+        title: 'เกิดข้อผิดพลาด',
+        description: 'เกิดข้อผิดพลาดในการลบเอกสาร',
+        confirmText: 'ตกลง',
+        cancelText: 'ยกเลิก',
+        variant: 'danger'
+      });
     } finally {
       setIsActionLoading(false);
     }
@@ -391,17 +471,36 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
   const handleApprove = async () => {
     if (!id) return;
     
-    if (!window.confirm("คุณต้องการอนุมัติเอกสารนี้ใช่หรือไม่?")) return;
+    const isConfirmed = await confirm({
+        title: 'ยืนยันการอนุมัติ',
+        description: 'คุณต้องการอนุมัติเอกสารนี้ใช่หรือไม่?',
+        confirmText: 'อนุมัติ',
+        cancelText: 'ยกเลิก',
+        variant: 'success'
+    });
+
+    if (!isConfirmed) return;
     
     setIsActionLoading(true);
     try {
       const success = await PRService.approve(id);
       if (success) {
-        window.alert("อนุมัติเอกสารเรียบร้อยแล้ว");
+        await confirm({
+            title: 'อนุมัติสำเร็จ',
+            description: 'เอกสารได้รับการอนุมัติเรียบร้อยแล้ว',
+            confirmText: 'ตกลง',
+            variant: 'success'
+        });
         onSuccess?.(); // Trigger refresh in parent
         onClose();     // Close modal
       } else {
-        showAlert("ไม่อนุมัติเอกสารไม่สำเร็จ");
+        await confirm({
+            title: 'ไม่อนุมัติ',
+            description: 'ไม่สามารถอนุมัติเอกสารได้',
+            confirmText: 'ตกลง',
+            cancelText: 'ยกเลิก',
+            variant: 'danger'
+        });
       }
     } catch (error) {
       console.error('Approve PR failed', error);
@@ -585,7 +684,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                   <th className="px-2 py-1.5 text-left font-normal border-r border-blue-500 whitespace-nowrap w-24">เครดิต (วัน)</th>
                   <th className="px-2 py-1.5 text-left font-normal border-r border-blue-500 whitespace-nowrap">Vendor Quote No.</th>
                   <th className="px-2 py-1.5 text-left font-normal border-r border-blue-500 whitespace-nowrap">ขนส่งโดย <span className="text-red-300">*</span></th>
-                  <th className="px-2 py-1.5 text-left font-normal whitespace-nowrap">ผู้ขอซื้อ</th>
+                  <th className="px-2 py-1.5 text-left font-normal whitespace-nowrap">ผู้จัดทำ (Preparer)</th>
                 </tr>
               </thead>
               <tbody>
@@ -623,10 +722,11 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                     </select>
                   </td>
                   <td className="px-2 py-1 font-bold">
+                    {/* TODO: Bind to Auth User (Logged-in User) instead of selected requester */}
                     <input 
                       value={requesterName} 
                       readOnly
-                      title="ชื่อผู้ขอซื้อ (ดึงจากระบบอัตโนมัติ)"
+                      title="ผู้จัดทำเอกสาร (User/Creator)"
                       className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded-sm w-full h-6 text-xs focus:outline-none cursor-not-allowed" 
                     />
                   </td>

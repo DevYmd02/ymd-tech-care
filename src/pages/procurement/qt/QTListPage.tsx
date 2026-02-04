@@ -153,26 +153,12 @@ export default function QTListPage() {
             enableSorting: false,
         }),
         columnHelper.accessor('total_amount', {
-            header: () => <div className="text-right">ยอดรวม</div>,
-            cell: (info) => {
-                const item = info.row.original;
-                return (
-                    <div className="text-right">
-                        <div className="font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-                            {info.getValue().toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </div>
-                        <div className="text-[10px] text-gray-500 font-normal">{item.currency_code || 'THB'}</div>
-                    </div>
-                );
-            },
-            footer: () => {
-                 const total = data?.data.reduce((sum, item) => sum + item.total_amount, 0) || 0;
-                 return (
-                     <div className="text-right font-bold text-base text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-                         {total.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} THB
-                     </div>
-                 );
-            },
+            header: () => <div className="text-right">ยอดรวม (บาท)</div>,
+            cell: (info) => (
+                <div className="text-right font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                    {info.getValue().toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+            ),
             size: 90,
             enableSorting: true,
         }),
@@ -224,6 +210,14 @@ export default function QTListPage() {
                         )}
                     </div>
                 );
+            },
+            footer: () => {
+                 const total = data?.data.reduce((sum, item) => sum + item.total_amount, 0) || 0;
+                 return (
+                     <div className="text-right font-bold text-base text-emerald-600 dark:text-emerald-400 whitespace-nowrap pr-2">
+                         {total.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท
+                     </div>
+                 );
             },
             size: 165,
             enableSorting: false,

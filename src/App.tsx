@@ -61,6 +61,9 @@ const LoginPage = React.lazy(() => import('./pages/auth/LoginPage'));
 const RegisterPage = React.lazy(() => import('./pages/auth/RegisterPage'));
 const ForgotPasswordPage = React.lazy(() => import('./pages/auth/ForgotPasswordPage'));
 
+// Common Pages
+const ComingSoon = React.lazy(() => import('./pages/common/ComingSoon'));
+
 // ====================================================================================
 // PLACEHOLDER COMPONENT - For routes not yet implemented
 // ====================================================================================
@@ -164,6 +167,9 @@ function App() {
           <Route path="master-data/item" element={<ItemMasterForm />} />
           <Route path="master-data/uom-conversion" element={<UOMConversionForm />} />
           <Route path="master-data/item-barcode" element={<ItemBarcodeForm />} />
+          
+          {/* Generic Coming Soon for Work in Progress */}
+          <Route path="/coming-soon" element={<ComingSoon />} />
 
           {/* ==================== PLACEHOLDER ROUTES ==================== */}
           

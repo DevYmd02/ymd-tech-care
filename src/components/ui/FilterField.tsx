@@ -36,6 +36,8 @@ export interface FilterFieldProps {
     accentColor?: 'emerald' | 'blue' | 'purple' | 'teal' | 'indigo';
     /** Disabled state */
     disabled?: boolean;
+    /** Custom class name */
+    className?: string;
 }
 
 // ====================================================================================
@@ -63,8 +65,11 @@ export const FilterField: React.FC<FilterFieldProps> = ({
     options = [],
     accentColor = 'emerald',
     disabled = false,
+    className = '',
 }) => {
-    const inputClass = styles.input.replace('ring-blue-500', ringColors[accentColor]);
+    const baseInputClass = styles.input.replace('ring-blue-500', ringColors[accentColor]);
+    // Merge base class with custom class
+    const inputClass = `${baseInputClass} ${className} ${disabled ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''}`;
     const labelClass = styles.label;
 
     return (

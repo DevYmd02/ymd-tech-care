@@ -5,7 +5,7 @@
 
 import React from 'react';
 import type { UseFormRegister, UseFormSetValue, UseFormWatch } from 'react-hook-form';
-import { Search, Building2, FolderKanban, User } from 'lucide-react';
+import { Building2, FolderKanban, User } from 'lucide-react';
 import type { PRFormData } from '@project-types/pr-types';
 import type { CostCenter, Project } from '@project-types/master-data-types';
 import { VendorSearch } from '@shared/VendorSearch';
@@ -29,7 +29,6 @@ export const PRHeader: React.FC<Props> = ({ register, setValue, watch, costCente
   const inputClass = "h-8 w-full px-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white";
   const selectClass = "h-8 w-full px-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white";
   const labelClass = "block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1";
-  const searchButtonClass = "h-8 w-8 bg-blue-600 text-white rounded-r-md flex items-center justify-center hover:bg-blue-700 transition-colors border border-blue-600";
 
   return (
     <div className="p-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm font-sans">
@@ -53,10 +52,7 @@ export const PRHeader: React.FC<Props> = ({ register, setValue, watch, costCente
         {/* Row 1: เลขที่เอกสาร, วันที่ขอซื้อ, วันที่ต้องการใช้, สกุลเงิน */}
         <div className="col-span-12 md:col-span-3">
           <label className={labelClass}>เลขที่เอกสาร</label>
-          <div className="flex">
-            <input {...register("pr_no")} className={`${inputClass} bg-gray-100 rounded-r-none`} readOnly />
-            <button type="button" className={searchButtonClass}><Search size={14} /></button>
-          </div>
+          <input {...register("pr_no")} className={`${inputClass} bg-gray-100`} readOnly />
         </div>
 
         <div className="col-span-12 md:col-span-3">

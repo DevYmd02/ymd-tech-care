@@ -46,8 +46,6 @@ export function VendorFormModal(props: VendorFormModalProps) {
         isLoading,
         isSubmitting,
         headerTitle,
-        showConfirmModal,
-        setShowConfirmModal,
         handleChange,
         addBankAccount,
         removeBankAccount,
@@ -61,7 +59,6 @@ export function VendorFormModal(props: VendorFormModalProps) {
         handleSameAsRegisteredChange,
         handleCreditLimitChange,
         handleSubmit,
-        handleConfirmSave,
         systemAlert,
         setSystemAlert
     } = useVendorForm(props);
@@ -201,49 +198,6 @@ export function VendorFormModal(props: VendorFormModalProps) {
                 </div>
 
             </div>
-
-            {/* Confirmation Modal */}
-            {showConfirmModal && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="p-6 text-center">
-                            <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <Save size={24} />
-                            </div>
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
-                                {isEdit ? 'ยืนยันการแก้ไข' : 'ยืนยันการบันทึก'}
-                            </h3>
-                            <p className="text-gray-600 dark:text-gray-400 mb-6">
-                                {isEdit ? 'คุณต้องการบันทึกการแก้ไขข้อมูลเจ้าหนี้ใช่หรือไม่?' : 'คุณต้องการบันทึกข้อมูลเจ้าหนี้ใช่หรือไม่?'}
-                            </p>
-                            <div className="flex items-center gap-3 justify-center">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowConfirmModal(false)}
-                                    className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium transition-colors"
-                                >
-                                    ยกเลิก
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={handleConfirmSave}
-                                    disabled={isSubmitting}
-                                    className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-medium shadow-sm transition-colors flex items-center gap-2"
-                                >
-                                    {isSubmitting ? (
-                                        <>
-                                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                            กำลังบันทึก...
-                                        </>
-                                    ) : (
-                                        isEdit ? 'ยืนยันการแก้ไข' : 'ยืนยัน'
-                                    )}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

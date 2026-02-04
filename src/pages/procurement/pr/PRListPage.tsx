@@ -15,7 +15,7 @@ import { PRStatusBadge } from '@ui/StatusBadge';
 import { FilterField } from '@ui/FilterField';
 // import type { FilterFieldConfig } from '@shared/FilterFormBuilder';
 // import { useWindowManager } from '@hooks/useWindowManager';
-import { useTableFilters, type TableFilters } from '@hooks';
+import { useTableFilters, useDebounce, type TableFilters } from '@hooks';
 import RFQFormModal from '../rfq/components/RFQFormModal';
 import { PRFormModal } from './components/PRFormModal';
 import { formatThaiDate } from '@utils/dateUtils';
@@ -52,18 +52,38 @@ export default function PRListPage() {
     // URL-based Filter State
     const { filters, setFilters, resetFilters, handlePageChange } = useTableFilters<PRStatus>({
         defaultStatus: 'ALL',
+        customParamKeys: {
+            search: 'pr_no',
+            search2: 'requester_name',
+            search3: 'department'
+        }
     });
 
-    // Convert to API filter format
+//     // Convert to API filter format - REPLACED BY DEBOUNCED VERSION BELOW
+//     const apiFilters: PRListParams = {
+//         pr_no: filters.search || undefined,
+//         requester_name: filters.search2 || undefined,
+//         department: filters.search3 || undefined,
+//         status: filters.status === 'ALL' ? undefined : filters.status,
+//         date_from: filters.dateFrom || undefined,
+//         date_to: filters.dateTo || undefined,
+//         page: filters.page,
+//         limit: filters.limit
+//     };
+
+    // Debounce filters to prevent API flooding
+    const debouncedFilters = useDebounce(filters, 500);
+
+    // Convert to API filter format using DEBOUNCED values
     const apiFilters: PRListParams = {
-        pr_no: filters.search || undefined,
-        requester_name: filters.search2 || undefined,
-        department: filters.search3 || undefined,
-        status: filters.status === 'ALL' ? undefined : filters.status,
-        date_from: filters.dateFrom || undefined,
-        date_to: filters.dateTo || undefined,
-        page: filters.page,
-        limit: filters.limit
+        pr_no: debouncedFilters.search || undefined,
+        requester_name: debouncedFilters.search2 || undefined,
+        department: debouncedFilters.search3 || undefined,
+        status: debouncedFilters.status === 'ALL' ? undefined : debouncedFilters.status,
+        date_from: debouncedFilters.dateFrom || undefined,
+        date_to: debouncedFilters.dateTo || undefined,
+        page: debouncedFilters.page,
+        limit: debouncedFilters.limit
     };
 
     // Data Fetching with React Query
@@ -208,7 +228,7 @@ export default function PRListPage() {
             header: () => <div className="text-right w-full">ยอดรวม (บาท)</div>,
             cell: (info) => (
                 <div className="font-semibold text-gray-800 dark:text-gray-200 text-right whitespace-nowrap">
-                    {info.getValue().toLocaleString('en-US', { minimumFractionDigits: 2 })} บาท
+                    {info.getValue().toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </div>
             ),
             size: 130,
@@ -265,7 +285,7 @@ export default function PRListPage() {
             footer: () => {
                 const total = data?.data.reduce((sum, item) => sum + item.total_amount, 0) || 0;
                 return (
-                    <div className="text-right font-bold text-base text-blue-600 dark:text-blue-400 whitespace-nowrap pr-2">
+                    <div className="text-right font-bold text-base text-emerald-600 dark:text-emerald-400 whitespace-nowrap pr-2">
                         {total.toLocaleString('en-US', { minimumFractionDigits: 2 })} บาท
                     </div>
                 );
@@ -295,6 +315,8 @@ export default function PRListPage() {
                             onChange={(val: string) => handleFilterChange('search', val)}
                             placeholder="PR2024-xxx"
                             accentColor="blue"
+                            disabled={true}
+                            className="bg-gray-100 cursor-not-allowed text-gray-400"
                         />
                         <FilterField
                             label="ผู้ขอ"

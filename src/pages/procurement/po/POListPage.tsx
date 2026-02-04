@@ -135,7 +135,7 @@ export default function POListPage() {
                     {info.getValue()}
                 </span>
             ),
-            size: 140,
+            size: 130, // Optimized for balance
             enableSorting: true,
         }),
         columnHelper.accessor('po_date', {
@@ -151,20 +151,21 @@ export default function POListPage() {
         columnHelper.accessor('pr_no', {
             header: 'เลขที่ PR',
             cell: (info) => (
-                <span className="text-purple-600 dark:text-purple-400 hover:underline cursor-pointer" title={info.getValue() || ''}>
+                <span className="text-purple-600 dark:text-purple-400 hover:underline cursor-pointer whitespace-nowrap" title={info.getValue() || ''}>
                     {info.getValue() || '-'}
                 </span>
             ),
-            size: 125,
+            size: 130, // Reduced slightly but kept readable
             enableSorting: false,
         }),
         columnHelper.accessor('vendor_name', {
             header: 'ชื่อผู้ขาย',
             cell: (info) => (
-                <div className="font-semibold text-gray-800 dark:text-gray-200 text-left whitespace-nowrap" title={info.getValue() || '-'}>
+                <div className="font-semibold text-gray-800 dark:text-gray-200 text-left truncate max-w-[220px]" title={info.getValue() || '-'}>
                     {info.getValue() || '-'}
                 </div>
             ),
+            size: 250, // Reduced to balance with Actions column
             enableSorting: false,
         }),
         columnHelper.accessor(row => row.status, {
@@ -189,21 +190,13 @@ export default function POListPage() {
             enableSorting: false,
         }),
         columnHelper.accessor('total_amount', {
-            header: () => <div className="text-center w-full whitespace-nowrap">ยอดรวม (บาท)</div>,
+            header: () => <div className="text-right w-full whitespace-nowrap">ยอดรวม (บาท)</div>,
             cell: (info) => (
-                <div className="text-center font-bold text-gray-800 dark:text-white whitespace-nowrap">
+                <div className="text-right font-bold text-gray-800 dark:text-white whitespace-nowrap">
                     {info.getValue()?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </div>
             ),
-            footer: () => {
-                 const total = data?.data.reduce((sum, item) => sum + item.total_amount, 0) || 0;
-                 return (
-                     <div className="text-center font-bold text-base text-blue-600 dark:text-blue-400 whitespace-nowrap">
-                         {total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                     </div>
-                 );
-            },
-            size: 130,
+            size: 120,
             enableSorting: true,
         }),
         columnHelper.display({
@@ -248,7 +241,7 @@ export default function POListPage() {
                         {item.status === 'APPROVED' && (
                             <button 
                                 onClick={() => handleIssue(item.po_id)}
-                                className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1 transition-colors shadow-sm"
+                                className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1 transition-colors shadow-sm whitespace-nowrap"
                             >
                                 <CheckCircle size={14} />
                                 ออก PO
@@ -259,7 +252,7 @@ export default function POListPage() {
                         {item.status === 'ISSUED' && (
                             <button 
                                 onClick={() => handleGRN(item.po_id)}
-                                className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1 transition-colors shadow-sm"
+                                className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1 transition-colors shadow-sm whitespace-nowrap"
                             >
                                 <Package size={14} />
                                 เปิด GRN
@@ -268,7 +261,15 @@ export default function POListPage() {
                     </div>
                 );
             },
-            size: 150,
+            footer: () => {
+                 const total = data?.data.reduce((sum, item) => sum + item.total_amount, 0) || 0;
+                 return (
+                     <div className="text-right font-bold text-base text-emerald-600 dark:text-emerald-400 whitespace-nowrap pr-2">
+                         {total.toLocaleString('en-US', { minimumFractionDigits: 2 })} บาท
+                     </div>
+                 );
+            },
+            size: 160,
             enableSorting: false,
         }),
     ], [columnHelper, filters.page, filters.limit, data?.data]);

@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { VendorService } from '@/services/procurement/vendor.service';
+import { useConfirmation } from '@/hooks/useConfirmation';
+import { useQueryClient } from '@tanstack/react-query';
 import type { 
     VendorFormData,
     VendorBankAccount,
@@ -58,9 +60,11 @@ export function useVendorForm({
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [headerTitle, setHeaderTitle] = useState('เพิ่มเจ้าหนี้ใหม่');
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
-    const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [systemAlert, setSystemAlert] = useState<{ message: string; type: 'error' | 'success' } | null>(null);
     const prevIsOpenRef = useRef(isOpen);
+    
+    const { confirm } = useConfirmation(); // Shared System
+    const queryClient = useQueryClient();
 
     // Fetch/Reset data when modal opens
     useEffect(() => {
@@ -277,10 +281,10 @@ export function useVendorForm({
         });
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
-        // Perform Validation before showing confirmation
+        // Validation
         const result = vendorSchema.safeParse(formData);
         
         if (!result.success) {
@@ -298,13 +302,8 @@ export function useVendorForm({
             });
             setErrors(newErrors);
             
-            // Trigger System Alert for Feedback
-            setSystemAlert({
-                message: 'กรุณาตรวจสอบข้อมูลสีแดงในแบบฟอร์ม',
-                type: 'error'
-            });
+            setSystemAlert({ message: 'กรุณาตรวจสอบข้อมูลสีแดงในแบบฟอร์ม', type: 'error' });
             
-            // Scroll to the first error (using name selector with 100ms delay for reliability)
             setTimeout(() => {
                 const firstErrorKey = Object.keys(newErrors)[0];
                 if (firstErrorKey) {
@@ -315,41 +314,69 @@ export function useVendorForm({
                     }
                 }
             }, 100);
-            
             return;
         }
 
-        setErrors({}); // Clear errors if valid
-        setShowConfirmModal(true);
-    };
+        setErrors({});
 
-    const handleConfirmSave = async () => {
+        // Confirmation (Shared System)
+        const isConfirmed = await confirm({
+            title: headerTitle === 'แก้ไขข้อมูลเจ้าหนี้' ? 'ยืนยันการแก้ไข' : 'ยืนยันการบันทึก',
+            description: headerTitle === 'แก้ไขข้อมูลเจ้าหนี้' 
+                ? 'คุณต้องการบันทึกการแก้ไขข้อมูลเจ้าหนี้ใช่หรือไม่?' 
+                : 'คุณต้องการบันทึกข้อมูลเจ้าหนี้ใช่หรือไม่?',
+            confirmText: headerTitle === 'แก้ไขข้อมูลเจ้าหนี้' ? 'ยืนยันการแก้ไข' : 'ยืนยัน',
+            cancelText: 'ยกเลิก',
+            variant: 'info'
+        });
+
+        if (!isConfirmed) return;
+
+        // Save Logic
         setIsSubmitting(true);
         try {
             const request = toVendorCreateRequest(formData);
             const targetId = vendorId || initialData?.vendor_id;
 
+            let response;
             if (targetId) {
-                await VendorService.update(targetId, request);
+                response = await VendorService.update(targetId, request);
             } else {
-                await VendorService.create(request);
+                response = await VendorService.create(request);
             }
 
-            // Success Alert is handled by onSuccess or parent usually, but we can do it here too if we want a Toast.
-            // But usually we close the modal.
-            // For now, removing the invasive window.alert calls.
-            
-            onSuccess?.();
-            onClose();
-        } catch (error) {
+            if (response.success) {
+                await confirm({
+                    title: 'บันทึกสำเร็จ!',
+                    description: 'ข้อมูลเจ้าหนี้ถูกบันทึกเรียบร้อยแล้ว',
+                    confirmText: 'ตกลง',
+                    hideCancel: true,
+                    variant: 'success'
+                });
+                
+                // Refetch List
+                await queryClient.invalidateQueries({ queryKey: ['vendors'] });
+
+                onSuccess?.();
+                onClose();
+            } else {
+                throw new Error(response.message || 'บันทึกไม่สำเร็จ');
+            }
+
+        } catch (error: unknown) {
             console.error('Error saving vendor:', error);
-            setSystemAlert({
-                message: 'บันทึกข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง',
-                type: 'error'
+            let errorMessage = 'เกิดข้อผิดพลาดในการเชื่อมต่อระบบ';
+            if (error instanceof Error) errorMessage = error.message;
+            
+            await confirm({
+                title: 'บันทึกไม่สำเร็จ',
+                description: errorMessage,
+                confirmText: 'ตกลง',
+                hideCancel: true,
+                variant: 'danger'
             });
         } finally {
             setIsSubmitting(false);
-            setShowConfirmModal(false);
         }
     };
 
@@ -364,8 +391,6 @@ export function useVendorForm({
         isLoading,
         isSubmitting,
         headerTitle,
-        showConfirmModal,
-        setShowConfirmModal,
         systemAlert,
         setSystemAlert,
         handleChange,
@@ -380,7 +405,6 @@ export function useVendorForm({
         updateAddress,
         handleSameAsRegisteredChange,
         handleCreditLimitChange,
-        handleSubmit,
-        handleConfirmSave
+        handleSubmit
     };
 }

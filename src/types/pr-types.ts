@@ -145,6 +145,7 @@ export interface PRLineFormData {
   item_description?: string;
   quantity: number;
   uom: string;
+  uom_id?: string | number;
   est_unit_price: number;
   est_amount: number;
   needed_date: string;
@@ -223,6 +224,7 @@ export interface CreatePRLineItem {
     item_name: string;
     qty: number;
     uom: string;
+    uom_id?: string | number; // Added
     price: number;
     needed_date?: string;
     remark?: string;
@@ -230,16 +232,21 @@ export interface CreatePRLineItem {
 
 export interface CreatePRPayload {
     pr_date: string;
-    remark?: string;
+    remark?: string; // Backend 'remark'
     department_id?: string; // Maps to cost_center_id
     project_id?: string;
     requester_name?: string;
+    requester_user_id?: number; // Backend 'requester_user_id'
+    branch_id?: number;         // Backend 'branch_id'
+    warehouse_id?: number;      // Backend 'warehouse_id'
+    
     required_date?: string;
     items: CreatePRLineItem[];
     
     // Additional fields supported by UI
     delivery_date?: string;
     credit_days?: number;
+    payment_term_days?: number; // Backend 'payment_term_days'
     vendor_quote_no?: string;
     shipping_method?: string;
     preferred_vendor_id?: string;

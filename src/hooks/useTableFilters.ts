@@ -24,6 +24,17 @@ export interface TableFilterOptions<TStatus extends string = string> {
   defaultSort?: string;
   defaultDateFrom?: string;
   defaultDateTo?: string;
+  customParamKeys?: {
+    page?: string;
+    limit?: string;
+    search?: string;
+    search2?: string;
+    search3?: string;
+    status?: string;
+    sort?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  };
 }
 
 /** Filter state returned by the hook */
@@ -119,27 +130,42 @@ export function useTableFilters<TStatus extends string = string>(
     defaultDateTo = '',
   } = options;
 
+  // ------------------------------------------------------------
+  // Resolve Param Keys (Default + Custom Overrides)
+  // ------------------------------------------------------------
+  const keys = useMemo(() => ({
+    page: options.customParamKeys?.page ?? PARAM_KEYS.page,
+    limit: options.customParamKeys?.limit ?? PARAM_KEYS.limit,
+    search: options.customParamKeys?.search ?? PARAM_KEYS.search,
+    search2: options.customParamKeys?.search2 ?? PARAM_KEYS.search2,
+    search3: options.customParamKeys?.search3 ?? PARAM_KEYS.search3,
+    status: options.customParamKeys?.status ?? PARAM_KEYS.status,
+    sort: options.customParamKeys?.sort ?? PARAM_KEYS.sort,
+    dateFrom: options.customParamKeys?.dateFrom ?? PARAM_KEYS.dateFrom,
+    dateTo: options.customParamKeys?.dateTo ?? PARAM_KEYS.dateTo,
+  }), [options.customParamKeys]);
+
   const [searchParams, setSearchParams] = useSearchParams();
 
   // ------------------------------------------------------------
   // Derive filters from URL params (memoized for performance)
   // ------------------------------------------------------------
   const filters = useMemo<TableFilters<TStatus>>(() => {
-    const pageParam = searchParams.get(PARAM_KEYS.page);
-    const limitParam = searchParams.get(PARAM_KEYS.limit);
+    const pageParam = searchParams.get(keys.page);
+    const limitParam = searchParams.get(keys.limit);
 
     return {
       page: pageParam ? parseInt(pageParam, 10) : defaultPage,
       limit: limitParam ? parseInt(limitParam, 10) : defaultLimit,
-      search: searchParams.get(PARAM_KEYS.search) ?? defaultSearch,
-      search2: searchParams.get(PARAM_KEYS.search2) ?? '',
-      search3: searchParams.get(PARAM_KEYS.search3) ?? '',
-      status: (searchParams.get(PARAM_KEYS.status) ?? defaultStatus) as TStatus | 'ALL',
-      sort: searchParams.get(PARAM_KEYS.sort) ?? defaultSort,
-      dateFrom: searchParams.get(PARAM_KEYS.dateFrom) ?? defaultDateFrom,
-      dateTo: searchParams.get(PARAM_KEYS.dateTo) ?? defaultDateTo,
+      search: searchParams.get(keys.search) ?? defaultSearch,
+      search2: searchParams.get(keys.search2) ?? '',
+      search3: searchParams.get(keys.search3) ?? '',
+      status: (searchParams.get(keys.status) ?? defaultStatus) as TStatus | 'ALL',
+      sort: searchParams.get(keys.sort) ?? defaultSort,
+      dateFrom: searchParams.get(keys.dateFrom) ?? defaultDateFrom,
+      dateTo: searchParams.get(keys.dateTo) ?? defaultDateTo,
     };
-  }, [searchParams, defaultPage, defaultLimit, defaultSearch, defaultStatus, defaultSort, defaultDateFrom, defaultDateTo]);
+  }, [searchParams, keys, defaultPage, defaultLimit, defaultSearch, defaultStatus, defaultSort, defaultDateFrom, defaultDateTo]);
 
   // ------------------------------------------------------------
   // Helper to update URL params
@@ -151,7 +177,7 @@ export function useTableFilters<TStatus extends string = string>(
 
         // Apply updates
         Object.entries(updates).forEach(([key, value]) => {
-          const paramKey = PARAM_KEYS[key as keyof typeof PARAM_KEYS];
+          const paramKey = keys[key as keyof typeof keys];
           if (paramKey) {
             if (value !== undefined && value !== '' && value !== null) {
               newParams.set(paramKey, String(value));
@@ -163,13 +189,13 @@ export function useTableFilters<TStatus extends string = string>(
 
         // Reset page to 1 if requested
         if (resetPage) {
-          newParams.set(PARAM_KEYS.page, '1');
+          newParams.set(keys.page, '1');
         }
 
         return newParams;
       });
     },
-    [setSearchParams]
+    [setSearchParams, keys]
   );
 
   // ------------------------------------------------------------

@@ -9,6 +9,7 @@ interface ConfirmationOptions {
     confirmText?: string;
     cancelText?: string;
     variant?: ConfirmationVariant;
+    hideCancel?: boolean;
 }
 
 interface ConfirmationContextType {
@@ -62,6 +63,7 @@ export const ConfirmationProvider: React.FC<{ children: ReactNode }> = ({ childr
                 confirmText={options.confirmText}
                 cancelText={options.cancelText}
                 variant={options.variant}
+                hideCancel={options.hideCancel}
             />
         </ConfirmationContext.Provider>
     );

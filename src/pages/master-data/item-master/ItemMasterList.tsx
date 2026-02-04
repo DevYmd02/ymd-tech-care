@@ -9,7 +9,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { 
     Edit2, Trash2
 } from 'lucide-react';
-import Swal from 'sweetalert2';
+import { useConfirmation } from '@/hooks/useConfirmation';
 import { ItemMasterService } from '@/services/inventory/item-master.service';
 import type { ItemListItem } from '@project-types/master-data-types';
 import { SmartTable } from '@ui/SmartTable';
@@ -21,6 +21,7 @@ const columnHelper = createColumnHelper<ItemListItem>();
 export default function ItemMasterList() {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
+    const { confirm } = useConfirmation();
     
     // Pagination state
     const [pageIndex, setPageIndex] = useState(1);
@@ -39,42 +40,36 @@ export default function ItemMasterList() {
     }, [navigate]);
 
     const handleDelete = useCallback(async (id: string, code: string) => {
-        const result = await Swal.fire({
+        const isConfirmed = await confirm({
             title: 'คุณต้องการลบสินค้า?',
-            text: `ต้องการลบรหัสสินค้า ${code} ใช่หรือไม่?`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'ลบข้อมูล',
-            cancelButtonText: 'ยกเลิก',
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            background: '#1f2937',
-            color: '#ffffff'
+            description: `ต้องการลบรหัสสินค้า ${code} ใช่หรือไม่?`,
+            confirmText: 'ลบข้อมูล',
+            cancelText: 'ยกเลิก',
+            variant: 'danger'
         });
 
-        if (result.isConfirmed) {
+        if (isConfirmed) {
             const success = await ItemMasterService.delete(id);
             if (success) {
-                await Swal.fire({
-                    icon: 'success',
+                await confirm({
                     title: 'ลบข้อมูลเรียบร้อยแล้ว!',
-                    timer: 1500,
-                    showConfirmButton: false,
-                    background: '#1f2937',
-                    color: '#ffffff'
+                    description: 'ระบบได้ทำการลบข้อมูลสินค้าเรียบร้อยแล้ว',
+                    confirmText: 'ตกลง',
+                    variant: 'success',
+                    hideCancel: true
                 });
                 queryClient.invalidateQueries({ queryKey: ['items'] });
             } else {
-                Swal.fire({
-                    icon: 'error',
+                await confirm({
                     title: 'เกิดข้อผิดพลาด',
-                    text: 'ไม่สามารถลบข้อมูลได้',
-                    background: '#1f2937',
-                    color: '#ffffff'
+                    description: 'ไม่สามารถลบข้อมูลได้ กรุณาลองใหม่อีกครั้ง',
+                    confirmText: 'ตกลง',
+                    variant: 'danger',
+                    hideCancel: true
                 });
             }
         }
-    }, [queryClient]);
+    }, [queryClient, confirm]);
     
     const columns = useMemo(() => [
         columnHelper.accessor('item_code', {
