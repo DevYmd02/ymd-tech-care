@@ -17,7 +17,7 @@ export const API_BASE_URL = '/api';
  */
 export const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
 
-export const AUTH_TOKEN_KEY = 'auth_token';
+export const AUTH_TOKEN_KEY = 'token';
 
 // =============================================================================
 // AXIOS INSTANCE
