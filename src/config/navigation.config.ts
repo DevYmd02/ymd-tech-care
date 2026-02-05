@@ -267,8 +267,26 @@ export const sidebarMenuItems: MenuItem[] = [
                 label: 'Master Data Company',
                 subItems: [
                     { id: 'branch-code', label: 'กำหนดรหัสสาขา', path: '/master-data/branch' },
-                    { id: 'warehouse-code', label: 'กำหนดรหัสคลังสินค้า', path: '/master-data/warehouse' },
-                    { id: 'company-placeholder-1', label: 'Company Structure (Coming Soon)', path: '/coming-soon' },
+                    {
+                    id: 'employee-side',
+                    label: 'กำหนดรหัสฝ่าย (Employee Side)',
+                    path: '/master-data/employee-side',
+                },
+                {
+                    id: 'section-code',
+                    label: 'กำหนดรหัสแผนก (Section)',
+                    path: '/master-data/section',
+                },
+                {
+                    id: 'job-code',
+                    label: 'กำหนดรหัส Job',
+                    path: '/master-data/job',
+                },
+                {
+                    id: 'employee-code',
+                    label: 'กำหนดรหัสพนักงาน',
+                    path: '/master-data/employee',
+                },
                 ]
             },
             {
@@ -283,6 +301,7 @@ export const sidebarMenuItems: MenuItem[] = [
                 id: 'master-data-inventory',
                 label: 'Master Data คลังสินค้า',
                 subItems: [
+                    { id: 'warehouse-code', label: 'กำหนดรหัสคลังสินค้า', path: '/master-data/warehouse' },
                     { id: 'product-category', label: 'กำหนดรหัสหมวดสินค้า', path: '/master-data/product-category' },
                     { id: 'item-type', label: 'กำหนดรหัสประเภทสินค้า', path: '/master-data/item-type' },
                     { id: 'unit', label: 'กำหนดรหัสหน่วยนับ', path: '/master-data/unit' },

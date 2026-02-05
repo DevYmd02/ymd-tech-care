@@ -7,28 +7,16 @@
 export { default as MasterDataDashboard } from './MasterDataDashboard';
 
 // Vendor Module
-export * from './vendor';
+export * from './vendor/management';
 
-// Branch Module
-export * from './branch';
+// Group 1: Company
+export * from './company/branch';
 
-// Warehouse Module
-export * from './warehouse';
-
-// Product Category Module
-export * from './product-category';
-
-// Item Type Module
-export * from './item-type';
-
-// Unit Module
-export * from './unit';
-
-// Item Master Module
-export * from './item-master';
-
-// UOM Conversion Module
-export * from './uom-conversion';
-
-// Item Barcode Module
-export * from './item-barcode';
+// Group 3: Inventory
+export * from './inventory/warehouse';
+export * from './inventory/category';
+export * from './inventory/item-type';
+export * from './inventory/unit';
+export * from './inventory/item-master';
+export * from './inventory/uom-conversion';
+export * from './inventory/item-barcode';

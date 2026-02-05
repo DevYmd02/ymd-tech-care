@@ -6,7 +6,7 @@
 
 import { useState } from 'react';
 import { Tag } from 'lucide-react';
-import { GenericMasterDataList } from '../components/GenericMasterDataList';
+import { GenericMasterDataList } from '../../components/GenericMasterDataList';
 import { useGenericMasterDataList } from '@hooks/useGenericMasterDataList';
 import { ProductCategoryFormModal } from './ProductCategoryFormModal';
 import { ProductCategoryService } from '@/services/inventory/product-category.service';

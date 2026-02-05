@@ -72,7 +72,158 @@ export const initialBranchFormData: BranchFormData = {
 };
 
 // ====================================================================================
-// WAREHOUSE - กำหนดรหัสคลังสินค้า
+// COMPANY DOMAIN TYPES
+// ====================================================================================
+
+// --- DEPARTMENT (ฝ่าย) ---
+export interface DepartmentMaster extends BaseMasterData {
+    department_id: string;
+    department_code: string;
+    department_name: string;
+    department_name_en?: string;
+}
+export interface DepartmentFormData {
+    departmentCode: string;
+    departmentName: string;
+    departmentNameEn: string;
+    isActive: boolean;
+}
+export type DepartmentListItem = DepartmentMaster;
+
+// --- SECTION (แผนก) ---
+export interface SectionMaster extends BaseMasterData {
+    section_id: string;
+    section_code: string;
+    section_name: string;
+    section_name_en?: string;
+    department_id?: string; // Optional link to Department
+    department_code?: string; // Added for reference
+    department_name?: string;
+}
+export interface SectionFormData {
+    sectionCode: string;
+    sectionName: string;
+    sectionNameEn: string;
+    departmentId: string;
+    isActive: boolean;
+}
+export type SectionListItem = SectionMaster;
+
+// --- JOB (Job) ---
+export interface JobMaster extends BaseMasterData {
+    job_id: string;
+    job_code: string;
+    job_name: string;
+}
+export interface JobFormData {
+    jobCode: string;
+    jobName: string;
+    isActive: boolean;
+}
+export type JobListItem = JobMaster;
+
+// --- EMPLOYEE GROUP (กลุ่มพนักงาน) ---
+export interface EmployeeGroupMaster extends BaseMasterData {
+    group_id: string;
+    group_code: string;
+    group_name: string;
+}
+export interface EmployeeGroupFormData {
+    groupCode: string;
+    groupName: string;
+    isActive: boolean;
+}
+export type EmployeeGroupListItem = EmployeeGroupMaster;
+
+// --- POSITION (ตำแหน่ง) ---
+export interface PositionMaster extends BaseMasterData {
+    position_id: string;
+    position_code: string;
+    position_name: string;
+}
+export interface PositionFormData {
+    positionCode: string;
+    positionName: string;
+    isActive: boolean;
+}
+export type PositionListItem = PositionMaster;
+
+// --- SALES ZONE (เขตการขาย) ---
+export interface SalesZoneMaster extends BaseMasterData {
+    zone_id: string;
+    zone_code: string;
+    zone_name: string;
+}
+export interface SalesZoneFormData {
+    zoneCode: string;
+    zoneName: string;
+    isActive: boolean;
+}
+export type SalesZoneListItem = SalesZoneMaster;
+
+// --- SALES CHANNEL (ช่องทางการขาย) ---
+export interface SalesChannelMaster extends BaseMasterData {
+    channel_id: string;
+    channel_code: string;
+    channel_name: string;
+}
+export interface SalesChannelFormData {
+    channelCode: string;
+    channelName: string;
+    isActive: boolean;
+}
+export type SalesChannelListItem = SalesChannelMaster;
+
+// --- SALES TARGET (เป้าการขาย) ---
+export interface SalesTargetMaster extends BaseMasterData {
+    target_id: string;
+    target_code: string; // Maybe Auto-gen?
+    target_name: string; // Description
+    amount: number;
+    year: number;
+    period: number; // Month 1-12 or Quarter
+}
+export interface SalesTargetFormData {
+    targetCode: string;
+    targetName: string;
+    amount: number;
+    year: number;
+    period: number;
+    isActive: boolean;
+}
+export type SalesTargetListItem = SalesTargetMaster;
+
+// --- EMPLOYEE (พนักงาน) ---
+export interface EmployeeMaster extends BaseMasterData {
+    employee_id: string;
+    employee_code: string;
+    employee_name: string; // First + Last
+    title_name?: string;   // Mr, Ms
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    phone?: string;
+    position_id?: string;
+    position_name?: string;
+    department_id?: string;
+    department_name?: string;
+    status: 'ACTIVE' | 'RESIGNED' | 'SUSPENDED'; // Overrides generic boolean? Or map to boolean
+}
+// For consistency with other master data forms
+export interface EmployeeFormData {
+    employeeCode: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    positionId: string;
+    departmentId: string;
+    isActive: boolean; // Map to status
+}
+export type EmployeeListItem = EmployeeMaster;
+
+// ====================================================================================
+// WAREHOUSE
 // ====================================================================================
 
 /**

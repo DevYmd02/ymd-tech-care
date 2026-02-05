@@ -71,7 +71,7 @@ export interface VendorAddress {
     vendor_id: number;
     address_type: VendorAddressType;
     address: string;
-    // sub_district?: string | null; // Backend doesn't support this
+    sub_district?: string | null;
     district?: string | null;
     province?: string | null;
     postal_code?: string | null;
@@ -133,8 +133,11 @@ export interface VendorMaster {
 
     // Relational Data (Matches JSON structure)
     addresses: VendorAddress[];
+    vendorAddresses?: VendorAddress[];
     contacts: VendorContact[];
+    vendorContacts?: VendorContact[];
     bank_accounts: VendorBankAccountData[];
+    vendorBankAccounts?: VendorBankAccountData[];
 
     // Deprecated flat fields (kept optional)
     address_line1?: string;
@@ -236,8 +239,11 @@ export interface VendorListItem {
     
     // Nested arrays (from backend API)
     addresses?: VendorAddress[];
+    vendorAddresses?: VendorAddress[];
     contacts?: VendorContact[];
+    vendorContacts?: VendorContact[];
     bank_accounts?: VendorBankAccountData[];
+    vendorBankAccounts?: VendorBankAccountData[];
     
     phone?: string;
     email?: string;

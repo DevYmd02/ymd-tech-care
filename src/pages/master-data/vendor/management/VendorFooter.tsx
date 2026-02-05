@@ -1,6 +1,6 @@
 import React from 'react';
 import { Save, Printer, FilePlus, X, CheckCircle, Copy, Search, Trash2 } from 'lucide-react';
-import { ActionButton } from '../../../components/ui/ActionButton';
+import { ActionButton } from '../../../../components/ui/ActionButton';
 
 interface VendorFooterProps {
     onSave: () => void;

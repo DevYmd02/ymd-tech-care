@@ -22,10 +22,10 @@ import {
     ChevronsLeft,
     ChevronsRight
 } from 'lucide-react';
-import { styles } from '../../../constants';
+import { styles } from '../../../../constants';
 
 import { VendorService } from '@/services/procurement/vendor.service';
-import type { VendorListItem, VendorStatus } from '../../../types/vendor-types';
+import type { VendorListItem, VendorStatus } from '../../../../types/vendor-types';
 import { VendorStatusBadge } from '@ui/StatusBadge';
 
 // ====================================================================================

@@ -1,0 +1,209 @@
+/**
+ * @file BranchFormModal.tsx
+ * @description Modal สำหรับสร้าง/แก้ไขข้อมูลสาขา (Refactored to Standard)
+ */
+
+import { useEffect } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Building2, Save, X } from 'lucide-react';
+import { styles } from '@/constants';
+import { mockBranches } from '@/__mocks__/masterDataMocks';
+import { DialogFormLayout } from '@/components/layout/DialogFormLayout';
+import { logger } from '@/utils/logger';
+
+// ====================================================================================
+// SCHEMA
+// ====================================================================================
+
+const branchSchema = z.object({
+    branchCode: z.string()
+        .min(1, 'กรุณากรอกรหัสสาขา')
+        .max(20, 'รหัสสาขาต้องไม่เกิน 20 ตัวอักษร'),
+    branchName: z.string()
+        .min(1, 'กรุณากรอกชื่อสาขา')
+        .max(200, 'ชื่อสาขาต้องไม่เกิน 200 ตัวอักษร'),
+    isActive: z.boolean(),
+});
+
+type BranchFormValues = z.infer<typeof branchSchema>;
+
+// ====================================================================================
+// PROPS
+// ====================================================================================
+
+interface Props {
+    isOpen: boolean;
+    onClose: () => void;
+    editId?: string | null;
+    onSuccess?: () => void;
+}
+
+
+
+// ====================================================================================
+// COMPONENT
+// ====================================================================================
+
+export function BranchFormModal({ isOpen, onClose, editId, onSuccess }: Props) {
+    const {
+        register,
+        handleSubmit,
+        reset,
+        formState: { errors, isSubmitting },
+        control
+    } = useForm<BranchFormValues>({
+        resolver: zodResolver(branchSchema),
+        defaultValues: {
+            branchCode: '',
+            branchName: '',
+            isActive: true
+        }
+    });
+
+    const isActive = useWatch({ control, name: 'isActive' });
+
+    // Reset/Load Data
+    useEffect(() => {
+        if (isOpen) {
+            if (editId) {
+                const existing = mockBranches.find(b => b.branch_id === editId);
+                if (existing) {
+                    reset({
+                        branchCode: existing.branch_code,
+                        branchName: existing.branch_name,
+                        isActive: existing.is_active
+                    });
+                }
+            } else {
+                reset({
+                    branchCode: '',
+                    branchName: '',
+                    isActive: true
+                });
+            }
+        }
+    }, [isOpen, editId, reset]);
+
+    const onSubmit = (data: BranchFormValues) => {
+        // Simulation of API Call
+        setTimeout(() => {
+            if (editId) {
+                // Update Mock
+                const index = mockBranches.findIndex(b => b.branch_id === editId);
+                if (index !== -1) {
+                    mockBranches[index] = {
+                        ...mockBranches[index],
+                        branch_code: data.branchCode,
+                        branch_name: data.branchName,
+                        is_active: data.isActive,
+                    };
+                }
+            } else {
+                // Create Mock
+                mockBranches.push({
+                    branch_id: `BR${Math.floor(Math.random() * 10000)}`,
+                    branch_code: data.branchCode,
+                    branch_name: data.branchName,
+                    is_active: data.isActive,
+                    created_at: new Date().toISOString(),
+                });
+            }
+
+            logger.log('Saved Branch:', data);
+            if (onSuccess) onSuccess();
+            onClose();
+        }, 500);
+    };
+
+    // ==================== RENDERING ====================
+    
+    // Header Icon
+    const TitleIcon = <Building2 size={24} className="text-white" />;
+
+    // Footer Actions
+    const FormFooter = (
+        <div className="flex justify-end gap-3 p-4">
+            <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg flex items-center gap-2 transition-colors border border-gray-300"
+            >
+                <X size={18} />
+                ยกเลิก
+            </button>
+            <button
+                type="button"
+                onClick={handleSubmit(onSubmit)}
+                disabled={isSubmitting}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50"
+            >
+                <Save size={18} />
+                {isSubmitting ? 'กำลังบันทึก...' : 'บันทึก'}
+            </button>
+        </div>
+    );
+
+    return (
+        <DialogFormLayout
+            isOpen={isOpen}
+            onClose={onClose}
+            title={editId ? 'แก้ไขข้อมูลสาขา' : 'เพิ่มสาขาใหม่'}
+            titleIcon={TitleIcon}
+            footer={FormFooter}
+        >
+            <div className="p-6 space-y-6">
+                
+                {/* Branch Code */}
+                <div>
+                    <label className={styles.label}>
+                        รหัสสาขา <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        {...register('branchCode')}
+                        type="text"
+                        placeholder="กรอกรหัสสาขา (เช่น BKK001)"
+                        className={`${styles.input} ${errors.branchCode ? 'border-red-500 focus:ring-red-200' : ''}`}
+                    />
+                    {errors.branchCode ? (
+                        <p className="text-red-500 text-xs mt-1">{errors.branchCode.message}</p>
+                    ) : (
+                        <p className="text-gray-400 text-xs mt-1">varchar(20), UNIQUE - ต้องไม่ซ้ำ</p>
+                    )}
+                </div>
+
+                {/* Branch Name */}
+                <div>
+                    <label className={styles.label}>
+                        ชื่อสาขา <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        {...register('branchName')}
+                        type="text"
+                        placeholder="กรอกชื่อสาขา"
+                        className={`${styles.input} ${errors.branchName ? 'border-red-500 focus:ring-red-200' : ''}`}
+                    />
+                    {errors.branchName ? (
+                        <p className="text-red-500 text-xs mt-1">{errors.branchName.message}</p>
+                    ) : (
+                        <p className="text-gray-400 text-xs mt-1">varchar(200)</p>
+                    )}
+                </div>
+
+                {/* Status */}
+                <div className="form-control">
+                    <label className="label cursor-pointer justify-start gap-4">
+                        <span className="label-text text-base font-medium text-gray-700 dark:text-gray-300">สถานะการใช้งาน</span>
+                        <input
+                            type="checkbox"
+                            className="toggle toggle-success"
+                            {...register('isActive')}
+                        />
+                        <span className="label-text text-gray-700 dark:text-gray-300">{isActive ? 'ใช้งาน (Active)' : 'ไม่ใช้งาน (Inactive)'}</span>
+                    </label>
+                </div>
+            </div>
+        </DialogFormLayout>
+    );
+}

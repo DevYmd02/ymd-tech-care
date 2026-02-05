@@ -20,10 +20,10 @@ import { MasterDataService } from '@/services/core/master-data.service';
 import { VendorService } from '@/services/procurement/vendor.service';
 
 // Import Form Modals
-import { VendorFormModal } from './vendor';
-import { BranchFormModal } from './branch';
-import { WarehouseFormModal } from './warehouse';
-import { ItemMasterList } from './item-master';
+import { VendorFormModal } from './vendor/management';
+import { BranchFormModal } from './company/branch';
+import { WarehouseFormModal } from './inventory/warehouse';
+import { ItemMasterList } from './inventory/item-master';
 
 // Import sub-components
 import { MasterDataHeader } from './components/MasterDataHeader';
@@ -364,14 +364,12 @@ export default function MasterDataDashboard() {
      * Handles both flat fields (legacy) and nested addresses array (backend API)
      */
     const formatVendorAddress = (vendor: VendorListItem): string => {
-        // First try nested addresses array (from backend API)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const vendorAny = vendor as any;
-        const addresses = vendor.addresses || vendorAny.vendorAddresses || [];
+        // Handle both frontend 'addresses' and backend 'vendorAddresses' field names
+        const addressesArray = vendor.addresses || vendor.vendorAddresses || [];
         
-        if (addresses && addresses.length > 0) {
+        if (addressesArray && addressesArray.length > 0) {
             // Find REGISTERED address or use first one
-            const primaryAddr = addresses.find((a: { address_type?: string }) => a.address_type === 'REGISTERED') || addresses[0];
+            const primaryAddr = addressesArray.find((a: { address_type?: string }) => a.address_type === 'REGISTERED') || addressesArray[0];
             if (primaryAddr) {
                 const parts = [
                     primaryAddr.address,

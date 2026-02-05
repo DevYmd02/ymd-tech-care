@@ -22,6 +22,15 @@ import type {
     ItemBarcodeListItem,
     CostCenter,
     Project,
+    DepartmentListItem,
+    SectionListItem,
+    JobListItem,
+    EmployeeGroupListItem,
+    PositionListItem,
+    SalesZoneListItem,
+    SalesChannelListItem,
+    SalesTargetListItem,
+    EmployeeListItem,
 } from '../types/master-data-types';
 
 // ====================================================================================
@@ -67,6 +76,73 @@ const _mockBranches: BranchListItem[] = [
 ];
 
 /** Mock data สำหรับ Branch List - เฉพาะ DEV mode */
+// ====================================================================================
+// COMPANY MOCKS
+// ====================================================================================
+
+export const mockDepartments: DepartmentListItem[] = [
+    { department_id: 'D01', department_code: 'ACC', department_name: 'ฝ่ายบัญชี', department_name_en: 'Accounting Department', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { department_id: 'D02', department_code: 'IT', department_name: 'ฝ่ายเทคโนโลยีสารสนเทศ', department_name_en: 'Information Technology Department', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { department_id: 'D03', department_code: 'HR', department_name: 'ฝ่ายทรัพยากรบุคคล', department_name_en: 'Human Resources Department', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { department_id: 'D04', department_code: 'FIN', department_name: 'ฝ่ายการเงิน', department_name_en: 'Finance Department', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+];
+
+export const mockSections: SectionListItem[] = [
+    { section_id: 'S01', section_code: 'FIN-TRS', section_name: 'แผนกธุรการการเงิน', section_name_en: 'Treasury Department', department_id: 'D04', department_code: 'FIN', department_name: 'ฝ่ายการเงิน', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { section_id: 'S02', section_code: 'FIN-BUD', section_name: 'แผนกงบประมาณ', section_name_en: 'Budget Department', department_id: 'D04', department_code: 'FIN', department_name: 'ฝ่ายการเงิน', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { section_id: 'S03', section_code: 'ACC-GL', section_name: 'แผนกบัญชีทั่วไป', section_name_en: 'General Ledger Department', department_id: 'D01', department_code: 'ACC', department_name: 'ฝ่ายบัญชี', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+];
+
+export const mockJobs: JobListItem[] = [
+    { job_id: 'J01', job_code: 'J-DEV', job_name: 'Developer', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { job_id: 'J02', job_code: 'J-MGR', job_name: 'Manager', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+];
+
+export const mockEmployeeGroups: EmployeeGroupListItem[] = [
+    { group_id: 'G01', group_code: 'FULL', group_name: 'Full-Time', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { group_id: 'G02', group_code: 'CONT', group_name: 'Contractor', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+];
+
+export const mockPositions: PositionListItem[] = [
+    { position_id: 'P01', position_code: 'SE', position_name: 'Software Engineer', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { position_id: 'P02', position_code: 'SSR', position_name: 'Senior Sales Key Account', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+];
+
+export const mockSalesZones: SalesZoneListItem[] = [
+    { zone_id: 'Z01', zone_code: 'BKK', zone_name: 'Bangkok', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { zone_id: 'Z02', zone_code: 'NORTH', zone_name: 'Northern Region', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+];
+
+export const mockSalesChannels: SalesChannelListItem[] = [
+    { channel_id: 'C01', channel_code: 'ONLINE', channel_name: 'Online Store', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { channel_id: 'C02', channel_code: 'RETAIL', channel_name: 'Retail Shop', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+];
+
+export const mockSalesTargets: SalesTargetListItem[] = [
+    { target_id: 'T01', target_code: 'FY2026-Q1', target_name: 'Q1 2026 Sales Target', amount: 1000000, year: 2026, period: 1, is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+];
+
+export const mockEmployees: EmployeeListItem[] = [
+    { 
+        employee_id: 'E001', 
+        employee_code: 'EMP001', 
+        employee_name: 'Somchai Jaidee', 
+        title_name: 'Mr.',
+        first_name: 'Somchai', 
+        last_name: 'Jaidee',
+        email: 'somchai@ymd.com', 
+        phone: '0812345678',
+        department_id: 'D02', 
+        department_name: 'Information Technology',
+        position_id: 'P01', 
+        position_name: 'Software Engineer',
+        status: 'ACTIVE', 
+        is_active: true, 
+        created_at: '2023-01-01T00:00:00Z',
+        updated_at: '2023-01-01T00:00:00Z'
+    },
+];
+
 export const mockBranches: BranchListItem[] = IS_DEV ? _mockBranches : [];
 
 /** Mock dropdown สำหรับ Branch - เฉพาะ DEV mode */

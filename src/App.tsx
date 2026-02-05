@@ -44,17 +44,21 @@ const ITGCDashboard = React.lazy(() => import('./pages/it-governance/ITGCDashboa
 
 // Master Data Pages
 const MasterDataDashboard = React.lazy(() => import('./pages/master-data/MasterDataDashboard'));
-const VendorForm = React.lazy(() => import('./pages/master-data/vendor/VendorForm'));
-const VendorDashboard = React.lazy(() => import('./pages/master-data/vendor/VendorDashboard'));
-const VendorList = React.lazy(() => import('./pages/master-data/vendor/VendorList'));
-const BranchForm = React.lazy(() => import('./pages/master-data/branch/BranchForm'));
-const WarehouseForm = React.lazy(() => import('./pages/master-data/warehouse/WarehouseForm'));
-const ProductCategoryForm = React.lazy(() => import('./pages/master-data/product-category/ProductCategoryForm'));
-const ItemTypeForm = React.lazy(() => import('./pages/master-data/item-type/ItemTypeForm'));
-const UnitForm = React.lazy(() => import('./pages/master-data/unit/UnitForm'));
-const ItemMasterForm = React.lazy(() => import('./pages/master-data/item-master/ItemMasterForm'));
-const UOMConversionForm = React.lazy(() => import('./pages/master-data/uom-conversion/UOMConversionForm'));
-const ItemBarcodeForm = React.lazy(() => import('./pages/master-data/item-barcode/ItemBarcodeForm'));
+const VendorForm = React.lazy(() => import('./pages/master-data/vendor/management/VendorForm'));
+const VendorDashboard = React.lazy(() => import('./pages/master-data/vendor/management/VendorDashboard'));
+const VendorList = React.lazy(() => import('./pages/master-data/vendor/management/VendorList'));
+const BranchList = React.lazy(() => import('./pages/master-data/company/branch/BranchList'));
+const EmployeeSideList = React.lazy(() => import('./pages/master-data/company/employee-side/EmployeeSideList'));
+const SectionList = React.lazy(() => import('./pages/master-data/company/section/SectionList'));
+const JobList = React.lazy(() => import('./pages/master-data/company/job/JobList'));
+const EmployeeList = React.lazy(() => import('./pages/master-data/employee/EmployeeList'));
+const WarehouseForm = React.lazy(() => import('./pages/master-data/inventory/warehouse/WarehouseForm'));
+const ProductCategoryForm = React.lazy(() => import('./pages/master-data/inventory/category/ProductCategoryForm'));
+const ItemTypeForm = React.lazy(() => import('./pages/master-data/inventory/item-type/ItemTypeForm'));
+const UnitForm = React.lazy(() => import('./pages/master-data/inventory/unit/UnitForm'));
+const ItemMasterForm = React.lazy(() => import('./pages/master-data/inventory/item-master/ItemMasterForm'));
+const UOMConversionForm = React.lazy(() => import('./pages/master-data/inventory/uom-conversion/UOMConversionForm'));
+const ItemBarcodeForm = React.lazy(() => import('./pages/master-data/inventory/item-barcode/ItemBarcodeForm'));
 
 // Auth Pages
 const LoginPage = React.lazy(() => import('./pages/auth/LoginPage'));
@@ -159,7 +163,11 @@ function App() {
           <Route path="master-data/vendor" element={<VendorDashboard />} />
           <Route path="master-data/vendor/list" element={<VendorList />} />
           <Route path="master-data/vendor/form" element={<VendorForm />} />
-          <Route path="master-data/branch" element={<BranchForm />} />
+          <Route path="master-data/branch" element={<BranchList />} />
+          <Route path="master-data/employee-side" element={<EmployeeSideList />} />
+          <Route path="master-data/section" element={<SectionList />} />
+          <Route path="master-data/job" element={<JobList />} />
+          <Route path="master-data/employee" element={<EmployeeList />} />
           <Route path="master-data/warehouse" element={<WarehouseForm />} />
           <Route path="master-data/product-category" element={<ProductCategoryForm />} />
           <Route path="master-data/item-type" element={<ItemTypeForm />} />
