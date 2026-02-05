@@ -5,7 +5,7 @@
  */
 
 import { createRoot } from 'react-dom/client';
-import { AppProvider } from './providers/AppProvider';
+import { AppProvider } from '@/core/providers/AppProvider';
 import './index.css';
 import App from './App';
 

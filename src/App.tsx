@@ -8,84 +8,70 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 // Main Layout - Lazy Loaded to prevent bundle bloat (admin dashboard code in login page)
-const MainLayout = React.lazy(() => import('./layouts/MainLayout'));
+const MainLayout = React.lazy(() => import('@/shared/layouts/MainLayout'));
 import { ErrorBoundary } from 'react-error-boundary';
-import { ErrorFallback } from '@system/ErrorBoundary';
-import { GlobalLoading } from '@system/GlobalLoading';
+import { ErrorFallback } from '@/shared/components/system/ErrorBoundary';
+import { GlobalLoading } from '@/shared/components/system/GlobalLoading';
 
-import { placeholderRoutes } from './config/routes';
-import { AuthProvider } from './contexts/AuthContext';
+import { placeholderRoutes } from '@/core/config/routes';
+import { AuthProvider } from '@/core/auth/contexts/AuthContext';
+import { PlaceholderPage } from '@/shared/components/PlaceholderPage';
 
 // ====================================================================================
 // PAGE IMPORTS - Lazy Loaded
 // ====================================================================================
 
 // Admin Pages
-const AdminDashboard = React.lazy(() => import('./pages/admin/AdminDashboard'));
-const EmployeePage = React.lazy(() => import('./pages/admin/employees/EmployeePage').then(module => ({ default: module.EmployeePage })));
+const AdminDashboard = React.lazy(() => import('@/modules/admin/pages/AdminDashboard'));
+const EmployeePage = React.lazy(() => import('@/modules/admin/pages/employees/EmployeePage').then(module => ({ default: module.EmployeePage })));
 
 // Procurement Pages
-const ProcurementDashboard = React.lazy(() => import('./pages/procurement/ProcurementDashboard'));
-const PRListPage = React.lazy(() => import('./pages/procurement/pr/PRListPage'));
-const RFQListPage = React.lazy(() => import('./pages/procurement/rfq/RFQListPage'));
-const QTListPage = React.lazy(() => import('./pages/procurement/qt/QTListPage'));
-const QCListPage = React.lazy(() => import('./pages/procurement/qc/QCListPage'));
-const POListPage = React.lazy(() => import('./pages/procurement/po/POListPage'));
-const GRNListPage = React.lazy(() => import('./pages/procurement/grn/GRNListPage'));
+const ProcurementDashboard = React.lazy(() => import('@/modules/procurement/pages/dashboard/ProcurementDashboard'));
+const PRListPage = React.lazy(() => import('./modules/procurement/pages/pr/PRListPage'));
+const RFQListPage = React.lazy(() => import('./modules/procurement/pages/rfq/RFQListPage'));
+const QTListPage = React.lazy(() => import('./modules/procurement/pages/qt/QTListPage'));
+const QCListPage = React.lazy(() => import('./modules/procurement/pages/qc/QCListPage'));
+const POListPage = React.lazy(() => import('./modules/procurement/pages/po/POListPage'));
+const GRNListPage = React.lazy(() => import('./modules/procurement/pages/grn/GRNListPage'));
 
-const GoodsReceiptNoteListPage = React.lazy(() => import('./pages/procurement/ProcurementComingSoon').then(module => ({ default: module.GoodsReceiptNoteListPage })));
-const PurchaseReturnListPage = React.lazy(() => import('./pages/procurement/ProcurementComingSoon').then(module => ({ default: module.PurchaseReturnListPage })));
+const GoodsReceiptNoteListPage = React.lazy(() => import('@/modules/procurement/pages/ProcurementComingSoon').then(module => ({ default: module.GoodsReceiptNoteListPage })));
+const PurchaseReturnListPage = React.lazy(() => import('@/modules/procurement/pages/ProcurementComingSoon').then(module => ({ default: module.PurchaseReturnListPage })));
 
 // Roles Pages
-const RolesDashboard = React.lazy(() => import('./pages/roles/RolesDashboard'));
+const RolesDashboard = React.lazy(() => import('@/modules/admin/pages/roles/RolesDashboard'));
 
 // IT Governance Pages
-const ITGCDashboard = React.lazy(() => import('./pages/it-governance/ITGCDashboard'));
+const ITGCDashboard = React.lazy(() => import('@/modules/governance/pages/ITGCDashboard'));
 
 // Master Data Pages
-const MasterDataDashboard = React.lazy(() => import('./pages/master-data/MasterDataDashboard'));
-const VendorForm = React.lazy(() => import('./pages/master-data/vendor/management/VendorForm'));
-const VendorDashboard = React.lazy(() => import('./pages/master-data/vendor/management/VendorDashboard'));
-const VendorList = React.lazy(() => import('./pages/master-data/vendor/management/VendorList'));
-const BranchList = React.lazy(() => import('./pages/master-data/company/branch/BranchList'));
-const EmployeeSideList = React.lazy(() => import('./pages/master-data/company/employee-side/EmployeeSideList'));
-const SectionList = React.lazy(() => import('./pages/master-data/company/section/SectionList'));
-const JobList = React.lazy(() => import('./pages/master-data/company/job/JobList'));
-const EmployeeList = React.lazy(() => import('./pages/master-data/employee/EmployeeList'));
-const WarehouseForm = React.lazy(() => import('./pages/master-data/inventory/warehouse/WarehouseForm'));
-const ProductCategoryForm = React.lazy(() => import('./pages/master-data/inventory/category/ProductCategoryForm'));
-const ItemTypeForm = React.lazy(() => import('./pages/master-data/inventory/item-type/ItemTypeForm'));
-const UnitForm = React.lazy(() => import('./pages/master-data/inventory/unit/UnitForm'));
-const ItemMasterForm = React.lazy(() => import('./pages/master-data/inventory/item-master/ItemMasterForm'));
-const UOMConversionForm = React.lazy(() => import('./pages/master-data/inventory/uom-conversion/UOMConversionForm'));
-const ItemBarcodeForm = React.lazy(() => import('./pages/master-data/inventory/item-barcode/ItemBarcodeForm'));
+const MasterDataDashboard = React.lazy(() => import('@/modules/master-data/pages/MasterDataDashboard'));
+// Vendor Pages (from master-data)
+const VendorForm = React.lazy(() => import('@/modules/master-data/vendor/pages/VendorForm'));
+const VendorDashboard = React.lazy(() => import('@/modules/master-data/vendor/pages/VendorDashboard'));
+const VendorList = React.lazy(() => import('@/modules/master-data/vendor/pages/VendorList'));
+// Company Pages (from master-data)
+const BranchList = React.lazy(() => import('@/modules/master-data/company/pages/branch/BranchList'));
+const EmployeeSideList = React.lazy(() => import('@/modules/master-data/company/pages/employee-side/EmployeeSideList'));
+const SectionList = React.lazy(() => import('@/modules/master-data/company/pages/section/SectionList'));
+const JobList = React.lazy(() => import('@/modules/master-data/company/pages/job/JobList'));
+const EmployeeList = React.lazy(() => import('@/modules/master-data/company/pages/employee/EmployeeList'));
+const WarehouseForm = React.lazy(() => import('@/modules/inventory/pages/warehouse/WarehouseForm'));
+const ProductCategoryForm = React.lazy(() => import('@/modules/inventory/pages/category/ProductCategoryForm'));
+const ItemTypeForm = React.lazy(() => import('@/modules/inventory/pages/item-type/ItemTypeForm'));
+const UnitForm = React.lazy(() => import('@/modules/inventory/pages/unit/UnitForm'));
+const ItemMasterForm = React.lazy(() => import('@/modules/inventory/pages/item-master/ItemMasterForm'));
+const UOMConversionForm = React.lazy(() => import('@/modules/inventory/pages/uom-conversion/UOMConversionForm'));
+const ItemBarcodeForm = React.lazy(() => import('@/modules/inventory/pages/item-barcode/ItemBarcodeForm'));
 
-// Auth Pages
-const LoginPage = React.lazy(() => import('./pages/auth/LoginPage'));
-const RegisterPage = React.lazy(() => import('./pages/auth/RegisterPage'));
-const ForgotPasswordPage = React.lazy(() => import('./pages/auth/ForgotPasswordPage'));
+// Auth Pages (from modules)
+const LoginPage = React.lazy(() => import('./modules/auth/pages/LoginPage'));
+const RegisterPage = React.lazy(() => import('./modules/auth/pages/RegisterPage'));
+const ForgotPasswordPage = React.lazy(() => import('./modules/auth/pages/ForgotPasswordPage'));
 
 // Common Pages
-const ComingSoon = React.lazy(() => import('./pages/common/ComingSoon'));
+const ComingSoon = React.lazy(() => import('./shared/pages/ComingSoon'));
 
-// ====================================================================================
-// PLACEHOLDER COMPONENT - For routes not yet implemented
-// ====================================================================================
 
-/**
- * PlaceholderPage - Displays a "Coming Soon" message for unimplemented pages
- * @param title - The name of the page to display
- */
-function PlaceholderPage({ title }: { title: string }) {
-  return (
-    <div className="p-6 flex items-center justify-center min-h-[400px]">
-      <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-700 dark:text-gray-300 mb-2">{title}</h2>
-        <p className="text-gray-500 dark:text-gray-400">Coming Soon</p>
-      </div>
-    </div>
-  );
-}
 
 // ====================================================================================
 // MAIN APP COMPONENT
@@ -197,57 +183,57 @@ function App() {
           ))}
 
           {/* IT Governance Placeholders */}
-          {placeholderRoutes.itGovernance.map(({ path, title }) => (
+          {placeholderRoutes.itGovernance.map(({ path, title }: { path: string; title: string }) => (
             <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
           ))}
 
           {/* Audit Placeholders */}
-          {placeholderRoutes.audit.map(({ path, title }) => (
+          {placeholderRoutes.audit.map(({ path, title }: { path: string; title: string }) => (
             <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
           ))}
 
           {/* Sales Placeholders */}
-          {placeholderRoutes.sales.map(({ path, title }) => (
+          {placeholderRoutes.sales.map(({ path, title }: { path: string; title: string }) => (
             <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
           ))}
 
           {/* MRP Placeholders */}
-          {placeholderRoutes.mrp.map(({ path, title }) => (
+          {placeholderRoutes.mrp.map(({ path, title }: { path: string; title: string }) => (
             <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
           ))}
 
           {/* AP Placeholders */}
-          {placeholderRoutes.ap.map(({ path, title }) => (
+          {placeholderRoutes.ap.map(({ path, title }: { path: string; title: string }) => (
             <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
           ))}
 
           {/* AR Placeholders */}
-          {placeholderRoutes.ar.map(({ path, title }) => (
+          {placeholderRoutes.ar.map(({ path, title }: { path: string; title: string }) => (
             <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
           ))}
 
           {/* GL Placeholders */}
-          {placeholderRoutes.gl.map(({ path, title }) => (
+          {placeholderRoutes.gl.map(({ path, title }: { path: string; title: string }) => (
             <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
           ))}
 
           {/* Cash & Bank Placeholders */}
-          {placeholderRoutes.cash.map(({ path, title }) => (
+          {placeholderRoutes.cash.map(({ path, title }: { path: string; title: string }) => (
             <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
           ))}
 
           {/* Budget Placeholders */}
-          {placeholderRoutes.budget.map(({ path, title }) => (
+          {placeholderRoutes.budget.map(({ path, title }: { path: string; title: string }) => (
             <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
           ))}
 
           {/* Fixed Assets Placeholders */}
-          {placeholderRoutes.fa.map(({ path, title }) => (
+          {placeholderRoutes.fa.map(({ path, title }: { path: string; title: string }) => (
             <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
           ))}
 
           {/* Tax Placeholders */}
-          {placeholderRoutes.tax.map(({ path, title }) => (
+          {placeholderRoutes.tax.map(({ path, title }: { path: string; title: string }) => (
             <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
           ))}
         </Route>
