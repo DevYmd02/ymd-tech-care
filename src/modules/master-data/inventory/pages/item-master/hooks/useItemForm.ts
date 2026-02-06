@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 
 import { logger } from '@/shared/utils/logger';
-import { ItemMasterService } from '@/modules/inventory/services/item-master.service';
-import { ITEM_CATEGORIES, ITEM_UOMS, ITEM_TAX_CODES } from '@/modules/inventory/constants/itemConstants';
+import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
+import { ITEM_CATEGORIES, ITEM_UOMS, ITEM_TAX_CODES } from '@/modules/master-data/inventory/constants/itemConstants';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 
 // Zod Schema for Item Master

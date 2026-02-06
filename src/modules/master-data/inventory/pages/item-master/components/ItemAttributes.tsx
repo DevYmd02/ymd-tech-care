@@ -12,7 +12,7 @@ import {
     ITEM_SIZES, 
     ITEM_COLORS,
     getItemName 
-} from '@/modules/inventory/constants/itemConstants';
+} from '@/modules/master-data/inventory/constants/itemConstants';
 
 /**
  * @interface ItemAttributesProps

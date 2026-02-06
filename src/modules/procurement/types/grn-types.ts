@@ -93,10 +93,12 @@ export interface GRNLineItemInput {
     item_id?: string;    // Added for linking
     item_code: string;
     item_name: string; // Captured for history
+    qty_ordered?: number; // PO quantity for reference
     receiving_qty: number;
     accepted_qty: number;
     rejected_qty: number;
     uom_name: string; // Captured
+    qc_status?: string; // QC status: PASS, FAIL, PENDING
     // We might need unit_price/total for value tracking if GRN tracks value
     unit_price?: number; 
     line_total?: number;

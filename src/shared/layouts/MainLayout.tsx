@@ -20,7 +20,7 @@ export default function MainLayout() {
 
     return (
         <WindowManagerProvider>
-            <div className="flex h-screen overflow-hidden bg-white dark:bg-gray-900 transition-colors duration-200">
+            <div className="flex h-screen overflow-hidden bg-white dark:bg-gray-900 transition-colors duration-200 relative z-0">
                 {/* Sidebar */}
                 <Sidebar isOpen={isSidebarOpen} />
 

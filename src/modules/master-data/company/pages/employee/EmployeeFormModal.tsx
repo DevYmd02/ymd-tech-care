@@ -8,6 +8,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Save, X, User } from 'lucide-react';
+import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@/shared/components/layout/DialogFormLayout';
 import { EmployeeService, DepartmentService, PositionService } from '@/modules/master-data/company/services/company.service';
 import type { DepartmentListItem, PositionListItem } from '@/modules/master-data/types/master-data-types';
@@ -162,93 +163,102 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
             titleIcon={TitleIcon}
             footer={FormFooter}
         >
-            <div className="p-6 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Employee Code */}
-                    <div className="col-span-full">
-                        <label className="label">
-                            <span className="label-text text-sm font-medium text-gray-700 dark:text-gray-300">รหัสพนักงาน <span className="text-error">*</span></span>
-                        </label>
-                        <input
-                            type="text"
-                            className={`input input-bordered w-full bg-white dark:bg-gray-900 ${errors.employeeCode ? 'input-error' : ''}`}
-                            placeholder="กรอกรหัสพนักงาน"
-                            {...register('employeeCode')}
-                            disabled={isEdit}
-                        />
-                        {errors.employeeCode && (
-                            <span className="text-error text-sm mt-1">{errors.employeeCode.message}</span>
-                        )}
-                    </div>
+            <div className="p-6 space-y-6">
+                {/* Employee Code */}
+                <div>
+                    <label className={styles.label}>
+                        รหัสพนักงาน <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        {...register('employeeCode')}
+                        type="text"
+                        placeholder="กรอกรหัสพนักงาน"
+                        className={`${styles.input} ${errors.employeeCode ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        disabled={isEdit}
+                    />
+                    {errors.employeeCode ? (
+                        <p className="text-red-500 text-xs mt-1">{errors.employeeCode.message}</p>
+                    ) : (
+                        <p className="text-gray-400 text-xs mt-1">varchar(20) - รหัสพนักงาน</p>
+                    )}
+                </div>
 
+                {/* Name Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* First Name */}
                     <div>
-                        <label className="label">
-                            <span className="label-text text-sm font-medium text-gray-700 dark:text-gray-300">ชื่อ <span className="text-error">*</span></span>
+                        <label className={styles.label}>
+                            ชื่อ <span className="text-red-500">*</span>
                         </label>
                         <input
-                            type="text"
-                            className={`input input-bordered w-full bg-white dark:bg-gray-900 ${errors.firstName ? 'input-error' : ''}`}
-                            placeholder="ช์่อ"
                             {...register('firstName')}
+                            type="text"
+                            placeholder="ชื่อ"
+                            className={`${styles.input} ${errors.firstName ? 'border-red-500 focus:ring-red-200' : ''}`}
                         />
                         {errors.firstName && (
-                            <span className="text-error text-sm mt-1">{errors.firstName.message}</span>
+                            <p className="text-red-500 text-xs mt-1">{errors.firstName.message}</p>
                         )}
                     </div>
 
                     {/* Last Name */}
                     <div>
-                        <label className="label">
-                            <span className="label-text text-sm font-medium text-gray-700 dark:text-gray-300">นามสกุล <span className="text-error">*</span></span>
+                        <label className={styles.label}>
+                            นามสกุล <span className="text-red-500">*</span>
                         </label>
                         <input
-                            type="text"
-                            className={`input input-bordered w-full bg-white dark:bg-gray-900 ${errors.lastName ? 'input-error' : ''}`}
-                            placeholder="นามสกุล"
                             {...register('lastName')}
+                            type="text"
+                            placeholder="นามสกุล"
+                            className={`${styles.input} ${errors.lastName ? 'border-red-500 focus:ring-red-200' : ''}`}
                         />
                         {errors.lastName && (
-                            <span className="text-error text-sm mt-1">{errors.lastName.message}</span>
+                            <p className="text-red-500 text-xs mt-1">{errors.lastName.message}</p>
                         )}
                     </div>
+                </div>
 
+                {/* Contact Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Email */}
                     <div>
-                        <label className="label">
-                            <span className="label-text text-sm font-medium text-gray-700 dark:text-gray-300">อีเมล</span>
+                        <label className={styles.label}>
+                            อีเมล
                         </label>
                         <input
-                            type="email"
-                            className={`input input-bordered w-full bg-white dark:bg-gray-900 ${errors.email ? 'input-error' : ''}`}
-                            placeholder="example@company.com"
                             {...register('email')}
+                            type="email"
+                            placeholder="example@company.com"
+                            className={`${styles.input} ${errors.email ? 'border-red-500 focus:ring-red-200' : ''}`}
                         />
                         {errors.email && (
-                            <span className="text-error text-sm mt-1">{errors.email.message}</span>
+                            <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>
                         )}
                     </div>
 
                     {/* Phone */}
                     <div>
-                        <label className="label">
-                            <span className="label-text text-sm font-medium text-gray-700 dark:text-gray-300">เบอร์โทรศัพท์</span>
+                        <label className={styles.label}>
+                            เบอร์โทรศัพท์
                         </label>
                         <input
-                            type="text"
-                            className={`input input-bordered w-full bg-white dark:bg-gray-900 ${errors.phone ? 'input-error' : ''}`}
-                            placeholder="08x-xxx-xxxx"
                             {...register('phone')}
+                            type="text"
+                            placeholder="08x-xxx-xxxx"
+                            className={`${styles.input} ${errors.phone ? 'border-red-500 focus:ring-red-200' : ''}`}
                         />
                     </div>
+                </div>
 
+                {/* Department & Position Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Department Dropdown */}
                     <div>
-                        <label className="label">
-                            <span className="label-text text-sm font-medium text-gray-700 dark:text-gray-300">ฝ่าย <span className="text-error">*</span></span>
+                        <label className={styles.label}>
+                            ฝ่าย <span className="text-red-500">*</span>
                         </label>
                         <select
-                            className={`select select-bordered w-full bg-white dark:bg-gray-900 ${errors.departmentId ? 'select-error' : ''}`}
+                            className={`${styles.input} cursor-pointer ${errors.departmentId ? 'border-red-500 focus:ring-red-200' : ''}`}
                             {...register('departmentId')}
                         >
                             <option value="">เลือกฝ่าย</option>
@@ -259,17 +269,17 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                             ))}
                         </select>
                         {errors.departmentId && (
-                            <span className="text-error text-sm mt-1">{errors.departmentId.message}</span>
+                            <p className="text-red-500 text-xs mt-1">{errors.departmentId.message}</p>
                         )}
                     </div>
 
                     {/* Position Dropdown */}
                     <div>
-                        <label className="label">
-                            <span className="label-text text-sm font-medium text-gray-700 dark:text-gray-300">ตำแหน่ง <span className="text-error">*</span></span>
+                        <label className={styles.label}>
+                            ตำแหน่ง <span className="text-red-500">*</span>
                         </label>
                         <select
-                            className={`select select-bordered w-full bg-white dark:bg-gray-900 ${errors.positionId ? 'select-error' : ''}`}
+                            className={`${styles.input} cursor-pointer ${errors.positionId ? 'border-red-500 focus:ring-red-200' : ''}`}
                             {...register('positionId')}
                         >
                             <option value="">เลือกตำแหน่ง</option>
@@ -280,21 +290,24 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                             ))}
                         </select>
                         {errors.positionId && (
-                            <span className="text-error text-sm mt-1">{errors.positionId.message}</span>
+                            <p className="text-red-500 text-xs mt-1">{errors.positionId.message}</p>
                         )}
                     </div>
+                </div>
 
-                    <div className="col-span-full form-control">
-                        <label className="label cursor-pointer justify-start gap-4">
-                            <span className="label-text text-sm font-medium text-gray-700 dark:text-gray-300">สถานะการใช้งาน</span>
-                            <input
-                                type="checkbox"
-                                className="toggle toggle-success"
-                                {...register('isActive')}
-                            />
-                            <span className="label-text text-gray-700 dark:text-gray-300">{isActive ? 'ใช้งาน (Active)' : 'ไม่ใช้งาน (Inactive)'}</span>
-                        </label>
-                    </div>
+                {/* Status - Dropdown Select */}
+                <div>
+                    <label className={styles.label}>
+                        สถานะ <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                        className={`${styles.input} cursor-pointer`}
+                        value={isActive ? 'true' : 'false'}
+                        onChange={(e) => setValue('isActive', e.target.value === 'true')}
+                    >
+                        <option value="true">ใช้งาน (Active)</option>
+                        <option value="false">ไม่ใช้งาน (Inactive)</option>
+                    </select>
                 </div>
             </div>
         </DialogFormLayout>

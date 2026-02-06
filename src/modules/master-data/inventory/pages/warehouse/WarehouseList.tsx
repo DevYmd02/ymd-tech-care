@@ -19,7 +19,7 @@ import {
 import { styles } from '@/shared/constants/styles';
 
 import { WarehouseFormModal } from './WarehouseFormModal';
-import { WarehouseService } from '@/modules/inventory/services/warehouse.service';
+import { WarehouseService } from '@/modules/master-data/inventory/services/warehouse.service';
 import type { WarehouseListItem } from '@/modules/master-data/types/master-data-types';
 import { ActiveStatusBadge } from '@ui/StatusBadge';
 

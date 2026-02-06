@@ -157,6 +157,7 @@ export const EmployeeGroupService = {
     group_id: `EGRP${Math.floor(Math.random() * 10000)}`,
     group_code: data.groupCode,
     group_name: data.groupName,
+    group_name_en: data.groupNameEn,
     is_active: data.isActive,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -165,6 +166,7 @@ export const EmployeeGroupService = {
     const payload: Partial<EmployeeGroupListItem> = {};
     if (data.groupCode !== undefined) payload.group_code = data.groupCode;
     if (data.groupName !== undefined) payload.group_name = data.groupName;
+    if (data.groupNameEn !== undefined) payload.group_name_en = data.groupNameEn;
     if (data.isActive !== undefined) payload.is_active = data.isActive;
     payload.updated_at = new Date().toISOString();
     return genericUpdate<EmployeeGroupListItem>(mockEmployeeGroups, 'group_id', id, payload);
@@ -179,6 +181,7 @@ export const PositionService = {
     position_id: `POS${Math.floor(Math.random() * 10000)}`,
     position_code: data.positionCode,
     position_name: data.positionName,
+    position_name_en: data.positionNameEn,
     is_active: data.isActive,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -187,6 +190,7 @@ export const PositionService = {
     const payload: Partial<PositionListItem> = {};
     if (data.positionCode !== undefined) payload.position_code = data.positionCode;
     if (data.positionName !== undefined) payload.position_name = data.positionName;
+    if (data.positionNameEn !== undefined) payload.position_name_en = data.positionNameEn;
     if (data.isActive !== undefined) payload.is_active = data.isActive;
     payload.updated_at = new Date().toISOString();
     return genericUpdate<PositionListItem>(mockPositions, 'position_id', id, payload);
@@ -201,6 +205,7 @@ export const SalesZoneService = {
     zone_id: `SZ${Math.floor(Math.random() * 10000)}`,
     zone_code: data.zoneCode,
     zone_name: data.zoneName,
+    zone_name_en: data.zoneNameEn,
     is_active: data.isActive,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -209,6 +214,7 @@ export const SalesZoneService = {
     const payload: Partial<SalesZoneListItem> = {};
     if (data.zoneCode !== undefined) payload.zone_code = data.zoneCode;
     if (data.zoneName !== undefined) payload.zone_name = data.zoneName;
+    if (data.zoneNameEn !== undefined) payload.zone_name_en = data.zoneNameEn;
     if (data.isActive !== undefined) payload.is_active = data.isActive;
     payload.updated_at = new Date().toISOString();
     return genericUpdate<SalesZoneListItem>(mockSalesZones, 'zone_id', id, payload);
@@ -223,6 +229,7 @@ export const SalesChannelService = {
     channel_id: `SC${Math.floor(Math.random() * 10000)}`,
     channel_code: data.channelCode,
     channel_name: data.channelName,
+    channel_name_en: data.channelNameEn,
     is_active: data.isActive,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -231,6 +238,7 @@ export const SalesChannelService = {
     const payload: Partial<SalesChannelListItem> = {};
     if (data.channelCode !== undefined) payload.channel_code = data.channelCode;
     if (data.channelName !== undefined) payload.channel_name = data.channelName;
+    if (data.channelNameEn !== undefined) payload.channel_name_en = data.channelNameEn;
     if (data.isActive !== undefined) payload.is_active = data.isActive;
     payload.updated_at = new Date().toISOString();
     return genericUpdate<SalesChannelListItem>(mockSalesChannels, 'channel_id', id, payload);

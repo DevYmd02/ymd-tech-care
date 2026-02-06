@@ -6,7 +6,7 @@ import {
     ITEM_NATURES, 
     ITEM_COSTING_METHODS, 
     ITEM_COMMISSIONS 
-} from '@/modules/inventory/constants/itemConstants';
+} from '@/modules/master-data/inventory/constants/itemConstants';
 
 /**
  * @interface ItemStockDetailsProps

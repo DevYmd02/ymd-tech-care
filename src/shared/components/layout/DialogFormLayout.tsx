@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 interface DialogFormLayoutProps {
@@ -41,9 +42,11 @@ export const DialogFormLayout: React.FC<DialogFormLayoutProps> = ({
 
     if (!shouldRender) return null;
 
-    return (
+    // Use Portal to render modal at document.body level
+    // This ensures proper stacking context and backdrop coverage
+    const modalContent = (
         <div 
-            className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-300 ${isAnimating ? 'opacity-100' : 'opacity-0'} bg-black/50 backdrop-blur-sm`}
+            className={`fixed inset-0 z-[9999] flex items-center justify-center p-4 transition-opacity duration-300 ${isAnimating ? 'opacity-100' : 'opacity-0'} bg-black/50 backdrop-blur-sm`}
             onClick={(e) => { 
                 // Close on backdrop click
                 if (e.target === e.currentTarget) onClose(); 
@@ -104,4 +107,7 @@ export const DialogFormLayout: React.FC<DialogFormLayoutProps> = ({
             </div>
         </div>
     );
+
+    // Render modal using Portal to document.body for proper stacking
+    return createPortal(modalContent, document.body);
 };

@@ -1,19 +1,10 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Save, Package, AlertCircle } from 'lucide-react';
+import { Save, Package, Plus, Trash2, Search } from 'lucide-react';
 import { WindowFormLayout } from '@/shared/components/layout/WindowFormLayout';
 import { POService } from '@/modules/procurement/services';
 import { GRNService } from '@/modules/procurement/services/grn.service';
 import type { POListItem } from '@/modules/procurement/types/po-types';
 import type { CreateGRNPayload, GRNLineItemInput } from '@/modules/procurement/types/grn-types';
-import { SmartTable } from '@/shared/components/ui/SmartTable';
-import { createColumnHelper } from '@tanstack/react-table';
-import type { ColumnDef } from '@tanstack/react-table';
-
-// ====================================================================================
-// INTERNAL HELPERS
-// ====================================================================================
-
-const columnHelper = createColumnHelper<GRNLineItemInput>();
 
 // ====================================================================================
 // PROPS
@@ -33,11 +24,15 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess }: Props) {
     const prevIsOpenRef = useRef(false);
     
     // -- State --
+    const [grnNo] = useState<string>('GRN2024-xxx');
     const [selectedPOId, setSelectedPOId] = useState<string>('');
     const [selectedPO, setSelectedPO] = useState<POListItem | null>(null);
     const [items, setItems] = useState<GRNLineItemInput[]>([]);
     const [formDate, setFormDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [remark, setRemark] = useState<string>('');
+    const [warehouseId, setWarehouseId] = useState<string>('');
+    const [receivedBy, setReceivedBy] = useState<string>('');
+    const [status, setStatus] = useState<string>('Draft');
 
     // -- Fetch Issued POs --
     const [poList, setPoList] = useState<POListItem[]>([]);
@@ -50,6 +45,9 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess }: Props) {
             setItems([]);
             setFormDate(new Date().toISOString().split('T')[0]);
             setRemark('');
+            setWarehouseId('');
+            setReceivedBy('');
+            setStatus('Draft');
             
             // Load POs
             POService.getList({ status: 'ISSUED', limit: 100 }).then(res => {
@@ -65,20 +63,19 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess }: Props) {
             POService.getById(selectedPOId).then(po => {
                 if (po) {
                     setSelectedPO(po);
-                    // Mock items from PO (since getById might not return lines in this mock setup)
-                    // In real app, we would use po.lines or fetch lines
                     const mockItems: GRNLineItemInput[] = Array.from({ length: po.item_count || 2 }).map((_, i) => ({
-                        po_line_id: `pol-${i}`, // Mock ID
-                        item_id: `item-${i}`,   // Mock ID
-                        item_code: `ITEM-${i+1}`,
-                        item_name: `Product Item ${i+1}`,
-                        qty_ordered: 10 * (i + 1),
-                        receiving_qty: 10 * (i + 1), // Default to full
-                        accepted_qty: 10 * (i + 1), // Default to full
+                        po_line_id: `pol-${i}`,
+                        item_id: `item-${i}`,
+                        item_code: `ITM00${i+1}`,
+                        item_name: `คอมพิวเตอร์ Notebook Dell Ins`,
+                        qty_ordered: 5 * (i + 1),
+                        receiving_qty: 5 * (i + 1),
+                        accepted_qty: 5 * (i + 1),
                         rejected_qty: 0,
                         uom_name: 'PCS',
                         unit_price: 100,
-                        line_total: 1000 * (i + 1),
+                        line_total: 500 * (i + 1),
+                        qc_status: 'PASS',
                         remark: ''
                     }));
                     setItems(mockItems);
@@ -91,24 +88,54 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess }: Props) {
     }, [selectedPOId]);
 
     // -- Handlers --
-    const handleQuantityChange = (index: number, field: 'receiving_qty' | 'accepted_qty', value: number) => {
+    const handleQuantityChange = (index: number, value: number) => {
         setItems(prev => {
             const newItems = [...prev];
             const item = { ...newItems[index] };
-            
-            if (field === 'receiving_qty') {
-                item.receiving_qty = value;
-                // Clamp accepted to be <= receiving
-                if (item.accepted_qty > value) item.accepted_qty = value;
-            } else {
-                item.accepted_qty = value;
-            }
-
-            // Recalculate rejected
-            item.rejected_qty = Math.max(0, item.receiving_qty - item.accepted_qty);
+            item.receiving_qty = value;
+            item.accepted_qty = value;
+            item.rejected_qty = 0;
             newItems[index] = item;
             return newItems;
         });
+    };
+
+    const handleQCStatusChange = (index: number, value: string) => {
+        setItems(prev => {
+            const newItems = [...prev];
+            newItems[index] = { ...newItems[index], qc_status: value };
+            return newItems;
+        });
+    };
+
+    const handleRemarkChange = (index: number, value: string) => {
+        setItems(prev => {
+            const newItems = [...prev];
+            newItems[index] = { ...newItems[index], remark: value };
+            return newItems;
+        });
+    };
+
+    const handleAddLine = () => {
+        setItems(prev => [...prev, {
+            po_line_id: `pol-new-${Date.now()}`,
+            item_id: '',
+            item_code: '',
+            item_name: '',
+            qty_ordered: 0,
+            receiving_qty: 0,
+            accepted_qty: 0,
+            rejected_qty: 0,
+            uom_name: 'PCS',
+            unit_price: 0,
+            line_total: 0,
+            qc_status: 'PASS',
+            remark: ''
+        }]);
+    };
+
+    const handleRemoveLine = (index: number) => {
+        setItems(prev => prev.filter((_, i) => i !== index));
     };
 
     const handleSubmit = async () => {
@@ -117,11 +144,11 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess }: Props) {
         const payload: CreateGRNPayload = {
              po_id: selectedPOId,
              received_date: formDate,
-             warehouse_id: selectedPO?.ship_to_warehouse_id || 'wh-default',
+             warehouse_id: warehouseId || selectedPO?.ship_to_warehouse_id || 'wh-default',
              remark: remark,
              items: items.map(i => ({
-                 po_line_id: i.po_line_id || 'unknown-pol', // Fallback
-                 item_id: i.item_id || 'unknown-item',     // Fallback
+                 po_line_id: i.po_line_id || 'unknown-pol',
+                 item_id: i.item_id || 'unknown-item',
                  receiving_qty: i.receiving_qty,
                  accepted_qty: i.accepted_qty,
                  rejected_qty: i.rejected_qty,
@@ -140,178 +167,274 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess }: Props) {
         }
     };
 
-    // -- Columns --
+    // -- Calculated Values --
+    const totalItems = items.length;
+    const totalReceived = useMemo(() => items.reduce((sum, item) => sum + (item.receiving_qty || 0), 0), [items]);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const columns = useMemo<ColumnDef<GRNLineItemInput, any>[]>(() => [
-        columnHelper.accessor('item_code', {
-            header: 'รหัสสินค้า',
-            cell: info => info.getValue(),
-            size: 100,
-        }),
-        columnHelper.accessor('item_name', {
-            header: 'ชื่อสินค้า',
-            cell: info => info.getValue(),
-            size: 200,
-        }),
-        columnHelper.accessor('receiving_qty', { // Using receiving_qty as proxy for ordered display
-            header: 'สั่งซื้อ',
-            cell: info => <span className="font-semibold text-gray-500">{info.row.original.receiving_qty}</span>,
-            size: 80,
-            id: 'ordered_qty_display' // Unique ID
-        }),
-        columnHelper.accessor('receiving_qty', {
-            header: 'รับจริง',
-            cell: ({ row, getValue }) => (
-                <input 
-                    type="number" 
-                    min={0}
-                    className="w-full px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500 outline-none text-right bg-white dark:bg-gray-800 dark:border-gray-700"
-                    value={getValue()}
-                    onChange={e => handleQuantityChange(row.index, 'receiving_qty', Number(e.target.value))}
-                />
-            ),
-            size: 100,
-            id: 'receiving_qty_input' // Unique ID
-        }),
-        columnHelper.accessor('accepted_qty', {
-            header: 'ผ่าน',
-            cell: ({ row, getValue }) => (
-                <input 
-                    type="number" 
-                    min={0}
-                    max={row.original.receiving_qty}
-                    className="w-full px-2 py-1 border rounded focus:ring-2 focus:ring-green-500 outline-none text-right text-green-700 font-medium bg-white dark:bg-gray-800 dark:border-gray-700"
-                    value={getValue()}
-                    onChange={e => handleQuantityChange(row.index, 'accepted_qty', Number(e.target.value))}
-                />
-            ),
-            size: 100,
-        }),
-        columnHelper.accessor('rejected_qty', {
-            header: 'ไม่ผ่าน',
-            cell: info => <span className="text-red-600 font-bold">{info.getValue()}</span>,
-            size: 80,
-        }),
-        columnHelper.accessor('uom_name', {
-            header: 'หน่วย',
-            size: 60,
-        }),
-    ], []);
+    // -- Styles --
+    const inputClass = 'w-full h-10 px-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+    const selectClass = 'w-full h-10 px-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 appearance-none';
+    const labelClass = 'block text-sm font-medium text-blue-600 dark:text-blue-400 mb-1';
+    const sectionHeaderClass = 'text-base font-bold text-blue-600 dark:text-blue-400 flex items-center gap-2';
 
     return (
         <WindowFormLayout
             isOpen={isOpen}
             onClose={onClose}
-            title="สร้างใบรับสินค้า (Create GRN)"
-            titleIcon={<Package className="text-white" size={20} />}
-            headerColor="bg-green-600 [&_div.flex.items-center.space-x-1>button:not(:last-child)]:hidden"
+            title="สร้างใบรับสินค้าใหม่ (Create GRN)"
+            titleIcon={<div className="bg-blue-500 p-2 rounded-lg shadow"><Package className="text-white" size={20} /></div>}
+            headerColor="bg-gradient-to-r from-blue-600 to-blue-500 [&_div.flex.items-center.space-x-1>button:not(:last-child)]:hidden"
             footer={
-                <div className="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-end items-center bg-white dark:bg-gray-900 sticky bottom-0 z-10 gap-x-2">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md text-sm font-medium transition-colors"
-                    >
-                        ยกเลิก
-                    </button>
-                    <button
-                        type="button"
-                        onClick={handleSubmit}
-                        disabled={!selectedPOId}
-                        className="px-6 py-2 bg-green-600 text-white hover:bg-green-700 rounded-md text-sm font-medium shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                    >
-                        <Save size={18} />
-                        บันทึก
-                    </button>
+                <div className="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-between items-center bg-white dark:bg-gray-900 sticky bottom-0 z-10">
+                    <div className="text-xs text-red-500">* ฟิลด์ที่จำเป็นต้องกรอก</div>
+                    <div className="flex items-center gap-3">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="px-5 py-2.5 border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors"
+                        >
+                            ยกเลิก
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleSubmit}
+                            disabled={!selectedPOId}
+                            className="px-6 py-2.5 bg-blue-600 text-white hover:bg-blue-700 rounded-lg text-sm font-medium shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        >
+                            <Save size={18} />
+                            บันทึก
+                        </button>
+                    </div>
                 </div>
             }
         >
-            <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 p-4 gap-4 overflow-auto">
-                {/* Header Section */}
-                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-                     <h3 className="text-base font-bold text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-2">
-                        <span className="w-1 h-6 bg-green-500 rounded-full"></span>
-                        ข้อมูลใบสั่งซื้อ
+            <div className="flex flex-col h-full bg-gray-100 dark:bg-gray-900 p-4 gap-4 overflow-auto">
+                
+                {/* ========== GRN Header Section ========== */}
+                <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+                    <h3 className={sectionHeaderClass}>
+                        <Package size={18} />
+                        ใบรับสินค้า (GRN Header)
                     </h3>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div className="col-span-1 lg:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                ใบสั่งซื้อ (Purchase Order)
+                    {/* Row 1 */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                        <div>
+                            <label className={labelClass}>
+                                เลขที่ GRN <span className="text-gray-400">(grn_no)</span> <span className="text-red-500">*</span>
                             </label>
-                            <select 
-                                className="w-full p-2.5 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                                value={selectedPOId}
-                                onChange={(e) => setSelectedPOId(e.target.value)}
-                            >
-                                <option value="">-- เลือกใบสั่งซื้อ --</option>
-                                {poList.map(po => (
-                                    <option key={po.po_id} value={po.po_id}>
-                                        {po.po_no} - {po.vendor_name}
-                                    </option>
-                                ))}
+                            <input type="text" value={grnNo} readOnly className={`${inputClass} bg-gray-50 dark:bg-gray-900`} />
+                        </div>
+                        <div>
+                            <label className={labelClass}>
+                                วันที่รับ <span className="text-gray-400">(grn_date)</span> <span className="text-red-500">*</span>
+                            </label>
+                            <input type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} className={inputClass} />
+                        </div>
+                        <div>
+                            <label className={labelClass}>
+                                เลขที่ PO อ้างอิง <span className="text-gray-400">(po_id FK)</span> <span className="text-red-500">*</span>
+                            </label>
+                            <div className="flex gap-2">
+                                <input 
+                                    type="text" 
+                                    value={selectedPO?.po_no || 'PO2024-xxx'} 
+                                    readOnly 
+                                    className={`${inputClass} flex-1 bg-gray-50 dark:bg-gray-900`}
+                                    placeholder="PO2024-xxx"
+                                />
+                                <button 
+                                    type="button"
+                                    onClick={() => {
+                                        // TODO: Open PO search modal
+                                        if (poList.length > 0 && !selectedPOId) {
+                                            setSelectedPOId(poList[0].po_id);
+                                        }
+                                    }}
+                                    className="px-4 h-10 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center"
+                                >
+                                    <Search size={18} />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Row 2 */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                        <div>
+                            <label className={labelClass}>
+                                รับเข้าคลัง <span className="text-gray-400">(warehouse_id FK)</span> <span className="text-red-500">*</span>
+                            </label>
+                            <select value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} className={selectClass}>
+                                <option value="">-- เลือกคลังสินค้า --</option>
+                                <option value="wh-1">คลังสินค้าหลัก</option>
+                                <option value="wh-2">คลังสินค้าสาขา</option>
                             </select>
                         </div>
-                        
-                         <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                วันที่รับของ
+                        <div>
+                            <label className={labelClass}>
+                                ผู้รับสินค้า <span className="text-gray-400">(received_by)</span> <span className="text-red-500">*</span>
                             </label>
-                            <input 
-                                type="date"
-                                className="w-full p-2.5 bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-green-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                                value={formDate}
-                                onChange={(e) => setFormDate(e.target.value)}
-                            />
+                            <select value={receivedBy} onChange={(e) => setReceivedBy(e.target.value)} className={selectClass}>
+                                <option value="">-- เลือกผู้รับสินค้า --</option>
+                                <option value="user-1">สมชาย ใจดี</option>
+                                <option value="user-2">สมหญิง รักดี</option>
+                            </select>
                         </div>
+                        <div>
+                            <label className={labelClass}>
+                                สถานะ <span className="text-gray-400">(status)</span>
+                            </label>
+                            <select value={status} onChange={(e) => setStatus(e.target.value)} className={selectClass}>
+                                <option value="Draft">Draft</option>
+                                <option value="Completed">Completed</option>
+                            </select>
+                        </div>
+                    </div>
 
-                         <div>
-                             {selectedPO && (
-                                <div className="text-sm p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg h-full flex flex-col justify-center">
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-500">คลังสินค้า:</span>
-                                        <span className="font-semibold">{selectedPO.branch_name || 'Main Warehouse'}</span>
-                                    </div>
-                                    <div className="flex justify-between mt-1">
-                                        <span className="text-gray-500">ผู้จำหน่าย:</span>
-                                        <span className="font-semibold truncate w-24 text-right">{selectedPO.vendor_name}</span>
-                                    </div>
-                                </div>
-                             )}
-                        </div>
+                    {/* Remarks */}
+                    <div className="mt-4">
+                        <label className={labelClass}>
+                            หมายเหตุ <span className="text-gray-400">(remarks - optional)</span>
+                        </label>
+                        <textarea 
+                            value={remark}
+                            onChange={(e) => setRemark(e.target.value)}
+                            placeholder="ระบุหมายเหตุเพิ่มเติม (ถ้ามี)"
+                            rows={2}
+                            className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 resize-none"
+                        />
                     </div>
                 </div>
 
-                {/* Items Section */}
-                <div className="flex-1 bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col">
-                     <h3 className="text-base font-bold text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-2">
-                        <span className="w-1 h-6 bg-blue-500 rounded-full"></span>
-                        รายการรับเข้า
-                    </h3>
+                {/* ========== Line Items Section ========== */}
+                <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex-1 flex flex-col">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className={sectionHeaderClass}>
+                            รายการสินค้าที่รับ (GRN Line Items)
+                        </h3>
+                        <button 
+                            type="button"
+                            onClick={handleAddLine}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm font-medium"
+                        >
+                            <Plus size={16} />
+                            เพิ่มรายการ
+                        </button>
+                    </div>
 
-                    {!selectedPOId ? (
-                        <div className="flex-1 flex flex-col items-center justify-center text-gray-400 bg-gray-50 dark:bg-gray-900/50 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700">
-                             <AlertCircle size={48} className="mb-2 opacity-50" />
-                            <p>กรุณาเลือก PO เพื่อแสดงรายการสินค้า</p>
+                    {/* Table */}
+                    <div className="flex-1 overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
+                        <table className="w-full min-w-[900px] text-sm">
+                            <thead className="bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400">
+                                <tr>
+                                    <th className="px-3 py-3 text-center w-12 border-b border-r border-gray-200 dark:border-gray-700">#</th>
+                                    <th className="px-3 py-3 text-left w-28 border-b border-r border-gray-200 dark:border-gray-700">
+                                        รหัสสินค้า<br/><span className="text-xs text-gray-400">(item_id FK)</span>
+                                    </th>
+                                    <th className="px-3 py-3 text-left border-b border-r border-gray-200 dark:border-gray-700">ชื่อสินค้า</th>
+                                    <th className="px-3 py-3 text-center w-24 border-b border-r border-gray-200 dark:border-gray-700">
+                                        จำนวนสั่ง<br/><span className="text-xs text-gray-400">(PO Qty)</span>
+                                    </th>
+                                    <th className="px-3 py-3 text-center w-24 border-b border-r border-gray-200 dark:border-gray-700">
+                                        จำนวนรับ<br/><span className="text-xs text-gray-400">(qty_received)*</span>
+                                    </th>
+                                    <th className="px-3 py-3 text-center w-20 border-b border-r border-gray-200 dark:border-gray-700">
+                                        หน่วย<br/><span className="text-xs text-gray-400">(uom_id FK)</span>
+                                    </th>
+                                    <th className="px-3 py-3 text-center w-24 border-b border-r border-gray-200 dark:border-gray-700">
+                                        สถานะ QC<br/><span className="text-xs text-gray-400">(qc_status)</span>
+                                    </th>
+                                    <th className="px-3 py-3 text-left w-32 border-b border-r border-gray-200 dark:border-gray-700">
+                                        หมายเหตุ<br/><span className="text-xs text-gray-400">(remarks)</span>
+                                    </th>
+                                    <th className="px-3 py-3 text-center w-12 border-b border-gray-200 dark:border-gray-700">ลบ</th>
+                                </tr>
+                            </thead>
+                            <tbody className="bg-white dark:bg-gray-800">
+                                {items.map((item, index) => (
+                                    <tr key={item.po_line_id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750">
+                                        <td className="px-3 py-2 text-center text-gray-500 border-r border-gray-100 dark:border-gray-700">{index + 1}</td>
+                                        <td className="px-3 py-2 border-r border-gray-100 dark:border-gray-700">
+                                            <input type="text" value={item.item_code} readOnly className="w-full h-8 px-2 text-sm border border-gray-200 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white" />
+                                        </td>
+                                        <td className="px-3 py-2 border-r border-gray-100 dark:border-gray-700">
+                                            <input type="text" value={item.item_name} readOnly className="w-full h-8 px-2 text-sm border border-gray-200 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white" />
+                                        </td>
+                                        <td className="px-3 py-2 text-center border-r border-gray-100 dark:border-gray-700">
+                                            <input type="number" value={item.qty_ordered} readOnly className="w-full h-8 px-2 text-sm text-center border border-gray-200 dark:border-gray-600 rounded bg-gray-100 dark:bg-gray-900 text-gray-500 dark:text-gray-400" />
+                                        </td>
+                                        <td className="px-3 py-2 border-r border-gray-100 dark:border-gray-700">
+                                            <input 
+                                                type="number" 
+                                                min={0}
+                                                value={item.receiving_qty} 
+                                                onChange={(e) => handleQuantityChange(index, Number(e.target.value))}
+                                                className="w-full h-8 px-2 text-sm text-center border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        </td>
+                                        <td className="px-3 py-2 border-r border-gray-100 dark:border-gray-700">
+                                            <select value={item.uom_name} className="w-full h-8 px-2 text-sm border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+                                                <option value="PCS">PCS</option>
+                                                <option value="BOX">BOX</option>
+                                                <option value="SET">SET</option>
+                                            </select>
+                                        </td>
+                                        <td className="px-3 py-2 border-r border-gray-100 dark:border-gray-700">
+                                            <select 
+                                                value={item.qc_status || 'PASS'} 
+                                                onChange={(e) => handleQCStatusChange(index, e.target.value)}
+                                                className="w-full h-8 px-2 text-sm border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                            >
+                                                <option value="PASS">PASS</option>
+                                                <option value="FAIL">FAIL</option>
+                                                <option value="PENDING">PENDING</option>
+                                            </select>
+                                        </td>
+                                        <td className="px-3 py-2 border-r border-gray-100 dark:border-gray-700">
+                                            <input 
+                                                type="text" 
+                                                value={item.remark || ''} 
+                                                onChange={(e) => handleRemarkChange(index, e.target.value)}
+                                                placeholder="หมายเหตุ"
+                                                className="w-full h-8 px-2 text-sm border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                            />
+                                        </td>
+                                        <td className="px-3 py-2 text-center">
+                                            <button 
+                                                type="button"
+                                                onClick={() => handleRemoveLine(index)}
+                                                className="text-red-500 hover:text-red-700 p-1"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {items.length === 0 && (
+                                    <tr>
+                                        <td colSpan={9} className="px-3 py-8 text-center text-gray-400">
+                                            กรุณาเลือก PO เพื่อแสดงรายการสินค้า หรือกดปุ่ม "เพิ่มรายการ"
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Summary Section */}
+                    <div className="mt-4 flex justify-end">
+                        <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 w-72">
+                            <div className="flex justify-between items-center mb-2 text-sm">
+                                <span className="text-gray-600 dark:text-gray-400">จำนวนรายการทั้งหมด:</span>
+                                <span className="font-bold text-gray-900 dark:text-white">{totalItems} รายการ</span>
+                            </div>
+                            <div className="flex justify-between items-center text-sm">
+                                <span className="text-gray-600 dark:text-gray-400 font-medium">จำนวนรับรวม:</span>
+                                <span className="font-bold text-blue-600 dark:text-blue-400 text-lg">{totalReceived.toLocaleString(undefined, { minimumFractionDigits: 3 })}</span>
+                            </div>
                         </div>
-                    ) : (
-                        <div className="flex-1 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
-                            <SmartTable
-                                data={items}
-                                columns={columns}
-                                isLoading={false}
-                                pagination={{
-                                    pageIndex: 1,
-                                    pageSize: Math.max(items.length, 10),
-                                    totalCount: items.length,
-                                    onPageChange: () => {},
-                                    onPageSizeChange: () => {}
-                                }}
-                                className="h-full"
-                            />
-                        </div>
-                    )}
+                    </div>
                 </div>
             </div>
         </WindowFormLayout>

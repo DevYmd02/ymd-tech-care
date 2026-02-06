@@ -7,8 +7,8 @@ import type { QuotationHeader, QuotationLine } from '@/modules/procurement/types
 import { MasterDataService } from '@/core/api/master-data.service';
 import { QTService } from '@/modules/procurement/services/qt.service';
 import type { UnitListItem } from '@/modules/master-data/types/master-data-types';
-import type { ProductLookup } from '@/modules/inventory/mocks/products';
-import { MOCK_PRODUCTS } from '@/modules/inventory/mocks/products';
+import type { ProductLookup } from '@/modules/master-data/inventory/mocks/products';
+import { MOCK_PRODUCTS } from '@/modules/master-data/inventory/mocks/products';
 import type { RFQHeader } from '@/modules/procurement/types/rfq-types';
 
 // ====================================================================================

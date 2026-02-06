@@ -287,6 +287,31 @@ export const sidebarMenuItems: MenuItem[] = [
                     label: 'กำหนดรหัสพนักงาน',
                     path: '/master-data/employee',
                 },
+                {
+                    id: 'employee-group',
+                    label: 'กำหนดรหัสกลุ่มพนักงาน',
+                    path: '/master-data/employee-group',
+                },
+                {
+                    id: 'position',
+                    label: 'กำหนดรหัสตำแหน่ง',
+                    path: '/master-data/position',
+                },
+                {
+                    id: 'sales-area',
+                    label: 'กำหนดเขตการขาย',
+                    path: '/master-data/sales-area',
+                },
+                {
+                    id: 'sales-channel',
+                    label: 'กำหนดช่องทางการขาย',
+                    path: '/master-data/sales-channel',
+                },
+                {
+                    id: 'sales-target',
+                    label: 'กำหนดรหัสเป้าการขาย',
+                    path: '/master-data/sales-target',
+                },
                 ]
             },
             {
@@ -294,7 +319,8 @@ export const sidebarMenuItems: MenuItem[] = [
                 label: 'Master Data เจ้าหนี้',
                 subItems: [
                     { id: 'vendor-management', label: 'กำหนดรหัสเจ้าหนี้', path: '/master-data/vendor' },
-                    { id: 'vendor-placeholder-1', label: 'Vendor Settings (Coming Soon)', path: '/coming-soon' },
+                    { id: 'vendor-type', label: 'กำหนดประเภทเจ้าหนี้', path: '/master-data/vendor-type' },
+                    { id: 'vendor-group', label: 'กำหนดกลุ่มเจ้าหนี้', path: '/master-data/vendor-group' },
                 ]
             },
             {

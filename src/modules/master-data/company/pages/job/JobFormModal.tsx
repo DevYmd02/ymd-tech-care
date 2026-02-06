@@ -9,6 +9,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Save, X, Briefcase } from 'lucide-react';
+import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@/shared/components/layout/DialogFormLayout';
 import { JobService } from '@/modules/master-data/company/services/company.service';
 
@@ -132,51 +133,56 @@ export const JobFormModal = ({ isOpen, onClose, onSuccess, editId }: JobFormModa
             footer={FormFooter}
         >
             <div className="p-6 space-y-6">
-                <div className="grid grid-cols-1 gap-4">
-                    <div className="space-y-4">
-                        <div>
-                            <label className="label">
-                                <span className="label-text text-sm font-medium text-gray-700 dark:text-gray-300">รหัส Job <span className="text-error">*</span></span>
-                            </label>
-                            <input
-                                type="text"
-                                className={`input input-bordered w-full bg-white dark:bg-gray-900 ${errors.jobCode ? 'input-error' : ''}`}
-                                placeholder="กรอกรหัส Job"
-                                {...register('jobCode')}
-                                disabled={isEdit}
-                            />
-                            {errors.jobCode && (
-                                <span className="text-error text-sm mt-1">{errors.jobCode.message}</span>
-                            )}
-                        </div>
+                {/* Job Code */}
+                <div>
+                    <label className={styles.label}>
+                        รหัส Job <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        {...register('jobCode')}
+                        type="text"
+                        placeholder="กรอกรหัส Job"
+                        className={`${styles.input} ${errors.jobCode ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        disabled={isEdit}
+                    />
+                    {errors.jobCode ? (
+                        <p className="text-red-500 text-xs mt-1">{errors.jobCode.message}</p>
+                    ) : (
+                        <p className="text-gray-400 text-xs mt-1">varchar(20) - รหัส Job</p>
+                    )}
+                </div>
 
-                        <div>
-                            <label className="label">
-                                <span className="label-text text-sm font-medium text-gray-700 dark:text-gray-300">ชื่อ Job <span className="text-error">*</span></span>
-                            </label>
-                            <input
-                                type="text"
-                                className={`input input-bordered w-full bg-white dark:bg-gray-900 ${errors.jobName ? 'input-error' : ''}`}
-                                placeholder="กรอกชื่อ Job"
-                                {...register('jobName')}
-                            />
-                            {errors.jobName && (
-                                <span className="text-error text-sm mt-1">{errors.jobName.message}</span>
-                            )}
-                        </div>
+                {/* Job Name */}
+                <div>
+                    <label className={styles.label}>
+                        ชื่อ Job <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        {...register('jobName')}
+                        type="text"
+                        placeholder="กรอกชื่อ Job"
+                        className={`${styles.input} ${errors.jobName ? 'border-red-500 focus:ring-red-200' : ''}`}
+                    />
+                    {errors.jobName ? (
+                        <p className="text-red-500 text-xs mt-1">{errors.jobName.message}</p>
+                    ) : (
+                        <p className="text-gray-400 text-xs mt-1">varchar(100) - ชื่อ Job</p>
+                    )}
+                </div>
 
-                        <div className="form-control">
-                            <label className="label cursor-pointer justify-start gap-4">
-                                <span className="label-text text-sm font-medium text-gray-700 dark:text-gray-300">สถานะการใช้งาน</span>
-                                <input
-                                    type="checkbox"
-                                    className="toggle toggle-success"
-                                    {...register('isActive')}
-                                />
-                                <span className="label-text text-gray-700 dark:text-gray-300">{isActive ? 'ใช้งาน (Active)' : 'ไม่ใช้งาน (Inactive)'}</span>
-                            </label>
-                        </div>
-                    </div>
+                {/* Status - Dropdown Select */}
+                <div>
+                    <label className={styles.label}>
+                        สถานะ <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                        className={`${styles.input} cursor-pointer`}
+                        value={isActive ? 'true' : 'false'}
+                        onChange={(e) => setValue('isActive', e.target.value === 'true')}
+                    >
+                        <option value="true">ใช้งาน (Active)</option>
+                        <option value="false">ไม่ใช้งาน (Inactive)</option>
+                    </select>
                 </div>
             </div>
         </DialogFormLayout>

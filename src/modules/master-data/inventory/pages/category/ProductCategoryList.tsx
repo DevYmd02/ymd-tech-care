@@ -9,7 +9,7 @@ import { Tag } from 'lucide-react';
 import { GenericMasterDataList } from '@/modules/master-data/pages/components/GenericMasterDataList';
 import { useGenericMasterDataList } from '@/shared/hooks/useGenericMasterDataList';
 import { ProductCategoryFormModal } from './ProductCategoryFormModal';
-import { ProductCategoryService } from '@/modules/inventory/services/product-category.service';
+import { ProductCategoryService } from '@/modules/master-data/inventory/services/product-category.service';
 import { ActiveStatusBadge } from '@ui/StatusBadge';
 import type { ProductCategoryListItem } from '@/modules/master-data/types/master-data-types';
 import type { GenericMasterDataListConfig } from '@/modules/master-data/types/generic-master-data-types';

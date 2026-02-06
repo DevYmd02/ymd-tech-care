@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { FileText, Eye, CheckCircle, RotateCcw, XCircle, Package, Plus } from 'lucide-react';
+import { Eye, Package, Plus } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { FilterFormBuilder } from '@/shared/components/FilterFormBuilder';
 import { SmartTable } from '@/shared/components/ui/SmartTable';
@@ -8,7 +8,7 @@ import { PageListLayout } from '@/shared/components/layout/PageListLayout';
 import type { FilterFieldConfig } from '@/shared/components/FilterFormBuilder';
 import { useTableFilters } from '@/shared/hooks';
 import { GRNService } from '@/modules/procurement/services/grn.service';
-import type { GRNListParams, GRNStatus, GRNListItem, GRNSummaryCounts } from '@/modules/procurement/types/grn-types';
+import type { GRNListParams, GRNStatus, GRNListItem } from '@/modules/procurement/types/grn-types';
 import { createColumnHelper } from '@tanstack/react-table';
 import type { ColumnDef } from '@tanstack/react-table';
 import { GRNFormModal } from './components';
@@ -68,11 +68,7 @@ export default function GRNListPage() {
         placeholderData: keepPreviousData,
     });
 
-    const { data: summaryCounts } = useQuery({
-        queryKey: ['grn-summary'],
-        queryFn: () => GRNService.getSummaryCounts(),
-        initialData: { DRAFT: 0, POSTED: 0, REVERSED: 0, RETURNED: 0 } as GRNSummaryCounts
-    });
+
 
     // 3. Actions
     const handleView = (id: string) => alert(`View GRN: ${id}`);
@@ -132,20 +128,21 @@ export default function GRNListPage() {
         }),
     ], [columnHelper, filters.page, filters.limit]);
 
-    // 5. Config
+    // 5. Config - matching the reference image layout
     const filterConfig: FilterFieldConfig<string>[] = [
-        { name: 'search', label: 'เลขที่ GRN', type: 'text', placeholder: 'ค้นหาเลขที่เอกสาร' },
-        { name: 'search2', label: 'เลขที่ PO', type: 'text', placeholder: 'ค้นหาเลขที่ PO' },
+        { name: 'search', label: 'เลขที่ GRN', type: 'text', placeholder: 'GRN2024-xxx' },
+        { name: 'search2', label: 'เลขที่ PO อ้างอิง', type: 'text', placeholder: 'PO2024-xxx' },
+        { name: 'warehouse', label: 'คลังสินค้า', type: 'text', placeholder: 'ชื่อคลัง' },
         { name: 'status', label: 'สถานะ', type: 'select', options: GRN_STATUS_OPTIONS },
-        { name: 'dateFrom', label: 'วันที่รับ จาก', type: 'date' },
-        { name: 'dateTo', label: 'ถึงวันที่', type: 'date' },
+        { name: 'dateFrom', label: 'วันที่เริ่มต้น', type: 'date' },
+        { name: 'dateTo', label: 'วันที่สิ้นสุด', type: 'date' },
     ];
 
     return (
         <>
             <PageListLayout
                 title="ใบรับสินค้า"
-                subtitle="Goods Receipt Note (GRN) Management"
+                subtitle="Goods Receipt Note (GRN)"
                 icon={Package}
                 accentColor="blue"
                 isLoading={isLoading}
@@ -156,6 +153,7 @@ export default function GRNListPage() {
                         onFilterChange={(name, value) => setFilters({ [name]: value })}
                         onSearch={() => refetch()} 
                         onReset={resetFilters}
+                        accentColor="blue"
                         columns={{ sm: 2, md: 3, lg: 5 }}
                         actionButtons={
                             <button 
@@ -169,42 +167,6 @@ export default function GRNListPage() {
                     />
                 }
             >
-                {/* Summary Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                    <SummaryCard 
-                        title="แบบร่าง (Draft)" 
-                        count={summaryCounts.DRAFT} 
-                        icon={FileText} 
-                        color="text-gray-600" 
-                        bg="bg-gray-50 dark:bg-gray-800" 
-                        border="border-gray-200 dark:border-gray-700" 
-                    />
-                    <SummaryCard 
-                        title="บันทึกแล้ว (Posted)" 
-                        count={summaryCounts.POSTED} 
-                        icon={CheckCircle} 
-                        color="text-green-600" 
-                        bg="bg-green-50 dark:bg-green-900/20" 
-                        border="border-green-200 dark:border-green-800" 
-                    />
-                    <SummaryCard 
-                        title="มีการคืน (Returned)" 
-                        count={summaryCounts.RETURNED} 
-                        icon={RotateCcw} 
-                        color="text-orange-600" 
-                        bg="bg-orange-50 dark:bg-orange-900/20" 
-                        border="border-orange-200 dark:border-orange-800" 
-                    />
-                    <SummaryCard 
-                        title="ยกเลิก (Reversed)" 
-                        count={summaryCounts.REVERSED} 
-                        icon={XCircle} 
-                        color="text-red-600" 
-                        bg="bg-red-50 dark:bg-red-900/20" 
-                        border="border-red-200 dark:border-red-800" 
-                    />
-                </div>
-
                 <SmartTable
                     data={data?.data ?? []}
                     columns={columns as ColumnDef<GRNListItem>[]}
@@ -229,26 +191,3 @@ export default function GRNListPage() {
     );
 }
 
-// Helper Component for Summary Layout
-interface SummaryCardProps {
-    title: string;
-    count: number;
-    icon: React.ElementType;
-    color: string;
-    bg: string;
-    border: string;
-}
-
-function SummaryCard({ title, count, icon: Icon, color, bg, border }: SummaryCardProps) {
-    return (
-        <div className={`p-4 rounded-xl border ${border} ${bg} flex items-center justify-between shadow-sm`}>
-            <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">{title}</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{count}</p>
-            </div>
-            <div className={`p-3 rounded-lg bg-white dark:bg-gray-800 ${color} shadow-sm`}>
-                <Icon size={24} />
-            </div>
-        </div>
-    );
-}

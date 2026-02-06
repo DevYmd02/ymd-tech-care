@@ -10,7 +10,7 @@ import {
     Edit2, Trash2
 } from 'lucide-react';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
-import { ItemMasterService } from '@/modules/inventory/services/item-master.service';
+import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import type { ItemListItem } from '@/modules/master-data/types/master-data-types';
 import { SmartTable } from '@ui/SmartTable';
 import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';

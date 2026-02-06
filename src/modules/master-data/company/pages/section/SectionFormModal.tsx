@@ -9,6 +9,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Save, X, Layers } from 'lucide-react';
+import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@/shared/components/layout/DialogFormLayout';
 import { SectionService, DepartmentService } from '@/modules/master-data/company/services/company.service';
 import type { DepartmentListItem } from '@/modules/master-data/types/master-data-types';
@@ -147,87 +148,93 @@ export const SectionFormModal = ({ isOpen, onClose, onSuccess, editId }: Section
             footer={FormFooter}
         >
             <div className="p-6 space-y-6">
-                <div className="grid grid-cols-1 gap-4">
-                    <div className="space-y-4">
-                        {/* Parent Department Selector */}
-                        <div>
-                            <label className="label">
-                                <span className="label-text text-sm font-medium text-gray-700 dark:text-gray-300">สังกัดฝ่าย <span className="text-error">*</span></span>
-                            </label>
-                            <select 
-                                className={`select select-bordered w-full bg-white dark:bg-gray-900 ${errors.departmentId ? 'select-error' : ''}`}
-                                {...register('departmentId')}
-                            >
-                                <option value="">เลือกฝ่าย</option>
-                                {departments.map(dept => (
-                                    <option key={dept.department_id} value={dept.department_id}>
-                                        {dept.department_code} - {dept.department_name}
-                                    </option>
-                                ))}
-                            </select>
-                            {errors.departmentId && (
-                                <span className="text-error text-sm mt-1">{errors.departmentId.message}</span>
-                            )}
-                        </div>
+                {/* Parent Department Selector */}
+                <div>
+                    <label className={styles.label}>
+                        สังกัดฝ่าย <span className="text-red-500">*</span>
+                    </label>
+                    <select 
+                        className={`${styles.input} cursor-pointer ${errors.departmentId ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        {...register('departmentId')}
+                    >
+                        <option value="">เลือกฝ่าย</option>
+                        {departments.map(dept => (
+                            <option key={dept.department_id} value={dept.department_id}>
+                                {dept.department_code} - {dept.department_name}
+                            </option>
+                        ))}
+                    </select>
+                    {errors.departmentId ? (
+                        <p className="text-red-500 text-xs mt-1">{errors.departmentId.message}</p>
+                    ) : (
+                        <p className="text-gray-400 text-xs mt-1">เลือกฝ่ายที่แผนกนี้สังกัด</p>
+                    )}
+                </div>
 
-                        <div>
-                            <label className="label">
-                                <span className="label-text text-sm font-medium text-gray-700 dark:text-gray-300">รหัสแผนก <span className="text-error">*</span></span>
-                            </label>
-                            <input
-                                type="text"
-                                className={`input input-bordered w-full bg-white dark:bg-gray-900 ${errors.sectionCode ? 'input-error' : ''}`}
-                                placeholder="กรอกรหัสแผนก"
-                                {...register('sectionCode')}
-                                disabled={isEdit}
-                            />
-                            <div className="text-[10px] text-gray-400 mt-1">varchar(25) - รหัสแผนก</div>
-                            {errors.sectionCode && (
-                                <span className="text-error text-sm mt-1">{errors.sectionCode.message}</span>
-                            )}
-                        </div>
+                {/* Section Code */}
+                <div>
+                    <label className={styles.label}>
+                        รหัสแผนก <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        {...register('sectionCode')}
+                        type="text"
+                        placeholder="กรอกรหัสแผนก"
+                        className={`${styles.input} ${errors.sectionCode ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        disabled={isEdit}
+                    />
+                    {errors.sectionCode ? (
+                        <p className="text-red-500 text-xs mt-1">{errors.sectionCode.message}</p>
+                    ) : (
+                        <p className="text-gray-400 text-xs mt-1">varchar(25) - รหัสแผนก</p>
+                    )}
+                </div>
 
-                        <div>
-                            <label className="label">
-                                <span className="label-text text-sm font-medium text-gray-700 dark:text-gray-300">ชื่อแผนก (ภาษาไทย) <span className="text-error">*</span></span>
-                            </label>
-                            <input
-                                type="text"
-                                className={`input input-bordered w-full bg-white dark:bg-gray-900 ${errors.sectionName ? 'input-error' : ''}`}
-                                placeholder="กรอกชื่อแผนก"
-                                {...register('sectionName')}
-                            />
-                            <div className="text-[10px] text-gray-400 mt-1">varchar(255) - ชื่อแผนก</div>
-                            {errors.sectionName && (
-                                <span className="text-error text-sm mt-1">{errors.sectionName.message}</span>
-                            )}
-                        </div>
+                {/* Section Name (Thai) */}
+                <div>
+                    <label className={styles.label}>
+                        ชื่อแผนก (ภาษาไทย) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        {...register('sectionName')}
+                        type="text"
+                        placeholder="กรอกชื่อแผนก"
+                        className={`${styles.input} ${errors.sectionName ? 'border-red-500 focus:ring-red-200' : ''}`}
+                    />
+                    {errors.sectionName ? (
+                        <p className="text-red-500 text-xs mt-1">{errors.sectionName.message}</p>
+                    ) : (
+                        <p className="text-gray-400 text-xs mt-1">varchar(255) - ชื่อแผนก</p>
+                    )}
+                </div>
 
-                        <div>
-                            <label className="label">
-                                <span className="label-text text-sm font-medium text-gray-700 dark:text-gray-300">ชื่อแผนก (ภาษาอังกฤษ)</span>
-                            </label>
-                            <input
-                                type="text"
-                                className={`input input-bordered w-full bg-white dark:bg-gray-900 ${errors.sectionNameEn ? 'input-error' : ''}`}
-                                placeholder="Enter section name in English"
-                                {...register('sectionNameEn')}
-                            />
-                            <div className="text-[10px] text-gray-400 mt-1">varchar(255) - ชื่อแผนก (Eng)</div>
-                        </div>
+                {/* Section Name (English) */}
+                <div>
+                    <label className={styles.label}>
+                        ชื่อแผนก (ภาษาอังกฤษ)
+                    </label>
+                    <input
+                        {...register('sectionNameEn')}
+                        type="text"
+                        placeholder="Enter section name in English"
+                        className={`${styles.input} ${errors.sectionNameEn ? 'border-red-500 focus:ring-red-200' : ''}`}
+                    />
+                    <p className="text-gray-400 text-xs mt-1">varchar(255) - ชื่อแผนก (Eng)</p>
+                </div>
 
-                        <div className="form-control">
-                            <label className="label cursor-pointer justify-start gap-4">
-                                <span className="label-text text-sm font-medium text-gray-700 dark:text-gray-300">สถานะการใช้งาน</span>
-                                <input
-                                    type="checkbox"
-                                    className="toggle toggle-success"
-                                    {...register('isActive')}
-                                />
-                                <span className="label-text text-gray-700 dark:text-gray-300">{isActive ? 'ใช้งาน (Active)' : 'ไม่ใช้งาน (Inactive)'}</span>
-                            </label>
-                        </div>
-                    </div>
+                {/* Status - Dropdown Select */}
+                <div>
+                    <label className={styles.label}>
+                        สถานะ <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                        className={`${styles.input} cursor-pointer`}
+                        value={isActive ? 'true' : 'false'}
+                        onChange={(e) => setValue('isActive', e.target.value === 'true')}
+                    >
+                        <option value="true">ใช้งาน (Active)</option>
+                        <option value="false">ไม่ใช้งาน (Inactive)</option>
+                    </select>
                 </div>
             </div>
         </DialogFormLayout>

@@ -1,6 +1,6 @@
 /**
- * @file DepartmentFormModal.tsx
- * @description Modal for creating/editing Department data (Standarized)
+ * @file EmployeeGroupFormModal.tsx
+ * @description Modal for creating/editing Employee Group data
  * @module company
  */
 
@@ -8,30 +8,28 @@ import { useEffect } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Save, X, Building } from 'lucide-react';
+import { Save, X, UsersRound } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@/shared/components/layout/DialogFormLayout';
-import { DepartmentService } from '@/modules/master-data/company/services/company.service';
+import { EmployeeGroupService } from '@/modules/master-data/company/services/company.service';
 
-
-
-interface DepartmentFormModalProps {
+interface EmployeeGroupFormModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
     editId?: string | null;
 }
 
-const departmentSchema = z.object({
-    departmentCode: z.string().min(1, 'กรุณากรอกรหัสฝ่าย').max(20, 'รหัสฝ่ายต้องไม่เกิน 20 ตัวอักษร'),
-    departmentName: z.string().min(1, 'กรุณากรอกชื่อฝ่าย').max(100, 'ชื่อฝ่ายต้องไม่เกิน 100 ตัวอักษร'),
-    departmentNameEn: z.string().max(100, 'ชื่อฝ่าย (English) ต้องไม่เกิน 100 ตัวอักษร'),
+const employeeGroupSchema = z.object({
+    groupCode: z.string().min(1, 'กรุณากรอกรหัสกลุ่มพนักงาน').max(20, 'รหัสกลุ่มพนักงานต้องไม่เกิน 20 ตัวอักษร'),
+    groupName: z.string().min(1, 'กรุณากรอกชื่อกลุ่มพนักงาน').max(100, 'ชื่อกลุ่มพนักงานต้องไม่เกิน 100 ตัวอักษร'),
+    groupNameEn: z.string().max(100, 'ชื่อกลุ่มพนักงาน (English) ต้องไม่เกิน 100 ตัวอักษร'),
     isActive: z.boolean(),
 });
 
-type DepartmentFormValues = z.infer<typeof departmentSchema>;
+type EmployeeGroupFormValues = z.infer<typeof employeeGroupSchema>;
 
-export const DepartmentFormModal = ({ isOpen, onClose, onSuccess, editId }: DepartmentFormModalProps) => {
+export const EmployeeGroupFormModal = ({ isOpen, onClose, onSuccess, editId }: EmployeeGroupFormModalProps) => {
     const isEdit = !!editId;
 
     const {
@@ -41,12 +39,12 @@ export const DepartmentFormModal = ({ isOpen, onClose, onSuccess, editId }: Depa
         formState: { errors, isSubmitting },
         setValue,
         control,
-    } = useForm<DepartmentFormValues>({
-        resolver: zodResolver(departmentSchema),
+    } = useForm<EmployeeGroupFormValues>({
+        resolver: zodResolver(employeeGroupSchema),
         defaultValues: {
-            departmentCode: '',
-            departmentName: '',
-            departmentNameEn: '',
+            groupCode: '',
+            groupName: '',
+            groupNameEn: '',
             isActive: true,
         },
     });
@@ -57,33 +55,33 @@ export const DepartmentFormModal = ({ isOpen, onClose, onSuccess, editId }: Depa
         if (isOpen) {
             if (isEdit && editId) {
                 // Fetch data for edit
-                DepartmentService.get(editId).then((data) => {
+                EmployeeGroupService.get(editId).then((data) => {
                     if (data) {
-                        setValue('departmentCode', data.department_code);
-                        setValue('departmentName', data.department_name);
-                        setValue('departmentNameEn', data.department_name_en || '');
+                        setValue('groupCode', data.group_code);
+                        setValue('groupName', data.group_name);
+                        setValue('groupNameEn', data.group_name_en || '');
                         setValue('isActive', data.is_active);
                     }
                 });
             } else {
                 // Reset for create
                 reset({
-                    departmentCode: '',
-                    departmentName: '',
-                    departmentNameEn: '',
+                    groupCode: '',
+                    groupName: '',
+                    groupNameEn: '',
                     isActive: true,
                 });
             }
         }
     }, [isOpen, isEdit, editId, reset, setValue]);
 
-    const onSubmit = async (data: DepartmentFormValues) => {
+    const onSubmit = async (data: EmployeeGroupFormValues) => {
         try {
             let res;
             if (isEdit && editId) {
-                res = await DepartmentService.update(editId, data);
+                res = await EmployeeGroupService.update(editId, data);
             } else {
-                res = await DepartmentService.create(data);
+                res = await EmployeeGroupService.create(data);
             }
 
             if (res.success) {
@@ -93,13 +91,13 @@ export const DepartmentFormModal = ({ isOpen, onClose, onSuccess, editId }: Depa
                 alert(res.message || 'บันทึกไม่สำเร็จ');
             }
         } catch (error) {
-            console.error('Error saving department:', error);
+            console.error('Error saving employee group:', error);
             alert('เกิดข้อผิดพลาดในการบันทึก');
         }
     };
 
     // Header Icon
-    const TitleIcon = <Building className="w-5 h-5 text-white" />;
+    const TitleIcon = <UsersRound className="w-5 h-5 text-white" />;
 
     // Footer Actions
     const FormFooter = (
@@ -132,60 +130,60 @@ export const DepartmentFormModal = ({ isOpen, onClose, onSuccess, editId }: Depa
         <DialogFormLayout
             isOpen={isOpen}
             onClose={onClose}
-            title={isEdit ? 'แก้ไขข้อมูลฝ่าย' : 'เพิ่มรหัสฝ่ายใหม่'}
+            title={isEdit ? 'แก้ไขข้อมูลกลุ่มพนักงาน' : 'เพิ่มกลุ่มพนักงานใหม่'}
             titleIcon={TitleIcon}
             footer={FormFooter}
         >
             <div className="p-6 space-y-6">
-                {/* Department Code */}
+                {/* Group Code */}
                 <div>
                     <label className={styles.label}>
-                        รหัสฝ่าย <span className="text-red-500">*</span>
+                        รหัสกลุ่มพนักงาน <span className="text-red-500">*</span>
                     </label>
                     <input
-                        {...register('departmentCode')}
+                        {...register('groupCode')}
                         type="text"
-                        placeholder="กรอกรหัสฝ่าย (เช่น FIN, HR, IT)"
-                        className={`${styles.input} ${errors.departmentCode ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        placeholder="กรอกรหัสกลุ่มพนักงาน"
+                        className={`${styles.input} ${errors.groupCode ? 'border-red-500 focus:ring-red-200' : ''}`}
                         disabled={isEdit}
                     />
-                    {errors.departmentCode ? (
-                        <p className="text-red-500 text-xs mt-1">{errors.departmentCode.message}</p>
+                    {errors.groupCode ? (
+                        <p className="text-red-500 text-xs mt-1">{errors.groupCode.message}</p>
                     ) : (
-                        <p className="text-gray-400 text-xs mt-1">varchar(25) - รหัสฝ่าย</p>
+                        <p className="text-gray-400 text-xs mt-1">varchar(20) - รหัสกลุ่มพนักงาน</p>
                     )}
                 </div>
 
-                {/* Department Name (Thai) */}
+                {/* Group Name (Thai) */}
                 <div>
                     <label className={styles.label}>
-                        ชื่อฝ่าย (ภาษาไทย) <span className="text-red-500">*</span>
+                        ชื่อกลุ่มพนักงาน (ภาษาไทย) <span className="text-red-500">*</span>
                     </label>
                     <input
-                        {...register('departmentName')}
+                        {...register('groupName')}
                         type="text"
-                        placeholder="กรอกชื่อฝ่าย"
-                        className={`${styles.input} ${errors.departmentName ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        placeholder="กรอกชื่อกลุ่มพนักงาน"
+                        className={`${styles.input} ${errors.groupName ? 'border-red-500 focus:ring-red-200' : ''}`}
                     />
-                    {errors.departmentName ? (
-                        <p className="text-red-500 text-xs mt-1">{errors.departmentName.message}</p>
+                    {errors.groupName ? (
+                        <p className="text-red-500 text-xs mt-1">{errors.groupName.message}</p>
                     ) : (
-                        <p className="text-gray-400 text-xs mt-1">varchar(255) - ชื่อฝ่าย</p>
+                        <p className="text-gray-400 text-xs mt-1">varchar(100) - ชื่อกลุ่มพนักงาน</p>
                     )}
                 </div>
 
-                {/* Department Name (English) */}
+                {/* Group Name (English) */}
                 <div>
                     <label className={styles.label}>
-                        ชื่อฝ่าย (ภาษาอังกฤษ)
+                        ชื่อกลุ่มพนักงาน (ภาษาอังกฤษ)
                     </label>
                     <input
-                        {...register('departmentNameEn')}
+                        {...register('groupNameEn')}
                         type="text"
-                        placeholder="Enter department name in English"
-                        className={`${styles.input} ${errors.departmentNameEn ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        placeholder="Enter employee group name in English"
+                        className={`${styles.input} ${errors.groupNameEn ? 'border-red-500 focus:ring-red-200' : ''}`}
                     />
-                    <p className="text-gray-400 text-xs mt-1">varchar(255) - ชื่อฝ่าย (Eng)</p>
+                    <p className="text-gray-400 text-xs mt-1">varchar(100) - ชื่อกลุ่มพนักงาน (Eng)</p>
                 </div>
 
                 {/* Status - Dropdown Select */}

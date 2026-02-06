@@ -1,6 +1,6 @@
 import React from 'react';
 import type { ItemFormData, ItemFormChangeHandler } from '../hooks/useItemForm';
-import { ITEM_TAX_CODES } from '@/modules/inventory/constants/itemConstants';
+import { ITEM_TAX_CODES } from '@/modules/master-data/inventory/constants/itemConstants';
 
 /**
  * @interface ItemFinancialsProps

@@ -14,15 +14,15 @@ import {
 } from 'lucide-react';
 
 // Import services (NOT static mock data - services handle mock/real switching internally)
-import { ItemMasterService } from '@/modules/inventory/services/item-master.service';
+import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import { MasterDataService } from '@/core/api/master-data.service';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
 
 // Import Form Modals
 import { VendorFormModal } from '@/modules/master-data/vendor/pages';
 import { BranchFormModal } from '@/modules/master-data/company/pages/branch';
-import { WarehouseFormModal } from '@/modules/inventory/pages/warehouse';
-import { ItemMasterList } from '@/modules/inventory/pages/item-master';
+import { WarehouseFormModal } from '@/modules/master-data/inventory/pages/warehouse';
+import { ItemMasterList } from '@/modules/master-data/inventory/pages/item-master';
 
 // Import sub-components
 import { MasterDataHeader } from './components/MasterDataHeader';

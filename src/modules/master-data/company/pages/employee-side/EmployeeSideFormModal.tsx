@@ -9,6 +9,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Save, X, Building } from 'lucide-react';
+import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@/shared/components/layout/DialogFormLayout';
 import { DepartmentService } from '@/modules/master-data/company/services/company.service';
 
@@ -136,66 +137,70 @@ export const EmployeeSideFormModal = ({ isOpen, onClose, onSuccess, editId }: Em
             footer={FormFooter}
         >
             <div className="p-6 space-y-6">
-                <div className="grid grid-cols-1 gap-4">
-                    <div className="space-y-4">
-                        <div>
-                            <label className="label">
-                                <span className="label-text text-sm font-medium text-gray-700 dark:text-gray-300">รหัสฝ่าย <span className="text-error">*</span></span>
-                            </label>
-                            <input
-                                type="text"
-                                className={`input input-bordered w-full bg-white dark:bg-gray-900 ${errors.departmentCode ? 'input-error' : ''}`}
-                                placeholder="กรอกรหัสฝ่าย (เช่น FIN, HR, IT)"
-                                {...register('departmentCode')}
-                                disabled={isEdit}
-                            />
-                            <div className="text-[10px] text-gray-400 mt-1">varchar(25) - รหัสฝ่าย</div>
-                            {errors.departmentCode && (
-                                <span className="text-error text-sm mt-1">{errors.departmentCode.message}</span>
-                            )}
-                        </div>
+                {/* Department Code */}
+                <div>
+                    <label className={styles.label}>
+                        รหัสฝ่าย <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        {...register('departmentCode')}
+                        type="text"
+                        placeholder="กรอกรหัสฝ่าย (เช่น FIN, HR, IT)"
+                        className={`${styles.input} ${errors.departmentCode ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        disabled={isEdit}
+                    />
+                    {errors.departmentCode ? (
+                        <p className="text-red-500 text-xs mt-1">{errors.departmentCode.message}</p>
+                    ) : (
+                        <p className="text-gray-400 text-xs mt-1">varchar(25) - รหัสฝ่าย</p>
+                    )}
+                </div>
 
-                        <div>
-                            <label className="label">
-                                <span className="label-text text-sm font-medium text-gray-700 dark:text-gray-300">ชื่อฝ่าย (ภาษาไทย) <span className="text-error">*</span></span>
-                            </label>
-                            <input
-                                type="text"
-                                className={`input input-bordered w-full bg-white dark:bg-gray-900 ${errors.departmentName ? 'input-error' : ''}`}
-                                placeholder="กรอกชื่อฝ่าย"
-                                {...register('departmentName')}
-                            />
-                            <div className="text-[10px] text-gray-400 mt-1">varchar(255) - ชื่อฝ่าย</div>
-                            {errors.departmentName && (
-                                <span className="text-error text-sm mt-1">{errors.departmentName.message}</span>
-                            )}
-                        </div>
+                {/* Department Name (Thai) */}
+                <div>
+                    <label className={styles.label}>
+                        ชื่อฝ่าย (ภาษาไทย) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        {...register('departmentName')}
+                        type="text"
+                        placeholder="กรอกชื่อฝ่าย"
+                        className={`${styles.input} ${errors.departmentName ? 'border-red-500 focus:ring-red-200' : ''}`}
+                    />
+                    {errors.departmentName ? (
+                        <p className="text-red-500 text-xs mt-1">{errors.departmentName.message}</p>
+                    ) : (
+                        <p className="text-gray-400 text-xs mt-1">varchar(255) - ชื่อฝ่าย</p>
+                    )}
+                </div>
 
-                        <div>
-                            <label className="label">
-                                <span className="label-text text-sm font-medium text-gray-700 dark:text-gray-300">ชื่อฝ่าย (ภาษาอังกฤษ)</span>
-                            </label>
-                            <input
-                                type="text"
-                                className={`input input-bordered w-full bg-white dark:bg-gray-900 ${errors.departmentNameEn ? 'input-error' : ''}`}
-                                placeholder="Enter department name in English"
-                                {...register('departmentNameEn')}
-                            />
-                            <div className="text-[10px] text-gray-400 mt-1">varchar(255) - ชื่อฝ่าย (Eng)</div>
-                        </div>
+                {/* Department Name (English) */}
+                <div>
+                    <label className={styles.label}>
+                        ชื่อฝ่าย (ภาษาอังกฤษ)
+                    </label>
+                    <input
+                        {...register('departmentNameEn')}
+                        type="text"
+                        placeholder="Enter department name in English"
+                        className={`${styles.input} ${errors.departmentNameEn ? 'border-red-500 focus:ring-red-200' : ''}`}
+                    />
+                    <p className="text-gray-400 text-xs mt-1">varchar(255) - ชื่อฝ่าย (Eng)</p>
+                </div>
 
-                        <div className="form-control">
-                            <label className="label cursor-pointer justify-start gap-4">
-                                <span className="label-text text-sm font-medium text-gray-700 dark:text-gray-300">สถานะการใช้งาน</span>
-                                <input
-                                    type="checkbox"
-                                    className="toggle toggle-success"
-                                    {...register('isActive')}
-                                />
-                                <span className="label-text text-gray-700 dark:text-gray-300">{isActive ? 'ใช้งาน (Active)' : 'ไม่ใช้งาน (Inactive)'}</span>
-                            </label>
-                        </div>
-                    </div>
+                {/* Status - Dropdown Select */}
+                <div>
+                    <label className={styles.label}>
+                        สถานะ <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                        className={`${styles.input} cursor-pointer`}
+                        value={isActive ? 'true' : 'false'}
+                        onChange={(e) => setValue('isActive', e.target.value === 'true')}
+                    >
+                        <option value="true">ใช้งาน (Active)</option>
+                        <option value="false">ไม่ใช้งาน (Inactive)</option>
+                    </select>
                 </div>
             </div>
         </DialogFormLayout>

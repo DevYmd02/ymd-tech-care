@@ -9,7 +9,7 @@
 
 import React from 'react';
 import { SearchModal, type ColumnDef } from './SearchModal';
-import { MOCK_PRODUCTS, type ProductLookup } from '@/modules/inventory/mocks/products';
+import { MOCK_PRODUCTS, type ProductLookup } from '@/modules/master-data/inventory/mocks/products';
 
 // Re-export Product type for consumers
 export type Product = ProductLookup;

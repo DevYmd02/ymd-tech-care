@@ -53,7 +53,8 @@ export function BranchFormModal({ isOpen, onClose, editId, onSuccess }: Props) {
         handleSubmit,
         reset,
         formState: { errors, isSubmitting },
-        control
+        control,
+        setValue
     } = useForm<BranchFormValues>({
         resolver: zodResolver(branchSchema),
         defaultValues: {
@@ -192,17 +193,19 @@ export function BranchFormModal({ isOpen, onClose, editId, onSuccess }: Props) {
                     )}
                 </div>
 
-                {/* Status */}
-                <div className="form-control">
-                    <label className="label cursor-pointer justify-start gap-4">
-                        <span className="label-text text-base font-medium text-gray-700 dark:text-gray-300">สถานะการใช้งาน</span>
-                        <input
-                            type="checkbox"
-                            className="toggle toggle-success"
-                            {...register('isActive')}
-                        />
-                        <span className="label-text text-gray-700 dark:text-gray-300">{isActive ? 'ใช้งาน (Active)' : 'ไม่ใช้งาน (Inactive)'}</span>
+                {/* Status - Dropdown Select */}
+                <div>
+                    <label className={styles.label}>
+                        สถานะ <span className="text-red-500">*</span>
                     </label>
+                    <select
+                        className={`${styles.input} cursor-pointer`}
+                        value={isActive ? 'true' : 'false'}
+                        onChange={(e) => setValue('isActive', e.target.value === 'true')}
+                    >
+                        <option value="true">ใช้งาน (Active)</option>
+                        <option value="false">ไม่ใช้งาน (Inactive)</option>
+                    </select>
                 </div>
             </div>
         </DialogFormLayout>

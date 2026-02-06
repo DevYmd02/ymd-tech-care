@@ -127,10 +127,12 @@ export interface EmployeeGroupMaster extends BaseMasterData {
     group_id: string;
     group_code: string;
     group_name: string;
+    group_name_en?: string;
 }
 export interface EmployeeGroupFormData {
     groupCode: string;
     groupName: string;
+    groupNameEn: string;
     isActive: boolean;
 }
 export type EmployeeGroupListItem = EmployeeGroupMaster;
@@ -140,10 +142,12 @@ export interface PositionMaster extends BaseMasterData {
     position_id: string;
     position_code: string;
     position_name: string;
+    position_name_en?: string;
 }
 export interface PositionFormData {
     positionCode: string;
     positionName: string;
+    positionNameEn: string;
     isActive: boolean;
 }
 export type PositionListItem = PositionMaster;
@@ -153,10 +157,12 @@ export interface SalesZoneMaster extends BaseMasterData {
     zone_id: string;
     zone_code: string;
     zone_name: string;
+    zone_name_en?: string;
 }
 export interface SalesZoneFormData {
     zoneCode: string;
     zoneName: string;
+    zoneNameEn: string;
     isActive: boolean;
 }
 export type SalesZoneListItem = SalesZoneMaster;
@@ -166,10 +172,12 @@ export interface SalesChannelMaster extends BaseMasterData {
     channel_id: string;
     channel_code: string;
     channel_name: string;
+    channel_name_en?: string;
 }
 export interface SalesChannelFormData {
     channelCode: string;
     channelName: string;
+    channelNameEn: string;
     isActive: boolean;
 }
 export type SalesChannelListItem = SalesChannelMaster;

@@ -712,3 +712,58 @@ export const initialVendorFormData: VendorFormData = {
     blocked: false,
     inactive: false,
 };
+
+// ====================================================================================
+// VENDOR TYPE MASTER - ประเภทเจ้าหนี้
+// ====================================================================================
+
+/**
+ * VendorTypeMaster - ข้อมูลประเภทเจ้าหนี้
+ */
+export interface VendorTypeMaster {
+    vendor_type_id: string;
+    vendor_type_code: string;
+    vendor_type_name: string;
+    vendor_type_name_en?: string;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+/**
+ * VendorTypeFormData - สำหรับ Frontend Form
+ */
+export interface VendorTypeFormData {
+    typeCode: string;
+    typeName: string;
+    typeNameEn: string;
+    isActive: boolean;
+}
+
+// ====================================================================================
+// VENDOR GROUP MASTER - กลุ่มเจ้าหนี้
+// ====================================================================================
+
+/**
+ * VendorGroupMaster - ข้อมูลกลุ่มเจ้าหนี้
+ */
+export interface VendorGroupMaster {
+    vendor_group_id: string;
+    vendor_group_code: string;
+    vendor_group_name: string;
+    vendor_group_name_en?: string;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+/**
+ * VendorGroupFormData - สำหรับ Frontend Form
+ */
+export interface VendorGroupFormData {
+    groupCode: string;
+    groupName: string;
+    groupNameEn: string;
+    isActive: boolean;
+}
+

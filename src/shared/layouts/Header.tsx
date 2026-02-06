@@ -69,7 +69,7 @@ export default function Header({ isSidebarOpen, onToggleSidebar }: HeaderProps) 
 
     // ==================== RENDER ====================
     return (
-        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-3 sm:py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4 transition-colors duration-200">
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-3 sm:py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4 transition-colors duration-200 relative z-10">
 
             {/* ========== LEFT SECTION: Page Title & Breadcrumb ========== */}
             <div className="min-w-0 flex-1 flex items-center gap-3">
