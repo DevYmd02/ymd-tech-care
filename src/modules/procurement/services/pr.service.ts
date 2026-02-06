@@ -12,6 +12,7 @@ import type {
 export type { PRListParams, PRListResponse, ConvertPRRequest };
 import { logger } from '@/shared/utils/logger';
 import { MOCK_PRS } from '@/modules/procurement/mocks/procurementMocks';
+import type { SuccessResponse } from '@/shared/types/api-response.types';
 
 const ENDPOINTS = {
   list: '/pr',
@@ -19,6 +20,7 @@ const ENDPOINTS = {
   submit: (id: string) => `/pr/${id}/submit`,
   approve: (id: string) => `/pr/${id}/approve`,
   cancel: (id: string) => `/pr/${id}/cancel`,
+  reject: (id: string) => `/pr/${id}/reject`,
   convert: (id: string) => `/pr/${id}/convert`,
   attachments: (id: string) => `/pr/${id}/attachments`,
   attachment: (id: string, attachmentId: string) => `/pr/${id}/attachments/${attachmentId}`,
@@ -73,7 +75,7 @@ export const PRService = {
        const paginatedData = sorted.slice(startIndex, startIndex + limit);
 
        return {
-         data: paginatedData,
+         items: paginatedData,
          total: filtered.length,
          page,
          limit
@@ -92,12 +94,11 @@ export const PRService = {
         requester_name: undefined
       };
       
-      const response = await api.get<PRListResponse>(ENDPOINTS.list, { params: apiParams });
-      return response.data;
+      return await api.get<PRListResponse>(ENDPOINTS.list, { params: apiParams });
     } catch (error) {
       logger.error('[PRService] getList error:', error);
       return {
-        data: [],
+        items: [],
         total: 0,
         page: params?.page || 1,
         limit: params?.limit || 20,
@@ -111,8 +112,7 @@ export const PRService = {
         return found || null;
     }
     try {
-      const response = await api.get<PRHeader>(ENDPOINTS.detail(prId));
-      return response.data;
+      return await api.get<PRHeader>(ENDPOINTS.detail(prId));
     } catch (error) {
       logger.error('[PRService] getById error:', error);
       return null;
@@ -153,17 +153,17 @@ export const PRService = {
         shipping_method: payload.shipping_method,
         preferred_vendor: payload.vendor_name, // Map vendor_name -> preferred_vendor string
         
-        // Map Lines
+        // Map Lines with full PRLine structure
         lines: payload.items.map((item, index) => ({
           line_no: index + 1,
-          item_id: Number(item.item_id) || undefined, // Try parse Int
+          item_id: Number(item.item_id) || undefined,
           item_code: item.item_code,
-          description: item.item_name, // Map item_name -> description
+          description: item.item_name,
           qty: item.qty,
-          uom_id: Number(item.uom_id) || 1, // Critical: Map uom_id (Default 1 if missing)
+          uom_id: Number(item.uom_id) || 1,
           est_unit_price: item.price,
           total_price: item.qty * item.price,
-          cost_center_id: payload.department_id ? String(payload.department_id) : '1', // Line needs CC too
+          cost_center_id: payload.department_id ? String(payload.department_id) : '1',
           project_id: payload.project_id ? Number(payload.project_id) : 0, 
           needed_date: item.needed_date || payload.required_date || new Date().toISOString(),
           remark: item.remark || ''
@@ -173,30 +173,60 @@ export const PRService = {
     if (USE_MOCK) {
         logger.info('🎭 [Mock Mode] Creating New PR', apiPayload);
 
-        // Generate Mock ID
+        const now = new Date().toISOString();
         const newId = `PR-${new Date().getTime()}`;
-        // Generate Mock PR No if not exists (Though PRForm generates it usually, service should ensure)
         const prNo = apiPayload.pr_no || `PR-${new Date().getFullYear()}${String(new Date().getMonth()+1).padStart(2,'0')}-${String(localPRData.length + 1).padStart(4,'0')}`;
 
-        const newPR: PRHeader = {
-            ...apiPayload,
-            pr_id: newId,
-            pr_no: prNo,
-            status: 'PENDING', // Force Pending
-            lines: apiPayload.lines as unknown as PRLine[], // Cast to satisfy loose mock types
-            request_date: apiPayload.request_date,
-            requester_name: apiPayload.requester_name || 'Admin',
-            cost_center_id: apiPayload.cost_center_id,
-            total_amount: totalEstAmount
-        } as unknown as PRHeader; // Cast to satisfy loose mock types
+        // Build PRLine[] with all required fields
+        const prLines: PRLine[] = apiPayload.lines.map((line, idx) => ({
+          pr_line_id: `PRL-${newId}-${idx + 1}`,
+          pr_id: newId,
+          line_no: line.line_no,
+          item_id: String(line.item_id || ''),
+          item_code: line.item_code,
+          item_name: line.description,
+          quantity: line.qty,
+          uom: String(line.uom_id),
+          est_unit_price: line.est_unit_price,
+          est_amount: line.total_price,
+          needed_date: line.needed_date,
+          remark: line.remark
+        }));
 
-        localPRData.unshift(newPR); // Add to top
+        // Build PRHeader with all required fields
+        const newPR: PRHeader = {
+          pr_id: newId,
+          pr_no: prNo,
+          branch_id: String(apiPayload.branch_id),
+          requester_user_id: String(apiPayload.requester_user_id),
+          requester_name: apiPayload.requester_name || 'Admin',
+          request_date: apiPayload.request_date,
+          required_date: apiPayload.required_date || now.split('T')[0],
+          cost_center_id: apiPayload.cost_center_id,
+          project_id: apiPayload.project_id ? String(apiPayload.project_id) : undefined,
+          purpose: apiPayload.purpose || '',
+          status: 'PENDING',
+          currency_code: apiPayload.currency_code,
+          total_amount: totalEstAmount,
+          attachment_count: 0,
+          created_at: now,
+          updated_at: now,
+          created_by_user_id: String(apiPayload.requester_user_id),
+          updated_by_user_id: String(apiPayload.requester_user_id),
+          delivery_date: apiPayload.delivery_date,
+          credit_days: apiPayload.credit_days,
+          vendor_quote_no: apiPayload.vendor_quote_no,
+          shipping_method: apiPayload.shipping_method,
+          vendor_name: apiPayload.preferred_vendor,
+          lines: prLines
+        };
+
+        localPRData.unshift(newPR);
         return newPR;
     }
 
     try {
-        const response = await api.post<PRHeader>(ENDPOINTS.list, apiPayload);
-        return response.data;
+        return await api.post<PRHeader>(ENDPOINTS.list, apiPayload);
     } catch (error) {
       logger.error('[PRService] create error:', error);
       return null;
@@ -207,14 +237,14 @@ export const PRService = {
     if (USE_MOCK) {
         const index = localPRData.findIndex(p => p.pr_id === prId);
         if (index !== -1) {
-            localPRData[index] = { ...localPRData[index], ...data } as unknown as PRHeader;
-            return localPRData[index];
+            const updated = { ...localPRData[index], ...data } as PRHeader;
+            localPRData[index] = updated;
+            return updated;
         }
         return null;
     }
     try {
-      const response = await api.put<PRHeader>(ENDPOINTS.detail(prId), data);
-      return response.data;
+      return await api.put<PRHeader>(ENDPOINTS.detail(prId), data);
     } catch (error) {
       logger.error('[PRService] update error:', error);
       return null;
@@ -228,7 +258,7 @@ export const PRService = {
         return localPRData.length < initialLength;
     }
     try {
-      await api.delete(ENDPOINTS.detail(prId));
+      await api.delete<SuccessResponse>(ENDPOINTS.detail(prId));
       return true;
     } catch (error) {
       logger.error('[PRService] delete error:', error);
@@ -246,8 +276,7 @@ export const PRService = {
         return { success: false, message: 'PR Not Found' };
     }
     try {
-      const response = await api.post<{ success: boolean; message: string }>(ENDPOINTS.submit(prId));
-      return response.data;
+      return await api.post<{ success: boolean; message: string }>(ENDPOINTS.submit(prId));
     } catch (error) {
       logger.error('[PRService] submit error:', error);
       return { success: false, message: 'เกิดข้อผิดพลาดในการส่งอนุมัติ' };
@@ -264,7 +293,7 @@ export const PRService = {
         return false;
     }
     try {
-      await api.post(ENDPOINTS.approve(prId), { action: 'APPROVE' });
+      await api.post<SuccessResponse>(ENDPOINTS.approve(prId), { action: 'APPROVE' });
       return true;
     } catch (error) {
       logger.error('[PRService] approve error:', error);
@@ -282,8 +311,7 @@ export const PRService = {
         return { success: false, message: 'PR Not Found' };
     }
     try {
-      const response = await api.post<{ success: boolean; message: string }>(ENDPOINTS.cancel(prId), { remark });
-      return response.data;
+      return await api.post<{ success: boolean; message: string }>(ENDPOINTS.cancel(prId), { remark });
     } catch (error) {
       logger.error('[PRService] cancel error:', error);
       return { success: false, message: 'เกิดข้อผิดพลาดในการยกเลิก' };
@@ -292,11 +320,10 @@ export const PRService = {
 
   convert: async (request: ConvertPRRequest): Promise<{ success: boolean; document_id?: string; document_no?: string }> => {
     try {
-      const response = await api.post<{ success: boolean; document_id?: string; document_no?: string }>(
+      return await api.post<{ success: boolean; document_id?: string; document_no?: string }>(
         ENDPOINTS.convert(request.pr_id),
         { convert_to: request.convert_to, line_ids: request.line_ids }
       );
-      return response.data;
     } catch (error) {
       logger.error('[PRService] convert error:', error);
       return { success: false };
@@ -307,21 +334,35 @@ export const PRService = {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      const response = await api.post<{ success: boolean; attachment_id?: string }>(
+      return await api.post<{ success: boolean; attachment_id?: string }>(
         ENDPOINTS.attachments(prId),
         formData,
         { headers: { 'Content-Type': 'multipart/form-data' } }
       );
-      return response.data;
     } catch (error) {
       logger.error('[PRService] uploadAttachment error:', error);
       return { success: false };
     }
   },
 
-  deleteAttachment: async (prId: string, attachmentId: string): Promise<boolean> => {
+  reject: async (prId: string, reason: string): Promise<void> => {
+    if (USE_MOCK) return;
     try {
-      await api.delete(ENDPOINTS.attachment(prId, attachmentId));
+      await api.post<SuccessResponse>(ENDPOINTS.reject(prId), { action: 'REJECT', reason });
+    } catch (error) {
+      console.error('Error rejecting PR:', error);
+      throw error;
+    }
+  },
+
+  deleteAttachment: async (prId: string, attachmentId: string): Promise<boolean> => {
+    if (USE_MOCK) {
+        const initialLength = localPRData.length;
+        localPRData = localPRData.filter(p => p.pr_id !== prId);
+        return localPRData.length < initialLength;
+    }
+    try {
+      await api.delete<SuccessResponse>(ENDPOINTS.attachment(prId, attachmentId));
       return true;
     } catch (error) {
       logger.error('[PRService] deleteAttachment error:', error);
@@ -338,8 +379,8 @@ export const PRService = {
         const month = String(now.getMonth() + 1).padStart(2, '0');
         const prefix = `PR-${year}${month}-`;
   
-        if (response.data && response.data.length > 0) {
-          const latestPR = response.data[0];
+        if (response.items && response.items.length > 0) {
+          const latestPR = response.items[0];
           if (latestPR.pr_no && latestPR.pr_no.startsWith(prefix)) {
              const parts = latestPR.pr_no.split('-');
              if (parts.length === 3) {

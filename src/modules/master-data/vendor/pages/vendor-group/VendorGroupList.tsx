@@ -78,8 +78,8 @@ export default function VendorGroupList() {
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
-            const data = await VendorGroupService.getAll();
-            setAllVendorGroups(data);
+            const response = await VendorGroupService.getAll();
+            setAllVendorGroups(response?.items || []);
         } catch (error) {
             console.error('Failed to fetch vendor groups:', error);
         } finally {

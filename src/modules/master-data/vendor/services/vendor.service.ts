@@ -11,51 +11,32 @@ import {
   MOCK_VENDORS, 
   getVendorById as mockGetById,
 } from '@/modules/master-data/vendor/mocks/vendorMocks';
+import type { SuccessResponse } from '@/shared/types/api-response.types';
 
 // Local in-memory store for mocks (persists during session)
 let localVendorData: VendorMaster[] = [...MOCK_VENDORS];
+
+// Define Union Type for Legacy and Standard Responses - REMOVED (Trust Interceptor)
 
 export const VendorService = {
   getList: async (): Promise<VendorListResponse> => {
     if (USE_MOCK) {
        logger.info('🎭 [Mock Mode] Serving Vendor List from Local Store');
        return {
-         data: localVendorData,
+         items: localVendorData,
          total: localVendorData.length,
          page: 1,
          limit: 100
        };
     }
     try {
-      const response = await api.get('/vendors');
-      
-      let vendors: VendorMaster[] = [];
-      let total = 0;
-
-      if (Array.isArray(response.data)) {
-        vendors = response.data;
-        total = vendors.length;
-      } else if (response.data?.data && Array.isArray(response.data.data)) {
-        vendors = response.data.data;
-        total = response.data.total || vendors.length;
-      } else if (response.data?.vendors && Array.isArray(response.data.vendors)) {
-        vendors = response.data.vendors;
-        total = vendors.length;
-      } else if (response.data && typeof response.data === 'object' && response.data.vendor_id) {
-        vendors = [response.data];
-        total = 1;
-      }
-
-      return {
-        data: vendors,
-        total: total,
-        page: 1,
-        limit: total,
-      };
+      // Trust Global Interceptor - it unwraps { success, data } -> data
+      const response = await api.get<VendorListResponse>('/vendors');
+      return response;
     } catch (error: unknown) {
       logger.error('[VendorService] getList error:', error);
       return {
-        data: [],
+        items: [],
         total: 0,
         page: 1,
         limit: 20,
@@ -73,8 +54,7 @@ export const VendorService = {
       return null;
     }
     try {
-      const response = await api.get<VendorMaster>(`/vendors/${vendorId}`);
-      return response.data;
+      return await api.get<VendorMaster>(`/vendors/${vendorId}`);
     } catch (error: unknown) {
       logger.error('[VendorService] getById error:', error);
       return null;
@@ -86,8 +66,7 @@ export const VendorService = {
         return localVendorData.find(v => v.tax_id === taxId) || null;
     }
     try {
-      const response = await api.get<VendorMaster>(`/vendors/by-tax-id/${taxId}`);
-      return response.data;
+      return await api.get<VendorMaster>(`/vendors/by-tax-id/${taxId}`);
     } catch (error: unknown) {
       logger.error('[VendorService] getByTaxId error:', error);
       return null;
@@ -104,8 +83,7 @@ export const VendorService = {
       }));
     }
     try {
-      const response = await api.get<VendorDropdownItem[]>('/vendors/dropdown');
-      return response.data;
+      return await api.get<VendorDropdownItem[]>('/vendors/dropdown');
     } catch (error: unknown) {
       logger.error('[VendorService] getDropdown error:', error);
       return [];
@@ -192,8 +170,7 @@ export const VendorService = {
     }
 
     try {
-      const response = await api.post<VendorResponse>('/vendors', data);
-      return response.data;
+      return await api.post<VendorResponse>('/vendors', data);
     } catch (error: unknown) {
       logger.error('[VendorService] create error:', error);
       let message = 'เกิดข้อผิดพลาดในการสร้าง Vendor';
@@ -219,8 +196,7 @@ export const VendorService = {
     }
 
     try {
-      const response = await api.put<VendorResponse>(`/vendors/${vendorId}`, data);
-      return response.data;
+      return await api.put<VendorResponse>(`/vendors/${vendorId}`, data);
     } catch (error: unknown) {
       logger.error('[VendorService] update error:', error);
       return { success: false, message: 'เกิดข้อผิดพลาดในการอัปเดต Vendor' };
@@ -238,7 +214,7 @@ export const VendorService = {
     }
     
     try {
-      await api.delete(`/vendors/${vendorId}`);
+      await api.delete<SuccessResponse>(`/vendors/${vendorId}`);
       return { success: true };
     } catch (error: unknown) {
       logger.error('[VendorService] delete error:', error);
@@ -256,8 +232,7 @@ export const VendorService = {
         }
     }
     try {
-      const response = await api.post<VendorResponse>(`/vendors/${vendorId}/block`, { remark });
-      return response.data;
+      return await api.post<VendorResponse>(`/vendors/${vendorId}/block`, { remark });
     } catch (error: unknown) {
       logger.error('[VendorService] block error:', error);
       return { success: false, message: 'เกิดข้อผิดพลาดในการ Block Vendor' };
@@ -266,8 +241,7 @@ export const VendorService = {
 
   unblock: async (vendorId: string): Promise<VendorResponse> => {
     try {
-      const response = await api.post<VendorResponse>(`/vendors/${vendorId}/unblock`);
-      return response.data;
+      return await api.post<VendorResponse>(`/vendors/${vendorId}/unblock`);
     } catch (error) {
       logger.error('[VendorService] unblock error:', error);
       return { success: false, message: 'เกิดข้อผิดพลาดในการ Unblock Vendor' };
@@ -276,8 +250,7 @@ export const VendorService = {
 
   setOnHold: async (vendorId: string, onHold: boolean): Promise<VendorResponse> => {
     try {
-      const response = await api.post<VendorResponse>(`/vendors/${vendorId}/hold`, { on_hold: onHold });
-      return response.data;
+      return await api.post<VendorResponse>(`/vendors/${vendorId}/hold`, { on_hold: onHold });
     } catch (error) {
       logger.error('[VendorService] setOnHold error:', error);
       return { success: false, message: 'เกิดข้อผิดพลาดในการเปลี่ยนสถานะ Hold' };
@@ -293,8 +266,7 @@ export const VendorService = {
        );
     }
     try {
-      const response = await api.get<VendorMaster[]>('/vendors/search', { params: { q: query } });
-      return response.data;
+      return await api.get<VendorMaster[]>('/vendors/search', { params: { q: query } });
     } catch (error) {
       logger.error('[VendorService] search error:', error);
       return [];

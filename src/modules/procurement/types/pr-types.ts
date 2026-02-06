@@ -272,7 +272,7 @@ export interface PRListParams {
 }
 
 export interface PRListResponse {
-  data: PRHeader[];
+  items: PRHeader[];
   total: number;
   page: number;
   limit: number;

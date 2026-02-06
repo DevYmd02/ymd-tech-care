@@ -15,7 +15,7 @@ export const ProjectService = {
     }
     try {
       const response = await api.get<Project[]>('/projects');
-      return response.data;
+      return response;
     } catch (error) {
       logger.error('[ProjectService] getList error:', error);
       return [];
@@ -25,7 +25,7 @@ export const ProjectService = {
   getById: async (id: string): Promise<Project | null> => {
     try {
       const response = await api.get<Project>(`/projects/${id}`);
-      return response.data;
+      return response;
     } catch (error) {
       logger.error('[ProjectService] getById error:', error);
       return null;

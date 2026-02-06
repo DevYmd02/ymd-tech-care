@@ -90,8 +90,8 @@ export const AuthService = {
         // ===== REAL API MODE =====
         try {
             const response = await api.post<LoginResponse>('/auth/login', data);
-            logger.info('🔍 [AuthService] Raw Login Response:', response.data);
-            return response.data;
+            logger.info('🔍 [AuthService] Raw Login Response:', response);
+            return response;
         } catch (error: unknown) {
             if (error instanceof AxiosError) {
                 logger.error('❌ [AuthService] Login failed:', error.response?.data || error.message);
@@ -107,8 +107,8 @@ export const AuthService = {
             // Backend expects POST /auth/employees/:employee_id/auth
             const { employee_id, ...body } = data;
             const response = await api.post<RegisterResponse>(`/auth/employees/${employee_id}/auth`, body);
-            logger.info('📦 [AuthService] Raw Register Response:', response.data);
-            return response.data;
+            logger.info('📦 [AuthService] Raw Register Response:', response);
+            return response;
         } catch (error: unknown) {
             if (error instanceof AxiosError) {
                 logger.error('❌ [AuthService] Registration failed:', error.response?.data || error.message);

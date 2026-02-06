@@ -26,7 +26,7 @@ export const QCService = {
     }
     try {
       const response = await api.get<QCListResponse>(ENDPOINTS.list, { params });
-      return response.data;
+      return response;
     } catch (error) {
       logger.error('[QCService] getList error:', error);
       return {
@@ -43,7 +43,7 @@ export const QCService = {
       const response = await api.post<{ qc_id: string }>(ENDPOINTS.create, data);
       return {
         success: true,
-        qc_id: response.data.qc_id,
+        qc_id: response.qc_id,
         message: 'บันทึกใบเปรียบเทียบราคาสำเร็จ',
       };
     } catch (error) {

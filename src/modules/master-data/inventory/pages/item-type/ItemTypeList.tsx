@@ -25,7 +25,8 @@ export default function ItemTypeList() {
     const fetchData = useCallback(() => {
         setIsLoading(true);
         const fetchItemTypes = async () => {
-            const data = await ItemTypeService.getList();
+            const response = await ItemTypeService.getAll();
+            const data = response.items || [];
             let filtered = [...data];
             if (statusFilter !== 'ALL') filtered = filtered.filter(i => statusFilter === 'ACTIVE' ? i.is_active : !i.is_active);
             if (searchTerm) {

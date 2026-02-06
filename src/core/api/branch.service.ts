@@ -21,14 +21,19 @@ export const BranchService = {
        return mockBranches;
     }
     try {
-      const response = await api.get(ENDPOINT);
+      // Legacy handling: verify strictly later
+      // Legacy handling: verify strictly later
+      const response = await api.get<BranchListItem[]>(ENDPOINT);
       
-      // Handle multiple response formats
-      if (Array.isArray(response.data)) {
-        return response.data;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const res = response as any;
+      
+      // Handle multiple response formats (Unwrapped)
+      if (Array.isArray(response)) {
+        return response;
       }
-      if (response.data?.data && Array.isArray(response.data.data)) {
-        return response.data.data;
+      if (res?.data && Array.isArray(res.data)) {
+        return res.data;
       }
       
       logger.warn('[BranchService] getList: unexpected response format');
@@ -44,8 +49,8 @@ export const BranchService = {
        return mockBranchDropdown;
     }
     try {
-      const response = await api.get(`${ENDPOINT}/dropdown`);
-      return Array.isArray(response.data) ? response.data : [];
+      const response = await api.get<BranchDropdownItem[]>(`${ENDPOINT}/dropdown`);
+      return Array.isArray(response) ? response : [];
     } catch (error) {
       logger.error('[BranchService] getDropdown error:', error);
       return [];
@@ -55,7 +60,7 @@ export const BranchService = {
   getById: async (id: string): Promise<BranchListItem | null> => {
     try {
       const response = await api.get<BranchListItem>(`${ENDPOINT}/${id}`);
-      return response.data;
+      return response;
     } catch (error) {
       logger.error('[BranchService] getById error:', error);
       return null;
@@ -64,7 +69,7 @@ export const BranchService = {
 
   create: async (data: BranchCreateRequest): Promise<{ success: boolean; message?: string }> => {
     try {
-      await api.post(ENDPOINT, data);
+      await api.post<unknown>(ENDPOINT, data);
       return { success: true };
     } catch (error) {
       logger.error('[BranchService] create error:', error);
@@ -74,7 +79,7 @@ export const BranchService = {
 
   update: async (data: BranchUpdateRequest): Promise<{ success: boolean; message?: string }> => {
     try {
-      await api.put(`${ENDPOINT}/${data.branch_id}`, data);
+      await api.put<unknown>(`${ENDPOINT}/${data.branch_id}`, data);
       return { success: true };
     } catch (error) {
       logger.error('[BranchService] update error:', error);
@@ -84,7 +89,7 @@ export const BranchService = {
 
   delete: async (id: string): Promise<boolean> => {
     try {
-      await api.delete(`${ENDPOINT}/${id}`);
+      await api.delete<unknown>(`${ENDPOINT}/${id}`);
       return true;
     } catch (error) {
       logger.error('[BranchService] delete error:', error);

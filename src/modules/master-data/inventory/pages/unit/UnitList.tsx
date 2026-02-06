@@ -25,7 +25,8 @@ export default function UnitList() {
     const fetchData = useCallback(() => {
         setIsLoading(true);
         const fetchUnits = async () => {
-            const data = await UnitService.getList();
+            const response = await UnitService.getAll();
+            const data = response.items || [];
             let filtered = [...data];
             if (statusFilter !== 'ALL') filtered = filtered.filter(u => statusFilter === 'ACTIVE' ? u.is_active : !u.is_active);
             if (searchTerm) {

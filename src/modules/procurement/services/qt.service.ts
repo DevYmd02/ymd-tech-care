@@ -7,6 +7,7 @@ import api, { USE_MOCK } from '@/core/api/api';
 import type { QTListParams, QTListResponse, QTCreateData } from '@/modules/procurement/types/qt-types';
 import { logger } from '@/shared/utils/logger';
 import { MOCK_QTS } from '@/modules/procurement/mocks/procurementMocks';
+import type { SuccessResponse } from '@/shared/types/api-response.types';
 
 const ENDPOINTS = {
   list: '/qt',
@@ -25,22 +26,21 @@ export const QTService = {
        };
     }
     try {
-      const response = await api.get<QTListResponse>(ENDPOINTS.list, { params });
-      return response.data;
+      return await api.get<QTListResponse>(ENDPOINTS.list, { params });
     } catch (error) {
       logger.error('[QTService] getList error:', error);
       return {
         data: [],
         total: 0,
         page: 1,
-        limit: 20,
+        limit: 10,
       };
     }
   },
 
   create: async (data: QTCreateData): Promise<void> => {
     try {
-      await api.post(ENDPOINTS.create, data);
+      await api.post<SuccessResponse>(ENDPOINTS.create, data);
     } catch (error) {
       logger.error('[QTService] create error:', error);
     }

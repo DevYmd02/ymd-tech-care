@@ -280,7 +280,7 @@ export default function PRListPage() {
                 );
             },
             footer: () => {
-                const total = data?.data.reduce((sum, item) => sum + item.total_amount, 0) || 0;
+                const total = data?.items.reduce((sum, item) => sum + item.total_amount, 0) || 0;
                 return (
                     <div className="text-right font-bold text-base text-emerald-600 dark:text-emerald-400 whitespace-nowrap pr-2">
                         {total.toLocaleString('en-US', { minimumFractionDigits: 2 })} บาท
@@ -290,7 +290,7 @@ export default function PRListPage() {
             size: 130,
             enableSorting: false,
         }),
-    ], [columnHelper, filters.page, filters.limit, data?.data, handleQuickApprove]); // Re-calculate index when page changes
+    ], [columnHelper, filters.page, filters.limit, data?.items, handleQuickApprove]); // Re-calculate index when page changes
 
     // ====================================================================================
     // RENDER
@@ -381,7 +381,7 @@ export default function PRListPage() {
             >
                 <div className="h-full flex flex-col">
                     <SmartTable
-                        data={data?.data ?? []}
+                        data={data?.items ?? []}
                         columns={columns as ColumnDef<PRHeader>[]}
                         isLoading={isLoading}
                         pagination={{

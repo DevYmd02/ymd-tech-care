@@ -6,6 +6,7 @@
 import api from '@/core/api/api';
 import type { POListParams, POListResponse, CreatePOPayload, POListItem } from '@/modules/procurement/types/po-types';
 import { logger } from '@/shared/utils/logger';
+import type { SuccessResponse } from '@/shared/types/api-response.types';
 
 const ENDPOINTS = {
   list: '/purchase-orders',
@@ -18,7 +19,7 @@ export const POService = {
     // 1. Mock Mode Check
     if (import.meta.env.VITE_USE_MOCK === 'true') {
         const { MOCK_POS } = await import('@/modules/procurement/mocks/procurementMocks');
-        console.log('🎭 [Mock Mode] Serving PO List');
+        logger.info('🎭 [Mock Mode] Serving PO List');
         
         // Simple Filtering (Optional but good for realism)
         let data = MOCK_POS;
@@ -35,8 +36,7 @@ export const POService = {
     }
 
     try {
-      const response = await api.get<POListResponse>(ENDPOINTS.list, { params });
-      return response.data;
+      return await api.get<POListResponse>(ENDPOINTS.list, { params });
     } catch (error) {
       logger.error('[POService] getList error:', error);
       return {
@@ -50,8 +50,7 @@ export const POService = {
 
   getById: async (id: string): Promise<POListItem | null> => {
       try {
-          const response = await api.get(ENDPOINTS.detail(id));
-          return response.data;
+          return await api.get<POListItem>(ENDPOINTS.detail(id));
       } catch (error) {
           logger.error('[POService] getById error:', error);
           return null;
@@ -59,6 +58,6 @@ export const POService = {
   },
 
   create: async (data: CreatePOPayload): Promise<void> => {
-      await api.post(ENDPOINTS.create, data);
+      await api.post<SuccessResponse>(ENDPOINTS.create, data);
   }
 };

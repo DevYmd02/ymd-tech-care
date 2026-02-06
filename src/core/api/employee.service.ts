@@ -10,8 +10,8 @@ import { logger } from '@/shared/utils/logger';
 export const EmployeeService = {
   createEmployee: async (data: IEmployeeCreateRequest): Promise<IEmployeeResponse> => {
     try {
-      const response = await api.post('/employees', data);
-      return response.data;
+      const response = await api.post<IEmployeeResponse>('/employees', data);
+      return response;
     } catch (error) {
       logger.error('[EmployeeService] createEmployee error:', error);
       throw error;
@@ -27,9 +27,9 @@ export const EmployeeService = {
     }
 
     try {
-      const response = await api.get('/employees');
-      logger.info('[EmployeeService] Raw API Response:', response.data);
-      return response.data;
+      const response = await api.get<IEmployee[]>('/employees');
+      logger.info('[EmployeeService] Raw API Response:', response);
+      return response;
     } catch (error) {
       logger.error('[EmployeeService] Error fetching employees:', error);
       throw error;

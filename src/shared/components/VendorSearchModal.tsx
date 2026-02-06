@@ -344,9 +344,9 @@ export const VendorSearchModal: React.FC<VendorSearchModalProps> = ({ isOpen, on
                 const response = await VendorService.getList();
                 if (!isMounted) return;
 
-                if (response.data.length > 0) {
+                if (response.items.length > 0) {
                     // Transform API data to VendorSearchItem format
-                    const items: VendorSearchItem[] = response.data.map(v => ({
+                    const items: VendorSearchItem[] = response.items.map(v => ({
                         vendor_id: v.vendor_id,
                         code: v.vendor_code,
                         name: v.vendor_name,

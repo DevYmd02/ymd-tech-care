@@ -42,7 +42,8 @@ export default function WarehouseList() {
     const fetchData = useCallback(() => {
         setIsLoading(true);
         const fetchWarehouses = async () => {
-            const data = await WarehouseService.getList();
+            const response = await WarehouseService.getAll();
+            const data = response.items || [];
             let filtered = [...data];
             
             if (statusFilter !== 'ALL') {

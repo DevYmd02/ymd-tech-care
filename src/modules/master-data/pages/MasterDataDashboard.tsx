@@ -115,11 +115,14 @@ export default function MasterDataDashboard() {
     const [projects, setProjects] = useState<Project[]>([]);
 
     // REFACTORED: Use useQuery for items (Cache Shared with ItemMasterList)
-    const { data: items = [] } = useQuery<ItemListItem[]>({
+    // REFACTORED: Use useQuery for items (Cache Shared with ItemMasterList)
+    const { data: response } = useQuery({
         queryKey: ['items'],
         queryFn: ItemMasterService.getAll,
         staleTime: 1000 * 60 * 5,
     });
+    
+    const items = response?.items || [];
 
     // Master Data Menu Configuration
     const MASTER_DATA_MENU = [
@@ -159,7 +162,7 @@ export default function MasterDataDashboard() {
             switch (activeTab) {
                 case 'vendor': {
                     const response = await VendorService.getList();
-                    setVendors(response.data || []);
+                    setVendors(response.items || []);
                     break;
                 }
                 case 'branch': {
@@ -205,7 +208,7 @@ export default function MasterDataDashboard() {
                     MasterDataService.getProjects()
                 ]);
                 
-                setVendors(vendorRes.data || []);
+                setVendors(vendorRes.items || []);
                 setBranches(branchRes || []);
                 setWarehouses(warehouseRes || []);
                 // items handled by useQuery

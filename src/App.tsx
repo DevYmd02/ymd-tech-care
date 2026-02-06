@@ -69,6 +69,18 @@ const UnitForm = React.lazy(() => import('@/modules/master-data/inventory/pages/
 const ItemMasterForm = React.lazy(() => import('@/modules/master-data/inventory/pages/item-master/ItemMasterForm'));
 const UOMConversionForm = React.lazy(() => import('@/modules/master-data/inventory/pages/uom-conversion/UOMConversionForm'));
 const ItemBarcodeForm = React.lazy(() => import('@/modules/master-data/inventory/pages/item-barcode/ItemBarcodeForm'));
+// New Inventory Master Pages (11 new pages)
+const ItemGroupList = React.lazy(() => import('@/modules/master-data/inventory/pages/item-group/ItemGroupList'));
+const BrandList = React.lazy(() => import('@/modules/master-data/inventory/pages/brand/BrandList'));
+const PatternList = React.lazy(() => import('@/modules/master-data/inventory/pages/pattern/PatternList'));
+const DesignList = React.lazy(() => import('@/modules/master-data/inventory/pages/design/DesignList'));
+const GradeList = React.lazy(() => import('@/modules/master-data/inventory/pages/grade/GradeList'));
+const ModelList = React.lazy(() => import('@/modules/master-data/inventory/pages/model/ModelList'));
+const SizeList = React.lazy(() => import('@/modules/master-data/inventory/pages/size/SizeList'));
+const ColorList = React.lazy(() => import('@/modules/master-data/inventory/pages/color/ColorList'));
+const LocationList = React.lazy(() => import('@/modules/master-data/inventory/pages/location/LocationList'));
+const ShelfList = React.lazy(() => import('@/modules/master-data/inventory/pages/shelf/ShelfList'));
+const LotNoList = React.lazy(() => import('@/modules/master-data/inventory/pages/lot-no/LotNoList'));
 
 // Auth Pages (from modules)
 const LoginPage = React.lazy(() => import('./modules/auth/pages/LoginPage'));
@@ -178,6 +190,18 @@ function App() {
           <Route path="master-data/item" element={<ItemMasterForm />} />
           <Route path="master-data/uom-conversion" element={<UOMConversionForm />} />
           <Route path="master-data/item-barcode" element={<ItemBarcodeForm />} />
+          {/* New Inventory Master Routes */}
+          <Route path="master-data/item-group" element={<ItemGroupList />} />
+          <Route path="master-data/brand" element={<BrandList />} />
+          <Route path="master-data/pattern" element={<PatternList />} />
+          <Route path="master-data/design" element={<DesignList />} />
+          <Route path="master-data/grade" element={<GradeList />} />
+          <Route path="master-data/model" element={<ModelList />} />
+          <Route path="master-data/size" element={<SizeList />} />
+          <Route path="master-data/color" element={<ColorList />} />
+          <Route path="master-data/location" element={<LocationList />} />
+          <Route path="master-data/shelf" element={<ShelfList />} />
+          <Route path="master-data/lot-no" element={<LotNoList />} />
           
           {/* Generic Coming Soon for Work in Progress */}
           <Route path="/coming-soon" element={<ComingSoon />} />

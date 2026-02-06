@@ -15,7 +15,7 @@ export const CostCenterService = {
     }
     try {
       const response = await api.get<CostCenter[]>('/cost-centers');
-      return response.data;
+      return response;
     } catch (error) {
       logger.error('[CostCenterService] getList error:', error);
       return [];
@@ -25,7 +25,7 @@ export const CostCenterService = {
   getById: async (id: string): Promise<CostCenter | null> => {
     try {
       const response = await api.get<CostCenter>(`/cost-centers/${id}`);
-      return response.data;
+      return response;
     } catch (error) {
       logger.error('[CostCenterService] getById error:', error);
       return null;

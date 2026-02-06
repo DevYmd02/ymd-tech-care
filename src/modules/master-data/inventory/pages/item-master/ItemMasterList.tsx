@@ -28,12 +28,14 @@ export default function ItemMasterList() {
     const [pageSize, setPageSize] = useState(10);
 
     // REFACTORED: Use React Query for data fetching (Deduplication & Caching)
-    const { data: items = [], isLoading } = useQuery({
+    const { data: response, isLoading } = useQuery({
         queryKey: ['items'],
         queryFn: ItemMasterService.getAll,
         staleTime: 1000 * 60 * 5, // 5 minutes stale time
         refetchOnWindowFocus: false, // Prevent spamming requests when switching tabs
     });
+    
+    const items = response?.items || [];
 
     const handleEdit = useCallback((id: string) => {
         navigate(`/master-data/item?id=${id}`);

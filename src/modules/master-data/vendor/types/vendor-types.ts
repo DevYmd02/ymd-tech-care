@@ -4,6 +4,8 @@
  * @usage import type { VendorMaster, VendorFormData } from '@/modules/master-data/vendor/types/vendor-types';
  */
 
+import type { IBaseMaster } from '@/shared/types/common-master.types';
+
 // ====================================================================================
 // ENUMS - Vendor Status Types
 // ====================================================================================
@@ -291,7 +293,7 @@ export interface VendorListParams {
 
 /** Response จาก getList */
 export interface VendorListResponse {
-    data: VendorListItem[];
+    items: VendorListItem[];
     total: number;
     page: number;
     limit: number;
@@ -720,14 +722,11 @@ export const initialVendorFormData: VendorFormData = {
 /**
  * VendorTypeMaster - ข้อมูลประเภทเจ้าหนี้
  */
-export interface VendorTypeMaster {
+export interface VendorTypeMaster extends IBaseMaster {
     vendor_type_id: string;
     vendor_type_code: string;
     vendor_type_name: string;
     vendor_type_name_en?: string;
-    is_active: boolean;
-    created_at: string;
-    updated_at: string;
 }
 
 /**
@@ -747,14 +746,11 @@ export interface VendorTypeFormData {
 /**
  * VendorGroupMaster - ข้อมูลกลุ่มเจ้าหนี้
  */
-export interface VendorGroupMaster {
+export interface VendorGroupMaster extends IBaseMaster {
     vendor_group_id: string;
     vendor_group_code: string;
     vendor_group_name: string;
     vendor_group_name_en?: string;
-    is_active: boolean;
-    created_at: string;
-    updated_at: string;
 }
 
 /**

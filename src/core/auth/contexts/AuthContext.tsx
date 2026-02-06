@@ -32,21 +32,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const response = await AuthService.login(data);
       
-      // Handle various common token field names since API specs are unclear
-      const responseAny = response as unknown as { token?: string; accessToken?: string; access_token?: string };
-      const token = responseAny.token || responseAny.accessToken || responseAny.access_token;
+      // AuthService.login returns LoginResponse with access_token field
+      const token = response.access_token;
       
-      // Check if response itself is the token string (less common but possible fallback)
-      const possibleToken = typeof response === 'string' ? response : token;
-
-      if (possibleToken && typeof possibleToken === 'string') {
-        localStorage.setItem('token', possibleToken);
+      if (token && typeof token === 'string') {
+        localStorage.setItem('token', token);
         setIsAuthenticated(true);
         navigate('/'); // Redirect to dashboard
       } else {
-        // Fallback: If response doesn't have an obvious token but didn't throw error
-        logger.warn('⚠️ Login successful but no token found in standard fields:', response);
-        // Assuming success for now if backend didn't throw 4xx/5xx - logic can be refined later
+        // If no token but didn't throw error - log warning
+        logger.warn('⚠️ Login successful but no token found:', response);
       }
     } catch (error: unknown) {
       setIsAuthenticated(false);

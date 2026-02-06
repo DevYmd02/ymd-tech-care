@@ -63,7 +63,7 @@ export default function VendorList() {
         staleTime: 1000 * 60 * 5, // 5 minutes cache
     });
 
-    const allVendors = data?.data || [];
+    const allVendors = data?.items || [];
 
 
     // ==================== LOCAL FILTERING & PAGINATION ====================

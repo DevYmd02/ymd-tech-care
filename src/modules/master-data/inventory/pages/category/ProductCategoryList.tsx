@@ -68,7 +68,8 @@ export default function ProductCategoryListRefactored() {
     // Use the generic hook for list management
     const listState = useGenericMasterDataList<ProductCategoryListItem>({
         fetchData: async () => {
-            return await ProductCategoryService.getList();
+            const response = await ProductCategoryService.getAll();
+            return response.items || [];
         },
         searchFields: ['category_code', 'category_name'],
         initialRowsPerPage: 10,

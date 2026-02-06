@@ -59,7 +59,7 @@ export default function VendorDashboard() {
         setIsLoading(true);
         try {
             const response = await VendorService.getList();
-            setVendors(response.data);
+            setVendors(response.items);
         } catch {
             setVendors([]);
         } finally {

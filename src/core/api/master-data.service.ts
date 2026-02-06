@@ -25,15 +25,18 @@ export const MasterDataService = {
   },
 
   getWarehouses: async (): Promise<WarehouseListItem[]> => {
-    return WarehouseService.getList();
+    const response = await WarehouseService.getAll();
+    return response.items;
   },
 
   getItems: async (): Promise<ItemListItem[]> => {
-    return ItemMasterService.getAll();
+    const response = await ItemMasterService.getAll();
+    return response.items;
   },
 
   getUnits: async (): Promise<UnitListItem[]> => {
-    return UnitService.getList();
+    const response = await UnitService.getAll();
+    return response.items;
   },
 
   getCostCenters: async (): Promise<CostCenter[]> => {
@@ -45,10 +48,12 @@ export const MasterDataService = {
   },
 
   getProductCategories: async (): Promise<ProductCategoryListItem[]> => {
-    return ProductCategoryService.getList();
+    const response = await ProductCategoryService.getAll();
+    return response.items;
   },
 
   getItemTypes: async (): Promise<ItemTypeListItem[]> => {
-    return ItemTypeService.getList();
+    const response = await ItemTypeService.getAll();
+    return response.items;
   }
 };

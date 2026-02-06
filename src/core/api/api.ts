@@ -1,9 +1,9 @@
 /**
  * @file api.ts
- * @description Axios instance และ API configuration
+ * @description Axios instance and API configuration
  */
 
-import axios from 'axios';
+import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios';
 import { logger } from '@/shared/utils/logger';
 
 // =============================================================================
@@ -13,7 +13,7 @@ import { logger } from '@/shared/utils/logger';
 export const API_BASE_URL = '/api';
 
 /**
- * Flag บอกว่าใช้ Mock Data หรือไม่ (สามารถปรับให้ hardcode เป็น false ได้ถ้ายกเลิก mock แล้ว)
+ * Flag to indicate if Mock Data is used
  */
 export const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
 
@@ -54,6 +54,14 @@ api.interceptors.response.use(
     const method = response.config.method?.toUpperCase() || 'UNKNOWN';
     const url = response.config.url;
     logger.info(`✅ [API] [${method}] ${url}`, response.data);
+
+    // Standardized Response Unwrapping
+    // If response.data follows { success: true, data: ... }, return 'data' directly.
+    if (response.data && typeof response.data === 'object' && 'success' in response.data && 'data' in response.data) {
+        return response.data.data;
+    }
+
+    // Default: return full response (legacy support for raw arrays)
     return response;
   },
   (error) => {
@@ -97,8 +105,25 @@ export const extractErrorMessage = (error: unknown): string => {
   return 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ';
 };
 
+// =============================================================================
+// TYPE DEFINITION OVERRIDES
+// =============================================================================
+
+// Strictly override the methods that return AxiosResponse to return Promise<T>
+// This matches our interceptor behavior which unwraps the response.data
+export interface ApiClient extends Omit<AxiosInstance, 'get' | 'put' | 'post' | 'delete' | 'patch'> {
+  get<T>(url: string, config?: AxiosRequestConfig): Promise<T>;
+  delete<T>(url: string, config?: AxiosRequestConfig): Promise<T>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  post<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  put<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  patch<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T>;
+}
+
 if (import.meta.env.DEV) {
   logApiMode();
 }
 
-export default api;
+export default api as ApiClient;

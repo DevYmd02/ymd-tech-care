@@ -78,8 +78,8 @@ export default function VendorTypeList() {
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
-            const data = await VendorTypeService.getAll();
-            setAllVendorTypes(data);
+            const response = await VendorTypeService.getAll();
+            setAllVendorTypes(response?.items || []);
         } catch (error) {
             console.error('Failed to fetch vendor types:', error);
         } finally {
