@@ -47,7 +47,7 @@ export default function GRNListPage() {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
     // 1. Filter State
-    const { filters, setFilters, resetFilters, handlePageChange } = useTableFilters<GRNStatus>({
+    const { filters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<GRNStatus>({
         defaultStatus: 'ALL',
     });
 
@@ -59,6 +59,7 @@ export default function GRNListPage() {
         date_to: filters.dateTo || undefined,
         page: filters.page,
         limit: filters.limit,
+        sort: filters.sort || undefined,
     };
 
     // 2. Data Fetching
@@ -182,6 +183,8 @@ export default function GRNListPage() {
                                 onPageChange: handlePageChange,
                                 onPageSizeChange: (size) => setFilters({ limit: size, page: 1 })
                             }}
+                            sortConfig={sortConfig}
+                            onSortChange={handleSortChange}
                             rowIdField="grn_id"
                             className="h-full"
                             showFooter={true}

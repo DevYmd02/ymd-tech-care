@@ -32,6 +32,7 @@ const getInitialLines = () => Array(PR_CONFIG.INITIAL_LINES).fill(null).map(() =
 const getDefaultFormValues = (): PRFormData => ({
   pr_no: '', request_date: getTodayDate(), required_date: '', requester_name: 'นางสาว กรรลิกา สารมาท',
   cost_center_id: '', project_id: undefined, purpose: '', currency_id: 'THB', lines: [], total_amount: 0,
+  is_on_hold: false,
   delivery_date: '', credit_days: 30, vendor_quote_no: '', shipping_method: 'รถยนต์', remarks: '',
   is_multicurrency: false, exchange_rate: 1, rate_date: new Date().toISOString().split('T')[0],
   currency_type_id: '',
@@ -65,7 +66,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
   const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const { register, handleSubmit, setValue, reset, watch, setFocus, formState: { isSubmitting } } = useForm<PRFormData>({
+  const { register, handleSubmit, setValue, reset, watch, setFocus, control, formState: { isSubmitting } } = useForm<PRFormData>({
     defaultValues: getDefaultFormValues()
   });
 
@@ -165,9 +166,29 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     });
   };
 
-  const handleClearLines = () => {
-    if (window.confirm("คุณต้องการล้างรายการสินค้าทั้งหมดใช่หรือไม่?")) {
+  const handleClearLines = async () => {
+    const isConfirmed = await confirm({
+        title: 'ยืนยันการล้างรายการ',
+        description: 'คุณต้องการล้างรายการสินค้าทั้งหมดใช่หรือไม่?',
+        confirmText: 'ล้างรายการ',
+        cancelText: 'ยกเลิก',
+        variant: 'danger'
+    });
+    if (isConfirmed) {
         setLines(getInitialLines());
+    }
+  };
+
+  const handleResetForm = async () => {
+    const isConfirmed = await confirm({
+        title: 'ยืนยันการล้างข้อมูล',
+        description: 'คุณต้องการล้างข้อมูลในฟอร์มทั้งหมดใช่หรือไม่? ข้อมูลที่กรอกไว้จะหายไปทั้งหมด',
+        confirmText: 'ล้างข้อมูล',
+        cancelText: 'ยกเลิก',
+        variant: 'danger'
+    });
+    if (isConfirmed) {
+        reset();
     }
   };
 
@@ -343,6 +364,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     alertState, setAlertState, products, costCenters, projects,
     addLine, removeLine, clearLine, updateLine, handleClearLines,
     openProductSearch, selectProduct, subtotal, discountAmount, afterDiscount,
-    vatAmount, grandTotal, handleVendorSelect, onSubmit, handleDelete, handleApprove
+    vatAmount, grandTotal, handleVendorSelect, onSubmit, handleDelete, handleApprove,
+    control, reset: handleResetForm
   };
 };

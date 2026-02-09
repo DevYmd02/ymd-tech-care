@@ -68,7 +68,24 @@ export const PRService = {
        }
 
        // 6. Pagination
-       const sorted = filtered.sort((a, b) => new Date(b.request_date).getTime() - new Date(a.request_date).getTime());
+        // 6. Dynamic Sorting
+        const sortParam = params?.sort || 'request_date:desc';
+        const [sortKey, sortDir] = sortParam.split(':');
+        
+        const sorted = filtered.sort((a, b) => {
+          const valA = a[sortKey as keyof typeof a];
+          const valB = b[sortKey as keyof typeof b];
+          
+          if (valA === valB) return 0;
+          
+          const multiplier = sortDir === 'asc' ? 1 : -1;
+          
+          if (typeof valA === 'string' && typeof valB === 'string') {
+            return valA.localeCompare(valB) * multiplier;
+          }
+          
+          return ((valA as number) < (valB as number) ? -1 : 1) * multiplier;
+        });
        const page = params?.page || 1;
        const limit = params?.limit || 20;
        const startIndex = (page - 1) * limit;

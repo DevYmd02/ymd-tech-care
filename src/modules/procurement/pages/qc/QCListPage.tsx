@@ -56,7 +56,7 @@ const QC_FILTER_CONFIG: FilterFieldConfig<QCFilterKeys>[] = [
 
 export default function QCListPage() {
     // URL-based Filter State
-    const { filters, setFilters, resetFilters, handlePageChange } = useTableFilters<QCStatus>({
+    const { filters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<QCStatus>({
         defaultStatus: 'ALL',
     });
 
@@ -67,8 +67,9 @@ export default function QCListPage() {
         status: filters.status === 'ALL' ? undefined : filters.status,
         date_from: filters.dateFrom || undefined,
         date_to: filters.dateTo || undefined,
-        // Assuming QCListParams needs pagination fields too, or handled by service defaults
-        // If not in type, casting or updating type might be needed, similar to RFQ/QT
+        page: filters.page,
+        limit: filters.limit,
+        sort: filters.sort || undefined,
     };
 
     // Data Fetching with React Query
@@ -260,6 +261,8 @@ export default function QCListPage() {
                                 onPageChange: handlePageChange,
                                 onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 })
                             }}
+                            sortConfig={sortConfig}
+                            onSortChange={handleSortChange}
                             rowIdField="qc_id"
                             className="h-full"
                             showFooter={true}

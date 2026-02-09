@@ -59,7 +59,7 @@ type RFQFilterKeys = Extract<keyof TableFilters<RFQStatus>, string> | 'creator';
 
 export default function RFQListPage() {
     // URL-based Filter State
-    const { filters, setFilters, resetFilters, handlePageChange } = useTableFilters<RFQStatus>({
+    const { filters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<RFQStatus>({
         defaultStatus: 'ALL',
     });
 
@@ -74,7 +74,8 @@ export default function RFQListPage() {
         date_from: filters.dateFrom || undefined,
         date_to: filters.dateTo || undefined,
         page: filters.page,
-        limit: filters.limit
+        limit: filters.limit,
+        sort: filters.sort || undefined
     };
 
     // Data Fetching with React Query
@@ -330,6 +331,8 @@ export default function RFQListPage() {
                             onPageChange: handlePageChange,
                             onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 })
                         }}
+                        sortConfig={sortConfig}
+                        onSortChange={handleSortChange}
                         rowIdField="rfq_id"
                         className="flex-1"
                     />

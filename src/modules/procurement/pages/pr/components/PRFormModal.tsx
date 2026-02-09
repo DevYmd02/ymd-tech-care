@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Trash2, Printer, Copy, CheckCircle, FileBox, MoreHorizontal, Coins, FileBarChart, History as HistoryIcon } from 'lucide-react';
 import { PRHeader } from './PRHeader';
-import { mockBranches } from '@/modules/master-data/mocks/masterDataMocks';
 import { PRFormLines } from './PRFormLines';
 import { PRFormSummary } from './PRFormSummary';
 import { WindowFormLayout } from '@/shared/components/layout/WindowFormLayout';
@@ -26,7 +25,8 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
     alertState, setAlertState, products, costCenters, projects,
     addLine, removeLine, clearLine, updateLine, handleClearLines,
     openProductSearch, selectProduct, subtotal, discountAmount,
-    vatAmount, grandTotal, handleVendorSelect, onSubmit, handleDelete, handleApprove
+    vatAmount, grandTotal, handleVendorSelect, onSubmit, handleDelete, handleApprove,
+    control, reset
   } = usePRForm(isOpen, onClose, id, onSuccess);
 
   // Auto-fetch exchange rate when currency changes
@@ -142,7 +142,16 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
 
       <div className="flex-1 overflow-auto bg-gray-100 dark:bg-gray-800 p-1.5 space-y-1">
         <div className={cardClass}>
-          <PRHeader register={register} setValue={setValue} watch={watch} costCenters={costCenters} projects={projects} branches={mockBranches} onVendorSelect={handleVendorSelect} />
+          <PRHeader 
+            register={register} 
+            setValue={setValue} 
+            watch={watch} 
+            control={control}
+            reset={reset}
+            costCenters={costCenters} 
+            projects={projects} 
+            onVendorSelect={handleVendorSelect} 
+          />
         </div>
 
         <div className={cardClass}>
@@ -223,7 +232,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                             type="number"
                             step="0.0001"
                             {...register('exchange_rate', { valueAsNumber: true })}
-                            className="w-full h-9 px-3 text-sm text-right bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                            className="w-full h-9 px-3 text-sm text-right bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         />
                          {watch('currency_id') && watch('currency_id') !== 'THB' && (
                            <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 text-right">

@@ -50,6 +50,12 @@ export interface TableFilters<TStatus extends string = string> {
   dateTo: string;
 }
 
+/** Parsed sort state */
+export interface SortConfig {
+  key: string;
+  direction: 'asc' | 'desc';
+}
+
 /** Return type of the useTableFilters hook */
 export interface UseTableFiltersReturn<TStatus extends string = string> {
   /** Current filter values (readonly, derived from URL) */
@@ -75,6 +81,12 @@ export interface UseTableFiltersReturn<TStatus extends string = string> {
   
   /** Change tertiary search term (resets page to 1) */
   handleSearch3Change: (value: string) => void;
+  
+  /** Change sorting (Single-Column Logic) */
+  handleSortChange: (key: string) => void;
+
+  /** Parsed sort configuration derived from filters.sort */
+  sortConfig: SortConfig | null;
   
   /** Reset all filters to defaults and clear URL params */
   resetFilters: () => void;
@@ -166,6 +178,16 @@ export function useTableFilters<TStatus extends string = string>(
       dateTo: searchParams.get(keys.dateTo) ?? defaultDateTo,
     };
   }, [searchParams, keys, defaultPage, defaultLimit, defaultSearch, defaultStatus, defaultSort, defaultDateFrom, defaultDateTo]);
+
+  // ------------------------------------------------------------
+  // Single-Column Sort Config derivation (key:direction)
+  // ------------------------------------------------------------
+  const sortConfig = useMemo<SortConfig | null>(() => {
+    if (!filters.sort) return null;
+    const [key, direction] = filters.sort.split(':');
+    if (!key || (direction !== 'asc' && direction !== 'desc')) return null;
+    return { key, direction: direction as 'asc' | 'desc' };
+  }, [filters.sort]);
 
   // ------------------------------------------------------------
   // Helper to update URL params
@@ -271,6 +293,27 @@ export function useTableFilters<TStatus extends string = string>(
   );
 
   // ------------------------------------------------------------
+  // Handler: Sort change (Single-Column Logic: New=DESC, Same=Toggle)
+  // ------------------------------------------------------------
+  const handleSortChange = useCallback(
+    (key: string) => {
+      const current = sortConfig;
+      let newDirection: 'asc' | 'desc' = 'desc';
+
+      if (current && current.key === key) {
+        // Same column -> Toggle
+        newDirection = current.direction === 'desc' ? 'asc' : 'desc';
+      } else {
+        // New column -> Always start with DESC (Business Default)
+        newDirection = 'desc';
+      }
+
+      updateParams({ sort: `${key}:${newDirection}` } as Partial<TableFilters<TStatus>>, false);
+    },
+    [sortConfig, updateParams]
+  );
+
+  // ------------------------------------------------------------
   // Handler: Reset all filters to defaults
   // ------------------------------------------------------------
   const resetFilters = useCallback(() => {
@@ -286,6 +329,8 @@ export function useTableFilters<TStatus extends string = string>(
     handleSearch3Change,
     handleStatusChange,
     handleDateRangeChange,
+    handleSortChange,
+    sortConfig,
     resetFilters,
   };
 }

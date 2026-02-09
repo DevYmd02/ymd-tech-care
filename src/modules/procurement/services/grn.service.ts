@@ -12,12 +12,38 @@ const BASE_URL = '/procurement/grn';
 
 export const GRNService = {
     getList: async (params?: GRNListParams): Promise<GRNListResponse> => {
-        if (import.meta.env.VITE_USE_MOCK === 'true') {
+        if (import.meta.env.VITE_USE_MICK === 'true' || import.meta.env.VITE_USE_MOCK === 'true') {
              const { MOCK_GRNS } = await import('@/modules/procurement/mocks/procurementMocks');
              logger.info('🎭 [Mock Mode] Serving GRN List');
+             
+             let filtered = MOCK_GRNS;
+             if (params?.status && params.status !== 'ALL') {
+                 filtered = filtered.filter(grn => grn.status === params.status);
+             }
+
+             const sortParam = params?.sort || 'received_date:desc';
+             const [sortKey, sortDir] = sortParam.split(':');
+             
+             const sorted = [...filtered].sort((a, b) => {
+                 const valA = a[sortKey as keyof typeof a];
+                 const valB = b[sortKey as keyof typeof b];
+                 
+                 if (valA === valB) return 0;
+                 if (valA === null || valA === undefined) return 1;
+                 if (valB === null || valB === undefined) return -1;
+                 
+                 const multiplier = sortDir === 'asc' ? 1 : -1;
+                 
+                 if (typeof valA === 'string' && typeof valB === 'string') {
+                     return valA.localeCompare(valB) * multiplier;
+                 }
+                 
+                 return (valA < valB ? -1 : 1) * multiplier;
+             });
+
              return {
-                 data: MOCK_GRNS,
-                 total: MOCK_GRNS.length,
+                 data: sorted,
+                 total: sorted.length,
                  page: 1,
                  limit: 100
              };

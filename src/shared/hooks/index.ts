@@ -13,3 +13,6 @@ export type { UseMasterDataListOptions, UseMasterDataListReturn } from './useMas
 // Table Filters Hook
 export { useTableFilters } from './useTableFilters';
 export type { TableFilters, TableFilterOptions, UseTableFiltersReturn } from './useTableFilters';
+
+// Confirmation Hook
+export { useConfirmation } from './useConfirmation';

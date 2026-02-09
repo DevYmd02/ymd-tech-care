@@ -72,6 +72,7 @@ export interface GRNListParams {
     limit?: number;
     // status filter might be needed
     status?: GRNStatus | 'ALL';
+    sort?: string;
 }
 
 export interface GRNListResponse {
