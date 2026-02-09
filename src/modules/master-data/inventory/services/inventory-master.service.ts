@@ -106,9 +106,8 @@ function createInventoryService<T extends { id: string }>(
                     updated_at: new Date().toISOString(),
                 };
                 
-                // MOCK STRICTNESS: Treat as generic object to satisfy T
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const mockItem = newItem as any;
+                // MOCK STRICTNESS: Ensure matches T structure
+                const mockItem = newItem as unknown as T;
                 localData.unshift(mockItem);
                 return { success: true, data: mockItem };
             }

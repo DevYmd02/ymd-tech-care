@@ -462,9 +462,17 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
         addressType: 'CONTACT'
     };
     
+    // Interface for legacy/alias fields that might coming from API variants
+    interface VendorMasterLegacy extends VendorMaster {
+        contactName?: string;
+        contactPerson?: string;
+        primaryContact?: string;
+        mobile?: string;
+        phoneNumber?: string;
+    }
+    
     // Handle both frontend 'addresses' and backend 'vendorAddresses' field names
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const vendorAny = vendor as any;
+    const vendorAny = vendor as VendorMasterLegacy;
     const addressesArray = vendor.addresses || vendorAny.vendorAddresses || [];
     
     if (addressesArray.length > 0) {

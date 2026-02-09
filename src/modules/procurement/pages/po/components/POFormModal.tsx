@@ -212,8 +212,7 @@ export default function POFormModal({ isOpen, onClose, onSuccess, initialValues 
         }
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const handleFormSubmit = handleSubmit(onSubmit as any);
+    const handleFormSubmit = handleSubmit(onSubmit);
 
     const handleAddItem = () => {
         append({

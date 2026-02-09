@@ -21,19 +21,15 @@ export const BranchService = {
        return mockBranches;
     }
     try {
-      // Legacy handling: verify strictly later
-      // Legacy handling: verify strictly later
-      const response = await api.get<BranchListItem[]>(ENDPOINT);
+      // Support both direct array and wrapped { data: [] } formats
+      const response = await api.get<BranchListItem[] | { data: BranchListItem[] }>(ENDPOINT);
       
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const res = response as any;
-      
-      // Handle multiple response formats (Unwrapped)
       if (Array.isArray(response)) {
         return response;
       }
-      if (res?.data && Array.isArray(res.data)) {
-        return res.data;
+      
+      if ('data' in response && Array.isArray(response.data)) {
+        return response.data;
       }
       
       logger.warn('[BranchService] getList: unexpected response format');
