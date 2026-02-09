@@ -290,7 +290,8 @@ export default function POListPage() {
                         onSearch={() => {}} // React Query auto-fetches
                         onReset={resetFilters}
                         accentColor="blue"
-                        columns={{ sm: 2, md: 3, lg: 4 }}
+                        columns={{ sm: 1, md: 2, xl: 4 }}
+                        actionColSpan={{ md: 2, xl: 2 }}
                         actionButtons={
                             <button
                                 onClick={() => setSearchParams({ mode: 'create' })}
@@ -304,21 +305,146 @@ export default function POListPage() {
                 }
             >
                 <div className="h-full flex flex-col">
-                    <SmartTable
-                        data={data?.data ?? []}
-                        columns={columns as ColumnDef<POListItem>[]}
-                        isLoading={isLoading}
-                        pagination={{
-                            pageIndex: filters.page,
-                            pageSize: filters.limit,
-                            totalCount: data?.total ?? 0,
-                            onPageChange: handlePageChange,
-                            onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 })
-                        }}
-                        rowIdField="po_id"
-                        className="flex-1"
-                        showFooter={true}
-                    />
+                    {/* Desktop View: Table */}
+                    <div className="hidden md:block flex-1 overflow-hidden">
+                        <SmartTable
+                            data={data?.data ?? []}
+                            columns={columns as ColumnDef<POListItem>[]}
+                            isLoading={isLoading}
+                            pagination={{
+                                pageIndex: filters.page,
+                                pageSize: filters.limit,
+                                totalCount: data?.total ?? 0,
+                                onPageChange: handlePageChange,
+                                onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 })
+                            }}
+                            rowIdField="po_id"
+                            className="h-full"
+                            showFooter={true}
+                        />
+                    </div>
+
+                    {/* Mobile View: Cards */}
+                    <div className="md:hidden flex-1 overflow-y-auto p-2 space-y-3 pb-20">
+                        {isLoading ? (
+                            <div className="text-center py-4 text-gray-500">กำลังโหลด...</div>
+                        ) : data?.data.length === 0 ? (
+                            <div className="text-center py-8 text-gray-500 bg-white rounded-lg border border-dashed border-gray-300">
+                                ไม่พบข้อมูล
+                            </div>
+                        ) : (
+                            data?.data.map((item) => (
+                                <div key={item.po_id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 space-y-3">
+                                    {/* Header: PO No + Status */}
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex flex-col">
+                                            <span className="font-bold text-lg text-blue-600 dark:text-blue-400">
+                                                {item.po_no}
+                                            </span>
+                                            <span className="text-xs text-gray-500">
+                                                {formatThaiDate(item.po_date)}
+                                            </span>
+                                        </div>
+                                        <POStatusBadge status={item.status} />
+                                    </div>
+
+                                    {/* Content Info */}
+                                    <div className="text-sm text-gray-700 dark:text-gray-300 space-y-1.5 border-t border-b border-gray-50 py-2">
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-500">ผู้ขาย:</span>
+                                            <span className="font-medium text-right truncate max-w-[200px]">{item.vendor_name || '-'}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-500">PR อ้างอิง:</span>
+                                            <span className="font-medium text-purple-600">{item.pr_no || '-'}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-500">จำนวนรายการ:</span>
+                                            <span className="font-medium">{item.item_count} รายการ</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Footer: Amount + Actions */}
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between items-center">
+                                            <span className="font-semibold text-gray-900 dark:text-white">ยอดรวมสุทธิ</span>
+                                            <span className="font-bold text-lg text-emerald-600">
+                                                {item.total_amount?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                            </span>
+                                        </div>
+
+                                        <div className="flex flex-wrap gap-2">
+                                            <button 
+                                                onClick={() => handleView(item.po_id)}
+                                                className="flex-1 bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1 border border-gray-200"
+                                            >
+                                                <Eye size={14} /> ดู
+                                            </button>
+
+                                            {item.status === 'DRAFT' && (
+                                                <>
+                                                    <button 
+                                                        onClick={() => handleEdit(item.po_id)}
+                                                        className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1"
+                                                    >
+                                                        <Edit size={14} /> แก้ไข
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleApprove(item.po_id)}
+                                                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm whitespace-nowrap"
+                                                    >
+                                                        <Send size={14} /> ส่งอนุมัติ
+                                                    </button>
+                                                </>
+                                            )}
+
+                                            {item.status === 'APPROVED' && (
+                                                <button 
+                                                    onClick={() => handleIssue(item.po_id)}
+                                                    className="flex-[2] bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
+                                                >
+                                                    <CheckCircle size={14} /> ออก PO
+                                                </button>
+                                            )}
+                                            
+                                            {item.status === 'ISSUED' && (
+                                                <button 
+                                                    onClick={() => handleGRN(item.po_id)}
+                                                    className="flex-[2] bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
+                                                >
+                                                    <Package size={14} /> เปิด GRN
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+
+                        {/* Pagination for Mobile */}
+                        {data?.total ? (
+                            <div className="flex justify-between items-center pt-2 text-sm text-gray-600">
+                                 <div>ทั้งหมด {data.total} รายการ</div>
+                                 <div className="flex gap-2">
+                                     <button
+                                        disabled={filters.page === 1}
+                                        onClick={() => handlePageChange(filters.page - 1)}
+                                        className="px-3 py-1 bg-white border rounded hover:bg-gray-50 disabled:opacity-50"
+                                     >
+                                        &lt;
+                                     </button>
+                                     <span>{filters.page} / {Math.ceil(data.total / filters.limit)}</span>
+                                     <button
+                                        disabled={filters.page >= Math.ceil(data.total / filters.limit)}
+                                        onClick={() => handlePageChange(filters.page + 1)}
+                                        className="px-3 py-1 bg-white border rounded hover:bg-gray-50 disabled:opacity-50"
+                                     >
+                                        &gt;
+                                     </button>
+                                 </div>
+                            </div>
+                         ) : null}
+                    </div>
                 </div>
             </PageListLayout>
             

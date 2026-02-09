@@ -7,7 +7,7 @@
  *   - Center: Main content area (renders child routes via Outlet)
  */
 
-import { useState, Suspense } from 'react';
+import { useState, Suspense, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
@@ -17,6 +17,23 @@ import { PageLoader } from '@layout/PageLoader';
 
 export default function MainLayout() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+    // Auto-collapse sidebar on smaller screens
+    useEffect(() => {
+        const handleResize = () => {
+            if (window.innerWidth < 1024) {
+                setIsSidebarOpen(false);
+            } else {
+                setIsSidebarOpen(true);
+            }
+        };
+
+        // Initial check
+        handleResize();
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     return (
         <WindowManagerProvider>

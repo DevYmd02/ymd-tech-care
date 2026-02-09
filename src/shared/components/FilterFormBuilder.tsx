@@ -76,13 +76,17 @@ export interface FilterFormBuilderProps<
         sm?: number;
         md?: number;
         lg?: number;
+        xl?: number;
     };
     /** Column span for the action buttons container */
     actionColSpan?: {
         sm?: number | 'full';
         md?: number | 'full';
         lg?: number | 'full';
+        xl?: number | 'full';
     };
+    /** Alignment of action buttons (default: 'end') */
+    actionAlign?: 'start' | 'end' | 'center' | 'between';
 }
 
 // ====================================================================================
@@ -139,8 +143,9 @@ export function FilterFormBuilder<
     createLabel = 'สร้างใหม่',
     searchLabel = 'ค้นหา',
     resetLabel = 'ล้างค่า',
-    columns = { sm: 2, md: 4, lg: 5 },
-    actionColSpan = { sm: 'full', md: 2, lg: 2 },
+    columns = { sm: 2, md: 4, lg: 5, xl: 6 },
+    actionColSpan = { sm: 'full', md: 2, lg: 2, xl: 2 },
+    actionAlign = 'end',
 }: FilterFormBuilderProps<TFilters, TFilterKeys>): React.ReactElement {
     // Grid column mappings to ensure Tailwind scanner picks them up
     // This eliminates the need for safelisting in tailwind.config.js
@@ -159,9 +164,15 @@ export function FilterFormBuilder<
         12: 'grid-cols-12',
     };
 
-    const smCols = columns.sm && gridColsMap[columns.sm] ? `sm:${gridColsMap[columns.sm]}` : 'sm:grid-cols-2';
-    const mdCols = columns.md && gridColsMap[columns.md] ? `md:${gridColsMap[columns.md]}` : 'md:grid-cols-4';
-    const lgCols = columns.lg && gridColsMap[columns.lg] ? `lg:${gridColsMap[columns.lg]}` : 'lg:grid-cols-5';
+    const getGridClass = (cols: number | undefined, prefix: string) => {
+        if (!cols || !gridColsMap[cols]) return '';
+        return prefix ? `${prefix}:${gridColsMap[cols]}` : gridColsMap[cols];
+    };
+
+    const smCols = getGridClass(columns.sm, 'sm') || 'sm:grid-cols-2';
+    const mdCols = getGridClass(columns.md, 'md') || 'md:grid-cols-4';
+    const lgCols = getGridClass(columns.lg, 'lg') || 'lg:grid-cols-5';
+    const xlCols = getGridClass(columns.xl, 'xl') || 'xl:grid-cols-6';
 
     // Build responsive grid classes
     const gridClasses = [
@@ -170,9 +181,10 @@ export function FilterFormBuilder<
         smCols,
         mdCols,
         lgCols,
+        xlCols,
         'gap-4',
         'w-full',
-    ].join(' ');
+    ].filter(Boolean).join(' ');
 
     // Column span mapping for fields
     const colSpanMap: Record<number, string> = {
@@ -194,12 +206,17 @@ export function FilterFormBuilder<
     const getActionColSpanClass = (span: number | 'full' | undefined, prefix: string) => {
         if (!span) return '';
         if (span === 'full') return `${prefix}col-span-full`;
-        return colSpanMap[span] ? `${prefix}${colSpanMap[span]}` : '';
+        // Safe check for number type to satisfy TypeScript
+        if (typeof span === 'number' && colSpanMap[span]) {
+            return `${prefix}${colSpanMap[span]}`;
+        }
+        return '';
     };
 
     const actionSmSpan = getActionColSpanClass(actionColSpan.sm, 'sm:');
     const actionMdSpan = getActionColSpanClass(actionColSpan.md, 'md:');
     const actionLgSpan = getActionColSpanClass(actionColSpan.lg, 'lg:');
+    const actionXlSpan = getActionColSpanClass(actionColSpan.xl, 'xl:');
 
     // Handle form submission (prevent default and trigger search)
     const handleSubmit = (e: React.FormEvent) => {
@@ -214,6 +231,21 @@ export function FilterFormBuilder<
             onSearch();
         }
     };
+
+    /**
+     * Helper to get justification class
+     */
+    const getJustifyClass = (align: 'start' | 'end' | 'center' | 'between') => {
+        switch (align) {
+            case 'start': return 'justify-start';
+            case 'center': return 'justify-center';
+            case 'between': return 'justify-between';
+            case 'end':
+            default: return 'justify-end';
+        }
+    };
+
+    const justifyClass = getJustifyClass(actionAlign);
 
     return (
         <form onSubmit={handleSubmit} className="w-full">
@@ -249,32 +281,35 @@ export function FilterFormBuilder<
                 })}
 
                 {/* Action Buttons */}
-                <div className={`flex flex-wrap items-end gap-2 min-w-0 col-span-1 ${actionSmSpan} ${actionMdSpan} ${actionLgSpan}`}>
-                    {/* Search Button */}
-                    <button
-                        type="submit"
-                        className={`flex-1 md:flex-none px-4 py-2 ${buttonColors[accentColor]} text-white font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors whitespace-nowrap shadow-sm`}
-                    >
-                        <Search size={16} />
-                        {searchLabel}
-                    </button>
+                <div className={`flex flex-col sm:flex-row flex-wrap items-end ${justifyClass} gap-2 min-w-0 col-span-1 ${actionSmSpan} ${actionMdSpan} ${actionLgSpan} ${actionXlSpan}`}>
+                    
+                    <div className="flex gap-2 w-full sm:w-auto">
+                        {/* Reset Button */}
+                        <button
+                            type="button"
+                            onClick={onReset}
+                            className="flex-1 sm:flex-none h-10 px-4 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-lg border border-gray-300 flex items-center justify-center gap-2 transition-colors whitespace-nowrap shadow-sm"
+                        >
+                            <X size={16} />
+                            {resetLabel}
+                        </button>
 
-                    {/* Reset Button */}
-                    <button
-                        type="button"
-                        onClick={onReset}
-                        className="flex-1 md:flex-none px-4 py-2 bg-white hover:bg-gray-100 text-gray-700 font-medium rounded-lg border border-gray-300 flex items-center justify-center gap-2 transition-colors whitespace-nowrap"
-                    >
-                        <X size={16} />
-                        {resetLabel}
-                    </button>
+                        {/* Search Button */}
+                        <button
+                            type="submit"
+                            className={`flex-1 sm:flex-none h-10 px-6 ${buttonColors[accentColor]} text-white font-bold rounded-lg flex items-center justify-center gap-2 transition-colors whitespace-nowrap shadow-sm`}
+                        >
+                            <Search size={16} />
+                            {searchLabel}
+                        </button>
+                    </div>
 
                     {/* Create Button - rendered if onCreate is provided */}
                     {onCreate && (
                         <button
                             type="button"
                             onClick={onCreate}
-                            className="flex-1 md:flex-none px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors whitespace-nowrap shadow-sm"
+                            className="w-full sm:w-auto h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg flex items-center justify-center gap-2 transition-colors whitespace-nowrap shadow-sm"
                         >
                             <Plus size={18} />
                             {createLabel}

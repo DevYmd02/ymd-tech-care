@@ -24,7 +24,8 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
     alertState, setAlertState, products, costCenters, projects,
     addLine, removeLine, clearLine, updateLine, handleClearLines,
     openProductSearch, selectProduct, subtotal, discountAmount,
-    vatAmount, grandTotal, handleVendorSelect, onSubmit, handleDelete, handleApprove
+    vatAmount, grandTotal, handleVendorSelect, onSubmit, handleDelete, handleApprove,
+    invokeSetFocus
   } = usePRForm(isOpen, onClose, id, onSuccess);
 
   // Tabs state
@@ -156,6 +157,85 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                   </tbody>
                 </table>
             </div>
+
+        </div>
+
+        {/* Multicurrency Section (Middle) */}
+        <div className={`p-4 ${cardClass}`}>
+            <div className="space-y-4">
+                <div className="flex items-center">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input 
+                            type="checkbox"
+                            checked={watch('is_multicurrency')}
+                            onChange={(e) => {
+                                const isChecked = e.target.checked;
+                                const currentCurrency = watch('currency_id');
+                                if (isChecked && currentCurrency === 'THB') {
+                                    invokeSetFocus?.('currency_id'); // Guide to header
+                                } else if (!isChecked && currentCurrency !== 'THB') {
+                                    invokeSetFocus?.('currency_id'); // Guide to header
+                                } else {
+                                    setValue('is_multicurrency', isChecked);
+                                }
+                            }}
+                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-gray-300 dark:border-gray-600"
+                        />
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Multicurrency</span>
+                    </label>
+                </div>
+                
+                {/* Fields Row */}
+                <div className={`grid grid-cols-1 md:grid-cols-4 gap-4 ${watch('is_multicurrency') ? '' : 'opacity-50 pointer-events-none grayscale'}`}>
+                    <div>
+                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">วันที่อัตราแลกเปลี่ยน</label>
+                        <input 
+                            type="date" 
+                            {...register('rate_date')}
+                            disabled={!watch('is_multicurrency')}
+                            className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">รหัสสกุลเงิน</label>
+                        <select 
+                            value={watch('currency_id')} 
+                            onChange={(e) => setValue('currency_id', e.target.value)}
+                            disabled={!watch('is_multicurrency')}
+                            className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="THB">THB - บาท</option>
+                            <option value="USD">USD - ดอลลาร์สหรัฐ</option>
+                            <option value="EUR">EUR - ยูโร</option>
+                            <option value="JPY">JPY - เยน</option>
+                            <option value="CNY">CNY - หยวน</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">รหัสประเภทอัตราแลกเปลี่ยน</label>
+                        <select 
+                            {...register('currency_type_id')}
+                            disabled={!watch('is_multicurrency')}
+                            className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="">เลือกประเภทอัตราแลกเปลี่ยน</option>
+                            <option value="BUYING">Buying Rate</option>
+                            <option value="SELLING">Selling Rate</option>
+                            <option value="AVERAGE">Average Rate</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">อัตราแลกเปลี่ยน</label>
+                        <input 
+                            type="number"
+                            step="0.0001"
+                            {...register('exchange_rate', { valueAsNumber: true })}
+                            disabled={!watch('is_multicurrency')}
+                            className="w-full h-9 px-3 text-sm text-right bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
+                </div>
+            </div>
         </div>
 
         <PRFormLines 
@@ -177,6 +257,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
             discountAmount={discountAmount}
             vatAmount={vatAmount}
             grandTotal={grandTotal}
+
         />
 
         {/* Tabs Section */}

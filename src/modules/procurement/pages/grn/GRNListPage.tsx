@@ -154,11 +154,12 @@ export default function GRNListPage() {
                         onSearch={() => refetch()} 
                         onReset={resetFilters}
                         accentColor="blue"
-                        columns={{ sm: 2, md: 3, lg: 5 }}
+                        columns={{ sm: 1, md: 2, xl: 4 }}
+                        actionColSpan={{ md: 2, xl: 2 }}
                         actionButtons={
                             <button 
                                 onClick={() => setIsCreateModalOpen(true)}
-                                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm transition-colors whitespace-nowrap"
+                                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 shadow-sm transition-colors whitespace-nowrap w-full sm:w-auto font-medium"
                             >
                                 <Plus size={20} />
                                 สร้างใบรับสินค้า
@@ -167,19 +168,106 @@ export default function GRNListPage() {
                     />
                 }
             >
-                <SmartTable
-                    data={data?.data ?? []}
-                    columns={columns as ColumnDef<GRNListItem>[]}
-                    isLoading={isLoading}
-                    pagination={{
-                        pageIndex: filters.page,
-                        pageSize: filters.limit,
-                        totalCount: data?.total ?? 0,
-                        onPageChange: handlePageChange,
-                        onPageSizeChange: (size) => setFilters({ limit: size, page: 1 })
-                    }}
-                    rowIdField="grn_id"
-                />
+                <div className="h-full flex flex-col">
+                    {/* Desktop View: Table */}
+                    <div className="hidden md:block flex-1 overflow-hidden">
+                        <SmartTable
+                            data={data?.data ?? []}
+                            columns={columns as ColumnDef<GRNListItem>[]}
+                            isLoading={isLoading}
+                            pagination={{
+                                pageIndex: filters.page,
+                                pageSize: filters.limit,
+                                totalCount: data?.total ?? 0,
+                                onPageChange: handlePageChange,
+                                onPageSizeChange: (size) => setFilters({ limit: size, page: 1 })
+                            }}
+                            rowIdField="grn_id"
+                            className="h-full"
+                            showFooter={true}
+                        />
+                    </div>
+
+                    {/* Mobile View: Cards */}
+                    <div className="md:hidden flex-1 overflow-y-auto p-2 space-y-3 pb-20">
+                        {isLoading ? (
+                            <div className="text-center py-4 text-gray-500">กำลังโหลด...</div>
+                        ) : data?.data.length === 0 ? (
+                            <div className="text-center py-8 text-gray-500 bg-white rounded-lg border border-dashed border-gray-300">
+                                ไม่พบข้อมูล
+                            </div>
+                        ) : (
+                            data?.data.map((item) => (
+                                <div key={item.grn_id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 space-y-3">
+                                    {/* Header: GRN No + Status */}
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex flex-col">
+                                            <span className="font-bold text-lg text-blue-600 dark:text-blue-400">
+                                                {item.grn_no}
+                                            </span>
+                                            <span className="text-xs text-gray-500">
+                                                {formatThaiDate(item.received_date)}
+                                            </span>
+                                        </div>
+                                        <div className={`px-2 py-1 rounded text-xs font-semibold ${STATUS_COLORS[item.status]}`}>
+                                            {STATUS_LABELS[item.status]}
+                                        </div>
+                                    </div>
+
+                                    {/* Content Info */}
+                                    <div className="text-sm text-gray-700 dark:text-gray-300 space-y-1.5 border-t border-b border-gray-50 py-2">
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-500">PO อ้างอิง:</span>
+                                            <span className="font-medium text-purple-600">{item.po_no || '-'}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-500">คลังสินค้า:</span>
+                                            <span className="font-medium">{item.warehouse_name || '-'}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-500">ผู้รับ:</span>
+                                            <span className="font-medium">{item.received_by_name || '-'}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Footer: Actions */}
+                                    <div className="flex justify-end gap-2 pt-1">
+                                            <button 
+                                                onClick={() => handleView(item.grn_id)}
+                                                className="flex-1 bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1 border border-gray-200"
+                                            >
+                                                <Eye size={14} /> ดูรายละเอียด
+                                            </button>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+
+                        {/* Pagination for Mobile */}
+                        {data?.total ? (
+                            <div className="flex justify-between items-center pt-2 text-sm text-gray-600">
+                                 <div>ทั้งหมด {data.total} รายการ</div>
+                                 <div className="flex gap-2">
+                                     <button
+                                        disabled={filters.page === 1}
+                                        onClick={() => handlePageChange(filters.page - 1)}
+                                        className="px-3 py-1 bg-white border rounded hover:bg-gray-50 disabled:opacity-50"
+                                     >
+                                        &lt;
+                                     </button>
+                                     <span>{filters.page} / {Math.ceil(data.total / filters.limit)}</span>
+                                     <button
+                                        disabled={filters.page >= Math.ceil(data.total / filters.limit)}
+                                        onClick={() => handlePageChange(filters.page + 1)}
+                                        className="px-3 py-1 bg-white border rounded hover:bg-gray-50 disabled:opacity-50"
+                                     >
+                                        &gt;
+                                     </button>
+                                 </div>
+                            </div>
+                         ) : null}
+                    </div>
+                </div>
             </PageListLayout>
 
             <GRNFormModal 

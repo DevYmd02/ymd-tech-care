@@ -117,7 +117,15 @@ export interface PRFormData {
   cost_center_id: string;           // ศูนย์ต้นทุน
   project_id?: string;              // โครงการ (optional)
   purpose: string;                  // วัตถุประสงค์
-  currency_code: string;            // สกุลเงิน (THB, USD)
+  currency_id: string;              // UUID (Schema: currency_id)
+  is_multicurrency: boolean;        // เปิดใช้งาน Multi-Currency
+  exchange_rate: number;            // อัตราแลกเปลี่ยน (Schema: buy_rate/sale_rate applied)
+  rate_date?: string;               // วันที่อัตราแลกเปลี่ยน (Schema: rate_date)
+  currency_type_id?: string;        // ประเภทอัตราแลกเปลี่ยน (Schema: currency_type_id)
+  
+  // Optional Schema fields
+  exchange_round?: number;          // Schema: exchange_round
+  allow_adjust?: number;            // Schema: allow_adjust
   
   // Vendor Info
   preferred_vendor_id?: string;     // ผู้ขายที่แนะนำ

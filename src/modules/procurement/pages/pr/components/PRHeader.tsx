@@ -67,7 +67,7 @@ export const PRHeader: React.FC<Props> = ({ register, setValue, watch, costCente
 
         <div className="col-span-12 md:col-span-3">
           <label className={labelClass}>สกุลเงิน</label>
-          <select className={selectClass} {...register("currency_code")}>
+          <select className={selectClass} {...register("currency_id")}>
             <option value="THB">THB - บาท</option>
             <option value="USD">USD - ดอลลาร์</option>
             <option value="EUR">EUR - ยูโร</option>

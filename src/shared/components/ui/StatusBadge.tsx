@@ -53,7 +53,7 @@ type ModuleStatusConfig = Record<string, StatusConfig>;
 const statusConfig: Record<ModuleType, ModuleStatusConfig> = {
   PR: {
     DRAFT: {
-      label: 'ร่าง',
+      label: 'แบบร่าง',
       colorClass: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
     },
     PENDING: {

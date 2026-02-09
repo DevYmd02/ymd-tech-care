@@ -9,6 +9,7 @@ interface PRFormSummaryProps {
     discountAmount: number;
     vatAmount: number;
     grandTotal: number;
+
 }
 
 export const PRFormSummary: React.FC<PRFormSummaryProps> = ({
@@ -17,7 +18,8 @@ export const PRFormSummary: React.FC<PRFormSummaryProps> = ({
     setVatRate,
     discountAmount,
     vatAmount,
-    grandTotal
+    grandTotal,
+
 }) => {
     const cardClass = 'bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-sm overflow-hidden';
     const inputReadonlyClass = 'h-7 px-2 text-right bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded text-gray-900 dark:text-white';
@@ -29,6 +31,8 @@ export const PRFormSummary: React.FC<PRFormSummaryProps> = ({
           <div className="p-3 bg-white dark:bg-gray-900">
             <div className="flex justify-end">
               <div className="w-[400px] space-y-2 text-sm">
+
+
                 {/* รวม (Subtotal) */}
                 <div className="flex justify-between items-center">
                   <span className={labelClass}>รวม</span>
@@ -56,6 +60,8 @@ export const PRFormSummary: React.FC<PRFormSummaryProps> = ({
                     />
                   </div>
                 </div>
+
+
 
                 {/* ภาษี VAT */}
                 <div className="flex justify-between items-center">

@@ -104,7 +104,7 @@ export function SmartTable<TData>({
         onRowSelectionChange: setRowSelection,
         manualPagination: true,
         enableRowSelection: true,
-        enableSorting: false,
+        enableSorting: true,
         manualSorting: false,
     });
 
@@ -125,16 +125,33 @@ export function SmartTable<TData>({
                         {table.getHeaderGroups().map(headerGroup => (
                             <tr key={headerGroup.id} className="border-b border-gray-200 dark:border-gray-600">
                                 {headerGroup.headers.map(header => {
+                                    const canSort = header.column.getCanSort();
+                                    const isSorted = header.column.getIsSorted();
+
                                     return (
                                         <th
                                             key={header.id}
-                                            style={{ width: header.getSize() !== 150 ? header.getSize() : undefined }} // Use size if specifically set
-                                            className="px-4 py-3 font-semibold select-none group"
+                                            style={{ width: header.getSize() !== 150 ? header.getSize() : undefined }}
+                                            className={`px-4 py-3 font-semibold select-none group ${canSort ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors' : ''}`}
+                                            onClick={header.column.getToggleSortingHandler()}
                                         >
                                             <div className="flex items-center gap-1 w-full">
                                                 {flexRender(
                                                     header.column.columnDef.header,
                                                     header.getContext()
+                                                )}
+                                                {canSort && (
+                                                    <span className="text-gray-400">
+                                                        {{
+                                                            asc: <ChevronLeft className="w-4 h-4 rotate-90" />, // Up
+                                                            desc: <ChevronLeft className="w-4 h-4 -rotate-90" />, // Down
+                                                        }[isSorted as string] ?? (
+                                                            <div className="flex flex-col opacity-0 group-hover:opacity-50">
+                                                                <ChevronLeft className="w-3 h-3 rotate-90 -mb-1" />
+                                                                <ChevronLeft className="w-3 h-3 -rotate-90" />
+                                                            </div>
+                                                        )}
+                                                    </span>
                                                 )}
                                             </div>
                                         </th>

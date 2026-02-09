@@ -182,6 +182,12 @@ export default function QCListPage() {
                 const item = row.original;
                 return (
                     <div className="flex items-center justify-center gap-2">
+                        <button 
+                            className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors flex items-center justify-center"
+                            title="ดูรายละเอียด"
+                        >
+                            <Eye size={18} />
+                        </button>
                         {item.status === 'WAITING_FOR_PO' && (
                             <button 
                                 onClick={() => {
@@ -191,19 +197,13 @@ export default function QCListPage() {
                                     });
                                     setIsPOModalOpen(true);
                                 }}
-                                className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors text-xs font-medium whitespace-nowrap h-8"
+                                className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors text-xs font-medium whitespace-nowrap h-8 shadow-sm"
                                 title="เปิดใบสั่งซื้อ"
                             >
                                 <FileText size={14} />
                                 <span>เปิดใบสั่งซื้อ</span>
                             </button>
                         )}
-                        <button 
-                            className="p-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded transition-colors flex items-center justify-center h-8 w-8"
-                            title="ดูรายละเอียด"
-                        >
-                            <Eye size={16} />
-                        </button>
                     </div>
                 );
             },
@@ -240,27 +240,134 @@ export default function QCListPage() {
                         onSearch={() => {}} // React Query auto-fetches on filter change
                         onReset={resetFilters}
                         accentColor="indigo"
-                        columns={{ sm: 1, md: 2, lg: 3 }}
-                        actionColSpan={{ lg: 1 }}
+                        columns={{ sm: 1, md: 2, lg: 4, xl: 4 }}
+                        actionColSpan={{ md: 2, lg: 3, xl: 3 }}
+                        actionAlign="start"
                     />
                 }
             >
                 <div className="h-full flex flex-col">
-                    <SmartTable
-                        data={data?.data ?? []}
-                        columns={columns as ColumnDef<QCListItem>[]}
-                        isLoading={isLoading}
-                        pagination={{
-                            pageIndex: filters.page,
-                            pageSize: filters.limit,
-                            totalCount: data?.total ?? 0,
-                            onPageChange: handlePageChange,
-                            onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 })
-                        }}
-                        rowIdField="qc_id"
-                        className="flex-1"
-                        showFooter={true}
-                    />
+                    {/* Desktop View: Table */}
+                    <div className="hidden md:block flex-1 overflow-hidden">
+                        <SmartTable
+                            data={data?.data ?? []}
+                            columns={columns as ColumnDef<QCListItem>[]}
+                            isLoading={isLoading}
+                            pagination={{
+                                pageIndex: filters.page,
+                                pageSize: filters.limit,
+                                totalCount: data?.total ?? 0,
+                                onPageChange: handlePageChange,
+                                onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 })
+                            }}
+                            rowIdField="qc_id"
+                            className="h-full"
+                            showFooter={true}
+                        />
+                    </div>
+
+                    {/* Mobile View: Cards */}
+                    <div className="md:hidden flex-1 overflow-y-auto p-2 space-y-3 pb-20">
+                        {isLoading ? (
+                            <div className="text-center py-4 text-gray-500">กำลังโหลด...</div>
+                        ) : data?.data.length === 0 ? (
+                            <div className="text-center py-8 text-gray-500 bg-white rounded-lg border border-dashed border-gray-300">
+                                ไม่พบข้อมูล
+                            </div>
+                        ) : (
+                            data?.data.map((item) => (
+                                <div key={item.qc_id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 space-y-3">
+                                    {/* Header: QC No + Status */}
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex flex-col">
+                                            <span className="font-bold text-lg text-blue-600 dark:text-blue-400">
+                                                {item.qc_no}
+                                            </span>
+                                            <span className="text-xs text-gray-500">
+                                                {formatThaiDate(item.created_at)}
+                                            </span>
+                                        </div>
+                                        <QCStatusBadge status={item.status} />
+                                    </div>
+
+                                    {/* Content Info */}
+                                    <div className="text-sm text-gray-700 dark:text-gray-300 space-y-1.5 border-t border-b border-gray-50 py-2">
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-500">PR อ้างอิง:</span>
+                                            <span className="font-medium text-purple-600">{item.pr_no}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-500">Vendors:</span>
+                                            <span className="font-medium">{item.vendor_count} ราย</span>
+                                        </div>
+                                        <div className="flex justify-between items-baseline">
+                                            <span className="text-gray-500 whitespace-nowrap mr-2">ต่ำสุดโดย:</span>
+                                            <span className="font-medium text-right truncate max-w-[150px]">
+                                                {item.lowest_bidder_name || '-'}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Footer: Amount + Actions */}
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between items-center">
+                                            <span className="font-semibold text-gray-900 dark:text-white">ราคาต่ำสุด</span>
+                                            <span className="font-bold text-lg text-emerald-600">
+                                                {item.lowest_bid_amount?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                            </span>
+                                        </div>
+
+                                        <div className="flex flex-wrap gap-2">
+                                            <button 
+                                                className="flex-1 bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1 border border-gray-200"
+                                            >
+                                                <Eye size={14} /> ดู
+                                            </button>
+
+                                            {item.status === 'WAITING_FOR_PO' && (
+                                                <button 
+                                                    onClick={() => {
+                                                        setPoInitialValues({
+                                                            vendor_id: item.lowest_bidder_vendor_id || '',
+                                                            remarks: `Refer from QC: ${item.qc_no}`
+                                                        });
+                                                        setIsPOModalOpen(true);
+                                                    }}
+                                                    className="flex-[2] bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
+                                                >
+                                                    <FileText size={14} /> เปิดใบสั่งซื้อ
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+
+                        {/* Pagination for Mobile */}
+                        {data?.total ? (
+                            <div className="flex justify-between items-center pt-2 text-sm text-gray-600">
+                                 <div>ทั้งหมด {data.total} รายการ</div>
+                                 <div className="flex gap-2">
+                                     <button
+                                        disabled={filters.page === 1}
+                                        onClick={() => handlePageChange(filters.page - 1)}
+                                        className="px-3 py-1 bg-white border rounded hover:bg-gray-50 disabled:opacity-50"
+                                     >
+                                        &lt;
+                                     </button>
+                                     <span>{filters.page} / {Math.ceil(data.total / filters.limit)}</span>
+                                     <button
+                                        disabled={filters.page >= Math.ceil(data.total / filters.limit)}
+                                        onClick={() => handlePageChange(filters.page + 1)}
+                                        className="px-3 py-1 bg-white border rounded hover:bg-gray-50 disabled:opacity-50"
+                                     >
+                                        &gt;
+                                     </button>
+                                 </div>
+                            </div>
+                         ) : null}
+                    </div>
                 </div>
             </PageListLayout>
 

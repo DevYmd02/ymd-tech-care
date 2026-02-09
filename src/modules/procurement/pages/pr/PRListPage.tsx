@@ -7,7 +7,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { FileText, Eye, Edit, Send, Plus, Search } from 'lucide-react';
+import { FileText, Eye, Edit, Send, Plus, Search, Trash2, CheckCircle, XCircle } from 'lucide-react';
 import { SmartTable } from '@/shared/components/ui/SmartTable';
 import { PageListLayout } from '@/shared/components/layout/PageListLayout';
 import { PRStatusBadge } from '@/shared/components/ui/StatusBadge';
@@ -15,6 +15,7 @@ import { FilterField } from '@/shared/components/ui/FilterField';
 import { useTableFilters, useDebounce, type TableFilters } from '@/shared/hooks';
 import RFQFormModal from '../rfq/components/RFQFormModal';
 import { PRFormModal } from './components/PRFormModal';
+import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';
 
@@ -29,6 +30,7 @@ import { mockCostCenters } from '@/modules/master-data/mocks/masterDataMocks';
 
 const PR_STATUS_OPTIONS = [
     { value: 'ALL', label: 'ทั้งหมด' },
+    { value: 'DRAFT', label: 'แบบร่าง' },
     { value: 'PENDING', label: 'รออนุมัติ' },
     { value: 'APPROVED', label: 'อนุมัติแล้ว' },
     { value: 'CANCELLED', label: 'ยกเลิก' },
@@ -104,6 +106,16 @@ export default function PRListPage() {
     const [selectedPRId, setSelectedPRId] = useState<string | undefined>(undefined);
 
 
+    // Confirmation Modal State
+    const [isSendApprovalModalOpen, setIsSendApprovalModalOpen] = useState(false);
+    const [pendingSendApprovalId, setPendingSendApprovalId] = useState<string | null>(null);
+
+    const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
+    const [pendingApproveId, setPendingApproveId] = useState<string | null>(null);
+
+    const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+    const [pendingRejectId, setPendingRejectId] = useState<string | null>(null);
+
     // Handlers
     const handleFilterChange = (name: PRFilterKeys, value: string) => {
         setFilters({ [name]: value });
@@ -129,21 +141,91 @@ export default function PRListPage() {
         setSelectedPRId(undefined);
     };
 
-    const handleQuickApprove = useCallback(async (id: string) => {
-        if (!window.confirm("คุณต้องการอนุมัติเอกสารนี้ใช่หรือไม่?")) return;
+    const handleSendApproval = useCallback((id: string) => {
+        setPendingSendApprovalId(id);
+        setIsSendApprovalModalOpen(true);
+    }, []);
+
+    const confirmSendApproval = useCallback(async () => {
+        if (!pendingSendApprovalId) return;
+        
         try {
-            const success = await PRService.approve(id);
+            // Changed from approve() to submit() to transition to PENDING
+            const result = await PRService.submit(pendingSendApprovalId);
+            if (result.success) {
+                refetch();
+            } else {
+                window.alert(result.message || "ส่งอนุมัติไม่สำเร็จ");
+            }
+        } catch (error) {
+            console.error('Send approval failed', error);
+            window.alert("เกิดข้อผิดพลาดในการส่งอนุมัติ");
+        } finally {
+            setIsSendApprovalModalOpen(false);
+            setPendingSendApprovalId(null);
+        }
+    }, [pendingSendApprovalId, refetch]);
+
+    const handleDelete = useCallback(async (id: string) => {
+        if (!window.confirm("คุณต้องการลบใบขอซื้อนี้ใช่หรือไม่?")) return;
+
+        try {
+            const success = await PRService.delete(id);
             if (success) {
-                window.alert("อนุมัติเอกสารเรียบร้อยแล้ว");
+                refetch();
+            } else {
+                window.alert("ลบข้อมูลไม่สำเร็จ");
+            }
+        } catch (error) {
+            console.error('Delete failed', error);
+            window.alert("เกิดข้อผิดพลาดในการลบข้อมูล");
+        }
+    }, [refetch]);
+
+    const handleApprove = useCallback((id: string) => {
+        setPendingApproveId(id);
+        setIsApproveModalOpen(true);
+    }, []);
+
+    const confirmApprove = useCallback(async () => {
+        if (!pendingApproveId) return;
+        
+        try {
+            const success = await PRService.approve(pendingApproveId);
+            if (success) {
                 refetch();
             } else {
                 window.alert("อนุมัติเอกสารไม่สำเร็จ");
             }
         } catch (error) {
-            console.error('Quick approve failed', error);
+            console.error('Approve failed', error);
             window.alert("เกิดข้อผิดพลาดในการอนุมัติเอกสาร");
+        } finally {
+            setIsApproveModalOpen(false);
+            setPendingApproveId(null);
         }
-    }, [refetch]);
+    }, [pendingApproveId, refetch]);
+
+    const handleReject = useCallback((id: string) => {
+        setPendingRejectId(id);
+        setIsRejectModalOpen(true);
+    }, []);
+
+    const confirmReject = useCallback(async () => {
+        if (!pendingRejectId) return;
+
+        try {
+            // For now, hardcode reason or just call reject
+            await PRService.reject(pendingRejectId, "Rejected by Approver"); 
+            refetch();
+        } catch (error) {
+            console.error('Reject failed', error);
+            window.alert("เกิดข้อผิดพลาดในการไม่อนุมัติเอกสาร");
+        } finally {
+            setIsRejectModalOpen(false);
+            setPendingRejectId(null);
+        }
+    }, [pendingRejectId, refetch]);
 
 
 
@@ -233,49 +315,83 @@ export default function PRListPage() {
         }),
         columnHelper.display({
             id: 'actions',
-            header: () => <div className="text-center w-full min-w-[100px]">จัดการ</div>,
+            header: () => <div className="text-center w-full min-w-[120px]">จัดการ</div>,
             cell: ({ row }) => {
                 const item = row.original;
                 return (
-                    <div className="flex items-center justify-center gap-1.5">
-                        {/* Always show View button */}
-                        <button className="p-1 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors" title="ดูรายละเอียด">
+                    <div className="flex items-center justify-center gap-1">
+                        {/* 1. VIEW: Always Visible */}
+                        <button 
+                            className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-all" 
+                            title="ดูรายละเอียด"
+                        >
                             <Eye size={16} />
                         </button>
-                        
-                        {/* Edit & Approve Buttons: ONLY for PENDING */}
-                        {item.status === 'PENDING' && (
-                            <div className="flex items-center gap-1.5">
+
+                        {/* 2. DRAFT Actions: Edit, Delete, Send Approval */}
+                        {item.status === 'DRAFT' && (
+                            <>
                                 <button 
-                                    type="button"
                                     onClick={() => handleEdit(item.pr_id)}
-                                    className="group flex items-center justify-center gap-1.5 px-2 py-1 bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded transition-colors text-xs font-semibold border border-orange-200 dark:border-orange-800"
+                                    className="p-1.5 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-md transition-all"
                                     title="แก้ไข"
                                 >
-                                    <Edit size={12} strokeWidth={2.5} /> แก้ไข
+                                    <Edit size={16} />
                                 </button>
                                 
                                 <button 
-                                    type="button"
-                                    onClick={() => handleQuickApprove(item.pr_id)}
-                                    className="flex items-center justify-center gap-0.5 px-1.5 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded transition-colors text-[10px] font-bold shadow-sm whitespace-nowrap"
+                                    onClick={() => handleDelete(item.pr_id)}
+                                    className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-all"
+                                    title="ลบ"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+
+                                <button 
+                                    onClick={() => handleSendApproval(item.pr_id)}
+                                    className="flex items-center gap-1 pl-1.5 pr-2 py-1 ml-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap"
                                     title="ส่งอนุมัติ"
                                 >
-                                    <Send size={11} /> ส่งอนุมัติ
+                                    <Send size={12} /> ส่งอนุมัติ
                                 </button>
-                            </div>
+                            </>
+                        )}
+
+                        {/* 3. PENDING: Approve / Reject (Approver View) */}
+                        {item.status === 'PENDING' && (
+                            <>
+                                <button 
+                                    onClick={() => handleApprove(item.pr_id)}
+                                    className="flex items-center gap-1 pl-1.5 pr-2 py-1 ml-1 bg-green-600 hover:bg-green-700 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap"
+                                    title="อนุมัติ"
+                                >
+                                    <CheckCircle size={12} /> อนุมัติ
+                                </button>
+                                <button 
+                                    onClick={() => handleReject(item.pr_id)}
+                                    className="flex items-center gap-1 pl-1.5 pr-2 py-1 ml-1 bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap"
+                                    title="ไม่อนุมัติ"
+                                >
+                                    <XCircle size={12} /> ไม่อนุมัติ
+                                </button>
+                            </>
                         )}
                         
-                        {/* Create RFQ Button: ONLY for APPROVED */}
-                        {item.status === 'APPROVED' ? (
+                        {/* 4. APPROVED Actions: Create RFQ */}
+                        {item.status === 'APPROVED' && (
                             <button 
                                 onClick={() => handleCreateRFQ(item)}
-                                className="bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm transition-colors flex items-center gap-0.5 whitespace-nowrap"
-                                title="สร้างใบขอใบเสนอราคา"
+                                className="flex items-center gap-1 pl-1.5 pr-2 py-1 ml-1 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap"
+                                title="สร้างใบขอเสนอราคา"
                             >
                                 <FileText size={12} /> สร้าง RFQ
                             </button>
-                        ) : null}
+                        )}
+
+                         {/* 5. CANCELLED: View Only */}
+                         {item.status === 'CANCELLED' && (
+                            null
+                        )}
                     </div>
                 );
             },
@@ -287,10 +403,10 @@ export default function PRListPage() {
                     </div>
                 );
             },
-            size: 130,
+            size: 160, // Widened for Draft actions
             enableSorting: false,
         }),
-    ], [columnHelper, filters.page, filters.limit, data?.items, handleQuickApprove]); // Re-calculate index when page changes
+    ], [columnHelper, filters.page, filters.limit, data?.items, handleSendApproval, handleDelete, handleApprove, handleReject]); // Re-calculate index when page changes
 
     // ====================================================================================
     // RENDER
@@ -353,24 +469,25 @@ export default function PRListPage() {
                         />
                         
                         {/* Action Buttons Group */}
-                        <div className="lg:col-span-2 flex justify-end gap-2 flex-wrap">
-                            <button
-                                onClick={resetFilters}
-                                className="h-10 px-6 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg font-medium transition-colors border border-gray-300"
-                            >
-                                ล้างค่า
-                            </button>
-                            {/* React Query automatically handles fetching, so this button is visual mostly, or triggers refetch if needed manually */}
-                            <button
-                                onClick={() => refetch()}
-                                className="h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2"
-                            >
-                                <Search size={18} />
-                                ค้นหา
-                            </button>
+                        <div className="md:col-span-2 xl:col-span-2 flex flex-col sm:flex-row flex-wrap justify-end gap-2 items-center">
+                            <div className="flex gap-2 w-full sm:w-auto">
+                                <button
+                                    onClick={resetFilters}
+                                    className="flex-1 sm:flex-none h-10 px-4 bg-white hover:bg-gray-50 text-gray-700 rounded-lg font-medium transition-colors border border-gray-300 shadow-sm whitespace-nowrap"
+                                >
+                                    ล้างค่า
+                                </button>
+                                <button
+                                    onClick={() => refetch()}
+                                    className="flex-1 sm:flex-none h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+                                >
+                                    <Search size={18} />
+                                    ค้นหา
+                                </button>
+                            </div>
                             <button
                                 onClick={handleCreate}
-                                className="h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2"
+                                className="w-full sm:w-auto h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
                             >
                                 <Plus size={16} strokeWidth={2.5} />
                                 สร้างใบขอซื้อใหม่
@@ -417,6 +534,51 @@ export default function PRListPage() {
                     onSuccess={() => refetch()}
                 />
             )}
+
+            <ConfirmationModal
+                isOpen={isSendApprovalModalOpen}
+                onClose={() => {
+                    setIsSendApprovalModalOpen(false);
+                    setPendingSendApprovalId(null);
+                }}
+                onConfirm={confirmSendApproval}
+                title="ยืนยันการส่งอนุมัติ"
+                description="คุณต้องการส่งเอกสารนี้เพื่อขออนุมัติใช่หรือไม่?"
+                confirmText="ส่งอนุมัติ"
+                cancelText="ยกเลิก"
+                variant="info"
+                icon={Send}
+            />
+
+            <ConfirmationModal
+                isOpen={isApproveModalOpen}
+                onClose={() => {
+                    setIsApproveModalOpen(false);
+                    setPendingApproveId(null);
+                }}
+                onConfirm={confirmApprove}
+                title="ยืนยันการอนุมัติ"
+                description="คุณต้องการอนุมัติเอกสารนี้ใช่หรือไม่?"
+                confirmText="อนุมัติ"
+                cancelText="ยกเลิก"
+                variant="success"
+                icon={CheckCircle}
+            />
+
+            <ConfirmationModal
+                isOpen={isRejectModalOpen}
+                onClose={() => {
+                    setIsRejectModalOpen(false);
+                    setPendingRejectId(null);
+                }}
+                onConfirm={confirmReject}
+                title="ยืนยันการไม่อนุมัติ"
+                description="คุณต้องการ 'ไม่อนุมัติ' เอกสารนี้ใช่หรือไม่?"
+                confirmText="ยืนยัน"
+                cancelText="ยกเลิก"
+                variant="danger"
+                icon={XCircle}
+            />
         </>
     );
 }

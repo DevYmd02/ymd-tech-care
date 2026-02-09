@@ -31,8 +31,10 @@ const getInitialLines = () => Array(PR_CONFIG.INITIAL_LINES).fill(null).map(() =
 
 const getDefaultFormValues = (): PRFormData => ({
   pr_no: '', request_date: getTodayDate(), required_date: '', requester_name: 'นางสาว กรรลิกา สารมาท',
-  cost_center_id: '', project_id: undefined, purpose: '', currency_code: 'THB', lines: [], total_amount: 0,
+  cost_center_id: '', project_id: undefined, purpose: '', currency_id: 'THB', lines: [], total_amount: 0,
   delivery_date: '', credit_days: 30, vendor_quote_no: '', shipping_method: 'รถยนต์', remarks: '',
+  is_multicurrency: false, exchange_rate: 1, rate_date: new Date().toISOString().split('T')[0],
+  currency_type_id: '',
 });
 
 export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onSuccess?: () => void) => {
@@ -63,7 +65,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
   const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const { register, handleSubmit, setValue, reset, watch, formState: { isSubmitting } } = useForm<PRFormData>({
+  const { register, handleSubmit, setValue, reset, watch, setFocus, formState: { isSubmitting } } = useForm<PRFormData>({
     defaultValues: getDefaultFormValues()
   });
 
@@ -112,6 +114,18 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     }
     prevIsOpenRef.current = isOpen;
   }, [isOpen, reset, id]);
+
+  // Currency Sync Logic
+  const currencyId = watch('currency_id');
+  useEffect(() => {
+    if (currencyId === 'THB') {
+        setValue('is_multicurrency', false);
+        setValue('exchange_rate', 1);
+    } else {
+        setValue('is_multicurrency', true);
+        // Keep existing rate or could fetch default here
+    }
+  }, [currencyId, setValue]);
 
   const showAlert = (message: string) => setAlertState({ show: true, message });
 
@@ -325,7 +339,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     vatRate, setVatRate, remarks, setRemarks, deliveryDate, setDeliveryDate,
     creditDays, vendorQuoteNo, setVendorQuoteNo, shippingMethod, setShippingMethod,
     requesterName, isProductModalOpen, setIsProductModalOpen, searchTerm, setSearchTerm,
-    register, handleSubmit, setValue, watch, isSubmitting, isActionLoading,
+    register, handleSubmit, setValue, watch, invokeSetFocus: setFocus, isSubmitting, isActionLoading,
     alertState, setAlertState, products, costCenters, projects,
     addLine, removeLine, clearLine, updateLine, handleClearLines,
     openProductSearch, selectProduct, subtotal, discountAmount, afterDiscount,
