@@ -17,6 +17,7 @@ export interface Currency extends BaseMasterData {
  */
 export interface ExchangeRateType extends BaseMasterData {
     currency_type_id: string; // uuid
+    code?: string; // e.g., SPOT, FORWARD
     name_th: string;
     name_en?: string;
 }
