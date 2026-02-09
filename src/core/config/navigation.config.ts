@@ -315,6 +315,15 @@ export const sidebarMenuItems: MenuItem[] = [
                 ]
             },
             {
+                id: 'master-data-currency',
+                label: 'Master Data สกุลเงิน',
+                subItems: [
+                    { id: 'currency-code', label: 'กำหนดรหัสสกุลเงิน', path: '/master-data/currency/code' },
+                    { id: 'currency-type', label: 'กำหนดรหัสประเภทอัตราแลกเปลี่ยน', path: '/master-data/currency/type' },
+                    { id: 'currency-rate', label: 'กำหนดอัตราแลกเปลี่ยนเงินตรา', path: '/master-data/currency/rate' },
+                ]
+            },
+            {
                 id: 'master-data-vendor',
                 label: 'Master Data เจ้าหนี้',
                 subItems: [

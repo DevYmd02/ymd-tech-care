@@ -6,7 +6,6 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
     Star,
     FileText,
@@ -22,22 +21,25 @@ import {
     ChevronsLeft,
     ChevronsRight
 } from 'lucide-react';
+import { VendorStatusBadge } from '@/shared/components/ui/StatusBadge';
+import { VendorFormModal } from './VendorFormModal';
 import { styles } from '@/shared/constants/styles';
 
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
 import type { VendorListItem, VendorStatus } from '@/modules/master-data/vendor/types/vendor-types';
-import { VendorStatusBadge } from '@/shared/components/ui/StatusBadge';
 
 // ====================================================================================
 // MAIN COMPONENT
 // ====================================================================================
 
 export default function VendorDashboard() {
-    const navigate = useNavigate();
-    
+
     // States
     const [vendors, setVendors] = useState<VendorListItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
 
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<'ALL' | VendorStatus>('ALL');
@@ -93,13 +95,13 @@ export default function VendorDashboard() {
 
     // Handlers
     const handleCreateNew = () => {
-        navigate('/master-data/vendor/form');
+        setSelectedVendorId(null);
+        setIsModalOpen(true);
     };
 
-
-
     const handleEdit = (vendorId: string) => {
-        navigate(`/master-data/vendor/form?id=${vendorId}`);
+        setSelectedVendorId(vendorId);
+        setIsModalOpen(true);
     };
 
     const handleExportExcel = () => {
@@ -402,6 +404,16 @@ export default function VendorDashboard() {
                 )}
             </div>
 
+            {/* Modal */}
+            <VendorFormModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                vendorId={selectedVendorId || undefined}
+                onSuccess={() => {
+                    fetchVendors();
+                    setIsModalOpen(false);
+                }}
+            />
 
         </div>
     );

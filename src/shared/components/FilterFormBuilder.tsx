@@ -143,7 +143,7 @@ export function FilterFormBuilder<
     createLabel = 'สร้างใหม่',
     searchLabel = 'ค้นหา',
     resetLabel = 'ล้างค่า',
-    columns = { sm: 2, md: 4, lg: 5, xl: 6 },
+    columns = { sm: 2, md: 5, lg: 6, xl: 8 },
     actionColSpan = { sm: 'full', md: 2, lg: 2, xl: 2 },
     actionAlign = 'end',
 }: FilterFormBuilderProps<TFilters, TFilterKeys>): React.ReactElement {

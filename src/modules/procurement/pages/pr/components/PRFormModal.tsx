@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FileText, Trash2, Printer, Copy, CheckCircle, FileBox, MoreHorizontal, Coins, FileBarChart, History as HistoryIcon } from 'lucide-react';
 import { PRHeader } from './PRHeader';
 import { mockBranches } from '@/modules/master-data/mocks/masterDataMocks';
@@ -7,6 +7,7 @@ import { PRFormSummary } from './PRFormSummary';
 import { WindowFormLayout } from '@/shared/components/layout/WindowFormLayout';
 import { SystemAlert } from '@/shared/components/ui/SystemAlert';
 import { usePRForm } from '@/modules/procurement/hooks/usePRForm';
+import { fetchExchangeRate } from '@/modules/procurement/services/mockExchangeRateService';
 
 interface Props {
   isOpen: boolean;
@@ -27,6 +28,16 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
     openProductSearch, selectProduct, subtotal, discountAmount,
     vatAmount, grandTotal, handleVendorSelect, onSubmit, handleDelete, handleApprove
   } = usePRForm(isOpen, onClose, id, onSuccess);
+
+  // Auto-fetch exchange rate when currency changes
+  const currencyId = watch('currency_id');
+  useEffect(() => {
+     if (currencyId) {
+         fetchExchangeRate(currencyId).then(rate => {
+             setValue('exchange_rate', rate);
+         });
+     }
+  }, [currencyId, setValue]);
 
   // Tabs state
   const [activeTab, setActiveTab] = useState('detail');
@@ -171,7 +182,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                 </div>
                 
                 {/* Fields Row */}
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
                     <div>
                         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">วันที่อัตราแลกเปลี่ยน</label>
                         <input 
@@ -214,15 +225,13 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                             {...register('exchange_rate', { valueAsNumber: true })}
                             className="w-full h-9 px-3 text-sm text-right bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                         />
+                         {watch('currency_id') && watch('currency_id') !== 'THB' && (
+                           <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 text-right">
+                              1 {watch('currency_id')} ≈ {Number(watch('exchange_rate') || 0).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })} THB
+                           </div>
+                        )}
                     </div>
-                    
-                    {/* Conversion Display */}
-                    <div className="flex flex-col justify-center">
-                        <span className="text-[10px] text-gray-500 dark:text-gray-400 mb-1 text-center">การแปลงค่าเงิน (Conversion)</span>
-                        <div className="h-9 px-2 flex items-center justify-center bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded font-medium text-gray-700 dark:text-gray-300 text-sm shadow-sm">
-                           1 {watch('currency_id') || 'THB'} = {Number(watch('exchange_rate') || 0).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })} THB
-                        </div>
-                    </div>
+
                 </div>
             </div>
         </div>
