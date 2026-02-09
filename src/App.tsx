@@ -81,6 +81,10 @@ const ColorList = React.lazy(() => import('@/modules/master-data/inventory/pages
 const LocationList = React.lazy(() => import('@/modules/master-data/inventory/pages/location/LocationList'));
 const ShelfList = React.lazy(() => import('@/modules/master-data/inventory/pages/shelf/ShelfList'));
 const LotNoList = React.lazy(() => import('@/modules/master-data/inventory/pages/lot-no/LotNoList'));
+// Currency Pages
+const CurrencyCodeList = React.lazy(() => import('@/modules/master-data/currency/pages/code/CurrencyCodeList'));
+const ExchangeRateTypeList = React.lazy(() => import('@/modules/master-data/currency/pages/type/ExchangeRateTypeList'));
+const ExchangeRateList = React.lazy(() => import('@/modules/master-data/currency/pages/rate/ExchangeRateList'));
 
 // Auth Pages (from modules)
 const LoginPage = React.lazy(() => import('./modules/auth/pages/LoginPage'));
@@ -202,6 +206,9 @@ function App() {
           <Route path="master-data/location" element={<LocationList />} />
           <Route path="master-data/shelf" element={<ShelfList />} />
           <Route path="master-data/lot-no" element={<LotNoList />} />
+          <Route path="master-data/currency/code" element={<CurrencyCodeList />} />
+          <Route path="master-data/currency/type" element={<ExchangeRateTypeList />} />
+          <Route path="master-data/currency/rate" element={<ExchangeRateList />} />
           
           {/* Generic Coming Soon for Work in Progress */}
           <Route path="/coming-soon" element={<ComingSoon />} />

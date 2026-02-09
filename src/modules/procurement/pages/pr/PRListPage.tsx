@@ -12,7 +12,7 @@ import { SmartTable } from '@/shared/components/ui/SmartTable';
 import { PageListLayout } from '@/shared/components/layout/PageListLayout';
 import { PRStatusBadge } from '@/shared/components/ui/StatusBadge';
 import { FilterField } from '@/shared/components/ui/FilterField';
-import { useTableFilters, useDebounce, type TableFilters } from '@/shared/hooks';
+import { useTableFilters, useDebounce, type TableFilters, useConfirmation } from '@/shared/hooks';
 import RFQFormModal from '../rfq/components/RFQFormModal';
 import { PRFormModal } from './components/PRFormModal';
 import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal';
@@ -49,7 +49,7 @@ type PRFilterKeys = Extract<keyof TableFilters<PRStatus>, string>;
 
 export default function PRListPage() {
     // URL-based Filter State
-    const { filters, setFilters, resetFilters, handlePageChange } = useTableFilters<PRStatus>({
+    const { filters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<PRStatus>({
         defaultStatus: 'ALL',
         customParamKeys: {
             search: 'pr_no',
@@ -57,6 +57,7 @@ export default function PRListPage() {
             search3: 'department'
         }
     });
+    const { confirm } = useConfirmation();
 
 //     // Convert to API filter format - REPLACED BY DEBOUNCED VERSION BELOW
 //     const apiFilters: PRListParams = {
@@ -82,7 +83,8 @@ export default function PRListPage() {
         date_from: debouncedFilters.dateFrom || undefined,
         date_to: debouncedFilters.dateTo || undefined,
         page: debouncedFilters.page,
-        limit: debouncedFilters.limit
+        limit: debouncedFilters.limit,
+        sort: debouncedFilters.sort || undefined
     };
 
     // Data Fetching with React Query
@@ -167,20 +169,28 @@ export default function PRListPage() {
     }, [pendingSendApprovalId, refetch]);
 
     const handleDelete = useCallback(async (id: string) => {
-        if (!window.confirm("คุณต้องการลบใบขอซื้อนี้ใช่หรือไม่?")) return;
+        const isConfirmed = await confirm({
+            title: 'ยืนยันการลบ',
+            description: 'คุณต้องการลบใบขอซื้อนี้ใช่หรือไม่?',
+            confirmText: 'ลบข้อมูล',
+            cancelText: 'ยกเลิก',
+            variant: 'danger'
+        });
+
+        if (!isConfirmed) return;
 
         try {
             const success = await PRService.delete(id);
             if (success) {
                 refetch();
             } else {
-                window.alert("ลบข้อมูลไม่สำเร็จ");
+                await confirm({ title: 'ลบไม่สำเร็จ', description: 'ไม่สามารถลบข้อมูลได้ในขณะนี้', confirmText: 'ตกลง', hideCancel: true, variant: 'warning' });
             }
         } catch (error) {
             console.error('Delete failed', error);
-            window.alert("เกิดข้อผิดพลาดในการลบข้อมูล");
+            await confirm({ title: 'เกิดข้อผิดพลาด', description: 'เกิดข้อผิดพลาดในการลบข้อมูล', confirmText: 'ตกลง', hideCancel: true, variant: 'danger' });
         }
-    }, [refetch]);
+    }, [confirm, refetch]);
 
     const handleApprove = useCallback((id: string) => {
         setPendingApproveId(id);
@@ -508,6 +518,8 @@ export default function PRListPage() {
                             onPageChange: handlePageChange,
                             onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 })
                         }}
+                        sortConfig={sortConfig}
+                        onSortChange={handleSortChange}
                         rowIdField="pr_id"
                         className="flex-1"
                         showFooter={true}

@@ -56,7 +56,7 @@ type QTFilterKeys = Extract<keyof TableFilters<QTStatus>, string>;
 
 export default function QTListPage() {
     // URL-based Filter State
-    const { filters, setFilters, resetFilters, handlePageChange } = useTableFilters<QTStatus>({
+    const { filters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<QTStatus>({
         defaultStatus: 'ALL',
     });
 
@@ -69,7 +69,8 @@ export default function QTListPage() {
         date_from: filters.dateFrom || undefined,
         date_to: filters.dateTo || undefined,
         page: filters.page,
-        limit: filters.limit
+        limit: filters.limit,
+        sort: filters.sort || undefined
     };
 
     // Data Fetching with React Query
@@ -320,6 +321,8 @@ export default function QTListPage() {
                             onPageChange: handlePageChange,
                             onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 })
                         }}
+                        sortConfig={sortConfig}
+                        onSortChange={handleSortChange}
                         rowIdField="quotation_id"
                         className="flex-1"
                         showFooter={true}

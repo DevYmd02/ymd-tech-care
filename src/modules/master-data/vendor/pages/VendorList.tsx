@@ -4,12 +4,10 @@
  * @purpose แสดงรายการเจ้าหนี้ในรูปแบบตาราง พร้อมค้นหา กรอง และจัดการข้อมูล
  */
 
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useMemo, useState } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { 
     Plus, 
-    Search, 
     Edit2, 
     Trash2, 
     Database,
@@ -17,7 +15,6 @@ import {
     ChevronRight,
     ChevronsLeft,
     ChevronsRight,
-    Filter,
     RefreshCw,
     AlertCircle
 } from 'lucide-react';
@@ -26,27 +23,63 @@ import { styles } from '@/shared/constants/styles';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
 import type { VendorStatus, VendorListParams } from '@/modules/master-data/vendor/types/vendor-types';
 import { VendorStatusBadge } from '@/shared/components/ui/StatusBadge';
+import { useTableFilters } from '@/shared/hooks/useTableFilters';
+import FilterFormBuilder, { type FilterFieldConfig } from '@/shared/components/FilterFormBuilder';
+import { VendorFormModal } from './VendorFormModal';
 
 // ====================================================================================
 // COMPONENT
 // ====================================================================================
 
 export default function VendorList() {
-    const navigate = useNavigate();
     
     // ==================== STATE ====================
-    // Note: 'vendors' state is removed in favor of React Query 'data'
-    const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState<'ALL' | VendorStatus>('ALL');
-    const [currentPage, setCurrentPage] = useState(1);
-    const [rowsPerPage, setRowsPerPage] = useState(10);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
+
+    // ==================== FILTERS ====================
+    const { 
+        filters, 
+        setFilters, 
+        handlePageChange,
+        resetFilters
+    } = useTableFilters<VendorStatus>({
+        defaultLimit: 10,
+        customParamKeys: {
+            search: 'q',
+            status: 'status'
+        }
+    });
+
+    // ==================== FILTER CONFIG ====================
+    const filterConfig: FilterFieldConfig<keyof typeof filters>[] = useMemo(() => [
+        { 
+            name: 'search', 
+            label: 'ค้นหาเจ้าหนี้', 
+            type: 'text', 
+            placeholder: 'ค้นหาชื่อ, รหัส, หรือเลขภาษี...' 
+        },
+        { 
+            name: 'status', 
+            label: 'สถานะ', 
+            type: 'select', 
+            options: [
+                { value: 'ALL', label: 'สถานะทั้งหมด' },
+                { value: 'ACTIVE', label: 'Active' },
+                { value: 'INACTIVE', label: 'Inactive' },
+                { value: 'BLACKLISTED', label: 'Blacklisted' },
+                { value: 'SUSPENDED', label: 'Suspended' },
+            ] 
+        },
+    ], []);
 
     // ==================== QUERY PARAMS ====================
+    // Note: We use values from the filters object provided by useTableFilters
     const queryParams: VendorListParams = {
-        page: currentPage,
-        limit: rowsPerPage,
-        status: statusFilter !== 'ALL' ? statusFilter : undefined,
-        search: searchTerm || undefined,
+        page: filters.page,
+        limit: filters.limit,
+        status: filters.status !== 'ALL' ? filters.status : undefined,
+        search: filters.search || undefined,
     };
 
     // ==================== DATA FETCHING (React Query) ====================
@@ -69,8 +102,8 @@ export default function VendorList() {
     // ==================== LOCAL FILTERING & PAGINATION ====================
     const filteredVendors = allVendors.filter(v => {
         // Search
-        if (searchTerm) {
-            const term = searchTerm.toLowerCase();
+        if (filters.search) {
+            const term = filters.search.toLowerCase();
             const matchesSearch = 
                 v.vendor_code.toLowerCase().includes(term) ||
                 v.vendor_name.toLowerCase().includes(term) ||
@@ -80,37 +113,31 @@ export default function VendorList() {
         }
 
         // Status
-        if (statusFilter !== 'ALL') {
-             if (v.status !== statusFilter) return false;
+        if (filters.status !== 'ALL') {
+             if (v.status !== filters.status) return false;
         }
 
         return true;
     });
 
     const vendors = filteredVendors.slice(
-        (currentPage - 1) * rowsPerPage,
-        currentPage * rowsPerPage
+        (filters.page - 1) * filters.limit,
+        filters.page * filters.limit
     );
-    // Recalculate total items based on filter for correct pagination count?
-    // Actually the mock returns `total` for ALL items. 
-    // If we handle filtering locally, we should ignore server `total` if it's just total count.
-    // The previous implementation of `MockVendorService.getList` DID return filtered total.
-    // Now `getList` returns EVERYTHING. 
-    // So `data.total` is total of everything.
-    // We should use `filteredVendors.length` as total for pagination.
 
     // ==================== PAGINATION ====================
     const totalItems = filteredVendors.length;
-    const totalPages = Math.ceil(totalItems / rowsPerPage);
-    const startIndex = (currentPage - 1) * rowsPerPage;
+    const totalPages = Math.ceil(totalItems / filters.limit);
 
     // ==================== HANDLERS ====================
     const handleCreateNew = () => {
-        navigate('/master-data/vendor/form');
+        setSelectedVendorId(null);
+        setIsModalOpen(true);
     };
 
     const handleEdit = (vendorId: string) => {
-        navigate(`/master-data/vendor?id=${vendorId}`);
+        setSelectedVendorId(vendorId);
+        setIsModalOpen(true);
     };
 
     const handleDelete = async (vendorId: string) => {
@@ -133,32 +160,8 @@ export default function VendorList() {
         refetch();
     };
 
-    // Reset page when filters change (Handled manually or by effect if strict separation needed, 
-    // but often safer to just set page to 1 on filter change directly in UI)
-    // Keeping simple effect for now to match previous behavior safely
-    /* 
-       Note: In a pure "golden standard", we'd update page=1 directly in the onChange of filters. 
-       But keeping this simple effect is acceptable for this refactor scope.
-    */
-    // useEffect(() => {
-    //     setCurrentPage(1);
-    // }, [statusFilter, searchTerm, rowsPerPage]); 
-    // ^ Commented out to avoid double fetch? 
-    // Actually, React Query handles keys changing, so we just need to reset page when filters change.
-    
-    const handleSearchChange = (val: string) => {
-        setSearchTerm(val);
-        setCurrentPage(1);
-    };
-
-    const handleStatusChange = (val: 'ALL' | VendorStatus) => {
-        setStatusFilter(val);
-        setCurrentPage(1);
-    };
-
     const handleRowsPerPageChange = (val: number) => {
-        setRowsPerPage(val);
-        setCurrentPage(1);
+        setFilters({ limit: val, page: 1 });
     };
 
     // ==================== RENDER ====================
@@ -194,34 +197,18 @@ export default function VendorList() {
                 </div>
             </div>
 
-            {/* Search & Filter Section */}
+            {/* Search & Filter Section (Standardized) */}
             <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-                <div className="flex flex-col md:flex-row gap-4">
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                        <input
-                            type="text"
-                            placeholder="ค้นหาชื่อ, รหัส, หรือเลขภาษี..."
-                            value={searchTerm}
-                            onChange={(e) => handleSearchChange(e.target.value)}
-                            className={`${styles.input} pl-10 dark:text-white`}
-                        />
-                    </div>
-                    <div className="relative w-full md:w-48">
-                        <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                        <select
-                            value={statusFilter}
-                            onChange={(e) => handleStatusChange(e.target.value as 'ALL' | VendorStatus)}
-                            className={`${styles.inputSelect} pl-10`}
-                        >
-                            <option value="ALL">สถานะทั้งหมด</option>
-                            <option value="ACTIVE">Active</option>
-                            <option value="INACTIVE">Inactive</option>
-                            <option value="BLACKLISTED">Blacklisted</option>
-                            <option value="SUSPENDED">Suspended</option>
-                        </select>
-                    </div>
-                </div>
+                <FilterFormBuilder
+                    config={filterConfig}
+                    filters={filters}
+                    onFilterChange={(name, value) => setFilters({ [name]: value })}
+                    onSearch={() => handlePageChange(1)}
+                    onReset={resetFilters}
+                    onCreate={handleCreateNew}
+                    createLabel="เพิ่มเจ้าหนี้ใหม่"
+                    accentColor="indigo"
+                />
             </div>
 
             {/* Error Message */}
@@ -318,7 +305,7 @@ export default function VendorList() {
                     <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                         <span>แสดง</span>
                         <select
-                            value={rowsPerPage}
+                            value={filters.limit}
                             onChange={(e) => handleRowsPerPageChange(Number(e.target.value))}
                             className={styles.inputSm}
                         >
@@ -328,39 +315,39 @@ export default function VendorList() {
                             <option value={50}>50</option>
                         </select>
                         <span>รายการ</span>
-                        <span className="hidden sm:inline">| {startIndex + 1}-{Math.min(startIndex + rowsPerPage, totalItems)} จาก {totalItems}</span>
+                        <span className="hidden sm:inline">| {(filters.page - 1) * filters.limit + 1}-{Math.min(filters.page * filters.limit, totalItems)} จาก {totalItems}</span>
                     </div>
 
                     <div className="flex items-center gap-1">
                         <button
-                            onClick={() => setCurrentPage(1)}
-                            disabled={currentPage === 1}
+                            onClick={() => handlePageChange(1)}
+                            disabled={filters.page === 1}
                             className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                             <ChevronsLeft size={18} className="text-gray-600 dark:text-gray-400" />
                         </button>
                         <button
-                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                            disabled={currentPage === 1}
+                            onClick={() => handlePageChange(Math.max(1, filters.page - 1))}
+                            disabled={filters.page === 1}
                             className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                             <ChevronLeft size={18} className="text-gray-600 dark:text-gray-400" />
                         </button>
                         
                         <span className="px-3 py-1 text-sm text-gray-700 dark:text-gray-300">
-                            หน้า {currentPage} / {totalPages || 1}
+                            หน้า {filters.page} / {totalPages || 1}
                         </span>
                         
                         <button
-                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                            disabled={currentPage >= totalPages}
+                            onClick={() => handlePageChange(Math.min(totalPages, filters.page + 1))}
+                            disabled={filters.page >= totalPages}
                             className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                             <ChevronRight size={18} className="text-gray-600 dark:text-gray-400" />
                         </button>
                         <button
-                            onClick={() => setCurrentPage(totalPages)}
-                            disabled={currentPage >= totalPages}
+                            onClick={() => handlePageChange(totalPages)}
+                            disabled={filters.page >= totalPages}
                             className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                             <ChevronsRight size={18} className="text-gray-600 dark:text-gray-400" />
@@ -370,6 +357,16 @@ export default function VendorList() {
                 )}
             </div>
 
+            {/* Modal */}
+            <VendorFormModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                vendorId={selectedVendorId || undefined}
+                onSuccess={() => {
+                    refetch();
+                    setIsModalOpen(false);
+                }}
+            />
 
         </div>
     );

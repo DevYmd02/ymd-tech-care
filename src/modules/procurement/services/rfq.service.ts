@@ -17,9 +17,30 @@ export const RFQService = {
   getList: async (params?: RFQFilterCriteria): Promise<RFQListResponse> => {
     if (USE_MOCK) {
        logger.info('🎭 [Mock Mode] Serving RFQ List');
+       
+       const sortParam = params?.sort || 'rfq_date:desc';
+       const [sortKey, sortDir] = sortParam.split(':');
+       
+       const sorted = [...MOCK_RFQS].sort((a, b) => {
+         const valA = a[sortKey as keyof RFQHeader];
+         const valB = b[sortKey as keyof RFQHeader];
+         
+         if (valA === valB) return 0;
+         if (valA === null || valA === undefined) return 1;
+         if (valB === null || valB === undefined) return -1;
+         
+         const multiplier = sortDir === 'asc' ? 1 : -1;
+         
+         if (typeof valA === 'string' && typeof valB === 'string') {
+           return valA.localeCompare(valB) * multiplier;
+         }
+         
+         return (valA < valB ? -1 : 1) * multiplier;
+       });
+
        return {
-         data: MOCK_RFQS,
-         total: MOCK_RFQS.length,
+         data: sorted,
+         total: sorted.length,
          page: 1,
          limit: 100
        };

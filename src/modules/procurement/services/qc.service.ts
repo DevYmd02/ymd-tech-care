@@ -17,9 +17,35 @@ export const QCService = {
   getList: async (params?: QCListParams): Promise<QCListResponse> => {
     if (USE_MOCK) {
        logger.info('🎭 [Mock Mode] Serving QC List');
+       
+       let filtered = MOCK_QCS;
+       if (params?.status && params.status !== 'ALL') {
+           filtered = filtered.filter(qc => qc.status === params.status);
+       }
+
+       const sortParam = params?.sort || 'created_at:desc';
+       const [sortKey, sortDir] = sortParam.split(':');
+       
+       const sorted = [...filtered].sort((a, b) => {
+           const valA = a[sortKey as keyof typeof a];
+           const valB = b[sortKey as keyof typeof b];
+           
+           if (valA === valB) return 0;
+           if (valA === null || valA === undefined) return 1;
+           if (valB === null || valB === undefined) return -1;
+           
+           const multiplier = sortDir === 'asc' ? 1 : -1;
+           
+           if (typeof valA === 'string' && typeof valB === 'string') {
+               return valA.localeCompare(valB) * multiplier;
+           }
+           
+           return (valA < valB ? -1 : 1) * multiplier;
+       });
+
        return {
-         data: MOCK_QCS,
-         total: MOCK_QCS.length,
+         data: sorted,
+         total: sorted.length,
          page: 1,
          limit: 100
        };

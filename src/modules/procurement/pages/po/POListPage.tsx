@@ -81,7 +81,7 @@ export default function POListPage() {
         });
     };
 
-    const { filters, setFilters, resetFilters, handlePageChange } = useTableFilters<POStatus>({
+    const { filters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<POStatus>({
         defaultStatus: 'ALL',
     });
 
@@ -96,6 +96,7 @@ export default function POListPage() {
         // POListParams likely has pagination like others
         page: filters.page,
         limit: filters.limit,
+        sort: filters.sort || undefined,
     };
 
     // Data Fetching with React Query
@@ -318,6 +319,8 @@ export default function POListPage() {
                                 onPageChange: handlePageChange,
                                 onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 })
                             }}
+                            sortConfig={sortConfig}
+                            onSortChange={handleSortChange}
                             rowIdField="po_id"
                             className="h-full"
                             showFooter={true}

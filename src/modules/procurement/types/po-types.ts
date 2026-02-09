@@ -101,6 +101,7 @@ export interface POListParams {
     date_to?: string;
     page?: number;
     limit?: number;
+    sort?: string;
 }
 
 /** PO Response with Pagination */

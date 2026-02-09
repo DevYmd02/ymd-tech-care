@@ -12,8 +12,15 @@ import {
     ChevronRight, 
     ChevronsLeft, 
     ChevronsRight, 
-    Search
+    Search,
+    ChevronUp,
+    ChevronDown
 } from 'lucide-react';
+
+interface SortConfig {
+    key: string;
+    direction: 'asc' | 'desc';
+}
 
 interface SmartTableProps<TData> {
     data: TData[];
@@ -34,6 +41,8 @@ interface SmartTableProps<TData> {
     rowIdField?: keyof TData; // Field to use as ID for selection (default: 'id')
     hoverable?: boolean; // Enable/disable hover effect (default: true)
     showFooter?: boolean; // Enable/disable footer row (default: false)
+    sortConfig?: SortConfig | null;
+    onSortChange?: (key: string) => void;
 }
 
 export function SmartTable<TData>({
@@ -48,6 +57,8 @@ export function SmartTable<TData>({
     rowIdField = 'id' as keyof TData,
     hoverable = true,
     showFooter = false,
+    sortConfig,
+    onSortChange,
 }: SmartTableProps<TData>) {
     const [rowSelection, setRowSelection] = React.useState<Record<string, boolean>>({});
 
@@ -98,14 +109,15 @@ export function SmartTable<TData>({
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
         getRowId: (row) => String(row[rowIdField]), // Use custom ID field
+        onRowSelectionChange: setRowSelection,
         state: {
             rowSelection,
+            sorting: sortConfig ? [{ id: sortConfig.key, desc: sortConfig.direction === 'desc' }] : [],
         },
-        onRowSelectionChange: setRowSelection,
         manualPagination: true,
+        manualSorting: !!onSortChange, // If onSortChange is provided, assume manual sorting
         enableRowSelection: true,
         enableSorting: true,
-        manualSorting: false,
     });
 
     // Pagination calculations
@@ -126,14 +138,21 @@ export function SmartTable<TData>({
                             <tr key={headerGroup.id} className="border-b border-gray-200 dark:border-gray-600">
                                 {headerGroup.headers.map(header => {
                                     const canSort = header.column.getCanSort();
-                                    const isSorted = header.column.getIsSorted();
 
                                     return (
                                         <th
                                             key={header.id}
                                             style={{ width: header.getSize() !== 150 ? header.getSize() : undefined }}
-                                            className={`px-4 py-3 font-semibold select-none group ${canSort ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors' : ''}`}
-                                            onClick={header.column.getToggleSortingHandler()}
+                                            className={`px-4 py-3 font-semibold select-none group transition-all ${
+                                                canSort ? 'cursor-pointer hover:bg-blue-100/50 dark:hover:bg-gray-600' : ''
+                                            } ${sortConfig?.key === header.column.id ? 'bg-blue-100/30 dark:bg-blue-900/10' : ''}`}
+                                            onClick={() => {
+                                                if (canSort && onSortChange) {
+                                                    onSortChange(header.column.id);
+                                                } else if (canSort) {
+                                                    header.column.getToggleSortingHandler()?.(null);
+                                                }
+                                            }}
                                         >
                                             <div className="flex items-center gap-1 w-full">
                                                 {flexRender(
@@ -141,14 +160,12 @@ export function SmartTable<TData>({
                                                     header.getContext()
                                                 )}
                                                 {canSort && (
-                                                    <span className="text-gray-400">
-                                                        {{
-                                                            asc: <ChevronLeft className="w-4 h-4 rotate-90" />, // Up
-                                                            desc: <ChevronLeft className="w-4 h-4 -rotate-90" />, // Down
-                                                        }[isSorted as string] ?? (
-                                                            <div className="flex flex-col opacity-0 group-hover:opacity-50">
-                                                                <ChevronLeft className="w-3 h-3 rotate-90 -mb-1" />
-                                                                <ChevronLeft className="w-3 h-3 -rotate-90" />
+                                                    <span className="text-blue-600 dark:text-blue-400">
+                                                        {sortConfig?.key === header.column.id ? (
+                                                            sortConfig.direction === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                                                        ) : (
+                                                            <div className="w-4 h-4 opacity-0 group-hover:opacity-30 flex items-center justify-center">
+                                                                <ChevronDown size={14} />
                                                             </div>
                                                         )}
                                                     </span>

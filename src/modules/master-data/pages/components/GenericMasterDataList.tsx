@@ -4,9 +4,10 @@
  * @usage Used to eliminate code duplication across master data modules
  */
 
-import { Search, Edit2, Trash2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, RefreshCw, Plus } from 'lucide-react';
+import { Edit2, Trash2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, RefreshCw, Plus } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import type { GenericMasterDataListProps, GenericMasterDataItem, GenericTableColumn } from '@/modules/master-data/types/generic-master-data-types';
+import FilterFormBuilder from '@/shared/components/FilterFormBuilder';
 
 /**
  * Generic Master Data List Component
@@ -49,6 +50,26 @@ export function GenericMasterDataList<T extends GenericMasterDataItem>(
 
     const Icon = config.icon;
 
+    // Filter Config for FilterFormBuilder
+    const filterConfig = [
+        { 
+            name: 'search', 
+            label: 'ค้นหา', 
+            type: 'text' as const, 
+            placeholder: config.searchPlaceholder 
+        },
+        { 
+            name: 'status', 
+            label: 'สถานะ', 
+            type: 'select' as const, 
+            options: [
+                { value: 'ALL', label: 'ทั้งหมด' },
+                { value: 'ACTIVE', label: 'ใช้งาน' },
+                { value: 'INACTIVE', label: 'ไม่ใช้งาน' },
+            ] 
+        },
+    ];
+
     return (
         <div className="p-6 space-y-6">
             {/* Header Section */}
@@ -80,29 +101,24 @@ export function GenericMasterDataList<T extends GenericMasterDataItem>(
                 </div>
             </div>
 
-            {/* Search & Filter Section */}
+            {/* Filter Section (Standardized) */}
             <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-                <div className="flex flex-col md:flex-row gap-4">
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                        <input
-                            type="text"
-                            placeholder={config.searchPlaceholder}
-                            value={searchTerm}
-                            onChange={(e) => onSearchChange(e.target.value)}
-                            className={`${styles.input} pl-10`}
-                        />
-                    </div>
-                    <select
-                        value={statusFilter}
-                        onChange={(e) => onStatusFilterChange(e.target.value as 'ALL' | 'ACTIVE' | 'INACTIVE')}
-                        className={`${styles.inputSelect} w-full md:w-40`}
-                    >
-                        <option value="ALL">ทั้งหมด</option>
-                        <option value="ACTIVE">ใช้งาน</option>
-                        <option value="INACTIVE">ไม่ใช้งาน</option>
-                    </select>
-                </div>
+                <FilterFormBuilder
+                    config={filterConfig}
+                    filters={{ search: searchTerm, status: statusFilter }}
+                    onFilterChange={(name: string, value: string | boolean | string[]) => {
+                        if (name === 'search') onSearchChange(value as string);
+                        if (name === 'status') onStatusFilterChange(value as 'ALL' | 'ACTIVE' | 'INACTIVE');
+                    }}
+                    onSearch={() => onPageChange(1)}
+                    onReset={() => {
+                        onSearchChange('');
+                        onStatusFilterChange('ALL');
+                    }}
+                    onCreate={onCreate}
+                    createLabel={config.createButtonText}
+                    accentColor="indigo"
+                />
             </div>
 
             {/* Data Table */}

@@ -4,25 +4,26 @@
  */
 
 import React from 'react';
-import type { UseFormRegister, UseFormSetValue, UseFormWatch } from 'react-hook-form';
-import { Building2, FolderKanban, User } from 'lucide-react';
+import type { UseFormRegister, UseFormSetValue, UseFormWatch, Control } from 'react-hook-form';
+import { Controller } from 'react-hook-form';
+import { Building2, FolderKanban, User, RefreshCcw } from 'lucide-react';
 import type { PRFormData } from '@/modules/procurement/types/pr-types';
 import type { CostCenter, Project } from '@/modules/master-data/types/master-data-types';
 import { VendorSearch } from '@/shared/components/VendorSearch';
 import type { VendorMaster } from '@/modules/master-data/vendor/types/vendor-types';
-import type { BranchListItem } from '@/modules/master-data/types/master-data-types';
 
 interface Props {
   register: UseFormRegister<PRFormData>;
   setValue: UseFormSetValue<PRFormData>;
   watch: UseFormWatch<PRFormData>;
+  control: Control<PRFormData>;
+  reset: () => void;
   costCenters: CostCenter[];
   projects: Project[];
-  branches: BranchListItem[];
   onVendorSelect: (vendor: VendorMaster | null) => void;
 }
 
-export const PRHeader: React.FC<Props> = ({ register, setValue, watch, costCenters, projects, branches, onVendorSelect }) => {
+export const PRHeader: React.FC<Props> = ({ register, setValue, watch, control, reset, costCenters, projects, onVendorSelect }) => {
   // Watch for vendor values to display in the selector
   const preferredVendorId = watch("preferred_vendor_id");
   const vendorName = watch("vendor_name");
@@ -36,9 +37,13 @@ export const PRHeader: React.FC<Props> = ({ register, setValue, watch, costCente
     <div className="p-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm font-sans">
       {/* Document Status & Logo */}
       <div className="flex justify-between items-start mb-2">
-        <div>
-          <h2 className="text-pink-600 dark:text-pink-400 font-bold text-sm">สถานะเอกสาร : ร่าง (DRAFT)</h2>
+        <div className="flex flex-col gap-1">
+          <h2 className={`font-bold text-sm ${watch('is_on_hold') ? 'text-orange-500' : 'text-pink-600 dark:text-pink-400'}`}>
+            สถานะเอกสาร : {watch('is_on_hold') ? 'พักเรื่อง (ON HOLD)' : 'ร่าง (DRAFT)'}
+          </h2>
         </div>
+        
+
         <div className="text-right">
           <div className="text-[10px] font-bold text-blue-800 dark:text-blue-400 leading-tight">YOUNGMEEDEE</div>
           <div className="text-[9px] text-gray-500 dark:text-gray-400 tracking-wider">FUTURE GROUP</div>
@@ -58,7 +63,7 @@ export const PRHeader: React.FC<Props> = ({ register, setValue, watch, costCente
         </div>
 
         <div className="col-span-12 md:col-span-3">
-          <label className={labelClass}>วันที่ขอซื้อ</label>
+          <label className={labelClass}>วันที่ขอซื้อ <span className="text-red-500">*</span></label>
           <input {...register("request_date")} type="date" className={inputClass} />
         </div>
 
@@ -67,16 +72,43 @@ export const PRHeader: React.FC<Props> = ({ register, setValue, watch, costCente
           <input {...register("required_date")} type="date" className={inputClass} />
         </div>
 
-        <div className="col-span-12 md:col-span-3">
-          <label className={labelClass}>สาขา (Branch) <span className="text-red-500">*</span></label>
-          <select className={selectClass} {...register("branch_id")}>
-            <option value="">-- เลือกสาขา --</option>
-            {branches.map((branch) => (
-              <option key={branch.branch_id} value={branch.branch_id}>
-                {branch.branch_name}
-              </option>
-            ))}
-          </select>
+        {/* Column 4: ON HOLD & CLEAR Actions */}
+        <div className="col-span-12 md:col-span-3 flex flex-col justify-end h-full">
+             <div className="flex items-center w-full h-8 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+                {/* 1. ON HOLD Checkbox */}
+                <Controller
+                  name="is_on_hold"
+                  control={control}
+                  render={({ field }) => (
+                    <label 
+                      className="flex-1 flex items-center justify-center gap-2 cursor-pointer group hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-colors h-full px-2 select-none"
+                    >
+                      <input 
+                        type="checkbox"
+                        checked={field.value} 
+                        onChange={(e) => field.onChange(e.target.checked)}
+                        className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-orange-500 focus:ring-orange-500 cursor-pointer" 
+                      />
+                      <span className={`text-xs font-bold transition-colors ${field.value ? 'text-orange-600 dark:text-orange-400' : 'text-gray-600 dark:text-gray-400'}`}>
+                        ON HOLD
+                      </span>
+                    </label>
+                  )}
+                />
+
+                {/* Divider */}
+                <div className="w-px h-5 bg-gray-200 dark:bg-gray-700"></div>
+
+                {/* 2. CLEAR Button */}
+                <button
+                  type="button"
+                  onClick={() => reset()}
+                  className="flex-1 h-full flex items-center justify-center gap-2 text-[10px] font-bold text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all uppercase px-2"
+                >
+                  <RefreshCcw size={12} />
+                  <span>CLEAR FORM</span>
+                </button>
+             </div>
         </div>
 
         {/* Row 2: ผู้ขอซื้อ, ศูนย์ต้นทุน, โครงการ */}

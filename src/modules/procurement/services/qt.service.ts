@@ -18,9 +18,30 @@ export const QTService = {
   getList: async (params?: QTListParams): Promise<QTListResponse> => {
     if (USE_MOCK) {
        logger.info('🎭 [Mock Mode] Serving QT List');
+
+       const sortParam = params?.sort || 'quotation_date:desc';
+       const [sortKey, sortDir] = sortParam.split(':');
+       
+       const sorted = [...MOCK_QTS].sort((a, b) => {
+         const valA = a[sortKey as keyof typeof a];
+         const valB = b[sortKey as keyof typeof b];
+         
+         if (valA === valB) return 0;
+         if (valA === null || valA === undefined) return 1;
+         if (valB === null || valB === undefined) return -1;
+         
+         const multiplier = sortDir === 'asc' ? 1 : -1;
+         
+         if (typeof valA === 'string' && typeof valB === 'string') {
+           return valA.localeCompare(valB) * multiplier;
+         }
+         
+         return (valA < valB ? -1 : 1) * multiplier;
+       });
+
        return {
-         data: MOCK_QTS,
-         total: MOCK_QTS.length,
+         data: sorted,
+         total: sorted.length,
          page: 1,
          limit: 100
        };

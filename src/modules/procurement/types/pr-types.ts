@@ -111,7 +111,6 @@ export type { CostCenter, Project, ProjectStatus } from '@/modules/master-data/t
 export interface PRFormData {
   // Header fields
   pr_no: string;                    // Auto-generated
-  branch_id?: string;               // สาขา
   request_date: string;             // วันที่ขอซื้อ
   required_date: string;            // วันที่ต้องการใช้
   requester_name?: string;           // ชื่อผู้ขอ
@@ -143,6 +142,7 @@ export interface PRFormData {
   lines: PRLineFormData[];
   
   // Summary
+  is_on_hold: boolean;              // พักเรื่อง
   total_amount: number;
 }
 

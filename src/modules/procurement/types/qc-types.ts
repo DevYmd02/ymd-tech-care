@@ -45,6 +45,7 @@ export interface QCListParams {
   date_to?: string;
   page?: number;
   limit?: number;
+  sort?: string;
 }
 
 export interface QCListResponse {

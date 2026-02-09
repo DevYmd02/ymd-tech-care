@@ -56,87 +56,87 @@ const _prLinesFactory: PRLine[] = [
 
 const _mockPRs: PRHeader[] = [
   {
-    pr_id: 'pr-013', pr_no: 'PR-202602-0013', branch_id: 'BR001', requester_user_id: 'u004', requester_name: 'กานดา มารยาท',
-    request_date: '2026-02-05', required_date: '2026-02-15', cost_center_id: 'CC004', purpose: 'จัดเลี้ยงรับรองลูกค้า (สำหรับ RFQ ยกเลิก)',
+    pr_id: 'pr-013', pr_no: 'PR-202603-0013', branch_id: 'BR001', requester_user_id: 'u004', requester_name: 'กานดา มารยาท',
+    request_date: '2026-03-15', required_date: '2026-03-25', cost_center_id: 'CC004', purpose: 'จัดเลี้ยงรับรองลูกค้า (สำหรับ RFQ ยกเลิก)',
     status: 'APPROVED', currency_code: 'THB', total_amount: 5000, attachment_count: 0,
-    created_at: '2026-02-05T09:00:00Z', updated_at: '2026-02-06T10:00:00Z', created_by_user_id: 'u004', updated_by_user_id: 'mgr01',
+    created_at: '2026-03-15T09:00:00Z', updated_at: '2026-03-16T10:00:00Z', created_by_user_id: 'u004', updated_by_user_id: 'mgr01',
     lines: []
   },
   {
-    pr_id: 'pr-012', pr_no: 'PR-202602-0012', branch_id: 'BR002', requester_user_id: 'u002', requester_name: 'วิชัย มากมี',
-    request_date: '2026-02-01', required_date: '2026-02-14', cost_center_id: 'CC003', purpose: 'อุปกรณ์สำนักงานเพิ่มเติม (สำหรับ RFQ ปิดแล้ว)',
+    pr_id: 'pr-012', pr_no: 'PR-202603-0012', branch_id: 'BR002', requester_user_id: 'u002', requester_name: 'วิชัย มากมี',
+    request_date: '2026-03-10', required_date: '2026-03-24', cost_center_id: 'CC003', purpose: 'อุปกรณ์สำนักงานเพิ่มเติม (สำหรับ RFQ ปิดแล้ว)',
     status: 'APPROVED', currency_code: 'THB', total_amount: 15000, attachment_count: 0,
-    created_at: '2026-02-01T10:00:00Z', updated_at: '2026-02-02T11:00:00Z', created_by_user_id: 'u002', updated_by_user_id: 'mgr02',
+    created_at: '2026-03-10T10:00:00Z', updated_at: '2026-03-11T11:00:00Z', created_by_user_id: 'u002', updated_by_user_id: 'mgr02',
     lines: getLinesForPR('pr-012', _prLinesOffice)
   },
   {
-    pr_id: 'pr-011', pr_no: 'PR-202601-0011', branch_id: 'BR001', requester_user_id: 'u001', requester_name: 'สมชาย ใจดี',
-    request_date: '2026-01-20', required_date: '2026-02-05', cost_center_id: 'CC001', purpose: 'วัสดุสิ้นเปลืองโรงงาน (สำหรับ RFQ ส่งแล้ว)',
+    pr_id: 'pr-011', pr_no: 'PR-202603-0011', branch_id: 'BR001', requester_user_id: 'u001', requester_name: 'สมชาย ใจดี',
+    request_date: '2026-03-05', required_date: '2026-03-20', cost_center_id: 'CC001', purpose: 'วัสดุสิ้นเปลืองโรงงาน (สำหรับ RFQ ส่งแล้ว)',
     status: 'APPROVED', currency_code: 'THB', total_amount: 25000, attachment_count: 0,
-    created_at: '2026-01-20T09:00:00Z', updated_at: '2026-01-21T10:00:00Z', created_by_user_id: 'u001', updated_by_user_id: 'mgr01',
+    created_at: '2026-03-05T09:00:00Z', updated_at: '2026-03-06T10:00:00Z', created_by_user_id: 'u001', updated_by_user_id: 'mgr01',
     lines: getLinesForPR('pr-011', _prLinesFactory)
   },
   {
-    pr_id: 'pr-010', pr_no: 'PR-202603-0010', branch_id: 'BR001', requester_user_id: 'u001', requester_name: 'สมชาย ใจดี',
-    request_date: '2026-03-10', required_date: '2026-03-25', cost_center_id: 'CC001', purpose: 'อุปกรณ์ IT สำหรับพนักงานใหม่ (Q2)',
+    pr_id: 'pr-010', pr_no: 'PR-202602-0010', branch_id: 'BR001', requester_user_id: 'u001', requester_name: 'สมชาย ใจดี',
+    request_date: '2026-02-28', required_date: '2026-03-15', cost_center_id: 'CC001', purpose: 'อุปกรณ์ IT สำหรับพนักงานใหม่ (Q2)',
     status: 'DRAFT', currency_code: 'THB', total_amount: 144800, attachment_count: 0,
-    created_at: '2026-03-10T09:00:00Z', updated_at: '2026-03-10T09:00:00Z', created_by_user_id: 'u001', updated_by_user_id: 'u001',
+    created_at: '2026-02-28T09:00:00Z', updated_at: '2026-02-28T09:00:00Z', created_by_user_id: 'u001', updated_by_user_id: 'u001',
     lines: getLinesForPR('pr-010', _prLinesIT)
   },
   {
-    pr_id: 'pr-009', pr_no: 'PR-202603-0009', branch_id: 'BR002', requester_user_id: 'u002', requester_name: 'วิชัย มากมี',
-    request_date: '2026-03-08', required_date: '2026-04-01', cost_center_id: 'CC003', purpose: 'จ้างเหมาทำความสะอาดใหญ่ประจำปี',
+    pr_id: 'pr-009', pr_no: 'PR-202602-0009', branch_id: 'BR002', requester_user_id: 'u002', requester_name: 'วิชัย มากมี',
+    request_date: '2026-02-23', required_date: '2026-03-10', cost_center_id: 'CC003', purpose: 'จ้างเหมาทำความสะอาดใหญ่ประจำปี',
     status: 'PENDING', currency_code: 'THB', total_amount: 120000, attachment_count: 1,
-    created_at: '2026-03-08T10:00:00Z', updated_at: '2026-03-08T10:00:00Z', created_by_user_id: 'u002', updated_by_user_id: 'u002',
+    created_at: '2026-02-23T10:00:00Z', updated_at: '2026-02-23T10:00:00Z', created_by_user_id: 'u002', updated_by_user_id: 'u002',
     lines: getLinesForPR('pr-009', _prLinesService)
   },
   {
-    pr_id: 'pr-008', pr_no: 'PR-202603-0008', branch_id: 'BR001', requester_user_id: 'u003', requester_name: 'นภา สวยงาม',
-    request_date: '2026-03-05', required_date: '2026-03-20', cost_center_id: 'CC002', purpose: 'วัสดุสิ้นเปลืองโรงงาน (Emergency)',
+    pr_id: 'pr-008', pr_no: 'PR-202602-0008', branch_id: 'BR001', requester_user_id: 'u003', requester_name: 'นภา สวยงาม',
+    request_date: '2026-02-18', required_date: '2026-03-05', cost_center_id: 'CC002', purpose: 'วัสดุสิ้นเปลืองโรงงาน (Emergency)',
     status: 'PENDING', currency_code: 'THB', total_amount: 115000, attachment_count: 0,
-    created_at: '2026-03-05T14:30:00Z', updated_at: '2026-03-05T14:30:00Z', created_by_user_id: 'u003', updated_by_user_id: 'u003',
+    created_at: '2026-02-18T14:30:00Z', updated_at: '2026-02-18T14:30:00Z', created_by_user_id: 'u003', updated_by_user_id: 'u003',
     lines: getLinesForPR('pr-008', _prLinesFactory)
   },
   {
-    pr_id: 'pr-007', pr_no: 'PR-202603-0007', branch_id: 'BR001', requester_user_id: 'u001', requester_name: 'สมชาย ใจดี',
-    request_date: '2026-03-01', required_date: '2026-03-15', cost_center_id: 'CC001', purpose: 'เครื่องเขียนสำนักงานล็อตใหญ่',
+    pr_id: 'pr-007', pr_no: 'PR-202602-0007', branch_id: 'BR001', requester_user_id: 'u001', requester_name: 'สมชาย ใจดี',
+    request_date: '2026-02-13', required_date: '2026-02-28', cost_center_id: 'CC001', purpose: 'เครื่องเขียนสำนักงานล็อตใหญ่',
     status: 'APPROVED', currency_code: 'THB', total_amount: 8250, attachment_count: 0,
-    created_at: '2026-03-01T09:00:00Z', updated_at: '2026-03-02T11:00:00Z', created_by_user_id: 'u001', updated_by_user_id: 'mgr01',
+    created_at: '2026-02-13T09:00:00Z', updated_at: '2026-02-14T11:00:00Z', created_by_user_id: 'u001', updated_by_user_id: 'mgr01',
     lines: getLinesForPR('pr-007', _prLinesOffice)
   },
   {
     pr_id: 'pr-006', pr_no: 'PR-202602-0006', branch_id: 'BR002', requester_user_id: 'u002', requester_name: 'วิชัย มากมี',
-    request_date: '2026-02-25', required_date: '2026-03-10', cost_center_id: 'CC003', purpose: 'Laptop สำหรับทีม Sales',
+    request_date: '2026-02-08', required_date: '2026-02-20', cost_center_id: 'CC003', purpose: 'Laptop สำหรับทีม Sales',
     status: 'APPROVED', currency_code: 'THB', total_amount: 239600, attachment_count: 2,
-    created_at: '2026-02-25T13:00:00Z', updated_at: '2026-02-26T09:00:00Z', created_by_user_id: 'u002', updated_by_user_id: 'mgr02',
+    created_at: '2026-02-08T13:00:00Z', updated_at: '2026-02-09T09:00:00Z', created_by_user_id: 'u002', updated_by_user_id: 'mgr02',
     lines: getLinesForPR('pr-006', _prLinesIT)
   },
   {
     pr_id: 'pr-005', pr_no: 'PR-202602-0005', branch_id: 'BR001', requester_user_id: 'u003', requester_name: 'นภา สวยงาม',
-    request_date: '2026-02-20', required_date: '2026-03-05', cost_center_id: 'CC002', purpose: 'น้ำมันหล่อลื่นเครื่องจักร',
+    request_date: '2026-02-03', required_date: '2026-02-15', cost_center_id: 'CC002', purpose: 'น้ำมันหล่อลื่นเครื่องจักร',
     status: 'APPROVED', currency_code: 'THB', total_amount: 85000, attachment_count: 0,
-    created_at: '2026-02-20T10:00:00Z', updated_at: '2026-02-21T15:00:00Z', created_by_user_id: 'u003', updated_by_user_id: 'mgr01',
+    created_at: '2026-02-03T10:00:00Z', updated_at: '2026-02-04T15:00:00Z', created_by_user_id: 'u003', updated_by_user_id: 'mgr01',
     lines: getLinesForPR('pr-005', _prLinesFactory)
   },
   {
-    pr_id: 'pr-004', pr_no: 'PR-202602-0004', branch_id: 'BR001', requester_user_id: 'u004', requester_name: 'กานดา มารยาท',
-    request_date: '2026-02-15', required_date: '2026-02-28', cost_center_id: 'CC004', purpose: 'จัดเลี้ยงรับรองลูกค้า (ยกเลิก)',
+    pr_id: 'pr-004', pr_no: 'PR-202601-0004', branch_id: 'BR001', requester_user_id: 'u004', requester_name: 'กานดา มารยาท',
+    request_date: '2026-01-29', required_date: '2026-02-10', cost_center_id: 'CC004', purpose: 'จัดเลี้ยงรับรองลูกค้า (ยกเลิก)',
     status: 'CANCELLED', currency_code: 'THB', total_amount: 5000, attachment_count: 0,
-    created_at: '2026-02-15T11:00:00Z', updated_at: '2026-02-16T09:00:00Z', created_by_user_id: 'u004', updated_by_user_id: 'u004',
+    created_at: '2026-01-29T11:00:00Z', updated_at: '2026-01-30T09:00:00Z', created_by_user_id: 'u004', updated_by_user_id: 'u004',
     lines: []
   },
   {
-    pr_id: 'pr-003', pr_no: 'PR-202602-0003', branch_id: 'BR001', requester_user_id: 'u001', requester_name: 'สมชาย ใจดี',
-    request_date: '2026-02-10', required_date: '2026-02-25', cost_center_id: 'CC001', purpose: 'จอ Monitor เพิ่มเติม',
+    pr_id: 'pr-003', pr_no: 'PR-202601-0003', branch_id: 'BR001', requester_user_id: 'u001', requester_name: 'สมชาย ใจดี',
+    request_date: '2026-01-24', required_date: '2026-02-05', cost_center_id: 'CC001', purpose: 'จอ Monitor เพิ่มเติม',
     status: 'APPROVED', currency_code: 'THB', total_amount: 50000, attachment_count: 0,
-    created_at: '2026-02-10T09:30:00Z', updated_at: '2026-02-11T10:00:00Z', created_by_user_id: 'u001', updated_by_user_id: 'mgr01',
+    created_at: '2026-01-24T09:30:00Z', updated_at: '2026-01-25T10:00:00Z', created_by_user_id: 'u001', updated_by_user_id: 'mgr01',
     lines: getLinesForPR('pr-003', _prLinesIT)
   },
   {
-    pr_id: 'pr-002', pr_no: 'PR-202602-0002', branch_id: 'BR002', requester_user_id: 'u002', requester_name: 'วิชัย มากมี',
-    request_date: '2026-02-05', required_date: '2026-02-20', cost_center_id: 'CC003', purpose: 'โต๊ะทำงานผู้บริหาร (ไม่อนุมัติ)',
-    status: 'CANCELLED', currency_code: 'THB', total_amount: 45000, attachment_count: 1, // Rejected simulated as Cancelled
-    created_at: '2026-02-05T14:00:00Z', updated_at: '2026-02-06T16:00:00Z', created_by_user_id: 'u002', updated_by_user_id: 'mgr02',
+    pr_id: 'pr-002', pr_no: 'PR-202601-0002', branch_id: 'BR002', requester_user_id: 'u002', requester_name: 'วิชัย มากมี',
+    request_date: '2026-01-19', required_date: '2026-02-05', cost_center_id: 'CC003', purpose: 'โต๊ะทำงานผู้บริหาร (ไม่อนุมัติ)',
+    status: 'CANCELLED', currency_code: 'THB', total_amount: 45000, attachment_count: 1, 
+    created_at: '2026-01-19T14:00:00Z', updated_at: '2026-01-20T16:00:00Z', created_by_user_id: 'u002', updated_by_user_id: 'mgr02',
     lines: []
   },
   {
@@ -157,52 +157,52 @@ export const MOCK_PR_LINES: PRLine[] = IS_DEV ? [..._prLinesIT, ..._prLinesOffic
 
 const _mockRFQs: RFQHeader[] = [
   {
-    rfq_id: 'rfq-008', rfq_no: 'RFQ-202603-0008', pr_id: 'pr-007', branch_id: 'BR001',
-    rfq_date: '2026-03-03', quote_due_date: '2026-03-08', status: 'DRAFT',
-    created_by_user_id: 'pur01', created_at: '2026-03-03T09:00:00Z', updated_at: '2026-03-03T09:00:00Z',
-    pr_no: 'PR-202603-0007', branch_name: 'สำนักงานใหญ่', created_by_name: 'นายจัดซื้อ หนึ่ง',
+    rfq_id: 'rfq-008', rfq_no: 'RFQ-202602-0008', pr_id: 'pr-007', branch_id: 'BR001',
+    rfq_date: '2026-02-15', quote_due_date: '2026-02-20', status: 'DRAFT',
+    created_by_user_id: 'pur01', created_at: '2026-02-15T09:00:00Z', updated_at: '2026-02-15T09:00:00Z',
+    pr_no: 'PR-202602-0007', branch_name: 'สำนักงานใหญ่', created_by_name: 'นายจัดซื้อ หนึ่ง',
     vendor_count: 0, vendor_responded: 0
   },
   {
     rfq_id: 'rfq-007', rfq_no: 'RFQ-202602-0007', pr_id: 'pr-006', branch_id: 'BR002',
-    rfq_date: '2026-02-27', quote_due_date: '2026-03-05', status: 'SENT',
-    created_by_user_id: 'pur02', created_at: '2026-02-27T10:00:00Z', updated_at: '2026-02-27T10:00:00Z',
+    rfq_date: '2026-02-10', quote_due_date: '2026-02-15', status: 'SENT',
+    created_by_user_id: 'pur02', created_at: '2026-02-10T10:00:00Z', updated_at: '2026-02-10T10:00:00Z',
     pr_no: 'PR-202602-0006', branch_name: 'สาขาเชียงใหม่', created_by_name: 'นางสาวจัดซื้อ สอง',
     vendor_count: 3, vendor_responded: 1
   },
   {
     rfq_id: 'rfq-006', rfq_no: 'RFQ-202602-0006', pr_id: 'pr-005', branch_id: 'BR001',
-    rfq_date: '2026-02-22', quote_due_date: '2026-02-28', status: 'IN_PROGRESS',
-    created_by_user_id: 'pur01', created_at: '2026-02-22T11:00:00Z', updated_at: '2026-02-23T09:00:00Z',
+    rfq_date: '2026-02-05', quote_due_date: '2026-02-10', status: 'IN_PROGRESS',
+    created_by_user_id: 'pur01', created_at: '2026-02-05T11:00:00Z', updated_at: '2026-02-06T09:00:00Z',
     pr_no: 'PR-202602-0005', branch_name: 'สำนักงานใหญ่', created_by_name: 'นายจัดซื้อ หนึ่ง',
     vendor_count: 2, vendor_responded: 2
   },
   {
-    rfq_id: 'rfq-005', rfq_no: 'RFQ-202602-0005', pr_id: 'pr-003', branch_id: 'BR001',
-    rfq_date: '2026-02-12', quote_due_date: '2026-02-18', status: 'CLOSED', // Complete
-    created_by_user_id: 'pur01', created_at: '2026-02-12T13:00:00Z', updated_at: '2026-02-20T10:00:00Z',
-    pr_no: 'PR-202602-0003', branch_name: 'สำนักงานใหญ่', created_by_name: 'นายจัดซื้อ หนึ่ง',
+    rfq_id: 'rfq-005', rfq_no: 'RFQ-202601-0005', pr_id: 'pr-003', branch_id: 'BR001',
+    rfq_date: '2026-01-26', quote_due_date: '2026-02-01', status: 'CLOSED', // Complete
+    created_by_user_id: 'pur01', created_at: '2026-01-26T13:00:00Z', updated_at: '2026-02-03T10:00:00Z',
+    pr_no: 'PR-202601-0003', branch_name: 'สำนักงานใหญ่', created_by_name: 'นายจัดซื้อ หนึ่ง',
     vendor_count: 3, vendor_responded: 3
   },
   {
-    rfq_id: 'rfq-004', rfq_no: 'RFQ-202602-0004', pr_id: 'pr-013', branch_id: 'BR001', // Linked to pr-013
-    rfq_date: '2026-02-10', quote_due_date: '2026-02-15', status: 'CANCELLED',
-    created_by_user_id: 'pur01', created_at: '2026-02-10T09:00:00Z', updated_at: '2026-02-11T14:00:00Z',
-    pr_no: 'PR-202602-0013', branch_name: 'สำนักงานใหญ่', created_by_name: 'นายจัดซื้อ หนึ่ง',
+    rfq_id: 'rfq-004', rfq_no: 'RFQ-202603-0004', pr_id: 'pr-013', branch_id: 'BR001', 
+    rfq_date: '2026-03-17', quote_due_date: '2026-03-22', status: 'CANCELLED',
+    created_by_user_id: 'pur01', created_at: '2026-03-17T09:00:00Z', updated_at: '2026-03-18T14:00:00Z',
+    pr_no: 'PR-202603-0013', branch_name: 'สำนักงานใหญ่', created_by_name: 'นายจัดซื้อ หนึ่ง',
     vendor_count: 0, vendor_responded: 0
   },
   {
-    rfq_id: 'rfq-003', rfq_no: 'RFQ-202602-0003', pr_id: 'pr-012', branch_id: 'BR002', // Linked to pr-012
-    rfq_date: '2026-02-08', quote_due_date: '2026-02-14', status: 'CLOSED',
-    created_by_user_id: 'pur02', created_at: '2026-02-08T15:00:00Z', updated_at: '2026-02-15T09:00:00Z',
-    pr_no: 'PR-202602-0012', branch_name: 'สาขาเชียงใหม่', created_by_name: 'นางสาวจัดซื้อ สอง',
+    rfq_id: 'rfq-003', rfq_no: 'RFQ-202603-0003', pr_id: 'pr-012', branch_id: 'BR002', 
+    rfq_date: '2026-03-12', quote_due_date: '2026-03-18', status: 'CLOSED',
+    created_by_user_id: 'pur02', created_at: '2026-03-12T15:00:00Z', updated_at: '2026-03-19T09:00:00Z',
+    pr_no: 'PR-202603-0012', branch_name: 'สาขาเชียงใหม่', created_by_name: 'นางสาวจัดซื้อ สอง',
     vendor_count: 2, vendor_responded: 2
   },
   {
-    rfq_id: 'rfq-002', rfq_no: 'RFQ-202601-0002', pr_id: 'pr-011', branch_id: 'BR001', // Linked to pr-011
-    rfq_date: '2026-01-25', quote_due_date: '2026-02-01', status: 'SENT',
-    created_by_user_id: 'pur01', created_at: '2026-01-25T10:00:00Z', updated_at: '2026-01-25T10:00:00Z',
-    pr_no: 'PR-202601-0011', branch_name: 'สำนักงานใหญ่', created_by_name: 'นายจัดซื้อ หนึ่ง',
+    rfq_id: 'rfq-002', rfq_no: 'RFQ-202603-0002', pr_id: 'pr-011', branch_id: 'BR001', 
+    rfq_date: '2026-03-07', quote_due_date: '2026-03-12', status: 'SENT',
+    created_by_user_id: 'pur01', created_at: '2026-03-07T10:00:00Z', updated_at: '2026-03-07T10:00:00Z',
+    pr_no: 'PR-202603-0011', branch_name: 'สำนักงานใหญ่', created_by_name: 'นายจัดซื้อ หนึ่ง',
     vendor_count: 4, vendor_responded: 1
   },
   {
@@ -223,20 +223,20 @@ export const MOCK_RFQ_VENDORS: RFQVendor[] = [];
 // =============================================================================
 
 const _mockQTs: QTListItem[] = [
-  // Responses for RFQ-007 (Laptop)
-  { quotation_id: 'qt-010', quotation_no: 'QT-V001-010', qc_id: '', rfq_no: 'RFQ-202602-0007', vendor_id: 'v001', vendor_code: 'V001', vendor_name: 'IT Supply Co.', quotation_date: '2026-02-28', valid_until: '2026-03-30', payment_term_days: 30, lead_time_days: 7, total_amount: 240000, currency_code: 'THB', exchange_rate: 1, status: 'SUBMITTED' },
-  { quotation_id: 'qt-009', quotation_no: 'QT-V005-009', qc_id: '', rfq_no: 'RFQ-202602-0007', vendor_id: 'v005', vendor_code: 'V005', vendor_name: 'Smart Tech', quotation_date: '2026-02-28', valid_until: '2026-03-30', payment_term_days: 30, lead_time_days: 5, total_amount: 235000, currency_code: 'THB', exchange_rate: 1, status: 'DRAFT' },
+  // Responses for RFQ-007 (Laptop - Feb 10)
+  { quotation_id: 'qt-010', quotation_no: 'QT-V001-010', qc_id: '', rfq_no: 'RFQ-202602-0007', vendor_id: 'v001', vendor_code: 'V001', vendor_name: 'IT Supply Co.', quotation_date: '2026-02-11', valid_until: '2026-03-11', payment_term_days: 30, lead_time_days: 7, total_amount: 240000, currency_code: 'THB', exchange_rate: 1, status: 'SUBMITTED' },
+  { quotation_id: 'qt-009', quotation_no: 'QT-V005-009', qc_id: '', rfq_no: 'RFQ-202602-0007', vendor_id: 'v005', vendor_code: 'V005', vendor_name: 'Smart Tech', quotation_date: '2026-02-12', valid_until: '2026-03-12', payment_term_days: 30, lead_time_days: 5, total_amount: 235000, currency_code: 'THB', exchange_rate: 1, status: 'DRAFT' },
 
-  // Responses for RFQ-006 (Factory Oil)
-  { quotation_id: 'qt-008', quotation_no: 'QT-V006-008', qc_id: 'qc-006', rfq_no: 'RFQ-202602-0006', vendor_id: 'v006', vendor_code: 'V006', vendor_name: 'Industrial Part Ltd.', quotation_date: '2026-02-24', valid_until: '2026-03-24', payment_term_days: 60, lead_time_days: 3, total_amount: 85000, currency_code: 'THB', exchange_rate: 1, status: 'SUBMITTED' },
-  { quotation_id: 'qt-007', quotation_no: 'QT-V007-007', qc_id: 'qc-006', rfq_no: 'RFQ-202602-0006', vendor_id: 'v007', vendor_code: 'V007', vendor_name: 'Global Oil Co.', quotation_date: '2026-02-25', valid_until: '2026-03-25', payment_term_days: 45, lead_time_days: 7, total_amount: 82000, currency_code: 'THB', exchange_rate: 1, status: 'SUBMITTED' },
+  // Responses for RFQ-006 (Factory Oil - Feb 05)
+  { quotation_id: 'qt-008', quotation_no: 'QT-V006-008', qc_id: 'qc-006', rfq_no: 'RFQ-202602-0006', vendor_id: 'v006', vendor_code: 'V006', vendor_name: 'Industrial Part Ltd.', quotation_date: '2026-02-06', valid_until: '2026-03-06', payment_term_days: 60, lead_time_days: 3, total_amount: 85000, currency_code: 'THB', exchange_rate: 1, status: 'SUBMITTED' },
+  { quotation_id: 'qt-007', quotation_no: 'QT-V007-007', qc_id: 'qc-006', rfq_no: 'RFQ-202602-0006', vendor_id: 'v007', vendor_code: 'V007', vendor_name: 'Global Oil Co.', quotation_date: '2026-02-07', valid_until: '2026-03-07', payment_term_days: 45, lead_time_days: 7, total_amount: 82000, currency_code: 'THB', exchange_rate: 1, status: 'SUBMITTED' },
 
-  // Responses for RFQ-005 (Monitor)
-  { quotation_id: 'qt-006', quotation_no: 'QT-V001-006', qc_id: 'qc-005', rfq_no: 'RFQ-202602-0005', vendor_id: 'v001', vendor_code: 'V001', vendor_name: 'IT Supply Co.', quotation_date: '2026-02-14', valid_until: '2026-03-14', payment_term_days: 30, lead_time_days: 7, total_amount: 50000, currency_code: 'THB', exchange_rate: 1, status: 'SELECTED' }, // Winner
-  { quotation_id: 'qt-005', quotation_no: 'QT-V005-005', qc_id: 'qc-005', rfq_no: 'RFQ-202602-0005', vendor_id: 'v005', vendor_code: 'V005', vendor_name: 'Smart Tech', quotation_date: '2026-02-15', valid_until: '2026-03-15', payment_term_days: 30, lead_time_days: 10, total_amount: 52000, currency_code: 'THB', exchange_rate: 1, status: 'REJECTED' },
-  { quotation_id: 'qt-004', quotation_no: 'QT-V002-004', qc_id: 'qc-005', rfq_no: 'RFQ-202602-0005', vendor_id: 'v002', vendor_code: 'V002', vendor_name: 'OfficeMate', quotation_date: '2026-02-16', valid_until: '2026-03-16', payment_term_days: 30, lead_time_days: 2, total_amount: 55000, currency_code: 'THB', exchange_rate: 1, status: 'REJECTED' },
+  // Responses for RFQ-005 (Monitor - Jan 26)
+  { quotation_id: 'qt-006', quotation_no: 'QT-V001-006', qc_id: 'qc-005', rfq_no: 'RFQ-202601-0005', vendor_id: 'v001', vendor_code: 'V001', vendor_name: 'IT Supply Co.', quotation_date: '2026-01-27', valid_until: '2026-02-27', payment_term_days: 30, lead_time_days: 7, total_amount: 50000, currency_code: 'THB', exchange_rate: 1, status: 'SELECTED' }, // Winner
+  { quotation_id: 'qt-005', quotation_no: 'QT-V005-005', qc_id: 'qc-005', rfq_no: 'RFQ-202601-0005', vendor_id: 'v005', vendor_code: 'V005', vendor_name: 'Smart Tech', quotation_date: '2026-01-28', valid_until: '2026-02-28', payment_term_days: 30, lead_time_days: 10, total_amount: 52000, currency_code: 'THB', exchange_rate: 1, status: 'REJECTED' },
+  { quotation_id: 'qt-004', quotation_no: 'QT-V002-004', qc_id: 'qc-005', rfq_no: 'RFQ-202601-0005', vendor_id: 'v002', vendor_code: 'V002', vendor_name: 'OfficeMate', quotation_date: '2026-01-29', valid_until: '2026-03-01', payment_term_days: 30, lead_time_days: 2, total_amount: 55000, currency_code: 'THB', exchange_rate: 1, status: 'REJECTED' },
 
-  // Responses for RFQ-001 (Stationery)
+  // Responses for RFQ-001 (Stationery - Jan 17)
   { quotation_id: 'qt-003', quotation_no: 'QT-V002-003', qc_id: 'qc-001', rfq_no: 'RFQ-202601-0001', vendor_id: 'v002', vendor_code: 'V002', vendor_name: 'OfficeMate', quotation_date: '2026-01-18', valid_until: '2026-02-18', payment_term_days: 30, lead_time_days: 1, total_amount: 8250, currency_code: 'THB', exchange_rate: 1, status: 'SELECTED' }, // Winner
   { quotation_id: 'qt-002', quotation_no: 'QT-V003-002', qc_id: 'qc-001', rfq_no: 'RFQ-202601-0001', vendor_id: 'v003', vendor_code: 'V003', vendor_name: 'B2S', quotation_date: '2026-01-19', valid_until: '2026-02-19', payment_term_days: 30, lead_time_days: 3, total_amount: 8500, currency_code: 'THB', exchange_rate: 1, status: 'REJECTED' },
   { quotation_id: 'qt-001', quotation_no: 'QT-V004-001', qc_id: 'qc-001', rfq_no: 'RFQ-202601-0001', vendor_id: 'v004', vendor_code: 'V004', vendor_name: 'Local Store', quotation_date: '2026-01-20', valid_until: '2026-02-20', payment_term_days: 0, lead_time_days: 0, total_amount: 9000, currency_code: 'THB', exchange_rate: 1, status: 'REJECTED' },
@@ -249,11 +249,11 @@ export const MOCK_QTS: QTListItem[] = IS_DEV ? _mockQTs : [];
 // =============================================================================
 
 const _mockQCs: QCListItem[] = [
-  { qc_id: 'qc-006', qc_no: 'QC-202602-0006', pr_id: 'pr-005', pr_no: 'PR-202602-0005', created_at: '2026-02-26', status: 'WAITING_FOR_PO', vendor_count: 2, lowest_bidder_vendor_id: 'v007', lowest_bidder_name: 'Global Oil Co.', lowest_bid_amount: 82000 },
-  { qc_id: 'qc-005', qc_no: 'QC-202602-0005', pr_id: 'pr-003', pr_no: 'PR-202602-0003', created_at: '2026-02-17', status: 'PO_CREATED', vendor_count: 3, lowest_bidder_vendor_id: 'v001', lowest_bidder_name: 'IT Supply Co.', lowest_bid_amount: 50000 },
-  { qc_id: 'qc-004', qc_no: 'QC-202602-0004', pr_id: 'pr-x', pr_no: 'PR-202602-xxxx', created_at: '2026-02-10', status: 'PO_CREATED', vendor_count: 1, lowest_bidder_vendor_id: 'v00x', lowest_bidder_name: 'Test Vendor', lowest_bid_amount: 10000 },
-  { qc_id: 'qc-003', qc_no: 'QC-202602-0003', pr_id: 'pr-y', pr_no: 'PR-202602-yyyy', created_at: '2026-02-05', status: 'WAITING_FOR_PO', vendor_count: 2, lowest_bidder_vendor_id: 'v00y', lowest_bidder_name: 'Test Vendor Y', lowest_bid_amount: 5500 },
-  { qc_id: 'qc-002', qc_no: 'QC-202601-0002', pr_id: 'pr-z', pr_no: 'PR-202601-zzzz', created_at: '2026-01-30', status: 'PO_CREATED', vendor_count: 3, lowest_bidder_vendor_id: 'v00z', lowest_bidder_name: 'Test Vendor Z', lowest_bid_amount: 12000 },
+  { qc_id: 'qc-006', qc_no: 'QC-202602-0006', pr_id: 'pr-005', pr_no: 'PR-202602-0005', created_at: '2026-02-08', status: 'WAITING_FOR_PO', vendor_count: 2, lowest_bidder_vendor_id: 'v007', lowest_bidder_name: 'Global Oil Co.', lowest_bid_amount: 82000 },
+  { qc_id: 'qc-005', qc_no: 'QC-202601-0005', pr_id: 'pr-003', pr_no: 'PR-202601-0003', created_at: '2026-01-31', status: 'PO_CREATED', vendor_count: 3, lowest_bidder_vendor_id: 'v001', lowest_bidder_name: 'IT Supply Co.', lowest_bid_amount: 50000 },
+  { qc_id: 'qc-004', qc_no: 'QC-202603-0004', pr_id: 'pr-x', pr_no: 'PR-202603-xxxx', created_at: '2026-03-20', status: 'PO_CREATED', vendor_count: 1, lowest_bidder_vendor_id: 'v00x', lowest_bidder_name: 'Test Vendor', lowest_bid_amount: 10000 },
+  { qc_id: 'qc-003', qc_no: 'QC-202603-0003', pr_id: 'pr-y', pr_no: 'PR-202603-yyyy', created_at: '2026-03-15', status: 'WAITING_FOR_PO', vendor_count: 2, lowest_bidder_vendor_id: 'v00y', lowest_bidder_name: 'Test Vendor Y', lowest_bid_amount: 5500 },
+  { qc_id: 'qc-002', qc_no: 'QC-202603-0002', pr_id: 'pr-z', pr_no: 'PR-202603-zzzz', created_at: '2026-03-05', status: 'PO_CREATED', vendor_count: 3, lowest_bidder_vendor_id: 'v00z', lowest_bidder_name: 'Test Vendor Z', lowest_bid_amount: 12000 },
   { qc_id: 'qc-001', qc_no: 'QC-202601-0001', pr_id: 'pr-001', pr_no: 'PR-202601-0001', created_at: '2026-01-21', status: 'PO_CREATED', vendor_count: 3, lowest_bidder_vendor_id: 'v002', lowest_bidder_name: 'OfficeMate', lowest_bid_amount: 8250 },
 ];
 
@@ -264,13 +264,13 @@ export const MOCK_QCS: QCListItem[] = IS_DEV ? _mockQCs : [];
 // =============================================================================
 
 const _mockPOs: POListItem[] = [
-  { po_id: 'po-008', po_no: 'PO-202603-0008', po_date: '2026-03-05', pr_id: 'pr-x', vendor_id: 'v001', vendor_name: 'IT Supply Co.', branch_id: 'br1', status: 'DRAFT', currency_code: 'THB', exchange_rate: 1, payment_term_days: 30, subtotal: 5000, tax_amount: 350, total_amount: 5350, created_by: 'u1', item_count: 1 },
-  { po_id: 'po-007', po_no: 'PO-202603-0007', po_date: '2026-03-01', pr_id: 'pr-y', vendor_id: 'v002', vendor_name: 'OfficeMate', branch_id: 'br1', status: 'APPROVED', currency_code: 'THB', exchange_rate: 1, payment_term_days: 30, subtotal: 10000, tax_amount: 700, total_amount: 10700, created_by: 'u1', item_count: 5 },
-  { po_id: 'po-006', po_no: 'PO-202602-0006', po_date: '2026-02-20', pr_id: 'pr-003', vendor_id: 'v001', vendor_name: 'IT Supply Co.', branch_id: 'br1', status: 'ISSUED', currency_code: 'THB', exchange_rate: 1, payment_term_days: 30, subtotal: 50000, tax_amount: 3500, total_amount: 53500, created_by: 'u1', item_count: 2 }, // Linked to GRN Draft
-  { po_id: 'po-005', po_no: 'PO-202602-0005', po_date: '2026-02-15', pr_id: 'pr-z', vendor_id: 'v006', vendor_name: 'Industrial Part', branch_id: 'br1', status: 'ISSUED', currency_code: 'THB', exchange_rate: 1, payment_term_days: 60, subtotal: 85000, tax_amount: 5950, total_amount: 90950, created_by: 'u1', item_count: 2 },
-  { po_id: 'po-004', po_no: 'PO-202602-0004', po_date: '2026-02-10', pr_id: 'pr-a', vendor_id: 'v004', vendor_name: 'Local Store', branch_id: 'br1', status: 'CANCELLED', currency_code: 'THB', exchange_rate: 1, payment_term_days: 0, subtotal: 3000, tax_amount: 210, total_amount: 3210, created_by: 'u1', item_count: 1 },
-  { po_id: 'po-003', po_no: 'PO-202602-0003', po_date: '2026-02-05', pr_id: 'pr-b', vendor_id: 'v003', vendor_name: 'B2S', branch_id: 'br1', status: 'CLOSED', currency_code: 'THB', exchange_rate: 1, payment_term_days: 30, subtotal: 2500, tax_amount: 175, total_amount: 2675, created_by: 'u1', item_count: 3 },
-  { po_id: 'po-002', po_no: 'PO-202602-0002', po_date: '2026-02-01', pr_id: 'pr-c', vendor_id: 'v002', vendor_name: 'OfficeMate', branch_id: 'br1', status: 'CLOSED', currency_code: 'THB', exchange_rate: 1, payment_term_days: 30, subtotal: 4500, tax_amount: 315, total_amount: 4815, created_by: 'u1', item_count: 5 },
+  { po_id: 'po-008', po_no: 'PO-202603-0008', po_date: '2026-03-25', pr_id: 'pr-x', vendor_id: 'v001', vendor_name: 'IT Supply Co.', branch_id: 'br1', status: 'DRAFT', currency_code: 'THB', exchange_rate: 1, payment_term_days: 30, subtotal: 5000, tax_amount: 350, total_amount: 5350, created_by: 'u1', item_count: 1 },
+  { po_id: 'po-007', po_no: 'PO-202603-0007', po_date: '2026-03-20', pr_id: 'pr-y', vendor_id: 'v002', vendor_name: 'OfficeMate', branch_id: 'br1', status: 'APPROVED', currency_code: 'THB', exchange_rate: 1, payment_term_days: 30, subtotal: 10000, tax_amount: 700, total_amount: 10700, created_by: 'u1', item_count: 5 },
+  { po_id: 'po-006', po_no: 'PO-202602-0006', po_date: '2026-02-05', pr_id: 'pr-003', vendor_id: 'v001', vendor_name: 'IT Supply Co.', branch_id: 'br1', status: 'ISSUED', currency_code: 'THB', exchange_rate: 1, payment_term_days: 30, subtotal: 50000, tax_amount: 3500, total_amount: 53500, created_by: 'u1', item_count: 2 }, // Linked to GRN Draft
+  { po_id: 'po-005', po_no: 'PO-202603-0005', po_date: '2026-03-10', pr_id: 'pr-z', vendor_id: 'v006', vendor_name: 'Industrial Part', branch_id: 'br1', status: 'ISSUED', currency_code: 'THB', exchange_rate: 1, payment_term_days: 60, subtotal: 85000, tax_amount: 5950, total_amount: 90950, created_by: 'u1', item_count: 2 },
+  { po_id: 'po-004', po_no: 'PO-202603-0004', po_date: '2026-03-01', pr_id: 'pr-a', vendor_id: 'v004', vendor_name: 'Local Store', branch_id: 'br1', status: 'CANCELLED', currency_code: 'THB', exchange_rate: 1, payment_term_days: 0, subtotal: 3000, tax_amount: 210, total_amount: 3210, created_by: 'u1', item_count: 1 },
+  { po_id: 'po-003', po_no: 'PO-202602-0003', po_date: '2026-02-15', pr_id: 'pr-b', vendor_id: 'v003', vendor_name: 'B2S', branch_id: 'br1', status: 'CLOSED', currency_code: 'THB', exchange_rate: 1, payment_term_days: 30, subtotal: 2500, tax_amount: 175, total_amount: 2675, created_by: 'u1', item_count: 3 },
+  { po_id: 'po-002', po_no: 'PO-202602-0002', po_date: '2026-02-10', pr_id: 'pr-c', vendor_id: 'v002', vendor_name: 'OfficeMate', branch_id: 'br1', status: 'CLOSED', currency_code: 'THB', exchange_rate: 1, payment_term_days: 30, subtotal: 4500, tax_amount: 315, total_amount: 4815, created_by: 'u1', item_count: 5 },
   { po_id: 'po-001', po_no: 'PO-202601-0001', po_date: '2026-01-25', pr_id: 'pr-001', vendor_id: 'v002', vendor_name: 'OfficeMate', branch_id: 'br1', status: 'CLOSED', currency_code: 'THB', exchange_rate: 1, payment_term_days: 30, subtotal: 8250, tax_amount: 577.5, total_amount: 8827.5, created_by: 'u1', item_count: 2 }, // Full Flow
 ];
 
@@ -281,13 +281,13 @@ export const MOCK_POS: POListItem[] = IS_DEV ? _mockPOs : [];
 // =============================================================================
 
 const _mockGRNs: GRNListItem[] = [
-  { grn_id: 'grn-008', grn_no: 'GRN-202603-0008', po_id: 'po-006', po_no: 'PO-202602-0006', received_date: '2026-03-05', warehouse_id: 'w1', warehouse_name: 'Main WH', received_by: 'u2', received_by_name: 'Staff', status: 'DRAFT', item_count: 2 },
-  { grn_id: 'grn-007', grn_no: 'GRN-202603-0007', po_id: 'po-005', po_no: 'PO-202602-0005', received_date: '2026-03-01', warehouse_id: 'w2', warehouse_name: 'Factory WH', received_by: 'u2', received_by_name: 'Staff', status: 'POSTED', item_count: 2 },
-  { grn_id: 'grn-006', grn_no: 'GRN-202602-0006', po_id: 'po-003', po_no: 'PO-202602-0003', received_date: '2026-02-25', warehouse_id: 'w1', warehouse_name: 'Main WH', received_by: 'u2', received_by_name: 'Staff', status: 'POSTED', item_count: 3 },
-  { grn_id: 'grn-005', grn_no: 'GRN-202602-0005', po_id: 'po-002', po_no: 'PO-202602-0002', received_date: '2026-02-20', warehouse_id: 'w1', warehouse_name: 'Main WH', received_by: 'u2', received_by_name: 'Staff', status: 'RETURNED', item_count: 5 }, // Damaged
-  { grn_id: 'grn-004', grn_no: 'GRN-202602-0004', po_id: 'po-x', po_no: 'PO-202602-xxxx', received_date: '2026-02-15', warehouse_id: 'w1', warehouse_name: 'Main WH', received_by: 'u2', received_by_name: 'Staff', status: 'REVERSED', item_count: 1 },
-  { grn_id: 'grn-003', grn_no: 'GRN-202602-0003', po_id: 'po-y', po_no: 'PO-202602-yyyy', received_date: '2026-02-10', warehouse_id: 'w1', warehouse_name: 'Main WH', received_by: 'u2', received_by_name: 'Staff', status: 'POSTED', item_count: 1 },
-  { grn_id: 'grn-002', grn_no: 'GRN-202602-0002', po_id: 'po-z', po_no: 'PO-202602-zzzz', received_date: '2026-02-05', warehouse_id: 'w1', warehouse_name: 'Main WH', received_by: 'u2', received_by_name: 'Staff', status: 'POSTED', item_count: 1 },
+  { grn_id: 'grn-008', grn_no: 'GRN-202602-0008', po_id: 'po-006', po_no: 'PO-202602-0006', received_date: '2026-02-10', warehouse_id: 'w1', warehouse_name: 'Main WH', received_by: 'u2', received_by_name: 'Staff', status: 'DRAFT', item_count: 2 },
+  { grn_id: 'grn-007', grn_no: 'GRN-202603-0007', po_id: 'po-005', po_no: 'PO-202603-0005', received_date: '2026-03-15', warehouse_id: 'w2', warehouse_name: 'Factory WH', received_by: 'u2', received_by_name: 'Staff', status: 'POSTED', item_count: 2 },
+  { grn_id: 'grn-006', grn_no: 'GRN-202602-0006', po_id: 'po-003', po_no: 'PO-202602-0003', received_date: '2026-02-20', warehouse_id: 'w1', warehouse_name: 'Main WH', received_by: 'u2', received_by_name: 'Staff', status: 'POSTED', item_count: 3 },
+  { grn_id: 'grn-005', grn_no: 'GRN-202602-0005', po_id: 'po-002', po_no: 'PO-202602-0002', received_date: '2026-02-15', warehouse_id: 'w1', warehouse_name: 'Main WH', received_by: 'u2', received_by_name: 'Staff', status: 'RETURNED', item_count: 5 }, // Damaged
+  { grn_id: 'grn-004', grn_no: 'GRN-202603-0004', po_id: 'po-x', po_no: 'PO-202603-xxxx', received_date: '2026-03-28', warehouse_id: 'w1', warehouse_name: 'Main WH', received_by: 'u2', received_by_name: 'Staff', status: 'REVERSED', item_count: 1 },
+  { grn_id: 'grn-003', grn_no: 'GRN-202603-0003', po_id: 'po-y', po_no: 'PO-202603-yyyy', received_date: '2026-03-23', warehouse_id: 'w1', warehouse_name: 'Main WH', received_by: 'u2', received_by_name: 'Staff', status: 'POSTED', item_count: 1 },
+  { grn_id: 'grn-002', grn_no: 'GRN-202603-0002', po_id: 'po-z', po_no: 'PO-202603-zzzz', received_date: '2026-03-13', warehouse_id: 'w1', warehouse_name: 'Main WH', received_by: 'u2', requester_name: 'Staff', status: 'POSTED', item_count: 1 } as unknown as GRNListItem, // Fix type mismatch if needed, sticking to pattern
   { grn_id: 'grn-001', grn_no: 'GRN-202601-0001', po_id: 'po-001', po_no: 'PO-202601-0001', received_date: '2026-01-30', warehouse_id: 'w1', warehouse_name: 'Main WH', received_by: 'u2', received_by_name: 'Staff', status: 'POSTED', item_count: 2 }, // Full Flow
 ];
 
