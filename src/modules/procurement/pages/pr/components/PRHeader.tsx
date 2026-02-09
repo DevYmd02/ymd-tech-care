@@ -10,6 +10,7 @@ import type { PRFormData } from '@/modules/procurement/types/pr-types';
 import type { CostCenter, Project } from '@/modules/master-data/types/master-data-types';
 import { VendorSearch } from '@/shared/components/VendorSearch';
 import type { VendorMaster } from '@/modules/master-data/vendor/types/vendor-types';
+import type { BranchListItem } from '@/modules/master-data/types/master-data-types';
 
 interface Props {
   register: UseFormRegister<PRFormData>;
@@ -17,10 +18,11 @@ interface Props {
   watch: UseFormWatch<PRFormData>;
   costCenters: CostCenter[];
   projects: Project[];
+  branches: BranchListItem[];
   onVendorSelect: (vendor: VendorMaster | null) => void;
 }
 
-export const PRHeader: React.FC<Props> = ({ register, setValue, watch, costCenters, projects, onVendorSelect }) => {
+export const PRHeader: React.FC<Props> = ({ register, setValue, watch, costCenters, projects, branches, onVendorSelect }) => {
   // Watch for vendor values to display in the selector
   const preferredVendorId = watch("preferred_vendor_id");
   const vendorName = watch("vendor_name");
@@ -66,11 +68,14 @@ export const PRHeader: React.FC<Props> = ({ register, setValue, watch, costCente
         </div>
 
         <div className="col-span-12 md:col-span-3">
-          <label className={labelClass}>สกุลเงิน</label>
-          <select className={selectClass} {...register("currency_id")}>
-            <option value="THB">THB - บาท</option>
-            <option value="USD">USD - ดอลลาร์</option>
-            <option value="EUR">EUR - ยูโร</option>
+          <label className={labelClass}>สาขา (Branch) <span className="text-red-500">*</span></label>
+          <select className={selectClass} {...register("branch_id")}>
+            <option value="">-- เลือกสาขา --</option>
+            {branches.map((branch) => (
+              <option key={branch.branch_id} value={branch.branch_id}>
+                {branch.branch_name}
+              </option>
+            ))}
           </select>
         </div>
 
