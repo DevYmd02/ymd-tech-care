@@ -124,6 +124,11 @@ export interface ApiClient extends Omit<AxiosInstance, 'get' | 'put' | 'post' | 
 
 if (import.meta.env.DEV) {
   logApiMode();
+  if (USE_MOCK) {
+    import('./mockAdapter').then(({ setupMocks }) => {
+      setupMocks(api);
+    });
+  }
 }
 
 export default api as ApiClient;

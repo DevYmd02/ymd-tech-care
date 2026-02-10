@@ -1,7 +1,6 @@
 /**
  * @file auth.service.ts
- * @description Auth Service with Colocated Mocking Strategy
- * @note When VITE_USE_MOCK=true, returns mock data instead of hitting real API
+ * @description Auth Service
  */
 
 import { AxiosError } from 'axios';
@@ -50,43 +49,11 @@ export interface RegisterResponse {
 }
 
 // =============================================================================
-// MOCK DATA (For Development Mode)
-// =============================================================================
-
-const MOCK_LOGIN_RESPONSE: LoginResponse = {
-    access_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyIiwidXNlcm5hbWUiOiJqb2huLmRvZTEiLCJpYXQiOjE3MzgzMjAwMDAsImV4cCI6MTczODQwNjQwMH0.mock_signature_for_dev",
-    user: {
-        id: 2,
-        username: "john.doe1",
-        employee_id: 2,
-        employee: {
-            employee_id: 2,
-            branch_id: 1,
-            employee_code: "EMP0003",
-            employee_fullname: "นาย สมชาย ใจดี",
-            position_id: 1,
-            department_id: 1
-        }
-    }
-};
-
-// =============================================================================
 // SERVICE IMPLEMENTATION
 // =============================================================================
 
 export const AuthService = {
     login: async (data: LoginPayload): Promise<LoginResponse> => {
-        const isMock = import.meta.env.VITE_USE_MOCK === 'true';
-
-        // ===== MOCK MODE =====
-        if (isMock) {
-            logger.info('📢 [AuthService] Using Mock Data (VITE_USE_MOCK=true)');
-            // Simulate network delay
-            await new Promise((resolve) => setTimeout(resolve, 500));
-            return MOCK_LOGIN_RESPONSE;
-        }
-
-        // ===== REAL API MODE =====
         try {
             const response = await api.post<LoginResponse>('/auth/login', data);
             logger.info('🔍 [AuthService] Raw Login Response:', response);
@@ -103,7 +70,6 @@ export const AuthService = {
 
     register: async (data: RegisterPayload): Promise<RegisterResponse> => {
         try {
-            // Backend expects POST /auth/employees/:employee_id/auth
             const { employee_id, ...body } = data;
             const response = await api.post<RegisterResponse>(`/auth/employees/${employee_id}/auth`, body);
             logger.info('📦 [AuthService] Raw Register Response:', response);
