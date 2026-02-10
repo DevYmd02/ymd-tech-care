@@ -1,10 +1,19 @@
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import path from 'path'
+import { visualizer } from 'rollup-plugin-visualizer'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    visualizer({
+      open: false,
+      filename: 'stats.html',
+      gzipSize: true,
+      brotliSize: true,
+    })
+  ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -45,30 +54,29 @@ export default defineConfig({
             // (recharts, lucide-react) into a single vendor-react chunk.
             // ============================================================
             
-            // React ecosystem: Core + UI libraries that depend on React
-            // This prevents circular dependency between vendor-core and vendor-charts
+            if (id.includes('lucide')) return 'vendor-icons';
+            
+            // React Core & UI Libraries (Grouping together to avoid circular dependencies)
             if (
-              id.includes('react-dom') ||
-              id.includes('node_modules/react/') ||
-              id.includes('react-router') ||
-              id.includes('scheduler') ||
-              id.includes('recharts') ||      // Charts library (React-dependent)
-              id.includes('lucide-react')     // Icons library (React-dependent)
+              id.includes('node_modules/react/') || 
+              id.includes('node_modules/react-dom/') || 
+              id.includes('node_modules/react-router/') ||
+              id.includes('node_modules/react-router-dom/') ||
+              id.includes('node_modules/scheduler/') ||
+              id.includes('recharts')
             ) {
               return 'vendor-react';
             }
-            
-            // Form handling libraries (standalone, no React runtime dependency)
-            if (id.includes('react-hook-form')) return 'vendor-form';
-            
-            // Validation library (standalone)
-            if (id.includes('zod')) return 'vendor-zod';
-            
-            // HTTP client (standalone)
-            if (id.includes('axios')) return 'vendor-axios';
-            
-            // TanStack Query (React-dependent but loaded separately for caching)
-            if (id.includes('@tanstack/react-query')) return 'vendor-query';
+
+            // Utilities and other large libs
+            if (
+              id.includes('axios') ||
+              id.includes('zod') ||
+              id.includes('@tanstack') ||
+              id.includes('sweetalert2')
+            ) {
+              return 'vendor-utils';
+            }
             
             // Let Vite/Rollup handle remaining vendors automatically
             // to avoid creating additional circular dependencies

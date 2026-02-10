@@ -48,6 +48,7 @@ export default function PositionList() {
     });
 
     const [allPositions, setAllPositions] = useState<PositionListItem[]>([]);
+    const [totalCount, setTotalCount] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -78,53 +79,22 @@ export default function PositionList() {
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
-            const data = await PositionService.getList();
-            setAllPositions(data);
+            const response = await PositionService.getList(filters);
+            setAllPositions(response.items);
+            setTotalCount(response.total);
         } catch (error) {
             console.error('Failed to fetch positions:', error);
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [filters]);
 
     useEffect(() => {
         fetchData();
     }, [fetchData]);
 
-    // ==================== CLIENT-SIDE FILTERING & PAGINATION ====================
-    const filteredData = useMemo(() => {
-        let result = [...allPositions];
-
-        // Filter by Status
-        if (filters.status !== 'ALL') {
-            result = result.filter(item => 
-                filters.status === 'ACTIVE' ? item.is_active : !item.is_active
-            );
-        }
-
-        // Filter by Code
-        if (filters.search) {
-            const term = filters.search.toLowerCase();
-            result = result.filter(item => item.position_code.toLowerCase().includes(term));
-        }
-
-        // Filter by Name
-        if (filters.search2) {
-            const term = filters.search2.toLowerCase();
-            result = result.filter(item => item.position_name.toLowerCase().includes(term));
-        }
-
-        // Sort by Created Date Desc
-        result.sort((a, b) => new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime());
-
-        return result;
-    }, [allPositions, filters]);
-
-    // Pagination Slicing
-    const paginatedData = useMemo(() => {
-        const startIndex = (filters.page - 1) * filters.limit;
-        return filteredData.slice(startIndex, startIndex + filters.limit);
-    }, [filteredData, filters.page, filters.limit]);
+    // ==================== DATA MAPPING ====================
+    const tableData = useMemo(() => allPositions, [allPositions]);
 
     // ==================== HANDLERS ====================
     const handleCreateNew = () => {
@@ -245,18 +215,18 @@ export default function PositionList() {
             <div className="flex flex-col gap-4">
                 <div className="flex justify-between items-center">
                     <h2 className="text-gray-700 dark:text-gray-300 font-medium">
-                        พบข้อมูล {filteredData.length} รายการ
+                        พบข้อมูล {totalCount} รายการ
                     </h2>
                 </div>
 
                 <SmartTable
-                    data={paginatedData}
+                    data={tableData}
                     columns={columns}
                     isLoading={isLoading}
                     pagination={{
                         pageIndex: filters.page,
                         pageSize: filters.limit,
-                        totalCount: filteredData.length,
+                        totalCount: totalCount,
                         onPageChange: handlePageChange,
                         onPageSizeChange: (size) => setFilters({ limit: size, page: 1 }),
                     }}

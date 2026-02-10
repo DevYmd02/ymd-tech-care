@@ -13,7 +13,7 @@ interface PRFormLinesProps {
     openProductSearch: (index: number) => void;
 }
 
-export const PRFormLines: React.FC<PRFormLinesProps> = ({
+export const PRFormLines: React.FC<PRFormLinesProps> = React.memo(({
     lines,
     updateLine,
     removeLine,
@@ -109,4 +109,6 @@ export const PRFormLines: React.FC<PRFormLinesProps> = ({
             </div>
         </div>
     );
-};
+});
+
+PRFormLines.displayName = 'PRFormLines';

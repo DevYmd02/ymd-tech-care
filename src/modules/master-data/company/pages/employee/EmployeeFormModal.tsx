@@ -69,9 +69,9 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
             Promise.all([
                 DepartmentService.getList(),
                 PositionService.getList()
-            ]).then(([deptData, posData]) => {
-                setDepartments(deptData);
-                setPositions(posData);
+            ]).then(([deptResponse, posResponse]) => {
+                setDepartments(deptResponse.items);
+                setPositions(posResponse.items);
             });
 
             if (isEdit && editId) {

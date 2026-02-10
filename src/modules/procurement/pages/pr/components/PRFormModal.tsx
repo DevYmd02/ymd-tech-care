@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { FileText, Trash2, Printer, Copy, CheckCircle, FileBox, MoreHorizontal, Coins, FileBarChart, History as HistoryIcon } from 'lucide-react';
 import { PRHeader } from './PRHeader';
 import { PRFormLines } from './PRFormLines';
@@ -6,7 +6,6 @@ import { PRFormSummary } from './PRFormSummary';
 import { WindowFormLayout } from '@/shared/components/layout/WindowFormLayout';
 import { SystemAlert } from '@/shared/components/ui/SystemAlert';
 import { usePRForm } from '@/modules/procurement/hooks/usePRForm';
-import { fetchExchangeRate } from '@/modules/procurement/services/mockExchangeRateService';
 
 interface Props {
   isOpen: boolean;
@@ -19,25 +18,18 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
   const {
     isEditMode, lines, discountPercent, setDiscountPercent,
     vatRate, setVatRate, deliveryDate, setDeliveryDate,
-    creditDays, vendorQuoteNo, setVendorQuoteNo, shippingMethod, setShippingMethod,
+    vendorQuoteNo, setVendorQuoteNo, shippingMethod, setShippingMethod,
     requesterName, isProductModalOpen, setIsProductModalOpen, searchTerm, setSearchTerm,
     register, handleSubmit, setValue, watch, isSubmitting, isActionLoading,
     alertState, setAlertState, products, costCenters, projects,
     addLine, removeLine, clearLine, updateLine, handleClearLines,
     openProductSearch, selectProduct, subtotal, discountAmount,
     vatAmount, grandTotal, handleVendorSelect, onSubmit, handleDelete, handleApprove,
-    control, reset
+    handleVoid,
+    control
   } = usePRForm(isOpen, onClose, id, onSuccess);
 
-  // Auto-fetch exchange rate when currency changes
-  const currencyId = watch('currency_id');
-  useEffect(() => {
-     if (currencyId) {
-         fetchExchangeRate(currencyId).then(rate => {
-             setValue('exchange_rate', rate);
-         });
-     }
-  }, [currencyId, setValue]);
+
 
   // Tabs state
   const [activeTab, setActiveTab] = useState('detail');
@@ -142,17 +134,18 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
 
       <div className="flex-1 overflow-auto bg-gray-100 dark:bg-gray-800 p-1.5 space-y-1">
         <div className={cardClass}>
-          <PRHeader 
-            register={register} 
-            setValue={setValue} 
-            watch={watch} 
-            control={control}
-            reset={reset}
-            costCenters={costCenters} 
-            projects={projects} 
-            onVendorSelect={handleVendorSelect} 
-          />
-        </div>
+                    <PRHeader 
+                        register={register}
+                        setValue={setValue}
+                        watch={watch}
+                        control={control}
+                        costCenters={costCenters}
+                        projects={projects}
+                        onVendorSelect={handleVendorSelect}
+                        isEditMode={isEditMode}
+                        onVoid={handleVoid}
+                    />
+  </div>
 
         <div className={cardClass}>
             <div className="w-full overflow-x-auto border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900">
@@ -162,16 +155,16 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                       <th className="px-2 py-1.5 text-left border-r border-blue-500 w-48">วันที่กำหนดส่ง</th>
                       <th className="px-2 py-1.5 text-left border-r border-blue-500 w-24">เครดิต (วัน)</th>
                       <th className="px-2 py-1.5 text-left border-r border-blue-500">Vendor Quote No.</th>
-                      <th className="px-2 py-1.5 text-left border-r border-blue-500">ขนส่งโดย</th>
+                      <th className="px-2 py-1.5 text-left border-r border-blue-500">ขนส่งโดย <span className="text-red-500">*</span></th>
                       <th className="px-2 py-1.5 text-left">ผู้จัดทำ</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr className="bg-white dark:bg-gray-800">
                       <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700"><input type="date" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)} className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded px-2 py-1" /></td>
-                      <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700 text-center text-gray-900 dark:text-white">{creditDays}</td>
+                      <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700 text-center text-gray-900 dark:text-white">{watch('credit_days')}</td>
                       <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700"><input value={vendorQuoteNo} onChange={(e) => setVendorQuoteNo(e.target.value)} placeholder="Quote No" className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded px-2 py-1" /></td>
-                      <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700"><select value={shippingMethod} onChange={(e) => setShippingMethod(e.target.value)} className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded px-2 py-1"><option value="รถยนต์">รถยนต์</option><option value="รถบรรทุก">รถบรรทุก</option></select></td>
+                      <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700"><select value={shippingMethod} onChange={(e) => setShippingMethod(e.target.value)} className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded px-2 py-1"><option value="">เลือก</option><option value="รถยนต์">รถยนต์</option><option value="รถบรรทุก">รถบรรทุก</option></select></td>
                       <td className="px-2 py-1 text-gray-900 dark:text-white">{requesterName}</td>
                     </tr>
                   </tbody>
@@ -207,6 +200,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                             onChange={(e) => setValue('currency_id', e.target.value)}
                             className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                         >
+                            <option value="">เลือกสกุลเงิน</option>
                             <option value="THB">THB - บาท</option>
                             <option value="USD">USD - ดอลลาร์สหรัฐ</option>
                             <option value="EUR">EUR - ยูโร</option>
@@ -215,15 +209,17 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                         </select>
                     </div>
                     <div>
-                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">รหัสประเภทอัตราแลกเปลี่ยน</label>
+                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">ไปยังสกุลเงิน (Target)</label>
                         <select 
                             {...register('currency_type_id')}
                             className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                         >
-                            <option value="">เลือกประเภทอัตราแลกเปลี่ยน</option>
-                            <option value="BUYING">Buying Rate</option>
-                            <option value="SELLING">Selling Rate</option>
-                            <option value="AVERAGE">Average Rate</option>
+                            <option value="">เลือกสกุลเงิน</option>
+                            <option value="THB">THB - บาท</option>
+                            <option value="USD">USD - ดอลลาร์สหรัฐ</option>
+                            <option value="EUR">EUR - ยูโร</option>
+                            <option value="JPY">JPY - เยน</option>
+                            <option value="CNY">CNY - หยวน</option>
                         </select>
                     </div>
                     <div>
@@ -232,7 +228,8 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                             type="number"
                             step="0.0001"
                             {...register('exchange_rate', { valueAsNumber: true })}
-                            className="w-full h-9 px-3 text-sm text-right bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            readOnly={watch('currency_id') === 'THB'}
+                            className={`w-full h-9 px-3 text-sm text-right border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${watch('currency_id') === 'THB' ? 'bg-gray-100 dark:bg-gray-800 italic' : 'bg-white dark:bg-gray-800'}`}
                         />
                          {watch('currency_id') && watch('currency_id') !== 'THB' && (
                            <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 text-right">

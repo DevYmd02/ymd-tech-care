@@ -1,5 +1,5 @@
-import { useMemo, useState, useEffect } from 'react';
-import { Layers, Edit, Trash2 } from 'lucide-react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
+import { Layers, Edit2, Trash2 } from 'lucide-react';
 import SmartTable from '@/shared/components/ui/SmartTable';
 import FilterFormBuilder, { type FilterFieldConfig } from '@/shared/components/FilterFormBuilder';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
@@ -8,26 +8,59 @@ import type { ColumnDef } from '@tanstack/react-table';
 import type { ExchangeRateType } from '@/modules/master-data/types/currency-types';
 import { CurrencyService } from '../../services/currency.service';
 import { logger } from '@/shared/utils/logger';
+import { ExchangeRateTypeFormModal } from './ExchangeRateTypeFormModal';
+import { useConfirmation } from '@/shared/hooks/useConfirmation';
 
 export default function ExchangeRateTypeList() {
     const { filters, setFilters, resetFilters } = useTableFilters();
+    const { confirm } = useConfirmation();
     const [data, setData] = useState<ExchangeRateType[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editId, setEditId] = useState<string | null>(null);
+
+    const fetchData = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const response = await CurrencyService.getExchangeRateTypes();
+            setData(response.items);
+        } catch (error) {
+            logger.error('[ExchangeRateTypeList] Fetch error:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    const handleCreate = useCallback(() => {
+        setEditId(null);
+        setIsModalOpen(true);
+    }, []);
+
+    const handleEdit = useCallback((id: string) => {
+        setEditId(id);
+        setIsModalOpen(true);
+    }, []);
+
+    const handleDelete = useCallback(async (id: string, code: string) => {
+        const isConfirmed = await confirm({
+            title: 'ยืนยันการลบ',
+            description: `คุณต้องการประเภทอัตราแลกเปลี่ยน ${code} ใช่หรือไม่?`,
+            variant: 'danger',
+        });
+
+        if (isConfirmed) {
+            const success = await CurrencyService.deleteExchangeRateType(id);
+            if (success) {
+                fetchData();
+            } else {
+                alert('เกิดข้อผิดพลาดในการลบข้อมูล');
+            }
+        }
+    }, [confirm, fetchData]);
 
     useEffect(() => {
-        const fetchData = async () => {
-            setIsLoading(true);
-            try {
-                const response = await CurrencyService.getExchangeRateTypes();
-                setData(response.items);
-            } catch (error) {
-                logger.error('[ExchangeRateTypeList] Fetch error:', error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
         fetchData();
-    }, []);
+    }, [fetchData]);
 
     const filterConfig: FilterFieldConfig<keyof typeof filters>[] = useMemo(() => [
         { name: 'search', label: 'ค้นหา', type: 'text', placeholder: 'กรอกชื่อประเภท' },
@@ -73,20 +106,28 @@ export default function ExchangeRateTypeList() {
         {
             id: 'actions',
             header: 'จัดการ',
-            cell: () => (
-                <div className="flex items-center gap-2 justify-center">
-                    <button className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors">
-                        <Edit size={16} />
+            cell: ({ row }) => (
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => handleEdit(row.original.currency_type_id)}
+                        className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                        title="แก้ไข"
+                    >
+                        <Edit2 size={18} />
                     </button>
-                    <button className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors">
-                        <Trash2 size={16} />
+                    <button
+                        onClick={() => handleDelete(row.original.currency_type_id, row.original.code || '')}
+                        className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                        title="ลบ"
+                    >
+                        <Trash2 size={18} />
                     </button>
                 </div>
             ),
             size: 120,
             minSize: 120
         }
-    ], []);
+    ], [handleEdit, handleDelete]);
 
     return (
         <div className="p-6 space-y-6">
@@ -107,8 +148,8 @@ export default function ExchangeRateTypeList() {
                     onFilterChange={(name, value) => setFilters({ [name]: value })}
                     onSearch={() => {}}
                     onReset={resetFilters}
-                    onCreate={() => alert('Feature coming soon')}
-                    createLabel="เพิ่มประเภทอัตราแลกเปลี่ยนใหม่"
+                    onCreate={handleCreate}
+                    createLabel="เพิ่มประเภทใหม่"
                     accentColor="blue"
                     actionColSpan={{ md: 4, lg: 5, xl: 7 }}
                     actionAlign="start"
@@ -137,6 +178,13 @@ export default function ExchangeRateTypeList() {
                 }}   
             />
             </div>
+
+            <ExchangeRateTypeFormModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                editId={editId}
+                onSuccess={fetchData}
+            />
         </div>
     );
 }

@@ -49,6 +49,7 @@ export default function SectionList() {
     });
 
     const [allSections, setAllSections] = useState<SectionListItem[]>([]);
+    const [totalCount, setTotalCount] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -85,62 +86,22 @@ export default function SectionList() {
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
-            const data = await SectionService.getList();
-            setAllSections(data);
+            const response = await SectionService.getList(filters);
+            setAllSections(response.items);
+            setTotalCount(response.total);
         } catch (error) {
             console.error('Failed to fetch sections:', error);
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [filters]);
 
     useEffect(() => {
         fetchData();
     }, [fetchData]);
 
-    // ==================== CLIENT-SIDE FILTERING & PAGINATION ====================
-    const filteredData = useMemo(() => {
-        let result = [...allSections];
-
-        // Filter by Status
-        if (filters.status !== 'ALL') {
-            result = result.filter(s => 
-                filters.status === 'ACTIVE' ? s.is_active : !s.is_active
-            );
-        }
-
-        // Filter by Code
-        if (filters.search) {
-            const term = filters.search.toLowerCase();
-            result = result.filter(s => s.section_code.toLowerCase().includes(term));
-        }
-
-        // Filter by Name
-        if (filters.search2) {
-            const term = filters.search2.toLowerCase();
-            result = result.filter(s => 
-                s.section_name.toLowerCase().includes(term) || 
-                (s.section_name_en && s.section_name_en.toLowerCase().includes(term))
-            );
-        }
-
-        // Filter by Dept Code
-        if (filters.search3) {
-            const term = filters.search3.toLowerCase();
-            result = result.filter(s => s.department_code && s.department_code.toLowerCase().includes(term));
-        }
-
-        // Sort by Created Date Desc
-        result.sort((a, b) => new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime());
-
-        return result;
-    }, [allSections, filters]);
-
-    // Pagination Slicing
-    const paginatedData = useMemo(() => {
-        const startIndex = (filters.page - 1) * filters.limit;
-        return filteredData.slice(startIndex, startIndex + filters.limit);
-    }, [filteredData, filters.page, filters.limit]);
+    // ==================== DATA MAPPING ====================
+    const tableData = useMemo(() => allSections, [allSections]);
 
     // ==================== HANDLERS ====================
     const handleCreateNew = () => {
@@ -272,18 +233,18 @@ export default function SectionList() {
             <div className="flex flex-col gap-4">
                 <div className="flex justify-between items-center">
                     <h2 className="text-gray-700 dark:text-gray-300 font-medium">
-                        พบข้อมูล {filteredData.length} รายการ
+                        พบข้อมูล {totalCount} รายการ
                     </h2>
                 </div>
 
                 <SmartTable
-                    data={paginatedData}
+                    data={tableData}
                     columns={columns}
                     isLoading={isLoading}
                     pagination={{
                         pageIndex: filters.page,
                         pageSize: filters.limit,
-                        totalCount: filteredData.length,
+                        totalCount: totalCount,
                         onPageChange: handlePageChange,
                         onPageSizeChange: (size) => setFilters({ limit: size, page: 1 }),
                     }}

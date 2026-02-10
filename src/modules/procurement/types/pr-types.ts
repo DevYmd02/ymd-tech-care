@@ -12,6 +12,7 @@ export type PRStatus =
   | 'DRAFT'                 // ร่าง
   | 'PENDING'               // รออนุมัติ
   | 'APPROVED'              // อนุมัติแล้ว
+  | 'REJECTED'              // ไม่อนุมัติ
   | 'CANCELLED';            // ยกเลิก
 
 // ====================================================================================
@@ -35,6 +36,7 @@ export interface PRHeader {
   attachment_count: number;         // INTEGER
   created_at: string;               // TIMESTAMP
   updated_at: string;               // TIMESTAMP
+  cancelflag?: 'Y' | 'N';           // CHAR(1) - Void/Cancel Flag
   created_by_user_id: string;       // UUID FK
   updated_by_user_id: string;       // UUID FK
   
@@ -141,8 +143,9 @@ export interface PRFormData {
   // Line items
   lines: PRLineFormData[];
   
-  // Summary
-  is_on_hold: boolean;              // พักเรื่อง
+  is_on_hold: boolean | string;              // พักเรื่อง ('Y' | 'N')
+  cancelflag?: 'Y' | 'N';           // ยกเลิกเอกสาร ('Y' | 'N')
+  status?: PRStatus;                // สถานะเอกสาร
   total_amount: number;
 }
 

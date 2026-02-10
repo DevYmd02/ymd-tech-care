@@ -5,12 +5,14 @@ import type {
   BranchCreateRequest,
   BranchUpdateRequest
 } from '@/modules/master-data/types/master-data-types';
+import type { PaginatedListResponse } from '@/shared/types/api-response.types';
+import type { TableFilters } from '@/shared/hooks/useTableFilters';
 
 const ENDPOINT = '/org-branches';
 
 export const BranchService = {
-  getList: async (): Promise<BranchListItem[]> => {
-    return api.get<BranchListItem[]>(ENDPOINT);
+  getList: async (params?: Partial<TableFilters>): Promise<PaginatedListResponse<BranchListItem>> => {
+    return api.get<PaginatedListResponse<BranchListItem>>(ENDPOINT, { params });
   },
 
   getDropdown: async (): Promise<BranchDropdownItem[]> => {

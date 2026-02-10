@@ -5,25 +5,27 @@
 
 import React from 'react';
 import type { UseFormRegister, UseFormSetValue, UseFormWatch, Control } from 'react-hook-form';
-import { Controller } from 'react-hook-form';
-import { Building2, FolderKanban, User, RefreshCcw } from 'lucide-react';
+
+import { Building2, FolderKanban, User, XCircle } from 'lucide-react';
 import type { PRFormData } from '@/modules/procurement/types/pr-types';
 import type { CostCenter, Project } from '@/modules/master-data/types/master-data-types';
 import { VendorSearch } from '@/shared/components/VendorSearch';
 import type { VendorMaster } from '@/modules/master-data/vendor/types/vendor-types';
+import { StatusCheckbox } from '@/shared/components/form/StatusCheckbox';
 
 interface Props {
   register: UseFormRegister<PRFormData>;
   setValue: UseFormSetValue<PRFormData>;
   watch: UseFormWatch<PRFormData>;
   control: Control<PRFormData>;
-  reset: () => void;
   costCenters: CostCenter[];
   projects: Project[];
   onVendorSelect: (vendor: VendorMaster | null) => void;
+  isEditMode: boolean;
+  onVoid?: () => void;
 }
 
-export const PRHeader: React.FC<Props> = ({ register, setValue, watch, control, reset, costCenters, projects, onVendorSelect }) => {
+export const PRHeader: React.FC<Props> = ({ register, setValue, watch, control, costCenters, projects, onVendorSelect, isEditMode, onVoid }) => {
   // Watch for vendor values to display in the selector
   const preferredVendorId = watch("preferred_vendor_id");
   const vendorName = watch("vendor_name");
@@ -36,10 +38,18 @@ export const PRHeader: React.FC<Props> = ({ register, setValue, watch, control, 
   return (
     <div className="p-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm font-sans">
       {/* Document Status & Logo */}
-      <div className="flex justify-between items-start mb-2">
-        <div className="flex flex-col gap-1">
-          <h2 className={`font-bold text-sm ${watch('is_on_hold') ? 'text-orange-500' : 'text-pink-600 dark:text-pink-400'}`}>
-            สถานะเอกสาร : {watch('is_on_hold') ? 'พักเรื่อง (ON HOLD)' : 'ร่าง (DRAFT)'}
+      <div className="flex justify-between items-center mb-2">
+        <div className="flex flex-col gap-0.5">
+          <h2 className={`font-bold text-sm ${
+              watch('cancelflag') === 'Y' || watch('status') === 'CANCELLED' ? 'text-red-500' :
+              watch('status') === 'APPROVED' ? 'text-green-500' :
+              watch('is_on_hold') === 'Y' ? 'text-orange-500' : 'text-pink-600 dark:text-pink-400'
+          }`}>
+            สถานะ : {
+                watch('cancelflag') === 'Y' || watch('status') === 'CANCELLED' ? 'ยกเลิก (VOID)' :
+                watch('status') === 'APPROVED' ? 'อนุมัติแล้ว (APPROVED)' :
+                watch('is_on_hold') === 'Y' ? 'พักเรื่อง (ON HOLD)' : 'ร่าง (DRAFT)'
+            }
           </h2>
         </div>
         
@@ -59,7 +69,14 @@ export const PRHeader: React.FC<Props> = ({ register, setValue, watch, control, 
         {/* Row 1: เลขที่เอกสาร, วันที่ขอซื้อ, วันที่ต้องการใช้, สกุลเงิน */}
         <div className="col-span-12 md:col-span-3">
           <label className={labelClass}>เลขที่เอกสาร</label>
-          <input {...register("pr_no")} className={`${inputClass} bg-gray-100`} readOnly />
+          <div className="relative">
+            <input 
+              {...register("pr_no")} 
+              className={`${inputClass} bg-gray-100 italic ${watch("pr_no")?.startsWith('DRAFT-TEMP') ? 'text-amber-600 font-bold' : ''}`} 
+              value={watch("pr_no")?.startsWith('DRAFT-TEMP') ? 'NEW (รอรันเลข)' : watch("pr_no")}
+              readOnly 
+            />
+          </div>
         </div>
 
         <div className="col-span-12 md:col-span-3">
@@ -76,38 +93,31 @@ export const PRHeader: React.FC<Props> = ({ register, setValue, watch, control, 
         <div className="col-span-12 md:col-span-3 flex flex-col justify-end h-full">
              <div className="flex items-center w-full h-8 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
                 {/* 1. ON HOLD Checkbox */}
-                <Controller
+                <StatusCheckbox<PRFormData>
                   name="is_on_hold"
                   control={control}
-                  render={({ field }) => (
-                    <label 
-                      className="flex-1 flex items-center justify-center gap-2 cursor-pointer group hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-colors h-full px-2 select-none"
-                    >
-                      <input 
-                        type="checkbox"
-                        checked={field.value} 
-                        onChange={(e) => field.onChange(e.target.checked)}
-                        className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-orange-500 focus:ring-orange-500 cursor-pointer" 
-                      />
-                      <span className={`text-xs font-bold transition-colors ${field.value ? 'text-orange-600 dark:text-orange-400' : 'text-gray-600 dark:text-gray-400'}`}>
-                        ON HOLD
-                      </span>
-                    </label>
-                  )}
+                  label="ON HOLD"
+                  trueValue="Y"
+                  falseValue="N"
+                  className="flex-1 px-2 h-full hover:bg-orange-50 dark:hover:bg-orange-950/20"
                 />
 
                 {/* Divider */}
                 <div className="w-px h-5 bg-gray-200 dark:bg-gray-700"></div>
 
-                {/* 2. CLEAR Button */}
-                <button
-                  type="button"
-                  onClick={() => reset()}
-                  className="flex-1 h-full flex items-center justify-center gap-2 text-[10px] font-bold text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all uppercase px-2"
-                >
-                  <RefreshCcw size={12} />
-                  <span>CLEAR FORM</span>
-                </button>
+                {/* 2. VOID Button - Visible in Edit Mode, only if not already voided/approved */}
+                {isEditMode && watch('status') !== 'CANCELLED' && watch('status') !== 'APPROVED' && watch('cancelflag') !== 'Y' ? (
+                  <button
+                    type="button"
+                    onClick={onVoid}
+                    className="flex-1 h-full flex items-center justify-center gap-2 text-[10px] font-bold text-white bg-red-600 hover:bg-red-700 transition-all uppercase px-3"
+                  >
+                    <XCircle size={14} />
+                    <span>ยกเลิกเอกสาร (Cancel)</span>
+                  </button>
+                ) : (
+                  <div className="flex-1 h-full bg-gray-100 dark:bg-gray-800/50"></div>
+                )}
              </div>
         </div>
 

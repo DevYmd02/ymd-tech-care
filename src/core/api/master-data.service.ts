@@ -21,7 +21,8 @@ import { ItemTypeService } from '@/modules/master-data/inventory/services/item-t
 
 export const MasterDataService = {
   getBranches: async (): Promise<BranchListItem[]> => {
-    return BranchService.getList();
+    const response = await BranchService.getList();
+    return response.items;
   },
 
   getWarehouses: async (): Promise<WarehouseListItem[]> => {

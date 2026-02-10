@@ -20,6 +20,8 @@ export interface TableFilterOptions<TStatus extends string = string> {
   defaultPage?: number;
   defaultLimit?: number;
   defaultSearch?: string;
+  defaultSearch2?: string;
+  defaultSearch3?: string;
   defaultStatus?: TStatus | 'ALL';
   defaultSort?: string;
   defaultDateFrom?: string;
@@ -132,52 +134,57 @@ const PARAM_KEYS = {
 export function useTableFilters<TStatus extends string = string>(
   options: TableFilterOptions<TStatus> = {}
 ): UseTableFiltersReturn<TStatus> {
-  const {
-    defaultPage = 1,
-    defaultLimit = 20,
-    defaultSearch = '',
-    defaultStatus = 'ALL' as TStatus | 'ALL',
-    defaultSort = '',
-    defaultDateFrom = '',
-    defaultDateTo = '',
-  } = options;
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // ------------------------------------------------------------
   // Resolve Param Keys (Default + Custom Overrides)
+  // Deps use individual primitives to avoid infinite loops from inline objects
   // ------------------------------------------------------------
+  const cpk = options.customParamKeys;
   const keys = useMemo(() => ({
-    page: options.customParamKeys?.page ?? PARAM_KEYS.page,
-    limit: options.customParamKeys?.limit ?? PARAM_KEYS.limit,
-    search: options.customParamKeys?.search ?? PARAM_KEYS.search,
-    search2: options.customParamKeys?.search2 ?? PARAM_KEYS.search2,
-    search3: options.customParamKeys?.search3 ?? PARAM_KEYS.search3,
-    status: options.customParamKeys?.status ?? PARAM_KEYS.status,
-    sort: options.customParamKeys?.sort ?? PARAM_KEYS.sort,
-    dateFrom: options.customParamKeys?.dateFrom ?? PARAM_KEYS.dateFrom,
-    dateTo: options.customParamKeys?.dateTo ?? PARAM_KEYS.dateTo,
-  }), [options.customParamKeys]);
-
-  const [searchParams, setSearchParams] = useSearchParams();
+    page: cpk?.page ?? PARAM_KEYS.page,
+    limit: cpk?.limit ?? PARAM_KEYS.limit,
+    search: cpk?.search ?? PARAM_KEYS.search,
+    search2: cpk?.search2 ?? PARAM_KEYS.search2,
+    search3: cpk?.search3 ?? PARAM_KEYS.search3,
+    status: cpk?.status ?? PARAM_KEYS.status,
+    sort: cpk?.sort ?? PARAM_KEYS.sort,
+    dateFrom: cpk?.dateFrom ?? PARAM_KEYS.dateFrom,
+    dateTo: cpk?.dateTo ?? PARAM_KEYS.dateTo,
+  }), [cpk?.page, cpk?.limit, cpk?.search, cpk?.search2, cpk?.search3, cpk?.status, cpk?.sort, cpk?.dateFrom, cpk?.dateTo]);
 
   // ------------------------------------------------------------
   // Derive filters from URL params (memoized for performance)
   // ------------------------------------------------------------
   const filters = useMemo<TableFilters<TStatus>>(() => {
+    // Define internal default filters based on options
+    const defaultInternalFilters: TableFilters<TStatus> = {
+      page: options.defaultPage || 1,
+      limit: options.defaultLimit || 20,
+      search: options.defaultSearch || '',
+      search2: options.defaultSearch2 || '',
+      search3: options.defaultSearch3 || '',
+      status: (options.defaultStatus || 'ALL') as TStatus | 'ALL',
+      sort: options.defaultSort || '',
+      dateFrom: options.defaultDateFrom || '',
+      dateTo: options.defaultDateTo || '',
+    };
+
     const pageParam = searchParams.get(keys.page);
     const limitParam = searchParams.get(keys.limit);
 
     return {
-      page: pageParam ? parseInt(pageParam, 10) : defaultPage,
-      limit: limitParam ? parseInt(limitParam, 10) : defaultLimit,
-      search: searchParams.get(keys.search) ?? defaultSearch,
-      search2: searchParams.get(keys.search2) ?? '',
-      search3: searchParams.get(keys.search3) ?? '',
-      status: (searchParams.get(keys.status) ?? defaultStatus) as TStatus | 'ALL',
-      sort: searchParams.get(keys.sort) ?? defaultSort,
-      dateFrom: searchParams.get(keys.dateFrom) ?? defaultDateFrom,
-      dateTo: searchParams.get(keys.dateTo) ?? defaultDateTo,
+      page: pageParam ? parseInt(pageParam, 10) : defaultInternalFilters.page,
+      limit: limitParam ? parseInt(limitParam, 10) : defaultInternalFilters.limit,
+      search: searchParams.get(keys.search) ?? defaultInternalFilters.search,
+      search2: searchParams.get(keys.search2) ?? defaultInternalFilters.search2,
+      search3: searchParams.get(keys.search3) ?? defaultInternalFilters.search3,
+      status: (searchParams.get(keys.status) ?? defaultInternalFilters.status) as TStatus | 'ALL',
+      sort: searchParams.get(keys.sort) ?? defaultInternalFilters.sort,
+      dateFrom: searchParams.get(keys.dateFrom) ?? defaultInternalFilters.dateFrom,
+      dateTo: searchParams.get(keys.dateTo) ?? defaultInternalFilters.dateTo,
     };
-  }, [searchParams, keys, defaultPage, defaultLimit, defaultSearch, defaultStatus, defaultSort, defaultDateFrom, defaultDateTo]);
+  }, [searchParams, keys, options.defaultPage, options.defaultLimit, options.defaultSearch, options.defaultSearch2, options.defaultSearch3, options.defaultStatus, options.defaultSort, options.defaultDateFrom, options.defaultDateTo]);
 
   // ------------------------------------------------------------
   // Single-Column Sort Config derivation (key:direction)

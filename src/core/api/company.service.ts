@@ -19,13 +19,15 @@ import {
   type SalesTargetFormData,
   type EmployeeFormData,
 } from '@/modules/master-data/types/master-data-types';
+import { type PaginatedListResponse } from '@/shared/types/api-response.types';
+import { type TableFilters } from '@/shared/hooks/useTableFilters';
 
 // ============================================================================
 // SERVICES
 // ============================================================================
 
 export const DepartmentService = {
-  getList: () => api.get<DepartmentListItem[]>('/org-departments'),
+  getList: (params?: Partial<TableFilters>) => api.get<PaginatedListResponse<DepartmentListItem>>('/org-departments', { params }),
   get: (id: string) => api.get<DepartmentListItem>(`/org-departments/${id}`),
   create: (data: DepartmentFormData) => api.post<{ success: boolean; data?: DepartmentListItem }>('/org-departments', data),
   update: (id: string, data: Partial<DepartmentFormData>) => api.put<{ success: boolean; data?: DepartmentListItem }>(`/org-departments/${id}`, data),
@@ -33,7 +35,7 @@ export const DepartmentService = {
 };
 
 export const SectionService = {
-  getList: () => api.get<SectionListItem[]>('/org-sections'),
+  getList: (params?: Partial<TableFilters>) => api.get<PaginatedListResponse<SectionListItem>>('/org-sections', { params }),
   get: (id: string) => api.get<SectionListItem>(`/org-sections/${id}`),
   create: (data: SectionFormData) => api.post<{ success: boolean; data?: SectionListItem }>('/org-sections', data),
   update: (id: string, data: Partial<SectionFormData>) => api.put<{ success: boolean; data?: SectionListItem }>(`/org-sections/${id}`, data),
@@ -41,7 +43,7 @@ export const SectionService = {
 };
 
 export const JobService = {
-  getList: () => api.get<JobListItem[]>('/org-jobs'),
+  getList: (params?: Partial<TableFilters>) => api.get<PaginatedListResponse<JobListItem>>('/org-jobs', { params }),
   get: (id: string) => api.get<JobListItem>(`/org-jobs/${id}`),
   create: (data: JobFormData) => api.post<{ success: boolean; data?: JobListItem }>('/org-jobs', data),
   update: (id: string, data: Partial<JobFormData>) => api.put<{ success: boolean; data?: JobListItem }>(`/org-jobs/${id}`, data),
@@ -49,7 +51,7 @@ export const JobService = {
 };
 
 export const EmployeeGroupService = {
-  getList: () => api.get<EmployeeGroupListItem[]>('/org-employee-groups'),
+  getList: (params?: Partial<TableFilters>) => api.get<PaginatedListResponse<EmployeeGroupListItem>>('/org-employee-groups', { params }),
   get: (id: string) => api.get<EmployeeGroupListItem>(`/org-employee-groups/${id}`),
   create: (data: EmployeeGroupFormData) => api.post<{ success: boolean; data?: EmployeeGroupListItem }>('/org-employee-groups', data),
   update: (id: string, data: Partial<EmployeeGroupFormData>) => api.put<{ success: boolean; data?: EmployeeGroupListItem }>(`/org-employee-groups/${id}`, data),
@@ -57,7 +59,7 @@ export const EmployeeGroupService = {
 };
 
 export const PositionService = {
-  getList: () => api.get<PositionListItem[]>('/org-positions'),
+  getList: (params?: Partial<TableFilters>) => api.get<PaginatedListResponse<PositionListItem>>('/org-positions', { params }),
   get: (id: string) => api.get<PositionListItem>(`/org-positions/${id}`),
   create: (data: PositionFormData) => api.post<{ success: boolean; data?: PositionListItem }>('/org-positions', data),
   update: (id: string, data: Partial<PositionFormData>) => api.put<{ success: boolean; data?: PositionListItem }>(`/org-positions/${id}`, data),
@@ -89,7 +91,7 @@ export const SalesTargetService = {
 };
 
 export const EmployeeService = {
-  getList: () => api.get<EmployeeListItem[]>('/org-employees'),
+  getList: (params?: Partial<TableFilters>) => api.get<PaginatedListResponse<EmployeeListItem>>('/org-employees', { params }),
   get: (id: string) => api.get<EmployeeListItem>(`/org-employees/${id}`),
   create: (data: EmployeeFormData) => api.post<{ success: boolean; data?: EmployeeListItem }>('/org-employees', data),
   update: (id: string, data: Partial<EmployeeFormData>) => api.put<{ success: boolean; data?: EmployeeListItem }>(`/org-employees/${id}`, data),

@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { Coins, Edit2, Trash2 } from 'lucide-react';
 import SmartTable from '@/shared/components/ui/SmartTable';
 import FilterFormBuilder, { type FilterFieldConfig } from '@/shared/components/FilterFormBuilder';
@@ -8,26 +8,59 @@ import type { ColumnDef } from '@tanstack/react-table';
 import type { Currency } from '@/modules/master-data/types/currency-types';
 import { CurrencyService } from '../../services/currency.service';
 import { logger } from '@/shared/utils/logger';
+import { CurrencyFormModal } from './CurrencyCodeFormModal';
+import { useConfirmation } from '@/shared/hooks/useConfirmation';
 
 export default function CurrencyCodeList() {
     const { filters, setFilters, resetFilters } = useTableFilters();
+    const { confirm } = useConfirmation();
     const [data, setData] = useState<Currency[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editId, setEditId] = useState<string | null>(null);
+
+    const fetchData = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const response = await CurrencyService.getCurrencies();
+            setData(response.items);
+        } catch (error) {
+            logger.error('[CurrencyCodeList] Fetch error:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
 
     useEffect(() => {
-        const fetchData = async () => {
-            setIsLoading(true);
-            try {
-                const response = await CurrencyService.getCurrencies();
-                setData(response.items);
-            } catch (error) {
-                logger.error('[CurrencyCodeList] Fetch error:', error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
         fetchData();
+    }, [fetchData]);
+
+    const handleCreate = useCallback(() => {
+        setEditId(null);
+        setIsModalOpen(true);
     }, []);
+
+    const handleEdit = useCallback((id: string) => {
+        setEditId(id);
+        setIsModalOpen(true);
+    }, []);
+
+    const handleDelete = useCallback(async (id: string, code: string) => {
+        const isConfirmed = await confirm({
+            title: 'ยืนยันการลบ',
+            description: `คุณต้องการลบสกุลเงิน ${code} ใช่หรือไม่?`,
+            variant: 'danger',
+        });
+
+        if (isConfirmed) {
+            const success = await CurrencyService.deleteCurrency(id);
+            if (success) {
+                fetchData();
+            } else {
+                alert('เกิดข้อผิดพลาดในการลบข้อมูล');
+            }
+        }
+    }, [confirm, fetchData]);
 
     const filterConfig: FilterFieldConfig<keyof typeof filters>[] = useMemo(() => [
         { name: 'search', label: 'ค้นหา', type: 'text', placeholder: 'กรอกรหัสหรือชื่อสกุลเงิน' },
@@ -46,14 +79,14 @@ export default function CurrencyCodeList() {
             cell: ({ row }) => (
                 <div className="flex items-center gap-2">
                     <button
-                        onClick={() => alert(`แก้ไข ${row.original.currency_code}`)}
+                        onClick={() => handleEdit(row.original.currency_id)}
                         className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                         title="แก้ไข"
                     >
                         <Edit2 size={18} />
                     </button>
                     <button
-                        onClick={() => alert(`ลบ ${row.original.currency_code}`)}
+                        onClick={() => handleDelete(row.original.currency_id, row.original.currency_code)}
                         className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                         title="ลบ"
                     >
@@ -62,7 +95,7 @@ export default function CurrencyCodeList() {
                 </div>
             ),
         },
-    ], []);
+    ], [handleEdit, handleDelete]);
 
     return (
         <div className="p-6 space-y-6">
@@ -83,7 +116,7 @@ export default function CurrencyCodeList() {
                     onFilterChange={(name, value) => setFilters({ [name]: value })}
                     onSearch={() => {}}
                     onReset={resetFilters}
-                    onCreate={() => alert('Feature coming soon')}
+                    onCreate={handleCreate}
                     createLabel="เพิ่มสกุลเงินใหม่"
                     accentColor="blue"
                 />
@@ -110,6 +143,13 @@ export default function CurrencyCodeList() {
                     }}
                 />
             </div>
+
+            <CurrencyFormModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                editId={editId}
+                onSuccess={fetchData}
+            />
         </div>
     );
 }

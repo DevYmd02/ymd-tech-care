@@ -40,11 +40,8 @@ export default function VendorGroupList() {
         setFilters, 
         handlePageChange,
         resetFilters
-    } = useTableFilters({
-        customParamKeys: {
-          search: 'group_code',
-          search2: 'group_name'
-        }
+    } = useTableFilters({ 
+        customParamKeys: { search: 'code', search2: 'name' } 
     });
 
     const [allVendorGroups, setAllVendorGroups] = useState<VendorGroupMaster[]>([]);
