@@ -287,6 +287,7 @@ export default function SectionList() {
                         onPageChange: handlePageChange,
                         onPageSizeChange: (size) => setFilters({ limit: size, page: 1 }),
                     }}
+                    rowIdField="section_id"
                     className="shadow-sm"
                 />
             </div>

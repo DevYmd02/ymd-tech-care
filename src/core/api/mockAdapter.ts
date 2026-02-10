@@ -7,7 +7,23 @@ import {
   MOCK_POS 
 } from '@/modules/procurement/mocks/procurementMocks';
 import { MOCK_VENDORS } from '@/modules/master-data/vendor/mocks/vendorMocks';
-import { mockEmployees } from '@/modules/master-data/company/mocks/employeeMocks';
+import { 
+  mockBranches, 
+  mockBranchDropdown,
+  mockDepartments,
+  mockSections,
+  mockJobs,
+  mockEmployeeGroups,
+  mockPositions,
+  mockSalesZones,
+  mockSalesChannels,
+  mockSalesTargets,
+  mockEmployees 
+} from '@/modules/master-data/mocks/masterDataMocks';
+import type { 
+  EmployeeGroupListItem, 
+  EmployeeListItem 
+} from '@/modules/master-data/types/master-data-types';
 import { logger } from '@/shared/utils/logger';
 
 /**
@@ -112,11 +128,124 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
   });
 
   // =========================================================================
+  // COMPANY MASTER DATA MOCKS
+  // =========================================================================
+
+  // --- BRANCHES ---
+  mock.onGet('/org-branches').reply(200, mockBranches);
+  mock.onGet('/org-branches/dropdown').reply(200, mockBranchDropdown);
+  mock.onGet(/\/org-branches\/.+/).reply((config) => {
+    const id = config.url?.split('/').pop();
+    const found = mockBranches.find(b => b.branch_id === id);
+    return found ? [200, found] : [404, { message: 'Branch Not Found' }];
+  });
+  mock.onPost('/org-branches').reply(200, { success: true });
+  mock.onPut(/\/org-branches\/.+/).reply(200, { success: true });
+  mock.onDelete(/\/org-branches\/.+/).reply(200, true);
+
+  // --- DEPARTMENTS ---
+  mock.onGet('/org-departments').reply(200, mockDepartments);
+  mock.onGet(/\/org-departments\/.+/).reply((config) => {
+    const id = config.url?.split('/').pop();
+    const found = mockDepartments.find(d => d.department_id === id);
+    return found ? [200, found] : [404, { message: 'Department Not Found' }];
+  });
+  mock.onPost('/org-departments').reply(200, { success: true });
+  mock.onPut(/\/org-departments\/.+/).reply(200, { success: true });
+  mock.onDelete(/\/org-departments\/.+/).reply(200, true);
+
+  // --- SECTIONS ---
+  mock.onGet('/org-sections').reply(200, mockSections);
+  mock.onGet(/\/org-sections\/.+/).reply((config) => {
+    const id = config.url?.split('/').pop();
+    const found = mockSections.find(s => s.section_id === id);
+    return found ? [200, found] : [404, { message: 'Section Not Found' }];
+  });
+  mock.onPost('/org-sections').reply(200, { success: true });
+  mock.onPut(/\/org-sections\/.+/).reply(200, { success: true });
+  mock.onDelete(/\/org-sections\/.+/).reply(200, true);
+
+  // --- JOBS ---
+  mock.onGet('/org-jobs').reply(200, mockJobs);
+  mock.onGet(/\/org-jobs\/.+/).reply((config) => {
+    const id = config.url?.split('/').pop();
+    const found = mockJobs.find(j => j.job_id === id);
+    return found ? [200, found] : [404, { message: 'Job Not Found' }];
+  });
+  mock.onPost('/org-jobs').reply(200, { success: true });
+  mock.onPut(/\/org-jobs\/.+/).reply(200, { success: true });
+  mock.onDelete(/\/org-jobs\/.+/).reply(200, true);
+
+  // --- POSITIONS ---
+  mock.onGet('/org-positions').reply(200, mockPositions);
+  mock.onGet(/\/org-positions\/.+/).reply((config) => {
+    const id = config.url?.split('/').pop();
+    const found = mockPositions.find(p => p.position_id === id);
+    return found ? [200, found] : [404, { message: 'Position Not Found' }];
+  });
+  mock.onPost('/org-positions').reply(200, { success: true });
+  mock.onPut(/\/org-positions\/.+/).reply(200, { success: true });
+  mock.onDelete(/\/org-positions\/.+/).reply(200, true);
+
+  // --- EMPLOYEE GROUPS ---
+  mock.onGet('/org-employee-groups').reply(200, mockEmployeeGroups);
+  mock.onGet(/\/org-employee-groups\/.+/).reply((config) => {
+    const id = config.url?.split('/').pop();
+    const found = mockEmployeeGroups.find((g: EmployeeGroupListItem) => g.group_id === id);
+    return found ? [200, found] : [404, { message: 'Group Not Found' }];
+  });
+  mock.onPost('/org-employee-groups').reply(200, { success: true });
+  mock.onPut(/\/org-employee-groups\/.+/).reply(200, { success: true });
+  mock.onDelete(/\/org-employee-groups\/.+/).reply(200, true);
+
+  // --- EMPLOYEES ---
+  mock.onGet('/org-employees').reply(200, mockEmployees);
+  mock.onGet(/\/org-employees\/.+/).reply((config) => {
+    const id = config.url?.split('/').pop();
+    const found = mockEmployees.find((e: EmployeeListItem) => e.employee_id === id);
+    return found ? [200, found] : [404, { message: 'Employee Not Found' }];
+  });
+  mock.onPost('/org-employees').reply(200, { success: true });
+  mock.onPut(/\/org-employees\/.+/).reply(200, { success: true });
+  mock.onDelete(/\/org-employees\/.+/).reply(200, true);
+
+  // --- SALES ---
+  mock.onGet('/org-sales-zones').reply(200, mockSalesZones);
+  mock.onGet('/org-sales-channels').reply(200, mockSalesChannels);
+  mock.onGet('/org-sales-targets').reply(200, mockSalesTargets);
+
+  // =========================================================================
   // OTHER MOCKS
   // =========================================================================
 
   mock.onGet('/vendors').reply(200, { items: MOCK_VENDORS, total: MOCK_VENDORS.length });
   mock.onGet('/employees').reply(200, mockEmployees);
+
+  // --- CURRENCY ---
+  mock.onGet('/master-data/currencies').reply(200, {
+    items: [
+        { currency_id: '1', currency_code: 'THB', name_th: 'บาทไทย', name_en: 'Thai Baht', symbol: '฿', is_active: true, created_at: '2026-01-01', updated_at: '2026-01-01' },
+        { currency_id: '2', currency_code: 'USD', name_th: 'ดอลลาร์สหรัฐ', name_en: 'US Dollar', symbol: '$', is_active: true, created_at: '2026-01-01', updated_at: '2026-01-01' },
+    ],
+    total: 2, page: 1, limit: 20
+  });
+
+  mock.onGet('/master-data/exchange-rate-types').reply(200, {
+    items: [
+        { currency_type_id: '1', code: 'SPOT', name_th: 'อัตราแลกเปลี่ยนทันที', name_en: 'Spot Exchange Rate', is_active: true, created_at: '2026-01-01', updated_at: '2026-01-01' },
+    ],
+    total: 1, page: 1, limit: 20
+  });
+
+  mock.onGet('/master-data/exchange-rates').reply(200, {
+    items: [
+        { 
+            exchange_id: '1', currency_id: '1', currency_code: 'THB', currency_type_id: '1', type_name: 'อัตราขาย', 
+            buy_rate: 1.0, sale_rate: 1.0, rate_date: new Date().toISOString(), remark: 'Mock', is_active: true 
+        },
+    ],
+    total: 1, page: 1, limit: 20
+  });
 
   logger.info('🎭 [Mock Adapter] Initialized with Centralized Routes');
 };

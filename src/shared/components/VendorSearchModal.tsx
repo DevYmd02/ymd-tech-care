@@ -12,8 +12,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { X, Check, Building2 } from 'lucide-react';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
-import type { VendorMaster, VendorSearchItem } from '@/modules/master-data/vendor/types/vendor-types';
-import { MOCK_VENDORS } from '@/modules/master-data/vendor/mocks/vendorMocks';
+import type { 
+    VendorListItem, 
+    VendorSearchItem 
+} from '@/modules/master-data/vendor/types/vendor-types';
+import { logger } from '@/shared/utils/logger';
 
 // Re-export for backward compatibility
 export type Vendor = VendorSearchItem;
@@ -22,7 +25,7 @@ export type Vendor = VendorSearchItem;
 // HELPER: Transform VendorMaster to VendorSearchItem
 // ====================================================================================
 
-const transformVendor = (v: VendorMaster): VendorSearchItem => ({
+const transformVendor = (v: VendorListItem): VendorSearchItem => ({
     vendor_id: v.vendor_id,
     code: v.vendor_code,
     name: v.vendor_name,
@@ -327,8 +330,7 @@ export const VendorSearchModalBase: React.FC<VendorSearchModalBaseProps> = ({
  * @usage ใช้เมื่อต้องการให้ component จัดการ fetch เอง (backward compatible)
  */
 export const VendorSearchModal: React.FC<VendorSearchModalProps> = ({ isOpen, onClose, onSelect }) => {
-    // Initialize with MOCK_VENDORS for immediate display
-    const [vendors, setVendors] = useState<VendorSearchItem[]>(() => MOCK_VENDORS.map(transformVendor));
+    const [vendors, setVendors] = useState<VendorSearchItem[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
     // Fetch vendors when modal opens
@@ -340,32 +342,19 @@ export const VendorSearchModal: React.FC<VendorSearchModalProps> = ({ isOpen, on
         const fetchVendors = async () => {
             setIsLoading(true);
             try {
-                // Try getting from service first
                 const response = await VendorService.getList();
                 if (!isMounted) return;
 
-                if (response.items.length > 0) {
-                    // Transform API data to VendorSearchItem format
-                    const items: VendorSearchItem[] = response.items.map(v => ({
-                        vendor_id: v.vendor_id,
-                        code: v.vendor_code,
-                        name: v.vendor_name,
-                        name_en: v.vendor_name_en,
-                        phone: v.phone,
-                        email: v.email,
-                        taxId: v.tax_id,
-                        address: '-',
-                        is_active: v.status === 'ACTIVE',
-                    }));
+                if (response.items && response.items.length > 0) {
+                    const items: VendorSearchItem[] = response.items.map(transformVendor);
                     setVendors(items);
                 } else {
-                    // Fallback to mock data
-                    setVendors(MOCK_VENDORS.map(transformVendor));
+                    setVendors([]);
                 }
-            } catch {
-                // On error, fallback to mock data
+            } catch (error) {
+                logger.error('[VendorSearchModal] fetchVendors error:', error);
                 if (isMounted) {
-                    setVendors(MOCK_VENDORS.map(transformVendor));
+                    setVendors([]);
                 }
             } finally {
                 if (isMounted) {

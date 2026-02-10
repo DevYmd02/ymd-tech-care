@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Coins, Edit2, Trash2 } from 'lucide-react';
 import SmartTable from '@/shared/components/ui/SmartTable';
 import FilterFormBuilder, { type FilterFieldConfig } from '@/shared/components/FilterFormBuilder';
@@ -6,18 +6,28 @@ import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { ActiveStatusBadge } from '@ui/StatusBadge';
 import type { ColumnDef } from '@tanstack/react-table';
 import type { Currency } from '@/modules/master-data/types/currency-types';
-
-const MOCK_DATA: Currency[] = [
-    { currency_id: '1', currency_code: 'THB', name_th: 'บาทไทย', name_en: 'Thai Baht', symbol: '฿', is_active: true, created_at: '2026-01-01', updated_at: '2026-01-01' },
-    { currency_id: '2', currency_code: 'USD', name_th: 'ดอลลาร์สหรัฐ', name_en: 'US Dollar', symbol: '$', is_active: true, created_at: '2026-01-01', updated_at: '2026-01-01' },
-    { currency_id: '3', currency_code: 'EUR', name_th: 'ยูโร', name_en: 'Euro', symbol: '€', is_active: true, created_at: '2026-01-01', updated_at: '2026-01-01' },
-    { currency_id: '4', currency_code: 'JPY', name_th: 'เยนญี่ปุ่น', name_en: 'Japanese Yen', symbol: '¥', is_active: true, created_at: '2026-01-01', updated_at: '2026-01-01' },
-    { currency_id: '5', currency_code: 'GBP', name_th: 'ปอนด์สเตอร์ลิง', name_en: 'British Pound', symbol: '£', is_active: true, created_at: '2026-01-01', updated_at: '2026-01-01' },
-    { currency_id: '6', currency_code: 'CNY', name_th: 'หยวนจีน', name_en: 'Chinese Yuan', symbol: '¥', is_active: false, created_at: '2026-01-01', updated_at: '2026-01-01' },
-];
+import { CurrencyService } from '../../services/currency.service';
+import { logger } from '@/shared/utils/logger';
 
 export default function CurrencyCodeList() {
     const { filters, setFilters, resetFilters } = useTableFilters();
+    const [data, setData] = useState<Currency[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            setIsLoading(true);
+            try {
+                const response = await CurrencyService.getCurrencies();
+                setData(response.items);
+            } catch (error) {
+                logger.error('[CurrencyCodeList] Fetch error:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchData();
+    }, []);
 
     const filterConfig: FilterFieldConfig<keyof typeof filters>[] = useMemo(() => [
         { name: 'search', label: 'ค้นหา', type: 'text', placeholder: 'กรอกรหัสหรือชื่อสกุลเงิน' },
@@ -82,18 +92,19 @@ export default function CurrencyCodeList() {
             <div className="flex flex-col gap-4">
                 <div className="flex justify-between items-center">
                     <h2 className="text-gray-700 dark:text-gray-300 font-medium">
-                        พบข้อมูล {MOCK_DATA.length} รายการ
+                        พบข้อมูล {data.length} รายการ
                     </h2>
                 </div>
 
                 <SmartTable
-                    data={MOCK_DATA}
+                    data={data}
                     columns={columns}
-                    isLoading={false}
+                    isLoading={isLoading}
+                    rowIdField="currency_id"
                     pagination={{
                         pageIndex: 1,
                         pageSize: 10,
-                        totalCount: MOCK_DATA.length,
+                        totalCount: data.length,
                         onPageChange: () => {},
                         onPageSizeChange: () => {},
                     }}

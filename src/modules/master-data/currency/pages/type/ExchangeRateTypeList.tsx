@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Layers, Edit, Trash2 } from 'lucide-react';
 import SmartTable from '@/shared/components/ui/SmartTable';
 import FilterFormBuilder, { type FilterFieldConfig } from '@/shared/components/FilterFormBuilder';
@@ -6,18 +6,28 @@ import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { ActiveStatusBadge } from '@ui/StatusBadge';
 import type { ColumnDef } from '@tanstack/react-table';
 import type { ExchangeRateType } from '@/modules/master-data/types/currency-types';
-
-const MOCK_DATA: ExchangeRateType[] = [
-    { currency_type_id: '1', code: 'SPOT', name_th: 'อัตราแลกเปลี่ยนทันที', name_en: 'Spot Exchange Rate', is_active: true, created_at: '2026-01-01', updated_at: '2026-01-01' },
-    { currency_type_id: '2', code: 'FORWARD', name_th: 'อัตราแลกเปลี่ยนล่วงหน้า', name_en: 'Forward Exchange Rate', is_active: true, created_at: '2026-01-01', updated_at: '2026-01-01' },
-    { currency_type_id: '3', code: 'BUYING', name_th: 'อัตราซื้อ', name_en: 'Buying Rate', is_active: true, created_at: '2026-01-01', updated_at: '2026-01-01' },
-    { currency_type_id: '4', code: 'SELLING', name_th: 'อัตราขาย', name_en: 'Selling Rate', is_active: true, created_at: '2026-01-01', updated_at: '2026-01-01' },
-    { currency_type_id: '5', code: 'MIDDLE', name_th: 'อัตรากลาง', name_en: 'Middle Rate', is_active: true, created_at: '2026-01-01', updated_at: '2026-01-01' },
-    { currency_type_id: '6', code: 'CUSTOM', name_th: 'อัตราศุลกากร', name_en: 'Custom Rate', is_active: false, created_at: '2026-01-01', updated_at: '2026-01-01' },
-];
+import { CurrencyService } from '../../services/currency.service';
+import { logger } from '@/shared/utils/logger';
 
 export default function ExchangeRateTypeList() {
     const { filters, setFilters, resetFilters } = useTableFilters();
+    const [data, setData] = useState<ExchangeRateType[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            setIsLoading(true);
+            try {
+                const response = await CurrencyService.getExchangeRateTypes();
+                setData(response.items);
+            } catch (error) {
+                logger.error('[ExchangeRateTypeList] Fetch error:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchData();
+    }, []);
 
     const filterConfig: FilterFieldConfig<keyof typeof filters>[] = useMemo(() => [
         { name: 'search', label: 'ค้นหา', type: 'text', placeholder: 'กรอกชื่อประเภท' },
@@ -100,6 +110,8 @@ export default function ExchangeRateTypeList() {
                     onCreate={() => alert('Feature coming soon')}
                     createLabel="เพิ่มประเภทอัตราแลกเปลี่ยนใหม่"
                     accentColor="blue"
+                    actionColSpan={{ md: 4, lg: 5, xl: 7 }}
+                    actionAlign="start"
                 />
             </div>
 
@@ -107,18 +119,19 @@ export default function ExchangeRateTypeList() {
             <div className="flex flex-col gap-4">
                 <div className="flex justify-between items-center">
                     <h2 className="text-gray-700 dark:text-gray-300 font-medium">
-                        พบข้อมูล {MOCK_DATA.length} รายการ
+                        พบข้อมูล {data.length} รายการ
                     </h2>
             </div>
            
             <SmartTable
-                data={MOCK_DATA}
+                data={data}
                 columns={columns}
-                isLoading={false}
+                isLoading={isLoading}
+                rowIdField="currency_type_id"
                 pagination={{
                     pageIndex: 1,
                     pageSize: 10,
-                    totalCount: MOCK_DATA.length,
+                    totalCount: data.length,
                     onPageChange: () => {},
                     onPageSizeChange: () => {},
                 }}   

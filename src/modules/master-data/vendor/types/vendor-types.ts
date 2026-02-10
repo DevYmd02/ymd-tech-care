@@ -249,6 +249,9 @@ export interface VendorListItem {
     
     phone?: string;
     email?: string;
+    payment_term_days?: number;
+    vat_registered?: boolean;
+    is_active?: boolean;
     created_at: string;
     updated_at: string;
 }

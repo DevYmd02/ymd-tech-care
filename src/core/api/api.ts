@@ -61,8 +61,8 @@ api.interceptors.response.use(
         return response.data.data;
     }
 
-    // Default: return full response (legacy support for raw arrays)
-    return response;
+    // Default: return response.data instead of full response object
+    return response.data;
   },
   (error) => {
     // Centralized Logging for Error

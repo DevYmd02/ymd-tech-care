@@ -255,6 +255,7 @@ export default function SalesChannelList() {
                         onPageChange: handlePageChange,
                         onPageSizeChange: (size) => setFilters({ limit: size, page: 1 }),
                     }}
+                    rowIdField="channel_id"
                     className="shadow-sm"
                 />
             </div>

@@ -108,7 +108,7 @@ export function SmartTable<TData>({
         columns: tableColumns,
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
-        getRowId: (row) => String(row[rowIdField]), // Use custom ID field
+        getRowId: (row, index) => String(row[rowIdField] ?? index), // Use custom ID field with index fallback
         onRowSelectionChange: setRowSelection,
         state: {
             rowSelection,

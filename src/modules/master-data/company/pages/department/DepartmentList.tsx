@@ -267,6 +267,7 @@ export default function DepartmentList() {
                         onPageChange: handlePageChange,
                         onPageSizeChange: (size) => setFilters({ limit: size, page: 1 }),
                     }}
+                    rowIdField="department_id"
                     className="shadow-sm"
                 />
             </div>

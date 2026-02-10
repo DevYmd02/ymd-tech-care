@@ -113,7 +113,7 @@ export default function ItemGroupList() {
             </div>
             <div className="flex flex-col gap-4">
                 <h2 className="text-gray-700 dark:text-gray-300 font-medium">พบข้อมูล {filteredData.length} รายการ</h2>
-                <SmartTable data={paginatedData} columns={columns} isLoading={isLoading} pagination={{ pageIndex: filters.page, pageSize: filters.limit, totalCount: filteredData.length, onPageChange: handlePageChange, onPageSizeChange: (size) => setFilters({ limit: size, page: 1 }) }} className="shadow-sm" />
+                <SmartTable data={paginatedData} columns={columns} isLoading={isLoading} pagination={{ pageIndex: filters.page, pageSize: filters.limit, totalCount: filteredData.length, onPageChange: handlePageChange, onPageSizeChange: (size) => setFilters({ limit: size, page: 1 }) }} rowIdField="item_group_id" className="shadow-sm" />
             </div>
             <ItemGroupFormModal isOpen={isModalOpen} onClose={handleModalClose} editId={editingId} onSuccess={fetchData} />
         </div>

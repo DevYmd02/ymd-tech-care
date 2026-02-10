@@ -7,8 +7,8 @@ import type { QuotationHeader, QuotationLine } from '@/modules/procurement/types
 import { MasterDataService } from '@/core/api/master-data.service';
 import { QTService } from '@/modules/procurement/services/qt.service';
 import type { UnitListItem } from '@/modules/master-data/types/master-data-types';
+import { ProductSearchModal } from '@/shared/components/ProductSearchModal';
 import type { ProductLookup } from '@/modules/master-data/inventory/mocks/products';
-import { MOCK_PRODUCTS } from '@/modules/master-data/inventory/mocks/products';
 import type { RFQHeader } from '@/modules/procurement/types/rfq-types';
 
 // ====================================================================================
@@ -85,13 +85,11 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ }
   // vendorQuoteRef and shippingMethod removed - not used in new layout
   
   // Master Data
-  const [products] = useState<ProductLookup[]>(MOCK_PRODUCTS);
-  const [units, setUnits] = useState<UnitListItem[]>([]); // Add units state
+  const [units, setUnits] = useState<UnitListItem[]>([]); 
 
   // Product Search Modal
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
 
   // -- Effects --
 
@@ -176,7 +174,6 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ }
   // Product Search
   const openProductSearch = (index: number) => {
     setActiveRowIndex(index);
-    setSearchTerm('');
     setIsProductModalOpen(true);
   };
 
@@ -191,10 +188,6 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ }
       }
   };
   
-  const filteredProducts = products.filter(p => 
-      p.item_code.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      p.item_name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   const handleSave = () => {
       // Mock Save
@@ -257,67 +250,11 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ }
       {alertState.show && <SystemAlert message={alertState.message} onClose={() => setAlertState({ ...alertState, show: false })} />}
 
       {/* Product Search Modal */}
-      {isProductModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 backdrop-blur-sm" onClick={() => setIsProductModalOpen(false)}>
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-[900px] max-h-[85vh] overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-800 dark:text-white">ค้นหาสินค้า</h2>
-                  <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">กรอกข้อมูลเพื่อค้นหาสินค้าในระบบ</p>
-                </div>
-                <button onClick={() => setIsProductModalOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xl">×</button>
-              </div>
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">รหัสสินค้าหรือชื่อสินค้า</label>
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                    <input 
-                    value={searchTerm} 
-                    onChange={(e) => setSearchTerm(e.target.value)} 
-                    placeholder="รหัสสินค้าหรือชื่อสินค้า" 
-                    className="w-full h-10 pl-10 pr-4 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800" 
-                    autoFocus 
-                    />
-                </div>
-              </div>
-            </div>
-            <div className="max-h-[450px] overflow-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 border-b border-gray-200 dark:border-gray-700">
-                  <tr className="text-gray-600 dark:text-gray-300">
-                    <th className="px-3 py-3 text-center font-medium w-20">เลือก</th>
-                    <th className="px-3 py-3 text-left font-medium">รหัสสินค้า</th>
-                    <th className="px-3 py-3 text-left font-medium">ชื่อสินค้า</th>
-                    <th className="px-3 py-3 text-center font-medium">หน่วยนับ</th>
-                    <th className="px-3 py-3 text-right font-medium">ราคา/หน่วย</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-gray-900">
-                  {filteredProducts.map((p) => (
-                    <tr key={p.item_code} className="border-b border-gray-100 dark:border-gray-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
-                      <td className="px-3 py-3 text-center">
-                        <button onClick={() => selectProduct(p)} className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs transition-colors shadow-sm">เลือก</button>
-                      </td>
-                      <td className="px-3 py-3 font-medium text-gray-900 dark:text-blue-100">{p.item_code}</td>
-                      <td className="px-3 py-3 text-gray-700 dark:text-gray-300">{p.item_name}</td>
-                      <td className="px-3 py-3 text-center text-gray-600 dark:text-gray-400">{p.unit}</td>
-                      <td className="px-3 py-3 text-right text-emerald-600 dark:text-emerald-400 font-medium">{p.unit_price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                    </tr>
-                  ))}
-                  {filteredProducts.length === 0 && (
-                        <tr>
-                            <td colSpan={5} className="p-8 text-center text-gray-500 dark:text-gray-400 italic">
-                                ไม่พบข้อมูลสินค้า
-                            </td>
-                        </tr>
-                    )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
+      <ProductSearchModal 
+        isOpen={isProductModalOpen}
+        onClose={() => setIsProductModalOpen(false)}
+        onSelect={selectProduct}
+      />
 
       {/* MAIN FORM */}
       <div className="flex-1 overflow-auto bg-gray-50 dark:bg-[#0b1120] p-4 space-y-4">

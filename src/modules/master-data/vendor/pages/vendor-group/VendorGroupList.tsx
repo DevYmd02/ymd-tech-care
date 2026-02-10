@@ -255,6 +255,7 @@ export default function VendorGroupList() {
                         onPageChange: handlePageChange,
                         onPageSizeChange: (size) => setFilters({ limit: size, page: 1 }),
                     }}
+                    rowIdField="vendor_group_id"
                     className="shadow-sm"
                 />
             </div>

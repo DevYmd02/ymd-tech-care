@@ -262,6 +262,7 @@ export default function JobList() {
                         onPageChange: handlePageChange,
                         onPageSizeChange: (size) => setFilters({ limit: size, page: 1 }),
                     }}
+                    rowIdField="job_id"
                     className="shadow-sm"
                 />
             </div>

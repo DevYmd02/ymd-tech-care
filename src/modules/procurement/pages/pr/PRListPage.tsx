@@ -17,7 +17,7 @@ import RFQFormModal from '../rfq/components/RFQFormModal';
 import { PRFormModal } from './components/PRFormModal';
 import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
-import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';
+import { createColumnHelper } from '@tanstack/react-table';
 
 // Services & Types - Updated imports to use new module structure
 import { PRService, type PRListParams } from '@/modules/procurement/services/pr.service';
@@ -406,7 +406,7 @@ export default function PRListPage() {
                 );
             },
             footer: () => {
-                const total = data?.items.reduce((sum, item) => sum + item.total_amount, 0) || 0;
+                const total = (data?.items ?? []).reduce((sum, item) => sum + (item.total_amount || 0), 0);
                 return (
                     <div className="text-right font-bold text-base text-emerald-600 dark:text-emerald-400 whitespace-nowrap pr-2">
                         {total.toLocaleString('en-US', { minimumFractionDigits: 2 })} บาท
@@ -509,7 +509,7 @@ export default function PRListPage() {
                 <div className="h-full flex flex-col">
                     <SmartTable
                         data={data?.items ?? []}
-                        columns={columns as ColumnDef<PRHeader>[]}
+                        columns={columns}
                         isLoading={isLoading}
                         pagination={{
                             pageIndex: filters.page,
