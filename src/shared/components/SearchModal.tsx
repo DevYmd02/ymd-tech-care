@@ -55,7 +55,10 @@ export interface SearchModalProps<T> {
     getKey: (item: T) => string | number;
 
     // Empty state
+    // Empty state
     emptyText?: string;
+    /** Loading state */
+    isLoading?: boolean;
 }
 
 // ====================================================================================
@@ -76,6 +79,7 @@ export function SearchModal<T>({
     filterFn,
     getKey,
     emptyText = 'ไม่พบข้อมูลที่ค้นหา',
+    isLoading = false,
 }: SearchModalProps<T>) {
     // State สำหรับเก็บคำค้นหา
     const [searchTerm, setSearchTerm] = useState('');
@@ -96,6 +100,7 @@ export function SearchModal<T>({
             ring: 'focus:ring-emerald-500',
             button: 'bg-emerald-500 hover:bg-emerald-600',
             hover: 'hover:bg-emerald-50',
+            loader: 'border-emerald-500',
         },
         blue: {
             title: 'text-blue-600',
@@ -103,6 +108,7 @@ export function SearchModal<T>({
             ring: 'focus:ring-blue-500',
             button: 'bg-blue-500 hover:bg-blue-600',
             hover: 'hover:bg-blue-50',
+            loader: 'border-blue-500',
         },
         purple: {
             title: 'text-purple-600',
@@ -110,6 +116,7 @@ export function SearchModal<T>({
             ring: 'focus:ring-purple-500',
             button: 'bg-purple-500 hover:bg-purple-600',
             hover: 'hover:bg-purple-50',
+            loader: 'border-purple-500',
         },
     }[accentColor];
 
@@ -120,7 +127,7 @@ export function SearchModal<T>({
         // Overlay
         <div className={`${styles.modalOverlay} p-4 font-sans`}>
             {/* Modal Container */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl h-[600px] flex flex-col border border-gray-200 dark:border-gray-700">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl h-[600px] flex flex-col border border-gray-200 dark:border-gray-700 overflow-hidden">
 
                 {/* ==================== HEADER ==================== */}
                 <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
@@ -154,7 +161,14 @@ export function SearchModal<T>({
                 </div>
 
                 {/* ==================== DATA TABLE ==================== */}
-                <div className="flex-1 overflow-y-auto p-4 bg-white dark:bg-gray-800">
+                <div className="flex-1 overflow-y-auto p-4 bg-white dark:bg-gray-800 relative">
+                    {isLoading && (
+                        <div className="absolute inset-0 bg-white/60 dark:bg-gray-800/60 backdrop-blur-[1px] z-10 flex flex-col items-center justify-center">
+                            <div className={`animate-spin rounded-full h-10 w-10 border-b-2 ${colorClasses.loader}`}></div>
+                            <span className="mt-2 text-sm text-gray-500 dark:text-gray-400 font-medium">กำลังโหลดข้อมูล...</span>
+                        </div>
+                    )}
+
                     <div className="space-y-1">
                         {/* Table Header */}
                         <div
@@ -172,7 +186,7 @@ export function SearchModal<T>({
                         </div>
 
                         {/* Data Rows */}
-                        {filteredData.map((item) => (
+                        {!isLoading && filteredData.map((item) => (
                             <div
                                 key={getKey(item)}
                                 className={`grid gap-4 items-center px-2 py-3 border-b border-gray-100 dark:border-gray-700 ${colorClasses.hover} dark:hover:bg-gray-700/50 transition-colors rounded-md`}
@@ -209,7 +223,7 @@ export function SearchModal<T>({
                                             key={String(col.key)}
                                             className={`text-sm text-gray-800 dark:text-gray-200 ${col.align === 'center' ? 'text-center' : ''}`}
                                         >
-                                            {String(item[col.key as keyof T] ?? '')}
+                                            {col.key !== 'action' ? String(item[col.key] ?? '') : ''}
                                         </div>
                                     );
                                 })}
@@ -217,7 +231,7 @@ export function SearchModal<T>({
                         ))}
 
                         {/* Empty State */}
-                        {filteredData.length === 0 && (
+                        {!isLoading && filteredData.length === 0 && (
                             <div className="text-center py-10 text-gray-400 dark:text-gray-500">{emptyText}</div>
                         )}
                     </div>

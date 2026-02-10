@@ -1,53 +1,39 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { TrendingUp } from 'lucide-react';
 import SmartTable from '@/shared/components/ui/SmartTable';
 import FilterFormBuilder, { type FilterFieldConfig } from '@/shared/components/FilterFormBuilder';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import type { ColumnDef } from '@tanstack/react-table';
 import type { ExchangeRate } from '@/modules/master-data/types/currency-types';
+import { CurrencyService } from '../../services/currency.service';
+import { logger } from '@/shared/utils/logger';
 
 interface ExchangeRateDisplay extends ExchangeRate {
-    currency_code: string;
-    type_name: string;
+    currency_code?: string;
+    type_name?: string;
 }
-
-const MOCK_DATA: ExchangeRateDisplay[] = [
-    { 
-        exchange_id: '1', 
-        currency_id: 'usd-id', 
-        currency_code: 'USD', 
-        currency_type_id: 'type-id-1', 
-        type_name: 'อัตราขาย', 
-        buy_rate: 34.50, 
-        sale_rate: 35.20, 
-        rate_date: '2026-02-09', 
-        remark: 'ประกาศเช้า',
-        exchange_round: 2,
-        allow_adjust: 5,
-        is_active: true,
-        created_at: '2026-02-09',
-        updated_at: '2026-02-09'
-    },
-    { 
-        exchange_id: '2', 
-        currency_id: 'eur-id', 
-        currency_code: 'EUR', 
-        currency_type_id: 'type-id-1', 
-        type_name: 'อัตราขาย', 
-        buy_rate: 38.00, 
-        sale_rate: 38.80, 
-        rate_date: '2026-02-09', 
-        remark: '',
-        exchange_round: 2,
-        allow_adjust: 5,
-        is_active: true,
-        created_at: '2026-02-09',
-        updated_at: '2026-02-09'
-    },
-];
 
 export default function ExchangeRateList() {
     const { filters, setFilters, resetFilters } = useTableFilters();
+    const [data, setData] = useState<ExchangeRateDisplay[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            setIsLoading(true);
+            try {
+                // The service returns BaseResponse<ExchangeRate & { currency_code?: string; type_name?: string }>
+                // which matches ExchangeRateDisplay interface.
+                const response = await CurrencyService.getExchangeRates();
+                setData(response.items);
+            } catch (error) {
+                logger.error('[ExchangeRateList] Fetch error:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchData();
+    }, []);
 
     const filterConfig: FilterFieldConfig<keyof typeof filters>[] = useMemo(() => [
         { name: 'search', label: 'สกุลเงิน', type: 'text', placeholder: 'ระบุสกุลเงิน' },
@@ -89,13 +75,14 @@ export default function ExchangeRateList() {
             </div>
 
             <SmartTable
-                data={MOCK_DATA}
+                data={data}
                 columns={columns}
-                isLoading={false}
+                isLoading={isLoading}
+                rowIdField="exchange_id"
                 pagination={{
                     pageIndex: 1,
                     pageSize: 10,
-                    totalCount: MOCK_DATA.length,
+                    totalCount: data.length,
                     onPageChange: () => {},
                     onPageSizeChange: () => {},
                 }}

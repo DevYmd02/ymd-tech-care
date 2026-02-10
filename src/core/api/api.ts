@@ -61,8 +61,8 @@ api.interceptors.response.use(
         return response.data.data;
     }
 
-    // Default: return full response (legacy support for raw arrays)
-    return response;
+    // Default: return response.data instead of full response object
+    return response.data;
   },
   (error) => {
     // Centralized Logging for Error
@@ -124,6 +124,11 @@ export interface ApiClient extends Omit<AxiosInstance, 'get' | 'put' | 'post' | 
 
 if (import.meta.env.DEV) {
   logApiMode();
+  if (USE_MOCK) {
+    import('./mockAdapter').then(({ setupMocks }) => {
+      setupMocks(api);
+    });
+  }
 }
 
 export default api as ApiClient;

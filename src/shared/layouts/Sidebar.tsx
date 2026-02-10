@@ -154,13 +154,17 @@ export default function Sidebar({ isOpen }: SidebarProps) {
         );
     };
 
+    // Check for specific expanded menu to adjust width
+    // Ensure parent 'master-data' is also expanded to avoid wide sidebar when submenu is hidden
+    const isMasterDataInventoryExpanded = expandedMenus.includes('master-data-inventory') && expandedMenus.includes('master-data');
+
     return (
         // Sidebar Container - Controlled by isOpen prop
         <div 
             className={`
                 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 h-screen flex flex-col 
                 transition-all duration-300 ease-in-out group overflow-hidden
-                ${isOpen ? 'w-[280px]' : 'w-0'}
+                ${isOpen ? (isMasterDataInventoryExpanded ? 'w-[300px]' : 'w-[280px]') : 'w-0'}
             `}
         >
 

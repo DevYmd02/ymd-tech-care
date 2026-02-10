@@ -4,13 +4,19 @@
  * @module company
  */
 
+/**
+ * @file BranchFormModal.tsx
+ * @description Modal สำหรับสร้าง/แก้ไขข้อมูลสาขา (Refactored to Standard)
+ * @module company
+ */
+
 import { useEffect } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Building2, Save, X } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
-import { mockBranches } from '@/modules/master-data/mocks/masterDataMocks';
+import { BranchService } from '@/core/api/branch.service';
 import { DialogFormLayout } from '@/shared/components/layout/DialogFormLayout';
 import { logger } from '@/shared/utils/logger';
 
@@ -70,14 +76,15 @@ export function BranchFormModal({ isOpen, onClose, editId, onSuccess }: Props) {
     useEffect(() => {
         if (isOpen) {
             if (editId) {
-                const existing = mockBranches.find(b => b.branch_id === editId);
-                if (existing) {
-                    reset({
-                        branchCode: existing.branch_code,
-                        branchName: existing.branch_name,
-                        isActive: existing.is_active
-                    });
-                }
+                BranchService.getById(editId).then(existing => {
+                    if (existing) {
+                        reset({
+                            branchCode: existing.branch_code,
+                            branchName: existing.branch_name,
+                            isActive: existing.is_active
+                        });
+                    }
+                });
             } else {
                 reset({
                     branchCode: '',
@@ -88,35 +95,35 @@ export function BranchFormModal({ isOpen, onClose, editId, onSuccess }: Props) {
         }
     }, [isOpen, editId, reset]);
 
-    const onSubmit = (data: BranchFormValues) => {
-        // Simulation of API Call
-        setTimeout(() => {
+    const onSubmit = async (data: BranchFormValues) => {
+        try {
+            let res;
             if (editId) {
-                // Update Mock
-                const index = mockBranches.findIndex(b => b.branch_id === editId);
-                if (index !== -1) {
-                    mockBranches[index] = {
-                        ...mockBranches[index],
-                        branch_code: data.branchCode,
-                        branch_name: data.branchName,
-                        is_active: data.isActive,
-                    };
-                }
-            } else {
-                // Create Mock
-                mockBranches.push({
-                    branch_id: `BR${Math.floor(Math.random() * 10000)}`,
+                res = await BranchService.update({
+                    branch_id: editId,
                     branch_code: data.branchCode,
                     branch_name: data.branchName,
-                    is_active: data.isActive,
-                    created_at: new Date().toISOString(),
+                    is_active: data.isActive
+                });
+            } else {
+                res = await BranchService.create({
+                    branch_code: data.branchCode,
+                    branch_name: data.branchName,
+                    is_active: data.isActive
                 });
             }
 
-            logger.log('Saved Branch:', data);
-            if (onSuccess) onSuccess();
-            onClose();
-        }, 500);
+            if (res.success) {
+                logger.log('Saved Branch:', data);
+                if (onSuccess) onSuccess();
+                onClose();
+            } else {
+                alert(res.message || 'เกิดข้อผิดพลาดในการบันทึก');
+            }
+        } catch (error) {
+            logger.error('Error saving branch:', error);
+            alert('เกิดข้อผิดพลาดในการบันทึก');
+        }
     };
 
     // ==================== RENDERING ====================

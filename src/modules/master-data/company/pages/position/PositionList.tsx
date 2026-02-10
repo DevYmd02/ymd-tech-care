@@ -260,6 +260,7 @@ export default function PositionList() {
                         onPageChange: handlePageChange,
                         onPageSizeChange: (size) => setFilters({ limit: size, page: 1 }),
                     }}
+                    rowIdField="position_id"
                     className="shadow-sm"
                 />
             </div>

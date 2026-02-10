@@ -255,6 +255,7 @@ export default function VendorTypeList() {
                         onPageChange: handlePageChange,
                         onPageSizeChange: (size) => setFilters({ limit: size, page: 1 }),
                     }}
+                    rowIdField="vendor_type_id"
                     className="shadow-sm"
                 />
             </div>

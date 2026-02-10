@@ -19,13 +19,6 @@ export const EmployeeService = {
   },
 
   getAll: async (): Promise<IEmployee[]> => {
-    // 1. Mock Mode Check
-    if (import.meta.env.VITE_USE_MOCK === 'true') {
-        const { mockEmployees } = await import('@/modules/master-data/company/mocks/employeeMocks');
-        logger.info('🎭 [Mock Mode] Serving Employee List');
-        return new Promise(resolve => setTimeout(() => resolve(mockEmployees), 500));
-    }
-
     try {
       const response = await api.get<IEmployee[]>('/employees');
       logger.info('[EmployeeService] Raw API Response:', response);

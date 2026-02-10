@@ -260,6 +260,7 @@ export default function EmployeeGroupList() {
                         onPageChange: handlePageChange,
                         onPageSizeChange: (size) => setFilters({ limit: size, page: 1 }),
                     }}
+                    rowIdField="group_id"
                     className="shadow-sm"
                 />
             </div>

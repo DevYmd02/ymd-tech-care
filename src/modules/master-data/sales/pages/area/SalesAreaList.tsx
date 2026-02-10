@@ -255,6 +255,7 @@ export default function SalesAreaList() {
                         onPageChange: handlePageChange,
                         onPageSizeChange: (size) => setFilters({ limit: size, page: 1 }),
                     }}
+                    rowIdField="zone_id"
                     className="shadow-sm"
                 />
             </div>

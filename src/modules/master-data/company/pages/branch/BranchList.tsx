@@ -262,6 +262,7 @@ export default function BranchList() {
                         onPageChange: handlePageChange,
                         onPageSizeChange: (size) => setFilters({ limit: size, page: 1 }),
                     }}
+                    rowIdField="branch_id"
                     className="shadow-sm"
                 />
             </div>

@@ -55,6 +55,7 @@ export const initialBranchFormData: BranchFormData = {
 export interface BranchCreateRequest {
     branch_code: string;
     branch_name: string;
+    is_active: boolean;
 }
 
 export interface BranchUpdateRequest extends Partial<BranchCreateRequest> {

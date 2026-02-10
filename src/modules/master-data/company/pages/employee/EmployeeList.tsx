@@ -269,6 +269,7 @@ export default function EmployeeList() {
                         onPageChange: handlePageChange,
                         onPageSizeChange: (size) => setFilters({ limit: size, page: 1 }),
                     }}
+                    rowIdField="employee_id"
                     className="shadow-sm"
                 />
             </div>

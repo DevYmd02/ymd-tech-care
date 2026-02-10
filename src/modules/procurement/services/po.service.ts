@@ -16,46 +16,6 @@ const ENDPOINTS = {
 
 export const POService = {
   getList: async (params?: POListParams): Promise<POListResponse> => {
-    // 1. Mock Mode Check
-    if (import.meta.env.VITE_USE_MOCK === 'true') {
-        const { MOCK_POS } = await import('@/modules/procurement/mocks/procurementMocks');
-        logger.info('🎭 [Mock Mode] Serving PO List');
-        
-        // Simple Filtering (Optional but good for realism)
-        let filtered = MOCK_POS;
-        if (params?.status && params.status !== 'ALL') {
-            filtered = filtered.filter(po => po.status === params.status);
-        }
-
-        // Sorting
-        const sortParam = params?.sort || 'po_date:desc';
-        const [sortKey, sortDir] = sortParam.split(':');
-        
-        const sorted = [...filtered].sort((a, b) => {
-            const valA = a[sortKey as keyof typeof a];
-            const valB = b[sortKey as keyof typeof b];
-            
-            if (valA === valB) return 0;
-            if (valA === null || valA === undefined) return 1;
-            if (valB === null || valB === undefined) return -1;
-            
-            const multiplier = sortDir === 'asc' ? 1 : -1;
-            
-            if (typeof valA === 'string' && typeof valB === 'string') {
-                return valA.localeCompare(valB) * multiplier;
-            }
-            
-            return (valA < valB ? -1 : 1) * multiplier;
-        });
-
-        return {
-            data: sorted,
-            total: sorted.length,
-            page: 1,
-            limit: 100
-        };
-    }
-
     try {
       return await api.get<POListResponse>(ENDPOINTS.list, { params });
     } catch (error) {

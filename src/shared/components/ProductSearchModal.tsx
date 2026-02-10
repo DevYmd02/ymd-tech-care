@@ -9,7 +9,8 @@
 
 import React from 'react';
 import { SearchModal, type ColumnDef } from './SearchModal';
-import { MOCK_PRODUCTS, type ProductLookup } from '@/modules/master-data/inventory/mocks/products';
+import api from '@/core/api/api';
+import type { ProductLookup } from '@/modules/master-data/inventory/mocks/products';
 
 // Re-export Product type for consumers
 export type Product = ProductLookup;
@@ -59,6 +60,8 @@ export interface ProductSearchModalBaseProps {
     subtitle?: string;
     /** Custom empty text */
     emptyText?: string;
+    /** Loading state */
+    isLoading?: boolean;
 }
 
 /**
@@ -86,6 +89,7 @@ export const ProductSearchModalBase: React.FC<ProductSearchModalBaseProps> = ({
     title = 'ค้นหาสินค้า',
     subtitle = 'กรอกข้อมูลเพื่อค้นหาสินค้าในระบบ',
     emptyText = 'ไม่พบสินค้าที่ค้นหา',
+    isLoading = false
 }) => {
     return (
         <SearchModal<ProductLookup>
@@ -105,6 +109,7 @@ export const ProductSearchModalBase: React.FC<ProductSearchModalBaseProps> = ({
             }
             getKey={(p) => p.item_code}
             emptyText={emptyText}
+            isLoading={isLoading}
         />
     );
 };
@@ -136,12 +141,48 @@ interface ProductSearchModalProps {
  * ```
  */
 export const ProductSearchModal: React.FC<ProductSearchModalProps> = ({ isOpen, onClose, onSelect }) => {
+    const [products, setProducts] = React.useState<ProductLookup[]>([]);
+    const [isLoading, setIsLoading] = React.useState(false);
+
+    React.useEffect(() => {
+        if (!isOpen) return;
+
+        let isMounted = true;
+        const fetchProducts = async () => {
+            setIsLoading(true);
+            try {
+                // In a real scenario, we'd have a ProductService.
+                // For now, since we want to remove direct mock imports from UI,
+                // we'll assume the central interceptor handles '/products'
+                const response = await api.get<{ items: ProductLookup[] }>('/products');
+                if (isMounted) {
+                    setProducts(response.items || []);
+                }
+            } catch (error) {
+                console.error('[ProductSearchModal] Error fetching products:', error);
+                if (isMounted) {
+                    setProducts([]);
+                }
+            } finally {
+                if (isMounted) {
+                    setIsLoading(false);
+                }
+            }
+        };
+
+        fetchProducts();
+        return () => {
+            isMounted = false;
+        };
+    }, [isOpen]);
+
     return (
         <ProductSearchModalBase
             isOpen={isOpen}
             onClose={onClose}
             onSelect={onSelect}
-            data={MOCK_PRODUCTS}
+            data={products}
+            isLoading={isLoading}
         />
     );
 };
