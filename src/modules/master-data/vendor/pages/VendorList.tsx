@@ -7,7 +7,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { 
-    Plus, 
     Edit2, 
     Trash2, 
     Database,
@@ -15,7 +14,6 @@ import {
     ChevronRight,
     ChevronsLeft,
     ChevronsRight,
-    RefreshCw,
     AlertCircle
 } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
@@ -180,20 +178,7 @@ export default function VendorList() {
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button
-                        onClick={handleRefresh}
-                        className="p-2 text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                        title="รีเฟรช"
-                    >
-                        <RefreshCw size={20} className={isLoading ? 'animate-spin' : ''} />
-                    </button>
-                    <button
-                        onClick={handleCreateNew}
-                        className={`${styles.btnPrimary} flex items-center gap-2 whitespace-nowrap`}
-                    >
-                        <Plus size={20} />
-                        เพิ่มเจ้าหนี้ใหม่
-                    </button>
+                    {/* Buttons removed as they are redundant with FilterFormBuilder */}
                 </div>
             </div>
 

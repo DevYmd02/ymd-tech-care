@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { 
     Users, Package, Building2, Warehouse as WarehouseIcon, 
@@ -22,7 +22,7 @@ import { VendorService } from '@/modules/master-data/vendor/services/vendor.serv
 import { VendorFormModal } from '@/modules/master-data/vendor/pages';
 import { BranchFormModal } from '@/modules/master-data/company/pages/branch';
 import { WarehouseFormModal } from '@/modules/master-data/inventory/pages/warehouse';
-import { ItemMasterList } from '@/modules/master-data/inventory/pages/item-master';
+import { ItemMasterFormModal } from '@/modules/master-data/inventory/pages/item-master/ItemMasterFormModal';
 
 // Import sub-components
 import { MasterDataHeader } from './components/MasterDataHeader';
@@ -35,6 +35,7 @@ import { BranchTab } from './dashboard/tabs/BranchTab';
 import { WarehouseTab } from './dashboard/tabs/WarehouseTab';
 import { CostCenterTab } from './dashboard/tabs/CostCenterTab';
 import { ProjectTab } from './dashboard/tabs/ProjectTab';
+import { ItemTab } from './dashboard/tabs/ItemTab';
 
 // Import types
 import type { VendorListItem, VendorMaster } from '@/modules/master-data/vendor/types/vendor-types';
@@ -90,7 +91,6 @@ const DB_RELATIONS: Record<TabType, { dbTable: string; relations: string[]; fk: 
 
 export default function MasterDataDashboard() {
     const [searchParams, setSearchParams] = useSearchParams();
-    const navigate = useNavigate();
     
     // Get initial tab from URL or default to 'vendor'
     const initialTab = (searchParams.get('tab') as TabType) || 'vendor';
@@ -115,8 +115,7 @@ export default function MasterDataDashboard() {
     const [projects, setProjects] = useState<Project[]>([]);
 
     // REFACTORED: Use useQuery for items (Cache Shared with ItemMasterList)
-    // REFACTORED: Use useQuery for items (Cache Shared with ItemMasterList)
-    const { data: response } = useQuery({
+    const { data: response, refetch: refetchItems } = useQuery({
         queryKey: ['items'],
         queryFn: ItemMasterService.getAll,
         staleTime: 1000 * 60 * 5,
@@ -239,10 +238,6 @@ export default function MasterDataDashboard() {
     };
 
     const handleAddNew = () => {
-        if (activeTab === 'item') {
-            navigate('/master-data/item');
-            return;
-        }
         setEditingId(null);
         setIsModalOpen(true);
     };
@@ -273,8 +268,18 @@ export default function MasterDataDashboard() {
                     alert(result.message || 'เกิดข้อผิดพลาดในการลบข้อมูล');
                     return;
                 }
+                fetchData();
+            } else if (activeTab === 'item') {
+                const success = await ItemMasterService.delete(id);
+                if (success) {
+                    refetchItems();
+                } else {
+                    alert('เกิดข้อผิดพลาดในการลบข้อมูล');
+                }
+            } else {
+                // Simplified mock deletes for other tabs (implementation details might vary)
+                fetchData();
             }
-            fetchData();
         }
     };
 
@@ -282,7 +287,11 @@ export default function MasterDataDashboard() {
         setIsModalOpen(false);
         setEditingId(null);
         setSelectedVendor(null);
-        fetchData();
+        if (activeTab === 'item') {
+             refetchItems();
+        } else {
+             fetchData();
+        }
     };
 
     const toggleExpand = (id: string) => {
@@ -427,7 +436,14 @@ export default function MasterDataDashboard() {
                         dbRelation={currentTab}
                     />
                 ) : activeTab === 'item' ? (
-                     <ItemMasterList />
+                     <ItemTab 
+                        data={paginatedData as ItemListItem[]}
+                        expandedId={expandedId}
+                        toggleExpand={toggleExpand}
+                        handleEdit={handleEdit}
+                        handleDelete={handleDelete}
+                        dbRelation={currentTab}
+                    />
                 ) : activeTab === 'cost-center' ? (
                     <CostCenterTab 
                         data={paginatedData as CostCenter[]}
@@ -449,8 +465,8 @@ export default function MasterDataDashboard() {
                 )}
             </div>
 
-            {/* Pagination Footer - Hide for Item Master (it has its own SmartTable pagination) */}
-            {!isLoading && totalItems > 0 && activeTab !== 'item' && (
+            {/* Pagination Footer - Show for all tabs now */}
+            {!isLoading && totalItems > 0 && (
                 <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
                     <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 w-full sm:w-auto justify-center sm:justify-start">
                         <span className="whitespace-nowrap">แสดง</span>
@@ -519,7 +535,18 @@ export default function MasterDataDashboard() {
             />
             <BranchFormModal isOpen={isModalOpen && activeTab === 'branch'} onClose={handleModalClose} editId={editingId} />
             <WarehouseFormModal isOpen={isModalOpen && activeTab === 'warehouse'} onClose={handleModalClose} editId={editingId} />
-            {/* Item Master modals are handled within ItemMasterList */}
+            <ItemMasterFormModal 
+                isOpen={isModalOpen && activeTab === 'item'} 
+                onClose={handleModalClose} 
+                editId={editingId}
+                onSuccess={() => {
+                    refetchItems();
+                    handleModalClose();
+                }}
+            />
         </div>
     );
 }
+
+// Remove unused import if we actually removed it
+// import { ItemMasterList } from '@/modules/master-data/inventory/pages/item-master';

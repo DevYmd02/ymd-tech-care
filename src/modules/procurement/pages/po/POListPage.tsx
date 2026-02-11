@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { FileText, Plus, Eye, Send, CheckCircle, Package, Edit } from 'lucide-react';
@@ -14,6 +14,7 @@ import type { POListParams, POStatus, POListItem, POFormData } from '@/modules/p
 import { createColumnHelper } from '@tanstack/react-table';
 import type { ColumnDef } from '@tanstack/react-table';
 import { POFormModal } from './components';
+import GRNFormModal from '@/modules/procurement/pages/grn/components/GRNFormModal';
 
 // ====================================================================================
 // STATUS OPTIONS
@@ -81,6 +82,10 @@ export default function POListPage() {
         });
     };
 
+    // -- GRN Modal State --
+    const [isGRNModalOpen, setIsGRNModalOpen] = useState(false);
+    const [selectedPOIdForGRN, setSelectedPOIdForGRN] = useState<string | undefined>(undefined);
+
     const { filters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<POStatus>({
         defaultStatus: 'ALL',
     });
@@ -116,7 +121,11 @@ export default function POListPage() {
     const handleEdit = (id: string) => window.alert(`Coming Soon: Edit PO ${id}`);
     const handleApprove = (id: string) => alert(`ส่งอนุมัติ PO: ${id}`);
     const handleIssue = (id: string) => alert(`ออก PO: ${id}`);
-    const handleGRN = (id: string) => alert(`เปิด GRN สำหรับ PO: ${id}`);
+    
+    const handleGRN = useCallback((id: string) => {
+        setSelectedPOIdForGRN(id);
+        setIsGRNModalOpen(true);
+    }, []);
 
     const columnHelper = createColumnHelper<POListItem>();
     
@@ -273,7 +282,7 @@ export default function POListPage() {
             size: 160,
             enableSorting: false,
         }),
-    ], [columnHelper, filters.page, filters.limit, data?.data]);
+    ], [columnHelper, filters.page, filters.limit, data?.data, handleGRN]);
 
     return (
         <>
@@ -459,6 +468,19 @@ export default function POListPage() {
                     window.location.reload(); 
                 }} 
                 initialValues={initialCreateValues}
+            />
+
+            <GRNFormModal
+                isOpen={isGRNModalOpen}
+                onClose={() => {
+                    setIsGRNModalOpen(false);
+                    setSelectedPOIdForGRN(undefined);
+                }}
+                initialPOId={selectedPOIdForGRN}
+                onSuccess={() => {
+                   // Refresh list if needed, or navigate to GRN list
+                   setIsGRNModalOpen(false);
+                }}
             />
         </>
     );
