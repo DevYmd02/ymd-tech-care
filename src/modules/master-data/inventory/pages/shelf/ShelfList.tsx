@@ -4,8 +4,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Edit2, Trash2, LayoutGrid } from 'lucide-react';
 import { ShelfFormModal } from './ShelfFormModal';
-import { ShelfService } from '../../services/inventory-master.service';
-import type { Shelf } from '../../types/inventory-master.types';
+import { ShelfService } from '@/modules/master-data/inventory/services/inventory-master.service';
+import type { Shelf } from '@/modules/master-data/inventory/types/inventory-master.types';
 import { ActiveStatusBadge } from '@ui/StatusBadge';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import FilterFormBuilder, { type FilterFieldConfig } from '@/shared/components/FilterFormBuilder';

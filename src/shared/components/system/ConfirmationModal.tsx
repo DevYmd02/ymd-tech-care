@@ -62,7 +62,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     const Icon = icon || config.icon;
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" style={{ zIndex: 9999 }}>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
             {/* Backdrop click to close */}
             <div className="absolute inset-0" onClick={onClose} />
 

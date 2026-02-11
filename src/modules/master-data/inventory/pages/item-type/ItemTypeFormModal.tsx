@@ -11,9 +11,14 @@ import { mockItemTypes } from '@/modules/master-data/mocks/masterDataMocks';
 import type { ItemTypeFormData } from '@/modules/master-data/types/master-data-types';
 import { initialItemTypeFormData } from '@/modules/master-data/types/master-data-types';
 
-interface Props { isOpen: boolean; onClose: () => void; editId?: string | null; }
+interface Props { 
+    isOpen: boolean; 
+    onClose: () => void; 
+    editId?: string | null;
+    onSuccess?: () => void;
+}
 
-export function ItemTypeFormModal({ isOpen, onClose, editId }: Props) {
+export function ItemTypeFormModal({ isOpen, onClose, editId, onSuccess }: Props) {
     const [formData, setFormData] = useState<ItemTypeFormData>(initialItemTypeFormData);
     const [isSearching, setIsSearching] = useState(false);
 
@@ -64,6 +69,7 @@ export function ItemTypeFormModal({ isOpen, onClose, editId }: Props) {
         if (!formData.itemTypeCode.trim() || !formData.itemTypeName.trim()) { alert('กรุณากรอกข้อมูลให้ครบถ้วน'); return; }
         logger.log('Save item type:', formData);
         alert(editId ? 'บันทึกการแก้ไขสำเร็จ' : 'เพิ่มประเภทสินค้าใหม่สำเร็จ');
+        if (onSuccess) onSuccess();
         onClose();
     };
 

@@ -21,6 +21,16 @@ export const GRNService = {
                  filtered = filtered.filter(grn => grn.status === params.status);
              }
 
+             // 1. Text Search
+             if (params?.grn_no) {
+                 const searchLower = params.grn_no.toLowerCase();
+                 filtered = filtered.filter(grn => grn.grn_no.toLowerCase().includes(searchLower));
+             }
+             if (params?.po_no) {
+                 const searchLower = params.po_no.toLowerCase();
+                 filtered = filtered.filter(grn => grn.po_no.toLowerCase().includes(searchLower));
+             }
+
              const sortParam = params?.sort || 'received_date:desc';
              const [sortKey, sortDir] = sortParam.split(':');
              
@@ -41,11 +51,18 @@ export const GRNService = {
                  return (valA < valB ? -1 : 1) * multiplier;
              });
 
+             // 2. Pagination
+             const page = Number(params?.page) || 1;
+             const limit = Number(params?.limit) || 10;
+             const startIndex = (page - 1) * limit;
+             const endIndex = startIndex + limit;
+             const paginated = sorted.slice(startIndex, endIndex);
+
              return {
-                 data: sorted,
+                 data: paginated,
                  total: sorted.length,
-                 page: 1,
-                 limit: 100
+                 page,
+                 limit
              };
         }
 

@@ -142,7 +142,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                 {/* ---------- SUBMENU ITEMS (Recursive) ---------- */}
                 {hasSubItems && (
                     <div
-                        className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}
+                        className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-[3000px] opacity-100' : 'max-h-0 opacity-0'}`}
                     >
                          {/* Tree View Line: Left Border + Margin */}
                         <div className="ml-6 border-l border-gray-300 dark:border-gray-600 my-1 pl-1"> 

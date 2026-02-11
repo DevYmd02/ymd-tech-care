@@ -11,9 +11,14 @@ import { mockProductCategories } from '@/modules/master-data/mocks/masterDataMoc
 import type { ProductCategoryFormData } from '@/modules/master-data/types/master-data-types';
 import { initialProductCategoryFormData } from '@/modules/master-data/types/master-data-types';
 
-interface Props { isOpen: boolean; onClose: () => void; editId?: string | null; }
+interface Props { 
+    isOpen: boolean; 
+    onClose: () => void; 
+    editId?: string | null;
+    onSuccess?: () => void;
+}
 
-export function ProductCategoryFormModal({ isOpen, onClose, editId }: Props) {
+export function ProductCategoryFormModal({ isOpen, onClose, editId, onSuccess }: Props) {
     const [formData, setFormData] = useState<ProductCategoryFormData>(initialProductCategoryFormData);
     const [isSearching, setIsSearching] = useState(false);
 
@@ -64,6 +69,7 @@ export function ProductCategoryFormModal({ isOpen, onClose, editId }: Props) {
         if (!formData.categoryCode.trim() || !formData.categoryName.trim()) { alert('กรุณากรอกข้อมูลให้ครบถ้วน'); return; }
         logger.log('Save category:', formData);
         alert(editId ? 'บันทึกการแก้ไขสำเร็จ' : 'เพิ่มหมวดสินค้าใหม่สำเร็จ');
+        if (onSuccess) onSuccess();
         onClose();
     };
 

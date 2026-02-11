@@ -1,6 +1,6 @@
 /**
  * @file SectionFormModal.tsx
- * @description Modal สำหรับสร้าง/แก้ไขข้อมูลส่วนงาน (Section)
+ * @description Modal สำหรับสร้าง/แก้ไขข้อมูลส่วนงาน (Section) - UI Refactored to match design standards
  * @module company
  */
 
@@ -13,8 +13,7 @@ import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@/shared/components/layout/DialogFormLayout';
 import { SectionService, DepartmentService } from '@/modules/master-data/company/services/company.service';
 import type { DepartmentListItem } from '@/modules/master-data/types/master-data-types';
-
-
+import { logger } from '@/shared/utils/logger';
 
 interface SectionFormModalProps {
     isOpen: boolean;
@@ -69,11 +68,13 @@ export const SectionFormModal = ({ isOpen, onClose, onSuccess, editId }: Section
             if (isEdit && editId) {
                 SectionService.get(editId).then((data) => {
                     if (data) {
-                        setValue('sectionCode', data.section_code);
-                        setValue('sectionName', data.section_name);
-                        setValue('sectionNameEn', data.section_name_en || '');
-                        setValue('departmentId', data.department_id || '');
-                        setValue('isActive', data.is_active);
+                        reset({
+                            sectionCode: data.section_code,
+                            sectionName: data.section_name,
+                            sectionNameEn: data.section_name_en || '',
+                            departmentId: data.department_id || '',
+                            isActive: data.is_active ?? true,
+                        });
                     }
                 });
             } else {
@@ -86,7 +87,7 @@ export const SectionFormModal = ({ isOpen, onClose, onSuccess, editId }: Section
                 });
             }
         }
-    }, [isOpen, isEdit, editId, reset, setValue]);
+    }, [isOpen, isEdit, editId, reset]);
 
     const onSubmit = async (data: SectionFormValues) => {
         try {
@@ -104,7 +105,7 @@ export const SectionFormModal = ({ isOpen, onClose, onSuccess, editId }: Section
                 alert(res.message || 'บันทึกไม่สำเร็จ');
             }
         } catch (error) {
-            console.error('Error saving section:', error);
+            logger.error('Error saving section:', error);
             alert('เกิดข้อผิดพลาดในการบันทึก');
         }
     };
@@ -143,55 +144,30 @@ export const SectionFormModal = ({ isOpen, onClose, onSuccess, editId }: Section
         <DialogFormLayout
             isOpen={isOpen}
             onClose={onClose}
-            title={isEdit ? 'แก้ไขข้อมูลแผนก' : 'เพิ่มรหัสแผนกใหม่'}
+            title={isEdit ? 'แก้ไขข้อมูลแผนก' : 'เพิ่มแผนกใหม่'}
             titleIcon={TitleIcon}
             footer={FormFooter}
         >
             <div className="p-6 space-y-6">
-                {/* Parent Department Selector */}
-                <div>
-                    <label className={styles.label}>
-                        สังกัดฝ่าย <span className="text-red-500">*</span>
-                    </label>
-                    <select 
-                        className={`${styles.input} cursor-pointer ${errors.departmentId ? 'border-red-500 focus:ring-red-200' : ''}`}
-                        {...register('departmentId')}
-                    >
-                        <option value="">เลือกฝ่าย</option>
-                        {departments.map(dept => (
-                            <option key={dept.department_id} value={dept.department_id}>
-                                {dept.department_code} - {dept.department_name}
-                            </option>
-                        ))}
-                    </select>
-                    {errors.departmentId ? (
-                        <p className="text-red-500 text-xs mt-1">{errors.departmentId.message}</p>
-                    ) : (
-                        <p className="text-gray-400 text-xs mt-1">เลือกฝ่ายที่แผนกนี้สังกัด</p>
-                    )}
-                </div>
-
-                {/* Section Code */}
-                <div>
+                {/* 1. Section Code (รหัสแผนก) */}
+                <div className="space-y-1">
                     <label className={styles.label}>
                         รหัสแผนก <span className="text-red-500">*</span>
                     </label>
                     <input
                         {...register('sectionCode')}
                         type="text"
-                        placeholder="กรอกรหัสแผนก"
+                        placeholder="กรอกรหัสแผนก (เช่น FIN-TRS, ACC-GL)"
                         className={`${styles.input} ${errors.sectionCode ? 'border-red-500 focus:ring-red-200' : ''}`}
                         disabled={isEdit}
                     />
-                    {errors.sectionCode ? (
+                    {errors.sectionCode && (
                         <p className="text-red-500 text-xs mt-1">{errors.sectionCode.message}</p>
-                    ) : (
-                        <p className="text-gray-400 text-xs mt-1">varchar(25) - รหัสแผนก</p>
                     )}
                 </div>
 
-                {/* Section Name (Thai) */}
-                <div>
+                {/* 2. Section Name Thai (ชื่อแผนก ภาษาไทย) */}
+                <div className="space-y-1">
                     <label className={styles.label}>
                         ชื่อแผนก (ภาษาไทย) <span className="text-red-500">*</span>
                     </label>
@@ -201,29 +177,50 @@ export const SectionFormModal = ({ isOpen, onClose, onSuccess, editId }: Section
                         placeholder="กรอกชื่อแผนก"
                         className={`${styles.input} ${errors.sectionName ? 'border-red-500 focus:ring-red-200' : ''}`}
                     />
-                    {errors.sectionName ? (
+                    {errors.sectionName && (
                         <p className="text-red-500 text-xs mt-1">{errors.sectionName.message}</p>
-                    ) : (
-                        <p className="text-gray-400 text-xs mt-1">varchar(255) - ชื่อแผนก</p>
                     )}
                 </div>
 
-                {/* Section Name (English) */}
-                <div>
+                {/* 3. Section Name English (ชื่อแผนก ภาษาอังกฤษ) */}
+                <div className="space-y-1">
                     <label className={styles.label}>
                         ชื่อแผนก (ภาษาอังกฤษ)
                     </label>
                     <input
                         {...register('sectionNameEn')}
                         type="text"
-                        placeholder="Enter section name in English"
+                        placeholder="Enter department name in English"
                         className={`${styles.input} ${errors.sectionNameEn ? 'border-red-500 focus:ring-red-200' : ''}`}
                     />
-                    <p className="text-gray-400 text-xs mt-1">varchar(255) - ชื่อแผนก (Eng)</p>
+                    {errors.sectionNameEn && (
+                        <p className="text-red-500 text-xs mt-1">{errors.sectionNameEn.message}</p>
+                    )}
                 </div>
 
-                {/* Status - Dropdown Select */}
-                <div>
+                {/* 4. Select Side/Department (เลือกฝ่าย) */}
+                <div className="space-y-1">
+                    <label className={styles.label}>
+                        เลือกฝ่าย <span className="text-red-500">*</span>
+                    </label>
+                    <select 
+                        className={`${styles.input} cursor-pointer ${errors.departmentId ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        {...register('departmentId')}
+                    >
+                        <option value="">-- เลือกฝ่าย --</option>
+                        {departments.map(dept => (
+                            <option key={dept.department_id} value={dept.department_id}>
+                                {dept.department_code} - {dept.department_name}
+                            </option>
+                        ))}
+                    </select>
+                    {errors.departmentId && (
+                        <p className="text-red-500 text-xs mt-1">{errors.departmentId.message}</p>
+                    )}
+                </div>
+
+                {/* 5. Status */}
+                <div className="space-y-1">
                     <label className={styles.label}>
                         สถานะ <span className="text-red-500">*</span>
                     </label>

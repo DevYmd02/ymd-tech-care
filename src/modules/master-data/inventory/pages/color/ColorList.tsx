@@ -4,8 +4,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Edit2, Trash2, Palette } from 'lucide-react';
 import { ColorFormModal } from './ColorFormModal';
-import { ColorService } from '../../services/inventory-master.service';
-import type { Color } from '../../types/inventory-master.types';
+import { ColorService } from '@/modules/master-data/inventory/services/inventory-master.service';
+import type { Color } from '@/modules/master-data/inventory/types/inventory-master.types';
 import { ActiveStatusBadge } from '@ui/StatusBadge';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import FilterFormBuilder, { type FilterFieldConfig } from '@/shared/components/FilterFormBuilder';
