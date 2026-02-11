@@ -8,3 +8,10 @@ export interface SuccessResponse {
   message?: string;
   id?: string | number;
 }
+
+export interface PaginatedListResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  limit: number;
+}

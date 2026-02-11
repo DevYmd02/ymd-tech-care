@@ -60,7 +60,7 @@ export const SectionFormModal = ({ isOpen, onClose, onSuccess, editId }: Section
     // Fetch Departments for Dropdown
     useEffect(() => {
         if (isOpen) {
-            DepartmentService.getList().then(setDepartments);
+            DepartmentService.getList().then(response => setDepartments(response.items));
         }
     }, [isOpen]);
 

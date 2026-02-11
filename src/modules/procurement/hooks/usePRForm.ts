@@ -1,12 +1,16 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import type { PRFormData, PRLineFormData, CreatePRPayload } from '@/modules/procurement/types/pr-types';
-import { MasterDataService } from '@/core/api/master-data.service';
 import { PRService } from '@/modules/procurement/services/pr.service';
+import { fetchExchangeRate } from '../services/mockExchangeRateService';
+import { MasterDataService } from '@/core/api/master-data.service';
 import type { ItemListItem, CostCenter, Project } from '@/modules/master-data/types/master-data-types';
 import type { VendorMaster } from '@/modules/master-data/vendor/types/vendor-types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
+import * as z from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+
 
 const PR_CONFIG = {
   MIN_LINES: 5,
@@ -14,6 +18,12 @@ const PR_CONFIG = {
 } as const;
 
 const getTodayDate = (): string => new Date().toISOString().split('T')[0];
+
+const getNextWeekDate = (): string => {
+  const date = new Date();
+  date.setDate(date.getDate() + 7);
+  return date.toISOString().split('T')[0];
+};
 
 export interface ExtendedLine extends PRLineFormData {
   warehouse?: string;
@@ -31,11 +41,13 @@ const getInitialLines = () => Array(PR_CONFIG.INITIAL_LINES).fill(null).map(() =
 
 const getDefaultFormValues = (): PRFormData => ({
   pr_no: '', request_date: getTodayDate(), required_date: '', requester_name: 'นางสาว กรรลิกา สารมาท',
-  cost_center_id: '', project_id: undefined, purpose: '', currency_id: 'THB', lines: [], total_amount: 0,
-  is_on_hold: false,
-  delivery_date: '', credit_days: 30, vendor_quote_no: '', shipping_method: 'รถยนต์', remarks: '',
+  cost_center_id: '', project_id: undefined, purpose: '', currency_id: '', lines: [], total_amount: 0,
+  is_on_hold: 'N',
+  delivery_date: '', credit_days: 30, vendor_quote_no: '', shipping_method: '', remarks: '',
   is_multicurrency: false, exchange_rate: 1, rate_date: new Date().toISOString().split('T')[0],
   currency_type_id: '',
+  cancelflag: 'N',
+  status: 'DRAFT',
 });
 
 export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onSuccess?: () => void) => {
@@ -57,17 +69,65 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     date.setDate(date.getDate() + 7);
     return date.toISOString().split('T')[0];
   });
-  const [creditDays, setCreditDays] = useState(30);
   const [vendorQuoteNo, setVendorQuoteNo] = useState('');
   const [shippingMethod, setShippingMethod] = useState('');
   const [requesterName] = useState('นางสาว กรรลิกา สารมาท');
   
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const prevCurrencyId = useRef<string>(getDefaultFormValues().currency_id);
+  const prevCurrencyTypeId = useRef<string | undefined>(getDefaultFormValues().currency_type_id);
+
   const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const { register, handleSubmit, setValue, reset, watch, setFocus, control, formState: { isSubmitting } } = useForm<PRFormData>({
-    defaultValues: getDefaultFormValues()
+  // Detailed schema to match PRFormData exactly and avoid 'any'
+  const PRLineSchema = z.object({
+    item_id: z.string(),
+    item_code: z.string(),
+    item_name: z.string(),
+    item_description: z.string().optional(),
+    quantity: z.number(),
+    uom: z.string(),
+    uom_id: z.union([z.string(), z.number()]).optional(),
+    est_unit_price: z.number(),
+    est_amount: z.number(),
+    needed_date: z.string(),
+    preferred_vendor_id: z.string().optional(),
+    remark: z.string().optional(),
+  });
+
+  const PRFormSchema = z.object({
+    pr_no: z.string(),
+    request_date: z.string(),
+    required_date: z.string(),
+    requester_name: z.string().optional(),
+    cost_center_id: z.string().min(1, 'Please select cost center'),
+    project_id: z.string().optional(),
+    purpose: z.string().min(1, 'Please enter purpose'),
+    currency_id: z.string(),
+    is_multicurrency: z.boolean(),
+    exchange_rate: z.number(),
+    rate_date: z.string().optional(),
+    currency_type_id: z.string().optional(),
+    exchange_round: z.number().optional(),
+    allow_adjust: z.number().optional(),
+    preferred_vendor_id: z.string().optional(),
+    vendor_name: z.string().optional(),
+    delivery_date: z.string().optional(),
+    credit_days: z.number().optional(),
+    vendor_quote_no: z.string().optional(),
+    shipping_method: z.string().optional(),
+    remarks: z.string().optional(),
+    lines: z.array(PRLineSchema),
+    is_on_hold: z.union([z.boolean(), z.string()]),
+    cancelflag: z.enum(['Y', 'N']).optional(),
+    status: z.enum(['DRAFT', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED']).optional(),
+    total_amount: z.number(),
+  });
+
+  const { register, handleSubmit, setValue, reset, watch, setFocus, control, getFieldState, formState: { isSubmitting } } = useForm<PRFormData>({
+    defaultValues: getDefaultFormValues(),
+    resolver: zodResolver(PRFormSchema)
   });
 
   const [products, setProducts] = useState<ItemListItem[]>([]);
@@ -95,15 +155,95 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
   useEffect(() => {
     if (isOpen && !prevIsOpenRef.current) {
       const timer = setTimeout(async () => {
-        if (!id) {
+        if (id) {
+          // Fetch PR for Edit Mode
+          try {
+            setIsActionLoading(true);
+            const pr = await PRService.getById(id);
+            if (pr) {
+              // Map PRHeader to PRFormData
+              const formData: PRFormData = {
+                pr_no: pr.pr_no,
+                request_date: pr.request_date,
+                required_date: pr.required_date,
+                requester_name: pr.requester_name,
+                cost_center_id: pr.cost_center_id,
+                project_id: pr.project_id,
+                purpose: pr.purpose,
+                currency_id: pr.currency_code || 'THB',
+                is_multicurrency: pr.currency_code !== 'THB',
+                exchange_rate: 1, // Default or fetch if needed
+                lines: (pr.lines || []).map(line => ({
+                  item_id: line.item_id,
+                  item_code: line.item_code,
+                  item_name: line.item_name,
+                  item_description: line.item_description,
+                  quantity: line.quantity,
+                  uom: line.uom,
+                  est_unit_price: line.est_unit_price,
+                  est_amount: line.est_amount,
+                  needed_date: line.needed_date,
+                  preferred_vendor_id: line.preferred_vendor_id,
+                  remark: line.remark
+                })), 
+                is_on_hold: pr.status === 'DRAFT' ? 'Y' : 'N', // map if needed
+                total_amount: pr.total_amount,
+                delivery_date: pr.delivery_date,
+                credit_days: pr.credit_days || 30,
+                vendor_quote_no: pr.vendor_quote_no,
+                shipping_method: pr.shipping_method,
+                remarks: pr.remarks,
+                preferred_vendor_id: pr.preferred_vendor_id,
+                vendor_name: pr.vendor_name,
+                cancelflag: pr.cancelflag || 'N',
+                status: pr.status
+              };
+
+              // Map PRLine to ExtendedLine
+              const mappedLines: ExtendedLine[] = (pr.lines || []).map(line => ({
+                item_id: line.item_id,
+                item_code: line.item_code,
+                item_name: line.item_name,
+                item_description: line.item_description,
+                quantity: line.quantity,
+                uom: line.uom,
+                est_unit_price: line.est_unit_price,
+                est_amount: line.est_amount,
+                needed_date: line.needed_date,
+                preferred_vendor_id: line.preferred_vendor_id,
+                remark: line.remark,
+                warehouse: '', // not in PRLine but in ExtendedLine
+                location: '',
+                discount: 0
+              }));
+
+              // Ensure at least 5 lines for UI consistency
+              const initialLines = [...mappedLines];
+              while (initialLines.length < PR_CONFIG.MIN_LINES) {
+                initialLines.push(createEmptyLine());
+              }
+
+              setLines(initialLines);
+              setRemarks(pr.remarks || '');
+              setDeliveryDate(pr.delivery_date || getNextWeekDate());
+              setVendorQuoteNo(pr.vendor_quote_no || '');
+              setShippingMethod(pr.shipping_method || '');
+              
+              reset(formData);
+            }
+          } catch (error) {
+            console.error('Failed to fetch PR details:', error);
+          } finally {
+            setIsActionLoading(false);
+          }
+        } else {
+          // New PR Mode
           setLines(getInitialLines());
           setDiscountPercent(0);
           setVatRate(7);
           setRemarks('');
-          const nextWeek = new Date();
-          nextWeek.setDate(nextWeek.getDate() + 7);
-          setDeliveryDate(nextWeek.toISOString().split('T')[0]);
-          setCreditDays(30);
+          setDeliveryDate(getNextWeekDate());
+          setValue('credit_days', 30);
           setVendorQuoteNo('');
           setShippingMethod('');
           setActiveTab('detail');
@@ -114,59 +254,110 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
       return () => clearTimeout(timer);
     }
     prevIsOpenRef.current = isOpen;
-  }, [isOpen, reset, id]);
+  }, [isOpen, reset, id, setValue]);
 
-  // Currency Sync Logic
-  const currencyId = watch('currency_id');
+  // Currency Pair (Source -> Target) Sync Logic
+  const sourceCurrencyId = watch('currency_id');
+  const targetCurrencyId = watch('currency_type_id'); // Using this as Target Currency
+  
   useEffect(() => {
-    if (currencyId === 'THB') {
-        setValue('is_multicurrency', false);
-        setValue('exchange_rate', 1);
-    } else {
-        setValue('is_multicurrency', true);
-        // Keep existing rate or could fetch default here
+    if (!sourceCurrencyId) return;
+
+    // Logic: If Source === Target (e.g. THB -> THB), Rate = 1
+    if (sourceCurrencyId === targetCurrencyId) {
+      setValue('exchange_rate', 1, { shouldDirty: false });
+      setValue('is_multicurrency', sourceCurrencyId !== 'THB');
+      prevCurrencyId.current = sourceCurrencyId;
+      prevCurrencyTypeId.current = targetCurrencyId;
+      return;
     }
-  }, [currencyId, setValue]);
+
+    const isSourceChanged = prevCurrencyId.current !== sourceCurrencyId;
+    const isTargetChanged = prevCurrencyTypeId.current !== targetCurrencyId;
+
+    const fetchRate = async () => {
+      // AUTO-DEFAULT: If Source changed to foreign and Target is empty/same-as-prev-source, 
+      // default Target to 'THB'
+      if (isSourceChanged && (targetCurrencyId === prevCurrencyId.current || !targetCurrencyId)) {
+        setValue('currency_type_id', 'THB');
+      }
+
+      const { isDirty } = getFieldState('exchange_rate');
+      
+      // Fetch if:
+      // 1. Source/Target changed
+      // 2. OR field is NOT dirty
+      if (isSourceChanged || isTargetChanged || !isDirty) {
+        try {
+          const finalTarget = (isSourceChanged && !targetCurrencyId) ? 'THB' : targetCurrencyId;
+          const rate = await fetchExchangeRate(sourceCurrencyId, finalTarget);
+          setValue('exchange_rate', rate, { shouldValidate: true, shouldDirty: false });
+          setValue('is_multicurrency', sourceCurrencyId !== 'THB' || finalTarget !== 'THB');
+        } catch (error) {
+          console.error('Failed to fetch exchange rate:', error);
+        }
+      }
+    };
+
+    fetchRate();
+    
+    prevCurrencyId.current = sourceCurrencyId;
+    prevCurrencyTypeId.current = targetCurrencyId;
+  }, [sourceCurrencyId, targetCurrencyId, setValue, getFieldState]);
 
   const showAlert = (message: string) => setAlertState({ show: true, message });
 
-  const addLine = () => setLines(prev => [...prev, createEmptyLine()]);
+  const addLine = useCallback(() => setLines(prev => [...prev, createEmptyLine()]), []);
   
-  const removeLine = (index: number) => {
-    if (lines.length <= PR_CONFIG.MIN_LINES) {
-      showAlert(`ต้องมีอย่างน้อย ${PR_CONFIG.MIN_LINES} แถว`);
-      return;
-    }
-    setLines(prev => prev.filter((_, i) => i !== index));
-  };
+  const removeLine = useCallback((index: number) => {
+    setLines(prev => {
+      if (prev.length <= PR_CONFIG.MIN_LINES) {
+        // Warning side-effect should theoretically be handled outside or via a state, 
+        // but for now we'll keep it simple. 
+        // Note: showAlert depends on setAlertState which is stable from useState
+        showAlert(`ต้องมีอย่างน้อย ${PR_CONFIG.MIN_LINES} แถว`);
+        return prev;
+      }
+      return prev.filter((_, i) => i !== index);
+    });
+  }, []);
   
-  const clearLine = (index: number) => {
+  const clearLine = useCallback((index: number) => {
     setLines(prev => {
       const newLines = [...prev];
       newLines[index] = createEmptyLine();
       return newLines;
     });
-  };
+  }, []);
   
-  const updateLine = (index: number, field: keyof ExtendedLine, value: string | number) => {
+  const updateLine = useCallback((index: number, field: keyof ExtendedLine, value: string | number) => {
     setLines(prev => {
       const newLines = [...prev];
+      // Create a shallow copy of the line to avoid mutation
       const line = { ...newLines[index] };
+      
       if (field === 'quantity' || field === 'est_unit_price' || field === 'est_amount' || field === 'discount') {
-        (line as Record<string, unknown>)[field] = value as number;
+        const numValue = typeof value === 'string' ? parseFloat(value) : value; 
+        // We know 'field' corresponds to a number property, but TypeScript needs help.
+        // We can cast 'line' to a type that has these specific keys as number-writable.
+        (line as { [key in typeof field]: number })[field] = isNaN(numValue) ? 0 : numValue;
       } else {
-        (line as Record<string, unknown>)[field] = value as string;
+        // Safe cast to Record to allow assignment of string/number/undefined
+        (line as Record<string, string | number | undefined>)[field] = value;
       }
+      
+      // Auto-calculate amount
       if (field === 'quantity' || field === 'est_unit_price' || field === 'discount') {
         const disc = line.discount || 0;
         line.est_amount = (line.quantity * line.est_unit_price) - disc;
       }
+      
       newLines[index] = line;
       return newLines;
     });
-  };
+  }, []);
 
-  const handleClearLines = async () => {
+  const handleClearLines = useCallback(async () => {
     const isConfirmed = await confirm({
         title: 'ยืนยันการล้างรายการ',
         description: 'คุณต้องการล้างรายการสินค้าทั้งหมดใช่หรือไม่?',
@@ -177,28 +368,16 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     if (isConfirmed) {
         setLines(getInitialLines());
     }
-  };
+  }, [confirm]);
 
-  const handleResetForm = async () => {
-    const isConfirmed = await confirm({
-        title: 'ยืนยันการล้างข้อมูล',
-        description: 'คุณต้องการล้างข้อมูลในฟอร์มทั้งหมดใช่หรือไม่? ข้อมูลที่กรอกไว้จะหายไปทั้งหมด',
-        confirmText: 'ล้างข้อมูล',
-        cancelText: 'ยกเลิก',
-        variant: 'danger'
-    });
-    if (isConfirmed) {
-        reset();
-    }
-  };
 
-  const openProductSearch = (index: number) => {
+  const openProductSearch = useCallback((index: number) => {
     setActiveRowIndex(index);
     setSearchTerm('');
     setIsProductModalOpen(true);
-  };
+  }, []);
   
-  const selectProduct = (product: ItemListItem) => {
+  const selectProduct = useCallback((product: ItemListItem) => {
     if (activeRowIndex !== null) {
       setLines(prev => {
         const firstEmptyIndex = prev.findIndex(l => !l.item_id);
@@ -223,7 +402,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
       });
     }
     setIsProductModalOpen(false);
-  };
+  }, [activeRowIndex]);
 
   const subtotal = lines.reduce((sum, line) => sum + (line.est_amount || 0), 0);
   const discountAmount = subtotal * (discountPercent / 100);
@@ -231,31 +410,76 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
   const vatAmount = afterDiscount * (vatRate / 100);
   const grandTotal = afterDiscount + vatAmount;
 
-  const handleVendorSelect = (vendor: VendorMaster | null) => {
+  const handleVendorSelect = useCallback((vendor: VendorMaster | null) => {
     if (vendor) {
       setValue("preferred_vendor_id", vendor.vendor_id);
       setValue("vendor_name", vendor.vendor_name);
-      setCreditDays(vendor.payment_term_days !== undefined ? vendor.payment_term_days : 30);
+      setValue("credit_days", vendor.payment_term_days !== undefined ? vendor.payment_term_days : 30);
     } else {
       setValue("preferred_vendor_id", undefined);
       setValue("vendor_name", '');
-      setCreditDays(30);
+      setValue("credit_days", 30);
     }
-  };
+  }, [setValue]);
 
   const createPRMutation = useMutation({
     mutationFn: async (payload: CreatePRPayload) => {
         const newPR = await PRService.create(payload);
         if (!newPR?.pr_id) throw new Error("ไม่สามารถสร้างเอกสารได้");
-        const submitResult = await PRService.submit(newPR.pr_id);
-        return { newPR, submitResult };
+        return { newPR };
     },
     onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['prs'] });
     }
   });
 
-  const onSubmit = async (data: PRFormData) => {
+  const handleSaveData = useCallback(async (data: PRFormData, activeLines: ExtendedLine[]) => {
+    setIsActionLoading(true);
+    try {
+        const payload: CreatePRPayload = { 
+            pr_date: data.request_date,
+            remark: remarks || data.purpose,
+            department_id: data.cost_center_id,
+            project_id: data.project_id,
+            requester_name: requesterName,
+            required_date: data.required_date,
+            items: activeLines.map(line => ({
+               item_id: line.item_id, item_code: line.item_code, item_name: line.item_name,
+               qty: line.quantity, uom: line.uom, uom_id: line.uom_id,
+               price: line.est_unit_price, needed_date: line.needed_date, remark: line.remark
+            })),
+            delivery_date: deliveryDate,
+            credit_days: data.credit_days || 30, // Use data directly
+            payment_term_days: data.credit_days || 30,
+            vendor_quote_no: vendorQuoteNo,
+            shipping_method: shippingMethod,
+            preferred_vendor_id: data.preferred_vendor_id,
+            vendor_name: data.vendor_name,
+            requester_user_id: 1, branch_id: 1, warehouse_id: 1       
+        };
+        if (isEditMode && id) {
+            await PRService.update(id, payload);
+            await confirm({ title: 'แก้ไขสำเร็จ', description: 'แก้ไขเอกสารเรียบร้อยแล้ว', confirmText: 'ตกลง', variant: 'success' });
+            onSuccess?.(); onClose();
+        } else {
+            const { newPR } = await createPRMutation.mutateAsync(payload);
+            const displayNo = newPR.pr_no.startsWith('DRAFT-TEMP') ? 'รอรันเลข (NEW)' : newPR.pr_no;
+            await confirm({
+                title: 'บันทึกแบบร่างสำเร็จ!',
+                description: `เลขที่เอกสาร: ${displayNo}\nสถานะ: แบบร่าง (Draft)`,
+                confirmText: 'ตกลง', hideCancel: true, variant: 'success'
+            });
+            onSuccess?.(); onClose();
+        }
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการเชื่อมต่อระบบ';
+        await confirm({ title: 'เกิดข้อผิดพลาด', description: errorMessage, confirmText: 'ตกลง', hideCancel: true, variant: 'danger' });
+    } finally {
+        setIsActionLoading(false);
+    }
+  }, [remarks, requesterName, deliveryDate, vendorQuoteNo, shippingMethod, isEditMode, id, confirm, onSuccess, onClose, createPRMutation]); // Removed creditDays dependency
+
+  const onSubmit = useCallback(async (data: PRFormData) => {
     if (!data.required_date) { showAlert('กรุณาระบุวันที่ต้องการใช้'); return; }
     if (!data.requester_name) { showAlert('กรุณาระบุชื่อผู้ขอซื้อ'); return; }
     if (!data.cost_center_id) { showAlert('กรุณาเลือกศูนย์ต้นทุน'); return; }
@@ -272,58 +496,24 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     });
     if (!isConfirmed) return;
     await handleSaveData(data, activeLines);
-  };
+  }, [shippingMethod, lines, isEditMode, confirm, handleSaveData]);
 
-  const handleSaveData = async (data: PRFormData, activeLines: ExtendedLine[]) => {
-    setIsActionLoading(true);
-    try {
-        const payload: CreatePRPayload = { 
-            pr_date: data.request_date,
-            remark: remarks || data.purpose,
-            department_id: data.cost_center_id,
-            project_id: data.project_id,
-            requester_name: requesterName,
-            required_date: data.required_date,
-            items: activeLines.map(line => ({
-               item_id: line.item_id, item_code: line.item_code, item_name: line.item_name,
-               qty: line.quantity, uom: line.uom, uom_id: line.uom_id,
-               price: line.est_unit_price, needed_date: line.needed_date, remark: line.remark
-            })),
-            delivery_date: deliveryDate,
-            credit_days: creditDays,
-            payment_term_days: creditDays,
-            vendor_quote_no: vendorQuoteNo,
-            shipping_method: shippingMethod,
-            preferred_vendor_id: data.preferred_vendor_id,
-            vendor_name: data.vendor_name,
-            requester_user_id: 1, branch_id: 1, warehouse_id: 1       
-        };
-        const { newPR, submitResult } = await createPRMutation.mutateAsync(payload);
-        if (submitResult.success) {
-            await confirm({
-                title: 'บันทึกสำเร็จ!',
-                description: `เลขที่เอกสาร: ${newPR.pr_no}\nสถานะ: รออนุมัติ (In Approval)`,
-                confirmText: 'ตกลง', hideCancel: true, variant: 'success'
-            });
-            onSuccess?.(); onClose();
-        } else {
-            await confirm({
-                title: 'บันทึกสำเร็จแต่ส่งอนุมัติไม่ผ่าน',
-                description: submitResult.message,
-                confirmText: 'ตกลง', hideCancel: true, variant: 'warning'
-            });
-            onSuccess?.(); onClose();
-        }
-    } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการเชื่อมต่อระบบ';
-        await confirm({ title: 'เกิดข้อผิดพลาด', description: errorMessage, confirmText: 'ตกลง', hideCancel: true, variant: 'danger' });
-    } finally {
-        setIsActionLoading(false);
-    }
-  };
-
-  const handleDelete = async () => {
+  const handleDelete = useCallback(async () => {
     if (!id) return;
+    
+    // Safety check: Only DRAFT can be deleted
+    const currentStatus = watch('status');
+    if (currentStatus && currentStatus !== 'DRAFT') {
+       await confirm({ 
+           title: 'ไม่สามารถลบได้', 
+           description: 'ขออภัย เฉพาะเอกสารสถานะ "แบบร่าง" เท่านั้นที่สามารถลบได้ หากต้องการยกเลิกกรุณาใช้ปุ่ม "Void" แทน', 
+           confirmText: 'ตกลง', 
+           hideCancel: true, 
+           variant: 'warning' 
+       });
+       return;
+    }
+
     const isConfirmed = await confirm({
         title: 'ยืนยันการลบ', description: 'คุณต้องการลบเอกสารนี้ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้',
         confirmText: 'ลบเอกสาร', cancelText: 'ยกเลิก', variant: 'danger'
@@ -339,9 +529,9 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     } catch (error) {
        console.error(error);
     } finally { setIsActionLoading(false); }
-  };
+  }, [id, confirm, onSuccess, onClose, watch]);
 
-  const handleApprove = async () => {
+  const handleApprove = useCallback(async () => {
     if (!id) return;
     const isConfirmed = await confirm({ title: 'ยืนยันการอนุมัติ', description: 'คุณต้องการอนุมัติเอกสารนี้ใช่หรือไม่?', confirmText: 'อนุมัติ', cancelText: 'ยกเลิก', variant: 'success' });
     if (!isConfirmed) return;
@@ -353,18 +543,61 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
         onSuccess?.(); onClose();
       }
     } catch (error) { console.error(error); } finally { setIsActionLoading(false); }
-  };
+  }, [id, confirm, onSuccess, onClose]);
+
+  const handleVoid = useCallback(async () => {
+    if (!id) return;
+    const isConfirmed = await confirm({
+        title: 'ยืนยันการยกเลิกเอกสาร',
+        description: 'คุณต้องการยกเลิกเอกสารใบขอซื้อนี้ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้',
+        confirmText: 'ยกเลิกเอกสาร',
+        cancelText: 'ย้อนกลับ',
+        variant: 'danger'
+    });
+    
+    if (!isConfirmed) return;
+    
+    setIsActionLoading(true);
+    try {
+      const response = await PRService.cancel(id);
+      if (response.success) {
+        await confirm({
+            title: 'ยกเลิกสำเร็จ',
+            description: 'เอกสารได้รับการยกเลิกเรียบร้อยแล้ว',
+            confirmText: 'ตกลง',
+            hideCancel: true,
+            variant: 'success'
+        });
+        onSuccess?.();
+        onClose();
+      } else {
+        throw new Error(response.message);
+      }
+    } catch (error) {
+       const errorMessage = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการยกเลิกเอกสาร';
+       await confirm({
+           title: 'เกิดข้อผิดพลาด',
+           description: errorMessage,
+           confirmText: 'ตกลง',
+           hideCancel: true,
+           variant: 'danger'
+       });
+    } finally {
+      setIsActionLoading(false);
+    }
+  }, [id, confirm, onSuccess, onClose]);
 
   return {
     isEditMode, lines, activeTab, setActiveTab, discountPercent, setDiscountPercent,
     vatRate, setVatRate, remarks, setRemarks, deliveryDate, setDeliveryDate,
-    creditDays, vendorQuoteNo, setVendorQuoteNo, shippingMethod, setShippingMethod,
+    vendorQuoteNo, setVendorQuoteNo, shippingMethod, setShippingMethod,
     requesterName, isProductModalOpen, setIsProductModalOpen, searchTerm, setSearchTerm,
     register, handleSubmit, setValue, watch, invokeSetFocus: setFocus, isSubmitting, isActionLoading,
     alertState, setAlertState, products, costCenters, projects,
     addLine, removeLine, clearLine, updateLine, handleClearLines,
     openProductSearch, selectProduct, subtotal, discountAmount, afterDiscount,
     vatAmount, grandTotal, handleVendorSelect, onSubmit, handleDelete, handleApprove,
-    control, reset: handleResetForm
+    handleVoid,
+    control, reset
   };
 };

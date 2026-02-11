@@ -24,7 +24,51 @@ import type {
   EmployeeGroupListItem, 
   EmployeeListItem 
 } from '@/modules/master-data/types/master-data-types';
+import type { CreatePRPayload, CreatePRLineItem } from '@/modules/procurement/types/pr-types';
 import { logger } from '@/shared/utils/logger';
+
+/**
+ * Generic helper to apply sorting and pagination to mock data arrays
+ */
+const applyMockFilters = <T>(data: T[], params: Record<string, string | number | boolean | undefined>) => {
+  const processed = [...data];
+  
+  // 1. Sorting
+  if (typeof params.sort === 'string') {
+    const [key, direction] = params.sort.split(':');
+    processed.sort((a, b) => {
+      const valA = a[key as keyof T];
+      const valB = b[key as keyof T];
+      
+      if (valA === valB) return 0;
+      if (valA === null || valA === undefined) return 1;
+      if (valB === null || valB === undefined) return -1;
+      
+      let comparison = 0;
+      if (typeof valA === 'string' && typeof valB === 'string') {
+        comparison = valA.localeCompare(valB);
+      } else if (typeof valA === 'number' && typeof valB === 'number') {
+        comparison = valA - valB;
+      } else if (typeof valA === 'boolean' && typeof valB === 'boolean') {
+        comparison = valA === valB ? 0 : (valA ? 1 : -1);
+      } else {
+        // Fallback for mixed or other types
+        comparison = String(valA).localeCompare(String(valB));
+      }
+      
+      return direction === 'desc' ? -comparison : comparison;
+    });
+  }
+  
+  // 2. Pagination
+  const page = Number(params.page) || 1;
+  const limit = Number(params.limit) || 20;
+  const total = processed.length;
+  const startIndex = (page - 1) * limit;
+  const items = processed.slice(startIndex, startIndex + limit);
+  
+  return { items, data: items, total, page, limit };
+};
 
 /**
  * Setup Centralized Mocks
@@ -60,22 +104,51 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
   mock.onGet('/pr').reply((config) => {
     const params = config.params || {};
     let filtered = [...MOCK_PRS];
+    
+    // 1. Search by PR No (q)
     if (params.q) {
-      const q = params.q.toLowerCase();
+      const q = String(params.q).toLowerCase();
       filtered = filtered.filter(p => p.pr_no.toLowerCase().includes(q));
     }
+
+    // 2. Search by Requester (created_by)
+    if (params.created_by) {
+      const q = String(params.created_by).toLowerCase();
+      filtered = filtered.filter(p => p.requester_name.toLowerCase().includes(q));
+    }
+
+    // 3. Search by Department
+    if (params.department) {
+      const q = String(params.department).toLowerCase();
+      // Simple mock filter: check if cost_center_id contains the query (or map to name if feasible)
+      filtered = filtered.filter(p => p.cost_center_id.toLowerCase().includes(q));
+    }
+
+    // 4. Status Filter
     if (params.status && params.status !== 'ALL') {
       filtered = filtered.filter(p => p.status === params.status);
     }
-    const page = params.page || 1;
-    const limit = params.limit || 20;
-    const startIndex = (page - 1) * limit;
-    return [200, {
-      items: filtered.slice(startIndex, startIndex + limit),
-      total: filtered.length,
-      page,
-      limit
-    }];
+
+    // 5. Date Range Filter
+    if (params.date_from) {
+      const fromDate = new Date(params.date_from as string);
+      fromDate.setHours(0, 0, 0, 0);
+      filtered = filtered.filter(p => {
+        const prDate = new Date(p.request_date);
+        return prDate >= fromDate;
+      });
+    }
+
+    if (params.date_to) {
+      const toDate = new Date(params.date_to as string);
+      toDate.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(p => {
+        const prDate = new Date(p.request_date);
+        return prDate <= toDate;
+      });
+    }
+    
+    return [200, applyMockFilters(filtered, params)];
   });
 
   mock.onGet(/\/pr\/.+/).reply((config) => {
@@ -84,9 +157,123 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
     return found ? [200, found] : [404, { message: 'PR Not Found' }];
   });
 
+  // Helper: Generate next PR Number (PR-YYYYMM-XXXX)
+  const generateNextPRNumber = (items: typeof MOCK_PRS) => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const prefix = `PR-${year}${month}`;
+    
+    // Find max sequence for current month
+    const maxSeq = items
+      .filter(p => p.pr_no && p.pr_no.startsWith(prefix))
+      .reduce((max, p) => {
+        const parts = p.pr_no.split('-');
+        const seq = parseInt(parts[2] || '0', 10);
+        return seq > max ? seq : max;
+      }, 0);
+
+    const nextNum = `${prefix}-${String(maxSeq + 1).padStart(4, '0')}`;
+    logger.info(`[MockAdapter] Generated PR No: ${nextNum} | MaxSeq: ${maxSeq} | Items Checked: ${items.length}`);
+    return nextNum;
+  };
+
   mock.onPost('/pr').reply((config) => {
-    const data = JSON.parse(config.data);
-    return [200, { ...data, pr_id: `mock-${Date.now()}`, pr_no: `PR-MOCK-${Date.now()}` }];
+    const data = JSON.parse(config.data) as CreatePRPayload;
+    
+    // Generate IDs
+    const newPrId = `pr-${Date.now()}`;
+    // Defer official number generation
+    const newPrNo = `DRAFT-TEMP-${Date.now()}`;
+
+    const newPR = {
+      ...data,
+      pr_id: newPrId,
+      pr_no: newPrNo,
+      status: 'DRAFT' as const, // Enforce DRAFT
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      lines: (data.items || []).map((item: CreatePRLineItem, index: number) => ({
+        ...item,
+        pr_line_id: `l-${Date.now()}-${index}`,
+        line_no: index + 1,
+        // Ensure required fields for PRLine are present or defaulted
+        item_id: item.item_id || `temp-item-${index}`, 
+        quantity: item.qty,
+        est_unit_price: item.price,
+        est_amount: item.qty * item.price,
+        needed_date: item.needed_date || new Date().toISOString().split('T')[0]
+      }))
+    };
+    
+    // Persist to Mock Data
+    // @ts-expect-error - Partial match for mock data vs full PRHeader
+    MOCK_PRS.unshift(newPR);
+    
+    return [200, newPR];
+  });
+
+  // DELETE handler - Only allowed for DRAFT status
+  mock.onDelete(/\/pr\/.+/).reply((config) => {
+    const id = config.url?.split('/').pop();
+    const pr = MOCK_PRS.find(p => p.pr_id === id);
+    
+    if (!pr) {
+      return [404, { message: 'PR Not Found' }];
+    }
+
+    if (pr.status !== 'DRAFT') {
+      return [400, { success: false, message: 'ไม่อนุญาตให้ลบเอกสารที่ไม่ได้อยู่ในสถานะแบบร่าง (ONLY DRAFT documents can be deleted)' }];
+    }
+    
+    const index = MOCK_PRS.indexOf(pr);
+    MOCK_PRS.splice(index, 1); // Remove from array
+    return [200, { success: true }];
+  });
+
+  mock.onPost(/\/pr\/.+\/submit/).reply((config) => {
+    const id = config.url?.split('/')[2]; // /pr/{id}/submit
+    const pr = MOCK_PRS.find(p => p.pr_id === id);
+    if (pr) {
+      // Generate official number if it's still a temporary one
+      if (pr.pr_no.startsWith('DRAFT-TEMP')) {
+          pr.pr_no = generateNextPRNumber(MOCK_PRS);
+      }
+      pr.status = 'PENDING';
+      return [200, { success: true, message: 'ส่งอนุมัติสำเร็จ', pr_no: pr.pr_no }];
+    }
+    return [404, { success: false, message: 'ไม่พบเอกสาร' }];
+  });
+
+  mock.onPost(/\/pr\/.+\/approve/).reply((config) => {
+    const id = config.url?.split('/')[2];
+    const pr = MOCK_PRS.find(p => p.pr_id === id);
+    if (pr) {
+      pr.status = 'APPROVED';
+      return [200, { success: true, message: 'อนุมัติสำเร็จ' }];
+    }
+    return [404, { success: false, message: 'ไม่พบเอกสาร' }];
+  });
+
+  mock.onPost(/\/pr\/.+\/reject/).reply((config) => {
+    const id = config.url?.split('/')[2];
+    const pr = MOCK_PRS.find(p => p.pr_id === id);
+    if (pr) {
+      pr.status = 'REJECTED';
+      return [200, { success: true, message: 'ไม่อนุมัติสำเร็จ' }];
+    }
+    return [404, { success: false, message: 'ไม่พบเอกสาร' }];
+  });
+
+  mock.onPost(/\/pr\/.+\/cancel/).reply((config) => {
+    const id = config.url?.split('/')[2]; // /pr/{id}/cancel
+    const pr = MOCK_PRS.find(p => p.pr_id === id);
+    if (pr) {
+      pr.status = 'CANCELLED';
+      pr.cancelflag = 'Y';
+      return [200, { success: true, message: 'ยกเลิกสำเร็จ' }];
+    }
+    return [404, { success: false, message: 'ไม่พบเอกสาร' }];
   });
 
   // =========================================================================
@@ -99,7 +286,7 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
     if (params.status && params.status !== 'ALL') {
       filtered = filtered.filter(r => r.status === params.status);
     }
-    return [200, { data: filtered, total: filtered.length, page: 1, limit: 100 }];
+    return [200, applyMockFilters(filtered, params)];
   });
 
   mock.onGet(/\/rfq\/.+/).reply((config) => {
@@ -112,7 +299,9 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
   // QT MOCKS
   // =========================================================================
   
-  mock.onGet('/qt').reply(200, { data: MOCK_QTS, total: MOCK_QTS.length, page: 1, limit: 100 });
+  mock.onGet('/qt').reply((config) => {
+    return [200, applyMockFilters(MOCK_QTS, config.params || {})];
+  });
 
   // =========================================================================
   // PO MOCKS
@@ -124,7 +313,7 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
     if (params.status && params.status !== 'ALL') {
       filtered = filtered.filter(p => p.status === params.status);
     }
-    return [200, { data: filtered, total: filtered.length, page: 1, limit: 100 }];
+    return [200, applyMockFilters(filtered, params)];
   });
 
   // =========================================================================
@@ -132,7 +321,7 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
   // =========================================================================
 
   // --- BRANCHES ---
-  mock.onGet('/org-branches').reply(200, mockBranches);
+  mock.onGet('/org-branches').reply((config) => [200, applyMockFilters(mockBranches, config.params || {})]);
   mock.onGet('/org-branches/dropdown').reply(200, mockBranchDropdown);
   mock.onGet(/\/org-branches\/.+/).reply((config) => {
     const id = config.url?.split('/').pop();
@@ -144,7 +333,7 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
   mock.onDelete(/\/org-branches\/.+/).reply(200, true);
 
   // --- DEPARTMENTS ---
-  mock.onGet('/org-departments').reply(200, mockDepartments);
+  mock.onGet('/org-departments').reply((config) => [200, applyMockFilters(mockDepartments, config.params || {})]);
   mock.onGet(/\/org-departments\/.+/).reply((config) => {
     const id = config.url?.split('/').pop();
     const found = mockDepartments.find(d => d.department_id === id);
@@ -155,7 +344,7 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
   mock.onDelete(/\/org-departments\/.+/).reply(200, true);
 
   // --- SECTIONS ---
-  mock.onGet('/org-sections').reply(200, mockSections);
+  mock.onGet('/org-sections').reply((config) => [200, applyMockFilters(mockSections, config.params || {})]);
   mock.onGet(/\/org-sections\/.+/).reply((config) => {
     const id = config.url?.split('/').pop();
     const found = mockSections.find(s => s.section_id === id);
@@ -166,7 +355,7 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
   mock.onDelete(/\/org-sections\/.+/).reply(200, true);
 
   // --- JOBS ---
-  mock.onGet('/org-jobs').reply(200, mockJobs);
+  mock.onGet('/org-jobs').reply((config) => [200, applyMockFilters(mockJobs, config.params || {})]);
   mock.onGet(/\/org-jobs\/.+/).reply((config) => {
     const id = config.url?.split('/').pop();
     const found = mockJobs.find(j => j.job_id === id);
@@ -177,7 +366,7 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
   mock.onDelete(/\/org-jobs\/.+/).reply(200, true);
 
   // --- POSITIONS ---
-  mock.onGet('/org-positions').reply(200, mockPositions);
+  mock.onGet('/org-positions').reply((config) => [200, applyMockFilters(mockPositions, config.params || {})]);
   mock.onGet(/\/org-positions\/.+/).reply((config) => {
     const id = config.url?.split('/').pop();
     const found = mockPositions.find(p => p.position_id === id);
@@ -188,7 +377,7 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
   mock.onDelete(/\/org-positions\/.+/).reply(200, true);
 
   // --- EMPLOYEE GROUPS ---
-  mock.onGet('/org-employee-groups').reply(200, mockEmployeeGroups);
+  mock.onGet('/org-employee-groups').reply((config) => [200, applyMockFilters(mockEmployeeGroups, config.params || {})]);
   mock.onGet(/\/org-employee-groups\/.+/).reply((config) => {
     const id = config.url?.split('/').pop();
     const found = mockEmployeeGroups.find((g: EmployeeGroupListItem) => g.group_id === id);
@@ -199,7 +388,7 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
   mock.onDelete(/\/org-employee-groups\/.+/).reply(200, true);
 
   // --- EMPLOYEES ---
-  mock.onGet('/org-employees').reply(200, mockEmployees);
+  mock.onGet('/org-employees').reply((config) => [200, applyMockFilters(mockEmployees, config.params || {})]);
   mock.onGet(/\/org-employees\/.+/).reply((config) => {
     const id = config.url?.split('/').pop();
     const found = mockEmployees.find((e: EmployeeListItem) => e.employee_id === id);
@@ -218,34 +407,37 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
   // OTHER MOCKS
   // =========================================================================
 
-  mock.onGet('/vendors').reply(200, { items: MOCK_VENDORS, total: MOCK_VENDORS.length });
-  mock.onGet('/employees').reply(200, mockEmployees);
+  mock.onGet('/vendors').reply((config) => [200, applyMockFilters(MOCK_VENDORS, config.params || {})]);
+  mock.onGet('/employees').reply((config) => [200, applyMockFilters(mockEmployees, config.params || {})]);
 
   // --- CURRENCY ---
-  mock.onGet('/master-data/currencies').reply(200, {
-    items: [
-        { currency_id: '1', currency_code: 'THB', name_th: 'บาทไทย', name_en: 'Thai Baht', symbol: '฿', is_active: true, created_at: '2026-01-01', updated_at: '2026-01-01' },
-        { currency_id: '2', currency_code: 'USD', name_th: 'ดอลลาร์สหรัฐ', name_en: 'US Dollar', symbol: '$', is_active: true, created_at: '2026-01-01', updated_at: '2026-01-01' },
-    ],
-    total: 2, page: 1, limit: 20
-  });
+  const mockCurrencies = [
+    { currency_id: '1', currency_code: 'THB', name_th: 'บาทไทย', name_en: 'Thai Baht', symbol: '฿', is_active: true, created_at: '2026-01-01', updated_at: '2026-01-01' },
+    { currency_id: '2', currency_code: 'USD', name_th: 'ดอลลาร์สหรัฐ', name_en: 'US Dollar', symbol: '$', is_active: true, created_at: '2026-01-01', updated_at: '2026-01-01' },
+  ];
 
-  mock.onGet('/master-data/exchange-rate-types').reply(200, {
-    items: [
-        { currency_type_id: '1', code: 'SPOT', name_th: 'อัตราแลกเปลี่ยนทันที', name_en: 'Spot Exchange Rate', is_active: true, created_at: '2026-01-01', updated_at: '2026-01-01' },
-    ],
-    total: 1, page: 1, limit: 20
-  });
+  mock.onGet('/master-data/currencies').reply((config) => 
+    [200, applyMockFilters(mockCurrencies, config.params || {})]
+  );
 
-  mock.onGet('/master-data/exchange-rates').reply(200, {
-    items: [
-        { 
-            exchange_id: '1', currency_id: '1', currency_code: 'THB', currency_type_id: '1', type_name: 'อัตราขาย', 
-            buy_rate: 1.0, sale_rate: 1.0, rate_date: new Date().toISOString(), remark: 'Mock', is_active: true 
-        },
-    ],
-    total: 1, page: 1, limit: 20
-  });
+  const mockExchangeRateTypes = [
+    { currency_type_id: '1', code: 'SPOT', name_th: 'อัตราแลกเปลี่ยนทันที', name_en: 'Spot Exchange Rate', is_active: true, created_at: '2026-01-01', updated_at: '2026-01-01' },
+  ];
+
+  mock.onGet('/master-data/exchange-rate-types').reply((config) => 
+    [200, applyMockFilters(mockExchangeRateTypes, config.params || {})]
+  );
+
+  const mockExchangeRates = [
+    { 
+        exchange_id: '1', currency_id: '1', currency_code: 'THB', currency_type_id: '1', type_name: 'อัตราขาย', 
+        buy_rate: 1.0, sale_rate: 1.0, rate_date: new Date().toISOString(), remark: 'Mock', is_active: true 
+    },
+  ];
+
+  mock.onGet('/master-data/exchange-rates').reply((config) => 
+    [200, applyMockFilters(mockExchangeRates, config.params || {})]
+  );
 
   logger.info('🎭 [Mock Adapter] Initialized with Centralized Routes');
 };

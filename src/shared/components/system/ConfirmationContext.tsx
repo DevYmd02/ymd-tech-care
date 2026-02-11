@@ -10,6 +10,7 @@ interface ConfirmationOptions {
     cancelText?: string;
     variant?: ConfirmationVariant;
     hideCancel?: boolean;
+    icon?: React.ElementType;
 }
 
 export interface ConfirmationContextType {
@@ -64,6 +65,7 @@ export const ConfirmationProvider: React.FC<{ children: ReactNode }> = ({ childr
                 cancelText={options.cancelText}
                 variant={options.variant}
                 hideCancel={options.hideCancel}
+                icon={options.icon}
             />
         </ConfirmationContext.Provider>
     );

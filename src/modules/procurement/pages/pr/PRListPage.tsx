@@ -15,7 +15,7 @@ import { FilterField } from '@/shared/components/ui/FilterField';
 import { useTableFilters, useDebounce, type TableFilters, useConfirmation } from '@/shared/hooks';
 import RFQFormModal from '../rfq/components/RFQFormModal';
 import { PRFormModal } from './components/PRFormModal';
-import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal';
+
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { createColumnHelper } from '@tanstack/react-table';
 
@@ -109,14 +109,7 @@ export default function PRListPage() {
 
 
     // Confirmation Modal State
-    const [isSendApprovalModalOpen, setIsSendApprovalModalOpen] = useState(false);
-    const [pendingSendApprovalId, setPendingSendApprovalId] = useState<string | null>(null);
-
-    const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
-    const [pendingApproveId, setPendingApproveId] = useState<string | null>(null);
-
-    const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
-    const [pendingRejectId, setPendingRejectId] = useState<string | null>(null);
+    // Removed manual states in favor of useConfirmation hook
 
     // Handlers
     const handleFilterChange = (name: PRFilterKeys, value: string) => {
@@ -143,32 +136,64 @@ export default function PRListPage() {
         setSelectedPRId(undefined);
     };
 
-    const handleSendApproval = useCallback((id: string) => {
-        setPendingSendApprovalId(id);
-        setIsSendApprovalModalOpen(true);
-    }, []);
+    const handleSendApproval = useCallback(async (id: string) => {
+        const isConfirmed = await confirm({
+            title: 'ยืนยันการส่งอนุมัติ',
+            description: 'คุณต้องการส่งเอกสารนี้เพื่อขออนุมัติใช่หรือไม่?',
+            confirmText: 'ส่งอนุมัติ',
+            cancelText: 'ยกเลิก',
+            variant: 'info',
+            icon: Send
+        });
 
-    const confirmSendApproval = useCallback(async () => {
-        if (!pendingSendApprovalId) return;
-        
+        if (!isConfirmed) return;
+
         try {
-            // Changed from approve() to submit() to transition to PENDING
-            const result = await PRService.submit(pendingSendApprovalId);
+            const result = await PRService.submit(id);
             if (result.success) {
+                await confirm({
+                    title: 'ส่งอนุมัติสำเร็จ!',
+                    description: `เลขที่เอกสาร: ${result.pr_no || id}\nสถานะ: รออนุมัติ (Pending)`,
+                    confirmText: 'ตกลง',
+                    hideCancel: true,
+                    variant: 'success'
+                });
                 refetch();
-            } else {
-                window.alert(result.message || "ส่งอนุมัติไม่สำเร็จ");
+            }
+ else {
+                await confirm({ 
+                    title: 'ส่งอนุมัติไม่สำเร็จ', 
+                    description: result.message || 'เกิดข้อผิดพลาด', 
+                    confirmText: 'ตกลง', 
+                    hideCancel: true, 
+                    variant: 'warning' 
+                });
             }
         } catch (error) {
             console.error('Send approval failed', error);
-            window.alert("เกิดข้อผิดพลาดในการส่งอนุมัติ");
-        } finally {
-            setIsSendApprovalModalOpen(false);
-            setPendingSendApprovalId(null);
+            await confirm({ 
+                title: 'เกิดข้อผิดพลาด', 
+                description: 'เกิดข้อผิดพลาดในการส่งอนุมัติ', 
+                confirmText: 'ตกลง', 
+                hideCancel: true, 
+                variant: 'danger' 
+            });
         }
-    }, [pendingSendApprovalId, refetch]);
+    }, [confirm, refetch]);
 
-    const handleDelete = useCallback(async (id: string) => {
+    const handleDelete = useCallback(async (item: PRHeader) => {
+        // Safety check: Only DRAFT can be deleted
+        if (item.status !== 'DRAFT') {
+            await confirm({ 
+                title: 'ไม่สามารถลบได้', 
+                description: 'ขออภัย เฉพาะเอกสารสถานะ "แบบร่าง" เท่านั้นที่สามารถลบได้', 
+                confirmText: 'ตกลง', 
+                hideCancel: true, 
+                variant: 'warning' 
+            });
+            return;
+        }
+
         const isConfirmed = await confirm({
             title: 'ยืนยันการลบ',
             description: 'คุณต้องการลบใบขอซื้อนี้ใช่หรือไม่?',
@@ -180,7 +205,7 @@ export default function PRListPage() {
         if (!isConfirmed) return;
 
         try {
-            const success = await PRService.delete(id);
+            const success = await PRService.delete(item.pr_id);
             if (success) {
                 refetch();
             } else {
@@ -192,50 +217,51 @@ export default function PRListPage() {
         }
     }, [confirm, refetch]);
 
-    const handleApprove = useCallback((id: string) => {
-        setPendingApproveId(id);
-        setIsApproveModalOpen(true);
-    }, []);
+    const handleApprove = useCallback(async (id: string) => {
+        const isConfirmed = await confirm({
+            title: 'ยืนยันการอนุมัติ',
+            description: 'คุณต้องการอนุมัติเอกสารนี้ใช่หรือไม่?',
+            confirmText: 'อนุมัติ',
+            cancelText: 'ยกเลิก',
+            variant: 'success',
+            icon: CheckCircle
+        });
 
-    const confirmApprove = useCallback(async () => {
-        if (!pendingApproveId) return;
-        
+        if (!isConfirmed) return;
+
         try {
-            const success = await PRService.approve(pendingApproveId);
+            const success = await PRService.approve(id);
             if (success) {
                 refetch();
             } else {
-                window.alert("อนุมัติเอกสารไม่สำเร็จ");
+                await confirm({ title: 'อนุมัติไม่สำเร็จ', description: 'เกิดข้อผิดพลาด', confirmText: 'ตกลง', hideCancel: true, variant: 'warning' });
             }
         } catch (error) {
             console.error('Approve failed', error);
-            window.alert("เกิดข้อผิดพลาดในการอนุมัติเอกสาร");
-        } finally {
-            setIsApproveModalOpen(false);
-            setPendingApproveId(null);
+             await confirm({ title: 'เกิดข้อผิดพลาด', description: 'เกิดข้อผิดพลาดในการอนุมัติ', confirmText: 'ตกลง', hideCancel: true, variant: 'danger' });
         }
-    }, [pendingApproveId, refetch]);
+    }, [confirm, refetch]);
 
-    const handleReject = useCallback((id: string) => {
-        setPendingRejectId(id);
-        setIsRejectModalOpen(true);
-    }, []);
+    const handleReject = useCallback(async (id: string) => {
+         const isConfirmed = await confirm({
+            title: 'ยืนยันการไม่อนุมัติ',
+            description: "คุณต้องการ 'ไม่อนุมัติ' เอกสารนี้ใช่หรือไม่?",
+            confirmText: 'ยืนยัน',
+            cancelText: 'ยกเลิก',
+            variant: 'danger',
+            icon: XCircle
+        });
 
-    const confirmReject = useCallback(async () => {
-        if (!pendingRejectId) return;
+        if (!isConfirmed) return;
 
         try {
-            // For now, hardcode reason or just call reject
-            await PRService.reject(pendingRejectId, "Rejected by Approver"); 
+            await PRService.reject(id, "Rejected by Approver");
             refetch();
         } catch (error) {
             console.error('Reject failed', error);
-            window.alert("เกิดข้อผิดพลาดในการไม่อนุมัติเอกสาร");
-        } finally {
-            setIsRejectModalOpen(false);
-            setPendingRejectId(null);
+            await confirm({ title: 'เกิดข้อผิดพลาด', description: 'เกิดข้อผิดพลาดในการไม่อนุมัติ', confirmText: 'ตกลง', hideCancel: true, variant: 'danger' });
         }
-    }, [pendingRejectId, refetch]);
+    }, [confirm, refetch]);
 
 
 
@@ -253,11 +279,22 @@ export default function PRListPage() {
         }),
         columnHelper.accessor('pr_no', {
             header: 'เลขที่เอกสาร',
-            cell: (info) => (
-                <span className="font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer truncate block" title={info.getValue()}>
-                    {info.getValue()}
-                </span>
-            ),
+            cell: (info) => {
+                const val = info.getValue();
+                const isTemp = val.startsWith('DRAFT-TEMP');
+                return (
+                    <span 
+                        className={`font-semibold truncate block ${isTemp ? 'text-amber-600 dark:text-amber-400 italic' : 'text-blue-600 dark:text-blue-400 hover:underline cursor-pointer'}`} 
+                        title={isTemp ? 'รอรันเลขเอกสาร (Pending Generation)' : val}
+                    >
+                        {isTemp ? (
+                            <span className="flex items-center gap-1">
+                                <span className="px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-[10px] rounded border border-amber-200 dark:border-amber-800">รอรันเลข</span>
+                            </span>
+                        ) : val}
+                    </span>
+                );
+            },
             size: 110,
             enableSorting: true,
         }),
@@ -350,7 +387,7 @@ export default function PRListPage() {
                                 </button>
                                 
                                 <button 
-                                    onClick={() => handleDelete(item.pr_id)}
+                                    onClick={() => handleDelete(item)}
                                     className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-all"
                                     title="ลบ"
                                 >
@@ -547,50 +584,7 @@ export default function PRListPage() {
                 />
             )}
 
-            <ConfirmationModal
-                isOpen={isSendApprovalModalOpen}
-                onClose={() => {
-                    setIsSendApprovalModalOpen(false);
-                    setPendingSendApprovalId(null);
-                }}
-                onConfirm={confirmSendApproval}
-                title="ยืนยันการส่งอนุมัติ"
-                description="คุณต้องการส่งเอกสารนี้เพื่อขออนุมัติใช่หรือไม่?"
-                confirmText="ส่งอนุมัติ"
-                cancelText="ยกเลิก"
-                variant="info"
-                icon={Send}
-            />
-
-            <ConfirmationModal
-                isOpen={isApproveModalOpen}
-                onClose={() => {
-                    setIsApproveModalOpen(false);
-                    setPendingApproveId(null);
-                }}
-                onConfirm={confirmApprove}
-                title="ยืนยันการอนุมัติ"
-                description="คุณต้องการอนุมัติเอกสารนี้ใช่หรือไม่?"
-                confirmText="อนุมัติ"
-                cancelText="ยกเลิก"
-                variant="success"
-                icon={CheckCircle}
-            />
-
-            <ConfirmationModal
-                isOpen={isRejectModalOpen}
-                onClose={() => {
-                    setIsRejectModalOpen(false);
-                    setPendingRejectId(null);
-                }}
-                onConfirm={confirmReject}
-                title="ยืนยันการไม่อนุมัติ"
-                description="คุณต้องการ 'ไม่อนุมัติ' เอกสารนี้ใช่หรือไม่?"
-                confirmText="ยืนยัน"
-                cancelText="ยกเลิก"
-                variant="danger"
-                icon={XCircle}
-            />
+            {/* <ConfirmationModal>s removed in favor of useConfirmation hook */ }
         </>
     );
 }

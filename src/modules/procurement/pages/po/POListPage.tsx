@@ -263,7 +263,7 @@ export default function POListPage() {
                 );
             },
             footer: () => {
-                 const total = data?.data.reduce((sum, item) => sum + item.total_amount, 0) || 0;
+                 const total = (data?.data || []).reduce((sum, item) => sum + item.total_amount, 0) || 0;
                  return (
                      <div className="text-right font-bold text-base text-emerald-600 dark:text-emerald-400 whitespace-nowrap pr-2">
                          {total.toLocaleString('en-US', { minimumFractionDigits: 2 })} บาท

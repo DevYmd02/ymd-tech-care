@@ -127,9 +127,9 @@ export const PRService = {
     }
   },
 
-  submit: async (prId: string): Promise<{ success: boolean; message: string }> => {
+  submit: async (prId: string): Promise<{ success: boolean; message: string; pr_no?: string }> => {
     try {
-      return await api.post<{ success: boolean; message: string }>(ENDPOINTS.submit(prId));
+      return await api.post<{ success: boolean; message: string; pr_no?: string }>(ENDPOINTS.submit(prId));
     } catch (error) {
       logger.error('[PRService] submit error:', error);
       return { success: false, message: 'เกิดข้อผิดพลาดในการส่งอนุมัติ' };
