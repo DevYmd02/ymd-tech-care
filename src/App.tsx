@@ -66,7 +66,7 @@ const WarehouseList = React.lazy(() => import('@/modules/master-data/inventory/p
 const ProductCategoryList = React.lazy(() => import('@/modules/master-data/inventory/pages/category/ProductCategoryList'));
 const ItemTypeList = React.lazy(() => import('@/modules/master-data/inventory/pages/item-type/ItemTypeList'));
 const UnitList = React.lazy(() => import('@/modules/master-data/inventory/pages/unit/UnitList'));
-const ItemMasterForm = React.lazy(() => import('@/modules/master-data/inventory/pages/item-master/ItemMasterForm'));
+const ItemMasterList = React.lazy(() => import('@/modules/master-data/inventory/pages/item-master/ItemMasterList'));
 const UOMConversionList = React.lazy(() => import('@/modules/master-data/inventory/pages/uom-conversion/UOMConversionList'));
 const ItemBarcodeList = React.lazy(() => import('@/modules/master-data/inventory/pages/item-barcode/ItemBarcodeList'));
 // New Inventory Master Pages (11 new pages)
@@ -191,7 +191,8 @@ function App() {
           <Route path="master-data/product-category" element={<ProductCategoryList />} />
           <Route path="master-data/item-type" element={<ItemTypeList />} />
           <Route path="master-data/unit" element={<UnitList />} />
-          <Route path="master-data/item" element={<ItemMasterForm />} />
+          <Route path="master-data/unit" element={<UnitList />} />
+          <Route path="master-data/item" element={<ItemMasterList />} />
           <Route path="master-data/uom-conversion" element={<UOMConversionList />} />
           <Route path="master-data/item-barcode" element={<ItemBarcodeList />} />
           {/* New Inventory Master Routes */}
