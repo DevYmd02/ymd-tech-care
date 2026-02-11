@@ -2,12 +2,13 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthService } from '@/modules/auth/services/auth.service';
-import type { LoginPayload } from '@/modules/auth/services/auth.service';
+import type { LoginPayload, UserProfile } from '@/modules/auth/services/auth.service';
 import { logger } from '@/shared/utils/logger';
 
 interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
+  user: UserProfile | null;
   login: (data: LoginPayload) => Promise<void>;
   logout: () => void;
 }
@@ -16,14 +17,25 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check for token on mount
+    // Check for token and user on mount
     const token = localStorage.getItem('token') || localStorage.getItem('access_token');
+    const storedUser = localStorage.getItem('user_profile');
+    
     if (token) {
       setIsAuthenticated(true);
+      if (storedUser) {
+        try {
+          setUser(JSON.parse(storedUser));
+        } catch (e) {
+          logger.error('Failed to parse user profile', e);
+          localStorage.removeItem('user_profile');
+        }
+      }
     }
     setIsLoading(false);
   }, []);
@@ -37,6 +49,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       if (token && typeof token === 'string') {
         localStorage.setItem('token', token);
+        
+        // Save user profile
+        if (response.user) {
+           setUser(response.user);
+           localStorage.setItem('user_profile', JSON.stringify(response.user));
+        }
+        
         setIsAuthenticated(true);
         navigate('/'); // Redirect to dashboard
       } else {
@@ -45,6 +64,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     } catch (error: unknown) {
       setIsAuthenticated(false);
+      setUser(null);
       throw error;
     }
   }, [navigate]);
@@ -52,16 +72,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const logout = useCallback(() => {
     localStorage.removeItem('token');
     localStorage.removeItem('access_token');
+    localStorage.removeItem('user_profile');
     setIsAuthenticated(false);
+    setUser(null);
     navigate('/auth/login');
   }, [navigate]);
 
   const value = React.useMemo(() => ({
     isAuthenticated,
     isLoading,
+    user,
     login,
     logout
-  }), [isAuthenticated, isLoading, login, logout]);
+  }), [isAuthenticated, isLoading, user, login, logout]);
 
   return (
     <AuthContext.Provider value={value}>

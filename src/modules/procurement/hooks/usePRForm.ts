@@ -2,14 +2,17 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import type { PRFormData, PRLineFormData, CreatePRPayload } from '@/modules/procurement/types/pr-types';
 import { PRService } from '@/modules/procurement/services/pr.service';
-import { fetchExchangeRate } from '../services/mockExchangeRateService';
-import { MasterDataService } from '@/core/api/master-data.service';
-import type { ItemListItem, CostCenter, Project } from '@/modules/master-data/types/master-data-types';
+import { fetchExchangeRate } from '@/modules/master-data/currency/services/mockExchangeRateService';
+import { logger } from '@/shared/utils/logger';
+import type { ItemListItem } from '@/modules/master-data/types/master-data-types';
 import type { VendorMaster } from '@/modules/master-data/vendor/types/vendor-types';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
-import * as z from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { calculateLineTotal } from '@/modules/procurement/utils/pricing.utils';
+import { useAuth } from '@/core/auth/contexts/AuthContext';
+import { usePRMasterData } from './usePRMasterData';
+import { usePRActions } from './usePRActions';
+import { PRFormSchema } from '@/modules/procurement/types/pr-schemas';
 
 
 const PR_CONFIG = {
@@ -52,11 +55,20 @@ const getDefaultFormValues = (): PRFormData => ({
 
 export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onSuccess?: () => void) => {
   const isEditMode = !!id;
+  const { user } = useAuth();
   const prevIsOpenRef = useRef(false);
-  const queryClient = useQueryClient();
   const { confirm } = useConfirmation();
   
+  // Custom Hooks
+  const { products, costCenters, projects } = usePRMasterData();
+  const { createPRMutation, updatePR, deletePR, approvePR, cancelPR } = usePRActions();
+  
   const [isActionLoading, setIsActionLoading] = useState(false);
+  // Sync loading state if needed, or just use the hook's state. 
+  // For now, let's keep local isActionLoading and sync it or replace usages gradually.
+  // Actually, let's just use local state for now to avoid breaking existing logic that sets it, 
+  // and we'll eventually replace it.
+  
   const [alertState, setAlertState] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
   const [lines, setLines] = useState<ExtendedLine[]>(getInitialLines);
   const [activeTab, setActiveTab] = useState('detail');
@@ -80,77 +92,17 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
   const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Detailed schema to match PRFormData exactly and avoid 'any'
-  const PRLineSchema = z.object({
-    item_id: z.string(),
-    item_code: z.string(),
-    item_name: z.string(),
-    item_description: z.string().optional(),
-    quantity: z.number(),
-    uom: z.string(),
-    uom_id: z.union([z.string(), z.number()]).optional(),
-    est_unit_price: z.number(),
-    est_amount: z.number(),
-    needed_date: z.string(),
-    preferred_vendor_id: z.string().optional(),
-    remark: z.string().optional(),
-  });
 
-  const PRFormSchema = z.object({
-    pr_no: z.string(),
-    request_date: z.string(),
-    required_date: z.string(),
-    requester_name: z.string().optional(),
-    cost_center_id: z.string().min(1, 'Please select cost center'),
-    project_id: z.string().optional(),
-    purpose: z.string().min(1, 'Please enter purpose'),
-    currency_id: z.string(),
-    is_multicurrency: z.boolean(),
-    exchange_rate: z.number(),
-    rate_date: z.string().optional(),
-    currency_type_id: z.string().optional(),
-    exchange_round: z.number().optional(),
-    allow_adjust: z.number().optional(),
-    preferred_vendor_id: z.string().optional(),
-    vendor_name: z.string().optional(),
-    delivery_date: z.string().optional(),
-    credit_days: z.number().optional(),
-    vendor_quote_no: z.string().optional(),
-    shipping_method: z.string().optional(),
-    remarks: z.string().optional(),
-    lines: z.array(PRLineSchema),
-    is_on_hold: z.union([z.boolean(), z.string()]),
-    cancelflag: z.enum(['Y', 'N']).optional(),
-    status: z.enum(['DRAFT', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED']).optional(),
-    total_amount: z.number(),
-  });
 
   const { register, handleSubmit, setValue, reset, watch, setFocus, control, getFieldState, formState: { isSubmitting } } = useForm<PRFormData>({
     defaultValues: getDefaultFormValues(),
     resolver: zodResolver(PRFormSchema)
   });
 
-  const [products, setProducts] = useState<ItemListItem[]>([]);
-  const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-
-  useEffect(() => {
-    const fetchMasterData = async () => {
-      try {
-        const [items, cc, prj] = await Promise.all([
-          MasterDataService.getItems(),
-          MasterDataService.getCostCenters(),
-          MasterDataService.getProjects()
-        ]);
-        setProducts(items);
-        setCostCenters(cc);
-        setProjects(prj);
-      } catch (error) {
-        console.error('Failed to fetch master data:', error);
-      }
-    };
-    fetchMasterData();
-  }, []);
+  // Master Data is now handled by usePRMasterData hook
+  // const [products, setProducts] = useState<ItemListItem[]>([]);
+  // const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
+  // const [projects, setProjects] = useState<Project[]>([]);
 
   useEffect(() => {
     if (isOpen && !prevIsOpenRef.current) {
@@ -233,6 +185,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
             }
           } catch (error) {
             console.error('Failed to fetch PR details:', error);
+            logger.error('Failed to fetch PR details:', error);
           } finally {
             setIsActionLoading(false);
           }
@@ -294,7 +247,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
           setValue('exchange_rate', rate, { shouldValidate: true, shouldDirty: false });
           setValue('is_multicurrency', sourceCurrencyId !== 'THB' || finalTarget !== 'THB');
         } catch (error) {
-          console.error('Failed to fetch exchange rate:', error);
+          logger.error('Failed to fetch exchange rate:', error);
         }
       }
     };
@@ -348,8 +301,11 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
       
       // Auto-calculate amount
       if (field === 'quantity' || field === 'est_unit_price' || field === 'discount') {
-        const disc = line.discount || 0;
-        line.est_amount = (line.quantity * line.est_unit_price) - disc;
+        const qty = field === 'quantity' ? Number(value) : line.quantity;
+        const price = field === 'est_unit_price' ? Number(value) : line.est_unit_price;
+        const disc = field === 'discount' ? Number(value) : (line.discount || 0);
+        
+        line.est_amount = calculateLineTotal(qty, price, disc);
       }
       
       newLines[index] = line;
@@ -404,7 +360,12 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     setIsProductModalOpen(false);
   }, [activeRowIndex]);
 
+  // ...
   const subtotal = lines.reduce((sum, line) => sum + (line.est_amount || 0), 0);
+  
+  // PR uses global discount % logic, which differs from PO's per-line discount.
+  // We keep the existing logic here but acknowledgment this difference.
+  
   const discountAmount = subtotal * (discountPercent / 100);
   const afterDiscount = subtotal - discountAmount;
   const vatAmount = afterDiscount * (vatRate / 100);
@@ -422,16 +383,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     }
   }, [setValue]);
 
-  const createPRMutation = useMutation({
-    mutationFn: async (payload: CreatePRPayload) => {
-        const newPR = await PRService.create(payload);
-        if (!newPR?.pr_id) throw new Error("ไม่สามารถสร้างเอกสารได้");
-        return { newPR };
-    },
-    onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['prs'] });
-    }
-  });
+  // defined in usePRActions
 
   const handleSaveData = useCallback(async (data: PRFormData, activeLines: ExtendedLine[]) => {
     setIsActionLoading(true);
@@ -449,16 +401,19 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
                price: line.est_unit_price, needed_date: line.needed_date, remark: line.remark
             })),
             delivery_date: deliveryDate,
-            credit_days: data.credit_days || 30, // Use data directly
+            credit_days: data.credit_days || 30,
             payment_term_days: data.credit_days || 30,
             vendor_quote_no: vendorQuoteNo,
             shipping_method: shippingMethod,
             preferred_vendor_id: data.preferred_vendor_id,
             vendor_name: data.vendor_name,
-            requester_user_id: 1, branch_id: 1, warehouse_id: 1       
+            requester_user_id: user?.id || 1, 
+            branch_id: user?.employee?.branch_id || 1, 
+            warehouse_id: 1       
         };
+        
         if (isEditMode && id) {
-            await PRService.update(id, payload);
+            await updatePR(id, payload);
             await confirm({ title: 'แก้ไขสำเร็จ', description: 'แก้ไขเอกสารเรียบร้อยแล้ว', confirmText: 'ตกลง', variant: 'success' });
             onSuccess?.(); onClose();
         } else {
@@ -477,7 +432,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     } finally {
         setIsActionLoading(false);
     }
-  }, [remarks, requesterName, deliveryDate, vendorQuoteNo, shippingMethod, isEditMode, id, confirm, onSuccess, onClose, createPRMutation]); // Removed creditDays dependency
+  }, [remarks, requesterName, deliveryDate, vendorQuoteNo, shippingMethod, isEditMode, id, confirm, onSuccess, onClose, createPRMutation, updatePR, user]);
 
   const onSubmit = useCallback(async (data: PRFormData) => {
     if (!data.required_date) { showAlert('กรุณาระบุวันที่ต้องการใช้'); return; }
@@ -521,15 +476,15 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     if (!isConfirmed) return;
     setIsActionLoading(true);
     try {
-      const success = await PRService.delete(id);
+      const success = await deletePR(id);
       if (success) {
         await confirm({ title: 'ลบสำเร็จ', description: 'เอกสารถูกลบเรียบร้อยแล้ว', confirmText: 'ตกลง', variant: 'success' });
         onSuccess?.(); onClose();
       }
     } catch (error) {
-       console.error(error);
+       logger.error('Delete PR failed:', error);
     } finally { setIsActionLoading(false); }
-  }, [id, confirm, onSuccess, onClose, watch]);
+  }, [id, confirm, onSuccess, onClose, watch, deletePR]);
 
   const handleApprove = useCallback(async () => {
     if (!id) return;
@@ -537,13 +492,13 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     if (!isConfirmed) return;
     setIsActionLoading(true);
     try {
-      const success = await PRService.approve(id);
+      const success = await approvePR(id);
       if (success) {
         await confirm({ title: 'อนุมัติสำเร็จ', description: 'เอกสารได้รับการอนุมัติเรียบร้อยแล้ว', confirmText: 'ตกลง', variant: 'success' });
         onSuccess?.(); onClose();
       }
-    } catch (error) { console.error(error); } finally { setIsActionLoading(false); }
-  }, [id, confirm, onSuccess, onClose]);
+    } catch (error) { logger.error('Approve PR failed:', error); } finally { setIsActionLoading(false); }
+  }, [id, confirm, onSuccess, onClose, approvePR]);
 
   const handleVoid = useCallback(async () => {
     if (!id) return;
@@ -559,8 +514,8 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     
     setIsActionLoading(true);
     try {
-      const response = await PRService.cancel(id);
-      if (response.success) {
+      const success = await cancelPR(id);
+      if (success) {
         await confirm({
             title: 'ยกเลิกสำเร็จ',
             description: 'เอกสารได้รับการยกเลิกเรียบร้อยแล้ว',
@@ -570,8 +525,6 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
         });
         onSuccess?.();
         onClose();
-      } else {
-        throw new Error(response.message);
       }
     } catch (error) {
        const errorMessage = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการยกเลิกเอกสาร';
@@ -585,7 +538,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     } finally {
       setIsActionLoading(false);
     }
-  }, [id, confirm, onSuccess, onClose]);
+  }, [id, confirm, onSuccess, onClose, cancelPR]);
 
   return {
     isEditMode, lines, activeTab, setActiveTab, discountPercent, setDiscountPercent,

@@ -3,84 +3,105 @@
  * @description หน้ารายการข้อมูลคลังสินค้า (Warehouse Master Data List)
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import { 
-    Plus, 
-    Search, 
-    Edit2, 
-    Trash2, 
-    Warehouse,
-    ChevronLeft,
-    ChevronRight,
-    ChevronsLeft,
-    ChevronsRight,
-    RefreshCw
-} from 'lucide-react';
-import { styles } from '@/shared/constants/styles';
-
+import { useState, useMemo, useCallback } from 'react';
+import { Warehouse, Edit2, Trash2 } from 'lucide-react';
 import { WarehouseFormModal } from './WarehouseFormModal';
 import { WarehouseService } from '@/modules/master-data/inventory/services/warehouse.service';
 import type { WarehouseListItem } from '@/modules/master-data/types/master-data-types';
 import { ActiveStatusBadge } from '@ui/StatusBadge';
+import { FilterFormBuilder, type FilterFieldConfig } from '@/shared/components/FilterFormBuilder';
+import { SmartTable } from '@/shared/components/ui/SmartTable';
+import { useTableFilters } from '@/shared/hooks';
+import type { ColumnDef } from '@tanstack/react-table';
+import { useQuery } from '@tanstack/react-query';
 
-// ====================================================================================
-// COMPONENT
-// ====================================================================================
+const STATUS_OPTIONS = [
+    { value: 'ALL', label: 'ทั้งหมด' },
+    { value: 'ACTIVE', label: 'ใช้งาน' },
+    { value: 'INACTIVE', label: 'ไม่ใช้งาน' },
+];
 
 export default function WarehouseList() {
-    // ==================== STATE ====================
-    const [warehouses, setWarehouses] = useState<WarehouseListItem[]>([]);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
-    const [currentPage, setCurrentPage] = useState(1);
-    const [rowsPerPage, setRowsPerPage] = useState(10);
+    // ==================== STATE & FILTERS ====================
+    const { 
+        filters, 
+        setFilters, 
+        handlePageChange, 
+        resetFilters,
+        handleSortChange,
+        sortConfig 
+    } = useTableFilters({
+        defaultLimit: 10,
+        customParamKeys: {
+            search: 'code',
+            search2: 'name',
+            status: 'status'
+        }
+    });
+
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+
+    // ==================== FILTER CONFIG ====================
+    const filterConfig: FilterFieldConfig<Extract<keyof typeof filters, string>>[] = useMemo(() => [
+        { 
+            name: 'search', 
+            label: 'รหัสหรือชื่อคลัง', 
+            type: 'text', 
+            placeholder: 'กรอกรหัส หรือชื่อคลัง',
+            colSpan: 1
+        },
+        { 
+            name: 'status', 
+            label: 'สถานะ', 
+            type: 'select', 
+            options: STATUS_OPTIONS,
+            colSpan: 1
+        },
+    ], []);
 
     // ==================== DATA FETCHING ====================
-    const fetchData = useCallback(() => {
-        setIsLoading(true);
-        const fetchWarehouses = async () => {
-            const response = await WarehouseService.getAll();
-            const data = response.items || [];
-            let filtered = [...data];
+    const { data: response, isLoading, refetch } = useQuery({
+        queryKey: ['warehouses', filters],
+        queryFn: async () => {
+            const result = await WarehouseService.getAll();
+            let items = result.items || [];
             
-            if (statusFilter !== 'ALL') {
-                filtered = filtered.filter(w => 
-                    statusFilter === 'ACTIVE' ? w.is_active : !w.is_active
-                );
+            // Client-side filtering
+            if (filters.status !== 'ALL') {
+                items = items.filter(w => filters.status === 'ACTIVE' ? w.is_active : !w.is_active);
             }
-            
-            if (searchTerm) {
-                const term = searchTerm.toLowerCase();
-                filtered = filtered.filter(w => 
+            if (filters.search) {
+                const term = filters.search.toLowerCase();
+                items = items.filter(w => 
                     w.warehouse_code.toLowerCase().includes(term) ||
                     w.warehouse_name.toLowerCase().includes(term) ||
                     (w.branch_name && w.branch_name.toLowerCase().includes(term))
                 );
             }
-            
-            setWarehouses(filtered);
-            setWarehouses(filtered);
-            setIsLoading(false);
-        };
-        fetchWarehouses();
-    }, [statusFilter, searchTerm]);
 
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+            // Sorting
+            if (sortConfig) {
+                items.sort((a, b) => {
+                    const fieldValA = a[sortConfig.key as keyof WarehouseListItem];
+                    const fieldValB = b[sortConfig.key as keyof WarehouseListItem];
+                    
+                    const valA = fieldValA !== undefined && fieldValA !== null ? String(fieldValA) : '';
+                    const valB = fieldValB !== undefined && fieldValB !== null ? String(fieldValB) : '';
+                    
+                    return sortConfig.direction === 'asc' 
+                        ? valA.localeCompare(valB, 'th') 
+                        : valB.localeCompare(valA, 'th');
+                });
+            }
 
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [statusFilter, searchTerm, rowsPerPage]);
+            const total = items.length;
+            const start = (filters.page - 1) * filters.limit;
+            const paginatedItems = items.slice(start, start + filters.limit);
 
-    // ==================== PAGINATION ====================
-    const totalItems = warehouses.length;
-    const totalPages = Math.ceil(totalItems / rowsPerPage);
-    const startIndex = (currentPage - 1) * rowsPerPage;
-    const paginatedData = warehouses.slice(startIndex, startIndex + rowsPerPage);
+            return { items: paginatedItems, total };
+        }
+    });
 
     // ==================== HANDLERS ====================
     const handleCreateNew = () => {
@@ -93,186 +114,148 @@ export default function WarehouseList() {
         setIsModalOpen(true);
     };
 
-    const handleDelete = (id: string) => {
+    const handleDelete = useCallback(async (id: string) => {
         if (confirm('คุณต้องการลบข้อมูลคลังสินค้านี้หรือไม่?')) {
-            WarehouseService.delete(id).then(() => fetchData());
+            await WarehouseService.delete(id);
+            refetch();
         }
-    };
+    }, [refetch]);
 
     const handleModalClose = () => {
         setIsModalOpen(false);
         setEditingId(null);
-        fetchData();
     };
 
-
+    // ==================== TABLE COLUMNS ====================
+    const columns = useMemo<ColumnDef<WarehouseListItem>[]>(() => [
+        {
+            id: 'sequence',
+            header: 'ลำดับ',
+            accessorFn: (_, index) => (filters.page - 1) * filters.limit + index + 1,
+            size: 60,
+        },
+        {
+            accessorKey: 'warehouse_code',
+            header: 'รหัสคลัง',
+            cell: ({ getValue, row }) => (
+                <span 
+                    className="font-medium text-blue-600 cursor-pointer hover:underline"
+                    onClick={() => handleEdit(row.original.warehouse_id)}
+                >
+                    {getValue() as string}
+                </span>
+            ),
+            size: 150,
+        },
+        {
+            accessorKey: 'warehouse_name',
+            header: 'ชื่อคลังสินค้า',
+        },
+        {
+            accessorKey: 'branch_name',
+            header: 'สาขา',
+            cell: ({ getValue }) => <span className="text-gray-500">{getValue() as string || '-'}</span>,
+            meta: { className: "hidden md:table-cell" } // Example of using meta if SmartTable supports it or just use className in cell/header if needed
+        },
+        {
+            accessorKey: 'is_active',
+            header: () => <div className="text-center w-full">สถานะ</div>,
+            cell: ({ getValue }) => (
+                <div className="flex justify-center">
+                    <ActiveStatusBadge isActive={getValue() as boolean} />
+                </div>
+            ),
+            size: 100,
+        },
+        {
+            id: 'actions',
+            header: () => <div className="text-center w-full">จัดการ</div>,
+            size: 100,
+            cell: ({ row }) => (
+                <div className="flex items-center justify-center gap-2">
+                    <button 
+                        onClick={() => handleEdit(row.original.warehouse_id)}
+                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="แก้ไข"
+                    >
+                        <Edit2 size={18} />
+                    </button>
+                    <button 
+                        onClick={() => handleDelete(row.original.warehouse_id)}
+                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="ลบ"
+                    >
+                        <Trash2 size={18} />
+                    </button>
+                </div>
+            ),
+        },
+    ], [filters.page, filters.limit, handleDelete]);
 
     // ==================== RENDER ====================
     return (
         <div className="p-6 space-y-6">
-            
-            {/* Header */}
+            {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
                         <Warehouse className="text-blue-600" />
                         กำหนดรหัสคลังสินค้า (Warehouse)
                     </h1>
-                    <p className="text-gray-500 dark:text-gray-400 mt-1">
+                    <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">
                         จัดการข้อมูลคลังสินค้าทั้งหมด
                     </p>
                 </div>
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={fetchData}
-                        className="p-2 text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                        title="รีเฟรช"
-                    >
-                        <RefreshCw size={20} className={isLoading ? 'animate-spin' : ''} />
-                    </button>
-                    <button
-                        onClick={handleCreateNew}
-                        className={`${styles.btnPrimary} flex items-center gap-2 whitespace-nowrap`}
-                    >
-                        <Plus size={20} />
-                        เพิ่มคลังสินค้าใหม่
-                    </button>
-                </div>
             </div>
 
-            {/* Search & Filter */}
+            {/* Filter Section */}
             <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-                <div className="flex flex-col md:flex-row gap-4">
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                        <input
-                            type="text"
-                            placeholder="ค้นหารหัส ชื่อคลัง หรือสาขา..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className={`${styles.input} pl-10`}
-                        />
-                    </div>
-                    <select
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value as 'ALL' | 'ACTIVE' | 'INACTIVE')}
-                        className={`${styles.inputSelect} w-full md:w-40`}
-                    >
-                        <option value="ALL">ทั้งหมด</option>
-                        <option value="ACTIVE">ใช้งาน</option>
-                        <option value="INACTIVE">ไม่ใช้งาน</option>
-                    </select>
-                </div>
+                <FilterFormBuilder
+                    config={filterConfig}
+                    filters={filters}
+                    onFilterChange={(name, value) => {
+                        setFilters({ [name]: value } as Partial<typeof filters>);
+                    }}
+                    onSearch={() => handlePageChange(1)}
+                    onReset={resetFilters}
+                    onCreate={handleCreateNew}
+                    createLabel="เพิ่มคลังสินค้าใหม่"
+                    accentColor="indigo"
+                    columns={{ sm: 1, md: 5, lg: 5, xl: 5 }}
+                    actionColSpan={{ sm: 'full', md: 3, lg: 3, xl: 3 }}
+                    actionAlign="end"
+                />
             </div>
 
-            {/* Table */}
-            <div className={styles.tableContainer}>
-                {isLoading ? (
-                    <div className="flex items-center justify-center py-12">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                        <span className="ml-3 text-gray-600 dark:text-gray-400">กำลังโหลดข้อมูล...</span>
-                    </div>
-                ) : (
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead className={styles.tableHeader}>
-                            <tr>
-                                <th className="px-6 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-200 uppercase tracking-wider">รหัสคลัง</th>
-                                <th className="px-6 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-200 uppercase tracking-wider">ชื่อคลังสินค้า</th>
-                                <th className="px-6 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-200 uppercase tracking-wider hidden md:table-cell">สาขา</th>
-                                <th className="px-6 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-200 uppercase tracking-wider">สถานะ</th>
-                                <th className="px-6 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-200 uppercase tracking-wider">จัดการ</th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                            {paginatedData.length > 0 ? (
-                                paginatedData.map((item) => (
-                                    <tr key={item.warehouse_id} className={styles.tableTr}>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600 dark:text-blue-400">
-                                            {item.warehouse_code}
-                                        </td>
-                                        <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
-                                            {item.warehouse_name}
-                                        </td>
-                                        <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">
-                                            {item.branch_name || '-'}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                                            <ActiveStatusBadge isActive={item.is_active} />
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                                            <div className="flex items-center justify-center gap-2">
-                                                <button 
-                                                    onClick={() => handleEdit(item.warehouse_id)}
-                                                    className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-                                                    title="แก้ไข"
-                                                >
-                                                    <Edit2 size={18} />
-                                                </button>
-                                                <button 
-                                                    onClick={() => handleDelete(item.warehouse_id)}
-                                                    className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-                                                    title="ลบ"
-                                                >
-                                                    <Trash2 size={18} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
-                                        ไม่พบข้อมูลคลังสินค้า
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-                )}
+            {/* Data Table Section */}
+            <div className="flex flex-col gap-4">
+                <h2 className="text-gray-700 dark:text-gray-300 font-medium">
+                    พบข้อมูล {response?.total || 0} รายการ
+                </h2>
 
-                {/* Pagination */}
-                {!isLoading && paginatedData.length > 0 && (
-                <div className="px-4 py-4 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                        <span>แสดง</span>
-                        <select
-                            value={rowsPerPage}
-                            onChange={(e) => setRowsPerPage(Number(e.target.value))}
-                            className={styles.inputSm}
-                        >
-                            <option value={5}>5</option>
-                            <option value={10}>10</option>
-                            <option value={25}>25</option>
-                        </select>
-                        <span>รายการ | {startIndex + 1}-{Math.min(startIndex + rowsPerPage, totalItems)} จาก {totalItems}</span>
-                    </div>
-
-                    <div className="flex items-center gap-1">
-                        <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                            <ChevronsLeft size={18} className="text-gray-600 dark:text-gray-400" />
-                        </button>
-                        <button onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} disabled={currentPage === 1} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                            <ChevronLeft size={18} className="text-gray-600 dark:text-gray-400" />
-                        </button>
-                        <span className="px-3 py-1 text-sm text-gray-700 dark:text-gray-300">หน้า {currentPage} / {totalPages || 1}</span>
-                        <button onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} disabled={currentPage >= totalPages} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                            <ChevronRight size={18} className="text-gray-600 dark:text-gray-400" />
-                        </button>
-                        <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage >= totalPages} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                            <ChevronsRight size={18} className="text-gray-600 dark:text-gray-400" />
-                        </button>
-                    </div>
-                </div>
-                )}
+                <SmartTable
+                    data={response?.items || []}
+                    columns={columns}
+                    isLoading={isLoading}
+                    pagination={{
+                        pageIndex: filters.page,
+                        pageSize: filters.limit,
+                        totalCount: response?.total || 0,
+                        onPageChange: handlePageChange,
+                        onPageSizeChange: (size) => setFilters({ limit: size, page: 1 }),
+                    }}
+                    sortConfig={sortConfig}
+                    onSortChange={handleSortChange}
+                    rowIdField="warehouse_id"
+                    className="shadow-sm border border-gray-200 dark:border-gray-700"
+                />
             </div>
 
-            {/* Modal */}
             <WarehouseFormModal 
                 isOpen={isModalOpen} 
                 onClose={handleModalClose}
                 editId={editingId}
+                onSuccess={refetch}
             />
         </div>
     );

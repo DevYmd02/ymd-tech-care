@@ -7,8 +7,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
     Edit2, 
     Trash2, 
-    User,
-    RefreshCw
+    User
 } from 'lucide-react';
 import { EmployeeFormModal } from './EmployeeFormModal';
 import { EmployeeService } from '@/modules/master-data/company/services/company.service';
@@ -195,15 +194,7 @@ export default function EmployeeList() {
                         จัดการข้อมูลพนักงานทั้งหมดในระบบ
                     </p>
                 </div>
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={fetchData}
-                        className="p-2 text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                        title="รีเฟรช"
-                    >
-                        <RefreshCw size={20} className={isLoading ? 'animate-spin' : ''} />
-                    </button>
-                </div>
+
             </div>
 
             {/* Filter Section (Standardized) */}

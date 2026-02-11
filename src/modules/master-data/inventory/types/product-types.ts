@@ -284,6 +284,7 @@ export interface UOMConversionFormData {
     toUnit: string;
     conversionFactor: number;
     isPurchaseUnit: boolean;
+    isActive: boolean;
 }
 
 export interface UOMConversionListItem {
@@ -305,6 +306,7 @@ export const initialUOMConversionFormData: UOMConversionFormData = {
     toUnit: '',
     conversionFactor: 0,
     isPurchaseUnit: false,
+    isActive: true,
 };
 
 // ====================================================================================
@@ -331,6 +333,7 @@ export interface ItemBarcodeFormData {
     barcode: string;
     linkedUnit: string;
     isPrimary: boolean;
+    isActive: boolean;
 }
 
 export interface ItemBarcodeListItem {
@@ -350,4 +353,5 @@ export const initialItemBarcodeFormData: ItemBarcodeFormData = {
     barcode: '',
     linkedUnit: '',
     isPrimary: false,
+    isActive: true,
 };

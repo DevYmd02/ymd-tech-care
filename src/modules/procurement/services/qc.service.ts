@@ -23,6 +23,16 @@ export const QCService = {
            filtered = filtered.filter(qc => qc.status === params.status);
        }
 
+       // 1. Text Search
+       if (params?.qc_no) {
+           const searchLower = params.qc_no.toLowerCase();
+           filtered = filtered.filter(qc => qc.qc_no.toLowerCase().includes(searchLower));
+       }
+       if (params?.pr_no) {
+           const searchLower = params.pr_no.toLowerCase();
+           filtered = filtered.filter(qc => qc.pr_no && qc.pr_no.toLowerCase().includes(searchLower));
+       }
+
        const sortParam = params?.sort || 'created_at:desc';
        const [sortKey, sortDir] = sortParam.split(':');
        
@@ -43,11 +53,18 @@ export const QCService = {
            return (valA < valB ? -1 : 1) * multiplier;
        });
 
+       // 2. Pagination
+       const page = Number(params?.page) || 1;
+       const limit = Number(params?.limit) || 10;
+       const startIndex = (page - 1) * limit;
+       const endIndex = startIndex + limit;
+       const paginated = sorted.slice(startIndex, endIndex);
+
        return {
-         data: sorted,
+         data: paginated,
          total: sorted.length,
-         page: 1,
-         limit: 100
+         page,
+         limit
        };
     }
     try {

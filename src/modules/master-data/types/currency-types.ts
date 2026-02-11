@@ -65,6 +65,7 @@ export interface ExchangeRate extends BaseMasterData {
     rate_date: string; // datetime string
     exchange_round: number; // smallint(2)
     allow_adjust: number; // float(8)
+    fee?: number; // float(8) - Optional or Required depending on DB? Assuming optional for now or 0 default
     remark?: string;
     is_active: boolean;
 }
@@ -76,6 +77,7 @@ export const exchangeRateSchema = z.object({
     buyRate: z.number().min(0, 'อัตราซื้อต้องไม่ติดลบ'),
     saleRate: z.number().min(0, 'อัตราขายต้องไม่ติดลบ'),
     allowAdjust: z.number().min(0, 'อนุญาตปรับต้องไม่ติดลบ'),
+    fee: z.number().min(0, 'ค่าธรรมเนียมต้องไม่ติดลบ'),
     exchangeRound: z.number().min(2).max(6), // Decimal places select
     remark: z.string().max(255).optional(),
     isActive: z.boolean(),

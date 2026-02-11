@@ -62,13 +62,13 @@ const PositionList = React.lazy(() => import('@/modules/master-data/company/page
 const SalesAreaList = React.lazy(() => import('@/modules/master-data/sales/pages/area/SalesAreaList'));
 const SalesChannelList = React.lazy(() => import('@/modules/master-data/sales/pages/channel/SalesChannelList'));
 const SalesTargetList = React.lazy(() => import('@/modules/master-data/sales/pages/target/SalesTargetList'));
-const WarehouseForm = React.lazy(() => import('@/modules/master-data/inventory/pages/warehouse/WarehouseForm'));
-const ProductCategoryForm = React.lazy(() => import('@/modules/master-data/inventory/pages/category/ProductCategoryForm'));
-const ItemTypeForm = React.lazy(() => import('@/modules/master-data/inventory/pages/item-type/ItemTypeForm'));
-const UnitForm = React.lazy(() => import('@/modules/master-data/inventory/pages/unit/UnitForm'));
-const ItemMasterForm = React.lazy(() => import('@/modules/master-data/inventory/pages/item-master/ItemMasterForm'));
-const UOMConversionForm = React.lazy(() => import('@/modules/master-data/inventory/pages/uom-conversion/UOMConversionForm'));
-const ItemBarcodeForm = React.lazy(() => import('@/modules/master-data/inventory/pages/item-barcode/ItemBarcodeForm'));
+const WarehouseList = React.lazy(() => import('@/modules/master-data/inventory/pages/warehouse/WarehouseList'));
+const ProductCategoryList = React.lazy(() => import('@/modules/master-data/inventory/pages/category/ProductCategoryList'));
+const ItemTypeList = React.lazy(() => import('@/modules/master-data/inventory/pages/item-type/ItemTypeList'));
+const UnitList = React.lazy(() => import('@/modules/master-data/inventory/pages/unit/UnitList'));
+const ItemMasterList = React.lazy(() => import('@/modules/master-data/inventory/pages/item-master/ItemMasterList'));
+const UOMConversionList = React.lazy(() => import('@/modules/master-data/inventory/pages/uom-conversion/UOMConversionList'));
+const ItemBarcodeList = React.lazy(() => import('@/modules/master-data/inventory/pages/item-barcode/ItemBarcodeList'));
 // New Inventory Master Pages (11 new pages)
 const ItemGroupList = React.lazy(() => import('@/modules/master-data/inventory/pages/item-group/ItemGroupList'));
 const BrandList = React.lazy(() => import('@/modules/master-data/inventory/pages/brand/BrandList'));
@@ -187,13 +187,14 @@ function App() {
           <Route path="master-data/sales-target" element={<SalesTargetList />} />
           <Route path="master-data/vendor-type" element={<VendorTypeList />} />
           <Route path="master-data/vendor-group" element={<VendorGroupList />} />
-          <Route path="master-data/warehouse" element={<WarehouseForm />} />
-          <Route path="master-data/product-category" element={<ProductCategoryForm />} />
-          <Route path="master-data/item-type" element={<ItemTypeForm />} />
-          <Route path="master-data/unit" element={<UnitForm />} />
-          <Route path="master-data/item" element={<ItemMasterForm />} />
-          <Route path="master-data/uom-conversion" element={<UOMConversionForm />} />
-          <Route path="master-data/item-barcode" element={<ItemBarcodeForm />} />
+          <Route path="master-data/warehouse" element={<WarehouseList />} />
+          <Route path="master-data/product-category" element={<ProductCategoryList />} />
+          <Route path="master-data/item-type" element={<ItemTypeList />} />
+          <Route path="master-data/unit" element={<UnitList />} />
+          <Route path="master-data/unit" element={<UnitList />} />
+          <Route path="master-data/item" element={<ItemMasterList />} />
+          <Route path="master-data/uom-conversion" element={<UOMConversionList />} />
+          <Route path="master-data/item-barcode" element={<ItemBarcodeList />} />
           {/* New Inventory Master Routes */}
           <Route path="master-data/item-group" element={<ItemGroupList />} />
           <Route path="master-data/brand" element={<BrandList />} />

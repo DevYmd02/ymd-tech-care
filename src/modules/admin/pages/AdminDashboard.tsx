@@ -174,9 +174,9 @@ export default function AdminDashboard() {
                     <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Quick Stats</h3>
                     <div className="space-y-4">
                         {[
-                            { label: 'ใช้งาน Storage', value: '65%', width: '65%', color: 'bg-blue-600' },
-                            { label: 'API Calls (วันนี้)', value: '2,340', width: '45%', color: 'bg-green-600' },
-                            { label: 'Active Sessions', value: '23', width: '30%', color: 'bg-purple-600' }
+                            { label: 'ใช้งาน Storage', value: '65%', widthClass: 'w-[65%]', color: 'bg-blue-600' },
+                            { label: 'API Calls (วันนี้)', value: '2,340', widthClass: 'w-[45%]', color: 'bg-green-600' },
+                            { label: 'Active Sessions', value: '23', widthClass: 'w-[30%]', color: 'bg-purple-600' }
                         ].map((stat, index) => (
                             <div key={index}>
                                 <div className="flex justify-between text-sm mb-1">
@@ -184,7 +184,7 @@ export default function AdminDashboard() {
                                     <span className="text-gray-800 dark:text-gray-200 font-medium">{stat.value}</span>
                                 </div>
                                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                    <div className={`${stat.color} h-2 rounded-full`} style={{ width: stat.width }}></div>
+                                    <div className={`${stat.color} h-2 rounded-full ${stat.widthClass}`}></div>
                                 </div>
                             </div>
                         ))}

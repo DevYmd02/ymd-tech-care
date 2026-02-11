@@ -114,12 +114,9 @@ export const extractErrorMessage = (error: unknown): string => {
 export interface ApiClient extends Omit<AxiosInstance, 'get' | 'put' | 'post' | 'delete' | 'patch'> {
   get<T>(url: string, config?: AxiosRequestConfig): Promise<T>;
   delete<T>(url: string, config?: AxiosRequestConfig): Promise<T>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  post<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  put<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  patch<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T>;
+  post<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T>;
+  put<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T>;
+  patch<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T>;
 }
 
 if (import.meta.env.DEV) {
