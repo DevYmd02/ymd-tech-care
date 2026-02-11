@@ -13,7 +13,7 @@ import { POService } from '@/modules/procurement/services';
 import type { POListParams, POStatus, POListItem, POFormData } from '@/modules/procurement/types/po-types';
 import { createColumnHelper } from '@tanstack/react-table';
 import type { ColumnDef } from '@tanstack/react-table';
-import { POFormModal } from './components';
+import { POFormModal, POApprovalModal } from './components';
 import GRNFormModal from '@/modules/procurement/pages/grn/components/GRNFormModal';
 
 // ====================================================================================
@@ -86,6 +86,10 @@ export default function POListPage() {
     const [isGRNModalOpen, setIsGRNModalOpen] = useState(false);
     const [selectedPOIdForGRN, setSelectedPOIdForGRN] = useState<string | undefined>(undefined);
 
+    // -- Approval Modal State --
+    const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
+    const [selectedPOIdForApproval, setSelectedPOIdForApproval] = useState<string | undefined>(undefined);
+
     const { filters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<POStatus>({
         defaultStatus: 'ALL',
     });
@@ -105,7 +109,7 @@ export default function POListPage() {
     };
 
     // Data Fetching with React Query
-    const { data, isLoading } = useQuery({
+    const { data, isLoading, refetch } = useQuery({
         queryKey: ['purchase-orders', apiFilters],
         queryFn: () => POService.getList(apiFilters),
         placeholderData: keepPreviousData,
@@ -119,7 +123,12 @@ export default function POListPage() {
     // Action Handlers (Mock)
     const handleView = (id: string) => window.alert(`Coming Soon: View PO ${id}`);
     const handleEdit = (id: string) => window.alert(`Coming Soon: Edit PO ${id}`);
-    const handleApprove = (id: string) => alert(`ส่งอนุมัติ PO: ${id}`);
+    
+    const handleApprove = useCallback((id: string) => {
+        setSelectedPOIdForApproval(id);
+        setIsApprovalModalOpen(true);
+    }, []);
+
     const handleIssue = (id: string) => alert(`ออก PO: ${id}`);
     
     const handleGRN = useCallback((id: string) => {
@@ -282,7 +291,7 @@ export default function POListPage() {
             size: 160,
             enableSorting: false,
         }),
-    ], [columnHelper, filters.page, filters.limit, data?.data, handleGRN]);
+    ], [columnHelper, filters.page, filters.limit, data?.data, handleGRN, handleApprove]);
 
     return (
         <>
@@ -482,6 +491,21 @@ export default function POListPage() {
                    setIsGRNModalOpen(false);
                 }}
             />
+
+            {selectedPOIdForApproval && (
+                <POApprovalModal
+                    isOpen={isApprovalModalOpen}
+                    onClose={() => {
+                        setIsApprovalModalOpen(false);
+                        setSelectedPOIdForApproval(undefined);
+                    }}
+                    poId={selectedPOIdForApproval}
+                    onSuccess={() => {
+                        setIsApprovalModalOpen(false);
+                        refetch();
+                    }}
+                />
+            )}
         </>
     );
 }
