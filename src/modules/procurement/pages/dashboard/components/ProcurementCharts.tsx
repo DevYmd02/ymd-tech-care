@@ -54,7 +54,7 @@ export const ProcurementCharts: React.FC<ProcurementChartsProps> = ({
                 <Card>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">ยอดซื้อแยกตามผู้ขาย (YTD)</h3>
                     <div className="flex flex-col sm:flex-row items-center gap-6">
-                        <div className="w-full sm:w-[60%] min-w-0" style={{ width: '100%', height: 350 }}>
+                        <div className="w-full sm:w-[60%] min-w-0 h-[350px]">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
                                     <Pie
@@ -95,7 +95,7 @@ export const ProcurementCharts: React.FC<ProcurementChartsProps> = ({
                 {/* Line Chart - Monthly Trend */}
                 <Card>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">แนวโน้มยอดซื้อ (7 เดือนล่าสุด)</h3>
-                    <div style={{ width: '100%', height: 350 }}>
+                    <div className="w-full h-[350px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={trendData}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
@@ -126,7 +126,7 @@ export const ProcurementCharts: React.FC<ProcurementChartsProps> = ({
                 {/* Bar Chart - Lead Time Analysis */}
                 <Card>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">วิเคราะห์ Lead Time (วัน)</h3>
-                    <div style={{ width: '100%', height: 350 }}>
+                    <div className="w-full h-[350px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={leadTimeData}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />

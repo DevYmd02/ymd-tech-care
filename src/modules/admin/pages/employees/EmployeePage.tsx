@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Users, AlertCircle, RefreshCw } from 'lucide-react';
-import { EmployeeCreateModal } from './EmployeeCreateModal';
+import { EmployeeFormModal } from '@/modules/master-data/company/pages/employee/EmployeeFormModal';
 import { EmployeeService } from '@/core/api/employee.service';
 import type { IEmployee } from '@/modules/master-data/company/types/employee-types';
 import { logger } from '@/shared/utils/logger';
@@ -52,20 +52,20 @@ export const EmployeePage: React.FC = () => {
         
         {/* Actions */}
         <div className="flex gap-2">
-          <button 
-             onClick={handleRefreshList}
-             className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-             title="Refresh"
-          >
+            <button 
+                onClick={handleRefreshList}
+                className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                title="Refresh"
+            >
             <RefreshCw size={20} />
-          </button>
-          <button
+            </button>
+            <button
             onClick={() => setIsCreateModalOpen(true)}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm font-medium"
-          >
+            >
             <Plus size={18} />
             Create New Employee
-          </button>
+            </button>
         </div>
       </div>
 
@@ -136,8 +136,8 @@ export const EmployeePage: React.FC = () => {
         )}
       </div>
 
-      {/* Create Employee Modal */}
-      <EmployeeCreateModal
+      {/* Create Employee Modal - Standardized */}
+      <EmployeeFormModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSuccess={handleRefreshList}

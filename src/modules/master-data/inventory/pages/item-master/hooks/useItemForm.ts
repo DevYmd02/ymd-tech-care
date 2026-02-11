@@ -79,7 +79,10 @@ const initialFormData: ItemFormData = {
 /**
  * Custom Hook for Item Master Form Logic
  */
-export function useItemForm(editId: string | null) {
+/**
+ * Custom Hook for Item Master Form Logic
+ */
+export function useItemForm(editId: string | null, onSuccess?: () => void) {
     const navigate = useNavigate();
     const { confirm } = useConfirmation();
     const [formData, setFormData] = useState<ItemFormData>(initialFormData);
@@ -221,7 +224,11 @@ export function useItemForm(editId: string | null) {
                 hideCancel: true
             });
             
-            navigate('/master-data?tab=item');
+            if (onSuccess) {
+                onSuccess();
+            } else {
+                navigate('/master-data?tab=item');
+            }
         } catch (error: unknown) {
             logger.error('Save item error:', error);
             setSaveError('เกิดข้อผิดพลาดในการบันทึก');
@@ -241,7 +248,15 @@ export function useItemForm(editId: string | null) {
     const handleFind = () => {
         const newId = prompt("Enter Item Code/ID to switch to:");
         if (newId) {
-            navigate(`/master-data/item-form?id=${newId}`);
+            // Check if we are in modal mode (onSuccess present) or page mode
+            if (onSuccess) {
+                 // In modal mode, we might need a way to tell parent to switch ID
+                 // For now, prompt is crude but acceptable for legacy support
+                 // A better way would be expose setEditId but hook doesn't control it
+                 alert("Quick find not supported in modal yet");
+            } else {
+                navigate(`/master-data/item-form?id=${newId}`);
+            }
         }
     };
 

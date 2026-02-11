@@ -88,6 +88,7 @@ export function ExchangeRateFormModal({ isOpen, onClose, editId, onSuccess }: Pr
                             buyRate: existing.buy_rate,
                             saleRate: existing.sale_rate,
                             allowAdjust: existing.allow_adjust,
+                            fee: existing.fee || 0,
                             exchangeRound: existing.exchange_round,
                             remark: existing.remark || '',
                             isActive: existing.is_active
@@ -102,6 +103,7 @@ export function ExchangeRateFormModal({ isOpen, onClose, editId, onSuccess }: Pr
                     buyRate: 0,
                     saleRate: 0,
                     allowAdjust: 0,
+                    fee: 0,
                     exchangeRound: 2,
                     remark: '',
                     isActive: true
@@ -120,6 +122,7 @@ export function ExchangeRateFormModal({ isOpen, onClose, editId, onSuccess }: Pr
                 buy_rate: data.buyRate,
                 sale_rate: data.saleRate,
                 allow_adjust: data.allowAdjust,
+                fee: data.fee || 0,
                 exchange_round: data.exchangeRound,
                 remark: data.remark || '',
                 is_active: data.isActive
@@ -289,6 +292,23 @@ export function ExchangeRateFormModal({ isOpen, onClose, editId, onSuccess }: Pr
                         <p className="text-gray-400 text-xs mt-1 text-[10px]">float(8) - ห้ามเว้นว่าง</p>
                     </div>
 
+                    {/* Fee (New Field) */}
+                    <div>
+                        <label className={styles.label}>
+                            ค่าธรรมเนียม (Fee)
+                        </label>
+                        <input
+                            {...register('fee', { valueAsNumber: true })}
+                            type="number"
+                            step="0.0001"
+                            placeholder="0"
+                            className={`${styles.input} ${errors.fee ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        />
+                         {errors.fee && <p className="text-red-500 text-xs mt-1">{errors.fee.message}</p>}
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
                     {/* exchange_round (Decimal Places) */}
                     <div>
                         <label className={styles.label}>

@@ -1,6 +1,6 @@
 /**
  * @file DepartmentFormModal.tsx
- * @description Modal for creating/editing Department data (Standarized)
+ * @description Modal for creating/editing Department data (Standarized UI)
  * @module company
  */
 
@@ -12,8 +12,7 @@ import { Save, X, Building } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@/shared/components/layout/DialogFormLayout';
 import { DepartmentService } from '@/modules/master-data/company/services/company.service';
-
-
+import { logger } from '@/shared/utils/logger';
 
 interface DepartmentFormModalProps {
     isOpen: boolean;
@@ -59,10 +58,12 @@ export const DepartmentFormModal = ({ isOpen, onClose, onSuccess, editId }: Depa
                 // Fetch data for edit
                 DepartmentService.get(editId).then((data) => {
                     if (data) {
-                        setValue('departmentCode', data.department_code);
-                        setValue('departmentName', data.department_name);
-                        setValue('departmentNameEn', data.department_name_en || '');
-                        setValue('isActive', data.is_active);
+                        reset({
+                            departmentCode: data.department_code,
+                            departmentName: data.department_name,
+                            departmentNameEn: data.department_name_en || '',
+                            isActive: data.is_active ?? true,
+                        });
                     }
                 });
             } else {
@@ -75,7 +76,7 @@ export const DepartmentFormModal = ({ isOpen, onClose, onSuccess, editId }: Depa
                 });
             }
         }
-    }, [isOpen, isEdit, editId, reset, setValue]);
+    }, [isOpen, isEdit, editId, reset]);
 
     const onSubmit = async (data: DepartmentFormValues) => {
         try {
@@ -93,7 +94,7 @@ export const DepartmentFormModal = ({ isOpen, onClose, onSuccess, editId }: Depa
                 alert(res.message || 'บันทึกไม่สำเร็จ');
             }
         } catch (error) {
-            console.error('Error saving department:', error);
+            logger.error('Error saving department:', error);
             alert('เกิดข้อผิดพลาดในการบันทึก');
         }
     };
@@ -138,7 +139,7 @@ export const DepartmentFormModal = ({ isOpen, onClose, onSuccess, editId }: Depa
         >
             <div className="p-6 space-y-6">
                 {/* Department Code */}
-                <div>
+                <div className="space-y-1">
                     <label className={styles.label}>
                         รหัสฝ่าย <span className="text-red-500">*</span>
                     </label>
@@ -149,15 +150,13 @@ export const DepartmentFormModal = ({ isOpen, onClose, onSuccess, editId }: Depa
                         className={`${styles.input} ${errors.departmentCode ? 'border-red-500 focus:ring-red-200' : ''}`}
                         disabled={isEdit}
                     />
-                    {errors.departmentCode ? (
+                    {errors.departmentCode && (
                         <p className="text-red-500 text-xs mt-1">{errors.departmentCode.message}</p>
-                    ) : (
-                        <p className="text-gray-400 text-xs mt-1">varchar(25) - รหัสฝ่าย</p>
                     )}
                 </div>
 
                 {/* Department Name (Thai) */}
-                <div>
+                <div className="space-y-1">
                     <label className={styles.label}>
                         ชื่อฝ่าย (ภาษาไทย) <span className="text-red-500">*</span>
                     </label>
@@ -167,15 +166,13 @@ export const DepartmentFormModal = ({ isOpen, onClose, onSuccess, editId }: Depa
                         placeholder="กรอกชื่อฝ่าย"
                         className={`${styles.input} ${errors.departmentName ? 'border-red-500 focus:ring-red-200' : ''}`}
                     />
-                    {errors.departmentName ? (
+                    {errors.departmentName && (
                         <p className="text-red-500 text-xs mt-1">{errors.departmentName.message}</p>
-                    ) : (
-                        <p className="text-gray-400 text-xs mt-1">varchar(255) - ชื่อฝ่าย</p>
                     )}
                 </div>
 
                 {/* Department Name (English) */}
-                <div>
+                <div className="space-y-1">
                     <label className={styles.label}>
                         ชื่อฝ่าย (ภาษาอังกฤษ)
                     </label>
@@ -185,11 +182,13 @@ export const DepartmentFormModal = ({ isOpen, onClose, onSuccess, editId }: Depa
                         placeholder="Enter department name in English"
                         className={`${styles.input} ${errors.departmentNameEn ? 'border-red-500 focus:ring-red-200' : ''}`}
                     />
-                    <p className="text-gray-400 text-xs mt-1">varchar(255) - ชื่อฝ่าย (Eng)</p>
+                    {errors.departmentNameEn && (
+                        <p className="text-red-500 text-xs mt-1">{errors.departmentNameEn.message}</p>
+                    )}
                 </div>
 
                 {/* Status - Dropdown Select */}
-                <div>
+                <div className="space-y-1">
                     <label className={styles.label}>
                         สถานะ <span className="text-red-500">*</span>
                     </label>

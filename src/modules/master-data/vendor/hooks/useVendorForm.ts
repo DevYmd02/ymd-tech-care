@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
+import { useForm, type Path, type SubmitHandler, type FieldErrors, type FieldError } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { VendorService } from '../services/vendor.service';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import { useQueryClient } from '@tanstack/react-query';
@@ -14,29 +16,10 @@ import {
     toVendorFormData as mapToFormData, 
     toVendorCreateRequest,
 } from '../types/vendor-types';
-import { z } from 'zod';
+import { logger } from '@/shared/utils/logger';
 
-// Define Validation Schema
-const vendorSchema = z.object({
-    vendorNameTh: z.string().min(1, 'กรุณากรอกชื่อเจ้าหนี้ (ไทย)'),
-    vendorTypeId: z.string().min(1, 'กรุณาเลือกประเภทเจ้าหนี้'),
-    vendorGroupId: z.string().min(1, 'กรุณาเลือกกลุ่มเจ้าหนี้'),
-    currencyId: z.string().min(1, 'กรุณาเลือกสกุลเงิน'),
-    taxId: z.string().length(13, 'เลขประจำตัวผู้เสียภาษีต้องมี 13 หลัก').regex(/^\d+$/, 'กรอกได้เฉพาะตัวเลข').optional().or(z.literal('')),
-    email: z.string().email('รูปแบบอีเมลไม่ถูกต้อง (เช่น user@example.com)').optional().or(z.literal('')),
-    addresses: z.array(z.object({
-        address: z.string().min(1, 'กรุณากรอกที่อยู่'),
-        subDistrict: z.string().optional().or(z.literal('')),
-        district: z.string().optional().or(z.literal('')),
-        province: z.string().min(1, 'กรุณากรอกจังหวัด'),
-        postalCode: z.string().length(5, 'รหัสไปรษณีย์ต้องมี 5 หลัก').regex(/^\d+$/, 'กรอกได้เฉพาะตัวเลข'),
-    })).min(1),
-    bankAccounts: z.array(z.object({
-        bankName: z.string().min(1, 'กรุณากรอกชื่อธนาคาร'),
-        accountNumber: z.string().min(1, 'กรุณากรอกเลขบัญชี'),
-        accountName: z.string().min(1, 'กรุณากรอกชื่อบัญชี'),
-    })),
-});
+import { VendorSchema } from '../types/vendor-schemas';
+
 
 interface UseVendorFormProps {
     isOpen: boolean;
@@ -55,11 +38,25 @@ export function useVendorForm({
     onSuccess, 
     predictedVendorId 
 }: UseVendorFormProps) {
-    const [formData, setFormData] = useState<VendorFormData>(initialVendorFormData);
     const [isLoading, setIsLoading] = useState(false);
-    const [isSubmitting, setIsSubmitting] = useState(false);
     const [headerTitle, setHeaderTitle] = useState('เพิ่มเจ้าหนี้ใหม่');
-    const [errors, setErrors] = useState<{ [key: string]: string }>({});
+    
+    // RHF Setup
+    const { 
+        watch, 
+        setValue, 
+        handleSubmit: rhfHandleSubmit, 
+        reset, 
+        getValues,
+        formState: { errors, isSubmitting } 
+    } = useForm<VendorFormData>({
+        resolver: zodResolver(VendorSchema),
+        defaultValues: initialVendorFormData,
+        mode: 'onChange' 
+    });
+
+    const formData = watch();
+
     const [systemAlert, setSystemAlert] = useState<{ message: string; type: 'error' | 'success' } | null>(null);
     const prevIsOpenRef = useRef(isOpen);
     
@@ -69,11 +66,12 @@ export function useVendorForm({
     // Fetch/Reset data when modal opens
     useEffect(() => {
         if (isOpen && !prevIsOpenRef.current) {
-            setErrors({});
+            setSystemAlert(null);
+            
             if (initialData) {
                 setHeaderTitle('แก้ไขข้อมูลเจ้าหนี้');
                 const converted = mapToFormData(initialData);
-                setFormData({
+                reset({
                     ...converted,
                     vendorCodeSearch: '',
                 });
@@ -85,13 +83,13 @@ export function useVendorForm({
                         const vendor = await VendorService.getById(vendorId);
                         if (vendor) {
                             const apiData = mapToFormData(vendor);
-                            setFormData({
+                            reset({
                                 ...apiData,
                                 vendorCodeSearch: '',
                             });
                         }
                     } catch (error) {
-                        console.error('Error fetching vendor:', error);
+                        logger.error('Error fetching vendor:', error);
                     } finally {
                         setIsLoading(false);
                     }
@@ -99,14 +97,14 @@ export function useVendorForm({
                 fetchData();
             } else {
                 setHeaderTitle('เพิ่มเจ้าหนี้ใหม่');
-                setFormData({
+                reset({
                     ...initialVendorFormData,
                     vendorCode: predictedVendorId || initialVendorFormData.vendorCode || ''
                 });
             }
         }
         prevIsOpenRef.current = isOpen;
-    }, [isOpen, vendorId, initialData, predictedVendorId]);
+    }, [isOpen, vendorId, initialData, predictedVendorId, reset]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value, type } = e.target;
@@ -116,19 +114,23 @@ export function useVendorForm({
             checked = (e.target as HTMLInputElement).checked;
         }
 
-        let finalValue = value;
+        let finalValue: string | boolean = value;
         
+        // Input Masking Logic
         if (['phone', 'mobile', 'taxId', 'postalCode'].includes(name)) {
             finalValue = value.replace(/[^0-9]/g, '');
         }
+        
+        // Special case for boolean checkboxes
+        if (type === 'checkbox') {
+            finalValue = checked;
+        }
 
-        setFormData(prev => ({
-            ...prev,
-            [name]: type === 'checkbox' ? checked : finalValue
-        }));
+        setValue(name as Path<VendorFormData>, finalValue, { shouldValidate: true, shouldDirty: true });
     };
 
     const addBankAccount = () => {
+        const current = getValues('bankAccounts') || [];
         const newAccount: VendorBankAccount = {
             id: Date.now().toString(),
             bankName: '',
@@ -137,13 +139,14 @@ export function useVendorForm({
             accountName: formData.vendorNameTh,
             accountType: 'SAVING',
             swiftCode: '',
-            isMain: formData.bankAccounts.length === 0
+            isMain: current.length === 0
         };
-        setFormData(prev => ({ ...prev, bankAccounts: [...prev.bankAccounts, newAccount] }));
+        setValue('bankAccounts', [...current, newAccount], { shouldDirty: true });
     };
 
     const removeBankAccount = (id: string) => {
-        setFormData(prev => ({ ...prev, bankAccounts: prev.bankAccounts.filter(acc => acc.id !== id) }));
+        const current = getValues('bankAccounts');
+        setValue('bankAccounts', current.filter(acc => acc.id !== id), { shouldDirty: true });
     };
 
     const updateBankAccount = (id: string, field: keyof VendorBankAccount, value: string | boolean) => {
@@ -151,15 +154,16 @@ export function useVendorForm({
         if (typeof value === 'string' && field === 'accountNumber') {
             finalValue = value.replace(/[^0-9]/g, '');
         }
-        setFormData(prev => ({
-            ...prev,
-            bankAccounts: prev.bankAccounts.map(acc => 
-                acc.id === id ? { ...acc, [field]: finalValue } : acc
-            )
-        }));
+        
+        const current = getValues('bankAccounts');
+        const updated = current.map(acc => 
+            acc.id === id ? { ...acc, [field]: finalValue } : acc
+        );
+        setValue('bankAccounts', updated, { shouldDirty: true, shouldValidate: true });
     };
 
     const addContactPerson = () => {
+        const current = getValues('additionalContacts') || [];
         const newContact: VendorContactPerson = {
             id: Date.now().toString(),
             name: '',
@@ -167,13 +171,14 @@ export function useVendorForm({
             phone: '',
             mobile: '',
             email: '',
-            isMain: formData.additionalContacts.length === 0
+            isMain: current.length === 0
         };
-        setFormData(prev => ({ ...prev, additionalContacts: [...prev.additionalContacts, newContact] }));
+        setValue('additionalContacts', [...current, newContact], { shouldDirty: true });
     };
 
     const removeContactPerson = (id: string) => {
-        setFormData(prev => ({ ...prev, additionalContacts: prev.additionalContacts.filter(c => c.id !== id) }));
+        const current = getValues('additionalContacts');
+        setValue('additionalContacts', current.filter(c => c.id !== id), { shouldDirty: true });
     };
 
     const updateContactPerson = (id: string, field: keyof VendorContactPerson, value: string | boolean) => {
@@ -181,16 +186,17 @@ export function useVendorForm({
         if (typeof value === 'string' && (field === 'phone' || field === 'mobile')) {
             finalValue = value.replace(/[^0-9]/g, '');
         }
-        setFormData(prev => ({
-            ...prev,
-            additionalContacts: prev.additionalContacts.map(c => 
-                c.id === id ? { ...c, [field]: finalValue } : c
-            )
-        }));
+        
+        const current = getValues('additionalContacts');
+        const updated = current.map(c => 
+            c.id === id ? { ...c, [field]: finalValue } : c
+        );
+        setValue('additionalContacts', updated, { shouldDirty: true, shouldValidate: true });
     };
 
     const addAddress = () => {
         const id = Date.now().toString();
+        const current = getValues('addresses') || [];
         const newAddress: VendorAddressFormItem = {
             id,
             address: '',
@@ -202,7 +208,7 @@ export function useVendorForm({
             isMain: false,
             addressType: 'SHIPPING'
         };
-        setFormData(prev => ({ ...prev, addresses: [...prev.addresses, newAddress] }));
+        setValue('addresses', [...current, newAddress], { shouldDirty: true });
         
         setTimeout(() => {
             const element = document.getElementById(`address-block-${id}`);
@@ -214,10 +220,8 @@ export function useVendorForm({
 
     const removeAddress = (index: number) => {
         if (index < 2) return;
-        setFormData(prev => ({
-            ...prev,
-            addresses: prev.addresses.filter((_, i) => i !== index)
-        }));
+        const current = getValues('addresses');
+        setValue('addresses', current.filter((_, i) => i !== index), { shouldDirty: true });
     };
 
     const updateAddress = (index: number, field: keyof VendorAddressFormItem, value: string | boolean) => {
@@ -227,96 +231,60 @@ export function useVendorForm({
             finalValue = value.replace(/[^0-9]/g, '');
         }
         
-        setFormData(prev => {
-            const newAddresses = [...prev.addresses];
-            if (newAddresses[index]) {
-                newAddresses[index] = { ...newAddresses[index], [field]: finalValue };
-                
-                if (index === 0 && prev.sameAsRegistered && 
-                    !['isMain', 'addressType', 'id'].includes(field)) {
-                    newAddresses[1] = { ...newAddresses[1], [field]: finalValue };
-                }
+        const current = [...getValues('addresses')];
+        if (current[index]) {
+            current[index] = { ...current[index], [field]: finalValue };
+            
+            const isSameAsRegistered = getValues('sameAsRegistered');
+            
+            if (index === 0 && isSameAsRegistered && 
+                !['isMain', 'addressType', 'id'].includes(field)) {
+                current[1] = { ...current[1], [field]: finalValue };
             }
-            return { ...prev, addresses: newAddresses };
-        });
+        }
+        setValue('addresses', current, { shouldDirty: true, shouldValidate: true });
     };
 
     const handleSameAsRegisteredChange = (checked: boolean) => {
-        setFormData(prev => {
-            const newAddresses = prev.addresses.map(addr => ({ ...addr }));
-            
-            if (checked) {
-                const registeredAddr = newAddresses[0];
-                if (registeredAddr) {
-                    newAddresses[1] = {
-                        ...registeredAddr,
-                        id: newAddresses[1]?.id || 'contact-addr',
-                        isMain: false,
-                        addressType: 'CONTACT'
-                    };
-                }
-            } else {
-                newAddresses[1] = {
-                    id: newAddresses[1]?.id || 'contact-addr',
-                    address: '',
-                    subDistrict: '',
-                    district: '',
-                    province: '',
-                    postalCode: '',
-                    country: '',
-                    contactPerson: '',
-                    phone: '',
-                    phoneExtension: '',
+        const current = [...getValues('addresses')];
+        
+        if (checked) {
+            const registeredAddr = current[0];
+            if (registeredAddr) {
+                current[1] = {
+                    ...registeredAddr,
+                    id: current[1]?.id || 'contact-addr',
                     isMain: false,
                     addressType: 'CONTACT'
                 };
             }
-
-            return {
-                ...prev,
-                sameAsRegistered: checked,
-                addresses: newAddresses
+        } else {
+            current[1] = {
+                id: current[1]?.id || 'contact-addr',
+                address: '',
+                subDistrict: '',
+                district: '',
+                province: '',
+                postalCode: '',
+                country: '',
+                contactPerson: '',
+                phone: '',
+                phoneExtension: '',
+                email: '',
+                isMain: false,
+                addressType: 'CONTACT'
             };
-        });
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        
-        const result = vendorSchema.safeParse(formData);
-        
-        if (!result.success) {
-            const newErrors: { [key: string]: string } = {};
-            result.error.issues.forEach(issue => {
-                let path = '';
-                issue.path.forEach((p, i) => {
-                    if (typeof p === 'number') {
-                        path += `[${p}]`;
-                    } else {
-                        path += (i === 0 ? '' : '.') + p.toString();
-                    }
-                });
-                newErrors[path] = issue.message;
-            });
-            setErrors(newErrors);
-            
-            setSystemAlert({ message: 'กรุณาตรวจสอบข้อมูลสีแดงในแบบฟอร์ม', type: 'error' });
-            
-            setTimeout(() => {
-                const firstErrorKey = Object.keys(newErrors)[0];
-                if (firstErrorKey) {
-                    const element = document.querySelector(`[name="${firstErrorKey}"]`);
-                    if (element) {
-                        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        (element as HTMLElement).focus();
-                    }
-                }
-            }, 100);
-            return;
         }
 
-        setErrors({});
+        setValue('sameAsRegistered', checked, { shouldDirty: true });
+        setValue('addresses', current, { shouldDirty: true });
+    };
 
+    const handleCreditLimitChange = (value: number) => {
+        setValue('creditLimit', value, { shouldDirty: true, shouldValidate: true });
+    };
+
+    const onSubmit: SubmitHandler<VendorFormData> = async (data) => {
         const isConfirmed = await confirm({
             title: headerTitle === 'แก้ไขข้อมูลเจ้าหนี้' ? 'ยืนยันการแก้ไข' : 'ยืนยันการบันทึก',
             description: headerTitle === 'แก้ไขข้อมูลเจ้าหนี้' 
@@ -329,9 +297,8 @@ export function useVendorForm({
 
         if (!isConfirmed) return;
 
-        setIsSubmitting(true);
         try {
-            const request = toVendorCreateRequest(formData);
+            const request = toVendorCreateRequest(data);
             const targetId = vendorId || initialData?.vendor_id;
 
             let response;
@@ -359,7 +326,7 @@ export function useVendorForm({
             }
 
         } catch (error: unknown) {
-            console.error('Error saving vendor:', error);
+            logger.error('Error saving vendor:', error);
             let errorMessage = 'เกิดข้อผิดพลาดในการเชื่อมต่อระบบ';
             if (error instanceof Error) errorMessage = error.message;
             
@@ -370,21 +337,108 @@ export function useVendorForm({
                 hideCancel: true,
                 variant: 'danger'
             });
-        } finally {
-            setIsSubmitting(false);
         }
     };
-
-    const handleCreditLimitChange = (value: number) => {
-        setFormData(prev => ({ ...prev, creditLimit: value }));
+    
+    // Wrapper for form submission to handle validation errors
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        
+        await rhfHandleSubmit(onSubmit, (invalidErrors) => {
+            console.error('Validation Errors:', invalidErrors);
+            setSystemAlert({ message: 'กรุณาตรวจสอบข้อมูลสีแดงในแบบฟอร์ม', type: 'error' });
+            
+            setTimeout(() => {
+                const firstErrorKey = Object.keys(invalidErrors)[0];
+                if (firstErrorKey) {
+                    const element = document.querySelector(`[name="${firstErrorKey}"]`);
+                    if (element) {
+                        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        (element as HTMLElement).focus();
+                    }
+                }
+            }, 100);
+        })(e);
     };
+
+    const flattenErrors = (rootErrors: FieldErrors<VendorFormData>): Record<string, string> => {
+        const result: Record<string, string> = {};
+        
+        const extractMessage = (path: string, error: FieldError | undefined | null | object) => {
+            if (error && typeof error === 'object' && 'message' in error) {
+                 const msg = (error as { message: unknown }).message;
+                 if (typeof msg === 'string') {
+                     result[path] = msg;
+                 }
+            }
+        };
+
+        // 1. Root fields (Exclude arrays)
+        const rootKeys = Object.keys(rootErrors) as Array<keyof VendorFormData>;
+        rootKeys.forEach(key => {
+            if (key === 'addresses' || key === 'bankAccounts' || key === 'additionalContacts') return;
+            // Safe to treat as FieldError for primitive fields in this specific form
+            extractMessage(String(key), rootErrors[key]);
+        });
+
+        // 2. Explicit Array Handling (Addresses)
+        if (rootErrors.addresses && Array.isArray(rootErrors.addresses)) {
+            rootErrors.addresses.forEach((addrErrors, index) => {
+                if (!addrErrors) return;
+                const keys = Object.keys(addrErrors) as Array<keyof typeof addrErrors>;
+                keys.forEach(key => {
+                    if (key === 'ref' || key === 'type') return;
+                    extractMessage(`addresses[${index}].${String(key)}`, addrErrors[key]);
+                });
+            });
+        }
+
+        // 3. Bank Accounts
+        if (rootErrors.bankAccounts && Array.isArray(rootErrors.bankAccounts)) {
+            rootErrors.bankAccounts.forEach((bankErrors, index) => {
+                if (!bankErrors) return;
+                const keys = Object.keys(bankErrors) as Array<keyof typeof bankErrors>;
+                keys.forEach(key => {
+                     if (key === 'ref' || key === 'type') return;
+                     extractMessage(`bankAccounts[${index}].${String(key)}`, bankErrors[key]);
+                });
+            });
+        }
+
+        // 4. Additional Contacts
+        if (rootErrors.additionalContacts && Array.isArray(rootErrors.additionalContacts)) {
+            rootErrors.additionalContacts.forEach((contactErrors, index) => {
+                if (!contactErrors) return;
+                const keys = Object.keys(contactErrors) as Array<keyof typeof contactErrors>;
+                keys.forEach(key => {
+                    if (key === 'ref' || key === 'type') return;
+                    extractMessage(`additionalContacts[${index}].${String(key)}`, contactErrors[key]);
+                });
+            });
+        }
+
+        return result;
+    };
+
+
+
+    const flatErrors = flattenErrors(errors);
 
     return {
         formData,
-        setFormData,
-        errors,
+        setFormData: (data: VendorFormData | ((prev: VendorFormData) => VendorFormData)) => {
+            if (typeof data === 'function') {
+                const current = getValues();
+                const newData = data(current);
+                reset(newData);
+            } else {
+                reset(data);
+            }
+        },
+        errors: flatErrors,
         isLoading,
         isSubmitting,
+
         headerTitle,
         systemAlert,
         setSystemAlert,

@@ -1,125 +1,211 @@
 /**
  * @file UnitFormModal.tsx
- * @description Modal สำหรับสร้าง/แก้ไขหน่วยนับ
+ * @description Modal สำหรับสร้าง/แก้ไขข้อมูลหน่วยนับ (Unit of Measure) - Refactored to Standard
  */
 
-import { useState, useEffect } from 'react';
-import { X, Ruler, Search, Save, RotateCcw } from 'lucide-react';
+import { useEffect } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Save, X, Ruler } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
+import { DialogFormLayout } from '@/shared/components/layout/DialogFormLayout';
+import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
 import { logger } from '@/shared/utils/logger';
-import { mockUnits } from '@/modules/master-data/mocks/masterDataMocks';
-import type { UnitFormData } from '@/modules/master-data/types/master-data-types';
-import { initialUnitFormData } from '@/modules/master-data/types/master-data-types';
 
-interface Props { isOpen: boolean; onClose: () => void; editId?: string | null; }
+interface UnitFormModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onSuccess: () => void;
+    editId?: string | null;
+}
 
-export function UnitFormModal({ isOpen, onClose, editId }: Props) {
-    const [formData, setFormData] = useState<UnitFormData>(initialUnitFormData);
-    const [isSearching, setIsSearching] = useState(false);
+const unitSchema = z.object({
+    unitCode: z.string().min(1, 'กรุณากรอกรหัสหน่วยนับ').max(20, 'รหัสหน่วยนับต้องไม่เกิน 20 ตัวอักษร'),
+    unitName: z.string().min(1, 'กรุณากรอกชื่อหน่วยนับ (ภาษาไทย)').max(100, 'ชื่อหน่วยนับต้องไม่เกิน 100 ตัวอักษร'),
+    unitNameEn: z.string().max(100, 'ชื่อหน่วยนับ (English) ต้องไม่เกิน 100 ตัวอักษร').optional(),
+    isActive: z.boolean(),
+});
+
+type UnitFormValues = z.infer<typeof unitSchema>;
+
+export const UnitFormModal = ({ isOpen, onClose, onSuccess, editId }: UnitFormModalProps) => {
+    const isEdit = !!editId;
+
+    const {
+        register,
+        handleSubmit,
+        reset,
+        formState: { errors, isSubmitting },
+        setValue,
+        control,
+    } = useForm<UnitFormValues>({
+        resolver: zodResolver(unitSchema),
+        defaultValues: {
+            unitCode: '',
+            unitName: '',
+            unitNameEn: '',
+            isActive: true,
+        },
+    });
+
+    const isActive = useWatch({ control, name: 'isActive' });
 
     useEffect(() => {
         if (isOpen) {
-            if (editId) {
-                const existing = mockUnits.find(u => u.unit_id === editId);
-                if (existing) {
-                    setFormData({
-                        unitCode: existing.unit_code,
-                        unitCodeSearch: existing.unit_code,
-                        unitName: existing.unit_name,
-                        unitNameEn: existing.unit_name_en || '',
-                        isActive: existing.is_active,
-                    });
-                }
+            if (isEdit && editId) {
+                UnitService.get(editId).then((data) => {
+                    if (data) {
+                        reset({
+                            unitCode: data.unit_code,
+                            unitName: data.unit_name,
+                            unitNameEn: data.unit_name_en || '',
+                            isActive: data.is_active ?? true,
+                        });
+                    }
+                });
             } else {
-                setFormData(initialUnitFormData);
+                reset({
+                    unitCode: '',
+                    unitName: '',
+                    unitNameEn: '',
+                    isActive: true,
+                });
             }
         }
-    }, [isOpen, editId]);
+    }, [isOpen, isEdit, editId, reset]);
 
-    if (!isOpen) return null;
+    const onSubmit = async (data: UnitFormValues) => {
+        try {
+            let res;
+            const payload = {
+                unit_code: data.unitCode,
+                unit_name: data.unitName,
+                unit_name_en: data.unitNameEn,
+                is_active: data.isActive,
+            };
 
-    const handleInputChange = (field: keyof UnitFormData, value: string | boolean) => {
-        setFormData(prev => ({ ...prev, [field]: value }));
+            if (isEdit && editId) {
+                res = await UnitService.update(editId, payload);
+            } else {
+                res = await UnitService.create(payload);
+            }
+
+            if (res.success) {
+                onSuccess();
+                onClose();
+            } else {
+                alert(res.message || 'บันทึกไม่สำเร็จ');
+            }
+        } catch (error) {
+            logger.error('Error saving unit:', error);
+            alert('เกิดข้อผิดพลาดในการบันทึก');
+        }
     };
 
-    const handleSearch = () => {
-        if (!formData.unitCodeSearch.trim()) return;
-        setIsSearching(true);
-        setTimeout(() => {
-            const found = mockUnits.find(u => u.unit_code.toLowerCase() === formData.unitCodeSearch.toLowerCase());
-            if (found) {
-                setFormData({
-                    unitCode: found.unit_code,
-                    unitCodeSearch: found.unit_code,
-                    unitName: found.unit_name,
-                    unitNameEn: found.unit_name_en || '',
-                    isActive: found.is_active,
-                });
-            } else { alert('ไม่พบรหัสหน่วยนับที่ค้นหา'); }
-            setIsSearching(false);
-        }, 300);
-    };
+    // Header Icon
+    const TitleIcon = <Ruler className="w-5 h-5 text-white" />;
 
-    const handleSave = () => {
-        if (!formData.unitCode.trim() || !formData.unitName.trim()) { alert('กรุณากรอกข้อมูลให้ครบถ้วน'); return; }
-        logger.log('Save unit:', formData);
-        alert(editId ? 'บันทึกการแก้ไขสำเร็จ' : 'เพิ่มหน่วยนับใหม่สำเร็จ');
-        onClose();
-    };
-
-    const handleReset = () => { setFormData(initialUnitFormData); };
-
-    return (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-            <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
-                <div className="fixed inset-0 bg-gray-500/75 dark:bg-gray-900/80 transition-opacity" onClick={onClose}></div>
-                <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-2xl mx-auto transform transition-all">
-                    <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-2xl">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3"><Ruler className="text-white" size={24} /><span className="text-white font-semibold">กำหนดรหัสหน่วยนับ (Unit of Measure)</span></div>
-                            <button onClick={onClose} className="text-white/80 hover:text-white transition-colors"><X size={24} /></button>
-                        </div>
-                    </div>
-
-                    <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div><label className={styles.label}>โค้ดหน่วย</label><input type="text" value={formData.unitCodeSearch} readOnly className={`${styles.input} bg-gray-100 dark:bg-gray-600`} /></div>
-                            <div><label className={styles.label}>ชื่อหน่วย</label><input type="text" value={formData.unitName} readOnly className={`${styles.input} bg-gray-100 dark:bg-gray-600`} /></div>
-                        </div>
-                    </div>
-
-                    <div className="p-6 space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className={styles.label}>โค้ดหน่วย</label>
-                                <div className="flex gap-2">
-                                    <input type="text" value={formData.unitCodeSearch} onChange={(e) => handleInputChange('unitCodeSearch', e.target.value)} className={styles.input} />
-                                    <button onClick={handleSearch} disabled={isSearching} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"><Search size={18} /></button>
-                                </div>
-                            </div>
-                            <div>
-                                <label className={styles.label}>ชื่อหน่วย (EN)</label>
-                                <input type="text" value={formData.unitNameEn} onChange={(e) => handleInputChange('unitNameEn', e.target.value)} className={styles.input} />
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className={styles.label}>ชื่อหน่วย</label>
-                                <input type="text" value={formData.unitName} onChange={(e) => handleInputChange('unitName', e.target.value)} className={styles.input} />
-                            </div>
-                            <div></div>
-                        </div>
-                    </div>
-
-                    <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 rounded-b-2xl border-t border-gray-200 dark:border-gray-700">
-                        <div className="flex justify-end gap-3">
-                            <button onClick={handleReset} className={`${styles.btnSecondary} flex items-center gap-2`}><RotateCcw size={18} />ล้างข้อมูล</button>
-                            <button onClick={handleSave} className={`${styles.btnPrimary} flex items-center gap-2`}><Save size={18} />บันทึก</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    // Footer Actions
+    const FormFooter = (
+        <div className="flex justify-end gap-3 p-4">
+            <button
+                type="button"
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg flex items-center gap-2 transition-colors border border-gray-300"
+                onClick={onClose}
+            >
+                <X className="w-4 h-4" />
+                ยกเลิก
+            </button>
+            <button
+                type="button"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50"
+                onClick={handleSubmit(onSubmit)}
+                disabled={isSubmitting}
+            >
+                {isSubmitting ? (
+                    <span className="loading loading-spinner loading-xs"></span>
+                ) : (
+                    <Save className="w-4 h-4" />
+                )}
+                บันทึก
+            </button>
         </div>
     );
-}
+
+    return (
+        <DialogFormLayout
+            isOpen={isOpen}
+            onClose={onClose}
+            title={isEdit ? 'แก้ไขข้อมูลหน่วยนับ' : 'เพิ่มหน่วยนับใหม่'}
+            titleIcon={TitleIcon}
+            footer={FormFooter}
+        >
+            <div className="p-6 space-y-6">
+                {/* 1. Unit Code */}
+                <div className="space-y-1">
+                    <label className={styles.label}>
+                        รหัสหน่วยนับ <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        {...register('unitCode')}
+                        type="text"
+                        placeholder="กรอกรหัสหน่วยนับ (เช่น PCS, BOX, KG)"
+                        className={`${styles.input} ${errors.unitCode ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        disabled={isEdit}
+                    />
+                    {errors.unitCode && (
+                        <p className="text-red-500 text-xs mt-1">{errors.unitCode.message}</p>
+                    )}
+                </div>
+
+                {/* 2. Unit Name Thai */}
+                <div className="space-y-1">
+                    <label className={styles.label}>
+                        ชื่อหน่วยนับ (ภาษาไทย) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        {...register('unitName')}
+                        type="text"
+                        placeholder="กรอกชื่อหน่วยนับ (ภาษาไทย)"
+                        className={`${styles.input} ${errors.unitName ? 'border-red-500 focus:ring-red-200' : ''}`}
+                    />
+                    {errors.unitName && (
+                        <p className="text-red-500 text-xs mt-1">{errors.unitName.message}</p>
+                    )}
+                </div>
+
+                {/* 3. Unit Name English */}
+                <div className="space-y-1">
+                    <label className={styles.label}>
+                        ชื่อหน่วยนับ (English)
+                    </label>
+                    <input
+                        {...register('unitNameEn')}
+                        type="text"
+                        placeholder="Enter unit of measure name in English"
+                        className={`${styles.input} ${errors.unitNameEn ? 'border-red-500 focus:ring-red-200' : ''}`}
+                    />
+                    {errors.unitNameEn && (
+                        <p className="text-red-500 text-xs mt-1">{errors.unitNameEn.message}</p>
+                    )}
+                </div>
+
+                {/* 4. Status */}
+                <div className="space-y-1">
+                    <label className={styles.label}>
+                        สถานะ <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                        className={`${styles.input} cursor-pointer`}
+                        value={isActive ? 'true' : 'false'}
+                        onChange={(e) => setValue('isActive', e.target.value === 'true')}
+                    >
+                        <option value="true">ใช้งาน (Active)</option>
+                        <option value="false">ไม่ใช้งาน (Inactive)</option>
+                    </select>
+                </div>
+            </div>
+        </DialogFormLayout>
+    );
+};

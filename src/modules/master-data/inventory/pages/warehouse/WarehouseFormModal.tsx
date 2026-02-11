@@ -19,13 +19,14 @@ interface Props {
     isOpen: boolean;
     onClose: () => void;
     editId?: string | null;
+    onSuccess?: () => void;
 }
 
 // ====================================================================================
 // MAIN COMPONENT
 // ====================================================================================
 
-export function WarehouseFormModal({ isOpen, onClose, editId }: Props) {
+export function WarehouseFormModal({ isOpen, onClose, editId, onSuccess }: Props) {
     const [formData, setFormData] = useState<WarehouseFormData>(initialWarehouseFormData);
     const [isSearching, setIsSearching] = useState(false);
     const [showBranchDropdown, setShowBranchDropdown] = useState(false);
@@ -104,6 +105,7 @@ export function WarehouseFormModal({ isOpen, onClose, editId }: Props) {
         
         logger.log('Save warehouse:', formData);
         alert(editId ? 'บันทึกการแก้ไขสำเร็จ' : 'เพิ่มคลังสินค้าใหม่สำเร็จ');
+        if (onSuccess) onSuccess();
         onClose();
     };
 

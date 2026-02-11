@@ -10,6 +10,7 @@ import { VendorService } from '@/modules/master-data/vendor/services/vendor.serv
 import type { VendorDropdownItem } from '@/modules/master-data/vendor/types/vendor-types';
 import type { POFormData, CreatePOPayload } from '@/modules/procurement/types/po-types';
 import { useQuery } from '@tanstack/react-query'; // React Query for vendors
+import { calculatePricingSummary } from '@/modules/procurement/utils/pricing.utils';
 
 // ====================================================================================
 // ZOD SCHEMA
@@ -49,36 +50,17 @@ const POSummary = ({ control }: { control: Control<POFormValues> }) => {
     const items = useWatch({ control, name: 'items' });
     const taxRate = useWatch({ control, name: 'tax_rate' });
     const isVatIncluded = useWatch({ control, name: 'is_vat_included' });
-
     const summary = useMemo(() => {
-        const subtotal = items?.reduce((sum, item) => {
-            const qty = Number(item.qty) || 0;
-            const price = Number(item.unit_price) || 0;
-            const discount = Number(item.discount) || 0;
-            return sum + (qty * price) - discount;
-        }, 0) || 0;
+        // Map form items to pricing items
+        const pricingItems = (items || []).map(item => ({
+            qty: Number(item.qty) || 0,
+            unit_price: Number(item.unit_price) || 0,
+            discount: Number(item.discount) || 0
+        }));
 
-        let taxAmount = 0;
-        let totalAmount = 0;
-        let beforeTax = subtotal;
-
-        if (isVatIncluded) {
-            // Formula: Total = Subtotal (inclusive)
-            // Tax = Total * 7 / 107
-            // Before Tax = Total - Tax
-            totalAmount = subtotal;
-            taxAmount = (totalAmount * taxRate) / (100 + taxRate);
-            beforeTax = totalAmount - taxAmount;
-        } else {
-            // Formula: Tax = Subtotal * 7%
-            // Total = Subtotal + Tax
-            beforeTax = subtotal;
-            taxAmount = subtotal * (taxRate / 100);
-            totalAmount = subtotal + taxAmount;
-        }
-
-        return { beforeTax, taxAmount, totalAmount };
+        return calculatePricingSummary(pricingItems, taxRate, isVatIncluded);
     }, [items, taxRate, isVatIncluded]);
+
 
     return (
         <div className="w-80 space-y-3 bg-white dark:bg-slate-800 p-4 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm">

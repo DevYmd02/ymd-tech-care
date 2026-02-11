@@ -8,8 +8,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
     Edit2, 
     Trash2, 
-    Layers,
-    RefreshCw
+    Layers
 } from 'lucide-react';
 import { SectionFormModal } from './SectionFormModal';
 import { SectionService } from '@/modules/master-data/company/services/company.service';
@@ -21,16 +20,6 @@ import type { ColumnDef } from '@tanstack/react-table';
 
 // ====================================================================================
 // CONFIG
-// ====================================================================================
-
-const STATUS_OPTIONS = [
-    { value: 'ALL', label: 'ทั้งหมด' },
-    { value: 'ACTIVE', label: 'ใช้งาน' },
-    { value: 'INACTIVE', label: 'ไม่ใช้งาน' },
-];
-
-// ====================================================================================
-// COMPONENT
 // ====================================================================================
 
 export default function SectionList() {
@@ -55,30 +44,27 @@ export default function SectionList() {
     const [editingId, setEditingId] = useState<string | null>(null);
 
     // ==================== FILTER CONFIG ====================
-    const filterConfig: FilterFieldConfig<keyof typeof filters>[] = useMemo(() => [
+    const filterConfig: FilterFieldConfig<Extract<keyof typeof filters, string>>[] = useMemo(() => [
         { 
             name: 'search', 
             label: 'รหัสส่วนงาน/แผนก', 
             type: 'text', 
-            placeholder: 'กรอกรหัสส่วนงาน' 
+            placeholder: 'กรอกรหัสส่วนงาน',
+            colSpan: 1
         },
         { 
             name: 'search2', 
             label: 'ชื่อส่วนงาน/แผนก', 
             type: 'text', 
-            placeholder: 'กรอกชื่อส่วนงาน' 
+            placeholder: 'กรอกชื่อส่วนงาน',
+            colSpan: 1
         },
         { 
             name: 'search3', 
             label: 'รหัสฝ่าย', 
             type: 'text', 
-            placeholder: 'กรอกรหัสฝ่าย' 
-        },
-        { 
-            name: 'status', 
-            label: 'สถานะ', 
-            type: 'select', 
-            options: STATUS_OPTIONS 
+            placeholder: 'กรอกรหัสฝ่าย',
+            colSpan: 1
         },
     ], []);
 
@@ -204,15 +190,7 @@ export default function SectionList() {
                         จัดการข้อมูลแผนกต่างๆ ในแต่ละฝ่าย
                     </p>
                 </div>
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={fetchData}
-                        className="p-2 text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                        title="รีเฟรช"
-                    >
-                        <RefreshCw size={20} className={isLoading ? 'animate-spin' : ''} />
-                    </button>
-                </div>
+
             </div>
 
             {/* Filter Section (Standardized) */}
@@ -220,12 +198,16 @@ export default function SectionList() {
                 <FilterFormBuilder
                     config={filterConfig}
                     filters={filters}
-                    onFilterChange={(name, value) => setFilters({ [name]: value })}
+                    onFilterChange={(name, value) => {
+                        setFilters({ [name]: value } as Partial<typeof filters>);
+                    }}
                     onSearch={() => handlePageChange(1)}
                     onReset={resetFilters}
                     onCreate={handleCreateNew}
                     createLabel="เพิ่มแผนกใหม่"
                     accentColor="indigo"
+                    columns={{ sm: 1, md: 5, lg: 5, xl: 5 }}
+                    actionColSpan={{ sm: 'full', md: 2, lg: 2, xl: 2 }}
                 />
             </div>
 
