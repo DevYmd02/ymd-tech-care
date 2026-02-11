@@ -316,6 +316,12 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
     return [200, applyMockFilters(filtered, params)];
   });
 
+  mock.onGet(/\/purchase-orders\/.+/).reply((config) => {
+    const id = config.url?.split('/').pop();
+    const found = MOCK_POS.find(p => p.po_id === id);
+    return found ? [200, found] : [404, { message: 'PO Not Found' }];
+  });
+
   // =========================================================================
   // COMPANY MASTER DATA MOCKS
   // =========================================================================

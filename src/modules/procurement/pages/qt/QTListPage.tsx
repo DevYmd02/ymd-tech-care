@@ -154,13 +154,13 @@ export default function QTListPage() {
             enableSorting: false,
         }),
         columnHelper.accessor('total_amount', {
-            header: () => <div className="text-right">ยอดรวม (บาท)</div>,
+            header: () => <div className="text-right whitespace-nowrap">ยอดรวม (บาท)</div>,
             cell: (info) => (
                 <div className="text-right font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
                     {info.getValue().toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
             ),
-            size: 90,
+            size: 120,
             enableSorting: true,
         }),
         columnHelper.accessor('valid_until', {

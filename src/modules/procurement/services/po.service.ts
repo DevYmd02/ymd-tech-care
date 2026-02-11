@@ -40,5 +40,15 @@ export const POService = {
 
   create: async (data: CreatePOPayload): Promise<void> => {
       await api.post<SuccessResponse>(ENDPOINTS.create, data);
+  },
+
+  approve: async (id: string, remark?: string): Promise<void> => {
+      // POST /purchase-orders/:id/approve
+      await api.post<SuccessResponse>(`${ENDPOINTS.list}/${id}/approve`, { remark });
+  },
+
+  reject: async (id: string, remark?: string): Promise<void> => {
+       // POST /purchase-orders/:id/reject
+      await api.post<SuccessResponse>(`${ENDPOINTS.list}/${id}/reject`, { remark });
   }
 };

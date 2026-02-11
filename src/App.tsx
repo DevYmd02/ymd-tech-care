@@ -46,7 +46,7 @@ const ITGCDashboard = React.lazy(() => import('@/modules/governance/pages/ITGCDa
 // Master Data Pages
 const MasterDataDashboard = React.lazy(() => import('@/modules/master-data/pages/MasterDataDashboard'));
 // Vendor Pages (from master-data)
-const VendorDashboard = React.lazy(() => import('@/modules/master-data/vendor/pages/VendorDashboard'));
+// const VendorDashboard = React.lazy(() => import('@/modules/master-data/vendor/pages/VendorDashboard'));
 const VendorList = React.lazy(() => import('@/modules/master-data/vendor/pages/VendorList'));
 const VendorTypeList = React.lazy(() => import('@/modules/master-data/vendor/pages/vendor-type/VendorTypeList'));
 const VendorGroupList = React.lazy(() => import('@/modules/master-data/vendor/pages/vendor-group/VendorGroupList'));
@@ -169,8 +169,9 @@ function App() {
 
           {/* Master Data - Implemented */}
           <Route path="master-data" element={<MasterDataDashboard />} />
-          <Route path="master-data/vendor" element={<VendorDashboard />} />
-          <Route path="master-data/vendor/list" element={<VendorList />} />
+          {/* <Route path="master-data/vendor" element={<VendorDashboard />} /> */}
+          <Route path="master-data/vendor" element={<VendorList />} />
+          {/* <Route path="master-data/vendor/list" element={<VendorList />} /> */}
 
           <Route path="master-data/branch" element={<BranchList />} />
           <Route path="master-data/employee-side" element={<EmployeeSideList />} />

@@ -14,13 +14,14 @@ interface Props {
     isOpen: boolean;
     onClose: () => void;
     onSuccess?: () => void;
+    initialPOId?: string;
 }
 
 // ====================================================================================
 // COMPONENT
 // ====================================================================================
 
-export default function GRNFormModal({ isOpen, onClose, onSuccess }: Props) {
+export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }: Props) {
     const prevIsOpenRef = useRef(false);
     
     // -- State --
@@ -40,7 +41,7 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess }: Props) {
     useEffect(() => {
         if (isOpen && !prevIsOpenRef.current) {
             // Reset form
-            setSelectedPOId('');
+            setSelectedPOId(initialPOId || '');
             setSelectedPO(null);
             setItems([]);
             setFormDate(new Date().toISOString().split('T')[0]);
@@ -55,7 +56,7 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess }: Props) {
             });
         }
         prevIsOpenRef.current = isOpen;
-    }, [isOpen]);
+    }, [isOpen, initialPOId]);
 
     // -- Handle PO Selection --
     useEffect(() => {
