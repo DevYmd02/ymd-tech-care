@@ -25,6 +25,8 @@ import type {
   EmployeeListItem 
 } from '@/modules/master-data/types/master-data-types';
 import type { CreatePRPayload, CreatePRLineItem } from '@/modules/procurement/types/pr-types';
+import type { PurchaseReturn } from '@/modules/procurement/types/prt/prt-types';
+import { MOCK_PRT_DATA, MOCK_PRT_ITEMS } from '@/modules/procurement/services/mock/prt.mock';
 import { logger } from '@/shared/utils/logger';
 
 /**
@@ -323,6 +325,53 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
   });
 
   // =========================================================================
+  // PRT MOCKS
+  // =========================================================================
+  
+  mock.onGet('/prt').reply((config) => {
+    const params = config.params || {};
+    let filtered = [...MOCK_PRT_DATA];
+    
+    if (params.prt_no) {
+       filtered = filtered.filter((p: PurchaseReturn) => p.prt_no.toLowerCase().includes(String(params.prt_no).toLowerCase()));
+    }
+    if (params.vendor_name) {
+       filtered = filtered.filter((p: PurchaseReturn) => p.vendor_name.toLowerCase().includes(String(params.vendor_name).toLowerCase()));
+    }
+    if (params.status && params.status !== 'ALL') {
+       filtered = filtered.filter((p: PurchaseReturn) => p.status === params.status);
+    }
+
+    return [200, applyMockFilters(filtered, params)];
+  });
+
+  mock.onGet(/\/prt\/.+/).reply((config) => {
+    const id = config.url?.split('/').pop();
+    const found = MOCK_PRT_DATA.find((p: PurchaseReturn) => p.prt_id === id);
+    return found ? [200, found] : [404, { message: 'PRT Not Found' }];
+  });
+
+  mock.onPost('/prt').reply((config) => {
+      const data = JSON.parse(config.data);
+      const newPRT: PurchaseReturn = {
+          ...MOCK_PRT_DATA[0], // fallback template
+          ...data,
+          prt_id: Math.random().toString(36).substr(2, 9),
+          prt_no: `PRT2024-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
+          status: 'DRAFT',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          items: data.items || []
+      };
+      MOCK_PRT_DATA.unshift(newPRT);
+      return [200, newPRT];
+  });
+
+  mock.onGet('/prt-items').reply(200, MOCK_PRT_ITEMS);
+
+
+
+  // =========================================================================
   // COMPANY MASTER DATA MOCKS
   // =========================================================================
 
@@ -444,6 +493,28 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
   mock.onGet('/master-data/exchange-rates').reply((config) => 
     [200, applyMockFilters(mockExchangeRates, config.params || {})]
   );
+
+  // New: Get Latest Rate
+  mock.onGet(/\/master-data\/exchange-rates\/latest/).reply((config) => {
+      const params = config.params || {};
+      const currencyId = params.currency_id;
+      
+      let rate = 1;
+      // Mock Logic matching the hardcoded values in PRTFormModal
+      if (currencyId === 'USD') rate = 35.5;
+      else if (currencyId === 'EUR') rate = 38.2;
+      else if (currencyId === 'JPY') rate = 0.24;
+      else if (currencyId === 'CNY') rate = 4.9;
+      else if (currencyId === 'THB') rate = 1;
+      
+      // Simulate API response
+      return [200, {
+          rate,
+          currency_id: currencyId,
+          date: params.rate_date || new Date().toISOString().split('T')[0],
+          source: 'System Rate'
+      }];
+  });
 
   logger.info('🎭 [Mock Adapter] Initialized with Centralized Routes');
 };

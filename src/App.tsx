@@ -35,7 +35,7 @@ const POListPage = React.lazy(() => import('./modules/procurement/pages/po/POLis
 const GRNListPage = React.lazy(() => import('./modules/procurement/pages/grn/GRNListPage'));
 
 const GoodsReceiptNoteListPage = React.lazy(() => import('@/modules/procurement/pages/ProcurementComingSoon').then(module => ({ default: module.GoodsReceiptNoteListPage })));
-const PurchaseReturnListPage = React.lazy(() => import('@/modules/procurement/pages/ProcurementComingSoon').then(module => ({ default: module.PurchaseReturnListPage })));
+const PurchaseReturnListPage = React.lazy(() => import('@/modules/procurement/pages/prt/PRTListPage'));
 
 // Roles Pages
 const RolesDashboard = React.lazy(() => import('@/modules/admin/pages/roles/RolesDashboard'));
@@ -85,6 +85,10 @@ const LotNoList = React.lazy(() => import('@/modules/master-data/inventory/pages
 const CurrencyCodeList = React.lazy(() => import('@/modules/master-data/currency/pages/code/CurrencyCodeList'));
 const ExchangeRateTypeList = React.lazy(() => import('@/modules/master-data/currency/pages/type/ExchangeRateTypeList'));
 const ExchangeRateList = React.lazy(() => import('@/modules/master-data/currency/pages/rate/ExchangeRateList'));
+
+// Tax Pages
+const TaxCodeList = React.lazy(() => import('@/modules/master-data/tax/pages/code/TaxCodeList'));
+const TaxGroupList = React.lazy(() => import('@/modules/master-data/tax/pages/group/TaxGroupList'));
 
 // Auth Pages (from modules)
 const LoginPage = React.lazy(() => import('./modules/auth/pages/LoginPage'));
@@ -212,6 +216,10 @@ function App() {
           <Route path="master-data/currency/type" element={<ExchangeRateTypeList />} />
           <Route path="master-data/currency/rate" element={<ExchangeRateList />} />
           
+          {/* Tax Master Data */}
+          <Route path="master-data/tax/code" element={<TaxCodeList />} />
+          <Route path="master-data/tax/group" element={<TaxGroupList />} />
+
           {/* Generic Coming Soon for Work in Progress */}
           <Route path="/coming-soon" element={<ComingSoon />} />
 
@@ -282,10 +290,7 @@ function App() {
             <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
           ))}
 
-          {/* Tax Placeholders */}
-          {placeholderRoutes.tax.map(({ path, title }: { path: string; title: string }) => (
-            <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
-          ))}
+
         </Route>
       </Routes>
     </AuthProvider>
