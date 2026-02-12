@@ -49,6 +49,7 @@ export const PRFormLines: React.FC<PRFormLinesProps> = React.memo(({
                             <th className="p-2 w-20 text-center border-r border-blue-500">จำนวน</th>
                             <th className="p-2 w-24 text-center border-r border-blue-500">ราคา/หน่วย</th>
                             <th className="p-2 w-20 text-center border-r border-blue-500">ส่วนลด</th>
+                            <th className="p-2 w-20 text-center border-r border-blue-500">ส่วนลด (บาท)</th>
                             <th className="p-2 w-24 text-center border-r border-blue-500">จำนวนเงิน</th>
                             <th className="p-2 w-24 text-center">
                                 <button 
@@ -83,7 +84,19 @@ export const PRFormLines: React.FC<PRFormLinesProps> = React.memo(({
                                     </td>
                                     <td className={tdBaseClass}><input type="number" value={line.quantity || ''} onChange={(e) => updateLine(index, 'quantity', parseFloat(e.target.value) || 0)} className={`${tableInputClass} text-center`} /></td>
                                     <td className={tdBaseClass}><input type="number" value={line.est_unit_price || ''} onChange={(e) => updateLine(index, 'est_unit_price', parseFloat(e.target.value) || 0)} className={`${tableInputClass} text-center`} /></td>
-                                    <td className={tdBaseClass}><input type="number" value={line.discount || ''} onChange={(e) => updateLine(index, 'discount', parseFloat(e.target.value) || 0)} className={`${tableInputClass} text-center`} /></td>
+                                    <td className={tdBaseClass}>
+                                        <input 
+                                            type="text" 
+                                            value={line.discount_input || ''} 
+                                            onChange={(e) => updateLine(index, 'discount_input', e.target.value)} 
+                                            className={`${tableInputClass} text-center`} 
+                                        />
+                                    </td>
+                                    <td className={tdBaseClass}>
+                                        <div className="px-2 text-right text-gray-700 dark:text-gray-300">
+                                            {line.discount ? line.discount.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
+                                        </div>
+                                    </td>
                                     <td className={`${tdBaseClass} text-right font-bold pr-2 text-gray-700 dark:text-gray-300`}>{lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                     
                                     {/* Action Buttons: Search, Eraser, Trash */}

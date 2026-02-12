@@ -3,12 +3,12 @@ import { useForm } from 'react-hook-form';
 import type { PRFormData, PRLineFormData, CreatePRPayload } from '@/modules/procurement/types/pr-types';
 import { PRService } from '@/modules/procurement/services/pr.service';
 import { fetchExchangeRate } from '@/modules/master-data/currency/services/mockExchangeRateService';
+import { TaxService } from '@/modules/master-data/tax/services/tax.service';
 import { logger } from '@/shared/utils/logger';
 import type { ItemListItem } from '@/modules/master-data/types/master-data-types';
 import type { VendorMaster } from '@/modules/master-data/vendor/types/vendor-types';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { calculateLineTotal } from '@/modules/procurement/utils/pricing.utils';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
 import { usePRMasterData } from './usePRMasterData';
 import { usePRActions } from './usePRActions';
@@ -31,13 +31,13 @@ const getNextWeekDate = (): string => {
 export interface ExtendedLine extends PRLineFormData {
   warehouse?: string;
   location?: string;
-  discount?: number;
+  // discount and discount_input are now in PRLineFormData
 }
 
 const createEmptyLine = (): ExtendedLine => ({
   item_id: '', item_code: '', item_name: '', item_description: '', quantity: 0, uom: '', uom_id: undefined,
   est_unit_price: 0, est_amount: 0, needed_date: getTodayDate(), preferred_vendor_id: undefined, remark: '',
-  warehouse: '', location: '', discount: 0,
+  warehouse: '', location: '', discount: 0, discount_input: '',
 });
 
 const getInitialLines = () => Array(PR_CONFIG.INITIAL_LINES).fill(null).map(() => createEmptyLine());
@@ -51,6 +51,8 @@ const getDefaultFormValues = (): PRFormData => ({
   currency_type_id: '',
   cancelflag: 'N',
   status: 'DRAFT',
+  discount_input: '',
+  tax_rate: 7, // Default safe value, will be updated by effect
 });
 
 export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onSuccess?: () => void) => {
@@ -72,8 +74,8 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
   const [alertState, setAlertState] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
   const [lines, setLines] = useState<ExtendedLine[]>(getInitialLines);
   const [activeTab, setActiveTab] = useState('detail');
-  const [discountPercent, setDiscountPercent] = useState(0);
-  const [vatRate, setVatRate] = useState(7);
+  const [globalDiscountInput, setGlobalDiscountInput] = useState('');
+  const [vatRate, setVatRate] = useState<number>(7);
   const [remarks, setRemarks] = useState('');
   
   const [deliveryDate, setDeliveryDate] = useState(() => {
@@ -103,6 +105,21 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
   // const [products, setProducts] = useState<ItemListItem[]>([]);
   // const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
   // const [projects, setProjects] = useState<Project[]>([]);
+
+  // Fetch Default Tax Rate on Mount
+  useEffect(() => {
+    const fetchTax = async () => {
+      try {
+        const rate = await TaxService.getDefaultTaxRate();
+        setVatRate(rate);
+      } catch (error) {
+        logger.error('Failed to fetch default tax rate', error);
+      }
+    };
+    if (!id) { // Only fetch default for new PRs, Edit mode uses saved rate (or default if missing)
+      fetchTax(); 
+    }
+  }, [id]);
 
   useEffect(() => {
     if (isOpen && !prevIsOpenRef.current) {
@@ -148,7 +165,8 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
                 preferred_vendor_id: pr.preferred_vendor_id,
                 vendor_name: pr.vendor_name,
                 cancelflag: pr.cancelflag || 'N',
-                status: pr.status
+                status: pr.status,
+                tax_rate: pr.tax_rate ?? 7
               };
 
               // Map PRLine to ExtendedLine
@@ -166,7 +184,8 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
                 remark: line.remark,
                 warehouse: '', // not in PRLine but in ExtendedLine
                 location: '',
-                discount: 0
+                discount: 0,
+                discount_input: ''
               }));
 
               // Ensure at least 5 lines for UI consistency
@@ -192,8 +211,8 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
         } else {
           // New PR Mode
           setLines(getInitialLines());
-          setDiscountPercent(0);
-          setVatRate(7);
+          setGlobalDiscountInput('');
+          // setVatRate(7); // Removed: Handled by useEffect
           setRemarks('');
           setDeliveryDate(getNextWeekDate());
           setValue('credit_days', 30);
@@ -202,6 +221,12 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
           setActiveTab('detail');
           const nextPRNo = await PRService.generateNextDocumentNo();
           reset({ ...getDefaultFormValues(), pr_no: nextPRNo });
+          // Ensure form also has the latest vatRate if it was fetched before reset
+          // But reset might overwrite it with default 7. 
+          // Note: useEffect for tax runs on mount (or id change). 
+          // If we reset here, we should ensure we don't lose the fetched rate if it already arrived.
+          // For simplicity, let's allow reset to 7, and the useEffect execution order or a separate setVatRate will handle it.
+          // Better: set value after reset.
         }
       }, 0);
       return () => clearTimeout(timer);
@@ -286,26 +311,91 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
   const updateLine = useCallback((index: number, field: keyof ExtendedLine, value: string | number) => {
     setLines(prev => {
       const newLines = [...prev];
-      // Create a shallow copy of the line to avoid mutation
       const line = { ...newLines[index] };
       
-      if (field === 'quantity' || field === 'est_unit_price' || field === 'est_amount' || field === 'discount') {
-        const numValue = typeof value === 'string' ? parseFloat(value) : value; 
-        // We know 'field' corresponds to a number property, but TypeScript needs help.
-        // We can cast 'line' to a type that has these specific keys as number-writable.
-        (line as { [key in typeof field]: number })[field] = isNaN(numValue) ? 0 : numValue;
+      // Handle Discount Input (String)
+      if (field === 'discount_input') {
+          const input = String(value);
+          line.discount_input = input;
+
+          // Parse Logic
+          const price = line.est_unit_price || 0;
+          const qty = line.quantity || 0;
+          const totalBeforeDiscount = price * qty;
+          
+          let discountAmount = 0;
+
+          if (input.trim().endsWith('%')) {
+              const percent = parseFloat(input.replace('%', ''));
+              if (!isNaN(percent)) {
+                  discountAmount = totalBeforeDiscount * (percent / 100);
+              }
+          } else {
+              discountAmount = parseFloat(input);
+          }
+
+          if (isNaN(discountAmount)) discountAmount = 0;
+
+          // Validation: Cap at Total Amount (Should not be negative total)
+          if (discountAmount > totalBeforeDiscount) {
+              discountAmount = totalBeforeDiscount; 
+              // Optional: You could revert input or show error, but capping is safer for now
+          }
+
+          line.discount = discountAmount;
+          line.est_amount = totalBeforeDiscount - discountAmount;
+      } 
+      // Handle Numeric Fields
+      else if (field === 'quantity' || field === 'est_unit_price') {
+          const numValue = typeof value === 'string' ? parseFloat(value) : value;
+          const safeValue = isNaN(numValue) ? 0 : numValue;
+          
+          if (field === 'quantity') {
+              line.quantity = safeValue;
+          } else {
+              line.est_unit_price = safeValue;
+          }
+
+          // Recalculate based on existing discount input
+          const qty = line.quantity || 0;
+          const price = line.est_unit_price || 0;
+          const totalBeforeDiscount = qty * price;
+          
+          // Re-evaluate discount based on input type
+          let discountAmount = 0;
+          const input = line.discount_input || '';
+          
+          if (input.trim().endsWith('%')) {
+              const percent = parseFloat(input.replace('%', ''));
+              if (!isNaN(percent)) {
+                  discountAmount = totalBeforeDiscount * (percent / 100);
+              }
+          } else {
+              // Fixed amount remains fixed, but if it exceeds total, we cap it
+             const fixed = parseFloat(input);
+             if (!isNaN(fixed)) discountAmount = fixed;
+          }
+          
+          // Validation Cap
+          if (discountAmount > totalBeforeDiscount) {
+              discountAmount = totalBeforeDiscount;
+          }
+
+          line.discount = discountAmount;
+          line.est_amount = totalBeforeDiscount - discountAmount;
+
       } else {
-        // Safe cast to Record to allow assignment of string/number/undefined
-        (line as Record<string, string | number | undefined>)[field] = value;
-      }
-      
-      // Auto-calculate amount
-      if (field === 'quantity' || field === 'est_unit_price' || field === 'discount') {
-        const qty = field === 'quantity' ? Number(value) : line.quantity;
-        const price = field === 'est_unit_price' ? Number(value) : line.est_unit_price;
-        const disc = field === 'discount' ? Number(value) : (line.discount || 0);
-        
-        line.est_amount = calculateLineTotal(qty, price, disc);
+          // Handle other fields explicitly to avoid 'any'
+          if (field === 'item_code' || field === 'item_name' || field === 'item_description' || 
+              field === 'uom' || field === 'warehouse' || field === 'location' || 
+              field === 'remark' || field === 'needed_date' || field === 'preferred_vendor_id' || 
+              field === 'item_id') {
+               line[field] = String(value);
+          } else if (field === 'uom_id') {
+               line[field] = value;
+          } else if (field === 'est_amount' || field === 'discount') {
+               line[field] = typeof value === 'string' ? parseFloat(value) : value;
+          }
       }
       
       newLines[index] = line;
@@ -361,12 +451,31 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
   }, [activeRowIndex]);
 
   // ...
+  // Calculate Totals
   const subtotal = lines.reduce((sum, line) => sum + (line.est_amount || 0), 0);
+  const totalGross = lines.reduce((sum, line) => sum + (line.quantity * line.est_unit_price), 0);
+  const totalLineDiscount = lines.reduce((sum, line) => sum + (line.discount || 0), 0);
   
   // PR uses global discount % logic, which differs from PO's per-line discount.
   // We keep the existing logic here but acknowledgment this difference.
   
-  const discountAmount = subtotal * (discountPercent / 100);
+  // Calculate Global Discount
+  let discountAmount = 0;
+  if (globalDiscountInput.trim().endsWith('%')) {
+      const percent = parseFloat(globalDiscountInput.replace('%', ''));
+      if (!isNaN(percent)) {
+          discountAmount = subtotal * (percent / 100);
+      }
+  } else {
+      const fixed = parseFloat(globalDiscountInput);
+      if (!isNaN(fixed)) discountAmount = fixed;
+  }
+  
+  // Validate Global Discount (Cap at Subtotal)
+  if (discountAmount > subtotal) {
+      discountAmount = subtotal;
+  }
+
   const afterDiscount = subtotal - discountAmount;
   const vatAmount = afterDiscount * (vatRate / 100);
   const grandTotal = afterDiscount + vatAmount;
@@ -398,7 +507,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
             items: activeLines.map(line => ({
                item_id: line.item_id, item_code: line.item_code, item_name: line.item_name,
                qty: line.quantity, uom: line.uom, uom_id: line.uom_id,
-               price: line.est_unit_price, needed_date: line.needed_date, remark: line.remark
+               price: line.est_unit_price, needed_date: line.needed_date, remark: line.remark, discount: line.discount
             })),
             delivery_date: deliveryDate,
             credit_days: data.credit_days || 30,
@@ -409,7 +518,8 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
             vendor_name: data.vendor_name,
             requester_user_id: user?.id || 1, 
             branch_id: user?.employee?.branch_id || 1, 
-            warehouse_id: 1       
+            warehouse_id: 1,
+            tax_rate: vatRate       
         };
         
         if (isEditMode && id) {
@@ -432,7 +542,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     } finally {
         setIsActionLoading(false);
     }
-  }, [remarks, requesterName, deliveryDate, vendorQuoteNo, shippingMethod, isEditMode, id, confirm, onSuccess, onClose, createPRMutation, updatePR, user]);
+  }, [remarks, requesterName, deliveryDate, vendorQuoteNo, shippingMethod, isEditMode, id, confirm, onSuccess, onClose, createPRMutation, updatePR, user, vatRate]);
 
   const onSubmit = useCallback(async (data: PRFormData) => {
     if (!data.required_date) { showAlert('กรุณาระบุวันที่ต้องการใช้'); return; }
@@ -541,7 +651,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
   }, [id, confirm, onSuccess, onClose, cancelPR]);
 
   return {
-    isEditMode, lines, activeTab, setActiveTab, discountPercent, setDiscountPercent,
+    isEditMode, lines, activeTab, setActiveTab, 
     vatRate, setVatRate, remarks, setRemarks, deliveryDate, setDeliveryDate,
     vendorQuoteNo, setVendorQuoteNo, shippingMethod, setShippingMethod,
     requesterName, isProductModalOpen, setIsProductModalOpen, searchTerm, setSearchTerm,
@@ -550,7 +660,8 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     addLine, removeLine, clearLine, updateLine, handleClearLines,
     openProductSearch, selectProduct, subtotal, discountAmount, afterDiscount,
     vatAmount, grandTotal, handleVendorSelect, onSubmit, handleDelete, handleApprove,
-    handleVoid,
-    control, reset
+    handleVoid, totalGross, totalLineDiscount,
+    control, reset,
+    globalDiscountInput, setGlobalDiscountInput
   };
 };

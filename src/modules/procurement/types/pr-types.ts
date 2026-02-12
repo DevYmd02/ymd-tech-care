@@ -13,7 +13,8 @@ export type PRStatus =
   | 'PENDING'               // รออนุมัติ
   | 'APPROVED'              // อนุมัติแล้ว
   | 'REJECTED'              // ไม่อนุมัติ
-  | 'CANCELLED';            // ยกเลิก
+  | 'CANCELLED'             // ยกเลิก
+  | 'COMPLETED';            // เสร็จสมบูรณ์
 
 // ====================================================================================
 // PR HEADER - ตาม pr_header table
@@ -48,6 +49,7 @@ export interface PRHeader {
   remarks?: string;                 // TEXT
   preferred_vendor_id?: string;     // UUID FK → vendor
   vendor_name?: string;             // VARCHAR(200)
+  tax_rate?: number;                // DECIMAL(5,2) - Tax Rate Snapshot
 
   // Relations (populated by API)
   lines?: PRLine[];
@@ -139,6 +141,8 @@ export interface PRFormData {
   vendor_quote_no?: string;
   shipping_method?: string;
   remarks?: string;
+  discount_input?: string;
+  tax_rate?: number;                // Tax Rate used for calculation
   
   // Line items
   lines: PRLineFormData[];
@@ -163,6 +167,8 @@ export interface PRLineFormData {
   needed_date: string;
   preferred_vendor_id?: string;
   remark?: string;
+  discount?: number;
+  discount_input?: string;
 }
 
 // ====================================================================================
@@ -240,6 +246,7 @@ export interface CreatePRLineItem {
     price: number;
     needed_date?: string;
     remark?: string;
+    discount?: number;
 }
 
 export interface CreatePRPayload {
@@ -263,6 +270,7 @@ export interface CreatePRPayload {
     shipping_method?: string;
     preferred_vendor_id?: string;
     vendor_name?: string;
+    tax_rate?: number;                // Added for Audit Trail
 }
 
 // ====================================================================================

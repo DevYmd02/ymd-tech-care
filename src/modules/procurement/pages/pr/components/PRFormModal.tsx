@@ -16,7 +16,7 @@ interface Props {
 
 export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess }) => {
   const {
-    isEditMode, lines, discountPercent, setDiscountPercent,
+    isEditMode, lines, globalDiscountInput, setGlobalDiscountInput,
     vatRate, setVatRate, deliveryDate, setDeliveryDate,
     vendorQuoteNo, setVendorQuoteNo, shippingMethod, setShippingMethod,
     requesterName, isProductModalOpen, setIsProductModalOpen, searchTerm, setSearchTerm,
@@ -26,7 +26,8 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
     openProductSearch, selectProduct, subtotal, discountAmount,
     vatAmount, grandTotal, handleVendorSelect, onSubmit, handleDelete, handleApprove,
     handleVoid,
-    control
+    control,
+    totalLineDiscount
   } = usePRForm(isOpen, onClose, id, onSuccess);
 
 
@@ -34,14 +35,31 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
   // Tabs state
   const [activeTab, setActiveTab] = useState('detail');
   const [remarks, setRemarks] = useState('');
+  const [showAllItems, setShowAllItems] = useState(false);
 
   const cardClass = 'bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-sm overflow-hidden';
   const tabClass = (tab: string) => `px-6 py-2 text-sm font-medium flex items-center gap-2 cursor-pointer border-b-2 transition-colors ${activeTab === tab ? 'border-blue-600 text-blue-600 bg-blue-50 dark:bg-blue-900/30' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`;
 
-  const filteredProducts = products.filter(p => 
-    p.item_code.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    p.item_name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Vendor Soft Filter Logic
+  const currentVendorId = watch('preferred_vendor_id');
+  const filteredProducts = products.filter(p => {
+    const matchesSearch = p.item_code.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          p.item_name.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // If "Show All" or No Vendor Selected -> Just Search
+    if (showAllItems || !currentVendorId) return matchesSearch;
+
+    // Else -> Search AND (Matches Vendor OR Has No Vendor/Generic)
+    // Note: If you want strict filtering (must have vendor set), remove `|| !p.preferred_vendor_id`
+    // User requested "Soft Filter", usually implies items linked to vendor.
+    // Assuming generic items (null/undefined preferred_vendor_id) are available to all.
+    // If strict compliance: `p.preferred_vendor_id === currentVendorId`
+    // Let's go with strict compliance + Generic Items strategy:
+    // "Buy an item from a vendor who doesn't sell it" -> suggests we should hide items not sold by them.
+    // But generic items (e.g. "Water") might not be linked.
+    // Let's allow Generic items as well: `!p.preferred_vendor_id`
+    return matchesSearch && (p.preferred_vendor_id === currentVendorId || !p.preferred_vendor_id);
+  });
 
   return (
     <WindowFormLayout
@@ -85,16 +103,44 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                 </div>
                 <button onClick={() => setIsProductModalOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xl">×</button>
               </div>
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">รหัสสินค้าหรือชื่อสินค้า</label>
-                <input 
-                  value={searchTerm} 
-                  onChange={(e) => setSearchTerm(e.target.value)} 
-                  placeholder="รหัสสินค้าหรือชื่อสินค้า" 
-                  className="w-full h-10 px-4 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800" 
-                  autoFocus 
-                />
+              
+              <div className="mt-4 flex gap-4 items-end">
+                <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">รหัสสินค้าหรือชื่อสินค้า</label>
+                    <input 
+                      value={searchTerm} 
+                      onChange={(e) => setSearchTerm(e.target.value)} 
+                      placeholder="รหัสสินค้าหรือชื่อสินค้า" 
+                      className="w-full h-10 px-4 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800" 
+                      autoFocus 
+                    />
+                </div>
+                
+                {/* Vendor Filter Toggle */}
+                {watch('preferred_vendor_id') && (
+                    <div className="flex items-center gap-2 pb-2">
+                         <div className="flex items-center">
+                            <input 
+                                id="show-all-items" 
+                                type="checkbox" 
+                                checked={showAllItems} 
+                                onChange={(e) => setShowAllItems(e.target.checked)}
+                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                            />
+                            <label htmlFor="show-all-items" className="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300 select-none cursor-pointer">
+                                แสดงสินค้าทั้งหมด (ไม่กรองตาม Vendor)
+                            </label>
+                         </div>
+                    </div>
+                )}
               </div>
+              
+              {watch('preferred_vendor_id') && !showAllItems && (
+                  <div className="mt-2 px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs rounded-md inline-block">
+                      💡 กำลังแสดงสินค้าเฉพาะของ Vendor นี้
+                  </div>
+              )}
+
             </div>
             <div className="max-h-[450px] overflow-auto">
               <table className="w-full text-sm">
@@ -111,20 +157,28 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-900">
-                  {filteredProducts.map((p) => (
-                    <tr key={p.item_id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 transition-colors">
-                      <td className="px-3 py-3 text-center">
-                        <button onClick={() => selectProduct(p)} className="px-3 py-1 bg-cyan-600 hover:bg-cyan-700 text-white rounded text-xs transition-colors shadow-sm">เลือก</button>
-                      </td>
-                      <td className="px-3 py-3 font-medium text-gray-900 dark:text-cyan-100">{p.item_code}</td>
-                      <td className="px-3 py-3 text-gray-700 dark:text-gray-300">{p.item_name}</td>
-                      <td className="px-3 py-3 text-gray-500 dark:text-gray-400 text-xs">{p.description}</td>
-                      <td className="px-3 py-3 text-center text-gray-600 dark:text-gray-400">{p.warehouse}</td>
-                      <td className="px-3 py-3 text-center text-gray-600 dark:text-gray-400">{p.location}</td>
-                      <td className="px-3 py-3 text-center text-gray-600 dark:text-gray-400">{p.unit_name}</td>
-                      <td className="px-3 py-3 text-right text-emerald-600 dark:text-emerald-400 font-medium">{p.standard_cost?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                    </tr>
-                  ))}
+                  {filteredProducts.length > 0 ? (
+                      filteredProducts.map((p) => (
+                        <tr key={p.item_id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 transition-colors">
+                          <td className="px-3 py-3 text-center">
+                            <button onClick={() => selectProduct(p)} className="px-3 py-1 bg-cyan-600 hover:bg-cyan-700 text-white rounded text-xs transition-colors shadow-sm">เลือก</button>
+                          </td>
+                          <td className="px-3 py-3 font-medium text-gray-900 dark:text-cyan-100">{p.item_code}</td>
+                          <td className="px-3 py-3 text-gray-700 dark:text-gray-300">{p.item_name}</td>
+                          <td className="px-3 py-3 text-gray-500 dark:text-gray-400 text-xs">{p.description}</td>
+                          <td className="px-3 py-3 text-center text-gray-600 dark:text-gray-400">{p.warehouse}</td>
+                          <td className="px-3 py-3 text-center text-gray-600 dark:text-gray-400">{p.location}</td>
+                          <td className="px-3 py-3 text-center text-gray-600 dark:text-gray-400">{p.unit_name}</td>
+                          <td className="px-3 py-3 text-right text-emerald-600 dark:text-emerald-400 font-medium">{p.standard_cost?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                        </tr>
+                      ))
+                  ) : (
+                      <tr>
+                          <td colSpan={8} className="px-3 py-8 text-center text-gray-500 dark:text-gray-400">
+                              ไม่พบสินค้า {watch('preferred_vendor_id') && !showAllItems ? 'สำหรับ Vendor นี้' : ''}
+                          </td>
+                      </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -254,13 +308,14 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
 
         <PRFormSummary
             subtotal={subtotal}
-            discountPercent={discountPercent}
-            setDiscountPercent={setDiscountPercent}
+            globalDiscountInput={globalDiscountInput}
+            setGlobalDiscountInput={setGlobalDiscountInput}
             vatRate={vatRate}
             setVatRate={setVatRate}
             discountAmount={discountAmount}
             vatAmount={vatAmount}
             grandTotal={grandTotal}
+            totalLineDiscount={totalLineDiscount}
 
         />
 

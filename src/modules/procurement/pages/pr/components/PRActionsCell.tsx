@@ -1,10 +1,10 @@
-import { Eye, Edit, Trash2, Send, CheckCircle, XCircle, FileText } from 'lucide-react';
+import { Eye, Edit, Send, CheckCircle, XCircle, FileText } from 'lucide-react';
 import type { PRHeader } from '@/modules/procurement/types/pr-types';
 
 interface PRActionsCellProps {
     row: PRHeader;
     onEdit: (id: string) => void;
-    onDelete: (item: PRHeader) => void;
+
     onSendApproval: (id: string) => void;
     onApprove: (id: string) => void;
     onReject: (id: string) => void;
@@ -14,7 +14,7 @@ interface PRActionsCellProps {
 export const PRActionsCell = ({ 
     row: item, 
     onEdit, 
-    onDelete, 
+
     onSendApproval, 
     onApprove, 
     onReject, 
@@ -41,14 +41,7 @@ export const PRActionsCell = ({
                     >
                         <Edit size={16} />
                     </button>
-                    
-                    <button 
-                        onClick={() => onDelete(item)}
-                        className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-all"
-                        title="ลบ"
-                    >
-                        <Trash2 size={16} />
-                    </button>
+
 
                     <button 
                         onClick={() => onSendApproval(item.pr_id)}

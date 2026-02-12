@@ -215,6 +215,20 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
     return [200, newPR];
   });
 
+  // PUT handler - Update PR (including status changes)
+  mock.onPut(/\/pr\/.+/).reply((config) => {
+    const id = config.url?.split('/').pop();
+    const pr = MOCK_PRS.find(p => p.pr_id === id);
+    if (!pr) {
+      return [404, { message: 'PR Not Found' }];
+    }
+    const data = JSON.parse(config.data || '{}') as Record<string, unknown>;
+    // Apply partial updates to the PR
+    Object.assign(pr, data, { updated_at: new Date().toISOString() });
+    logger.info(`[MockAdapter] PR updated: ${pr.pr_no} → status: ${pr.status}`);
+    return [200, pr];
+  });
+
   // DELETE handler - Only allowed for DRAFT status
   mock.onDelete(/\/pr\/.+/).reply((config) => {
     const id = config.url?.split('/').pop();

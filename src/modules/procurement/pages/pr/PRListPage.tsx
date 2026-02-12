@@ -35,7 +35,9 @@ const PR_STATUS_OPTIONS = [
     { value: 'DRAFT', label: 'แบบร่าง' },
     { value: 'PENDING', label: 'รออนุมัติ' },
     { value: 'APPROVED', label: 'อนุมัติแล้ว' },
+    { value: 'REJECTED', label: 'ไม่อนุมัติ' },
     { value: 'CANCELLED', label: 'ยกเลิก' },
+    { value: 'COMPLETED', label: 'เสร็จสมบูรณ์' },
 ];
 
 // ====================================================================================
@@ -123,6 +125,20 @@ export default function PRListPage() {
         setIsRFQModalOpen(true);
     };
 
+    const handleRFQSuccess = useCallback(async () => {
+        if (!selectedPR) return;
+        
+        try {
+            // Update PR status to COMPLETED after RFQ is successfully created
+            await PRService.update(selectedPR.pr_id, { status: 'COMPLETED' });
+            logger.log(`PR ${selectedPR.pr_no} status updated to COMPLETED`);
+        } catch (error) {
+            logger.error('Failed to update PR status to COMPLETED', error);
+        }
+        // Always refetch the list to show latest data
+        refetch();
+    }, [selectedPR, refetch]);
+
     const handleCreate = () => {
         setSelectedPRId(undefined);
         setIsPRModalOpen(true);
@@ -137,6 +153,7 @@ export default function PRListPage() {
         setIsPRModalOpen(false);
         setSelectedPRId(undefined);
     };
+
 
     const handleSendApproval = useCallback(async (id: string) => {
         const isConfirmed = await confirm({
@@ -183,41 +200,7 @@ export default function PRListPage() {
         }
     }, [confirm, refetch]);
 
-    const handleDelete = useCallback(async (item: PRHeader) => {
-        // Safety check: Only DRAFT can be deleted
-        if (item.status !== 'DRAFT') {
-            await confirm({ 
-                title: 'ไม่สามารถลบได้', 
-                description: 'ขออภัย เฉพาะเอกสารสถานะ "แบบร่าง" เท่านั้นที่สามารถลบได้', 
-                confirmText: 'ตกลง', 
-                hideCancel: true, 
-                variant: 'warning' 
-            });
-            return;
-        }
 
-        const isConfirmed = await confirm({
-            title: 'ยืนยันการลบ',
-            description: 'คุณต้องการลบใบขอซื้อนี้ใช่หรือไม่?',
-            confirmText: 'ลบข้อมูล',
-            cancelText: 'ยกเลิก',
-            variant: 'danger'
-        });
-
-        if (!isConfirmed) return;
-
-        try {
-            const success = await PRService.delete(item.pr_id);
-            if (success) {
-                refetch();
-            } else {
-                await confirm({ title: 'ลบไม่สำเร็จ', description: 'ไม่สามารถลบข้อมูลได้ในขณะนี้', confirmText: 'ตกลง', hideCancel: true, variant: 'warning' });
-            }
-        } catch (error) {
-            logger.error('Delete failed', error);
-            await confirm({ title: 'เกิดข้อผิดพลาด', description: 'เกิดข้อผิดพลาดในการลบข้อมูล', confirmText: 'ตกลง', hideCancel: true, variant: 'danger' });
-        }
-    }, [confirm, refetch]);
 
     const handleApprove = useCallback(async (id: string) => {
         const isConfirmed = await confirm({
@@ -369,7 +352,6 @@ export default function PRListPage() {
                 <PRActionsCell 
                     row={row.original}
                     onEdit={handleEdit}
-                    onDelete={handleDelete}
                     onSendApproval={handleSendApproval}
                     onApprove={handleApprove}
                     onReject={handleReject}
@@ -387,7 +369,7 @@ export default function PRListPage() {
             size: 160, // Widened for Draft actions
             enableSorting: false,
         }),
-    ], [columnHelper, filters.page, filters.limit, data?.items, handleSendApproval, handleDelete, handleApprove, handleReject]); // Re-calculate index when page changes
+    ], [columnHelper, filters.page, filters.limit, data?.items, handleSendApproval, handleApprove, handleReject]); // Re-calculate index when page changes
 
     // ====================================================================================
     // RENDER
@@ -400,7 +382,6 @@ export default function PRListPage() {
                 subtitle="Purchase Requisition Master"
                 icon={FileText}
                 accentColor="blue"
-                isLoading={isLoading}
                 searchForm={
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                         <FilterField
@@ -506,6 +487,7 @@ export default function PRListPage() {
                         setSelectedPR(null);
                     }}
                     initialPR={selectedPR}
+                    onSuccess={handleRFQSuccess}
                 />
             )}
 

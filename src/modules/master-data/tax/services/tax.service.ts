@@ -181,6 +181,15 @@ export const TaxService = {
         });
     },
 
+    getDefaultTaxRate: async (): Promise<number> => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                const defaultTax = MOCK_TAX_CODES.find(t => t.tax_code === 'VAT-OUT-7');
+                resolve(defaultTax ? defaultTax.tax_rate : 7);
+            }, 300);
+        });
+    },
+
     // --- Tax Groups ---
      getTaxGroups: async (): Promise<TaxGroup[]> => {
         return new Promise((resolve) => {
