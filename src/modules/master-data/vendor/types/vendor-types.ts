@@ -229,6 +229,7 @@ export interface VendorListItem {
     vendor_name: string;
     vendor_name_en?: string;
     tax_id?: string;
+    vendor_type: VendorType;
     status: VendorStatus;
     
     // Flat Address Display Fields (legacy/mock)
@@ -238,6 +239,8 @@ export interface VendorListItem {
     province?: string;
     postal_code?: string;
     country?: string;
+    phone?: string;
+    email?: string;
     
     // Nested arrays (from backend API)
     addresses?: VendorAddress[];
@@ -247,8 +250,6 @@ export interface VendorListItem {
     bank_accounts?: VendorBankAccountData[];
     vendorBankAccounts?: VendorBankAccountData[];
     
-    phone?: string;
-    email?: string;
     payment_term_days?: number;
     vat_registered?: boolean;
     is_active?: boolean;

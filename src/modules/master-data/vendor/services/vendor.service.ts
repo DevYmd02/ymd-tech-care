@@ -206,6 +206,13 @@ export const VendorService = {
   delete: async (vendorId: string): Promise<{ success: boolean; message?: string }> => {
     if (USE_MOCK) {
         const initialLength = localVendorData.length;
+        // Simulate Dependency Conflict for vendor-001 (Safe Delete Test)
+        if (vendorId === 'vendor-001') {
+             return { 
+                 success: false, 
+                 message: 'ไม่สามารถลบผู้ขายรายนี้ได้ เนื่องจากมีการใช้งานอยู่ในเอกสาร PR/PO (Simulation)' 
+             };
+        }
         localVendorData = localVendorData.filter(v => v.vendor_id !== vendorId);
         if (localVendorData.length < initialLength) {
             return { success: true };

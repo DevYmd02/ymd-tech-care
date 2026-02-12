@@ -223,6 +223,7 @@ export interface ItemListItem {
     item_type_code?: string;
     unit_name: string;
     unit_id?: string;
+    preferred_vendor_id?: string;
     is_active: boolean;
     created_at: string;
 }

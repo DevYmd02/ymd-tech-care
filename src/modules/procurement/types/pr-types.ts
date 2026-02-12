@@ -49,6 +49,7 @@ export interface PRHeader {
   remarks?: string;                 // TEXT
   preferred_vendor_id?: string;     // UUID FK → vendor
   vendor_name?: string;             // VARCHAR(200)
+  tax_rate?: number;                // DECIMAL(5,2) - Tax Rate Snapshot
 
   // Relations (populated by API)
   lines?: PRLine[];
@@ -141,6 +142,7 @@ export interface PRFormData {
   shipping_method?: string;
   remarks?: string;
   discount_input?: string;
+  tax_rate?: number;                // Tax Rate used for calculation
   
   // Line items
   lines: PRLineFormData[];
@@ -268,6 +270,7 @@ export interface CreatePRPayload {
     shipping_method?: string;
     preferred_vendor_id?: string;
     vendor_name?: string;
+    tax_rate?: number;                // Added for Audit Trail
 }
 
 // ====================================================================================

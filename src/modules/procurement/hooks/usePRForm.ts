@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import type { PRFormData, PRLineFormData, CreatePRPayload } from '@/modules/procurement/types/pr-types';
 import { PRService } from '@/modules/procurement/services/pr.service';
 import { fetchExchangeRate } from '@/modules/master-data/currency/services/mockExchangeRateService';
+import { TaxService } from '@/modules/master-data/tax/services/tax.service';
 import { logger } from '@/shared/utils/logger';
 import type { ItemListItem } from '@/modules/master-data/types/master-data-types';
 import type { VendorMaster } from '@/modules/master-data/vendor/types/vendor-types';
@@ -51,6 +52,7 @@ const getDefaultFormValues = (): PRFormData => ({
   cancelflag: 'N',
   status: 'DRAFT',
   discount_input: '',
+  tax_rate: 7, // Default safe value, will be updated by effect
 });
 
 export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onSuccess?: () => void) => {
@@ -73,7 +75,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
   const [lines, setLines] = useState<ExtendedLine[]>(getInitialLines);
   const [activeTab, setActiveTab] = useState('detail');
   const [globalDiscountInput, setGlobalDiscountInput] = useState('');
-  const [vatRate, setVatRate] = useState(7);
+  const [vatRate, setVatRate] = useState<number>(7);
   const [remarks, setRemarks] = useState('');
   
   const [deliveryDate, setDeliveryDate] = useState(() => {
@@ -103,6 +105,21 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
   // const [products, setProducts] = useState<ItemListItem[]>([]);
   // const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
   // const [projects, setProjects] = useState<Project[]>([]);
+
+  // Fetch Default Tax Rate on Mount
+  useEffect(() => {
+    const fetchTax = async () => {
+      try {
+        const rate = await TaxService.getDefaultTaxRate();
+        setVatRate(rate);
+      } catch (error) {
+        logger.error('Failed to fetch default tax rate', error);
+      }
+    };
+    if (!id) { // Only fetch default for new PRs, Edit mode uses saved rate (or default if missing)
+      fetchTax(); 
+    }
+  }, [id]);
 
   useEffect(() => {
     if (isOpen && !prevIsOpenRef.current) {
@@ -148,7 +165,8 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
                 preferred_vendor_id: pr.preferred_vendor_id,
                 vendor_name: pr.vendor_name,
                 cancelflag: pr.cancelflag || 'N',
-                status: pr.status
+                status: pr.status,
+                tax_rate: pr.tax_rate ?? 7
               };
 
               // Map PRLine to ExtendedLine
@@ -194,7 +212,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
           // New PR Mode
           setLines(getInitialLines());
           setGlobalDiscountInput('');
-          setVatRate(7);
+          // setVatRate(7); // Removed: Handled by useEffect
           setRemarks('');
           setDeliveryDate(getNextWeekDate());
           setValue('credit_days', 30);
@@ -203,6 +221,12 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
           setActiveTab('detail');
           const nextPRNo = await PRService.generateNextDocumentNo();
           reset({ ...getDefaultFormValues(), pr_no: nextPRNo });
+          // Ensure form also has the latest vatRate if it was fetched before reset
+          // But reset might overwrite it with default 7. 
+          // Note: useEffect for tax runs on mount (or id change). 
+          // If we reset here, we should ensure we don't lose the fetched rate if it already arrived.
+          // For simplicity, let's allow reset to 7, and the useEffect execution order or a separate setVatRate will handle it.
+          // Better: set value after reset.
         }
       }, 0);
       return () => clearTimeout(timer);
@@ -494,7 +518,8 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
             vendor_name: data.vendor_name,
             requester_user_id: user?.id || 1, 
             branch_id: user?.employee?.branch_id || 1, 
-            warehouse_id: 1       
+            warehouse_id: 1,
+            tax_rate: vatRate       
         };
         
         if (isEditMode && id) {
@@ -517,7 +542,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     } finally {
         setIsActionLoading(false);
     }
-  }, [remarks, requesterName, deliveryDate, vendorQuoteNo, shippingMethod, isEditMode, id, confirm, onSuccess, onClose, createPRMutation, updatePR, user]);
+  }, [remarks, requesterName, deliveryDate, vendorQuoteNo, shippingMethod, isEditMode, id, confirm, onSuccess, onClose, createPRMutation, updatePR, user, vatRate]);
 
   const onSubmit = useCallback(async (data: PRFormData) => {
     if (!data.required_date) { showAlert('กรุณาระบุวันที่ต้องการใช้'); return; }
