@@ -5,6 +5,7 @@ import type {
   VendorCreateRequest,
   VendorResponse,
   VendorDropdownItem,
+  VendorStatus,
 } from '../types/vendor-types';
 import { logger } from '@/shared/utils/logger';
 import { 
@@ -33,7 +34,7 @@ export const VendorService = {
       // Trust Global Interceptor - it unwraps { success, data } -> data
       const response = await api.get<VendorListResponse>('/vendors');
       return response;
-    } catch (error: unknown) {
+    } catch (error) {
       logger.error('[VendorService] getList error:', error);
       return {
         items: [],
@@ -55,7 +56,7 @@ export const VendorService = {
     }
     try {
       return await api.get<VendorMaster>(`/vendors/${vendorId}`);
-    } catch (error: unknown) {
+    } catch (error) {
       logger.error('[VendorService] getById error:', error);
       return null;
     }
@@ -67,7 +68,7 @@ export const VendorService = {
     }
     try {
       return await api.get<VendorMaster>(`/vendors/by-tax-id/${taxId}`);
-    } catch (error: unknown) {
+    } catch (error) {
       logger.error('[VendorService] getByTaxId error:', error);
       return null;
     }
@@ -84,7 +85,7 @@ export const VendorService = {
     }
     try {
       return await api.get<VendorDropdownItem[]>('/vendors/dropdown');
-    } catch (error: unknown) {
+    } catch (error) {
       logger.error('[VendorService] getDropdown error:', error);
       return [];
     }
@@ -171,7 +172,7 @@ export const VendorService = {
 
     try {
       return await api.post<VendorResponse>('/vendors', data);
-    } catch (error: unknown) {
+    } catch (error) {
       logger.error('[VendorService] create error:', error);
       let message = 'เกิดข้อผิดพลาดในการสร้าง Vendor';
       if (error instanceof Error) message = error.message;
@@ -197,7 +198,7 @@ export const VendorService = {
 
     try {
       return await api.put<VendorResponse>(`/vendors/${vendorId}`, data);
-    } catch (error: unknown) {
+    } catch (error) {
       logger.error('[VendorService] update error:', error);
       return { success: false, message: 'เกิดข้อผิดพลาดในการอัปเดต Vendor' };
     }
@@ -223,7 +224,7 @@ export const VendorService = {
     try {
       await api.delete<SuccessResponse>(`/vendors/${vendorId}`);
       return { success: true };
-    } catch (error: unknown) {
+    } catch (error) {
       logger.error('[VendorService] delete error:', error);
       return { success: false, message: 'เกิดข้อผิดพลาดในการลบ Vendor' };
     }
@@ -240,7 +241,7 @@ export const VendorService = {
     }
     try {
       return await api.post<VendorResponse>(`/vendors/${vendorId}/block`, { remark });
-    } catch (error: unknown) {
+    } catch (error) {
       logger.error('[VendorService] block error:', error);
       return { success: false, message: 'เกิดข้อผิดพลาดในการ Block Vendor' };
     }
@@ -261,6 +262,23 @@ export const VendorService = {
     } catch (error) {
       logger.error('[VendorService] setOnHold error:', error);
       return { success: false, message: 'เกิดข้อผิดพลาดในการเปลี่ยนสถานะ Hold' };
+    }
+  },
+
+  updateStatus: async (vendorId: string, status: string): Promise<VendorResponse> => {
+    if (USE_MOCK) {
+        const index = localVendorData.findIndex(v => v.vendor_id === vendorId);
+        if (index !== -1) {
+            localVendorData[index].status = status as VendorStatus;
+            return { success: true, data: localVendorData[index] };
+        }
+        return { success: false, message: 'Vendor not found' };
+    }
+    try {
+        return await api.patch<VendorResponse>(`/vendors/${vendorId}/status`, { status });
+    } catch (error) {
+        logger.error('[VendorService] updateStatus error:', error);
+        return { success: false, message: 'เกิดข้อผิดพลาดในการเปลี่ยนสถานะ' };
     }
   },
 

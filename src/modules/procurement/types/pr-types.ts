@@ -117,7 +117,7 @@ export interface PRFormData {
   pr_no: string;                    // Auto-generated
   request_date: string;             // วันที่ขอซื้อ
   required_date: string;            // วันที่ต้องการใช้
-  requester_name?: string;           // ชื่อผู้ขอ
+  requester_name: string;            // ชื่อผู้ขอ
   cost_center_id: string;           // ศูนย์ต้นทุน
   project_id?: string;              // โครงการ (optional)
   purpose: string;                  // วัตถุประสงค์
@@ -139,7 +139,7 @@ export interface PRFormData {
   delivery_date?: string;
   credit_days?: number;
   vendor_quote_no?: string;
-  shipping_method?: string;
+  shipping_method: string;
   remarks?: string;
   discount_input?: string;
   tax_rate?: number;                // Tax Rate used for calculation

@@ -327,22 +327,22 @@ import type { VendorStatus } from '@/modules/master-data/vendor/types/vendor-typ
 
 const vendorStatusConfig: Record<VendorStatus, { label: string; colorClass: string; dotColor: string }> = {
   ACTIVE: {
-    label: 'ใช้งาน',
+    label: 'ใช้งาน (Active)',
     colorClass: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
     dotColor: 'bg-green-500',
   },
   INACTIVE: {
-    label: 'ไม่ใช้งาน',
+    label: 'ไม่ใช้งาน (Inactive)',
     colorClass: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
     dotColor: 'bg-gray-500',
   },
   SUSPENDED: {
-    label: 'ระงับชั่วคราว',
+    label: 'ระงับชั่วคราว (Suspended)',
     colorClass: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
     dotColor: 'bg-yellow-500',
   },
   BLACKLISTED: {
-    label: 'ขึ้นบัญชีดำ',
+    label: 'บัญชีดำ (Blacklisted)',
     colorClass: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
     dotColor: 'bg-red-500',
   },

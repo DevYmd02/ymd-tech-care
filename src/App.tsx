@@ -16,6 +16,7 @@ import { GlobalLoading } from '@/shared/components/system/GlobalLoading';
 import { placeholderRoutes } from '@/core/config/routes';
 import { AuthProvider } from '@/core/auth/contexts/AuthContext';
 import { PlaceholderPage } from '@/shared/components/PlaceholderPage';
+import { ToastProvider } from '@/shared/components/ui';
 
 // ====================================================================================
 // PAGE IMPORTS - Lazy Loaded
@@ -104,195 +105,199 @@ const ComingSoon = React.lazy(() => import('./shared/pages/ComingSoon'));
 // MAIN APP COMPONENT
 // ====================================================================================
 
+
+
 function App() {
   return (
     <AuthProvider>
-      <Routes>
-        {/* ... (Auth Routes) ... */}
-        
-        <Route path="/auth/login" element={
-          <React.Suspense fallback={<GlobalLoading message="Loading Login..." />}>
-            <LoginPage />
-          </React.Suspense>
-        } />
-        
-        <Route path="/auth/register" element={
-          <React.Suspense fallback={<GlobalLoading message="Loading Register..." />}>
-            <RegisterPage />
-          </React.Suspense>
-        } />
+      <ToastProvider>
+        <Routes>
+          {/* ... (Auth Routes) ... */}
+          
+          <Route path="/auth/login" element={
+            <React.Suspense fallback={<GlobalLoading message="Loading Login..." />}>
+              <LoginPage />
+            </React.Suspense>
+          } />
+          
+          <Route path="/auth/register" element={
+            <React.Suspense fallback={<GlobalLoading message="Loading Register..." />}>
+              <RegisterPage />
+            </React.Suspense>
+          } />
 
-        <Route path="/auth/forgot-password" element={
-          <React.Suspense fallback={<GlobalLoading message="Loading..." />}>
-            <ForgotPasswordPage />
-          </React.Suspense>
-        } />
+          <Route path="/auth/forgot-password" element={
+            <React.Suspense fallback={<GlobalLoading message="Loading..." />}>
+              <ForgotPasswordPage />
+            </React.Suspense>
+          } />
 
-        {/* Legacy Redirects (Optional: to prevent broken links) */}
-        <Route path="/login" element={<Navigate to="/auth/login" replace />} />
-        <Route path="/register" element={<Navigate to="/auth/register" replace />} />
-        <Route path="/forgot-password" element={<Navigate to="/auth/forgot-password" replace />} />
+          {/* Legacy Redirects (Optional: to prevent broken links) */}
+          <Route path="/login" element={<Navigate to="/auth/login" replace />} />
+          <Route path="/register" element={<Navigate to="/auth/register" replace />} />
+          <Route path="/forgot-password" element={<Navigate to="/auth/forgot-password" replace />} />
 
 
-        {/* Main Layout Routes - With Sidebar & Header */}
-        <Route path="/" element={
-           <ErrorBoundary FallbackComponent={ErrorFallback} onReset={() => window.location.reload()}>
-             <React.Suspense fallback={<GlobalLoading />}>
-                <MainLayout />
-             </React.Suspense>
-           </ErrorBoundary>
-        }>
-          {/* Redirect root to admin (or login if we had logic) */}
-          <Route index element={<Navigate to="/admin" replace />} />
+          {/* Main Layout Routes - With Sidebar & Header */}
+          <Route path="/" element={
+             <ErrorBoundary FallbackComponent={ErrorFallback} onReset={() => window.location.reload()}>
+               <React.Suspense fallback={<GlobalLoading />}>
+                  <MainLayout />
+               </React.Suspense>
+             </ErrorBoundary>
+          }>
+            {/* Redirect root to admin (or login if we had logic) */}
+            <Route index element={<Navigate to="/admin" replace />} />
 
-          {/* ==================== IMPLEMENTED ROUTES ==================== */}
+            {/* ==================== IMPLEMENTED ROUTES ==================== */}
 
-          {/* Admin Dashboard */}
-          <Route path="admin" element={<AdminDashboard />} />
-          <Route path="admin/employees" element={<EmployeePage />} />
-          <Route path="admin/roles" element={<RolesDashboard />} />
+            {/* Admin Dashboard */}
+            <Route path="admin" element={<AdminDashboard />} />
+            <Route path="admin/employees" element={<EmployeePage />} />
+            <Route path="admin/roles" element={<RolesDashboard />} />
 
-          {/* Procurement */}
-          <Route path="procurement">
-            <Route path="dashboard" element={<ProcurementDashboard />} />
-            <Route path="pr" element={<PRListPage />} />
-            <Route path="rfq" element={<RFQListPage />} />
-            <Route path="qt" element={<QTListPage />} />
-            <Route path="qc" element={<QCListPage />} />
-            <Route path="po" element={<POListPage />} />
-            <Route path="grn" element={<GRNListPage />} />
-            <Route path="grn-coming-soon" element={<GoodsReceiptNoteListPage />} /> {/* Keep old GRN route as coming soon */}
-            <Route path="prt" element={<PurchaseReturnListPage />} />
+            {/* Procurement */}
+            <Route path="procurement">
+              <Route path="dashboard" element={<ProcurementDashboard />} />
+              <Route path="pr" element={<PRListPage />} />
+              <Route path="rfq" element={<RFQListPage />} />
+              <Route path="qt" element={<QTListPage />} />
+              <Route path="qc" element={<QCListPage />} />
+              <Route path="po" element={<POListPage />} />
+              <Route path="grn" element={<GRNListPage />} />
+              <Route path="grn-coming-soon" element={<GoodsReceiptNoteListPage />} /> {/* Keep old GRN route as coming soon */}
+              <Route path="prt" element={<PurchaseReturnListPage />} />
+            </Route>
+
+            {/* Roles - Implemented */}
+            <Route path="roles/dashboard" element={<RolesDashboard />} />
+
+            {/* IT Governance - Implemented */}
+            <Route path="it-governance/dashboard" element={<ITGCDashboard />} />
+
+            {/* Master Data - Implemented */}
+            <Route path="master-data" element={<MasterDataDashboard />} />
+            {/* <Route path="master-data/vendor" element={<VendorDashboard />} /> */}
+            <Route path="master-data/vendor" element={<VendorList />} />
+            {/* <Route path="master-data/vendor/list" element={<VendorList />} /> */}
+
+            <Route path="master-data/branch" element={<BranchList />} />
+            <Route path="master-data/employee-side" element={<EmployeeSideList />} />
+            <Route path="master-data/section" element={<SectionList />} />
+            <Route path="master-data/job" element={<JobList />} />
+            <Route path="master-data/employee" element={<EmployeeList />} />
+            <Route path="master-data/employee-group" element={<EmployeeGroupList />} />
+            <Route path="master-data/position" element={<PositionList />} />
+            <Route path="master-data/employee-group" element={<EmployeeGroupList />} />
+            <Route path="master-data/position" element={<PositionList />} />
+            {/* Sales Master Data */}
+            <Route path="master-data/sales-area" element={<SalesAreaList />} />
+            <Route path="master-data/sales-channel" element={<SalesChannelList />} />
+            <Route path="master-data/sales-target" element={<SalesTargetList />} />
+            <Route path="master-data/vendor-type" element={<VendorTypeList />} />
+            <Route path="master-data/vendor-group" element={<VendorGroupList />} />
+            <Route path="master-data/warehouse" element={<WarehouseList />} />
+            <Route path="master-data/product-category" element={<ProductCategoryList />} />
+            <Route path="master-data/item-type" element={<ItemTypeList />} />
+            <Route path="master-data/unit" element={<UnitList />} />
+            <Route path="master-data/unit" element={<UnitList />} />
+            <Route path="master-data/item" element={<ItemMasterList />} />
+            <Route path="master-data/uom-conversion" element={<UOMConversionList />} />
+            <Route path="master-data/item-barcode" element={<ItemBarcodeList />} />
+            {/* New Inventory Master Routes */}
+            <Route path="master-data/item-group" element={<ItemGroupList />} />
+            <Route path="master-data/brand" element={<BrandList />} />
+            <Route path="master-data/pattern" element={<PatternList />} />
+            <Route path="master-data/design" element={<DesignList />} />
+            <Route path="master-data/grade" element={<GradeList />} />
+            <Route path="master-data/model" element={<ModelList />} />
+            <Route path="master-data/size" element={<SizeList />} />
+            <Route path="master-data/color" element={<ColorList />} />
+            <Route path="master-data/location" element={<LocationList />} />
+            <Route path="master-data/shelf" element={<ShelfList />} />
+            <Route path="master-data/lot-no" element={<LotNoList />} />
+            <Route path="master-data/currency/code" element={<CurrencyCodeList />} />
+            <Route path="master-data/currency/type" element={<ExchangeRateTypeList />} />
+            <Route path="master-data/currency/rate" element={<ExchangeRateList />} />
+            
+            {/* Tax Master Data */}
+            <Route path="master-data/tax/code" element={<TaxCodeList />} />
+            <Route path="master-data/tax/group" element={<TaxGroupList />} />
+
+            {/* Generic Coming Soon for Work in Progress */}
+            <Route path="/coming-soon" element={<ComingSoon />} />
+
+            {/* ==================== PLACEHOLDER ROUTES ==================== */}
+            
+            {/* Procurement Placeholders */}
+            {placeholderRoutes.procurement.map(({ path, title }) => (
+              <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
+            ))}
+
+            {/* Inventory Placeholders */}
+            {placeholderRoutes.inventory.map(({ path, title }) => (
+              <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
+            ))}
+
+            {/* Roles Placeholders */}
+            {placeholderRoutes.roles.map(({ path, title }) => (
+              <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
+            ))}
+
+            {/* IT Governance Placeholders */}
+            {placeholderRoutes.itGovernance.map(({ path, title }: { path: string; title: string }) => (
+              <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
+            ))}
+
+            {/* Audit Placeholders */}
+            {placeholderRoutes.audit.map(({ path, title }: { path: string; title: string }) => (
+              <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
+            ))}
+
+            {/* Sales Placeholders */}
+            {placeholderRoutes.sales.map(({ path, title }: { path: string; title: string }) => (
+              <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
+            ))}
+
+            {/* MRP Placeholders */}
+            {placeholderRoutes.mrp.map(({ path, title }: { path: string; title: string }) => (
+              <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
+            ))}
+
+            {/* AP Placeholders */}
+            {placeholderRoutes.ap.map(({ path, title }: { path: string; title: string }) => (
+              <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
+            ))}
+
+            {/* AR Placeholders */}
+            {placeholderRoutes.ar.map(({ path, title }: { path: string; title: string }) => (
+              <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
+            ))}
+
+            {/* GL Placeholders */}
+            {placeholderRoutes.gl.map(({ path, title }: { path: string; title: string }) => (
+              <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
+            ))}
+
+            {/* Cash & Bank Placeholders */}
+            {placeholderRoutes.cash.map(({ path, title }: { path: string; title: string }) => (
+              <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
+            ))}
+
+            {/* Budget Placeholders */}
+            {placeholderRoutes.budget.map(({ path, title }: { path: string; title: string }) => (
+              <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
+            ))}
+
+            {/* Fixed Assets Placeholders */}
+            {placeholderRoutes.fa.map(({ path, title }: { path: string; title: string }) => (
+              <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
+            ))}
+
+
           </Route>
-
-          {/* Roles - Implemented */}
-          <Route path="roles/dashboard" element={<RolesDashboard />} />
-
-          {/* IT Governance - Implemented */}
-          <Route path="it-governance/dashboard" element={<ITGCDashboard />} />
-
-          {/* Master Data - Implemented */}
-          <Route path="master-data" element={<MasterDataDashboard />} />
-          {/* <Route path="master-data/vendor" element={<VendorDashboard />} /> */}
-          <Route path="master-data/vendor" element={<VendorList />} />
-          {/* <Route path="master-data/vendor/list" element={<VendorList />} /> */}
-
-          <Route path="master-data/branch" element={<BranchList />} />
-          <Route path="master-data/employee-side" element={<EmployeeSideList />} />
-          <Route path="master-data/section" element={<SectionList />} />
-          <Route path="master-data/job" element={<JobList />} />
-          <Route path="master-data/employee" element={<EmployeeList />} />
-          <Route path="master-data/employee-group" element={<EmployeeGroupList />} />
-          <Route path="master-data/position" element={<PositionList />} />
-          <Route path="master-data/employee-group" element={<EmployeeGroupList />} />
-          <Route path="master-data/position" element={<PositionList />} />
-          {/* Sales Master Data */}
-          <Route path="master-data/sales-area" element={<SalesAreaList />} />
-          <Route path="master-data/sales-channel" element={<SalesChannelList />} />
-          <Route path="master-data/sales-target" element={<SalesTargetList />} />
-          <Route path="master-data/vendor-type" element={<VendorTypeList />} />
-          <Route path="master-data/vendor-group" element={<VendorGroupList />} />
-          <Route path="master-data/warehouse" element={<WarehouseList />} />
-          <Route path="master-data/product-category" element={<ProductCategoryList />} />
-          <Route path="master-data/item-type" element={<ItemTypeList />} />
-          <Route path="master-data/unit" element={<UnitList />} />
-          <Route path="master-data/unit" element={<UnitList />} />
-          <Route path="master-data/item" element={<ItemMasterList />} />
-          <Route path="master-data/uom-conversion" element={<UOMConversionList />} />
-          <Route path="master-data/item-barcode" element={<ItemBarcodeList />} />
-          {/* New Inventory Master Routes */}
-          <Route path="master-data/item-group" element={<ItemGroupList />} />
-          <Route path="master-data/brand" element={<BrandList />} />
-          <Route path="master-data/pattern" element={<PatternList />} />
-          <Route path="master-data/design" element={<DesignList />} />
-          <Route path="master-data/grade" element={<GradeList />} />
-          <Route path="master-data/model" element={<ModelList />} />
-          <Route path="master-data/size" element={<SizeList />} />
-          <Route path="master-data/color" element={<ColorList />} />
-          <Route path="master-data/location" element={<LocationList />} />
-          <Route path="master-data/shelf" element={<ShelfList />} />
-          <Route path="master-data/lot-no" element={<LotNoList />} />
-          <Route path="master-data/currency/code" element={<CurrencyCodeList />} />
-          <Route path="master-data/currency/type" element={<ExchangeRateTypeList />} />
-          <Route path="master-data/currency/rate" element={<ExchangeRateList />} />
-          
-          {/* Tax Master Data */}
-          <Route path="master-data/tax/code" element={<TaxCodeList />} />
-          <Route path="master-data/tax/group" element={<TaxGroupList />} />
-
-          {/* Generic Coming Soon for Work in Progress */}
-          <Route path="/coming-soon" element={<ComingSoon />} />
-
-          {/* ==================== PLACEHOLDER ROUTES ==================== */}
-          
-          {/* Procurement Placeholders */}
-          {placeholderRoutes.procurement.map(({ path, title }) => (
-            <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
-          ))}
-
-          {/* Inventory Placeholders */}
-          {placeholderRoutes.inventory.map(({ path, title }) => (
-            <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
-          ))}
-
-          {/* Roles Placeholders */}
-          {placeholderRoutes.roles.map(({ path, title }) => (
-            <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
-          ))}
-
-          {/* IT Governance Placeholders */}
-          {placeholderRoutes.itGovernance.map(({ path, title }: { path: string; title: string }) => (
-            <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
-          ))}
-
-          {/* Audit Placeholders */}
-          {placeholderRoutes.audit.map(({ path, title }: { path: string; title: string }) => (
-            <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
-          ))}
-
-          {/* Sales Placeholders */}
-          {placeholderRoutes.sales.map(({ path, title }: { path: string; title: string }) => (
-            <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
-          ))}
-
-          {/* MRP Placeholders */}
-          {placeholderRoutes.mrp.map(({ path, title }: { path: string; title: string }) => (
-            <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
-          ))}
-
-          {/* AP Placeholders */}
-          {placeholderRoutes.ap.map(({ path, title }: { path: string; title: string }) => (
-            <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
-          ))}
-
-          {/* AR Placeholders */}
-          {placeholderRoutes.ar.map(({ path, title }: { path: string; title: string }) => (
-            <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
-          ))}
-
-          {/* GL Placeholders */}
-          {placeholderRoutes.gl.map(({ path, title }: { path: string; title: string }) => (
-            <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
-          ))}
-
-          {/* Cash & Bank Placeholders */}
-          {placeholderRoutes.cash.map(({ path, title }: { path: string; title: string }) => (
-            <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
-          ))}
-
-          {/* Budget Placeholders */}
-          {placeholderRoutes.budget.map(({ path, title }: { path: string; title: string }) => (
-            <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
-          ))}
-
-          {/* Fixed Assets Placeholders */}
-          {placeholderRoutes.fa.map(({ path, title }: { path: string; title: string }) => (
-            <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
-          ))}
-
-
-        </Route>
-      </Routes>
+        </Routes>
+      </ToastProvider>
     </AuthProvider>
   );
 }

@@ -17,9 +17,7 @@ interface Props {
 export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess }) => {
   const {
     isEditMode, lines, globalDiscountInput, setGlobalDiscountInput,
-    vatRate, setVatRate, deliveryDate, setDeliveryDate,
-    vendorQuoteNo, setVendorQuoteNo, shippingMethod, setShippingMethod,
-    requesterName, isProductModalOpen, setIsProductModalOpen, searchTerm, setSearchTerm,
+    vatRate, setVatRate, isProductModalOpen, setIsProductModalOpen, searchTerm, setSearchTerm,
     register, handleSubmit, setValue, watch, isSubmitting, isActionLoading,
     alertState, setAlertState, products, costCenters, projects,
     addLine, removeLine, clearLine, updateLine, handleClearLines,
@@ -27,7 +25,8 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
     vatAmount, grandTotal, handleVendorSelect, onSubmit, handleDelete, handleApprove,
     handleVoid,
     control,
-    totalLineDiscount
+    totalLineDiscount,
+    errors, handleFormError
   } = usePRForm(isOpen, onClose, id, onSuccess);
 
 
@@ -84,7 +83,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                 {isEditMode && (
                     <button type="button" onClick={handleApprove} disabled={isSubmitting || isActionLoading} className="px-6 py-2 bg-green-600 text-white hover:bg-green-700 rounded-md text-sm font-medium flex items-center gap-2"><CheckCircle size={16} /> อนุมัติ</button>
                 )}
-                <button type="button" onClick={handleSubmit(onSubmit)} disabled={isSubmitting || isActionLoading} className="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md text-sm font-medium">บันทึก</button>
+                <button type="button" onClick={handleSubmit(onSubmit, handleFormError)} disabled={isSubmitting || isActionLoading} className="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md text-sm font-medium">บันทึก</button>
             </div>
         </div>
       }
@@ -198,6 +197,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                         onVendorSelect={handleVendorSelect}
                         isEditMode={isEditMode}
                         onVoid={handleVoid}
+                        errors={errors}
                     />
   </div>
 
@@ -215,11 +215,20 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                   </thead>
                   <tbody>
                     <tr className="bg-white dark:bg-gray-800">
-                      <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700"><input type="date" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)} className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded px-2 py-1" /></td>
+                      <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700"><input type="date" {...register('delivery_date')} className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded px-2 py-1" /></td>
                       <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700 text-center text-gray-900 dark:text-white">{watch('credit_days')}</td>
-                      <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700"><input value={vendorQuoteNo} onChange={(e) => setVendorQuoteNo(e.target.value)} placeholder="Quote No" className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded px-2 py-1" /></td>
-                      <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700"><select value={shippingMethod} onChange={(e) => setShippingMethod(e.target.value)} className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded px-2 py-1"><option value="">เลือก</option><option value="รถยนต์">รถยนต์</option><option value="รถบรรทุก">รถบรรทุก</option></select></td>
-                      <td className="px-2 py-1 text-gray-900 dark:text-white">{requesterName}</td>
+                      <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700"><input {...register('vendor_quote_no')} placeholder="Quote No" className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded px-2 py-1" /></td>
+                      <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700">
+                        <select 
+                          {...register('shipping_method')}
+                          className={`w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded px-2 py-1 ${errors?.shipping_method ? 'border-red-500 ring-1 ring-red-500' : ''}`}
+                        >
+                          <option value="">เลือก</option>
+                          <option value="รถยนต์">รถยนต์</option>
+                          <option value="รถบรรทุก">รถบรรทุก</option>
+                        </select>
+                      </td>
+                      <td className="px-2 py-1 text-gray-900 dark:text-white">{watch('requester_name')}</td>
                     </tr>
                   </tbody>
                 </table>

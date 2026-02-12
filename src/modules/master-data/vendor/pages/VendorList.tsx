@@ -5,12 +5,20 @@
  */
 
 import { useState, useMemo, useCallback } from 'react';
-import { Database, Edit2, Trash2 } from 'lucide-react';
+import { Database, Edit2, Power, MoreHorizontal, PauseCircle, Ban } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
-import type { VendorStatus, VendorListItem } from '@/modules/master-data/vendor/types/vendor-types';
+import type { VendorStatus, VendorListItem, VendorListResponse } from '@/modules/master-data/vendor/types/vendor-types';
 import { VendorFormModal } from './VendorFormModal';
-import { VendorStatusBadge } from '@/shared/components/ui/StatusBadge';
+import { VendorStatusBadge } from '../components/VendorStatusBadge';
+import { 
+    DropdownMenu, 
+    DropdownMenuContent, 
+    DropdownMenuItem, 
+    DropdownMenuLabel, 
+    DropdownMenuSeparator, 
+    DropdownMenuTrigger 
+} from '@/shared/components/ui/DropdownMenu';
 import { FilterFormBuilder, type FilterFieldConfig } from '@/shared/components/FilterFormBuilder';
 import { SmartTable } from '@/shared/components/ui/SmartTable';
 import { useTableFilters } from '@/shared/hooks';
@@ -23,10 +31,10 @@ import { useConfirmation } from '@/shared/hooks/useConfirmation';
 
 const STATUS_OPTIONS = [
     { value: 'ALL', label: 'สถานะทั้งหมด' },
-    { value: 'ACTIVE', label: 'Active' },
-    { value: 'INACTIVE', label: 'Inactive' },
-    { value: 'BLACKLISTED', label: 'Blacklisted' },
-    { value: 'SUSPENDED', label: 'Suspended' },
+    { value: 'ACTIVE', label: 'ใช้งาน' },
+    { value: 'INACTIVE', label: 'ไม่ใช้งาน' },
+    { value: 'SUSPENDED', label: 'ระงับชั่วคราว' },
+    { value: 'BLACKLISTED', label: 'บัญชีดำ' },
 ];
 
 export default function VendorList() {
@@ -139,41 +147,94 @@ export default function VendorList() {
         setEditId(null);
     }, [queryClient]);
 
-    const handleDelete = useCallback(async (id: string, code: string) => {
+    const handleStatusChange = useCallback(async (id: string, code: string, newStatus: VendorStatus) => {
+        const statusConfig: Record<string, { label: string, title: string, description: string, variant: 'warning' | 'danger' | 'info' | 'success' }> = {
+            'INACTIVE': { 
+                label: 'เลิกใช้งาน', 
+                title: 'ยืนยันการเลิกใช้งาน', 
+                description: `ต้องการเลิกใช้งานผู้ขาย ${code} ใช่หรือไม่? (ข้อมูลจะยังอยู่ในระบบ)`,
+                variant: 'warning'
+            },
+            'SUSPENDED': { 
+                label: 'ระงับชั่วคราว', 
+                title: 'ยืนยันการระงับชั่วคราว', 
+                description: `ต้องการระงับการทำรายการกับผู้ขาย ${code} ชั่วคราวใช่หรือไม่?`,
+                variant: 'warning'
+            },
+            'BLACKLISTED': { 
+                label: 'บัญชีดำ', 
+                title: 'ยืนยันการขึ้นบัญชีดำ', 
+                description: `ต้องการขึ้นบัญชีดำผู้ขาย ${code} ใช่หรือไม่? การดำเนินการนี้จะส่งผลต่อการทำรายการในอนาคต`,
+                variant: 'danger'
+            },
+            'ACTIVE': { 
+                label: 'กลับมาใช้งาน', 
+                title: 'ยืนยันการกลับมาใช้งาน', 
+                description: `ต้องการเปลี่ยนสถานะผู้ขาย ${code} เป็น 'ใช้งาน' ใช่หรือไม่?`,
+                variant: 'success'
+            }
+        };
+        
+        const config = statusConfig[newStatus];
+        if (!config) return;
+
         const isConfirmed = await confirm({
-            title: 'ยืนยันการลบข้อมูล',
-            description: `ต้องการลบรหัสเจ้าหนี้ ${code} ใช่หรือไม่?\n⚠️ หากเจ้าหนี้นี้มีเอกสาร PR/PO ค้างอยู่ จะไม่สามารถลบได้`,
-            confirmText: 'ลบข้อมูล',
+            title: config.title,
+            description: config.description,
+            confirmText: 'ตกลง',
             cancelText: 'ยกเลิก',
-            variant: 'danger'
+            variant: config.variant
         });
 
         if (isConfirmed) {
+            // 1. Optimistic Update (Immediate UI Change)
+            // We search for all queries that start with ['vendors'] to update them all
+            const queryKeys = queryClient.getQueryCache().findAll({ queryKey: ['vendors'] }).map(q => q.queryKey);
+            
+            const snapshots = queryKeys.map(key => {
+                const previousData = queryClient.getQueryData(key);
+                queryClient.setQueryData(key, (old: VendorListResponse | undefined) => {
+                    if (!old || !old.items) return old;
+                    return {
+                        ...old,
+                        items: old.items.map((item: VendorListItem) => 
+                            item.vendor_id === id ? { ...item, status: newStatus } : item
+                        )
+                    };
+                });
+                return { key, previousData };
+            });
+
             try {
-                const result = await VendorService.delete(id);
+                // 2. Call API
+                const result = await VendorService.updateStatus(id, newStatus);
+                
                 if (result.success) {
+                    // 3. Show Success Modal instead of Toast
                     await confirm({
-                        title: 'ลบข้อมูลเรียบร้อยแล้ว!',
-                        description: 'ระบบได้ทำการลบข้อมูลเจ้าหนี้เรียบร้อยแล้ว',
+                        title: 'ดำเนินการสำเร็จ',
+                        description: `เปลี่ยนสถานะเป็น '${config.label}' เรียบร้อยแล้ว`,
                         confirmText: 'ตกลง',
                         variant: 'success',
                         hideCancel: true
                     });
+                    
+                    // Background refetch to ensure consistency
                     queryClient.invalidateQueries({ queryKey: ['vendors'] });
                 } else {
-                    await confirm({
-                        title: 'ไม่สามารถลบได้',
-                        description: result.message || 'พบข้อผิดพลาดที่ไม่ทราบสาเหตุ',
-                        confirmText: 'ตกลง',
-                        variant: 'danger',
-                        hideCancel: true
-                    });
+                    throw new Error(result.message || 'ไม่สามารถเปลี่ยนสถานะได้');
                 }
             } catch (err) {
-                console.error('Delete failed', err);
+                console.error('Update status failed', err);
+                
+                // 4. Rollback on Error
+                snapshots.forEach(({ key, previousData }) => {
+                    queryClient.setQueryData(key, previousData);
+                });
+
                 await confirm({
                     title: 'เกิดข้อผิดพลาด',
-                    description: 'เกิดข้อผิดพลาดในการเชื่อมต่อเครือข่าย',
+                    description: err instanceof Error ? err.message : 'ไม่สามารถเปลี่ยนสถานะได้',
                     confirmText: 'ตกลง',
                     variant: 'danger',
                     hideCancel: true
@@ -239,27 +300,53 @@ export default function VendorList() {
         {
             id: 'actions',
             header: () => <div className="text-center w-full">จัดการ</div>,
-            size: 100,
+            size: 80,
             cell: ({ row }) => (
-                <div className="flex items-center justify-center gap-2">
-                    <button 
-                        onClick={() => handleEdit(row.original.vendor_id)}
-                        className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-                        title="แก้ไข"
-                    >
-                        <Edit2 size={18} />
-                    </button>
-                    <button 
-                        onClick={() => handleDelete(row.original.vendor_id, row.original.vendor_code)}
-                        className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-                        title="ลบ"
-                    >
-                        <Trash2 size={18} />
-                    </button>
+                <div className="flex justify-center">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500">
+                            <MoreHorizontal size={18} className="text-gray-500" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuLabel>การจัดการ</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => handleEdit(row.original.vendor_id)}>
+                                <Edit2 className="mr-2 h-4 w-4" />
+                                <span>แก้ไขข้อมูล</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            
+                            {row.original.status === 'ACTIVE' && (
+                                <>
+                                    <DropdownMenuItem onClick={() => handleStatusChange(row.original.vendor_id, row.original.vendor_code, 'INACTIVE')}>
+                                        <Power className="mr-2 h-4 w-4 text-gray-500" />
+                                        <span>เลิกใช้งาน</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleStatusChange(row.original.vendor_id, row.original.vendor_code, 'SUSPENDED')}>
+                                        <PauseCircle className="mr-2 h-4 w-4 text-orange-500" />
+                                        <span>ระงับชั่วคราว</span>
+                                    </DropdownMenuItem>
+                                </>
+                            )}
+
+                            {row.original.status !== 'BLACKLISTED' && (
+                                <DropdownMenuItem onClick={() => handleStatusChange(row.original.vendor_id, row.original.vendor_code, 'BLACKLISTED')} className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/20">
+                                    <Ban className="mr-2 h-4 w-4" />
+                                    <span>บัญชีดำ</span>
+                                </DropdownMenuItem>
+                            )}
+
+                            {row.original.status !== 'ACTIVE' && (
+                                <DropdownMenuItem onClick={() => handleStatusChange(row.original.vendor_id, row.original.vendor_code, 'ACTIVE')}>
+                                    <Power className="mr-2 h-4 w-4 text-green-600" />
+                                    <span>กลับมาใช้งาน</span>
+                                </DropdownMenuItem>
+                            )}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
             ),
         },
-    ], [filters.page, filters.limit, handleEdit, handleDelete]);
+    ], [filters.page, filters.limit, handleEdit, handleStatusChange]);
 
     // ==================== RENDER ====================
     return (
