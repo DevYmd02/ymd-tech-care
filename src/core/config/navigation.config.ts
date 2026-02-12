@@ -333,6 +333,14 @@ export const sidebarMenuItems: MenuItem[] = [
                 ]
             },
             {
+                id: 'master-data-tax',
+                label: 'Master Data ภาษี',
+                subItems: [
+                    { id: 'tax-code', label: 'กำหนดรหัสภาษี', path: '/master-data/tax/code' },
+                    { id: 'tax-group', label: 'กำหนดกลุ่มภาษี', path: '/master-data/tax/group' },
+                ]
+            },
+            {
                 id: 'master-data-inventory',
                 label: 'Master Data คลังสินค้า',
                 subItems: [
