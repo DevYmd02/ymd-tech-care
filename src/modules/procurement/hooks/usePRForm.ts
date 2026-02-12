@@ -13,6 +13,8 @@ import { useAuth } from '@/core/auth/contexts/AuthContext';
 import { usePRMasterData } from './usePRMasterData';
 import { usePRActions } from './usePRActions';
 import { PRFormSchema } from '@/modules/procurement/types/pr-schemas';
+import { useQueryClient } from '@tanstack/react-query';
+import type { FieldErrors } from 'react-hook-form';
 
 
 const PR_CONFIG = {
@@ -46,7 +48,7 @@ const getDefaultFormValues = (): PRFormData => ({
   pr_no: '', request_date: getTodayDate(), required_date: '', requester_name: 'นางสาว กรรลิกา สารมาท',
   cost_center_id: '', project_id: undefined, purpose: '', currency_id: '', lines: [], total_amount: 0,
   is_on_hold: 'N',
-  delivery_date: '', credit_days: 30, vendor_quote_no: '', shipping_method: '', remarks: '',
+  delivery_date: getNextWeekDate(), credit_days: 30, vendor_quote_no: '', shipping_method: '', remarks: '',
   is_multicurrency: false, exchange_rate: 1, rate_date: new Date().toISOString().split('T')[0],
   currency_type_id: '',
   cancelflag: 'N',
@@ -60,6 +62,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
   const { user } = useAuth();
   const prevIsOpenRef = useRef(false);
   const { confirm } = useConfirmation();
+  const queryClient = useQueryClient();
   
   // Custom Hooks
   const { products, costCenters, projects } = usePRMasterData();
@@ -78,13 +81,10 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
   const [vatRate, setVatRate] = useState<number>(7);
   const [remarks, setRemarks] = useState('');
   
-  const [deliveryDate, setDeliveryDate] = useState(() => {
-    const date = new Date();
-    date.setDate(date.getDate() + 7);
-    return date.toISOString().split('T')[0];
-  });
-  const [vendorQuoteNo, setVendorQuoteNo] = useState('');
-  const [shippingMethod, setShippingMethod] = useState('');
+  // Removed local states - now managed by useForm
+  // const [deliveryDate, setDeliveryDate] = useState(...);
+  // const [vendorQuoteNo, setVendorQuoteNo] = useState('');
+  // const [shippingMethod, setShippingMethod] = useState('');
   const [requesterName] = useState('นางสาว กรรลิกา สารมาท');
   
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -96,10 +96,28 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
 
 
 
-  const { register, handleSubmit, setValue, reset, watch, setFocus, control, getFieldState, formState: { isSubmitting } } = useForm<PRFormData>({
+  const { register, handleSubmit, setValue, reset, watch, setFocus, control, getFieldState, formState: { isSubmitting, errors } } = useForm<PRFormData>({
     defaultValues: getDefaultFormValues(),
-    resolver: zodResolver(PRFormSchema)
+    resolver: zodResolver(PRFormSchema),
+    mode: 'onBlur',
   });
+
+  // onError handler: scroll to first invalid field + show alert
+  const handleFormError = useCallback((fieldErrors: FieldErrors<PRFormData>) => {
+    const firstKey = Object.keys(fieldErrors)[0] as keyof PRFormData | undefined;
+    if (firstKey) {
+      const msg = fieldErrors[firstKey]?.message;
+      if (msg && typeof msg === 'string') {
+        showAlert(msg);
+      }
+      // Attempt to focus the first errored field
+      try {
+        setFocus(firstKey);
+      } catch {
+        // setFocus may not support all field types (e.g. select), silently ignore
+      }
+    }
+  }, [setFocus]);
 
   // Master Data is now handled by usePRMasterData hook
   // const [products, setProducts] = useState<ItemListItem[]>([]);
@@ -160,7 +178,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
                 delivery_date: pr.delivery_date,
                 credit_days: pr.credit_days || 30,
                 vendor_quote_no: pr.vendor_quote_no,
-                shipping_method: pr.shipping_method,
+                shipping_method: pr.shipping_method || '',
                 remarks: pr.remarks,
                 preferred_vendor_id: pr.preferred_vendor_id,
                 vendor_name: pr.vendor_name,
@@ -196,9 +214,6 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
 
               setLines(initialLines);
               setRemarks(pr.remarks || '');
-              setDeliveryDate(pr.delivery_date || getNextWeekDate());
-              setVendorQuoteNo(pr.vendor_quote_no || '');
-              setShippingMethod(pr.shipping_method || '');
               
               reset(formData);
             }
@@ -214,10 +229,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
           setGlobalDiscountInput('');
           // setVatRate(7); // Removed: Handled by useEffect
           setRemarks('');
-          setDeliveryDate(getNextWeekDate());
           setValue('credit_days', 30);
-          setVendorQuoteNo('');
-          setShippingMethod('');
           setActiveTab('detail');
           const nextPRNo = await PRService.generateNextDocumentNo();
           reset({ ...getDefaultFormValues(), pr_no: nextPRNo });
@@ -509,11 +521,11 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
                qty: line.quantity, uom: line.uom, uom_id: line.uom_id,
                price: line.est_unit_price, needed_date: line.needed_date, remark: line.remark, discount: line.discount
             })),
-            delivery_date: deliveryDate,
+            delivery_date: data.delivery_date,
             credit_days: data.credit_days || 30,
             payment_term_days: data.credit_days || 30,
-            vendor_quote_no: vendorQuoteNo,
-            shipping_method: shippingMethod,
+            vendor_quote_no: data.vendor_quote_no,
+            shipping_method: data.shipping_method,
             preferred_vendor_id: data.preferred_vendor_id,
             vendor_name: data.vendor_name,
             requester_user_id: user?.id || 1, 
@@ -526,6 +538,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
             await updatePR(id, payload);
             await confirm({ title: 'แก้ไขสำเร็จ', description: 'แก้ไขเอกสารเรียบร้อยแล้ว', confirmText: 'ตกลง', variant: 'success' });
             onSuccess?.(); onClose();
+            queryClient.invalidateQueries({ queryKey: ['prs'] });
         } else {
             const { newPR } = await createPRMutation.mutateAsync(payload);
             const displayNo = newPR.pr_no.startsWith('DRAFT-TEMP') ? 'รอรันเลข (NEW)' : newPR.pr_no;
@@ -535,6 +548,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
                 confirmText: 'ตกลง', hideCancel: true, variant: 'success'
             });
             onSuccess?.(); onClose();
+            queryClient.invalidateQueries({ queryKey: ['prs'] });
         }
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการเชื่อมต่อระบบ';
@@ -542,14 +556,14 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     } finally {
         setIsActionLoading(false);
     }
-  }, [remarks, requesterName, deliveryDate, vendorQuoteNo, shippingMethod, isEditMode, id, confirm, onSuccess, onClose, createPRMutation, updatePR, user, vatRate]);
+  }, [remarks, requesterName, isEditMode, id, confirm, onSuccess, onClose, createPRMutation, updatePR, user, vatRate, queryClient]);
 
   const onSubmit = useCallback(async (data: PRFormData) => {
     if (!data.required_date) { showAlert('กรุณาระบุวันที่ต้องการใช้'); return; }
     if (!data.requester_name) { showAlert('กรุณาระบุชื่อผู้ขอซื้อ'); return; }
     if (!data.cost_center_id) { showAlert('กรุณาเลือกศูนย์ต้นทุน'); return; }
     if (!data.purpose) { showAlert('กรุณาระบุวัตถุประสงค์'); return; }
-    if (!shippingMethod) { showAlert('กรุณาเลือกประเภทการขนส่ง'); return; }
+    if (!data.shipping_method) { showAlert('กรุณาเลือกประเภทการขนส่ง'); return; }
     const activeLines = lines.filter(l => l.item_code);
     if (activeLines.length === 0) { showAlert('กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ'); return; }
     const isConfirmed = await confirm({
@@ -561,7 +575,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     });
     if (!isConfirmed) return;
     await handleSaveData(data, activeLines);
-  }, [shippingMethod, lines, isEditMode, confirm, handleSaveData]);
+  }, [lines, isEditMode, confirm, handleSaveData]);
 
   const handleDelete = useCallback(async () => {
     if (!id) return;
@@ -652,10 +666,9 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
 
   return {
     isEditMode, lines, activeTab, setActiveTab, 
-    vatRate, setVatRate, remarks, setRemarks, deliveryDate, setDeliveryDate,
-    vendorQuoteNo, setVendorQuoteNo, shippingMethod, setShippingMethod,
+    vatRate, setVatRate, remarks, setRemarks, 
     requesterName, isProductModalOpen, setIsProductModalOpen, searchTerm, setSearchTerm,
-    register, handleSubmit, setValue, watch, invokeSetFocus: setFocus, isSubmitting, isActionLoading,
+    register, handleSubmit, setValue, watch, invokeSetFocus: setFocus, isSubmitting, isActionLoading, errors, handleFormError,
     alertState, setAlertState, products, costCenters, projects,
     addLine, removeLine, clearLine, updateLine, handleClearLines,
     openProductSearch, selectProduct, subtotal, discountAmount, afterDiscount,

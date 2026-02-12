@@ -347,7 +347,7 @@ const _mockItems: ItemListItem[] = [
         warehouse: '1001',
         location: 'A-12',
         standard_cost: 500,
-        preferred_vendor_id: 'vendor-001', // IT Supply
+        preferred_vendor_id: 'V-003', // Siam Cement
         is_active: true,
         created_at: '2024-01-01T00:00:00Z',
     },
@@ -363,7 +363,7 @@ const _mockItems: ItemListItem[] = [
         warehouse: '9001',
         location: 'C-05',
         standard_cost: 25000,
-        preferred_vendor_id: 'vendor-001', // IT Supply
+        preferred_vendor_id: 'V-002', // JIB Computer
         is_active: true,
         created_at: '2024-01-02T00:00:00Z',
     },
@@ -379,6 +379,7 @@ const _mockItems: ItemListItem[] = [
         warehouse: '3001',
         location: 'B-03',
         standard_cost: 15000,
+        preferred_vendor_id: 'V-005', // Somchai Construction
         is_active: true,
         created_at: '2024-01-05T00:00:00Z',
     },
@@ -394,7 +395,7 @@ const _mockItems: ItemListItem[] = [
         warehouse: '2001',
         location: 'Z-C',
         standard_cost: 120,
-        preferred_vendor_id: 'vendor-002', // OfficeMate
+        preferred_vendor_id: 'V-001', // OfficeMate
         is_active: true,
         created_at: '2024-01-10T00:00:00Z',
     },
@@ -410,6 +411,7 @@ const _mockItems: ItemListItem[] = [
         warehouse: '4001',
         location: 'B-10',
         standard_cost: 450,
+        preferred_vendor_id: 'V-003', // Siam Cement
         is_active: true,
         created_at: '2024-01-12T00:00:00Z',
     },

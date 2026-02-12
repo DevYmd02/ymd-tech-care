@@ -7,14 +7,19 @@ export const MOCK_CLASSES = [ { id: 'CL01', name: 'Standard' }, { id: 'CL02', na
 export const MOCK_BRANDS = [ { id: 'BR01', name: 'Freshtime' }, { id: 'BR02', name: 'Double A' }, { id: 'BR03', name: '3M' } ];
 export const MOCK_PATTERNS = [ { id: 'PT01', name: 'Solid' }, { id: 'PT02', name: 'Gradient' } ];
 export const MOCK_DESIGNS = [ { id: 'DS01', name: 'Classic' }, { id: 'DS02', name: 'Modern' } ];
-export const MOCK_SIZES = [ { id: 'SZ01', name: 'Small' }, { id: 'SZ02', name: 'Medium' }, { id: 'SZ03', name: 'Large' }, { id: 'SZ04', name: '180g' } ];
+// Linked sizes to vendors for Soft Filter testing
+export const MOCK_SIZES = [ 
+    { id: 'SZ01', name: 'Small', preferred_vendor_id: 'V-001' }, 
+    { id: 'SZ02', name: 'Medium', preferred_vendor_id: 'V-001' }, 
+    { id: 'SZ03', name: 'Large', preferred_vendor_id: 'V-002' }, 
+    { id: 'SZ04', name: '180g', preferred_vendor_id: 'V-003' } 
+];
 export const MOCK_MODELS = [ { id: 'MD01', name: '2024 Model' }, { id: 'MD02', name: 'Legacy Model' } ];
 export const MOCK_GRADES = [ { id: 'GR01', name: 'A' }, { id: 'GR02', name: 'B' } ];
 export const MOCK_COLORS = [ { id: 'CO01', name: 'White' }, { id: 'CO02', name: 'Black' }, { id: 'CO03', name: 'Red' } ];
 
 /**
- * Helper to get name from ID
- * Safe for both string and number IDs
+ * Helper to get name from ID in mock arrays
  */
 export const getName = (
     id: string | number, 

@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import type { UseFormRegister, UseFormSetValue, UseFormWatch, Control } from 'react-hook-form';
+import type { UseFormRegister, UseFormSetValue, UseFormWatch, Control, FieldErrors } from 'react-hook-form';
 
 import { Building2, FolderKanban, User, XCircle } from 'lucide-react';
 import type { PRFormData } from '@/modules/procurement/types/pr-types';
@@ -23,9 +23,10 @@ interface Props {
   onVendorSelect: (vendor: VendorMaster | null) => void;
   isEditMode: boolean;
   onVoid?: () => void;
+  errors?: FieldErrors<PRFormData>;
 }
 
-export const PRHeader: React.FC<Props> = ({ register, setValue, watch, control, costCenters, projects, onVendorSelect, isEditMode, onVoid }) => {
+export const PRHeader: React.FC<Props> = ({ register, setValue, watch, control, costCenters, projects, onVendorSelect, isEditMode, onVoid, errors }) => {
   // Watch for vendor values to display in the selector
   const preferredVendorId = watch("preferred_vendor_id");
   const vendorName = watch("vendor_name");
@@ -34,6 +35,8 @@ export const PRHeader: React.FC<Props> = ({ register, setValue, watch, control, 
   const inputClass = "h-8 w-full px-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white";
   const selectClass = "h-8 w-full px-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white";
   const labelClass = "block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1";
+  const errorInputClass = "border-red-500 ring-1 ring-red-500";
+  const errorMsgClass = "text-red-500 text-[10px] mt-0.5 font-medium";
 
   return (
     <div className="p-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm font-sans">
@@ -81,12 +84,14 @@ export const PRHeader: React.FC<Props> = ({ register, setValue, watch, control, 
 
         <div className="col-span-12 md:col-span-3">
           <label className={labelClass}>วันที่ขอซื้อ <span className="text-red-500">*</span></label>
-          <input {...register("request_date")} type="date" className={inputClass} />
+          <input {...register("request_date")} type="date" className={`${inputClass} ${errors?.request_date ? errorInputClass : ''}`} />
+          {errors?.request_date && <p className={errorMsgClass}>{errors.request_date.message}</p>}
         </div>
 
         <div className="col-span-12 md:col-span-3">
           <label className={labelClass}>วันที่ต้องการใช้ <span className="text-red-500">*</span></label>
-          <input {...register("required_date")} type="date" className={inputClass} />
+          <input {...register("required_date")} type="date" className={`${inputClass} ${errors?.required_date ? errorInputClass : ''}`} />
+          {errors?.required_date && <p className={errorMsgClass}>{errors.required_date.message}</p>}
         </div>
 
         {/* Column 4: ON HOLD & CLEAR Actions */}
@@ -124,12 +129,13 @@ export const PRHeader: React.FC<Props> = ({ register, setValue, watch, control, 
         {/* Row 2: ผู้ขอซื้อ, ศูนย์ต้นทุน, โครงการ */}
         <div className="col-span-12 md:col-span-4">
           <label className={labelClass}><User size={11} className="inline mr-1" />ชื่อผู้ขอซื้อ <span className="text-red-500">*</span></label>
-          <input {...register("requester_name")} placeholder="ชื่อ-นามสกุล ผู้ขอ" className={`${inputClass} rounded-md`} />
+          <input {...register("requester_name")} placeholder="ชื่อ-นามสกุล ผู้ขอ" className={`${inputClass} rounded-md ${errors?.requester_name ? errorInputClass : ''}`} />
+          {errors?.requester_name && <p className={errorMsgClass}>{errors.requester_name.message}</p>}
         </div>
 
         <div className="col-span-12 md:col-span-4">
           <label className={labelClass}><Building2 size={11} className="inline mr-1" />ศูนย์ต้นทุน <span className="text-red-500">*</span></label>
-          <select className={selectClass} {...register("cost_center_id")} onChange={(e) => setValue("cost_center_id", e.target.value)}>
+          <select className={`${selectClass} ${errors?.cost_center_id ? errorInputClass : ''}`} {...register("cost_center_id")} onChange={(e) => setValue("cost_center_id", e.target.value)}>
             <option value="">-- เลือกศูนย์ต้นทุน --</option>
             {costCenters.filter(cc => cc.is_active).map((cc) => (
               <option key={cc.cost_center_id} value={cc.cost_center_id}>
@@ -137,6 +143,7 @@ export const PRHeader: React.FC<Props> = ({ register, setValue, watch, control, 
               </option>
             ))}
           </select>
+          {errors?.cost_center_id && <p className={errorMsgClass}>{errors.cost_center_id.message}</p>}
         </div>
 
         <div className="col-span-12 md:col-span-4">
@@ -158,9 +165,10 @@ export const PRHeader: React.FC<Props> = ({ register, setValue, watch, control, 
              <textarea 
                 {...register("purpose")}
                 placeholder="ระบุเหตุผลและวัตถุประสงค์ในการขอซื้อ..."
-                className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white resize-none"
+              className={`w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white resize-none ${errors?.purpose ? errorInputClass : ''}`}
                 rows={1}
               />
+              {errors?.purpose && <p className={errorMsgClass}>{errors.purpose.message}</p>}
           </div>
          
         </div>

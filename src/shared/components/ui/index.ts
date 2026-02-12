@@ -18,4 +18,5 @@ export { ActionButton } from './ActionButton';
 export type { ActionButtonProps } from './ActionButton';
 
 // Notifications
-export { Toast } from './Toast';
+export { Toast, ToastProvider, useToast } from './Toast';
+export type { ToastType } from './Toast';

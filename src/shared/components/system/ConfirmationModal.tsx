@@ -1,5 +1,6 @@
 import React from 'react';
-import { Save, AlertTriangle } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Save, AlertTriangle, CheckCircle } from 'lucide-react';
 
 export type ConfirmationVariant = 'info' | 'danger' | 'warning' | 'success';
 
@@ -51,7 +52,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             confirmBtn: 'bg-orange-500 hover:bg-orange-600 text-white',
         },
         success: {
-            icon: Save,
+            icon: CheckCircle,
             bgClass: 'bg-green-100 dark:bg-green-900/30',
             textClass: 'text-green-600 dark:text-green-400',
             confirmBtn: 'bg-green-600 hover:bg-green-700 text-white',
@@ -61,8 +62,8 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     const config = variantConfig[variant];
     const Icon = icon || config.icon;
 
-    return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+    return createPortal(
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
             {/* Backdrop click to close */}
             <div className="absolute inset-0" onClick={onClose} />
 
@@ -98,6 +99,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                     </div>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
