@@ -13,7 +13,8 @@ export type PRStatus =
   | 'PENDING'               // รออนุมัติ
   | 'APPROVED'              // อนุมัติแล้ว
   | 'REJECTED'              // ไม่อนุมัติ
-  | 'CANCELLED';            // ยกเลิก
+  | 'CANCELLED'             // ยกเลิก
+  | 'COMPLETED';            // เสร็จสมบูรณ์
 
 // ====================================================================================
 // PR HEADER - ตาม pr_header table
@@ -139,6 +140,7 @@ export interface PRFormData {
   vendor_quote_no?: string;
   shipping_method?: string;
   remarks?: string;
+  discount_input?: string;
   
   // Line items
   lines: PRLineFormData[];
@@ -163,6 +165,8 @@ export interface PRLineFormData {
   needed_date: string;
   preferred_vendor_id?: string;
   remark?: string;
+  discount?: number;
+  discount_input?: string;
 }
 
 // ====================================================================================
@@ -240,6 +244,7 @@ export interface CreatePRLineItem {
     price: number;
     needed_date?: string;
     remark?: string;
+    discount?: number;
 }
 
 export interface CreatePRPayload {

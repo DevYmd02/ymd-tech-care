@@ -16,7 +16,7 @@ interface Props {
 
 export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess }) => {
   const {
-    isEditMode, lines, discountPercent, setDiscountPercent,
+    isEditMode, lines, globalDiscountInput, setGlobalDiscountInput,
     vatRate, setVatRate, deliveryDate, setDeliveryDate,
     vendorQuoteNo, setVendorQuoteNo, shippingMethod, setShippingMethod,
     requesterName, isProductModalOpen, setIsProductModalOpen, searchTerm, setSearchTerm,
@@ -26,7 +26,8 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
     openProductSearch, selectProduct, subtotal, discountAmount,
     vatAmount, grandTotal, handleVendorSelect, onSubmit, handleDelete, handleApprove,
     handleVoid,
-    control
+    control,
+    totalLineDiscount
   } = usePRForm(isOpen, onClose, id, onSuccess);
 
 
@@ -254,13 +255,14 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
 
         <PRFormSummary
             subtotal={subtotal}
-            discountPercent={discountPercent}
-            setDiscountPercent={setDiscountPercent}
+            globalDiscountInput={globalDiscountInput}
+            setGlobalDiscountInput={setGlobalDiscountInput}
             vatRate={vatRate}
             setVatRate={setVatRate}
             discountAmount={discountAmount}
             vatAmount={vatAmount}
             grandTotal={grandTotal}
+            totalLineDiscount={totalLineDiscount}
 
         />
 

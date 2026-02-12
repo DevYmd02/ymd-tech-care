@@ -141,14 +141,34 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
     }, [formData.lines.length]);
 
     const handleSave = async () => {
+        // --- Basic Validation ---
+        const errors: string[] = [];
+        if (!formData.quote_due_date) {
+            errors.push('กรุณาระบุ ใช้ได้ถึงวันที่ (Quote Due Date)');
+        }
+        const hasValidLine = formData.lines.some(l => l.item_code && l.item_code.trim() !== '');
+        if (!hasValidLine) {
+            errors.push('กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ');
+        }
+        if (errors.length > 0) {
+            setAlert({ show: true, message: errors.join('\n') });
+            return;
+        }
+
         setIsSaving(true);
         try {
+            // Simulate API save with delay
             await new Promise(resolve => setTimeout(resolve, 1000));
             logger.log('Save RFQ:', formData);
-            if (onSuccess) onSuccess();
+
+            // Call onSuccess callback (async - updates PR status to COMPLETED)
+            if (onSuccess) {
+                await onSuccess();
+            }
             onClose();
         } catch (error) {
             logger.error('Failed to save RFQ:', error);
+            setAlert({ show: true, message: 'เกิดข้อผิดพลาดในการบันทึก RFQ' });
         } finally {
             setIsSaving(false);
         }

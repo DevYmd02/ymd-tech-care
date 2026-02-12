@@ -13,6 +13,8 @@ export const PRLineSchema = z.object({
   needed_date: z.string(),
   preferred_vendor_id: z.string().optional(),
   remark: z.string().optional(),
+  discount: z.number().optional(),
+  discount_input: z.string().optional(),
 });
 
 export const PRFormSchema = z.object({
@@ -40,8 +42,9 @@ export const PRFormSchema = z.object({
   lines: z.array(PRLineSchema),
   is_on_hold: z.union([z.boolean(), z.string()]),
   cancelflag: z.enum(['Y', 'N']).optional(),
-  status: z.enum(['DRAFT', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED']).optional(),
+  status: z.enum(['DRAFT', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED', 'COMPLETED']).optional(),
   total_amount: z.number(),
+  discount_input: z.string().optional(),
 });
 
 export type PRFormSchemaType = z.infer<typeof PRFormSchema>;

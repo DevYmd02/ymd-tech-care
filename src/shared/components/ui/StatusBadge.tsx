@@ -65,12 +65,16 @@ const statusConfig: Record<ModuleType, ModuleStatusConfig> = {
       colorClass: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
     },
     REJECTED: {
-      label: 'ยกเลิก',
+      label: 'ไม่อนุมัติ',
       colorClass: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-400',
     },
     CANCELLED: {
       label: 'ยกเลิก',
       colorClass: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-400',
+    },
+    COMPLETED: {
+      label: 'เสร็จสมบูรณ์',
+      colorClass: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
     },
   },
   RFQ: {

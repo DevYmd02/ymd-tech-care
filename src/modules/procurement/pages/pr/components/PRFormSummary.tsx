@@ -2,13 +2,14 @@ import React from 'react';
 
 interface PRFormSummaryProps {
     subtotal: number;
-    discountPercent?: number;
-    setDiscountPercent?: (value: number) => void;
+    globalDiscountInput: string;
+    setGlobalDiscountInput: (value: string) => void;
     vatRate: number;
     setVatRate: (value: number) => void;
     discountAmount: number;
     vatAmount: number;
     grandTotal: number;
+    totalLineDiscount?: number;
 
 }
 
@@ -16,9 +17,12 @@ export const PRFormSummary: React.FC<PRFormSummaryProps> = ({
     subtotal,
     vatRate,
     setVatRate,
+    globalDiscountInput,
+    setGlobalDiscountInput,
     discountAmount,
     vatAmount,
     grandTotal,
+    totalLineDiscount = 0,
 
 }) => {
     const cardClass = 'bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-sm overflow-hidden';
@@ -42,21 +46,32 @@ export const PRFormSummary: React.FC<PRFormSummaryProps> = ({
                     className={`w-32 ${inputReadonlyClass} bg-yellow-50 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-600 text-gray-900 dark:text-yellow-200`} 
                   />
                 </div>
-
-                {/* ส่วนลด (Discount) */}
+                
+                {/* ส่วนลดท้ายบิล (Global Discount) — 3 fields */}
                 <div className="flex justify-between items-center">
                   <span className={labelClass}>ส่วนลด</span>
                   <div className="flex items-center gap-1">
+                    {/* Field 1: Editable — user types number or % */}
+                    <input 
+                      type="text"
+                      value={globalDiscountInput} 
+                      onChange={(e) => setGlobalDiscountInput(e.target.value)} 
+                      placeholder="0 or 5%"
+                      className={`w-24 ${inputEditableClass}`} 
+                    />
+                    <span className="text-gray-400 dark:text-gray-500">-</span>
+                    {/* Field 2: Read-only — calculated discount amount from this input */}
                     <input 
                       value={discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} 
                       readOnly 
                       className={`w-24 ${inputReadonlyClass}`} 
                     />
                     <span className="text-gray-400 dark:text-gray-500">-</span>
+                    {/* Field 3: Read-only — total discount (line discounts + global discount) */}
                     <input 
-                      value={discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} 
+                      value={(totalLineDiscount + discountAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })} 
                       readOnly 
-                      className={`w-24 ${inputReadonlyClass}`} 
+                      className={`w-28 ${inputReadonlyClass} text-red-500 dark:text-red-400 font-medium`} 
                     />
                   </div>
                 </div>

@@ -56,6 +56,20 @@ const _prLinesFactory: PRLine[] = [
 
 const _mockPRs: PRHeader[] = [
   {
+    pr_id: 'pr-015', pr_no: 'PR-202603-0015', branch_id: 'BR001', requester_user_id: 'u001', requester_name: 'สมชาย ใจดี',
+    request_date: '2026-03-18', required_date: '2026-03-28', cost_center_id: 'CC001', purpose: 'เครื่องเขียนสำนักงาน (สร้าง RFQ แล้ว)',
+    status: 'COMPLETED', currency_code: 'THB', total_amount: 8250, attachment_count: 0,
+    created_at: '2026-03-18T09:00:00Z', updated_at: '2026-03-20T11:00:00Z', created_by_user_id: 'u001', updated_by_user_id: 'mgr01',
+    lines: getLinesForPR('pr-015', _prLinesOffice)
+  },
+  {
+    pr_id: 'pr-014', pr_no: 'PR-202603-0014', branch_id: 'BR002', requester_user_id: 'u002', requester_name: 'วิชัย มากมี',
+    request_date: '2026-03-16', required_date: '2026-03-26', cost_center_id: 'CC003', purpose: 'โต๊ะทำงานผู้บริหาร (ไม่ผ่านอนุมัติ)',
+    status: 'REJECTED', currency_code: 'THB', total_amount: 45000, attachment_count: 1,
+    created_at: '2026-03-16T10:00:00Z', updated_at: '2026-03-17T14:00:00Z', created_by_user_id: 'u002', updated_by_user_id: 'mgr02',
+    lines: []
+  },
+  {
     pr_id: 'pr-013', pr_no: 'PR-202603-0013', branch_id: 'BR001', requester_user_id: 'u004', requester_name: 'กานดา มารยาท',
     request_date: '2026-03-15', required_date: '2026-03-25', cost_center_id: 'CC004', purpose: 'จัดเลี้ยงรับรองลูกค้า (สำหรับ RFQ ยกเลิก)',
     status: 'APPROVED', currency_code: 'THB', total_amount: 5000, attachment_count: 0,
