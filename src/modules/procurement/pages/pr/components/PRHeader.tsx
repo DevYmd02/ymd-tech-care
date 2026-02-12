@@ -95,8 +95,9 @@ export const PRHeader: React.FC<Props> = ({ register, setValue, watch, control, 
         </div>
 
         {/* Column 4: ON HOLD & CLEAR Actions */}
-        <div className="col-span-12 md:col-span-3 flex flex-col justify-end h-full">
-             <div className="flex items-center w-full h-8 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+        <div className="col-span-12 md:col-span-3">
+          <label className={labelClass}>&nbsp;</label>
+          <div className="flex items-center w-full h-8 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
                 {/* 1. ON HOLD Checkbox */}
                 <StatusCheckbox<PRFormData>
                   name="is_on_hold"
