@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Palette, Save, X } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
-import { DialogFormLayout } from '@/shared/components/layout/DialogFormLayout';
+import { DialogFormLayout } from '@ui';
 import { ColorService } from '@/modules/master-data/inventory/services/inventory-master.service';
 
 const schema = z.object({ code: z.string().min(1, 'กรุณากรอกรหัส').max(20), nameTh: z.string().min(1, 'กรุณากรอกชื่อ').max(200), nameEn: z.string().max(200), hexCode: z.string().optional(), isActive: z.boolean() });
@@ -34,3 +34,5 @@ export function ColorFormModal({ isOpen, onClose, editId, onSuccess }: Props) {
         </DialogFormLayout>
     );
 }
+
+

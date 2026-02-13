@@ -117,7 +117,7 @@ export default function MasterDataDashboard() {
     // REFACTORED: Use useQuery for items (Cache Shared with ItemMasterList)
     const { data: response, refetch: refetchItems } = useQuery({
         queryKey: ['items'],
-        queryFn: ItemMasterService.getAll,
+        queryFn: () => ItemMasterService.getAll(),
         staleTime: 1000 * 60 * 5,
     });
     

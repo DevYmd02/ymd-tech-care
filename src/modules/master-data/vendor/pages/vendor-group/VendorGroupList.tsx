@@ -13,10 +13,10 @@ import {
 import { VendorGroupFormModal } from './VendorGroupFormModal';
 import { VendorGroupService } from '../../services/vendor-group.service';
 import type { VendorGroupMaster } from '../../types/vendor-types';
-import { ActiveStatusBadge } from '@ui/StatusBadge';
+import { ActiveStatusBadge } from '@ui';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
-import FilterFormBuilder, { type FilterFieldConfig } from '@/shared/components/FilterFormBuilder';
-import SmartTable from '@/shared/components/ui/SmartTable';
+import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
+import { SmartTable } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
 
 // ====================================================================================
@@ -224,7 +224,7 @@ export default function VendorGroupList() {
                 <FilterFormBuilder
                     config={filterConfig}
                     filters={filters}
-                    onFilterChange={(name, value) => setFilters({ [name]: value })}
+                    onFilterChange={(name: string, value: string) => setFilters({ [name]: value })}
                     onSearch={() => handlePageChange(1)}
                     onReset={resetFilters}
                     onCreate={handleCreateNew}
@@ -267,3 +267,6 @@ export default function VendorGroupList() {
         </div>
     );
 }
+
+
+

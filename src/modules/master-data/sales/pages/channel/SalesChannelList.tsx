@@ -13,10 +13,10 @@ import {
 import { SalesChannelFormModal } from './SalesChannelFormModal';
 import { SalesChannelService } from '@/modules/master-data/company/services/company.service';
 import type { SalesChannelListItem } from '@/modules/master-data/types/master-data-types';
-import { ActiveStatusBadge } from '@/shared/components/ui/StatusBadge';
+import { ActiveStatusBadge } from '@ui';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
-import FilterFormBuilder, { type FilterFieldConfig } from '@/shared/components/FilterFormBuilder';
-import SmartTable from '@/shared/components/ui/SmartTable';
+import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
+import { SmartTable } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
 
 // ====================================================================================
@@ -227,7 +227,7 @@ export default function SalesChannelList() {
                 <FilterFormBuilder
                     config={filterConfig}
                     filters={filters}
-                    onFilterChange={(name, value) => setFilters({ [name]: value })}
+                    onFilterChange={(name: string, value: string) => setFilters({ [name]: value })}
                     onSearch={() => handlePageChange(1)}
                     onReset={resetFilters}
                     onCreate={handleCreateNew}
@@ -270,3 +270,6 @@ export default function SalesChannelList() {
         </div>
     );
 }
+
+
+

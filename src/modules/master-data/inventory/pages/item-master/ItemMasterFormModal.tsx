@@ -1,5 +1,5 @@
 import { Package } from 'lucide-react';
-import { DialogFormLayout } from '@/shared/components/layout/DialogFormLayout';
+import { DialogFormLayout } from '@ui';
 import { useItemForm } from './hooks/useItemForm';
 import { ItemGeneralInfo } from './components/ItemGeneralInfo';
 import { ItemAttributes } from './components/ItemAttributes';
@@ -110,3 +110,5 @@ export function ItemMasterFormModal({ isOpen, onClose, editId, onSuccess }: Item
         </DialogFormLayout>
     );
 }
+
+

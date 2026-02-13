@@ -9,7 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Award, Save, X } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
-import { DialogFormLayout } from '@/shared/components/layout/DialogFormLayout';
+import { DialogFormLayout } from '@ui';
 import { BrandService } from '../../services/inventory-master.service';
 
 const schema = z.object({
@@ -57,3 +57,5 @@ export function BrandFormModal({ isOpen, onClose, editId, onSuccess }: Props) {
         </DialogFormLayout>
     );
 }
+
+

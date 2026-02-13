@@ -2,10 +2,10 @@ import { useState, useMemo } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { Eye, Package, Plus } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
-import { FilterFormBuilder } from '@/shared/components/FilterFormBuilder';
-import { SmartTable } from '@/shared/components/ui/SmartTable';
-import { PageListLayout } from '@/shared/components/layout/PageListLayout';
-import type { FilterFieldConfig } from '@/shared/components/FilterFormBuilder';
+import { FilterFormBuilder } from '@ui';
+import { SmartTable } from '@ui';
+import { PageListLayout } from '@ui';
+import type { FilterFieldConfig } from '@ui';
 import { useTableFilters } from '@/shared/hooks';
 import { GRNService } from '@/modules/procurement/services/grn.service';
 import type { GRNListParams, GRNStatus, GRNListItem } from '@/modules/procurement/types/grn-types';
@@ -151,7 +151,7 @@ export default function GRNListPage() {
                     <FilterFormBuilder
                         config={filterConfig}
                         filters={filters}
-                        onFilterChange={(name, value) => setFilters({ [name]: value })}
+                        onFilterChange={(name: string, value: string) => setFilters({ [name]: value })}
                         onSearch={() => refetch()} 
                         onReset={resetFilters}
                         accentColor="blue"
@@ -281,4 +281,6 @@ export default function GRNListPage() {
         </>
     );
 }
+
+
 

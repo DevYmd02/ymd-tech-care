@@ -1,9 +1,9 @@
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import { Coins, Edit2, Trash2 } from 'lucide-react';
-import SmartTable from '@/shared/components/ui/SmartTable';
-import FilterFormBuilder, { type FilterFieldConfig } from '@/shared/components/FilterFormBuilder';
+import { SmartTable } from '@ui';
+import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
-import { ActiveStatusBadge } from '@ui/StatusBadge';
+import { ActiveStatusBadge } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
 import type { Currency } from '@/modules/master-data/types/currency-types';
 import { CurrencyService } from '../../services/currency.service';
@@ -113,7 +113,7 @@ export default function CurrencyCodeList() {
                 <FilterFormBuilder
                     config={filterConfig}
                     filters={filters}
-                    onFilterChange={(name, value) => setFilters({ [name]: value })}
+                    onFilterChange={(name: string, value: string) => setFilters({ [name]: value })}
                     onSearch={() => {}}
                     onReset={resetFilters}
                     onCreate={handleCreate}
@@ -153,3 +153,6 @@ export default function CurrencyCodeList() {
         </div>
     );
 }
+
+
+

@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { TrendingUp, Edit2, Trash2 } from 'lucide-react';
 import type { ExchangeRate } from '@/modules/master-data/types/currency-types';
-import { ActiveStatusBadge } from '@/shared/components/ui/StatusBadge';
+import { ActiveStatusBadge } from '@ui';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
-import FilterFormBuilder, { type FilterFieldConfig } from '@/shared/components/FilterFormBuilder';
-import SmartTable from '@/shared/components/ui/SmartTable';
+import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
+import { SmartTable } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import { logger } from '@/shared/utils/logger';
@@ -248,7 +248,7 @@ export default function ExchangeRateList() {
                 <FilterFormBuilder
                     config={filterConfig}
                     filters={filters}
-                    onFilterChange={(name, value) => {
+                    onFilterChange={(name: string, value: string) => {
                         setFilters({ [name]: value } as Partial<typeof filters>);
                     }}
                     onSearch={() => handlePageChange(1)}
@@ -284,3 +284,6 @@ export default function ExchangeRateList() {
         </div>
     );
 }
+
+
+

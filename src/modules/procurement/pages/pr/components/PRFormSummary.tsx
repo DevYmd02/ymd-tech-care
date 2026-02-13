@@ -1,30 +1,29 @@
 import React from 'react';
+import { useFormContext } from 'react-hook-form';
+import { usePRCalculations } from '@/modules/procurement/hooks/usePRCalculations';
+import type { PRFormData } from '@/modules/procurement/types/pr-types';
 
-interface PRFormSummaryProps {
-    subtotal: number;
-    globalDiscountInput: string;
-    setGlobalDiscountInput: (value: string) => void;
-    vatRate: number;
-    setVatRate: (value: number) => void;
-    discountAmount: number;
-    vatAmount: number;
-    grandTotal: number;
-    totalLineDiscount?: number;
+export const PRFormSummary: React.FC = () => {
+    const { watch, setValue } = useFormContext<PRFormData>();
+    
+    // Watch values needed for calculations
+    const lines = watch('lines');
+    const taxRate = watch('tax_rate') ?? 7;
+    const discountInput = watch('discount_input') ?? '';
 
-}
+    // Use self-sufficient calculation hook
+    const {
+        subtotal,
+        globalDiscountAmount,
+        vatAmount,
+        grandTotal,
+        totalLineDiscount
+    } = usePRCalculations({
+        lines,
+        vatRate: taxRate,
+        globalDiscountInput: discountInput
+    });
 
-export const PRFormSummary: React.FC<PRFormSummaryProps> = ({
-    subtotal,
-    vatRate,
-    setVatRate,
-    globalDiscountInput,
-    setGlobalDiscountInput,
-    discountAmount,
-    vatAmount,
-    grandTotal,
-    totalLineDiscount = 0,
-
-}) => {
     const cardClass = 'bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-sm overflow-hidden';
     const inputReadonlyClass = 'h-7 px-2 text-right bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded text-gray-900 dark:text-white';
     const inputEditableClass = 'h-7 px-2 text-center bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500';
@@ -35,7 +34,6 @@ export const PRFormSummary: React.FC<PRFormSummaryProps> = ({
           <div className="p-3 bg-white dark:bg-gray-900">
             <div className="flex justify-end">
               <div className="w-[400px] space-y-2 text-sm">
-
 
                 {/* รวม (Subtotal) */}
                 <div className="flex justify-between items-center">
@@ -54,29 +52,27 @@ export const PRFormSummary: React.FC<PRFormSummaryProps> = ({
                     {/* Field 1: Editable — user types number or % */}
                     <input 
                       type="text"
-                      value={globalDiscountInput} 
-                      onChange={(e) => setGlobalDiscountInput(e.target.value)} 
+                      value={discountInput} 
+                      onChange={(e) => setValue('discount_input', e.target.value)} 
                       placeholder="0 or 5%"
                       className={`w-24 ${inputEditableClass}`} 
                     />
                     <span className="text-gray-400 dark:text-gray-500">-</span>
                     {/* Field 2: Read-only — calculated discount amount from this input */}
                     <input 
-                      value={discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} 
+                      value={globalDiscountAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} 
                       readOnly 
                       className={`w-24 ${inputReadonlyClass}`} 
                     />
                     <span className="text-gray-400 dark:text-gray-500">-</span>
                     {/* Field 3: Read-only — total discount (line discounts + global discount) */}
                     <input 
-                      value={(totalLineDiscount + discountAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })} 
+                      value={(totalLineDiscount + globalDiscountAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })} 
                       readOnly 
                       className={`w-28 ${inputReadonlyClass} text-red-500 dark:text-red-400 font-medium`} 
                     />
                   </div>
                 </div>
-
-
 
                 {/* ภาษี VAT */}
                 <div className="flex justify-between items-center">
@@ -90,8 +86,8 @@ export const PRFormSummary: React.FC<PRFormSummaryProps> = ({
                     <span className="text-gray-400 dark:text-gray-500 text-xs">ภาษี%</span>
                     <input 
                       type="number" 
-                      value={vatRate} 
-                      onChange={(e) => setVatRate(parseFloat(e.target.value) || 0)} 
+                      value={taxRate} 
+                      onChange={(e) => setValue('tax_rate', parseFloat(e.target.value) || 0)} 
                       className={`w-14 ${inputEditableClass}`} 
                     />
                     <span className="text-gray-400 dark:text-gray-500">-</span>

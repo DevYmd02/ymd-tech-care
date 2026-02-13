@@ -6,10 +6,10 @@ import { Edit2, Trash2, MapPin } from 'lucide-react';
 import { LocationFormModal } from './LocationFormModal';
 import { LocationService } from '../../services/inventory-master.service';
 import type { Location } from '../../types/inventory-master.types';
-import { ActiveStatusBadge } from '@ui/StatusBadge';
+import { ActiveStatusBadge } from '@ui';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
-import FilterFormBuilder, { type FilterFieldConfig } from '@/shared/components/FilterFormBuilder';
-import SmartTable from '@/shared/components/ui/SmartTable';
+import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
+import { SmartTable } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
 
 const STATUS_OPTIONS = [{ value: 'ALL', label: 'ทั้งหมด' }, { value: 'ACTIVE', label: 'ใช้งาน' }, { value: 'INACTIVE', label: 'ไม่ใช้งาน' }];
@@ -53,9 +53,12 @@ export default function LocationList() {
     return (
         <div className="p-6 space-y-6">
             <div><h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2"><MapPin className="text-blue-600" /> กำหนดที่เก็บสินค้า (Location Master)</h1><p className="text-gray-500 mt-1 text-sm">จัดการข้อมูลที่เก็บสินค้า</p></div>
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700"><FilterFormBuilder config={filterConfig} filters={filters} onFilterChange={(name, value) => setFilters({ [name]: value })} onSearch={() => handlePageChange(1)} onReset={resetFilters} onCreate={() => { setEditingId(null); setIsModalOpen(true); }} createLabel="เพิ่มที่เก็บใหม่" accentColor="indigo" /></div>
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700"><FilterFormBuilder config={filterConfig} filters={filters} onFilterChange={(name: string, value: string) => setFilters({ [name]: value })} onSearch={() => handlePageChange(1)} onReset={resetFilters} onCreate={() => { setEditingId(null); setIsModalOpen(true); }} createLabel="เพิ่มที่เก็บใหม่" accentColor="indigo" /></div>
             <div className="flex flex-col gap-4"><h2 className="text-gray-700 font-medium">พบข้อมูล {filteredData.length} รายการ</h2><SmartTable data={paginatedData} columns={columns} isLoading={isLoading} pagination={{ pageIndex: filters.page, pageSize: filters.limit, totalCount: filteredData.length, onPageChange: handlePageChange, onPageSizeChange: (size) => setFilters({ limit: size, page: 1 }) }} rowIdField="location_id" /></div>
             <LocationFormModal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setEditingId(null); }} editId={editingId} onSuccess={fetchData} />
         </div>
     );
 }
+
+
+

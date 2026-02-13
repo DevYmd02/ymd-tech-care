@@ -10,15 +10,12 @@ import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { FileText, Plus, Eye, Send, Search } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 // import { FilterFormBuilder } from '@shared';
-import { FilterField } from '@/shared/components/ui/FilterField';
-import { SmartTable } from '@/shared/components/ui/SmartTable';
-import { PageListLayout } from '@/shared/components/layout/PageListLayout';
-import { RFQStatusBadge } from '@/shared/components/ui/StatusBadge';
+import { PageListLayout, FilterField, SmartTable, RFQStatusBadge } from '@ui';
 // import type { FilterFieldConfig } from '@shared/FilterFormBuilder';
 import { useTableFilters, type TableFilters } from '@/shared/hooks';
 import { createColumnHelper } from '@tanstack/react-table';
 import type { ColumnDef } from '@tanstack/react-table';
-import { QTFormModal } from '../qt/components';
+import { QTFormModal } from '@/modules/procurement/pages/qt/components';
 
 // Services & Types
 import { RFQService } from '@/modules/procurement/services';
@@ -366,3 +363,4 @@ export default function RFQListPage() {
         </>
     );
 }
+

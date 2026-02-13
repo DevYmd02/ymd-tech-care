@@ -13,8 +13,7 @@ import type {
     VendorMaster
 } from '@/modules/master-data/vendor/types/vendor-types';
 
-import { SystemAlert } from '@/shared/components/ui/SystemAlert';
-import { DialogFormLayout } from '@/shared/components/layout/DialogFormLayout';
+import { DialogFormLayout, SystemAlert } from '@ui';
 
 import { VendorGeneralInfo } from './components/VendorGeneralInfo';
 import { VendorContactInfo } from './components/VendorContactInfo';
@@ -180,3 +179,4 @@ export function VendorFormModal(props: VendorFormModalProps) {
         </>
     );
 }
+

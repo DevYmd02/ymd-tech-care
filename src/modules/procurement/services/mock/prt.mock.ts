@@ -1,5 +1,5 @@
 
-import type { PurchaseReturn, PrtItem } from '../../types/prt/prt-types';
+import type { PurchaseReturn, PrtItem } from '@/modules/procurement/types/prt/prt-types';
 
 export const MOCK_PRT_ITEMS: PrtItem[] = [
     { id: 'item-1', code: 'ITM-001', name: 'คอมพิวเตอร์ Notebook Dell Inspiron', uom: 'PCS', price: 25000 },

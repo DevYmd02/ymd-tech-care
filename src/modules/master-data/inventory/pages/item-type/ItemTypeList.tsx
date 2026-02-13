@@ -8,9 +8,9 @@ import { Layers, Edit2, Trash2 } from 'lucide-react';
 import { ItemTypeFormModal } from './ItemTypeFormModal';
 import { ItemTypeService } from '@/modules/master-data/inventory/services/item-type.service';
 import type { ItemTypeListItem } from '@/modules/master-data/types/master-data-types';
-import { ActiveStatusBadge } from '@ui/StatusBadge';
-import { FilterFormBuilder, type FilterFieldConfig } from '@/shared/components/FilterFormBuilder';
-import { SmartTable } from '@/shared/components/ui/SmartTable';
+import { ActiveStatusBadge } from '@ui';
+import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
+import { SmartTable } from '@ui';
 import { useTableFilters } from '@/shared/hooks';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useQuery } from '@tanstack/react-query';
@@ -219,7 +219,7 @@ export default function ItemTypeList() {
                 <FilterFormBuilder
                     config={filterConfig}
                     filters={filters}
-                    onFilterChange={(name, value) => {
+                    onFilterChange={(name: string, value: string) => {
                         setFilters({ [name]: value } as Partial<typeof filters>);
                     }}
                     onSearch={() => handlePageChange(1)}
@@ -266,3 +266,6 @@ export default function ItemTypeList() {
         </div>
     );
 }
+
+
+

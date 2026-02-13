@@ -18,9 +18,9 @@ import {
     DropdownMenuLabel, 
     DropdownMenuSeparator, 
     DropdownMenuTrigger 
-} from '@/shared/components/ui/DropdownMenu';
-import { FilterFormBuilder, type FilterFieldConfig } from '@/shared/components/FilterFormBuilder';
-import { SmartTable } from '@/shared/components/ui/SmartTable';
+} from '@ui';
+import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
+import { SmartTable } from '@ui';
 import { useTableFilters } from '@/shared/hooks';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
@@ -370,7 +370,7 @@ export default function VendorList() {
                 <FilterFormBuilder
                     config={filterConfig}
                     filters={filters}
-                    onFilterChange={(name, value) => {
+                    onFilterChange={(name: string, value: string) => {
                         setFilters({ [name]: value } as Partial<typeof filters>);
                     }}
                     onSearch={() => handlePageChange(1)}
@@ -419,3 +419,7 @@ export default function VendorList() {
         </div>
     );
 }
+
+
+
+

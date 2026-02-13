@@ -12,11 +12,12 @@ const MainLayout = React.lazy(() => import('@/shared/layouts/MainLayout'));
 import { ErrorBoundary } from 'react-error-boundary';
 import { ErrorFallback } from '@/shared/components/system/ErrorBoundary';
 import { GlobalLoading } from '@/shared/components/system/GlobalLoading';
+import { Toaster } from 'react-hot-toast';
 
 import { placeholderRoutes } from '@/core/config/routes';
 import { AuthProvider } from '@/core/auth/contexts/AuthContext';
-import { PlaceholderPage } from '@/shared/components/PlaceholderPage';
-import { ToastProvider } from '@/shared/components/ui';
+import { PlaceholderPage } from '@ui';
+import { ToastProvider } from '@ui';
 
 // ====================================================================================
 // PAGE IMPORTS - Lazy Loaded
@@ -110,6 +111,7 @@ const ComingSoon = React.lazy(() => import('./shared/pages/ComingSoon'));
 function App() {
   return (
     <AuthProvider>
+      <Toaster position="top-right" reverseOrder={false} />
       <ToastProvider>
         <Routes>
           {/* ... (Auth Routes) ... */}
@@ -188,8 +190,7 @@ function App() {
             <Route path="master-data/employee" element={<EmployeeList />} />
             <Route path="master-data/employee-group" element={<EmployeeGroupList />} />
             <Route path="master-data/position" element={<PositionList />} />
-            <Route path="master-data/employee-group" element={<EmployeeGroupList />} />
-            <Route path="master-data/position" element={<PositionList />} />
+
             {/* Sales Master Data */}
             <Route path="master-data/sales-area" element={<SalesAreaList />} />
             <Route path="master-data/sales-channel" element={<SalesChannelList />} />
@@ -200,7 +201,7 @@ function App() {
             <Route path="master-data/product-category" element={<ProductCategoryList />} />
             <Route path="master-data/item-type" element={<ItemTypeList />} />
             <Route path="master-data/unit" element={<UnitList />} />
-            <Route path="master-data/unit" element={<UnitList />} />
+
             <Route path="master-data/item" element={<ItemMasterList />} />
             <Route path="master-data/uom-conversion" element={<UOMConversionList />} />
             <Route path="master-data/item-barcode" element={<ItemBarcodeList />} />
@@ -303,3 +304,4 @@ function App() {
 }
 
 export default App;
+

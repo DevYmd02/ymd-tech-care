@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Save, Package, Plus, Trash2, Search } from 'lucide-react';
-import { WindowFormLayout } from '@/shared/components/layout/WindowFormLayout';
+import { WindowFormLayout } from '@ui';
 import { POService } from '@/modules/procurement/services';
 import { GRNService } from '@/modules/procurement/services/grn.service';
 import type { POListItem } from '@/modules/procurement/types/po-types';
@@ -34,6 +34,7 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
     const [warehouseId, setWarehouseId] = useState<string>('');
     const [receivedBy, setReceivedBy] = useState<string>('');
     const [status, setStatus] = useState<string>('Draft');
+    const [isPOSearchOpen, setIsPOSearchOpen] = useState(false);
 
     // -- Fetch Issued POs --
     const [poList, setPoList] = useState<POListItem[]>([]);
@@ -247,10 +248,7 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
                                 <button 
                                     type="button"
                                     onClick={() => {
-                                        // TODO: Open PO search modal
-                                        if (poList.length > 0 && !selectedPOId) {
-                                            setSelectedPOId(poList[0].po_id);
-                                        }
+                                        setIsPOSearchOpen(true);
                                     }}
                                     className="px-4 h-10 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center"
                                 >
@@ -438,6 +436,71 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
                     </div>
                 </div>
             </div>
+            {/* PO Search Modal */}
+            {isPOSearchOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                    <div className="bg-white dark:bg-gray-800 w-full max-w-4xl max-h-[90vh] rounded-lg shadow-lg flex flex-col">
+                        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">เลือกใบสั่งซื้อ (Select PO)</h3>
+                            <button onClick={() => setIsPOSearchOpen(false)} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                                ×
+                            </button>
+                        </div>
+                        <div className="p-4 flex-1 overflow-auto">
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                                    <tr>
+                                        <th className="px-4 py-2 rounded-tl-lg">PO No.</th>
+                                        <th className="px-4 py-2">Vendor</th>
+                                        <th className="px-4 py-2">Date</th>
+                                        <th className="px-4 py-2">Status</th>
+                                        <th className="px-4 py-2 rounded-tr-lg">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                                    {poList.length > 0 ? (
+                                        poList.map(po => (
+                                            <tr key={po.po_id} className="hover:bg-gray-50 dark:hover:bg-gray-750">
+                                                <td className="px-4 py-3 font-medium text-blue-600 dark:text-blue-400">{po.po_no}</td>
+                                                <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{po.vendor_name}</td>
+                                                <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{po.po_date || '-'}</td>
+                                                <td className="px-4 py-3">
+                                                    <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">
+                                                        {po.status}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <button
+                                                        onClick={() => {
+                                                            setSelectedPOId(po.po_id);
+                                                            setIsPOSearchOpen(false);
+                                                        }}
+                                                        className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs"
+                                                    >
+                                                        เลือก
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                                                ไม่พบข้อมูลใบสั่งซื้อ
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+                            <button onClick={() => setIsPOSearchOpen(false)} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">
+                                ปิด
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </WindowFormLayout>
     );
 }
+

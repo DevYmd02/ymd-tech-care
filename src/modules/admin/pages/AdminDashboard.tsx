@@ -17,8 +17,8 @@ import {
     DollarSign,
     ChevronRight
 } from 'lucide-react';
-import { Card } from '@ui/Card';
-import { StatCard, QuickAccessCard } from '@ui/StatCard';
+import { Card } from '@ui';
+import { StatCard, QuickAccessCard } from '@ui';
 import { styles } from '@/shared/constants/styles';
 
 // ====================================================================================
@@ -194,3 +194,4 @@ export default function AdminDashboard() {
         </div>
     );
 }
+

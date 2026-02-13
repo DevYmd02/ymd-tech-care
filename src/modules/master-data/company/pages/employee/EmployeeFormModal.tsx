@@ -9,7 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Save, X, User } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
-import { DialogFormLayout } from '@/shared/components/layout/DialogFormLayout';
+import { DialogFormLayout } from '@ui';
 import { EmployeeService, DepartmentService, PositionService } from '@/modules/master-data/company/services/company.service';
 import type { DepartmentListItem, PositionListItem } from '@/modules/master-data/types/master-data-types';
 
@@ -313,3 +313,4 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
         </DialogFormLayout>
     );
 };
+

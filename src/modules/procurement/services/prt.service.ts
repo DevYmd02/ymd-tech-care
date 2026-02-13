@@ -1,6 +1,6 @@
 
 import api from '@/core/api/api';
-import type { PurchaseReturn, PRTListParams, PRTListResponse, PrtItem } from '../types/prt/prt-types';
+import type { PurchaseReturn, PRTListParams, PRTListResponse, PrtItem } from '@/modules/procurement/types/prt/prt-types';
 import { logger } from '@/shared/utils/logger';
 
 const ENDPOINTS = {

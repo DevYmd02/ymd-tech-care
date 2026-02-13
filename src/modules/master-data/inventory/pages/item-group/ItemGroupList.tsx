@@ -8,10 +8,10 @@ import { Edit2, Trash2, Layers } from 'lucide-react';
 import { ItemGroupFormModal } from './ItemGroupFormModal';
 import { ItemGroupService } from '../../services/inventory-master.service';
 import type { ItemGroup } from '../../types/inventory-master.types';
-import { ActiveStatusBadge } from '@ui/StatusBadge';
+import { ActiveStatusBadge } from '@ui';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
-import FilterFormBuilder, { type FilterFieldConfig } from '@/shared/components/FilterFormBuilder';
-import SmartTable from '@/shared/components/ui/SmartTable';
+import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
+import { SmartTable } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
 
 const STATUS_OPTIONS = [
@@ -109,7 +109,7 @@ export default function ItemGroupList() {
                 </div>
             </div>
             <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-                <FilterFormBuilder config={filterConfig} filters={filters} onFilterChange={(name, value) => setFilters({ [name]: value })} onSearch={() => handlePageChange(1)} onReset={resetFilters} onCreate={handleCreateNew} createLabel="เพิ่มกลุ่มสินค้าใหม่" accentColor="indigo" />
+                <FilterFormBuilder config={filterConfig} filters={filters} onFilterChange={(name: string, value: string) => setFilters({ [name]: value })} onSearch={() => handlePageChange(1)} onReset={resetFilters} onCreate={handleCreateNew} createLabel="เพิ่มกลุ่มสินค้าใหม่" accentColor="indigo" />
             </div>
             <div className="flex flex-col gap-4">
                 <h2 className="text-gray-700 dark:text-gray-300 font-medium">พบข้อมูล {filteredData.length} รายการ</h2>
@@ -119,3 +119,6 @@ export default function ItemGroupList() {
         </div>
     );
 }
+
+
+

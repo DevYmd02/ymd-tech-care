@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { MapPin, Save, X } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
-import { DialogFormLayout } from '@/shared/components/layout/DialogFormLayout';
+import { DialogFormLayout } from '@ui';
 import { LocationService } from '../../services/inventory-master.service';
 
 const schema = z.object({ code: z.string().min(1, 'กรุณากรอกรหัส').max(20), nameTh: z.string().min(1, 'กรุณากรอกชื่อ').max(200), nameEn: z.string().max(200), isActive: z.boolean() });
@@ -32,3 +32,5 @@ export function LocationFormModal({ isOpen, onClose, editId, onSuccess }: Props)
         </DialogFormLayout>
     );
 }
+
+

@@ -6,9 +6,9 @@
 export { default as useLocalStorage } from './useLocalStorage';
 export { useDebounce } from './useDebounce';
 export { usePagination } from './usePagination';
-export { useVendorForm } from './useVendorForm';
-export { useMasterDataList } from './useMasterDataList';
-export type { UseMasterDataListOptions, UseMasterDataListReturn } from './useMasterDataList';
+// export { useVendorForm } from './useVendorForm'; // DELETED / MOVED TO @vendor
+// export { useMasterDataList } from './useMasterDataList'; // MOVED TO @master-data
+// export type { UseMasterDataListOptions, UseMasterDataListReturn } from './useMasterDataList';
 
 // Table Filters Hook
 export { useTableFilters } from './useTableFilters';

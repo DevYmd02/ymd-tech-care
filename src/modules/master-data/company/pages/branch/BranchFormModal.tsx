@@ -17,7 +17,7 @@ import { z } from 'zod';
 import { Building2, Save, X } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { BranchService } from '@/core/api/branch.service';
-import { DialogFormLayout } from '@/shared/components/layout/DialogFormLayout';
+import { DialogFormLayout } from '@ui';
 import { logger } from '@/shared/utils/logger';
 
 // ====================================================================================
@@ -218,3 +218,5 @@ export function BranchFormModal({ isOpen, onClose, editId, onSuccess }: Props) {
         </DialogFormLayout>
     );
 }
+
+

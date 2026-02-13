@@ -10,7 +10,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Save, X, Layers } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
-import { DialogFormLayout } from '@/shared/components/layout/DialogFormLayout';
+import { DialogFormLayout } from '@ui';
 import { SectionService, DepartmentService } from '@/modules/master-data/company/services/company.service';
 import type { DepartmentListItem } from '@/modules/master-data/types/master-data-types';
 import { logger } from '@/shared/utils/logger';
@@ -237,3 +237,5 @@ export const SectionFormModal = ({ isOpen, onClose, onSuccess, editId }: Section
         </DialogFormLayout>
     );
 };
+
+

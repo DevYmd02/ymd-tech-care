@@ -6,9 +6,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { FileText, Search, Trash2, Scale } from 'lucide-react';
-import { WindowFormLayout } from '@/shared/components/layout/WindowFormLayout';
+import { WindowFormLayout } from '@ui';
 
-import { VendorSearchModal } from '@/shared/components/VendorSearchModal';
+import { VendorSearchModal } from '@/modules/master-data/vendor/components/selector/VendorSearchModal';
 import { QCService, type QCCreateData } from '@/modules/procurement/services/qc.service';
 import type { VendorSearchItem } from '@/modules/master-data/vendor/types/vendor-types';
 
@@ -423,3 +423,4 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
 };
 
 export default QCFormModal;
+

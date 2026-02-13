@@ -19,8 +19,8 @@ import {
     XCircle,
     ChevronRight,
 } from 'lucide-react';
-import { Card } from '@/shared/components/ui/Card';
-import { StatCard } from '@/shared/components/ui/StatCard';
+import { Card } from '@ui';
+import { StatCard } from '@ui';
 
 // Lazy load heavy chart components
 const ProcurementCharts = lazy(() => import('./components/ProcurementCharts'));
@@ -292,3 +292,5 @@ export default function ProcurementDashboard() {
         </div>
     );
 }
+
+

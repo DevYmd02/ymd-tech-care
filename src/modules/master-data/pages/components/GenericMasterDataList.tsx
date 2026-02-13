@@ -7,7 +7,7 @@
 import { Edit2, Trash2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, RefreshCw, Plus } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import type { GenericMasterDataListProps, GenericMasterDataItem, GenericTableColumn } from '@/modules/master-data/types/generic-master-data-types';
-import FilterFormBuilder from '@/shared/components/FilterFormBuilder';
+import { FilterFormBuilder } from '@ui';
 
 /**
  * Generic Master Data List Component
@@ -260,3 +260,5 @@ export function GenericMasterDataList<T extends GenericMasterDataItem>(
         </div>
     );
 }
+
+

@@ -3,11 +3,10 @@ import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { FileText, Plus, Eye, Send, CheckCircle, Package, Edit } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
-import { FilterFormBuilder } from '@/shared/components/FilterFormBuilder';
-import { SmartTable } from '@/shared/components/ui/SmartTable';
-import { PageListLayout } from '@/shared/components/layout/PageListLayout';
-import { POStatusBadge } from '@/shared/components/ui/StatusBadge';
-import type { FilterFieldConfig } from '@/shared/components/FilterFormBuilder';
+import { FilterFormBuilder } from '@ui';
+import { PageListLayout, SmartTable } from '@ui';
+import { POStatusBadge } from '@ui';
+import type { FilterFieldConfig } from '@ui';
 import { useTableFilters, type TableFilters } from '@/shared/hooks';
 import { POService } from '@/modules/procurement/services';
 import type { POListParams, POStatus, POListItem, POFormData } from '@/modules/procurement/types/po-types';
@@ -509,3 +508,5 @@ export default function POListPage() {
         </>
     );
 }
+
+

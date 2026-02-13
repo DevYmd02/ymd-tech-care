@@ -4,29 +4,24 @@
  */
 
 import React from 'react';
-import type { UseFormRegister, UseFormSetValue, UseFormWatch, Control, FieldErrors } from 'react-hook-form';
+import { useFormContext } from 'react-hook-form';
 
 import { Building2, FolderKanban, User, XCircle } from 'lucide-react';
-import type { PRFormData } from '@/modules/procurement/types/pr-types';
+import type { PRFormData, VendorSelection } from '@/modules/procurement/types/pr-types';
 import type { CostCenter, Project } from '@/modules/master-data/types/master-data-types';
-import { VendorSearch } from '@/shared/components/VendorSearch';
-import type { VendorMaster } from '@/modules/master-data/vendor/types/vendor-types';
-import { StatusCheckbox } from '@/shared/components/form/StatusCheckbox';
+import { VendorSearch } from '@/modules/master-data/vendor/components/selector/VendorSearch';
+import { StatusCheckbox } from '@ui';
 
 interface Props {
-  register: UseFormRegister<PRFormData>;
-  setValue: UseFormSetValue<PRFormData>;
-  watch: UseFormWatch<PRFormData>;
-  control: Control<PRFormData>;
   costCenters: CostCenter[];
   projects: Project[];
-  onVendorSelect: (vendor: VendorMaster | null) => void;
+  onVendorSelect: (vendor: VendorSelection | null) => void;
   isEditMode: boolean;
   onVoid?: () => void;
-  errors?: FieldErrors<PRFormData>;
 }
 
-export const PRHeader: React.FC<Props> = ({ register, setValue, watch, control, costCenters, projects, onVendorSelect, isEditMode, onVoid, errors }) => {
+export const PRHeader: React.FC<Props> = ({ costCenters, projects, onVendorSelect, isEditMode, onVoid }) => {
+  const { register, setValue, watch, control, formState: { errors } } = useFormContext<PRFormData>();
   // Watch for vendor values to display in the selector
   const preferredVendorId = watch("preferred_vendor_id");
   const vendorName = watch("vendor_name");
@@ -187,3 +182,4 @@ export const PRHeader: React.FC<Props> = ({ register, setValue, watch, control, 
     </div>
   );
 };
+

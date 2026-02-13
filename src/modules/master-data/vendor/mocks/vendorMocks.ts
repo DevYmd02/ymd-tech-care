@@ -267,7 +267,7 @@ export const MOCK_VENDORS: VendorMaster[] = [
     {
         vendor_id: 'V-013',
         vendor_code: 'V013',
-        vendor_name: 'หจก. ล้มละลายรุ่งเรือง',
+        vendor_name: 'หจก. รุ่งเรือง',
         vendor_name_en: 'Bankruptcy Pros Ltd., Part.',
         tax_id: '0103555001122',
         vendor_type: 'COMPANY',
@@ -306,7 +306,7 @@ export const MOCK_VENDORS: VendorMaster[] = [
     {
         vendor_id: 'V-015',
         vendor_code: 'V015',
-        vendor_name: 'หจก. ภาษีไม่ตรง',
+        vendor_name: 'หจก. เคลียร์ภาษี จำกัด',
         vendor_name_en: 'Tax Issue Ltd., Part.',
         tax_id: '0103555005566',
         vendor_type: 'COMPANY',
@@ -326,7 +326,7 @@ export const MOCK_VENDORS: VendorMaster[] = [
     {
         vendor_id: 'V-016',
         vendor_code: 'V016',
-        vendor_name: 'บริษัท ทุจริตการก่อสร้าง จำกัด',
+        vendor_name: 'บริษัท สุจริต จำกัด',
         vendor_name_en: 'Fraud Construction Co., Ltd.',
         tax_id: '0105555009900',
         vendor_type: 'COMPANY',
@@ -346,7 +346,7 @@ export const MOCK_VENDORS: VendorMaster[] = [
     {
         vendor_id: 'V-017',
         vendor_code: 'V017',
-        vendor_name: 'หจก. ส่งของไม่ครบ',
+        vendor_name: 'หจก. ส่งของไว จำกัด',
         vendor_name_en: 'Incomplete Delivery Ltd., Part.',
         tax_id: '0103555007788',
         vendor_type: 'COMPANY',

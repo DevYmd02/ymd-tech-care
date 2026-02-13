@@ -8,7 +8,7 @@
  */
 
 import React from 'react';
-import { SearchModal, type ColumnDef } from './SearchModal';
+import { SearchModal, type ColumnDef } from '@ui';
 import api from '@/core/api/api';
 import type { ProductLookup } from '@/modules/master-data/inventory/mocks/products';
 
@@ -22,22 +22,22 @@ export type Product = ProductLookup;
 const productColumns: ColumnDef<ProductLookup>[] = [
     { key: 'action', header: 'เลือก', width: '100px', align: 'center' },
     {
-        key: 'item_code', header: 'รหัสสินค้า', width: '120px', render: (p) => (
+        key: 'item_code', header: 'รหัสสินค้า', width: '120px', render: (p: ProductLookup) => (
             <span className="text-sm font-bold text-gray-800 dark:text-gray-200">{p.item_code}</span>
         )
     },
     {
-        key: 'item_name', header: 'ชื่อสินค้า', width: '1fr', render: (p) => (
+        key: 'item_name', header: 'ชื่อสินค้า', width: '1fr', render: (p: ProductLookup) => (
             <span className="text-sm text-gray-700 dark:text-gray-300">{p.item_name}</span>
         )
     },
     {
-        key: 'unit', header: 'หน่วย', width: '120px', render: (p) => (
+        key: 'unit', header: 'หน่วย', width: '120px', render: (p: ProductLookup) => (
             <span className="text-xs text-gray-600 dark:text-gray-400">{p.unit}</span>
         )
     },
     {
-        key: 'unit_price', header: 'ราคา/หน่วย', width: '140px', align: 'right', render: (p) => (
+        key: 'unit_price', header: 'ราคา/หน่วย', width: '140px', align: 'right', render: (p: ProductLookup) => (
             <span className="text-xs text-gray-500 dark:text-gray-400">{p.unit_price.toLocaleString()}</span>
         )
     },
@@ -103,11 +103,11 @@ export const ProductSearchModalBase: React.FC<ProductSearchModalBaseProps> = ({
             accentColor="blue"
             data={data}
             columns={productColumns}
-            filterFn={(p, term) =>
+            filterFn={(p: ProductLookup, term: string) =>
                 p.item_code.toLowerCase().includes(term) ||
                 p.item_name.toLowerCase().includes(term)
             }
-            getKey={(p) => p.item_code}
+            getKey={(p: ProductLookup) => p.item_code}
             emptyText={emptyText}
             isLoading={isLoading}
         />
@@ -186,3 +186,4 @@ export const ProductSearchModal: React.FC<ProductSearchModalProps> = ({ isOpen, 
         />
     );
 };
+

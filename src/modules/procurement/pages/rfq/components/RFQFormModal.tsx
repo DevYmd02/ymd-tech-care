@@ -1,9 +1,7 @@
 import React from 'react';
 import { FileText, Info, MoreHorizontal, Star, AlignLeft, History, Search } from 'lucide-react';
-import { VendorSearchModal } from '@/shared/components/VendorSearchModal';
-import { WindowFormLayout } from '@/shared/components/layout/WindowFormLayout';
-import TabPanel from '@/shared/components/layout/TabPanel';
-import { SystemAlert } from '@/shared/components/ui/SystemAlert';
+import { VendorSearchModal } from '@/modules/master-data/vendor/components/selector/VendorSearchModal';
+import { WindowFormLayout, TabPanel, SystemAlert } from '@ui';
 import type { PRHeader } from '@/modules/procurement/types/pr-types';
 import { useRFQForm } from '@/modules/procurement/hooks/useRFQForm';
 import { RFQFormHeader } from './RFQFormHeader';
@@ -184,3 +182,4 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, init
 };
 
 export { RFQFormModal as default };
+

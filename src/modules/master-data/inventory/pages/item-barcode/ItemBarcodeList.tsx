@@ -8,9 +8,9 @@ import { ScanBarcode, Edit2, Trash2 } from 'lucide-react';
 import { ItemBarcodeFormModal } from './ItemBarcodeFormModal';
 import { ItemBarcodeService } from '@/modules/master-data/inventory/services/item-barcode.service';
 import type { ItemBarcodeListItem } from '@/modules/master-data/types/master-data-types';
-import { ActiveStatusBadge } from '@ui/StatusBadge';
-import { FilterFormBuilder, type FilterFieldConfig } from '@/shared/components/FilterFormBuilder';
-import { SmartTable } from '@/shared/components/ui/SmartTable';
+import { ActiveStatusBadge } from '@ui';
+import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
+import { SmartTable } from '@ui';
 import { useTableFilters } from '@/shared/hooks';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useQuery } from '@tanstack/react-query';
@@ -247,7 +247,7 @@ export default function ItemBarcodeList() {
                 <FilterFormBuilder
                     config={filterConfig}
                     filters={filters}
-                    onFilterChange={(name, value) => {
+                    onFilterChange={(name: string, value: string) => {
                         setFilters({ [name]: value } as Partial<typeof filters>);
                     }}
                     onSearch={() => handlePageChange(1)}
@@ -294,3 +294,6 @@ export default function ItemBarcodeList() {
         </div>
     );
 }
+
+
+

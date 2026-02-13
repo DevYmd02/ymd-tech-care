@@ -9,7 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Save, X, Ruler } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
-import { DialogFormLayout } from '@/shared/components/layout/DialogFormLayout';
+import { DialogFormLayout } from '@ui';
 import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
 import { logger } from '@/shared/utils/logger';
 
@@ -209,3 +209,5 @@ export const UnitFormModal = ({ isOpen, onClose, onSuccess, editId }: UnitFormMo
         </DialogFormLayout>
     );
 };
+
+

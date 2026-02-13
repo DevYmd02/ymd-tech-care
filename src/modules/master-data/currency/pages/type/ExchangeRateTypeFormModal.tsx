@@ -10,7 +10,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Layers, Save, X } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { CurrencyService } from '../../services/currency.service';
-import { DialogFormLayout } from '@/shared/components/layout/DialogFormLayout';
+import { DialogFormLayout } from '@ui';
 import { logger } from '@/shared/utils/logger';
 import { exchangeRateTypeSchema, type ExchangeRateTypeFormValues, type ExchangeRateType } from '../../../types/currency-types';
 
@@ -207,3 +207,5 @@ export function ExchangeRateTypeFormModal({ isOpen, onClose, editId, onSuccess }
         </DialogFormLayout>
     );
 }
+
+
