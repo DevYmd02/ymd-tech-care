@@ -1,4 +1,5 @@
 import React from 'react';
+import { useFormContext } from 'react-hook-form';
 import { FileBox, Eraser, Plus, Trash2, Search } from 'lucide-react';
 import type { FieldArrayWithId } from 'react-hook-form';
 import type { PRFormData } from '@/modules/procurement/types/pr-types';
@@ -23,6 +24,9 @@ export const PRFormLines: React.FC<PRFormLinesProps> = React.memo(({
     handleClearLines,
     openProductSearch
 }) => {
+    const { register, watch: watchForm } = useFormContext<PRFormData>();
+    const watchedLines = watchForm('lines');
+
     const tableInputClass = 'w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 !rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white dark:focus:bg-gray-700 dark:text-white shadow-sm transition-all';
     const tdBaseClass = 'p-1 border-r border-gray-200 dark:border-gray-700';
 
@@ -65,40 +69,91 @@ export const PRFormLines: React.FC<PRFormLinesProps> = React.memo(({
                         </tr>
                     </thead>
                     <tbody>
-                        {lines.map((line, index) => {
+                        {lines.map((field, index) => {
+                            const line = watchedLines[index] || {};
                             const lineDiscount = line.discount || 0;
                             const lineTotal = ((line.quantity || 0) * (line.est_unit_price || 0)) - lineDiscount;
+                            
                             return (
-                                <tr key={line.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-800 transition-colors">
+                                <tr key={field.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-800 transition-colors">
                                     <td className="p-1 text-center bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold border-r border-gray-300 dark:border-gray-600 sticky left-0 z-10">{index + 1}</td>
-                                    <td className={tdBaseClass}><input value={line.item_code} onChange={(e) => updateLine(index, 'item_code', e.target.value)} className={`${tableInputClass} text-center`} /></td>
-                                    <td className={tdBaseClass}><input value={line.item_name} onChange={(e) => updateLine(index, 'item_name', e.target.value)} className={tableInputClass} /></td>
-                                    <td className={tdBaseClass}><input value={line.warehouse || ''} onChange={(e) => updateLine(index, 'warehouse', e.target.value)} className={`${tableInputClass} text-center`} /></td>
-                                    <td className={tdBaseClass}><input value={line.location || ''} onChange={(e) => updateLine(index, 'location', e.target.value)} className={`${tableInputClass} text-center`} /></td>
+                                    
                                     <td className={tdBaseClass}>
                                         <input 
-                                            type="text"
-                                            value={line.uom} 
-                                            onChange={(e) => updateLine(index, 'uom', e.target.value)} 
-                                            className={`${tableInputClass} text-center`}
-                                        />
-                                    </td>
-                                    <td className={tdBaseClass}><input type="number" value={line.quantity || ''} onChange={(e) => updateLine(index, 'quantity', parseFloat(e.target.value) || 0)} className={`${tableInputClass} text-center`} /></td>
-                                    <td className={tdBaseClass}><input type="number" value={line.est_unit_price || ''} onChange={(e) => updateLine(index, 'est_unit_price', parseFloat(e.target.value) || 0)} className={`${tableInputClass} text-center`} /></td>
-                                    <td className={tdBaseClass}>
-                                        <input 
-                                            type="text" 
-                                            value={line.discount_input || ''} 
-                                            onChange={(e) => updateLine(index, 'discount_input', e.target.value)} 
+                                            {...register(`lines.${index}.item_code`)} 
                                             className={`${tableInputClass} text-center`} 
                                         />
                                     </td>
+                                    
+                                    <td className={tdBaseClass}>
+                                        <input 
+                                            {...register(`lines.${index}.item_name`)} 
+                                            className={tableInputClass} 
+                                        />
+                                    </td>
+                                    
+                                    <td className={tdBaseClass}>
+                                        <input 
+                                            {...register(`lines.${index}.warehouse`)} 
+                                            className={`${tableInputClass} text-center`} 
+                                        />
+                                    </td>
+                                    
+                                    <td className={tdBaseClass}>
+                                        <input 
+                                            {...register(`lines.${index}.location`)} 
+                                            className={`${tableInputClass} text-center`} 
+                                        />
+                                    </td>
+                                    
+                                    <td className={tdBaseClass}>
+                                        <input 
+                                            {...register(`lines.${index}.uom`)} 
+                                            className={`${tableInputClass} text-center`} 
+                                        />
+                                    </td>
+                                    
+                                    <td className={tdBaseClass}>
+                                        <input 
+                                            type="number" 
+                                            {...register(`lines.${index}.quantity`, { 
+                                                valueAsNumber: true,
+                                                onChange: (e) => updateLine(index, 'quantity', e.target.value)
+                                            })} 
+                                            className={`${tableInputClass} text-center`} 
+                                        />
+                                    </td>
+                                    
+                                    <td className={tdBaseClass}>
+                                        <input 
+                                            type="number" 
+                                            {...register(`lines.${index}.est_unit_price`, { 
+                                                valueAsNumber: true,
+                                                onChange: (e) => updateLine(index, 'est_unit_price', e.target.value)
+                                            })} 
+                                            className={`${tableInputClass} text-center`} 
+                                        />
+                                    </td>
+                                    
+                                    <td className={tdBaseClass}>
+                                        <input 
+                                            type="text" 
+                                            {...register(`lines.${index}.discount_input`, { 
+                                                onChange: (e) => updateLine(index, 'discount_input', e.target.value)
+                                            })} 
+                                            className={`${tableInputClass} text-center`} 
+                                        />
+                                    </td>
+                                    
                                     <td className={tdBaseClass}>
                                         <div className="px-2 text-right text-gray-700 dark:text-gray-300">
                                             {line.discount ? line.discount.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
                                         </div>
                                     </td>
-                                    <td className={`${tdBaseClass} text-right font-bold pr-2 text-gray-700 dark:text-gray-300`}>{lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                    
+                                    <td className={`${tdBaseClass} text-right font-bold pr-2 text-gray-700 dark:text-gray-300`}>
+                                        {lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                    </td>
                                     
                                     {/* Action Buttons: Search, Eraser, Trash */}
                                     <td className="p-1">

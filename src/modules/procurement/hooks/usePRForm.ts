@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
+import type { FieldErrors, Path, FieldPathValue } from 'react-hook-form';
 import type { PRFormData, PRLineFormData, CreatePRPayload, VendorSelection } from '@/modules/procurement/types/pr-types';
 import { PRService } from '@/modules/procurement/services/pr.service';
 import { fetchExchangeRate } from '@/modules/master-data/currency/services/mockExchangeRateService';
@@ -14,7 +15,7 @@ import { usePRActions } from './usePRActions';
 import { PRFormSchema } from '@/modules/procurement/types/pr-schemas';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { useQueryClient } from '@tanstack/react-query';
-import type { FieldErrors } from 'react-hook-form';
+
 
 
 const PR_CONFIG = {
@@ -238,12 +239,16 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
   }, [updateFieldArray]);
   
   const updateLine = useCallback((index: number, field: keyof ExtendedLine, value: string | number | undefined) => {
+    // Use setValue instead of updateFieldArray to prevent field array state churn and focus loss
+    const path = `lines.${index}.${field}` as Path<PRFormData>;
+    setValue(path, value as FieldPathValue<PRFormData, typeof path>);
+    
+    // Get current line data to perform calculations
     const currentLines = watch('lines');
     const line = { ...currentLines[index] };
     
     if (field === 'discount_input') {
       const input = String(value || '');
-      line.discount_input = input;
       const totalBeforeDiscount = (line.est_unit_price || 0) * (line.quantity || 0);
       let discAmount = 0;
       if (input.trim().endsWith('%')) {
@@ -252,14 +257,18 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
       } else {
         discAmount = parseFloat(input) || 0;
       }
-      line.discount = discAmount > totalBeforeDiscount ? totalBeforeDiscount : discAmount;
-      line.est_amount = totalBeforeDiscount - (line.discount || 0);
-    } else if (field === 'quantity' || field === 'est_unit_price') {
-      const numValue = parseFloat(String(value || 0)) || 0;
-      if (field === 'quantity') line.quantity = numValue;
-      else line.est_unit_price = numValue;
+      const finalDiscount = discAmount > totalBeforeDiscount ? totalBeforeDiscount : discAmount;
       
-      const totalBeforeDiscount = (line.quantity || 0) * (line.est_unit_price || 0);
+      const discountPath = `lines.${index}.discount` as Path<PRFormData>;
+      const amountPath = `lines.${index}.est_amount` as Path<PRFormData>;
+      
+      setValue(discountPath, finalDiscount as FieldPathValue<PRFormData, typeof discountPath>);
+      setValue(amountPath, (totalBeforeDiscount - finalDiscount) as FieldPathValue<PRFormData, typeof amountPath>);
+    } else if (field === 'quantity' || field === 'est_unit_price') {
+      const quantity = field === 'quantity' ? (parseFloat(String(value || 0)) || 0) : (line.quantity || 0);
+      const unitPrice = field === 'est_unit_price' ? (parseFloat(String(value || 0)) || 0) : (line.est_unit_price || 0);
+      
+      const totalBeforeDiscount = quantity * unitPrice;
       let discAmount = 0;
       const input = line.discount_input || '';
       if (input.trim().endsWith('%')) {
@@ -268,16 +277,15 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
       } else {
         discAmount = parseFloat(input) || 0;
       }
-      line.discount = discAmount > totalBeforeDiscount ? totalBeforeDiscount : discAmount;
-      line.est_amount = totalBeforeDiscount - (line.discount || 0);
-    } else {
-      // Use record pattern to avoid 'any'
-      const lineData = line as Record<string, string | number | undefined>;
-      lineData[field] = value;
+      const finalDiscount = discAmount > totalBeforeDiscount ? totalBeforeDiscount : discAmount;
+      
+      const discountPath = `lines.${index}.discount` as Path<PRFormData>;
+      const amountPath = `lines.${index}.est_amount` as Path<PRFormData>;
+      
+      setValue(discountPath, finalDiscount as FieldPathValue<PRFormData, typeof discountPath>);
+      setValue(amountPath, (totalBeforeDiscount - finalDiscount) as FieldPathValue<PRFormData, typeof amountPath>);
     }
-    
-    updateFieldArray(index, line);
-  }, [watch, updateFieldArray]);
+  }, [setValue, watch]);
 
   const handleClearLines = useCallback(async () => {
     const isConfirmed = await confirm({
