@@ -30,8 +30,8 @@ export const MasterDataService = {
     return response.items;
   },
 
-  getItems: async (): Promise<ItemListItem[]> => {
-    const response = await ItemMasterService.getAll();
+  getItems: async (query?: string, vendorId?: string): Promise<ItemListItem[]> => {
+    const response = await ItemMasterService.getAll({ q: query, vendor_id: vendorId, limit: 50 });
     return response.items;
   },
 

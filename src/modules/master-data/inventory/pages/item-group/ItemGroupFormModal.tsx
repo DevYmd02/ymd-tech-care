@@ -9,7 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Layers, Save, X } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
-import { DialogFormLayout } from '@/shared/components/layout/DialogFormLayout';
+import { DialogFormLayout } from '@ui';
 import { ItemGroupService } from '../../services/inventory-master.service';
 
 const schema = z.object({
@@ -94,3 +94,5 @@ export function ItemGroupFormModal({ isOpen, onClose, editId, onSuccess }: Props
         </DialogFormLayout>
     );
 }
+
+

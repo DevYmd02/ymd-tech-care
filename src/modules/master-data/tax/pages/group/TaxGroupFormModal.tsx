@@ -5,7 +5,7 @@ import { Save } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import type { TaxGroup } from '@/modules/master-data/tax/types/tax-types';
 import { TaxService } from '@/modules/master-data/tax/services/tax.service';
-import { DialogFormLayout } from '@/shared/components/layout/DialogFormLayout';
+import { DialogFormLayout } from '@ui';
 
 interface TaxGroupFormModalProps {
     isOpen: boolean;
@@ -108,7 +108,7 @@ export function TaxGroupFormModal({ isOpen, onClose, groupId, onSuccess }: TaxGr
                         <select {...register('tax_type')} className={styles.inputSelect}>
                             <option value="TAX_CODE">รหัสภาษี</option>
                             <option value="LUMP_SUM">เหมาภาษี</option>
-                            <option value="NONE">ไม่คิดอะไร</option>
+                            <option value="NONE">ไม่คิดภาษี</option>
                         </select>
                     </div>
                      <div>
@@ -135,3 +135,4 @@ export function TaxGroupFormModal({ isOpen, onClose, groupId, onSuccess }: TaxGr
         </DialogFormLayout>
     );
 }
+

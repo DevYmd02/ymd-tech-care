@@ -17,17 +17,14 @@ import type {
     Color, ColorFormData,
     Location, LocationFormData,
     Shelf, ShelfFormData,
-    LotNo, LotNoFormData
+    LotNo, LotNoFormData,
+    IBaseMaster // Import IBaseMaster
 } from '../types/inventory-master.types';
 import type { ListResponse } from '@/shared/types/common-api.types';
 import {
     MOCK_ITEM_GROUPS, MOCK_BRANDS, MOCK_PATTERNS, MOCK_DESIGNS, MOCK_GRADES,
     MOCK_MODELS, MOCK_SIZES, MOCK_COLORS, MOCK_LOCATIONS, MOCK_SHELVES, MOCK_LOT_NUMBERS
 } from '../mocks/inventory-master.mock';
-
-// ====================================================================================
-// GENERIC SERVICE FACTORY
-// ====================================================================================
 
 // ====================================================================================
 // GENERIC SERVICE FACTORY
@@ -47,9 +44,10 @@ interface ServiceConfig<T> {
     apiPath: string;
     idField: string;
     mockData: T[];
+    mapToEntity: (data: BaseFormData, id: string, now: string) => T;
 }
 
-function createInventoryService<T extends { id: string }>(
+function createInventoryService<T extends IBaseMaster>(
     config: ServiceConfig<T>
 ) {
     let localData: T[] = [...config.mockData];
@@ -95,19 +93,11 @@ function createInventoryService<T extends { id: string }>(
             if (USE_MOCK) {
                 logger.info(`🎭 [Mock Mode] Creating ${config.entityName}`, data);
                 const newId = `${config.entityName.toUpperCase()}-${data.code.toUpperCase()}`;
-                const newItem = {
-                    id: newId,
-                    [config.idField]: newId,
-                    code: data.code.toUpperCase(),
-                    name_th: data.nameTh,
-                    name_en: data.nameEn ?? '',
-                    hex_code: data.hexCode,
-                    is_active: data.isActive,
-                    updated_at: new Date().toISOString(),
-                };
+                const now = new Date().toISOString();
                 
-                // MOCK STRICTNESS: Ensure matches T structure
-                const mockItem = newItem as unknown as T;
+                // Construct object using the provided mapper for strict type safety
+                const mockItem = config.mapToEntity(data, newId, now);
+                
                 localData.unshift(mockItem);
                 return { success: true, data: mockItem };
             }
@@ -124,17 +114,19 @@ function createInventoryService<T extends { id: string }>(
             if (USE_MOCK) {
                 const index = localData.findIndex(i => i.id === id);
                 if (index !== -1) {
-                    const updatedFields = {
-                        code: data.code.toUpperCase(),
-                        name_th: data.nameTh,
-                        name_en: data.nameEn ?? '',
-                        hex_code: data.hexCode,
-                        is_active: data.isActive,
-                        updated_at: new Date().toISOString(),
+                    const now = new Date().toISOString();
+                    // In mock update, we replace the item or merge.
+                    // Using mapToEntity ensures type safety.
+                    const updatedItem = config.mapToEntity(data, id, now);
+                    
+                    // Maintain existing timestamps if needed, or update them
+                    const existing = localData[index];
+                    localData[index] = {
+                        ...updatedItem,
+                        created_at: existing.created_at // Keep original creation date for mock consistency
                     };
-                    const mockItem = localData[index];
-                    Object.assign(mockItem, updatedFields);
-                    return { success: true, data: mockItem };
+                    
+                    return { success: true, data: localData[index] };
                 }
                 return { success: false, message: `ไม่พบ${config.entityName}` };
             }
@@ -200,6 +192,16 @@ export const ItemGroupService = createInventoryService<ItemGroup>({
     apiPath: '/item-groups',
     idField: 'item_group_id',
     mockData: MOCK_ITEM_GROUPS,
+    mapToEntity: (data, id, now) => ({
+        id,
+        item_group_id: id,
+        code: data.code.toUpperCase(),
+        name_th: data.nameTh,
+        name_en: data.nameEn ?? '',
+        is_active: data.isActive,
+        created_at: now,
+        updated_at: now,
+    }),
 });
 
 // Brand Service
@@ -208,6 +210,16 @@ export const BrandService = createInventoryService<Brand>({
     apiPath: '/brands',
     idField: 'brand_id',
     mockData: MOCK_BRANDS,
+    mapToEntity: (data, id, now) => ({
+        id,
+        brand_id: id,
+        code: data.code.toUpperCase(),
+        name_th: data.nameTh,
+        name_en: data.nameEn ?? '',
+        is_active: data.isActive,
+        created_at: now,
+        updated_at: now,
+    }),
 });
 
 // Pattern Service
@@ -216,6 +228,16 @@ export const PatternService = createInventoryService<Pattern>({
     apiPath: '/patterns',
     idField: 'pattern_id',
     mockData: MOCK_PATTERNS,
+    mapToEntity: (data, id, now) => ({
+        id,
+        pattern_id: id,
+        code: data.code.toUpperCase(),
+        name_th: data.nameTh,
+        name_en: data.nameEn ?? '',
+        is_active: data.isActive,
+        created_at: now,
+        updated_at: now,
+    }),
 });
 
 // Design Service
@@ -224,6 +246,16 @@ export const DesignService = createInventoryService<Design>({
     apiPath: '/designs',
     idField: 'design_id',
     mockData: MOCK_DESIGNS,
+    mapToEntity: (data, id, now) => ({
+        id,
+        design_id: id,
+        code: data.code.toUpperCase(),
+        name_th: data.nameTh,
+        name_en: data.nameEn ?? '',
+        is_active: data.isActive,
+        created_at: now,
+        updated_at: now,
+    }),
 });
 
 // Grade Service
@@ -232,6 +264,16 @@ export const GradeService = createInventoryService<Grade>({
     apiPath: '/grades',
     idField: 'grade_id',
     mockData: MOCK_GRADES,
+    mapToEntity: (data, id, now) => ({
+        id,
+        grade_id: id,
+        code: data.code.toUpperCase(),
+        name_th: data.nameTh,
+        name_en: data.nameEn ?? '',
+        is_active: data.isActive,
+        created_at: now,
+        updated_at: now,
+    }),
 });
 
 // Model Service
@@ -240,6 +282,16 @@ export const ModelService = createInventoryService<Model>({
     apiPath: '/models',
     idField: 'model_id',
     mockData: MOCK_MODELS,
+    mapToEntity: (data, id, now) => ({
+        id,
+        model_id: id,
+        code: data.code.toUpperCase(),
+        name_th: data.nameTh,
+        name_en: data.nameEn ?? '',
+        is_active: data.isActive,
+        created_at: now,
+        updated_at: now,
+    }),
 });
 
 // Size Service
@@ -248,6 +300,16 @@ export const SizeService = createInventoryService<Size>({
     apiPath: '/sizes',
     idField: 'size_id',
     mockData: MOCK_SIZES,
+    mapToEntity: (data, id, now) => ({
+        id,
+        size_id: id,
+        code: data.code.toUpperCase(),
+        name_th: data.nameTh,
+        name_en: data.nameEn ?? '',
+        is_active: data.isActive,
+        created_at: now,
+        updated_at: now,
+    }),
 });
 
 // Color Service (with hex_code support)
@@ -256,6 +318,17 @@ export const ColorService = createInventoryService<Color>({
     apiPath: '/colors',
     idField: 'color_id',
     mockData: MOCK_COLORS,
+    mapToEntity: (data, id, now) => ({
+        id,
+        color_id: id,
+        code: data.code.toUpperCase(),
+        name_th: data.nameTh,
+        name_en: data.nameEn ?? '',
+        is_active: data.isActive,
+        created_at: now,
+        updated_at: now,
+        hex_code: data.hexCode
+    }),
 });
 
 // Location Service
@@ -264,6 +337,16 @@ export const LocationService = createInventoryService<Location>({
     apiPath: '/locations',
     idField: 'location_id',
     mockData: MOCK_LOCATIONS,
+    mapToEntity: (data, id, now) => ({
+        id,
+        location_id: id,
+        code: data.code.toUpperCase(),
+        name_th: data.nameTh,
+        name_en: data.nameEn ?? '',
+        is_active: data.isActive,
+        created_at: now,
+        updated_at: now,
+    }),
 });
 
 // Shelf Service
@@ -272,6 +355,16 @@ export const ShelfService = createInventoryService<Shelf>({
     apiPath: '/shelves',
     idField: 'shelf_id',
     mockData: MOCK_SHELVES,
+    mapToEntity: (data, id, now) => ({
+        id,
+        shelf_id: id,
+        code: data.code.toUpperCase(),
+        name_th: data.nameTh,
+        name_en: data.nameEn ?? '',
+        is_active: data.isActive,
+        created_at: now,
+        updated_at: now,
+    }),
 });
 
 // Lot No Service
@@ -280,4 +373,14 @@ export const LotNoService = createInventoryService<LotNo>({
     apiPath: '/lot-numbers',
     idField: 'lot_no_id',
     mockData: MOCK_LOT_NUMBERS,
+    mapToEntity: (data, id, now) => ({
+        id,
+        lot_no_id: id,
+        code: data.code.toUpperCase(),
+        name_th: data.nameTh,
+        name_en: data.nameEn ?? '',
+        is_active: data.isActive,
+        created_at: now,
+        updated_at: now,
+    }),
 });

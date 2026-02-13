@@ -143,6 +143,7 @@ export interface PRFormData {
   remarks?: string;
   discount_input?: string;
   tax_rate?: number;                // Tax Rate used for calculation
+  warehouse_id?: number;            // Added for dynamic warehouse selection
   
   // Line items
   lines: PRLineFormData[];
@@ -289,6 +290,7 @@ export interface PRListParams {
   page?: number;
   limit?: number;
   sort?: string;
+  q?: string;
 }
 
 export interface PRListResponse {
@@ -318,4 +320,12 @@ export interface ConvertPRRequest {
   pr_id: string;
   convert_to: 'RFQ' | 'PO';
   line_ids?: string[];
+}
+
+export interface VendorSelection {
+  vendor_id: string;
+  vendor_code: string;
+  vendor_name: string;
+  tax_id?: string;
+  payment_term_days?: number;
 }

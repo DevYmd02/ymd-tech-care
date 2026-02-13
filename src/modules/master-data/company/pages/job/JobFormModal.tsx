@@ -10,7 +10,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Save, X, Briefcase } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
-import { DialogFormLayout } from '@/shared/components/layout/DialogFormLayout';
+import { DialogFormLayout } from '@ui';
 import { JobService } from '@/modules/master-data/company/services/company.service';
 
 
@@ -188,3 +188,5 @@ export const JobFormModal = ({ isOpen, onClose, onSuccess, editId }: JobFormModa
         </DialogFormLayout>
     );
 };
+
+

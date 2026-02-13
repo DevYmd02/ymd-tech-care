@@ -8,12 +8,9 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { FileText, Plus, Search, Send, CheckCircle, XCircle } from 'lucide-react';
-import { SmartTable } from '@/shared/components/ui/SmartTable';
-import { PageListLayout } from '@/shared/components/layout/PageListLayout';
-import { PRStatusBadge } from '@/shared/components/ui/StatusBadge';
-import { FilterField } from '@/shared/components/ui/FilterField';
+import { PageListLayout, SmartTable, PRStatusBadge, FilterField } from '@ui';
 import { useTableFilters, useDebounce, type TableFilters, useConfirmation } from '@/shared/hooks';
-import RFQFormModal from '../rfq/components/RFQFormModal';
+import RFQFormModal from '@/modules/procurement/pages/rfq/components/RFQFormModal';
 import { PRFormModal } from './components/PRFormModal';
 import { PRActionsCell } from './components/PRActionsCell';
 
@@ -504,3 +501,4 @@ export default function PRListPage() {
         </>
     );
 }
+

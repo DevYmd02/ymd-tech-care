@@ -4,7 +4,7 @@ import type { Control, SubmitHandler } from 'react-hook-form';
 import { z } from 'zod'; // Assumed z is available or will be installed
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Save, FileText, Plus, Trash2 } from 'lucide-react';
-import { WindowFormLayout } from '@/shared/components/layout/WindowFormLayout';
+import { WindowFormLayout } from '@ui';
 import { POService } from '@/modules/procurement/services';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
 import type { VendorDropdownItem } from '@/modules/master-data/vendor/types/vendor-types';
@@ -456,3 +456,4 @@ const WatchRowTotal = ({ control, index }: { control: Control<POFormValues>, ind
     
     return <>{total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>;
 };
+

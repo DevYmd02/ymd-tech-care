@@ -4,10 +4,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Edit2, Trash2, Database } from 'lucide-react';
 import { TaxService } from '@/modules/master-data/tax/services/tax.service';
 import { TaxCodeFormModal } from '@/modules/master-data/tax/pages/code/TaxCodeFormModal';
-import { FilterFormBuilder, type FilterFieldConfig } from '@/shared/components/FilterFormBuilder';
-import { SmartTable } from '@/shared/components/ui/SmartTable';
+import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
+import { SmartTable } from '@ui';
 import { useTableFilters } from '@/shared/hooks';
-import { ActiveStatusBadge } from '@/shared/components/ui/StatusBadge';
+import { ActiveStatusBadge } from '@ui';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import type { ColumnDef } from '@tanstack/react-table';
 import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
@@ -281,7 +281,7 @@ export default function TaxCodeList() {
                 <FilterFormBuilder
                     config={filterConfig}
                     filters={filters}
-                    onFilterChange={(name, value) => {
+                    onFilterChange={(name: string, value: string) => {
                         setFilters({ [name]: value } as Partial<typeof filters>);
                     }}
                     onSearch={() => handlePageChange(1)}
@@ -328,3 +328,6 @@ export default function TaxCodeList() {
         </div>
     );
 }
+
+
+

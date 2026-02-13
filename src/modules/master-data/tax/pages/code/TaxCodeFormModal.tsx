@@ -5,7 +5,7 @@ import { Save } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
 import { TaxService } from '@/modules/master-data/tax/services/tax.service';
-import { DialogFormLayout } from '@/shared/components/layout/DialogFormLayout';
+import { DialogFormLayout } from '@ui';
 
 interface TaxCodeFormModalProps {
     isOpen: boolean;
@@ -147,3 +147,5 @@ export function TaxCodeFormModal({ isOpen, onClose, taxId, onSuccess }: TaxCodeF
         </DialogFormLayout>
     );
 }
+
+

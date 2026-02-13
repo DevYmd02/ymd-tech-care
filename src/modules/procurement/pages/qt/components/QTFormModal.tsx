@@ -2,14 +2,13 @@ import { useState, useEffect } from 'react';
 import { FileText, Plus, Trash2, Search, MoreHorizontal, FileBox } from 'lucide-react';
 import { useWatch } from 'react-hook-form';
 
-import { WindowFormLayout } from '@/shared/components/layout/WindowFormLayout';
-import { SystemAlert } from '@/shared/components/ui/SystemAlert';
+import { WindowFormLayout, SystemAlert } from '@ui';
 import { MasterDataService } from '@/core/api/master-data.service';
 import type { UnitListItem } from '@/modules/master-data/types/master-data-types';
-import { ProductSearchModal } from '@/shared/components/ProductSearchModal';
+import { ProductSearchModal } from '@/modules/inventory/components/selector/ProductSearchModal';
 import type { ProductLookup } from '@/modules/master-data/inventory/mocks/products';
 import type { RFQHeader } from '@/modules/procurement/types/rfq-types';
-import { useQTForm } from '../hooks/useQTForm';
+import { useQTForm } from '@/modules/procurement/pages/qt/hooks/useQTForm';
 
 interface Props {
   isOpen: boolean;
@@ -318,3 +317,5 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ }
 };
 
 export default QTFormModal;
+
+

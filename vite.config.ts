@@ -17,9 +17,9 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@components': path.resolve(__dirname, './src/components'),
-      '@shared': path.resolve(__dirname, './src/components/shared'),
-      '@layout': path.resolve(__dirname, './src/shared/components/layout'),
+      '@components': path.resolve(__dirname, './src/shared/components'),
+      '@shared': path.resolve(__dirname, './src/shared'),
+      '@layout': path.resolve(__dirname, './src/shared/components/ui/layout'),
       '@system': path.resolve(__dirname, './src/shared/components/system'),
       '@ui': path.resolve(__dirname, './src/shared/components/ui'),
       '@services': path.resolve(__dirname, './src/services'),

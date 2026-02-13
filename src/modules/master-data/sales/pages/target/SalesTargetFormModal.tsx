@@ -10,7 +10,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Target, Save, X } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
-import { DialogFormLayout } from '@/shared/components/layout/DialogFormLayout';
+import { DialogFormLayout } from '@ui';
 import { SalesTargetService } from '@/modules/master-data/company/services/company.service';
 import type { SalesTargetFormData } from '@/modules/master-data/types/master-data-types';
 
@@ -262,3 +262,4 @@ export function SalesTargetFormModal({ isOpen, onClose, editId, onSuccess }: Pro
         </DialogFormLayout>
     );
 }
+

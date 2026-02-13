@@ -1,6 +1,6 @@
 import React from 'react';
 import { Save, Printer, FilePlus, X, CheckCircle, Copy, Search, Trash2 } from 'lucide-react';
-import { ActionButton } from '@/shared/components/ui/ActionButton';
+import { ActionButton } from '@ui';
 
 interface VendorFooterProps {
     onSave: () => void;
@@ -20,3 +20,5 @@ export const VendorFooter: React.FC<VendorFooterProps> = ({ onSave, onClose, isS
         <ActionButton icon={<X size={14} />} label="Close" onClick={onClose} variant="danger" />
     </div>
 );
+
+

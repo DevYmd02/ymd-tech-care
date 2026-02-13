@@ -280,6 +280,7 @@ export interface VendorSearchItem {
     payment_term_days?: number;
     vat_registered?: boolean;
     is_active?: boolean;
+    status?: VendorStatus;
 }
 
 // ====================================================================================

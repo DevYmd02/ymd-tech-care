@@ -14,8 +14,8 @@ import { SectionFormModal } from './SectionFormModal';
 import { SectionService } from '@/modules/master-data/company/services/company.service';
 import type { SectionListItem } from '@/modules/master-data/types/master-data-types';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
-import FilterFormBuilder, { type FilterFieldConfig } from '@/shared/components/FilterFormBuilder';
-import SmartTable from '@/shared/components/ui/SmartTable';
+import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
+import { SmartTable } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
 
 // ====================================================================================
@@ -198,7 +198,7 @@ export default function SectionList() {
                 <FilterFormBuilder
                     config={filterConfig}
                     filters={filters}
-                    onFilterChange={(name, value) => {
+                    onFilterChange={(name: string, value: string) => {
                         setFilters({ [name]: value } as Partial<typeof filters>);
                     }}
                     onSearch={() => handlePageChange(1)}
@@ -245,3 +245,6 @@ export default function SectionList() {
         </div>
     );
 }
+
+
+

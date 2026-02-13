@@ -12,6 +12,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { X, Check, Building2 } from 'lucide-react';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
+import { VendorStatusBadge } from '@/modules/master-data/vendor/components/VendorStatusBadge';
 import type { 
     VendorListItem, 
     VendorSearchItem 
@@ -37,6 +38,7 @@ const transformVendor = (v: VendorListItem): VendorSearchItem => ({
     payment_term_days: v.payment_term_days,
     vat_registered: v.vat_registered,
     is_active: v.is_active ?? v.status === 'ACTIVE',
+    status: v.status,
 });
 
 // ====================================================================================
@@ -216,6 +218,9 @@ export const VendorSearchModalBase: React.FC<VendorSearchModalBaseProps> = ({
                                         เลือก
                                     </th>
                                     <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase w-28">
+                                        สถานะ
+                                    </th>
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase w-28">
                                         รหัสผู้ขาย
                                     </th>
                                     <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">
@@ -224,73 +229,65 @@ export const VendorSearchModalBase: React.FC<VendorSearchModalBaseProps> = ({
                                     <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase w-36">
                                         เลขผู้เสียภาษี
                                     </th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase w-32">
-                                        เบอร์โทร
-                                    </th>
                                     <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">
                                         ที่อยู่
-                                    </th>
-                                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase w-20">
-                                        VAT
                                     </th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                                 {filteredData.length > 0 ? (
-                                    filteredData.map((vendor) => (
-                                        <tr 
-                                            key={vendor.code} 
-                                            className="hover:bg-purple-50 dark:hover:bg-gray-700/50 transition-colors group"
-                                        >
-                                            <td className="px-4 py-3 text-center">
-                                                <button
-                                                    onClick={() => handleSelect(vendor)}
-                                                    className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded shadow-sm transition-colors flex items-center gap-1 mx-auto"
-                                                >
-                                                    <Check size={14} />
-                                                    เลือก
-                                                </button>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <span className="font-bold text-purple-600 dark:text-purple-400">
-                                                    {vendor.code}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <div className="font-medium text-gray-800 dark:text-gray-200">
-                                                    {vendor.name}
-                                                </div>
-                                                {vendor.name_en && (
-                                                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                                                        {vendor.name_en}
+                                    filteredData.map((vendor) => {
+                                        const isSelectable = vendor.status === 'ACTIVE';
+                                        return (
+                                            <tr 
+                                                key={vendor.code} 
+                                                className={`transition-colors group ${!isSelectable ? 'bg-gray-50 dark:bg-gray-800/50 opacity-60' : 'hover:bg-purple-50 dark:hover:bg-gray-700/50'}`}
+                                            >
+                                                <td className="px-4 py-3 text-center">
+                                                    <button
+                                                        onClick={() => handleSelect(vendor)}
+                                                        disabled={!isSelectable}
+                                                        title={!isSelectable ? `ไม่สามารถเลือกได้ (${vendor.status})` : 'เลือกผู้ขาย'}
+                                                        className={`px-3 py-1.5 text-xs font-bold rounded shadow-sm transition-colors flex items-center gap-1 mx-auto ${
+                                                            isSelectable 
+                                                            ? 'bg-purple-600 hover:bg-purple-700 text-white' 
+                                                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                        }`}
+                                                    >
+                                                        <Check size={14} />
+                                                        เลือก
+                                                    </button>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    {vendor.status && <VendorStatusBadge status={vendor.status} />}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <span className="font-bold text-purple-600 dark:text-purple-400">
+                                                        {vendor.code}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <div className="font-medium text-gray-800 dark:text-gray-200">
+                                                        {vendor.name}
                                                     </div>
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 font-mono">
-                                                {vendor.taxId || '-'}
-                                            </td>
-                                            <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                                                {vendor.phone || '-'}
-                                            </td>
-                                            <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-500 truncate max-w-[200px]">
-                                                {vendor.address || '-'}
-                                            </td>
-                                            <td className="px-4 py-3 text-center">
-                                                {vendor.vat_registered ? (
-                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
-                                                        VAT
-                                                    </span>
-                                                ) : (
-                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">
-                                                        -
-                                                    </span>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))
+                                                    {vendor.name_en && (
+                                                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                            {vendor.name_en}
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 font-mono">
+                                                    {vendor.taxId || '-'}
+                                                </td>
+                                                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-500 truncate max-w-[200px]">
+                                                    {vendor.address || '-'}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
                                 ) : (
                                     <tr>
-                                        <td colSpan={7} className="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
+                                        <td colSpan={6} className="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
                                             <Building2 size={48} className="mx-auto mb-3 opacity-30" />
                                             <p className="text-lg font-medium">ไม่พบผู้ขายที่ค้นหา</p>
                                             <p className="text-sm">ลองเปลี่ยนคำค้นหาหรือเพิ่มผู้ขายใหม่ใน Master Data</p>

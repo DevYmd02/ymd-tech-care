@@ -13,10 +13,10 @@ import {
 import { BranchFormModal } from './BranchFormModal';
 import { BranchService } from '@/core/api/branch.service';
 import type { BranchListItem } from '@/modules/master-data/types/master-data-types';
-import { ActiveStatusBadge } from '@ui/StatusBadge';
+import { ActiveStatusBadge } from '@ui';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
-import FilterFormBuilder, { type FilterFieldConfig } from '@/shared/components/FilterFormBuilder';
-import SmartTable from '@/shared/components/ui/SmartTable';
+import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
+import { SmartTable } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
 
 // ====================================================================================
@@ -204,7 +204,7 @@ export default function BranchList() {
                 <FilterFormBuilder
                     config={filterConfig}
                     filters={filters}
-                    onFilterChange={(name, value) => setFilters({ [name]: value })}
+                    onFilterChange={(name: string, value: string) => setFilters({ [name]: value })}
                     onSearch={() => handlePageChange(1)} // Reset to page 1 on search
                     onReset={resetFilters}
                     onCreate={handleCreateNew}
@@ -247,3 +247,6 @@ export default function BranchList() {
         </div>
     );
 }
+
+
+

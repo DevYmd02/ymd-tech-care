@@ -34,6 +34,7 @@ export interface WarehouseListItem {
     warehouse_id: string;
     warehouse_code: string;
     warehouse_name: string;
+    branch_id?: string;
     branch_name?: string;
     is_active: boolean;
     created_at: string;

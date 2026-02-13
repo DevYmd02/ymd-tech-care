@@ -10,7 +10,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Save, X, UsersRound } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
-import { DialogFormLayout } from '@/shared/components/layout/DialogFormLayout';
+import { DialogFormLayout } from '@ui';
 import { EmployeeGroupService } from '@/modules/master-data/company/services/company.service';
 
 interface EmployeeGroupFormModalProps {
@@ -204,3 +204,5 @@ export const EmployeeGroupFormModal = ({ isOpen, onClose, onSuccess, editId }: E
         </DialogFormLayout>
     );
 };
+
+

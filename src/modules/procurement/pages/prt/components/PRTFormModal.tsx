@@ -4,7 +4,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import type { Control, Resolver, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Save, Search, Package, Coins } from 'lucide-react';
-import { WindowFormLayout } from '@/shared/components/layout/WindowFormLayout';
+import { WindowFormLayout } from '@ui';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
 import type { VendorDropdownItem } from '@/modules/master-data/vendor/types/vendor-types';
 import { useQuery } from '@tanstack/react-query';
@@ -199,8 +199,8 @@ export default function PRTFormModal({ isOpen, onClose, onSuccess, initialValues
         }
     }, [isOpen, reset, initialValues]);
 
-    const onSubmit: SubmitHandler<PrtFormValues> = async (data) => {
-        console.log('Submit PRT:', data);
+    const onSubmit: SubmitHandler<PrtFormValues> = async () => {
+
         alert('บันทึกใบคืนสินค้าเรียบร้อยแล้ว');
         if (onSuccess) onSuccess();
         onClose();
@@ -435,5 +435,6 @@ export default function PRTFormModal({ isOpen, onClose, onSuccess, initialValues
         </WindowFormLayout>
     );
 }
+
 
 

@@ -21,7 +21,7 @@ import {
     ChevronsLeft,
     ChevronsRight
 } from 'lucide-react';
-import { VendorStatusBadge } from '@/shared/components/ui/StatusBadge';
+import { VendorStatusBadge } from '@ui';
 import { VendorFormModal } from './VendorFormModal';
 import { styles } from '@/shared/constants/styles';
 
@@ -418,3 +418,5 @@ export default function VendorDashboard() {
         </div>
     );
 }
+
+

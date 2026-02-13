@@ -10,7 +10,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Tag, Save, X } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
-import { DialogFormLayout } from '@/shared/components/layout/DialogFormLayout';
+import { DialogFormLayout } from '@ui';
 import { logger } from '@/shared/utils/logger';
 import { VendorTypeService } from '../../services/vendor-type.service';
 
@@ -224,3 +224,4 @@ export function VendorTypeFormModal({ isOpen, onClose, editId, onSuccess }: Prop
         </DialogFormLayout>
     );
 }
+

@@ -4,10 +4,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Edit2, Trash2, Database } from 'lucide-react';
 import { TaxService } from '@/modules/master-data/tax/services/tax.service';
 import { TaxGroupFormModal } from '@/modules/master-data/tax/pages/group/TaxGroupFormModal';
-import { FilterFormBuilder, type FilterFieldConfig } from '@/shared/components/FilterFormBuilder';
-import { SmartTable } from '@/shared/components/ui/SmartTable';
+import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
+import { SmartTable } from '@ui';
 import { useTableFilters } from '@/shared/hooks';
-import { ActiveStatusBadge } from '@/shared/components/ui/StatusBadge';
+import { ActiveStatusBadge } from '@ui';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import type { ColumnDef } from '@tanstack/react-table';
 import type { TaxGroup } from '@/modules/master-data/tax/types/tax-types';
@@ -22,7 +22,7 @@ const TAX_GROUP_TYPE_OPTIONS = [
     { value: 'ALL', label: 'ทั้งหมด' },
     { value: 'TAX_CODE', label: 'รหัสภาษี' },
     { value: 'LUMP_SUM', label: 'เหมาภาษี' },
-    { value: 'NONE', label: 'ไม่คิดอะไร' },
+    { value: 'NONE', label: 'ไม่คิดภาษี' },
 ];
 
 export default function TaxGroupList() {
@@ -185,7 +185,7 @@ export default function TaxGroupList() {
                         colorClass = 'bg-purple-100 text-purple-800';
                         break;
                     case 'NONE': 
-                        label = 'ไม่คิดอะไร'; 
+                        label = 'ไม่คิดภาษี'; 
                         colorClass = 'bg-gray-100 text-gray-800';
                         break;
                 }
@@ -261,7 +261,7 @@ export default function TaxGroupList() {
                 <FilterFormBuilder
                     config={filterConfig}
                     filters={filters}
-                    onFilterChange={(name, value) => {
+                    onFilterChange={(name: string, value: string) => {
                         setFilters({ [name]: value } as Partial<typeof filters>);
                     }}
                     onSearch={() => handlePageChange(1)}
@@ -308,3 +308,6 @@ export default function TaxGroupList() {
         </div>
     );
 }
+
+
+

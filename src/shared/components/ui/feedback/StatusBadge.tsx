@@ -43,7 +43,7 @@ export interface StatusBadgeProps {
 // MODULE-BASED STATUS CONFIGURATION
 // ====================================================================================
 
-interface StatusConfig {
+export interface StatusConfig {
   label: string;
   colorClass: string;
 }

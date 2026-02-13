@@ -14,7 +14,7 @@ import {
     ResponsiveContainer,
     Legend,
 } from 'recharts';
-import { Card } from '@/shared/components/ui/Card';
+import { Card } from '@ui';
 
 export interface VendorPieItem {
     name: string;
@@ -148,3 +148,5 @@ export const ProcurementCharts: React.FC<ProcurementChartsProps> = ({
 };
 
 export default ProcurementCharts;
+
+

@@ -3,10 +3,9 @@ import { useMemo, useState } from 'react';
 import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/react-query';
 import { FileText, Eye, Package, Database } from 'lucide-react'; // Added Database as placeholder icon
 import { formatThaiDate } from '@/shared/utils/dateUtils';
-import { FilterFormBuilder } from '@/shared/components/FilterFormBuilder';
-import { SmartTable } from '@/shared/components/ui/SmartTable';
-import { PageListLayout } from '@/shared/components/layout/PageListLayout';
-import type { FilterFieldConfig } from '@/shared/components/FilterFormBuilder';
+import { FilterFormBuilder } from '@ui';
+import { PageListLayout, SmartTable } from '@ui';
+import type { FilterFieldConfig } from '@ui';
 import { useTableFilters, type TableFilters } from '@/shared/hooks';
 import { PrtService } from '@/modules/procurement/services/prt.service'; // Fixed import path
 import type { PRTListParams, PRTStatus, PurchaseReturn } from '@/modules/procurement/types/prt/prt-types';
@@ -301,3 +300,4 @@ export default function PRTListPage() {
         </PageListLayout>
     );
 }
+

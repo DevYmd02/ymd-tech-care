@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import api from '@/core/api/api';
-import { PRService } from '../pr.service';
+import { PRService } from '@/modules/procurement/services/pr.service';
 import type { CreatePRPayload } from '@/modules/procurement/types/pr-types';
 
 // Mock the API Client and USE_MOCK flag

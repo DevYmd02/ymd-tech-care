@@ -9,9 +9,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import type { ItemListItem } from '@/modules/master-data/types/master-data-types';
 import { ItemMasterFormModal } from './ItemMasterFormModal';
-import { ActiveStatusBadge } from '@ui/StatusBadge';
-import { FilterFormBuilder, type FilterFieldConfig } from '@/shared/components/FilterFormBuilder';
-import { SmartTable } from '@/shared/components/ui/SmartTable';
+import { ActiveStatusBadge } from '@ui';
+import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
+import { SmartTable } from '@ui';
 import { useTableFilters } from '@/shared/hooks';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
@@ -287,7 +287,7 @@ export default function ItemMasterList() {
                 <FilterFormBuilder
                     config={filterConfig}
                     filters={filters}
-                    onFilterChange={(name, value) => {
+                    onFilterChange={(name: string, value: string) => {
                         setFilters({ [name]: value } as Partial<typeof filters>);
                     }}
                     onSearch={() => handlePageChange(1)}
@@ -334,3 +334,6 @@ export default function ItemMasterList() {
         </div>
     );
 }
+
+
+

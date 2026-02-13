@@ -13,7 +13,7 @@
 
 import React, { type ReactNode } from 'react';
 import { Search, X, Plus } from 'lucide-react';
-import { FilterField, type FilterFieldType, type SelectOption } from '@ui/FilterField';
+import { FilterField, type FilterFieldType, type SelectOption } from '../inputs/FilterField';
 
 // ====================================================================================
 // TYPES
@@ -120,7 +120,7 @@ const buttonColors = {
  * <FilterFormBuilder
  *   config={filterConfig}
  *   filters={filters}
- *   onFilterChange={(name, value) => handleFilterChange(name, value)}
+ *   onFilterChange={(name: string, value: string) => handleFilterChange(name, value)}
  *   onSearch={handleSearch}
  *   onReset={resetFilters}
  *   accentColor="blue"
@@ -329,3 +329,4 @@ export function FilterFormBuilder<
 }
 
 export default FilterFormBuilder;
+

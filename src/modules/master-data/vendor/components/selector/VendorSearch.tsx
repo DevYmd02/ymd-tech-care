@@ -2,10 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Search, Loader2, X, Building2 } from 'lucide-react';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
 import type { VendorMaster } from '@/modules/master-data/vendor/types/vendor-types';
+import type { VendorSelection } from '@/modules/procurement/types/pr-types';
 import { VendorSearchModal } from './VendorSearchModal';
 
 interface VendorSearchProps {
-  onVendorSelect: (vendor: VendorMaster | null) => void;
+  onVendorSelect: (vendor: VendorSelection | null) => void;
   selectedVendorId?: string;
   selectedVendorName?: string;
   label?: string;
@@ -79,10 +80,25 @@ export const VendorSearch: React.FC<VendorSearchProps> = ({
   };
 
   const handleSelect = (vendor: VendorMaster) => {
+    // Safety check: Prevent selecting non-active vendors
+    if (vendor.status !== 'ACTIVE') {
+      console.warn('[VendorSearch] Cannot select non-active vendor:', vendor);
+      return;
+    }
+
     setQuery(vendor.vendor_name);
     setResults([]);
     setIsOpen(false);
-    onVendorSelect(vendor);
+    
+    // Transform to lightweight VendorSelection
+    const selection: VendorSelection = {
+        vendor_id: vendor.vendor_id,
+        vendor_code: vendor.vendor_code,
+        vendor_name: vendor.vendor_name,
+        tax_id: vendor.tax_id,
+        payment_term_days: vendor.payment_term_days
+    };
+    onVendorSelect(selection);
   };
 
   const handleClear = () => {
@@ -178,14 +194,21 @@ export const VendorSearch: React.FC<VendorSearchProps> = ({
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSelect={(vendor) => {
+          // Safety Check from Modal
+          if (vendor.status && vendor.status !== 'ACTIVE') {
+             return;
+          }
+
           // Transform search item back to minimal vendor master if needed
           // or just pass it as is if PRHeader handles it
-          onVendorSelect({
+          const selection: VendorSelection = {
             vendor_id: vendor.vendor_id,
             vendor_code: vendor.code,
             vendor_name: vendor.name,
             tax_id: vendor.taxId,
-          } as VendorMaster);
+            payment_term_days: vendor.payment_term_days
+          };
+          onVendorSelect(selection);
           setIsModalOpen(false);
         }}
       />

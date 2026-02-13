@@ -9,11 +9,9 @@ import { useState, useMemo } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { Scale, FileText, Eye } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
-import { FilterFormBuilder } from '@/shared/components/FilterFormBuilder';
-import { SmartTable } from '@/shared/components/ui/SmartTable';
-import { PageListLayout } from '@/shared/components/layout/PageListLayout';
-import { QCStatusBadge } from '@/shared/components/ui/StatusBadge';
-import type { FilterFieldConfig } from '@/shared/components/FilterFormBuilder';
+import { FilterFormBuilder } from '@/shared/components/ui/layout/FilterFormBuilder';
+import { PageListLayout, SmartTable, QCStatusBadge } from '@ui';
+import type { FilterFieldConfig } from '@ui';
 import { useTableFilters, type TableFilters } from '@/shared/hooks';
 import { QCFormModal } from './components';
 import { createColumnHelper } from '@tanstack/react-table';
@@ -24,7 +22,7 @@ import { QCService } from '@/modules/procurement/services';
 import type { QCListParams } from '@/modules/procurement/services/qc.service';
 import type { QCStatus, QCListItem } from '@/modules/procurement/types/qc-types';
 import type { POFormData } from '@/modules/procurement/types/po-types';
-import { POFormModal } from '../po/components';
+import { POFormModal } from '@/modules/procurement/pages/po/components';
 
 // ====================================================================================
 // STATUS OPTIONS
@@ -404,3 +402,5 @@ export default function QCListPage() {
         </>
     );
 }
+
+

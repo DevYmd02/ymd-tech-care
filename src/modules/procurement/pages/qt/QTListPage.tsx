@@ -10,10 +10,7 @@ import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { FileText, Plus, Eye, Edit, RefreshCw, Search } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 // import { FilterFormBuilder } from '@shared';
-import { FilterField } from '@/shared/components/ui/FilterField';
-import { SmartTable } from '@/shared/components/ui/SmartTable';
-import { PageListLayout } from '@/shared/components/layout/PageListLayout';
-import { QTStatusBadge } from '@/shared/components/ui/StatusBadge';
+import { PageListLayout, FilterField, SmartTable, QTStatusBadge } from '@ui';
 // import type { FilterFieldConfig } from '@shared/FilterFormBuilder';
 import { useTableFilters, type TableFilters } from '@/shared/hooks';
 import type { ColumnDef } from '@tanstack/react-table';
@@ -23,7 +20,7 @@ import { createColumnHelper } from '@tanstack/react-table';
 import { QTService, type QTListParams } from '@/modules/procurement/services/qt.service';
 import type { QTListItem, QTStatus } from '@/modules/procurement/types/qt-types';
 import { QTFormModal } from './components';
-import { QCFormModal } from '../qc/components';
+import { QCFormModal } from '@/modules/procurement/pages/qc/components';
 
 // ====================================================================================
 // STATUS OPTIONS
