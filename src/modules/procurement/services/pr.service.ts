@@ -6,6 +6,7 @@ import type {
   PRHeader, 
   PRFormData, 
   CreatePRPayload,
+  PRStatus,
 } from '@/modules/procurement/types/pr-types';
 
 export type { PRListParams, PRListResponse, ConvertPRRequest };
@@ -261,10 +262,16 @@ export const PRService = {
 
   submit: async (prId: string): Promise<{ success: boolean; message: string; pr_no?: string }> => {
     if (USE_MOCK) {
-        const pr = MOCK_PRS.find(p => p.pr_id === prId);
-        if (pr) {
-            pr.status = 'PENDING';
-            return { success: true, message: 'Submitted', pr_no: pr.pr_no };
+        logger.info(`🎭 [Mock Mode] Submitting PR: ${prId}`);
+        const index = MOCK_PRS.findIndex(p => p.pr_id === prId);
+        if (index > -1) {
+            const updatedPR = { 
+                ...MOCK_PRS[index], 
+                status: 'PENDING' as PRStatus,
+                updated_at: new Date().toISOString()
+            };
+            MOCK_PRS[index] = updatedPR;
+            return { success: true, message: 'Submitted', pr_no: updatedPR.pr_no };
         }
         return { success: false, message: 'PR not found' };
     }
@@ -279,9 +286,14 @@ export const PRService = {
 
   approve: async (prId: string): Promise<boolean> => {
     if (USE_MOCK) {
-        const pr = MOCK_PRS.find(p => p.pr_id === prId);
-        if (pr) {
-             pr.status = 'APPROVED';
+        logger.info(`🎭 [Mock Mode] Approving PR: ${prId}`);
+        const index = MOCK_PRS.findIndex(p => p.pr_id === prId);
+        if (index > -1) {
+             MOCK_PRS[index] = { 
+                 ...MOCK_PRS[index], 
+                 status: 'APPROVED' as PRStatus,
+                 updated_at: new Date().toISOString()
+             };
              return true;
         }
         return false; 
@@ -298,12 +310,20 @@ export const PRService = {
 
   cancel: async (prId: string, remark?: string): Promise<{ success: boolean; message: string }> => {
     if (USE_MOCK) {
-        const pr = MOCK_PRS.find(p => p.pr_id === prId);
-        if (pr) {
-             pr.status = 'CANCELLED';
-             pr.remarks = remark;
+        logger.info(`🎭 [Mock Mode] Cancelling PR: ${prId}`, { remark });
+        const index = MOCK_PRS.findIndex(p => p.pr_id === prId);
+        if (index > -1) {
+             MOCK_PRS[index] = { 
+                 ...MOCK_PRS[index], 
+                 status: 'CANCELLED' as PRStatus,
+                 cancelflag: 'Y',
+                 remarks: remark || MOCK_PRS[index].remarks,
+                 updated_at: new Date().toISOString()
+             };
+             logger.info(`🎭 [Mock Mode] PR ${prId} cancelled successfully`);
              return { success: true, message: 'Cancelled' };
         }
+        logger.warn(`🎭 [Mock Mode] PR ${prId} not found for cancellation`);
         return { success: false, message: 'Not found' };
     }
 
@@ -348,8 +368,16 @@ export const PRService = {
 
   reject: async (prId: string, reason: string): Promise<void> => {
     if (USE_MOCK) {
-        const pr = MOCK_PRS.find(p => p.pr_id === prId);
-        if (pr) pr.status = 'REJECTED';
+        logger.info(`🎭 [Mock Mode] Rejecting PR: ${prId}`, { reason });
+        const index = MOCK_PRS.findIndex(p => p.pr_id === prId);
+        if (index > -1) {
+            MOCK_PRS[index] = { 
+                ...MOCK_PRS[index], 
+                status: 'REJECTED' as PRStatus,
+                remarks: reason,
+                updated_at: new Date().toISOString()
+            };
+        }
         return;
     }
 

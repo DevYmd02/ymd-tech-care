@@ -1,11 +1,11 @@
 import React from 'react';
-import { useFormContext, useFieldArray } from 'react-hook-form';
 import { FileBox, Eraser, Plus, Trash2, Search } from 'lucide-react';
-
-import type { ExtendedLine } from '@/modules/procurement/hooks/usePRForm';
+import type { FieldArrayWithId } from 'react-hook-form';
 import type { PRFormData } from '@/modules/procurement/types/pr-types';
+import type { ExtendedLine } from '@/modules/procurement/hooks/usePRForm';
 
 interface PRFormLinesProps {
+    lines: FieldArrayWithId<PRFormData, "lines", "id">[];
     updateLine: (index: number, field: keyof ExtendedLine, value: string | number | undefined) => void;
     removeLine: (index: number) => void;
     clearLine: (index: number) => void;
@@ -15,6 +15,7 @@ interface PRFormLinesProps {
 }
 
 export const PRFormLines: React.FC<PRFormLinesProps> = React.memo(({
+    lines,
     updateLine,
     removeLine,
     clearLine,
@@ -22,12 +23,6 @@ export const PRFormLines: React.FC<PRFormLinesProps> = React.memo(({
     handleClearLines,
     openProductSearch
 }) => {
-    const { control } = useFormContext<PRFormData>();
-    const { fields } = useFieldArray({
-        control,
-        name: 'lines'
-    });
-
     const tableInputClass = 'w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 !rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white dark:focus:bg-gray-700 dark:text-white shadow-sm transition-all';
     const tdBaseClass = 'p-1 border-r border-gray-200 dark:border-gray-700';
 
@@ -70,12 +65,11 @@ export const PRFormLines: React.FC<PRFormLinesProps> = React.memo(({
                         </tr>
                     </thead>
                     <tbody>
-                        {fields.map((field, index) => {
-                            const line = field as unknown as ExtendedLine;
+                        {lines.map((line, index) => {
                             const lineDiscount = line.discount || 0;
                             const lineTotal = ((line.quantity || 0) * (line.est_unit_price || 0)) - lineDiscount;
                             return (
-                                <tr key={field.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-800 transition-colors">
+                                <tr key={line.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-800 transition-colors">
                                     <td className="p-1 text-center bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold border-r border-gray-300 dark:border-gray-600 sticky left-0 z-10">{index + 1}</td>
                                     <td className={tdBaseClass}><input value={line.item_code} onChange={(e) => updateLine(index, 'item_code', e.target.value)} className={`${tableInputClass} text-center`} /></td>
                                     <td className={tdBaseClass}><input value={line.item_name} onChange={(e) => updateLine(index, 'item_name', e.target.value)} className={tableInputClass} /></td>

@@ -5,7 +5,7 @@ import { PRHeader } from './PRHeader';
 import { PRFormLines } from './PRFormLines';
 import { PRFormSummary } from './PRFormSummary';
 import { ProductSearchModal } from './ProductSearchModal';
-import { WindowFormLayout, SystemAlert } from '@ui';
+import { WindowFormLayout, SystemAlert, CollapsibleSection } from '@ui';
 import { usePRForm } from '@/modules/procurement/hooks/usePRForm';
 
 interface Props {
@@ -17,7 +17,7 @@ interface Props {
 
 export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess }) => {
   const {
-    isEditMode, isProductModalOpen, setIsProductModalOpen, searchTerm, setSearchTerm,
+    isEditMode, lines, isProductModalOpen, setIsProductModalOpen, searchTerm, setSearchTerm,
     handleSubmit, isSubmitting, isActionLoading,
     alertState, setAlertState, products, costCenters, projects, isSearchingProducts,
     addLine, removeLine, clearLine, updateLine, handleClearLines,
@@ -90,24 +90,24 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
             <div className={cardClass}>
                 <div className="w-full overflow-x-auto border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900">
                     <table className="w-full min-w-[800px] text-xs">
-                    <thead className="bg-blue-600 text-white">
+                    <thead className="bg-blue-600 text-white font-medium">
                         <tr>
-                        <th className="px-2 py-1.5 text-left border-r border-blue-500 w-48">วันที่กำหนดส่ง</th>
-                        <th className="px-2 py-1.5 text-left border-r border-blue-500 w-24">เครดิต (วัน)</th>
-                        <th className="px-2 py-1.5 text-left border-r border-blue-500">Vendor Quote No.</th>
-                        <th className="px-2 py-1.5 text-left border-r border-blue-500">ขนส่งโดย <span className="text-red-500">*</span></th>
-                        <th className="px-2 py-1.5 text-left">ผู้จัดทำ</th>
+                        <th className="px-2 py-1.5 text-left border-r border-blue-500 w-48 font-semibold">วันที่กำหนดส่ง</th>
+                        <th className="px-2 py-1.5 text-left border-r border-blue-500 w-24 font-semibold">เครดิต (วัน)</th>
+                        <th className="px-2 py-1.5 text-left border-r border-blue-500 font-semibold">Vendor Quote No.</th>
+                        <th className="px-2 py-1.5 text-left border-r border-blue-500 font-semibold">ขนส่งโดย <span className="text-red-500">*</span></th>
+                        <th className="px-2 py-1.5 text-left font-semibold">ผู้จัดทำ</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr className="bg-white dark:bg-gray-800">
-                        <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700"><input type="date" {...register('delivery_date')} className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded px-2 py-1" /></td>
+                        <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700"><input type="date" {...register('delivery_date')} className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded px-2 py-0.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" /></td>
                         <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700 text-center text-gray-900 dark:text-white">{watch('credit_days')}</td>
-                        <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700"><input {...register('vendor_quote_no')} placeholder="Quote No" className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded px-2 py-1" /></td>
+                        <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700"><input {...register('vendor_quote_no')} placeholder="Quote No" className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded px-2 py-0.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" /></td>
                         <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700">
                             <select 
                             {...register('shipping_method')}
-                            className={`w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white border rounded px-2 py-1 focus:outline-none ${errors?.shipping_method ? 'border-red-500 ring-1 ring-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500'}`}
+                            className={`w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white border rounded px-2 py-0.5 focus:outline-none ${errors?.shipping_method ? 'border-red-500 ring-1 ring-red-500 focus:border-red-500' : 'border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500'}`}
                             >
                             <option value="">เลือก</option>
                             <option value="รถยนต์">รถยนต์</option>
@@ -122,72 +122,70 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                 </div>
             </div>
 
-            <div className={`p-4 ${cardClass}`}>
-                <div className="space-y-4">
-                    <div className="flex items-center mb-2">
-                        <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                            <Coins size={16} className="text-yellow-500" /> 
-                            ข้อมูลสกุลเงินและอัตราแลกเปลี่ยน (Currency & Rate)
-                        </h3>
+            <CollapsibleSection 
+              title="ข้อมูลสกุลเงินและอัตราแลกเปลี่ยน (Currency & Rate)" 
+              defaultOpen={true}
+              icon={<Coins size={16} />}
+              accentColor="amber"
+              className="mt-1"
+            >
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+                    <div>
+                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">วันที่อัตราแลกเปลี่ยน</label>
+                        <input 
+                            type="date" 
+                            {...register('rate_date')}
+                            className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
+                        />
                     </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
-                        <div>
-                            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">วันที่อัตราแลกเปลี่ยน</label>
-                            <input 
-                                type="date" 
-                                {...register('rate_date')}
-                                className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                            />
+                    <div>
+                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">รหัสสกุลเงิน</label>
+                        <select 
+                            {...register('currency_id')}
+                            className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="">เลือกสกุลเงิน</option>
+                            <option value="THB">THB - บาท</option>
+                            <option value="USD">USD - ดอลลาร์สหรัฐ</option>
+                            <option value="EUR">EUR - ยูโร</option>
+                            <option value="JPY">JPY - เยน</option>
+                            <option value="CNY">CNY - หยวน</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">ไปยังสกุลเงิน (Target)</label>
+                        <select 
+                            {...register('currency_type_id')}
+                            className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="">เลือกสกุลเงิน</option>
+                            <option value="THB">THB - บาท</option>
+                            <option value="USD">USD - ดอลลาร์สหรัฐ</option>
+                            <option value="EUR">EUR - ยูโร</option>
+                            <option value="JPY">JPY - เยน</option>
+                            <option value="CNY">CNY - หยวน</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">อัตราแลกเปลี่ยน</label>
+                        <input 
+                            type="number"
+                            step="0.0001"
+                            {...register('exchange_rate', { valueAsNumber: true })}
+                            readOnly={watch('currency_id') === 'THB'}
+                            className={`w-full h-9 px-3 text-sm text-right border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition-colors ${watch('currency_id') === 'THB' ? 'bg-gray-50 dark:bg-gray-800/50 italic text-gray-500' : 'bg-white dark:bg-gray-800 font-semibold'}`}
+                        />
+                        {watch('currency_id') && watch('currency_id') !== 'THB' && (
+                        <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 text-right font-medium">
+                            1 {watch('currency_id')} ≈ {Number(watch('exchange_rate') || 0).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })} THB
                         </div>
-                        <div>
-                            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">รหัสสกุลเงิน</label>
-                            <select 
-                                {...register('currency_id')}
-                                className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                            >
-                                <option value="">เลือกสกุลเงิน</option>
-                                <option value="THB">THB - บาท</option>
-                                <option value="USD">USD - ดอลลาร์สหรัฐ</option>
-                                <option value="EUR">EUR - ยูโร</option>
-                                <option value="JPY">JPY - เยน</option>
-                                <option value="CNY">CNY - หยวน</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">ไปยังสกุลเงิน (Target)</label>
-                            <select 
-                                {...register('currency_type_id')}
-                                className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                            >
-                                <option value="">เลือกสกุลเงิน</option>
-                                <option value="THB">THB - บาท</option>
-                                <option value="USD">USD - ดอลลาร์สหรัฐ</option>
-                                <option value="EUR">EUR - ยูโร</option>
-                                <option value="JPY">JPY - เยน</option>
-                                <option value="CNY">CNY - หยวน</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">อัตราแลกเปลี่ยน</label>
-                            <input 
-                                type="number"
-                                step="0.0001"
-                                {...register('exchange_rate', { valueAsNumber: true })}
-                                readOnly={watch('currency_id') === 'THB'}
-                                className={`w-full h-9 px-3 text-sm text-right border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${watch('currency_id') === 'THB' ? 'bg-gray-100 dark:bg-gray-800 italic' : 'bg-white dark:bg-gray-800'}`}
-                            />
-                            {watch('currency_id') && watch('currency_id') !== 'THB' && (
-                            <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 text-right">
-                                1 {watch('currency_id')} ≈ {Number(watch('exchange_rate') || 0).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })} THB
-                            </div>
-                            )}
-                        </div>
+                        )}
                     </div>
                 </div>
-            </div>
+            </CollapsibleSection>
 
             <PRFormLines 
+                lines={lines}
                 updateLine={updateLine}
                 removeLine={removeLine}
                 clearLine={clearLine}

@@ -30,11 +30,7 @@ const getNextWeekDate = (): string => {
   return date.toISOString().split('T')[0];
 };
 
-export interface ExtendedLine extends PRLineFormData {
-  warehouse?: string;
-  location?: string;
-  // discount and discount_input are now in PRLineFormData
-}
+export type ExtendedLine = PRLineFormData;
 
 const createEmptyLine = (): ExtendedLine => ({
   item_id: '', item_code: '', item_name: '', item_description: '', quantity: 0, uom: '', uom_id: undefined,

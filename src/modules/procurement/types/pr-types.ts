@@ -170,6 +170,8 @@ export interface PRLineFormData {
   remark?: string;
   discount?: number;
   discount_input?: string;
+  warehouse?: string;
+  location?: string;
 }
 
 // ====================================================================================
