@@ -303,6 +303,8 @@ export default function POListPage() {
                 subtitle="Purchase Order (PO) Master"
                 icon={FileText}
                 accentColor="blue"
+                totalCount={data?.total}
+                totalCountLoading={isLoading}
                 isLoading={isLoading}
                 searchForm={
                     <FilterFormBuilder

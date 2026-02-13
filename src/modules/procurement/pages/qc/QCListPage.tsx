@@ -229,6 +229,8 @@ export default function QCListPage() {
                 subtitle="Quote Comparison Master (QC)"
                 icon={Scale}
                 accentColor="indigo"
+                totalCount={data?.total}
+                totalCountLoading={isLoading}
                 isLoading={isLoading}
                 searchForm={
                     <FilterFormBuilder

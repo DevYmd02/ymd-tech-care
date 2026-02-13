@@ -255,7 +255,8 @@ export default function RFQListPage() {
                 subtitle="Request for Quotation (RFQ)"
                 icon={FileText}
                 accentColor="blue"
-                isLoading={isLoading}
+                totalCount={data?.total}
+                totalCountLoading={isLoading}
                 searchForm={
                     <FilterFormBuilder<TableFilters<RFQStatus>>
                         config={filterConfig}

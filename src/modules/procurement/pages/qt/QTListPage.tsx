@@ -233,7 +233,8 @@ export default function QTListPage() {
                 subtitle="Vendor Quotation (QT)"
                 icon={FileText}
                 accentColor="blue"
-                isLoading={isLoading}
+                totalCount={data?.total}
+                totalCountLoading={isLoading}
                 searchForm={
                     <FilterFormBuilder<TableFilters<QTStatus>>
                         config={filterConfig}

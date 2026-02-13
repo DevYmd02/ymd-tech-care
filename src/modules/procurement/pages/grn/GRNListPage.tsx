@@ -150,6 +150,8 @@ export default function GRNListPage() {
                 subtitle="Goods Receipt Note (GRN)"
                 icon={Package}
                 accentColor="blue"
+                totalCount={data?.total}
+                totalCountLoading={isLoading}
                 isLoading={isLoading}
                 searchForm={
                     <FilterFormBuilder
