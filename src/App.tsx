@@ -111,7 +111,31 @@ const ComingSoon = React.lazy(() => import('./shared/pages/ComingSoon'));
 function App() {
   return (
     <AuthProvider>
-      <Toaster position="top-right" reverseOrder={false} />
+      <Toaster 
+        position="top-right" 
+        reverseOrder={false}
+        toastOptions={{
+          style: {
+            background: '#1f2937', // gray-800
+            color: '#f3f4f6',      // gray-100
+            border: '1px solid #374151', // gray-700
+            borderRadius: '8px',
+            fontSize: '14px',
+          },
+          success: {
+            iconTheme: {
+              primary: '#10b981', // emerald-500
+              secondary: '#fff',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: '#ef4444', // red-500
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
       <ToastProvider>
         <Routes>
           {/* ... (Auth Routes) ... */}

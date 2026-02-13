@@ -17,7 +17,6 @@ import {
     toVendorCreateRequest,
 } from '../types/vendor-types';
 import { logger } from '@/shared/utils/logger';
-
 import { VendorSchema } from '../types/vendor-schemas';
 
 
@@ -28,6 +27,7 @@ interface UseVendorFormProps {
     initialData?: VendorMaster | null;
     onSuccess?: () => void;
     predictedVendorId?: string;
+    toast: (message: string, type?: 'success' | 'error' | 'warning' | 'info') => void;
 }
 
 export function useVendorForm({ 
@@ -36,7 +36,8 @@ export function useVendorForm({
     vendorId, 
     initialData, 
     onSuccess, 
-    predictedVendorId 
+    predictedVendorId,
+    toast
 }: UseVendorFormProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [headerTitle, setHeaderTitle] = useState('เพิ่มเจ้าหนี้ใหม่');
@@ -57,7 +58,6 @@ export function useVendorForm({
 
     const formData = watch();
 
-    const [systemAlert, setSystemAlert] = useState<{ message: string; type: 'error' | 'success' } | null>(null);
     const prevIsOpenRef = useRef(isOpen);
     
     const { confirm } = useConfirmation();
@@ -66,7 +66,6 @@ export function useVendorForm({
     // Fetch/Reset data when modal opens
     useEffect(() => {
         if (isOpen && !prevIsOpenRef.current) {
-            setSystemAlert(null);
             
             if (initialData) {
                 setHeaderTitle('แก้ไขข้อมูลเจ้าหนี้');
@@ -346,7 +345,7 @@ export function useVendorForm({
         
         await rhfHandleSubmit(onSubmit, (invalidErrors) => {
             console.error('Validation Errors:', invalidErrors);
-            setSystemAlert({ message: 'กรุณาตรวจสอบข้อมูลสีแดงในแบบฟอร์ม', type: 'error' });
+            toast('กรุณาตรวจสอบข้อมูลสีแดงในแบบฟอร์ม', 'error');
             
             setTimeout(() => {
                 const firstErrorKey = Object.keys(invalidErrors)[0];
@@ -440,8 +439,6 @@ export function useVendorForm({
         isSubmitting,
 
         headerTitle,
-        systemAlert,
-        setSystemAlert,
         handleChange,
         addBankAccount,
         removeBankAccount,

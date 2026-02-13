@@ -5,7 +5,7 @@ import { PRHeader } from './PRHeader';
 import { PRFormLines } from './PRFormLines';
 import { PRFormSummary } from './PRFormSummary';
 import { ProductSearchModal } from './ProductSearchModal';
-import { WindowFormLayout, SystemAlert, CollapsibleSection } from '@ui';
+import { WindowFormLayout, CollapsibleSection } from '@ui';
 import { usePRForm } from '@/modules/procurement/hooks/usePRForm';
 
 interface Props {
@@ -19,7 +19,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
   const {
     isEditMode, lines, isProductModalOpen, setIsProductModalOpen, searchTerm, setSearchTerm,
     handleSubmit, isSubmitting, isActionLoading,
-    alertState, setAlertState, products, costCenters, projects, isSearchingProducts,
+    products, costCenters, projects, isSearchingProducts,
     addLine, removeLine, clearLine, updateLine, handleClearLines,
     openProductSearch, selectProduct, handleVendorSelect, onSubmit, handleDelete, handleApprove,
     handleVoid,
@@ -64,7 +64,6 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
       }
     >
       <FormProvider {...formMethods}>
-          {alertState.show && <SystemAlert message={alertState.message} onClose={() => setAlertState({ ...alertState, show: false })} />}
           
           <ProductSearchModal 
             isOpen={isProductModalOpen}

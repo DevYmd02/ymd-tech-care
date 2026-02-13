@@ -12,7 +12,7 @@ import { Users, Save, X } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
 import { logger } from '@/shared/utils/logger';
-import { VendorGroupService } from '../../services/vendor-group.service';
+import { VendorGroupService } from '@/modules/master-data/vendor/services/vendor-group.service';
 
 // ====================================================================================
 // SCHEMA

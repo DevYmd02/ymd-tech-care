@@ -10,7 +10,7 @@ import { z } from 'zod';
 import { Award, Save, X } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
-import { BrandService } from '../../services/inventory-master.service';
+import { BrandService } from '@/modules/master-data/inventory/services/inventory-master.service';
 
 const schema = z.object({
     code: z.string().min(1, 'กรุณากรอกรหัส').max(20),

@@ -6,7 +6,7 @@ import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { ActiveStatusBadge } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
 import type { ExchangeRateType } from '@/modules/master-data/types/currency-types';
-import { CurrencyService } from '../../services/currency.service';
+import { CurrencyService } from '@/modules/master-data/currency/services/currency.service';
 import { logger } from '@/shared/utils/logger';
 import { ExchangeRateTypeFormModal } from './ExchangeRateTypeFormModal';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';

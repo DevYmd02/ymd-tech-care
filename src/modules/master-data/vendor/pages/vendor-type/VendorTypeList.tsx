@@ -11,8 +11,8 @@ import {
     Tag
 } from 'lucide-react';
 import { VendorTypeFormModal } from './VendorTypeFormModal';
-import { VendorTypeService } from '../../services/vendor-type.service';
-import type { VendorTypeMaster } from '../../types/vendor-types';
+import { VendorTypeService } from '@/modules/master-data/vendor/services/vendor-type.service';
+import type { VendorTypeMaster } from '@/modules/master-data/vendor/types/vendor-types';
 import { ActiveStatusBadge } from '@ui';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';

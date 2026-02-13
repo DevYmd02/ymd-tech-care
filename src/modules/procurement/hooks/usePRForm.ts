@@ -15,6 +15,7 @@ import { usePRActions } from './usePRActions';
 import { PRFormSchema } from '@/modules/procurement/types/pr-schemas';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/shared/components/ui/feedback/Toast';
 
 
 
@@ -73,8 +74,9 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
   } = usePRMasterData();
   const { createPRMutation, updatePR, deletePR, approvePR, cancelPR } = usePRActions();
   
+  const { toast } = useToast();
+  const showAlert = useCallback((message: string) => toast(message, 'error'), [toast]);
   const [isActionLoading, setIsActionLoading] = useState(false);
-  const [alertState, setAlertState] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
   const [activeTab, setActiveTab] = useState('detail');
   
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -110,7 +112,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
         setFocus(firstKey);
       } catch { /* ignore */ }
     }
-  }, [setFocus]);
+  }, [setFocus, showAlert]);
 
   // Fetch Default Tax Rate on Mount
   useEffect(() => {
@@ -222,7 +224,6 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     prevCurrencyTypeId.current = targetCurrencyId;
   }, [sourceCurrencyId, targetCurrencyId, setValue, getFieldState]);
 
-  const showAlert = (message: string) => setAlertState({ show: true, message });
 
   const addLine = useCallback(() => append(createEmptyLine()), [append]);
   
@@ -232,7 +233,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
       return;
     }
     remove(index);
-  }, [lines, remove]);
+  }, [lines, remove, showAlert]);
   
   const clearLine = useCallback((index: number) => {
     updateFieldArray(index, createEmptyLine());
@@ -469,7 +470,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     isEditMode, lines, activeTab, setActiveTab,
     isProductModalOpen, setIsProductModalOpen, searchTerm, setSearchTerm,
     handleSubmit, setValue, watch, isSubmitting, isActionLoading, errors, handleFormError,
-    alertState, setAlertState, products, costCenters, projects, isSearchingProducts,
+    products, costCenters, projects, isSearchingProducts,
     addLine, removeLine, clearLine, updateLine, handleClearLines,
     openProductSearch, selectProduct, handleVendorSelect, onSubmit, handleDelete, handleApprove,
     handleVoid, control, reset, formMethods

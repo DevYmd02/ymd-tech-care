@@ -9,6 +9,7 @@
  */
 
 import React from 'react';
+import { styles } from '@/shared/constants/styles';
 
 // ====================================================================================
 // TYPE DEFINITIONS
@@ -67,7 +68,7 @@ export const Card: React.FC<CardProps> = ({
 
     // Default card style
     return (
-        <div className={`bg-white dark:bg-gray-800/50 dark:backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm ${paddingClasses} ${className}`}>
+        <div className={`${styles.bg.surface} dark:bg-gray-800/50 dark:backdrop-blur-sm rounded-xl border ${styles.border.default} shadow-sm ${paddingClasses} ${className}`}>
             {children}
         </div>
     );
@@ -98,9 +99,9 @@ export const SectionCard: React.FC<SectionCardProps> = ({
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-2">
                     {titleIcon && (
-                        <span className="text-blue-600 dark:text-blue-400">{titleIcon}</span>
+                        <span className={styles.text.accent}>{titleIcon}</span>
                     )}
-                    <h2 className="text-lg font-bold text-gray-800 dark:text-white">{title}</h2>
+                    <h2 className={`text-lg font-bold ${styles.text.primary}`}>{title}</h2>
                 </div>
                 {headerAction}
             </div>

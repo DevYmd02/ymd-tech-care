@@ -4,8 +4,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Edit2, Trash2, MapPin } from 'lucide-react';
 import { LocationFormModal } from './LocationFormModal';
-import { LocationService } from '../../services/inventory-master.service';
-import type { Location } from '../../types/inventory-master.types';
+import { LocationService } from '@/modules/master-data/inventory/services/inventory-master.service';
+import type { Location } from '@/modules/master-data/inventory/types/inventory-master.types';
 import { ActiveStatusBadge } from '@ui';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';

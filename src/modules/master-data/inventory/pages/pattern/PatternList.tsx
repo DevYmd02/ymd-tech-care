@@ -6,8 +6,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Edit2, Trash2, Grid3X3 } from 'lucide-react';
 import { PatternFormModal } from './PatternFormModal';
-import { PatternService } from '../../services/inventory-master.service';
-import type { Pattern } from '../../types/inventory-master.types';
+import { PatternService } from '@/modules/master-data/inventory/services/inventory-master.service';
+import type { Pattern } from '@/modules/master-data/inventory/types/inventory-master.types';
 import { ActiveStatusBadge } from '@ui';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';

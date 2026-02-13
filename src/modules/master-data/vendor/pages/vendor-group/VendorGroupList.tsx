@@ -11,8 +11,8 @@ import {
     Users
 } from 'lucide-react';
 import { VendorGroupFormModal } from './VendorGroupFormModal';
-import { VendorGroupService } from '../../services/vendor-group.service';
-import type { VendorGroupMaster } from '../../types/vendor-types';
+import { VendorGroupService } from '@/modules/master-data/vendor/services/vendor-group.service';
+import type { VendorGroupMaster } from '@/modules/master-data/vendor/types/vendor-types';
 import { ActiveStatusBadge } from '@ui';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';

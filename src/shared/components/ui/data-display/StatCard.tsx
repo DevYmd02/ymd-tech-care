@@ -23,9 +23,10 @@ import { styles } from '@/shared/constants/styles';
 export interface StatCardProps {
     icon: React.ReactNode;
     label: string;
-    value: string;
+    value: string | number;
     change?: string;                  // Change percentage (e.g., "+12%")
-    color: 'blue' | 'green' | 'purple' | 'orange' | 'red' | 'yellow' | 'pink' | 'cyan' | 'indigo';
+    subtitle?: string;                // Subtitle for simpler use cases (e.g., "Items total")
+    color: 'blue' | 'green' | 'purple' | 'orange' | 'red' | 'yellow' | 'pink' | 'cyan' | 'indigo' | string;
 }
 
 // ====================================================================================
@@ -37,6 +38,7 @@ export const StatCard: React.FC<StatCardProps> = ({
     label,
     value,
     change,
+    subtitle,
     color,
 }) => {
     // Color mapping for icon background
@@ -52,26 +54,34 @@ export const StatCard: React.FC<StatCardProps> = ({
         indigo: 'bg-indigo-600',
     };
 
+    // Use specific color class if found, otherwise use raw color (for bgColor support)
+    const bgColorClass = colorClasses[color] || color;
+
     // Determine if change is positive or negative
     const isPositive = change?.startsWith('+') ?? true;
 
     return (
-        <div className={`${styles.cardGlass} p-6`}>
-            <div className="flex items-center justify-between mb-4">
-                {/* Icon Container */}
-                <div className={`w-12 h-12 ${colorClasses[color]} bg-opacity-10 dark:bg-opacity-20 rounded-lg flex items-center justify-center`}>
-                    {icon}
+        <div className={`${styles.cardGlass} p-6 h-full flex flex-col justify-between`}>
+            <div>
+                <div className="flex items-center justify-between mb-4">
+                    {/* Icon Container */}
+                    <div className={`w-12 h-12 ${bgColorClass} bg-opacity-10 dark:bg-opacity-20 rounded-lg flex items-center justify-center`}>
+                        {icon}
+                    </div>
+                    {/* Change Indicator */}
+                    {change && (
+                        <span className={`text-sm font-semibold ${isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                            {change}
+                        </span>
+                    )}
                 </div>
-                {/* Change Indicator */}
-                {change && (
-                    <span className={`text-sm font-semibold ${isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                        {change}
-                    </span>
-                )}
+                {/* Value & Label */}
+                <div className="text-2xl font-bold text-gray-800 dark:text-white mb-1">{value}</div>
+                <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{label}</div>
             </div>
-            {/* Value & Label */}
-            <div className="text-2xl font-bold text-gray-800 dark:text-white mb-1">{value}</div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">{label}</div>
+            {subtitle && (
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">{subtitle}</div>
+            )}
         </div>
     );
 };

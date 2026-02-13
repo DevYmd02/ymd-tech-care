@@ -152,7 +152,7 @@ export default function PRTListPage() {
             size: 200,
         }),
         columnHelper.accessor('ref_grn_no', {
-            header: 'อ้าง GRN',
+            header: 'อ้างอิง GRN',
             cell: (info) => (
                 <span className="text-purple-600 dark:text-purple-400 font-medium">
                     {info.getValue() || '-'}

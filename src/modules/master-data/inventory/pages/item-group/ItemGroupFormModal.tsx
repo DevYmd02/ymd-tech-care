@@ -10,7 +10,7 @@ import { z } from 'zod';
 import { Layers, Save, X } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
-import { ItemGroupService } from '../../services/inventory-master.service';
+import { ItemGroupService } from '@/modules/master-data/inventory/services/inventory-master.service';
 
 const schema = z.object({
     code: z.string().min(1, 'กรุณากรอกรหัส').max(20, 'รหัสต้องไม่เกิน 20 ตัวอักษร'),

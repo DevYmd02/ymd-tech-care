@@ -49,6 +49,10 @@ export default function GRNListPage() {
     // 1. Filter State
     const { filters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<GRNStatus>({
         defaultStatus: 'ALL',
+        customParamKeys: {
+            search: 'grn_no',
+            search2: 'po_no'
+        }
     });
 
     const apiFilters: GRNListParams = {

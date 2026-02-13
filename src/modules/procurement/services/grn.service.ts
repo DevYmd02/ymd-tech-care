@@ -12,58 +12,57 @@ const BASE_URL = '/procurement/grn';
 
 export const GRNService = {
     getList: async (params?: GRNListParams): Promise<GRNListResponse> => {
-        if (import.meta.env.VITE_USE_MICK === 'true' || import.meta.env.VITE_USE_MOCK === 'true') {
-             const { MOCK_GRNS } = await import('@/modules/procurement/mocks/procurementMocks');
-             logger.info('🎭 [Mock Mode] Serving GRN List');
-             
-             let filtered = MOCK_GRNS;
-             if (params?.status && params.status !== 'ALL') {
-                 filtered = filtered.filter(grn => grn.status === params.status);
-             }
+        const IS_DEV = import.meta.env.DEV;
+        const USE_MOCK = IS_DEV;
 
-             // 1. Text Search
-             if (params?.grn_no) {
-                 const searchLower = params.grn_no.toLowerCase();
-                 filtered = filtered.filter(grn => grn.grn_no.toLowerCase().includes(searchLower));
-             }
-             if (params?.po_no) {
-                 const searchLower = params.po_no.toLowerCase();
-                 filtered = filtered.filter(grn => grn.po_no.toLowerCase().includes(searchLower));
-             }
+        if (USE_MOCK) {
+            const { MOCK_GRNS } = await import('@/modules/procurement/mocks/procurementMocks');
+            let filtered = [...MOCK_GRNS];
 
-             const sortParam = params?.sort || 'received_date:desc';
-             const [sortKey, sortDir] = sortParam.split(':');
-             
-             const sorted = [...filtered].sort((a, b) => {
-                 const valA = a[sortKey as keyof typeof a];
-                 const valB = b[sortKey as keyof typeof b];
-                 
-                 if (valA === valB) return 0;
-                 if (valA === null || valA === undefined) return 1;
-                 if (valB === null || valB === undefined) return -1;
-                 
-                 const multiplier = sortDir === 'asc' ? 1 : -1;
-                 
-                 if (typeof valA === 'string' && typeof valB === 'string') {
-                     return valA.localeCompare(valB) * multiplier;
-                 }
-                 
-                 return (valA < valB ? -1 : 1) * multiplier;
-             });
+            if (params) {
+                if (params.status && params.status !== 'ALL') {
+                    filtered = filtered.filter(item => item.status === params.status);
+                }
+                if (params.grn_no) {
+                    filtered = filtered.filter(item => 
+                        item.grn_no.toLowerCase().includes(params.grn_no!.toLowerCase())
+                    );
+                }
+                if (params.po_no) {
+                    filtered = filtered.filter(item => 
+                        (item.po_no || '').toLowerCase().includes(params.po_no!.toLowerCase())
+                    );
+                }
+                if (params.date_from) {
+                    const fromDate = new Date(params.date_from).getTime();
+                    filtered = filtered.filter(item => new Date(item.received_date).getTime() >= fromDate);
+                }
+                if (params.date_to) {
+                    const toDate = new Date(params.date_to).getTime();
+                    filtered = filtered.filter(item => new Date(item.received_date).getTime() <= toDate);
+                }
 
-             // 2. Pagination
-             const page = Number(params?.page) || 1;
-             const limit = Number(params?.limit) || 10;
-             const startIndex = (page - 1) * limit;
-             const endIndex = startIndex + limit;
-             const paginated = sorted.slice(startIndex, endIndex);
+                if (params.sort) {
+                    const [field, order] = params.sort.split(':') as [keyof GRNListItem, 'asc' | 'desc'];
+                    filtered.sort((a, b) => {
+                        const valA = a[field];
+                        const valB = b[field];
+                        if (valA === valB) return 0;
+                        if (valA === null || valA === undefined) return 1;
+                        if (valB === null || valB === undefined) return -1;
+                        
+                        const comparison = (valA > valB) ? 1 : -1;
+                        return order === 'desc' ? -comparison : comparison;
+                    });
+                }
+            }
 
-             return {
-                 data: paginated,
-                 total: sorted.length,
-                 page,
-                 limit
-             };
+            const page = params?.page || 1;
+            const limit = params?.limit || 10;
+            const total = filtered.length;
+            const data = filtered.slice((page - 1) * limit, page * limit);
+
+            return { data, total, page, limit };
         }
 
         try {

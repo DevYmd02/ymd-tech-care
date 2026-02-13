@@ -38,6 +38,7 @@ export const PRService = {
         let items = [...MOCK_PRS];
         
         // Mock Filter Logic
+        // 1. General Search (q)
         if (params?.q) {
             const q = params.q.toLowerCase();
             items = items.filter(i => 
@@ -46,7 +47,33 @@ export const PRService = {
                 (i.purpose && i.purpose.toLowerCase().includes(q))
             );
         }
+
+        // 2. Specific Columns
+        if (params?.pr_no) {
+            const q = params.pr_no.toLowerCase();
+            items = items.filter(i => i.pr_no.toLowerCase().includes(q));
+        }
+
+        if (params?.requester_name) {
+            const q = params.requester_name.toLowerCase();
+            items = items.filter(i => i.requester_name.toLowerCase().includes(q));
+        }
+
+        if (params?.department) { // department is usually cost_center in mock
+             // Mock data might not have 'department' field directly on header, 
+             // but let's assume filtering by cost_center_id or checking if we need to join mock data
+             // In mock list, we probably don't have department name, 
+             // but looking at PRHeader type.. it has cost_center_id.
+             // Let's assume for mock purposes we check cost_center_id or just skip if strictly ID
+             // BUT wait, PRListPage mock data likely relies on just being a list.
+             // Let's filter by checking if any relevant field matches.
+             const q = params.department.toLowerCase();
+             // For mock simplicity, let's assume we match against cost_center_id for now 
+             // OR if MOCK_PRS has extended fields? MOCK_PRS is PRHeader[]
+             items = items.filter(i => i.cost_center_id?.toLowerCase().includes(q));
+        }
         
+        // 3. Status & Date
         if (params?.status && params.status !== 'ALL') {
              items = items.filter(i => i.status === params.status);
         }
@@ -57,6 +84,32 @@ export const PRService = {
 
         if (params?.date_to) {
              items = items.filter(i => i.request_date <= params.date_to!);
+        }
+
+        // 4. Sorting
+        if (params?.sort) {
+            const [key, dir] = params.sort.split(':');
+            const isAsc = dir === 'asc';
+            
+            items.sort((a, b) => {
+                let valA = a[key as keyof PRHeader];
+                let valB = b[key as keyof PRHeader];
+
+                // Handle specific numeric/date fields
+                if (key === 'total_amount') {
+                    valA = Number(valA || 0);
+                    valB = Number(valB || 0);
+                }
+                
+                if (valA === valB) return 0;
+                
+                if (valA == null) return 1;
+                if (valB == null) return -1;
+
+                if (valA < valB) return isAsc ? -1 : 1;
+                if (valA > valB) return isAsc ? 1 : -1;
+                return 0;
+            });
         }
 
         // Mock Pagination
