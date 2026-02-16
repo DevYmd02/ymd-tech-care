@@ -5,6 +5,11 @@
  */
 
 // ====================================================================================
+// CORE REFERENCE TYPES
+// ====================================================================================
+export type MasterDataId = string | number;
+
+// ====================================================================================
 // PR STATUS - ตาม pr_header.status
 // ====================================================================================
 
@@ -131,33 +136,33 @@ export interface PRFormData {
   pr_no: string;                    // Auto-generated
   pr_date: string;                  // วันที่ขอซื้อ (Postman: pr_date)
   need_by_date: string;             // วันที่ต้องการใช้ (Postman: need_by_date)
-  requester_name: string;           // ชื่อผู้ขอ (Editable per user request)
-  cost_center_id: string | number;           // ศูนย์ต้นทุน (string "CC001" or number 1)
-  project_id?: string | number | null;       // โครงการ (string "PRJ001" or number, nullable)
-  requester_user_id: string | number;        // Postman: requester_user_id
-  purpose: string;                  // วัตถุประสงค์ (UI legacy, maps to payload)
-  pr_base_currency_code: string;    // Postman: pr_base_currency_code
-  pr_quote_currency_code?: string;   // Postman: pr_quote_currency_code
-  is_multicurrency: boolean;        // UI Only
-  pr_exchange_rate: number;         // Postman: pr_exchange_rate
-  pr_exchange_rate_date?: string;   // Postman: pr_exchange_rate_date
-  
-  // Vendor Info
-  preferred_vendor_id?: string | number;     // ผู้ขายที่แนะนำ (string "V-001" or number)
-  vendor_name?: string;             // ชื่อผู้ขาย (สำหรับแสดงผล)
-
-  // New Fields (Info Bar & Remark)
-  delivery_date?: string;
-  credit_days?: number;
-  payment_term_days?: number;
-  vendor_quote_no?: string;
-  shipping_method: string;
-  remark?: string;                  // Singular
-  pr_discount_raw?: string;         // Postman: pr_discount_raw
-  pr_tax_code_id?: string | number;          // Postman: pr_tax_code_id
-  pr_tax_rate?: number;             // Added for Snapshotting Tax Rate
-  branch_id?: string | number;               // Added for filtering
-  warehouse_id?: string | number;            // Added for dynamic warehouse selection
+   requester_name: string;           // ชื่อผู้ขอ (Editable per user request)
+   cost_center_id: MasterDataId;              // ศูนย์ต้นทุน
+   project_id?: MasterDataId | null;          // โครงการ (Optional)
+   requester_user_id: MasterDataId;           // ID ผู้ขอซื้อ
+   purpose: string;                  // วัตถุประสงค์ (UI legacy, maps to payload)
+   pr_base_currency_code: string;    // Postman: pr_base_currency_code
+   pr_quote_currency_code?: string;   // Postman: pr_quote_currency_code
+   is_multicurrency: boolean;        // UI Only
+   pr_exchange_rate: number;         // Postman: pr_exchange_rate
+   pr_exchange_rate_date?: string;   // Postman: pr_exchange_rate_date
+   
+   // Vendor Info
+   preferred_vendor_id?: MasterDataId;       // ผู้ขายที่แนะนำ
+   vendor_name?: string;             // ชื่อผู้ขาย (สำหรับแสดงผล)
+ 
+   // New Fields (Info Bar & Remark)
+   delivery_date?: string;
+   credit_days?: number;
+   payment_term_days?: number;
+   vendor_quote_no?: string;
+   shipping_method: string;
+   remark?: string;                  // Singular
+   pr_discount_raw?: string;         // Postman: pr_discount_raw
+   pr_tax_code_id?: MasterDataId;             // ภาษี
+   pr_tax_rate?: number;             // Added for Snapshotting Tax Rate
+   branch_id?: MasterDataId;                  // สาขา
+   warehouse_id?: MasterDataId;               // คลัง
   
   // Line items
   lines: PRLineFormData[];
@@ -168,25 +173,25 @@ export interface PRFormData {
   total_amount: number;
 }
 
-/** ข้อมูลรายการสินค้าใน Form */
-export interface PRLineFormData {
-  item_id: string | number;
-  item_code: string;
-  item_name: string;
-  description?: string;
-  qty?: number;
-  uom?: string;
-  uom_id?: string | number;
-  est_unit_price?: number;
-  est_amount?: number;
-  needed_date?: string;
-  preferred_vendor_id?: string | number;
-  remark?: string;
-  discount?: number;
-  line_discount_raw?: string;
-  warehouse_id?: string | number;
-  location?: string;
-}
+ /** ข้อมูลรายการสินค้าใน Form */
+ export interface PRLineFormData {
+   item_id: MasterDataId;
+   item_code: string;
+   item_name: string;
+   description?: string;
+   qty?: number;
+   uom?: string;
+   uom_id?: MasterDataId;
+   est_unit_price?: number;
+   est_amount?: number;
+   needed_date?: string;
+   preferred_vendor_id?: MasterDataId;
+   remark?: string;
+   discount?: number;
+   line_discount_raw?: string;
+   warehouse_id?: MasterDataId;
+   location?: string;
+ }
 
 // ====================================================================================
 // LEGACY TYPES - สำหรับ Backward Compatibility (จะลบภายหลัง)
@@ -348,7 +353,7 @@ export interface ConvertPRRequest {
 }
 
 export interface VendorSelection {
-  vendor_id: string;
+  vendor_id: MasterDataId;
   vendor_code: string;
   vendor_name: string;
   tax_id?: string;

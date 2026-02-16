@@ -344,18 +344,7 @@ export default function PRListPage() {
                 const row = info.row.original;
                 const requesterName = info.getValue() || '-';
                 const deptId = row.cost_center_id;
-                
-                // Enhanced Map supporting both numeric and alphanumeric IDs
-                const deptMap: Record<string | number, string> = {
-                    ...DEPARTMENT_MOCK_MAP,
-                    'CC001': 'แผนกไอที',
-                    'CC002': 'แผนกทรัพยากรบุคคล',
-                    'CC003': 'แผนกบัญชี',
-                    'CC004': 'แผนกการตลาด',
-                    // Numeric keys from DEPARTMENT_MOCK_MAP (1, 2, 3, 4) also available
-                };
-                
-                const deptName = deptMap[deptId as keyof typeof deptMap] || (row.cost_center_id ? row.cost_center_id : 'ไม่ระบุ');
+                const deptName = (DEPARTMENT_MOCK_MAP as Record<string | number, string>)[deptId] || (row.cost_center_id ? row.cost_center_id : 'ไม่ระบุ');
                 
                 return (
                     <div className="flex flex-col py-0.5">

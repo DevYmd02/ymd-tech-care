@@ -26,11 +26,15 @@ const IS_DEV = import.meta.env.DEV;
 // =============================================================================
 // MOCK CONSTANTS
 // =============================================================================
-export const DEPARTMENT_MOCK_MAP: Record<number, string> = {
+export const DEPARTMENT_MOCK_MAP: Record<string | number, string> = {
     1: 'Information Technology',
     2: 'Human Resources',
     3: 'Accounting',
-    4: 'Marketing'
+    4: 'Marketing',
+    'CC001': 'แผนกไอที',
+    'CC002': 'แผนกทรัพยากรบุคคล',
+    'CC003': 'แผนกบัญชี',
+    'CC004': 'แผนกการตลาด',
 };
 
 // =============================================================================

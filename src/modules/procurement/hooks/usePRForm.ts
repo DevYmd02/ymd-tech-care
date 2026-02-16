@@ -32,22 +32,7 @@ const getNextWeekDate = (): string => {
   return date.toISOString().split('T')[0];
 };
 
-/**
- * Smart ID Parser: Converts string to number if possible, 
- * but preserves string if it's alphanumeric (e.g. "IT001").
- */
-const smartParseId = (val: string | number | null | undefined): string | number => {
-  if (val === null || val === undefined || val === '') return '';
-  const strVal = String(val).trim();
-  const numVal = Number(strVal);
-  // If it's a valid number and doesn't look like a code with leading zeros 
-  // (e.g., "007" should probably stay as string, but "1001" can be number)
-  // Standard ERP numeric IDs usually don't have leading zeros if they are true integers.
-  const isNumeric = !isNaN(numVal) && strVal !== '';
-  const hasLeadingZero = strVal.length > 1 && strVal.startsWith('0');
-  
-  return (isNumeric && !hasLeadingZero) ? numVal : strVal;
-};
+// Removed smartParseId in favor of direct MasterDataId handling
 
 export type ExtendedLine = PRLineFormData;
 
@@ -145,20 +130,20 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
   
   const { handleSubmit, setValue, reset, watch, setFocus, control, getFieldState, formState: { isSubmitting, errors } } = formMethods;
 
-  // Effect: Set Default Tax Code (Safe Lookup)
-  useEffect(() => {
-    if (purchaseTaxOptions.length > 0 && !formMethods.getValues('pr_tax_code_id')) {
-      // Find 'VAT-IN-7' safely by code, fallback to first purchase tax, or 7% default
-      const defaultTax = purchaseTaxOptions.find(t => t.tax_code === 'VAT-IN-7') || 
-                         purchaseTaxOptions.find(t => t.tax_rate === 7) ||
-                         purchaseTaxOptions[0];
-      
-      if (defaultTax) {
-        setValue('pr_tax_code_id', smartParseId(defaultTax.tax_id));
-        setValue('pr_tax_rate', defaultTax.tax_rate);
-      }
-    }
-  }, [purchaseTaxOptions, setValue, formMethods]);
+   // Effect: Set Default Tax Code (Safe Lookup)
+   useEffect(() => {
+     if (purchaseTaxOptions.length > 0 && !formMethods.getValues('pr_tax_code_id')) {
+       // Find 'VAT-IN-7' safely by code, fallback to first purchase tax, or 7% default
+       const defaultTax = purchaseTaxOptions.find(t => t.original?.tax_code === 'VAT-IN-7') || 
+                          purchaseTaxOptions.find(t => t.original?.tax_rate === 7) ||
+                          purchaseTaxOptions[0];
+       
+       if (defaultTax) {
+         setValue('pr_tax_code_id', defaultTax.value);
+         setValue('pr_tax_rate', defaultTax.original?.tax_rate || 0);
+       }
+     }
+   }, [purchaseTaxOptions, setValue, formMethods]);
 
   // Field Array for Lines
   const { fields: lines, append, remove, update: updateFieldArray } = useFieldArray({
@@ -403,13 +388,13 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
       const targetIndex = activeRowIndex;
         const line = {
           ...currentLines[targetIndex],
-          item_id: smartParseId(product.item_id),
+          item_id: product.item_id,
           item_code: product.item_code,
           item_name: product.item_name,
           warehouse_id: 1, // product.warehouse is string, default to 1 for now or find numeric ID
           location: product.location || '', 
           uom: product.unit_name || '',
-          uom_id: smartParseId(product.unit_id),
+          uom_id: product.unit_id,
           est_unit_price: product.standard_cost || 0,
           qty: 1,
           est_amount: (product.standard_cost || 0) * 1,
@@ -429,17 +414,16 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     }
   }, [debouncedSearchTerm, selectedVendorId, isProductModalOpen, searchProducts, showAllItems]);
 
-  useEffect(() => {
-     if (isMasterDataLoading || !user?.employee?.branch_id || warehouses.length === 0) return;
-      const branchWarehouse = warehouses.find(w => String(w.branch_id) === String(user.employee.branch_id));
-      if (branchWarehouse) setValue('warehouse_id', smartParseId(branchWarehouse.warehouse_id));
-  }, [isMasterDataLoading, user?.employee?.branch_id, warehouses, setValue]);
+   useEffect(() => {
+      if (isMasterDataLoading || !user?.employee?.branch_id || warehouses.length === 0) return;
+       const branchWarehouse = warehouses.find(w => String(w.original?.branch_id) === String(user.employee.branch_id));
+       if (branchWarehouse) setValue('warehouse_id', branchWarehouse.value);
+   }, [isMasterDataLoading, user?.employee?.branch_id, warehouses, setValue]);
 
-  const handleVendorSelect = (vendor: VendorSelection | null) => {
-    if (vendor) {
-      // Use smartParseId to handle both numeric and alphanumeric vendor IDs
-      setValue("preferred_vendor_id", smartParseId(vendor.vendor_id));
-      setValue("vendor_name", vendor.vendor_name);
+   const handleVendorSelect = (vendor: VendorSelection | null) => {
+     if (vendor) {
+       setValue("preferred_vendor_id", vendor.vendor_id);
+       setValue("vendor_name", vendor.vendor_name);
       setValue("credit_days", vendor.payment_term_days ?? 30);
     } else {
       setValue("preferred_vendor_id", undefined);

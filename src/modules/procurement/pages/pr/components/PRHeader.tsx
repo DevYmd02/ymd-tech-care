@@ -11,10 +11,11 @@ import type { PRFormData, VendorSelection } from '@/modules/procurement/types/pr
 import type { CostCenter, Project } from '@/modules/master-data/types/master-data-types';
 import { VendorSearch } from '@/modules/master-data/vendor/components/selector/VendorSearch';
 import { StatusCheckbox } from '@ui';
+import type { MappedOption } from '@/modules/procurement/hooks/usePRMasterData';
 
 interface Props {
-  costCenters: CostCenter[];
-  projects: Project[];
+  costCenters: MappedOption<CostCenter>[];
+  projects: MappedOption<Project>[];
   onVendorSelect: (vendor: VendorSelection | null) => void;
   isEditMode: boolean;
   onVoid?: () => void;
@@ -140,23 +141,17 @@ export const PRHeader: React.FC<Props> = ({ costCenters, projects, onVendorSelec
                ref={field.ref}
                name={field.name}
                onBlur={field.onBlur}
-               value={field.value != null ? String(field.value) : ''}
+               value={field.value || ''}
                onChange={(e) => {
                  const val = e.target.value;
-                 // Smart Parse ID: Prevent NaN for alphanumeric codes
-                 const strVal = String(val).trim();
-                 const numVal = Number(strVal);
-                 const isNumeric = !isNaN(numVal) && strVal !== '';
-                 const hasLeadingZero = strVal.length > 1 && strVal.startsWith('0');
-                 
-                 const newVal = val === '' ? '' : ((isNumeric && !hasLeadingZero) ? numVal : strVal);
-                 field.onChange(newVal);
+                 const selected = costCenters.find(cc => String(cc.value) === val);
+                 field.onChange(selected ? selected.value : val);
                }}
              >
                <option value="">-- เลือกศูนย์ต้นทุน --</option>
-               {costCenters.filter(cc => cc.is_active).map((cc) => (
-                 <option key={cc.cost_center_id} value={cc.cost_center_id}>
-                   {cc.cost_center_code} - {cc.cost_center_name}
+               {costCenters.map((cc) => (
+                 <option key={cc.value} value={cc.value}>
+                   {cc.label}
                  </option>
                ))}
              </select>
@@ -176,23 +171,17 @@ export const PRHeader: React.FC<Props> = ({ costCenters, projects, onVendorSelec
                ref={field.ref}
                name={field.name}
                onBlur={field.onBlur}
-               value={field.value != null ? String(field.value) : ''}
+               value={field.value || ''}
                onChange={(e) => {
                  const val = e.target.value;
-                 // Smart Parse ID: Prevent NaN for alphanumeric codes
-                 const strVal = String(val).trim();
-                 const numVal = Number(strVal);
-                 const isNumeric = !isNaN(numVal) && strVal !== '';
-                 const hasLeadingZero = strVal.length > 1 && strVal.startsWith('0');
-                 
-                 const newVal = val === '' ? undefined : ((isNumeric && !hasLeadingZero) ? numVal : strVal);
-                 field.onChange(newVal);
+                 const selected = projects.find(p => String(p.value) === val);
+                 field.onChange(selected ? selected.value : val);
                }}
              >
                <option value="">-- ไม่ระบุโครงการ --</option>
-               {projects.filter(p => p.status === 'ACTIVE').map((project) => (
-                 <option key={project.project_id} value={project.project_id}>
-                   {project.project_code} - {project.project_name}
+               {projects.map((project) => (
+                 <option key={project.value} value={project.value}>
+                   {project.label}
                  </option>
                ))}
              </select>
@@ -228,4 +217,3 @@ export const PRHeader: React.FC<Props> = ({ costCenters, projects, onVendorSelec
     </div>
   );
 };
-

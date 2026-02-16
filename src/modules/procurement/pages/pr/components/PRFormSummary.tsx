@@ -3,9 +3,10 @@ import { useFormContext, Controller } from 'react-hook-form';
 import { usePRCalculations } from '@/modules/procurement/hooks/usePRCalculations';
 import type { PRFormData } from '@/modules/procurement/types/pr-types';
 import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
+import type { MappedOption } from '@/modules/procurement/hooks/usePRMasterData';
 
 interface PRFormSummaryProps {
-    purchaseTaxOptions?: TaxCode[];
+    purchaseTaxOptions?: MappedOption<TaxCode>[];
 }
 
 export const PRFormSummary: React.FC<PRFormSummaryProps> = ({ purchaseTaxOptions = [] }) => {
@@ -17,8 +18,8 @@ export const PRFormSummary: React.FC<PRFormSummaryProps> = ({ purchaseTaxOptions
     const discountInput = watch('pr_discount_raw') ?? '';
 
     // Derive VAT rate from selected tax code (instead of hardcoded 7)
-    const selectedTax = purchaseTaxOptions.find(t => String(t.tax_id) === String(taxCodeId));
-    const vatRate = selectedTax?.tax_rate ?? 7;
+    const selectedTax = purchaseTaxOptions.find(t => t.value === taxCodeId);
+    const vatRate = selectedTax?.original?.tax_rate ?? 7;
 
     // Use self-sufficient calculation hook
     const {
@@ -102,27 +103,20 @@ export const PRFormSummary: React.FC<PRFormSummaryProps> = ({ purchaseTaxOptions
                           value={field.value || ''}
                           onChange={(e) => {
                             const val = e.target.value;
-                            // Smart Parsing Logic: Number if possible, preserve string if code
-                            const strVal = String(val).trim();
-                            const numVal = Number(strVal);
-                            const isNumeric = !isNaN(numVal) && strVal !== '';
-                            const hasLeadingZero = strVal.length > 1 && strVal.startsWith('0');
-                            
-                            const newVal = val === '' ? undefined : ((isNumeric && !hasLeadingZero) ? numVal : strVal);
-                            field.onChange(newVal);
+                            const selected = purchaseTaxOptions.find(t => String(t.value) === val);
+                            field.onChange(selected ? selected.value : val);
                             
                             // Snapshot Tax Rate
-                            const selected = purchaseTaxOptions.find(t => String(t.tax_id) === String(newVal));
-                            if (selected) {
-                              setValue('pr_tax_rate', selected.tax_rate);
+                            if (selected?.original) {
+                              setValue('pr_tax_rate', selected.original.tax_rate);
                             }
                           }}
                           className="h-7 px-1 text-xs bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 cursor-pointer min-w-[140px]"
                         >
                           <option value="">เลือกภาษี</option>
                           {purchaseTaxOptions.map(tax => (
-                            <option key={tax.tax_id} value={tax.tax_id}>
-                              {tax.tax_code} - {tax.tax_name}
+                            <option key={tax.value} value={tax.value}>
+                              {tax.label}
                             </option>
                           ))}
                         </select>
