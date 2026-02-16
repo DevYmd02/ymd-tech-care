@@ -3,7 +3,7 @@
  * @description Simplified Goods Receipt Note (GRN) Service
  */
 
-import api, { extractErrorMessage } from '@/core/api/api';
+import api, { extractErrorMessage, USE_MOCK } from '@/core/api/api';
 import { logger } from '@/shared/utils/logger';
 import type { GRNListParams, GRNListResponse, GRNListItem, GRNSummaryCounts, CreateGRNPayload } from '@/modules/procurement/types/grn-types';
 import type { SuccessResponse } from '@/shared/types/api-response.types';
@@ -12,8 +12,8 @@ const BASE_URL = '/procurement/grn';
 
 export const GRNService = {
     getList: async (params?: GRNListParams): Promise<GRNListResponse> => {
-        const IS_DEV = import.meta.env.DEV;
-        const USE_MOCK = IS_DEV;
+        // Removed: const IS_DEV = import.meta.env.DEV;
+        // Removed: const USE_MOCK = IS_DEV;
 
         if (USE_MOCK) {
             const { MOCK_GRNS } = await import('@/modules/procurement/mocks/procurementMocks');

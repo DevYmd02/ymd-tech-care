@@ -7,6 +7,7 @@ import { PRFormSummary } from './PRFormSummary';
 import { ProductSearchModal } from './ProductSearchModal';
 import { WindowFormLayout, CollapsibleSection } from '@ui';
 import { usePRForm } from '@/modules/procurement/hooks/usePRForm';
+import type { PRFormData } from '@/modules/procurement/types/pr-types';
 
 interface Props {
   isOpen: boolean;
@@ -18,13 +19,15 @@ interface Props {
 export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess }) => {
   const {
     isEditMode, lines, isProductModalOpen, setIsProductModalOpen, searchTerm, setSearchTerm,
-    handleSubmit, isSubmitting, isActionLoading,
-    products, costCenters, projects, isSearchingProducts,
+    showAllItems, setShowAllItems,
+    isSubmitting, isActionLoading,
+    products, costCenters, projects, purchaseTaxOptions, isSearchingProducts,
     addLine, removeLine, clearLine, updateLine, handleClearLines,
     openProductSearch, selectProduct, handleVendorSelect, onSubmit, handleDelete, handleApprove,
     handleVoid,
     handleFormError,
-    formMethods
+    formMethods,
+    user
   } = usePRForm(isOpen, onClose, id, onSuccess);
 
   const { register, watch, formState: { errors } } = formMethods;
@@ -34,6 +37,10 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
 
   const cardClass = 'bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-sm overflow-hidden';
   const tabClass = (tab: string) => `px-6 py-2 text-sm font-medium flex items-center gap-2 cursor-pointer border-b-2 transition-colors ${activeTab === tab ? 'border-blue-600 text-blue-600 bg-blue-50 dark:bg-blue-900/30' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`;
+
+  const handleSubmitWrapper = async (data: PRFormData) => {
+    return onSubmit(data);
+  };
 
   return (
     <WindowFormLayout
@@ -58,7 +65,14 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                 {isEditMode && (
                     <button type="button" onClick={handleApprove} disabled={isSubmitting || isActionLoading} className="px-6 py-2 bg-green-600 text-white hover:bg-green-700 rounded-md text-sm font-medium flex items-center gap-2"><CheckCircle size={16} /> อนุมัติ</button>
                 )}
-                <button type="button" onClick={handleSubmit(onSubmit, handleFormError)} disabled={isSubmitting || isActionLoading} className="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md text-sm font-medium">บันทึก</button>
+                <button 
+                  type="button" 
+                  onClick={() => formMethods.handleSubmit(handleSubmitWrapper, handleFormError)()} 
+                  disabled={isSubmitting || isActionLoading} 
+                  className="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md text-sm font-medium"
+                >
+                  บันทึก
+                </button>
             </div>
           </div>
       }
@@ -73,6 +87,8 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
             isSearchingProducts={isSearchingProducts}
             products={products}
             selectProduct={selectProduct}
+            showAllItems={showAllItems}
+            setShowAllItems={setShowAllItems}
           />
 
           <div className="flex-1 overflow-auto bg-gray-100 dark:bg-gray-800 p-1.5 space-y-1">
@@ -114,7 +130,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                             </select>
                             {errors?.shipping_method && <p className="text-red-500 text-[10px] mt-0.5">{errors.shipping_method.message}</p>}
                         </td>
-                        <td className="px-2 py-1 text-gray-900 dark:text-white">{watch('requester_name')}</td>
+                        <td className="px-2 py-1 text-gray-900 dark:text-white">{user?.employee?.employee_fullname || user?.username || 'N/A'}</td>
                         </tr>
                     </tbody>
                     </table>
@@ -133,14 +149,14 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">วันที่อัตราแลกเปลี่ยน</label>
                         <input 
                             type="date" 
-                            {...register('rate_date')}
+                            {...register('pr_exchange_rate_date')}
                             className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
                         />
                     </div>
                     <div>
                         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">รหัสสกุลเงิน</label>
                         <select 
-                            {...register('currency_id')}
+                            {...register('pr_base_currency_code')}
                             className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                         >
                             <option value="">เลือกสกุลเงิน</option>
@@ -154,7 +170,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                     <div>
                         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">ไปยังสกุลเงิน (Target)</label>
                         <select 
-                            {...register('currency_type_id')}
+                            {...register('pr_quote_currency_code')}
                             className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                         >
                             <option value="">เลือกสกุลเงิน</option>
@@ -170,13 +186,13 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                         <input 
                             type="number"
                             step="0.0001"
-                            {...register('exchange_rate', { valueAsNumber: true })}
-                            readOnly={watch('currency_id') === 'THB'}
-                            className={`w-full h-9 px-3 text-sm text-right border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition-colors ${watch('currency_id') === 'THB' ? 'bg-gray-50 dark:bg-gray-800/50 italic text-gray-500' : 'bg-white dark:bg-gray-800 font-semibold'}`}
+                            {...register('pr_exchange_rate', { valueAsNumber: true })}
+                            readOnly={watch('pr_base_currency_code') === 'THB'}
+                            className={`w-full h-9 px-3 text-sm text-right border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition-colors ${watch('pr_base_currency_code') === 'THB' ? 'bg-gray-50 dark:bg-gray-800/50 italic text-gray-500' : 'bg-white dark:bg-gray-800 font-semibold'}`}
                         />
-                        {watch('currency_id') && watch('currency_id') !== 'THB' && (
+                        {watch('pr_base_currency_code') && watch('pr_base_currency_code') !== 'THB' && (
                         <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 text-right font-medium">
-                            1 {watch('currency_id')} ≈ {Number(watch('exchange_rate') || 0).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })} THB
+                            1 {watch('pr_base_currency_code')} ≈ {Number(watch('pr_exchange_rate') || 0).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })} THB
                         </div>
                         )}
                     </div>
@@ -193,7 +209,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                 openProductSearch={openProductSearch}
             />
 
-            <PRFormSummary />
+            <PRFormSummary purchaseTaxOptions={purchaseTaxOptions} />
 
             <div className={cardClass}>
             <div className="flex border-b border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
@@ -206,7 +222,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
             <div className="p-3 min-h-[80px] dark:bg-gray-900">
                 {activeTab === 'detail' && (
                 <textarea 
-                    {...register('remarks')}
+                    {...register('remark')}
                     placeholder="กรอกหมายเหตุเพิ่มเติม..." 
                     className="w-full h-20 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 resize-none" 
                 />

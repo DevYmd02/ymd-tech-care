@@ -28,17 +28,18 @@ export const usePRCalculations = (props?: UsePRCalculationsProps): PRCalculation
 
   // Watch values or use props
   const watchedLines = context?.watch('lines');
-  const watchedVatRate = context?.watch('tax_rate');
-  const watchedDiscountInput = context?.watch('discount_input');
+  // const watchedTaxCodeId = context?.watch('pr_tax_code_id');
+  const watchedDiscountInput = context?.watch('pr_discount_raw');
 
   const lines = useMemo(() => props?.lines ?? watchedLines ?? [], [props?.lines, watchedLines]);
-  const vatRate = useMemo(() => props?.vatRate ?? watchedVatRate ?? 7, [props?.vatRate, watchedVatRate]);
+  // Default to 7% for VAT calculation if tax code is not yet resolved to a percentage
+  const vatRate = useMemo(() => props?.vatRate ?? 7, [props?.vatRate]); 
   const globalDiscountInput = useMemo(() => props?.globalDiscountInput ?? watchedDiscountInput ?? '', [props?.globalDiscountInput, watchedDiscountInput]);
   
   // 1. Calculate Line-Level Totals
   const { subtotal, totalGross, totalLineDiscount } = useMemo(() => {
     return lines.reduce((acc, line) => {
-      const qty = line.quantity || 0;
+      const qty = line.qty || 0;
       const price = line.est_unit_price || 0;
       const gross = qty * price;
       const lineTotal = line.est_amount || 0; // est_amount is already (gross - discount)

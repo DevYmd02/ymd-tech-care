@@ -7,7 +7,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { FileText, Plus, Search, Send, CheckCircle, XCircle } from 'lucide-react';
+import { FileText, Plus, Search, Send, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 import { PageListLayout, SmartTable, PRStatusBadge, FilterField } from '@ui';
 import { useTableFilters, useDebounce, type TableFilters, useConfirmation } from '@/shared/hooks';
 import RFQFormModal from '@/modules/procurement/pages/rfq/components/RFQFormModal';
@@ -21,7 +21,7 @@ import { createColumnHelper } from '@tanstack/react-table';
 import { PRService, type PRListParams } from '@/modules/procurement/services/pr.service';
 import { logger } from '@/shared/utils/logger';
 import type { PRHeader, PRStatus } from '@/modules/procurement/types/pr-types';
-import { mockCostCenters } from '@/modules/master-data/mocks/masterDataMocks';
+import { DEPARTMENT_MOCK_MAP } from '@/modules/procurement/mocks/procurementMocks';
 
 // ====================================================================================
 // STATUS OPTIONS
@@ -127,7 +127,7 @@ export default function PRListPage() {
         
         try {
             // Update PR status to COMPLETED after RFQ is successfully created
-            await PRService.update(selectedPR.pr_id, { status: 'COMPLETED' });
+            await PRService.update(selectedPR.pr_id, { status: 'COMPLETED' as PRStatus });
             logger.log(`PR ${selectedPR.pr_no} status updated to COMPLETED`);
         } catch (error) {
             logger.error('Failed to update PR status to COMPLETED', error);
@@ -256,80 +256,119 @@ export default function PRListPage() {
             header: () => <div className="text-center w-full">ลำดับ</div>,
             cell: (info) => <div className="text-center">{info.row.index + 1 + (filters.page - 1) * filters.limit}</div>,
             footer: () => <div className="absolute left-4 top-1/2 -translate-y-1/2 whitespace-nowrap font-bold text-sm text-gray-700 dark:text-gray-200">ยอดรวมทั้งหมด :</div>,
-            size: 40,
+            size: 50,
             enableSorting: false,
+            meta: { className: 'sticky left-0 z-20 bg-white dark:bg-slate-900 border-r border-gray-100 dark:border-gray-800' }
         }),
-        columnHelper.accessor('pr_no', {
-            header: 'เลขที่เอกสาร',
+        columnHelper.accessor('pr_date', {
+            id: 'pr_date_no', // Required for sorting on this combined column
+            header: 'เอกสาร / วันที่',
             cell: (info) => {
-                const val = info.getValue();
-                const isTemp = val.startsWith('DRAFT-TEMP');
+                const row = info.row.original;
+                const prNo = row.pr_no;
+                const prDateStr = info.getValue() as string;
+                const isTemp = prNo.startsWith('DRAFT-TEMP');
+                const needByDateStr = row.need_by_date;
+                
+                // Urgency Logic
+                let urgencyClass = 'text-gray-500';
+                let showWarning = false;
+                
+                if (needByDateStr) {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const target = new Date(needByDateStr);
+                    target.setHours(0, 0, 0, 0);
+                    const diffDays = Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                    
+                    if (diffDays < 0) {
+                        urgencyClass = 'text-red-600 font-semibold';
+                        showWarning = true;
+                    } else if (diffDays <= 3) {
+                        urgencyClass = 'text-amber-600 font-medium';
+                    }
+                }
+
                 return (
-                    <span 
-                        className={`font-semibold truncate block ${isTemp ? 'text-amber-600 dark:text-amber-400 italic' : 'text-blue-600 dark:text-blue-400 hover:underline cursor-pointer'}`} 
-                        title={isTemp ? 'รอรันเลขเอกสาร (Pending Generation)' : val}
-                    >
-                        {isTemp ? (
-                            <span className="flex items-center gap-1">
-                                <span className="px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-[10px] rounded border border-amber-200 dark:border-amber-800">รอรันเลข</span>
+                    <div className="flex flex-col py-0.5 min-w-[180px]">
+                        {/* Top Line: PR No (Enforced Visibility) */}
+                        <span 
+                            className={`font-bold whitespace-nowrap text-base leading-tight ${isTemp ? 'text-amber-600 dark:text-amber-400 italic' : 'text-blue-600 dark:text-blue-400 hover:underline cursor-pointer'}`} 
+                            title={isTemp ? 'รอรันเลขเอกสาร (Pending Generation)' : prNo}
+                        >
+                            {isTemp ? (
+                                <span className="flex items-center gap-1">
+                                    <span className="px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-[10px] rounded border border-amber-200 dark:border-amber-800">รอรันเลข</span>
+                                </span>
+                            ) : prNo}
+                        </span>
+                        
+                        {/* Bottom Line: PR Date & Need By Urgency */}
+                        <div className="flex flex-col mt-0.5">
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                                {formatThaiDate(prDateStr)}
                             </span>
-                        ) : val}
-                    </span>
+                            {needByDateStr && (
+                                <span className={`text-[10px] flex items-center mt-0.5 ${urgencyClass}`}>
+                                    {showWarning && <AlertTriangle className="w-2.5 h-2.5 mr-1" />}
+                                    ต้องการใช้: {formatThaiDate(needByDateStr)}
+                                </span>
+                            )}
+                        </div>
+                    </div>
                 );
             },
-            size: 110,
+            size: 100,
             enableSorting: true,
+            meta: { className: 'sticky left-[50px] z-20 bg-white dark:bg-slate-900 border-r border-gray-100 dark:border-gray-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]' }
         }),
-        columnHelper.accessor('request_date', {
-            header: 'วันที่',
-            cell: (info) => (
-                <span className="text-gray-600 dark:text-gray-300 whitespace-nowrap">
-                    {formatThaiDate(info.getValue())}
-                </span>
-            ),
-            size: 90,
-            enableSorting: true,
+        columnHelper.accessor('purpose', {
+            header: 'รายละเอียด',
+            cell: (info) => {
+                const val = info.getValue() || '-';
+                return (
+                    <div 
+                        className="line-clamp-2 whitespace-normal text-sm text-gray-600 dark:text-gray-400 break-words" 
+                        title={val}
+                    >
+                        {val}
+                    </div>
+                );
+            },
+            size: 200, // Fluid expander
+            enableSorting: false,
         }),
         columnHelper.accessor('requester_name', {
-            header: 'ผู้ขอ',
-            cell: (info) => (
-                <div className="font-medium text-gray-700 dark:text-gray-200 truncate" title={info.getValue()}>
-                    {info.getValue()}
-                </div>
-            ),
-            size: 100,
-            enableSorting: false,
-        }),
-        columnHelper.accessor('cost_center_id', {
-            header: () => <div className="pl-4">แผนก</div>,
+            header: 'ผู้ขอ / แผนก',
             cell: (info) => {
-                const id = info.getValue()?.toLowerCase();
-                const department = mockCostCenters.find(c => c.cost_center_id.toLowerCase() === id)?.cost_center_name?.replace('แผนก', '');
+                const row = info.row.original;
+                const requesterName = info.getValue() || '-';
+                const deptId = row.cost_center_id;
+                
+                // Enhanced Map supporting both numeric and alphanumeric IDs
+                const deptMap: Record<string | number, string> = {
+                    ...DEPARTMENT_MOCK_MAP,
+                    'CC001': 'แผนกไอที',
+                    'CC002': 'แผนกทรัพยากรบุคคล',
+                    'CC003': 'แผนกบัญชี',
+                    'CC004': 'แผนกการตลาด',
+                    // Numeric keys from DEPARTMENT_MOCK_MAP (1, 2, 3, 4) also available
+                };
+                
+                const deptName = deptMap[deptId as keyof typeof deptMap] || (row.cost_center_id ? row.cost_center_id : 'ไม่ระบุ');
+                
                 return (
-                    <span className="truncate block text-gray-600 dark:text-gray-300 pl-4" title={department || '-'}>
-                        {department || '-'}
-                    </span>
+                    <div className="flex flex-col py-0.5">
+                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate max-w-[160px]" title={requesterName}>
+                            {requesterName}
+                        </span>
+                        <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                            {deptName}
+                        </span>
+                    </div>
                 );
             },
-            size: 140,
-            enableSorting: false,
-        }),
-        columnHelper.accessor(row => row.status, {
-            id: 'status',
-            header: () => <div className="text-center w-full">สถานะ</div>,
-            cell: (info) => (
-                <div className="flex justify-center">
-                    <PRStatusBadge status={info.getValue()} />
-                </div>
-            ),
             size: 100,
-            enableSorting: false,
-        }),
-        columnHelper.accessor(row => row.lines?.length || 0, {
-            id: 'items',
-            header: () => <div className="text-center w-full">รายการ</div>,
-            cell: (info) => <div className="text-center text-gray-600 dark:text-gray-300">{info.getValue()}</div>,
-            size: 60,
             enableSorting: false,
         }),
         columnHelper.accessor('total_amount', {
@@ -339,12 +378,23 @@ export default function PRListPage() {
                     {info.getValue().toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </div>
             ),
-            size: 130,
+            size: 100,
             enableSorting: true,
+        }),
+        columnHelper.accessor(row => row.status, {
+            id: 'status',
+            header: () => <div className="text-center w-full">สถานะ</div>,
+            cell: (info) => (
+                <div className="flex justify-center">
+                    <PRStatusBadge status={info.getValue()} />
+                </div>
+            ),
+            size: 120,
+            enableSorting: false,
         }),
         columnHelper.display({
             id: 'actions',
-            header: () => <div className="text-center w-full min-w-[120px]">จัดการ</div>,
+            header: () => <div className="text-center w-full">จัดการ</div>,
             cell: ({ row }) => (
                 <PRActionsCell 
                     row={row.original}
@@ -363,10 +413,10 @@ export default function PRListPage() {
                     </div>
                 );
             },
-            size: 160, // Widened for Draft actions
+            size: 120, 
             enableSorting: false,
         }),
-    ], [columnHelper, filters.page, filters.limit, data?.items, handleSendApproval, handleApprove, handleReject]); // Re-calculate index when page changes
+    ], [columnHelper, filters.page, filters.limit, data?.items, handleSendApproval, handleApprove, handleReject]); 
 
     // ====================================================================================
     // RENDER
@@ -415,14 +465,14 @@ export default function PRListPage() {
                             accentColor="blue"
                         />
                         <FilterField
-                            label="วันที่เอกสาร จาก"
+                            label="วันที่เริ่มต้น"
                             type="date"
                             value={filters.dateFrom || ''}
                             onChange={(val: string) => handleFilterChange('dateFrom', val)}
                             accentColor="blue"
                         />
                         <FilterField
-                            label="ถึงวันที่"
+                            label="วันที่สิ้นสุด"
                             type="date"
                             value={filters.dateTo || ''}
                             onChange={(val: string) => handleFilterChange('dateTo', val)}

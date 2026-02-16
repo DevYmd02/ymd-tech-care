@@ -4,10 +4,11 @@ import type {
   PRListResponse,
   ConvertPRRequest,
   PRHeader, 
-  PRFormData, 
   CreatePRPayload,
   PRStatus,
 } from '@/modules/procurement/types/pr-types';
+
+export type PRUpdatePayload = Partial<CreatePRPayload> & { status?: PRStatus };
 
 export type { PRListParams, PRListResponse, ConvertPRRequest };
 import { logger } from '@/shared/utils/logger';
@@ -25,7 +26,10 @@ const ENDPOINTS = {
   attachment: (id: string, attachmentId: string) => `/pr/${id}/attachments/${attachmentId}`,
 };
 
-import { MOCK_PRS as INITIAL_MOCK_PRS } from '@/modules/procurement/mocks/procurementMocks';
+import { 
+  MOCK_PRS as INITIAL_MOCK_PRS,
+  DEPARTMENT_MOCK_MAP 
+} from '@/modules/procurement/mocks/procurementMocks';
 
 // --- MOCK DATA STORE ---
 let MOCK_PRS: PRHeader[] = [...INITIAL_MOCK_PRS]; // Initialize with data!
@@ -59,18 +63,13 @@ export const PRService = {
             items = items.filter(i => i.requester_name.toLowerCase().includes(q));
         }
 
-        if (params?.department) { // department is usually cost_center in mock
-             // Mock data might not have 'department' field directly on header, 
-             // but let's assume filtering by cost_center_id or checking if we need to join mock data
-             // In mock list, we probably don't have department name, 
-             // but looking at PRHeader type.. it has cost_center_id.
-             // Let's assume for mock purposes we check cost_center_id or just skip if strictly ID
-             // BUT wait, PRListPage mock data likely relies on just being a list.
-             // Let's filter by checking if any relevant field matches.
+        if (params?.department) {
              const q = params.department.toLowerCase();
-             // For mock simplicity, let's assume we match against cost_center_id for now 
-             // OR if MOCK_PRS has extended fields? MOCK_PRS is PRHeader[]
-             items = items.filter(i => i.cost_center_id?.toLowerCase().includes(q));
+             items = items.filter(i => {
+                const deptName = (DEPARTMENT_MOCK_MAP[i.cost_center_id as unknown as number] || '').toLowerCase();
+                const deptId = String(i.cost_center_id).toLowerCase();
+                return deptName.includes(q) || deptId.includes(q);
+             });
         }
         
         // 3. Status & Date
@@ -79,21 +78,28 @@ export const PRService = {
         }
 
         if (params?.date_from) {
-             items = items.filter(i => i.request_date >= params.date_from!);
+             items = items.filter(i => i.pr_date >= params.date_from!);
         }
 
         if (params?.date_to) {
-             items = items.filter(i => i.request_date <= params.date_to!);
+             items = items.filter(i => i.pr_date <= params.date_to!);
         }
 
         // 4. Sorting
         if (params?.sort) {
-            const [key, dir] = params.sort.split(':');
+            const [rawKey, dir] = params.sort.split(':');
             const isAsc = dir === 'asc';
             
+            // Map UI Column IDs to actual data keys (Modern PR List uses pr_date_no for the stacked column)
+            const keyMap: Record<string, keyof PRHeader> = {
+                'pr_date_no': 'pr_date',
+            };
+            
+            const key = keyMap[rawKey] || (rawKey as keyof PRHeader);
+            
             items.sort((a, b) => {
-                let valA = a[key as keyof PRHeader];
-                let valB = b[key as keyof PRHeader];
+                let valA = a[key];
+                let valB = b[key];
 
                 // Handle specific numeric/date fields
                 if (key === 'total_amount') {
@@ -101,10 +107,10 @@ export const PRService = {
                     valB = Number(valB || 0);
                 }
                 
+                // ISO Date string comparison or direct comparison
                 if (valA === valB) return 0;
-                
-                if (valA == null) return 1;
-                if (valB == null) return -1;
+                if (valA == null) return isAsc ? 1 : -1;
+                if (valB == null) return isAsc ? -1 : 1;
 
                 if (valA < valB) return isAsc ? -1 : 1;
                 if (valA > valB) return isAsc ? 1 : -1;
@@ -163,51 +169,49 @@ export const PRService = {
         if (USE_MOCK) {
             logger.info('🎭 [PRService] Creating Mock PR', payload);
             
-            // Generate IDs
             const prId = `mock-pr-${Date.now()}`;
             const prNo = `PR-MOCK-${Date.now()}`;
             const createdDate = new Date().toISOString();
 
-             // Construct valid PRHeader without 'as unknown'
             const newPR: PRHeader = {
                 pr_id: prId,
                 pr_no: prNo,
-                branch_id: String(payload.branch_id || '1'),
-                requester_user_id: String(payload.requester_user_id || '1'),
+                branch_id: Number(payload.branch_id) || 1,
+                requester_user_id: Number(payload.requester_user_id) || 1,
                 requester_name: payload.requester_name || 'Mock Requester',
-                request_date: payload.pr_date,
-                required_date: payload.required_date || '',
-                cost_center_id: payload.department_id || '1',
-                project_id: payload.project_id,
+                pr_date: payload.pr_date,
+                need_by_date: payload.need_by_date || '',
+                cost_center_id: String(payload.cost_center_id || 'CC001'),
+                project_id: payload.project_id ? String(payload.project_id) : undefined,
                 purpose: payload.remark || '',
                 status: 'DRAFT',
-                currency_code: 'THB',
-                total_amount: payload.items.reduce((s, i) => s + (i.qty * i.price), 0),
+                pr_base_currency_code: payload.pr_base_currency_code || 'THB',
+                total_amount: payload.items.reduce((s, i) => s + (i.qty * i.est_unit_price), 0),
                 attachment_count: 0,
                 created_at: createdDate,
                 updated_at: createdDate,
-                created_by_user_id: '1',
-                updated_by_user_id: '1',
+                created_by_user_id: Number(payload.requester_user_id) || 1,
+                updated_by_user_id: Number(payload.requester_user_id) || 1,
                 delivery_date: payload.delivery_date,
                 credit_days: payload.credit_days,
                 vendor_quote_no: payload.vendor_quote_no,
                 shipping_method: payload.shipping_method,
-                preferred_vendor_id: payload.preferred_vendor_id,
+                preferred_vendor_id: payload.preferred_vendor_id ? String(payload.preferred_vendor_id) : undefined,
                 vendor_name: payload.vendor_name,
-                tax_rate: payload.tax_rate,
+                pr_tax_code_id: payload.pr_tax_code_id ? String(payload.pr_tax_code_id) : undefined,
                 lines: payload.items.map((item, idx) => ({
                     pr_line_id: `line-${Date.now()}-${idx}`,
                     pr_id: prId,
                     line_no: idx + 1,
-                    item_id: item.item_id || `item-${idx}`,
+                    item_id: Number(item.item_id) || 0,
                     item_code: item.item_code,
-                    item_name: item.item_name,
-                    item_description: item.item_name,
-                    quantity: item.qty,
+                    item_name: item.description,
+                    qty: item.qty,
                     uom: item.uom,
-                    est_unit_price: item.price,
-                    est_amount: item.qty * item.price,
-                    needed_date: item.needed_date || payload.required_date || '',
+                    uom_id: Number(item.uom_id) || 1,
+                    est_unit_price: item.est_unit_price,
+                    est_amount: item.qty * item.est_unit_price,
+                    needed_date: item.needed_date || payload.need_by_date || '',
                     remark: item.remark
                 }))
             };
@@ -216,44 +220,44 @@ export const PRService = {
             return newPR;
         }
 
-        const totalEstAmount = payload.items.reduce((sum, item) => sum + (item.qty * item.price), 0);
+        const totalEstAmount = payload.items.reduce((sum, item) => sum + (item.qty * item.est_unit_price), 0);
 
         const apiPayload = {
             pr_no: '', 
             pr_date: payload.pr_date,
-            request_date: payload.pr_date,
             branch_id: Number(payload.branch_id) || 1,
             warehouse_id: Number(payload.warehouse_id) || 1,
             requester_user_id: Number(payload.requester_user_id) || 1,
-            cost_center_id: payload.department_id ? String(payload.department_id) : '1',
-            project_id: payload.project_id ? Number(payload.project_id) : undefined,
+            cost_center_id: payload.cost_center_id,
+            project_id: payload.project_id || undefined,
             remark: payload.remark || '',
             status: 'PENDING',
-            currency_code: 'THB',
-            exchange_rate: 1,
+            pr_base_currency_code: payload.pr_base_currency_code || 'THB',
+            pr_exchange_rate: payload.pr_exchange_rate || 1,
             total_est_amount: totalEstAmount,
             total_amount: totalEstAmount,
             payment_term_days: payload.payment_term_days || 30,
             requester_name: payload.requester_name,
-            required_date: payload.required_date || '',
+            need_by_date: payload.need_by_date || '',
             purpose: payload.remark || '', 
             delivery_date: payload.delivery_date,
             credit_days: payload.credit_days,
             vendor_quote_no: payload.vendor_quote_no,
             shipping_method: payload.shipping_method,
-            preferred_vendor: payload.vendor_name,
+            preferred_vendor_id: payload.preferred_vendor_id,
+            vendor_name: payload.vendor_name,
             lines: payload.items.map((item, index) => ({
               line_no: index + 1,
               item_id: Number(item.item_id) || undefined,
               item_code: item.item_code,
-              description: item.item_name,
+              description: item.description,
               qty: item.qty,
               uom_id: Number(item.uom_id) || 1,
-              est_unit_price: item.price,
-              total_price: item.qty * item.price,
-              cost_center_id: payload.department_id ? String(payload.department_id) : '1',
-              project_id: payload.project_id ? Number(payload.project_id) : 0, 
-              needed_date: item.needed_date || payload.required_date || new Date().toISOString(),
+              est_unit_price: item.est_unit_price,
+              total_price: item.qty * item.est_unit_price,
+              cost_center_id: payload.cost_center_id || 'CC001',
+              project_id: payload.project_id || undefined, 
+              needed_date: item.needed_date || payload.need_by_date || new Date().toISOString(),
               remark: item.remark || ''
             }))
         };
@@ -266,24 +270,48 @@ export const PRService = {
         }
       },
 
-      update: async (prId: string, data: Partial<PRFormData>): Promise<PRHeader | null> => {
+      update: async (prId: string, data: PRUpdatePayload): Promise<PRHeader | null> => {
         if (USE_MOCK) {
-            // Mock update logic
             const index = MOCK_PRS.findIndex(p => p.pr_id === prId);
             if (index > -1) {
                  const currentPR = MOCK_PRS[index];
                  
-                 // Map Form Data to Header (Safe Update)
-                 const updatedPR: PRHeader = {
-                     ...currentPR,
-                     ...data as unknown as Partial<PRHeader>, // Keep minimal cast for mismatched types if unavoidable, or map explicitly:
-                     // Explicit mapping is better but data types might differ slightly (number vs string). 
-                     // For 100% strictness we'd do manual mapping, but 'Partial<PRHeader>' is safer than 'any'.
-                     // Given the task, let's try to minimize the cast scope
-                     updated_at: new Date().toISOString()
-                 };
+                 // Explicit field mapping from CreatePRPayload to PRHeader
+                const updatedPR: PRHeader = {
+                    ...currentPR,
+                    ...(data.pr_date && { pr_date: data.pr_date }),
+                    ...(data.requester_name && { requester_name: data.requester_name }),
+                    ...(data.cost_center_id !== undefined && { cost_center_id: String(data.cost_center_id) }),
+                    ...(data.project_id !== undefined && { project_id: data.project_id ? String(data.project_id) : null }),
+                    ...(data.status && { status: data.status }),
+                    ...(data.remark !== undefined && { remark: data.remark }),
+                    ...(data.preferred_vendor_id !== undefined && { preferred_vendor_id: data.preferred_vendor_id ? String(data.preferred_vendor_id) : undefined }),
+                    ...(data.vendor_name && { vendor_name: data.vendor_name }),
+                    ...(data.delivery_date && { delivery_date: data.delivery_date }),
+                    ...(data.credit_days !== undefined && { credit_days: Number(data.credit_days) }),
+                    ...(data.shipping_method && { shipping_method: data.shipping_method }),
+                    ...(data.vendor_quote_no && { vendor_quote_no: data.vendor_quote_no }),
+                    ...(data.items && {
+                        total_amount: data.items.reduce((sum, item) => sum + (Number(item.qty) * Number(item.est_unit_price)), 0),
+                        lines: data.items.map((item, idx) => ({
+                            pr_line_id: `line-${Date.now()}-${idx}`,
+                            pr_id: prId,
+                            line_no: idx + 1,
+                            item_id: item.item_id as string | number,
+                            item_code: item.item_code,
+                            item_name: item.description || '',
+                            qty: Number(item.qty) || 0,
+                            uom: item.uom || '',
+                            uom_id: (item.uom_id as string | number) || '1',
+                            est_unit_price: Number(item.est_unit_price) || 0,
+                            est_amount: (Number(item.qty) || 0) * (Number(item.est_unit_price) || 0),
+                            needed_date: item.needed_date || data.need_by_date || '',
+                            remark: item.remark
+                        }))
+                    }),
+                    updated_at: new Date().toISOString()
+                };
                  
-                 // Explicitly map conflicting fields if needed, for now accept the Partial intersection
                  MOCK_PRS[index] = updatedPR;
                  return updatedPR;
             }
@@ -318,7 +346,7 @@ export const PRService = {
         logger.info(`🎭 [Mock Mode] Submitting PR: ${prId}`);
         const index = MOCK_PRS.findIndex(p => p.pr_id === prId);
         if (index > -1) {
-            const updatedPR = { 
+            const updatedPR = {   
                 ...MOCK_PRS[index], 
                 status: 'PENDING' as PRStatus,
                 updated_at: new Date().toISOString()
@@ -370,7 +398,7 @@ export const PRService = {
                  ...MOCK_PRS[index], 
                  status: 'CANCELLED' as PRStatus,
                  cancelflag: 'Y',
-                 remarks: remark || MOCK_PRS[index].remarks,
+                 remark: remark || MOCK_PRS[index].remark,
                  updated_at: new Date().toISOString()
              };
              logger.info(`🎭 [Mock Mode] PR ${prId} cancelled successfully`);
@@ -427,7 +455,7 @@ export const PRService = {
             MOCK_PRS[index] = { 
                 ...MOCK_PRS[index], 
                 status: 'REJECTED' as PRStatus,
-                remarks: reason,
+                remark: reason,
                 updated_at: new Date().toISOString()
             };
         }

@@ -11,6 +11,8 @@ interface ProductSearchModalProps {
   isSearchingProducts: boolean;
   products: ItemListItem[];
   selectProduct: (product: ItemListItem) => void;
+  showAllItems: boolean;
+  setShowAllItems: (val: boolean) => void;
 }
 
 export const ProductSearchModal: React.FC<ProductSearchModalProps> = ({
@@ -21,6 +23,8 @@ export const ProductSearchModal: React.FC<ProductSearchModalProps> = ({
   isSearchingProducts,
   products,
   selectProduct,
+  showAllItems,
+  setShowAllItems,
 }) => {
   const { watch } = useFormContext();
   const preferredVendorId = watch('preferred_vendor_id');
@@ -52,11 +56,30 @@ export const ProductSearchModal: React.FC<ProductSearchModalProps> = ({
                 )}
               </div>
             </div>
+            
+            {preferredVendorId && (
+              <div className="flex items-center gap-2 h-10 px-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full transition-all hover:bg-white dark:hover:bg-gray-700">
+                <input
+                  id="show-all-toggle"
+                  type="checkbox"
+                  checked={showAllItems}
+                  onChange={(e) => setShowAllItems(e.target.checked)}
+                  className="w-4 h-4 text-cyan-600 rounded border-gray-300 focus:ring-cyan-500 cursor-pointer"
+                />
+                <label htmlFor="show-all-toggle" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+                  แสดงสินค้าทั้งหมด
+                </label>
+              </div>
+            )}
           </div>
           
           {preferredVendorId && (
-            <div className="mt-2 px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs rounded-md inline-block">
-              💡 กำลังแสดงสินค้าเฉพาะของ Vendor นี้
+            <div className={`mt-2 px-3 py-1 text-xs rounded-md inline-block transition-colors ${showAllItems ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300' : 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'}`}>
+              {showAllItems ? (
+                <span>⚠️ กำลังแสดงสินค้าทั้งหมด (ไม่กรองตาม Vendor)</span>
+              ) : (
+                <span>💡 กำลังแสดงสินค้าเฉพาะของ Vendor นี้</span>
+              )}
             </div>
           )}
 
@@ -64,14 +87,14 @@ export const ProductSearchModal: React.FC<ProductSearchModalProps> = ({
                <table className="w-full text-sm">
                   <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 border-b border-gray-200 dark:border-gray-700">
                   <tr className="text-gray-600 dark:text-gray-300">
-                      <th className="px-3 py-3 text-center font-medium w-20">เลือก</th>
-                      <th className="px-3 py-3 text-left font-medium">รหัสสินค้า</th>
-                      <th className="px-3 py-3 text-left font-medium">ชื่อสินค้า</th>
-                      <th className="px-3 py-3 text-left font-medium">รายละเอียด</th>
-                      <th className="px-3 py-3 text-center font-medium">คลัง</th>
-                      <th className="px-3 py-3 text-center font-medium">ที่เก็บ</th>
-                      <th className="px-3 py-3 text-center font-medium">หน่วยนับ</th>
-                      <th className="px-3 py-3 text-right font-medium">ราคา/หน่วย</th>
+                      <th className="px-3 py-3 text-center font-medium w-20 whitespace-nowrap">เลือก</th>
+                      <th className="px-3 py-3 text-left font-medium whitespace-nowrap">รหัสสินค้า</th>
+                      <th className="px-3 py-3 text-left font-medium whitespace-nowrap">ชื่อสินค้า</th>
+                      <th className="px-3 py-3 text-left font-medium whitespace-nowrap">รายละเอียด</th>
+                      <th className="px-3 py-3 text-center font-medium whitespace-nowrap">คลัง</th>
+                      <th className="px-3 py-3 text-center font-medium whitespace-nowrap">ที่เก็บ</th>
+                      <th className="px-3 py-3 text-center font-medium whitespace-nowrap">หน่วยนับ</th>
+                      <th className="px-3 py-3 text-right font-medium whitespace-nowrap">ราคา/หน่วย</th>
                   </tr>
                   </thead>
                   <tbody className="bg-white dark:bg-gray-900">

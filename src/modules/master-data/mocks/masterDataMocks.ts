@@ -419,6 +419,22 @@ const _mockItems: ItemListItem[] = [
         is_active: true,
         created_at: '2024-01-12T00:00:00Z',
     },
+    {
+        item_id: 'IT006',
+        item_code: 'PN-001',
+        item_name: 'ปากกาลูกลื่น (Pens)',
+        item_name_en: 'Ballpoint Pens',
+        description: 'Blue ink, box of 12',
+        category_name: 'Office Supplies (วัสดุสำนักงาน)',
+        item_type_code: 'CON',
+        unit_name: 'Box (กล่อง)',
+        warehouse: '2001',
+        location: 'Z-D',
+        standard_cost: 150,
+        preferred_vendor_id: 'V-001', // OfficeMate
+        is_active: true,
+        created_at: '2024-01-15T00:00:00Z',
+    },
 ];
 
 /** Mock data สำหรับ Item Master List - เฉพาะ DEV mode */

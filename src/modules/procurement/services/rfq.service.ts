@@ -1,4 +1,4 @@
-import api from '@/core/api/api';
+import api, { USE_MOCK } from '@/core/api/api';
 import type { RFQHeader, RFQListResponse, RFQCreateData, RFQFilterCriteria } from '@/modules/procurement/types/rfq-types';
 import { logger } from '@/shared/utils/logger';
 import type { SuccessResponse } from '@/shared/types/api-response.types';
@@ -11,8 +11,8 @@ const ENDPOINTS = {
   sendToVendors: (id: string) => `/rfq/${id}/send`,
 };
 
-const IS_DEV = import.meta.env.DEV;
-const USE_MOCK = IS_DEV; // Force mock in dev for now
+// Removed: const IS_DEV = import.meta.env.DEV;
+// Removed: const USE_MOCK = IS_DEV; // Force mock in dev for now
 
 export const RFQService = {
   getList: async (params?: RFQFilterCriteria): Promise<RFQListResponse> => {

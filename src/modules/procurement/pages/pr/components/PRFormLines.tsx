@@ -72,7 +72,7 @@ export const PRFormLines: React.FC<PRFormLinesProps> = React.memo(({
                         {lines.map((field, index) => {
                             const line = watchedLines[index] || {};
                             const lineDiscount = line.discount || 0;
-                            const lineTotal = ((line.quantity || 0) * (line.est_unit_price || 0)) - lineDiscount;
+                            const lineTotal = ((line.qty || 0) * (line.est_unit_price || 0)) - lineDiscount;
                             
                             return (
                                 <tr key={field.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-800 transition-colors">
@@ -94,8 +94,9 @@ export const PRFormLines: React.FC<PRFormLinesProps> = React.memo(({
                                     
                                     <td className={tdBaseClass}>
                                         <input 
-                                            {...register(`lines.${index}.warehouse`)} 
+                                            {...register(`lines.${index}.warehouse_id`)} 
                                             className={`${tableInputClass} text-center`} 
+                                            readOnly // Keep as ID for now or map name
                                         />
                                     </td>
                                     
@@ -116,9 +117,8 @@ export const PRFormLines: React.FC<PRFormLinesProps> = React.memo(({
                                     <td className={tdBaseClass}>
                                         <input 
                                             type="number" 
-                                            {...register(`lines.${index}.quantity`, { 
-                                                valueAsNumber: true,
-                                                onChange: (e) => updateLine(index, 'quantity', e.target.value)
+                                            {...register(`lines.${index}.qty`, { 
+                                                onChange: (e) => updateLine(index, 'qty', e.target.value)
                                             })} 
                                             className={`${tableInputClass} text-center`} 
                                         />
@@ -128,7 +128,6 @@ export const PRFormLines: React.FC<PRFormLinesProps> = React.memo(({
                                         <input 
                                             type="number" 
                                             {...register(`lines.${index}.est_unit_price`, { 
-                                                valueAsNumber: true,
                                                 onChange: (e) => updateLine(index, 'est_unit_price', e.target.value)
                                             })} 
                                             className={`${tableInputClass} text-center`} 
@@ -138,8 +137,8 @@ export const PRFormLines: React.FC<PRFormLinesProps> = React.memo(({
                                     <td className={tdBaseClass}>
                                         <input 
                                             type="text" 
-                                            {...register(`lines.${index}.discount_input`, { 
-                                                onChange: (e) => updateLine(index, 'discount_input', e.target.value)
+                                            {...register(`lines.${index}.line_discount_raw`, { 
+                                                onChange: (e) => updateLine(index, 'line_discount_raw', e.target.value)
                                             })} 
                                             className={`${tableInputClass} text-center`} 
                                         />

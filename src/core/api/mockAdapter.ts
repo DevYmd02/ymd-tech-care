@@ -123,7 +123,7 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
     if (params.department) {
       const q = String(params.department).toLowerCase();
       // Simple mock filter: check if cost_center_id contains the query (or map to name if feasible)
-      filtered = filtered.filter(p => p.cost_center_id.toLowerCase().includes(q));
+      filtered = filtered.filter(p => String(p.cost_center_id).toLowerCase().includes(q));
     }
 
     // 4. Status Filter
@@ -136,7 +136,7 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
       const fromDate = new Date(params.date_from as string);
       fromDate.setHours(0, 0, 0, 0);
       filtered = filtered.filter(p => {
-        const prDate = new Date(p.request_date);
+        const prDate = new Date(p.pr_date);
         return prDate >= fromDate;
       });
     }
@@ -145,7 +145,7 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
       const toDate = new Date(params.date_to as string);
       toDate.setHours(23, 59, 59, 999);
       filtered = filtered.filter(p => {
-        const prDate = new Date(p.request_date);
+        const prDate = new Date(p.pr_date);
         return prDate <= toDate;
       });
     }
@@ -202,8 +202,8 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
         // Ensure required fields for PRLine are present or defaulted
         item_id: item.item_id || `temp-item-${index}`, 
         quantity: item.qty,
-        est_unit_price: item.price,
-        est_amount: item.qty * item.price,
+        est_unit_price: item.est_unit_price,
+        est_amount: item.qty * item.est_unit_price,
         needed_date: item.needed_date || new Date().toISOString().split('T')[0]
       }))
     };
