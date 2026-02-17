@@ -16,6 +16,7 @@ import {
     ChevronUp,
     ChevronDown
 } from 'lucide-react';
+import { styles } from '@/shared/constants/styles';
 
 interface SortConfig {
     key: string;
@@ -126,16 +127,16 @@ export function SmartTable<TData>({
     const endRow = Math.min(pagination.pageIndex * pagination.pageSize, pagination.totalCount);
 
     return (
-        <div className={`flex flex-col h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 ${className}`}>
+        <div className={`flex flex-col h-full ${styles.bg.surface} rounded-lg shadow-sm border ${styles.border.default} ${className}`}>
             {/* Table Container */}
             <div className="flex-1 overflow-auto relative">
                 <table 
                     className="w-full table-fixed text-left text-sm"
                     style={{ minWidth: table.getTotalSize() }}
                 >
-                    <thead className="bg-blue-50 dark:bg-gray-700 text-gray-600 dark:text-gray-200 uppercase text-xs sticky top-0 z-10">
+                    <thead className={`${styles.bg.header} ${styles.text.secondary} uppercase text-xs sticky top-0 z-10`}>
                         {table.getHeaderGroups().map(headerGroup => (
-                            <tr key={headerGroup.id} className="border-b border-gray-200 dark:border-gray-600">
+                            <tr key={headerGroup.id} className={`border-b ${styles.border.default}`}>
                                 {headerGroup.headers.map(header => {
                                     const canSort = header.column.getCanSort();
 
@@ -144,8 +145,8 @@ export function SmartTable<TData>({
                                             key={header.id}
                                             style={{ width: header.getSize() !== 150 ? header.getSize() : undefined }}
                                             className={`px-4 py-3 font-semibold select-none group transition-all ${
-                                                canSort ? 'cursor-pointer hover:bg-blue-100/50 dark:hover:bg-gray-600' : ''
-                                            } ${sortConfig?.key === header.column.id ? 'bg-blue-100/30 dark:bg-blue-900/10' : ''}`}
+                                                canSort ? `cursor-pointer ${styles.state.hover}` : ''
+                                            } ${sortConfig?.key === header.column.id ? styles.state.active : ''}`}
                                             onClick={() => {
                                                 if (canSort && onSortChange) {
                                                     onSortChange(header.column.id);
@@ -160,7 +161,7 @@ export function SmartTable<TData>({
                                                     header.getContext()
                                                 )}
                                                 {canSort && (
-                                                    <span className="text-blue-600 dark:text-blue-400">
+                                                    <span className={styles.text.accent}>
                                                         {sortConfig?.key === header.column.id ? (
                                                             sortConfig.direction === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
                                                         ) : (
@@ -177,7 +178,7 @@ export function SmartTable<TData>({
                             </tr>
                         ))}
                     </thead>
-                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                    <tbody className="divide-none">
                         {isLoading ? (
                             // Loading Skeleton
                             Array.from({ length: pagination.pageSize }).map((_, index) => (
@@ -195,9 +196,10 @@ export function SmartTable<TData>({
                                     key={row.id}
                                     onClick={() => onRowClick && onRowClick(row.original)}
                                     className={`
-                                        group transition-colors duration-150 border-b border-gray-50 dark:border-gray-800 last:border-none
+                                        group transition-colors duration-150 border-b border-transparent last:border-none
+                                        ${styles.tableStripe}
                                         ${onRowClick ? 'cursor-pointer' : ''}
-                                        ${hoverable ? 'hover:bg-blue-50 dark:hover:bg-gray-700' : ''}
+                                        ${hoverable ? styles.state.hover : ''}
                                     `}
                                 >
                                     {row.getVisibleCells().map(cell => (
@@ -213,9 +215,9 @@ export function SmartTable<TData>({
                         ) : (
                             // Empty State
                             <tr>
-                                <td colSpan={columns.length} className="px-4 py-16 text-center text-gray-500 dark:text-gray-400">
+                                <td colSpan={columns.length} className={`px-4 py-16 text-center ${styles.text.tertiary}`}>
                                     <div className="flex flex-col items-center justify-center gap-3">
-                                        <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-400">
+                                        <div className={`w-12 h-12 rounded-full ${styles.bg.subtle} flex items-center justify-center text-gray-400`}>
                                             <Search size={24} />
                                         </div>
                                         <p className="text-lg font-medium">ไม่พบข้อมูล</p>
@@ -226,7 +228,7 @@ export function SmartTable<TData>({
                         )}
                     </tbody>
                     {showFooter && (
-                        <tfoot className="bg-blue-50 dark:bg-gray-700 font-bold text-gray-700 dark:text-gray-200 sticky bottom-0 z-10 border-t-2 border-gray-300 dark:border-gray-600 shadow-sm">
+                        <tfoot className={`${styles.bg.header} font-bold ${styles.text.primary} sticky bottom-0 z-10 border-t-2 border-gray-300 dark:border-gray-600 shadow-sm`}>
                             {table.getFooterGroups().map(footerGroup => (
                                 <tr key={footerGroup.id}>
                                     {footerGroup.headers.map(header => (
@@ -247,10 +249,10 @@ export function SmartTable<TData>({
             </div>
 
             {/* Pagination Footer */}
-            <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-4 select-none">
+            <div className={`px-4 py-3 ${styles.bg.subtle} border-t ${styles.border.default} flex flex-col sm:flex-row items-center justify-between gap-4 select-none`}>
                 
                 {/* Left: Info & Size Selector */}
-                <div className="flex flex-col sm:flex-row items-center gap-4 text-sm text-gray-600 dark:text-gray-400 w-full sm:w-auto">
+                <div className={`flex flex-col sm:flex-row items-center gap-4 text-sm ${styles.text.secondary} w-full sm:w-auto`}>
                     <div className="flex items-center gap-2">
                         <span>แสดง</span>
                         <select

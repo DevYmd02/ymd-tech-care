@@ -35,9 +35,11 @@ export interface RFQHeader {
     updated_at: string;                 // TIMESTAMP
     
     // Extended fields for UI display (from JOINs)
-    pr_no?: string | null;              // From joined pr_header
+    pr_no?: string | null;              // เลขที่ PR (UI อาจใช้ ref_pr_no เพื่อความชัดเจนใน Filter)
+    ref_pr_no?: string | null;          // Alias สำหรับ pr_no
     branch_name?: string | null;        // From joined org_branch
-    created_by_name?: string | null;    // From joined users
+    created_by_name?: string | null;    // ชื่อผู้สร้าง
+    creator_name?: string | null;       // Alias สำหรับ created_by_name
     vendor_count?: number;              // From COUNT(rfq_vendor)
     vendor_responded?: number;          // From COUNT where responded
     
@@ -98,9 +100,9 @@ export interface RFQListItem {
     rfq_id: string;
     rfq_no: string;
     rfq_date: string;
-    pr_no: string | null;               // From joined pr_header
+    ref_pr_no: string | null;               // จาก pr_no เดิม
     pr_id: string | null;
-    created_by_name: string;            // ผู้สร้าง
+    creator_name: string;            // จาก created_by_name เดิม
     status: RFQStatus;
     quote_due_date: string | null;
     vendor_count?: number;              // จำนวนเจ้าหนี้ที่ส่ง
@@ -184,8 +186,8 @@ export const initialRFQFormData: RFQFormData = {
 /** RFQ Search/Filter Criteria */
 export interface RFQFilterCriteria {
     rfq_no?: string;
-    pr_no?: string;
-    created_by_name?: string;
+    ref_pr_no?: string;
+    creator_name?: string;
     status?: RFQStatus | 'ALL';
     date_from?: string;
     date_to?: string;

@@ -4,24 +4,25 @@
  */
 
 import React from 'react';
-import { useFormContext } from 'react-hook-form';
+import { useFormContext, Controller } from 'react-hook-form';
 
 import { Building2, FolderKanban, User, XCircle } from 'lucide-react';
 import type { PRFormData, VendorSelection } from '@/modules/procurement/types/pr-types';
 import type { CostCenter, Project } from '@/modules/master-data/types/master-data-types';
 import { VendorSearch } from '@/modules/master-data/vendor/components/selector/VendorSearch';
 import { StatusCheckbox } from '@ui';
+import type { MappedOption } from '@/modules/procurement/hooks/usePRMasterData';
 
 interface Props {
-  costCenters: CostCenter[];
-  projects: Project[];
+  costCenters: MappedOption<CostCenter>[];
+  projects: MappedOption<Project>[];
   onVendorSelect: (vendor: VendorSelection | null) => void;
   isEditMode: boolean;
   onVoid?: () => void;
 }
 
 export const PRHeader: React.FC<Props> = ({ costCenters, projects, onVendorSelect, isEditMode, onVoid }) => {
-  const { register, setValue, watch, control, formState: { errors } } = useFormContext<PRFormData>();
+  const { register, watch, control, formState: { errors } } = useFormContext<PRFormData>();
   // Watch for vendor values to display in the selector
   const preferredVendorId = watch("preferred_vendor_id");
   const vendorName = watch("vendor_name");
@@ -79,14 +80,14 @@ export const PRHeader: React.FC<Props> = ({ costCenters, projects, onVendorSelec
 
         <div className="col-span-12 md:col-span-3">
           <label className={labelClass}>วันที่ขอซื้อ <span className="text-red-500">*</span></label>
-          <input {...register("request_date")} type="date" className={`${inputClass} ${errors?.request_date ? errorInputClass : ''}`} />
-          {errors?.request_date && <p className={errorMsgClass}>{errors.request_date.message}</p>}
+          <input {...register("pr_date")} type="date" className={`${inputClass} ${errors?.pr_date ? errorInputClass : ''}`} />
+          {errors?.pr_date && <p className={errorMsgClass}>{errors.pr_date.message}</p>}
         </div>
 
         <div className="col-span-12 md:col-span-3">
           <label className={labelClass}>วันที่ต้องการใช้ <span className="text-red-500">*</span></label>
-          <input {...register("required_date")} type="date" className={`${inputClass} ${errors?.required_date ? errorInputClass : ''}`} />
-          {errors?.required_date && <p className={errorMsgClass}>{errors.required_date.message}</p>}
+          <input {...register("need_by_date")} type="date" className={`${inputClass} ${errors?.need_by_date ? errorInputClass : ''}`} />
+          {errors?.need_by_date && <p className={errorMsgClass}>{errors.need_by_date.message}</p>}
         </div>
 
         {/* Column 4: ON HOLD & CLEAR Actions */}
@@ -130,29 +131,63 @@ export const PRHeader: React.FC<Props> = ({ costCenters, projects, onVendorSelec
         </div>
 
         <div className="col-span-12 md:col-span-4">
-          <label className={labelClass}><Building2 size={11} className="inline mr-1" />ศูนย์ต้นทุน <span className="text-red-500">*</span></label>
-          <select className={`${selectClass} ${errors?.cost_center_id ? errorInputClass : ''}`} {...register("cost_center_id")} onChange={(e) => setValue("cost_center_id", e.target.value)}>
-            <option value="">-- เลือกศูนย์ต้นทุน --</option>
-            {costCenters.filter(cc => cc.is_active).map((cc) => (
-              <option key={cc.cost_center_id} value={cc.cost_center_id}>
-                {cc.cost_center_code} - {cc.cost_center_name}
-              </option>
-            ))}
-          </select>
-          {errors?.cost_center_id && <p className={errorMsgClass}>{errors.cost_center_id.message}</p>}
-        </div>
+         <label className={labelClass}><Building2 size={11} className="inline mr-1" />ศูนย์ต้นทุน <span className="text-red-500">*</span></label>
+         <Controller
+           name="cost_center_id"
+           control={control}
+           render={({ field }) => (
+             <select
+               className={`${selectClass} ${errors?.cost_center_id ? errorInputClass : ''}`}
+               ref={field.ref}
+               name={field.name}
+               onBlur={field.onBlur}
+               value={field.value || ''}
+               onChange={(e) => {
+                 const val = e.target.value;
+                 const selected = costCenters.find(cc => String(cc.value) === val);
+                 field.onChange(selected ? selected.value : val);
+               }}
+             >
+               <option value="">-- เลือกศูนย์ต้นทุน --</option>
+               {costCenters.map((cc) => (
+                 <option key={cc.value} value={cc.value}>
+                   {cc.label}
+                 </option>
+               ))}
+             </select>
+           )}
+         />
+         {errors?.cost_center_id && <p className={errorMsgClass}>{errors.cost_center_id.message}</p>}
+       </div>
 
-        <div className="col-span-12 md:col-span-4">
-          <label className={labelClass}><FolderKanban size={11} className="inline mr-1" />โครงการ <span className="text-gray-400">(ถ้ามี)</span></label>
-          <select className={selectClass} {...register("project_id")} onChange={(e) => setValue("project_id", e.target.value || undefined)}>
-            <option value="">-- ไม่ระบุโครงการ --</option>
-            {projects.filter(p => p.status === 'ACTIVE').map((project) => (
-              <option key={project.project_id} value={project.project_id}>
-                {project.project_code} - {project.project_name}
-              </option>
-            ))}
-          </select>
-        </div>
+       <div className="col-span-12 md:col-span-4">
+         <label className={labelClass}><FolderKanban size={11} className="inline mr-1" />โครงการ <span className="text-gray-400">(ถ้ามี)</span></label>
+         <Controller
+           name="project_id"
+           control={control}
+           render={({ field }) => (
+             <select
+               className={selectClass}
+               ref={field.ref}
+               name={field.name}
+               onBlur={field.onBlur}
+               value={field.value || ''}
+               onChange={(e) => {
+                 const val = e.target.value;
+                 const selected = projects.find(p => String(p.value) === val);
+                 field.onChange(selected ? selected.value : val);
+               }}
+             >
+               <option value="">-- ไม่ระบุโครงการ --</option>
+               {projects.map((project) => (
+                 <option key={project.value} value={project.value}>
+                   {project.label}
+                 </option>
+               ))}
+             </select>
+           )}
+         />
+       </div>
 
         {/* Row 3: วัตถุประสงค์ , ผู้ขายที่แนะนำ */}
         <div className="col-span-12 md:col-span-8">
@@ -172,7 +207,7 @@ export const PRHeader: React.FC<Props> = ({ costCenters, projects, onVendorSelec
         <div className="col-span-12 md:col-span-4">
           <VendorSearch 
               onVendorSelect={onVendorSelect}
-              selectedVendorId={preferredVendorId}
+              selectedVendorId={preferredVendorId ? String(preferredVendorId) : undefined}
               selectedVendorName={vendorName}
               label="ผู้ขายที่แนะนำ (Preferred Vendor)"
               placeholder="ค้นหาผู้ขาย..."
@@ -182,4 +217,3 @@ export const PRHeader: React.FC<Props> = ({ costCenters, projects, onVendorSelec
     </div>
   );
 };
-

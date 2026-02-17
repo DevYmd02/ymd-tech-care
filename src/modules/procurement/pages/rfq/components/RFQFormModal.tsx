@@ -1,7 +1,7 @@
 import React from 'react';
 import { FileText, Info, MoreHorizontal, Star, AlignLeft, History, Search } from 'lucide-react';
 import { VendorSearchModal } from '@/modules/master-data/vendor/components/selector/VendorSearchModal';
-import { WindowFormLayout, TabPanel, SystemAlert } from '@ui';
+import { WindowFormLayout, TabPanel } from '@ui';
 import type { PRHeader } from '@/modules/procurement/types/pr-types';
 import { useRFQForm } from '@/modules/procurement/hooks/useRFQForm';
 import { RFQFormHeader } from './RFQFormHeader';
@@ -18,7 +18,7 @@ interface Props {
 
 export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialPR }) => {
     const {
-        formData, isSaving, activeTab, setActiveTab, alert, setAlert,
+        formData, isSaving, activeTab, setActiveTab,
         branches, units, selectedVendors,
         isVendorModalOpen, setIsVendorModalOpen,
         isProductModalOpen, setIsProductModalOpen,
@@ -67,12 +67,7 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, init
                 </div>
             }
         >
-            {alert.show && (
-                <SystemAlert 
-                    message={alert.message} 
-                    onClose={() => setAlert({ ...alert, show: false })} 
-                />
-            )}
+            {/* Alert removed - now using toast */}
 
             <div className={cardClass}>
                 <RFQFormHeader 

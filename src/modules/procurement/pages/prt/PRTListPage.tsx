@@ -152,7 +152,7 @@ export default function PRTListPage() {
             size: 200,
         }),
         columnHelper.accessor('ref_grn_no', {
-            header: 'อ้าง GRN',
+            header: 'อ้างอิง GRN',
             cell: (info) => (
                 <span className="text-purple-600 dark:text-purple-400 font-medium">
                     {info.getValue() || '-'}
@@ -234,6 +234,8 @@ export default function PRTListPage() {
             subtitle="จัดการและติดตามใบคืนสินค้าทั้งหมด"
             icon={Database} // Using Database icon as generic placeholder or use another if FileText is too common
             accentColor="blue"
+            totalCount={data?.total}
+            totalCountLoading={isLoading}
             isLoading={isLoading}
             searchForm={
                 <FilterFormBuilder

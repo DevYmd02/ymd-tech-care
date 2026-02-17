@@ -7,11 +7,10 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { FileText, Plus, Eye, Edit, RefreshCw, Search } from 'lucide-react';
+import { FileText, Eye, Edit, RefreshCw } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
-// import { FilterFormBuilder } from '@shared';
-import { PageListLayout, FilterField, SmartTable, QTStatusBadge } from '@ui';
-// import type { FilterFieldConfig } from '@shared/FilterFormBuilder';
+import { PageListLayout, FilterFormBuilder, SmartTable, QTStatusBadge } from '@ui';
+import type { FilterFieldConfig } from '@/shared/components/ui/filters/FilterFormBuilder';
 import { useTableFilters, type TableFilters } from '@/shared/hooks';
 import type { ColumnDef } from '@tanstack/react-table';
 import { createColumnHelper } from '@tanstack/react-table';
@@ -36,25 +35,21 @@ const QT_STATUS_OPTIONS = [
 // FILTER CONFIG
 // ====================================================================================
 
-type QTFilterKeys = Extract<keyof TableFilters<QTStatus>, string>;
 
-// const QT_FILTER_CONFIG: FilterFieldConfig<QTFilterKeys>[] = [
-//     { name: 'search', label: 'เลขที่ใบเสนอราคา', type: 'text', placeholder: 'QT-xxx' },
-//     { name: 'search2', label: 'ชื่อผู้ขาย', type: 'text', placeholder: 'ชื่อผู้ขาย' },
-//     { name: 'search3', label: 'เลขที่ RFQ อ้างอิง', type: 'text', placeholder: 'RFQ2024-xxx' },
-//     { name: 'status', label: 'สถานะ', type: 'select', options: QT_STATUS_OPTIONS },
-//     { name: 'dateFrom', label: 'วันที่เริ่มต้น', type: 'date' },
-//     { name: 'dateTo', label: 'วันที่สิ้นสุด', type: 'date' },
-// ];
+
 
 // ====================================================================================
 // MAIN COMPONENT
 // ====================================================================================
 
 export default function QTListPage() {
-    // URL-based Filter State
     const { filters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<QTStatus>({
         defaultStatus: 'ALL',
+        customParamKeys: {
+            search: 'quotation_no',
+            search2: 'vendor_name',
+            search3: 'ref_rfq_no'
+        }
     });
 
     // Convert to API filter format
@@ -83,7 +78,7 @@ export default function QTListPage() {
     const [selectedQTForQC, setSelectedQTForQC] = useState<QTListItem | null>(null);
 
     // Handlers
-    const handleFilterChange = (name: QTFilterKeys, value: string) => {
+    const handleFilterChange = (name: string, value: string) => {
         setFilters({ [name]: value });
     };
 
@@ -130,7 +125,7 @@ export default function QTListPage() {
                 const item = info.row.original;
                 return (
                     <div>
-                        <span className="text-gray-700 dark:text-gray-200 block truncate" title={info.getValue()}>{info.getValue()}</span>
+                        <span className="text-gray-700 dark:text-gray-200 block truncate" title={info.getValue() || ''}>{info.getValue() || ''}</span>
                         <div className="text-[10px] text-gray-500 dark:text-gray-400 truncate" title={`เครดิต ${item.payment_term_days || '-'} วัน | Lead ${item.lead_time_days || '-'} วัน`}>
                             เครดิต {item.payment_term_days || '-'} วัน | Lead {item.lead_time_days || '-'} วัน
                         </div>
@@ -144,7 +139,7 @@ export default function QTListPage() {
             header: 'RFQ อ้างอิง',
             cell: (info) => (
                 <span className="text-purple-600 dark:text-purple-400 hover:underline cursor-pointer" title={info.getValue() || ''}>
-                    {info.getValue()}
+                    {info.getValue() || '-'}
                 </span>
             ),
             size: 155,
@@ -222,9 +217,14 @@ export default function QTListPage() {
         }),
     ], [columnHelper, filters.page, filters.limit, handleOpenQCModal, data?.data]);
 
-    // ====================================================================================
-    // RENDER
-    // ====================================================================================
+    const filterConfig: FilterFieldConfig<keyof TableFilters<QTStatus>>[] = useMemo(() => [
+        { name: 'search', label: 'เลขที่ใบเสนอราคา', type: 'text', placeholder: 'QT-xxx' },
+        { name: 'search2', label: 'ชื่อผู้ขาย', type: 'text', placeholder: 'ชื่อผู้ขาย' },
+        { name: 'search3', label: 'เลขที่ RFQ อ้างอิง', type: 'text', placeholder: 'RFQ-xxx' },
+        { name: 'status', label: 'สถานะ', type: 'select' as const, options: QT_STATUS_OPTIONS },
+        { name: 'dateFrom', label: 'วันที่เริ่มต้น', type: 'date' },
+        { name: 'dateTo', label: 'วันที่สิ้นสุด', type: 'date' },
+    ], []);
 
     return (
         <>
@@ -233,77 +233,19 @@ export default function QTListPage() {
                 subtitle="Vendor Quotation (QT)"
                 icon={FileText}
                 accentColor="blue"
-                isLoading={isLoading}
+                totalCount={data?.total}
+                totalCountLoading={isLoading}
                 searchForm={
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-                        <FilterField
-                            label="เลขที่ใบเสนอราคา"
-                            value={filters.search}
-                            onChange={(val: string) => handleFilterChange('search', val)}
-                            placeholder="QT-xxx"
-                            accentColor="blue"
-                        />
-                        <FilterField
-                            label="ชื่อผู้ขาย"
-                            value={filters.search2}
-                            onChange={(val: string) => handleFilterChange('search2', val)}
-                            placeholder="ชื่อผู้ขาย"
-                            accentColor="blue"
-                        />
-                        <FilterField
-                            label="เลขที่ RFQ อ้างอิง"
-                            value={filters.search3}
-                            onChange={(val: string) => handleFilterChange('search3', val)}
-                            placeholder="RFQ2024-xxx"
-                            accentColor="blue"
-                        />
-                        <FilterField
-                            label="สถานะ"
-                            type="select"
-                            value={filters.status}
-                            onChange={(val: string) => handleFilterChange('status', val)}
-                            options={QT_STATUS_OPTIONS}
-                            accentColor="blue"
-                        />
-                        <FilterField
-                            label="วันที่เริ่มต้น"
-                            type="date"
-                            value={filters.dateFrom || ''}
-                            onChange={(val: string) => handleFilterChange('dateFrom', val)}
-                            accentColor="blue"
-                        />
-                        <FilterField
-                            label="วันที่สิ้นสุด"
-                            type="date"
-                            value={filters.dateTo || ''}
-                            onChange={(val: string) => handleFilterChange('dateTo', val)}
-                            accentColor="blue"
-                        />
-
-                        {/* Action Buttons Group */}
-                        <div className="lg:col-span-2 flex justify-end gap-2 flex-wrap">
-                             <button
-                                onClick={resetFilters}
-                                className="h-10 px-6 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg font-medium transition-colors border border-gray-300"
-                            >
-                                ล้างค่า
-                            </button>
-                            <button
-                                onClick={() => refetch()}
-                                className="h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2"
-                            >
-                                <Search size={18} />
-                                ค้นหา
-                            </button>
-                            <button
-                                onClick={() => setIsCreateModalOpen(true)}
-                                className="h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2"
-                            >
-                                <Plus size={16} strokeWidth={2.5} />
-                                สร้างใบเสนอราคาใหม่
-                            </button>
-                        </div>
-                    </div>
+                    <FilterFormBuilder<TableFilters<QTStatus>>
+                        config={filterConfig}
+                        filters={filters}
+                        onFilterChange={handleFilterChange}
+                        onSearch={refetch}
+                        onReset={resetFilters}
+                        accentColor="blue"
+                        onCreate={() => setIsCreateModalOpen(true)}
+                        createLabel="สร้างใบเสนอราคาใหม่"
+                    />
                 }
             >
                 <div className="h-full flex flex-col">

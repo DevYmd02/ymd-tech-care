@@ -6,6 +6,7 @@ import { initialRFQFormData, initialRFQLineFormData } from '@/modules/procuremen
 import type { PRHeader } from '@/modules/procurement/types/pr-types';
 import type { VendorSearchItem } from '@/modules/master-data/vendor/types/vendor-types';
 import { logger } from '@/shared/utils/logger';
+import { useToast } from '@/shared/components/ui/feedback/Toast';
 
 interface VendorSelection {
     vendor_code: string;
@@ -26,9 +27,9 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         })),
     });
 
+    const { toast } = useToast();
     const [isSaving, setIsSaving] = useState(false);
     const [activeTab, setActiveTab] = useState('detail');
-    const [alert, setAlert] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
     
     // Vendor Selection State
     const [selectedVendors, setSelectedVendors] = useState<VendorSelection[]>([
@@ -131,14 +132,14 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
 
     const handleRemoveLine = useCallback((index: number) => {
         if (formData.lines.length <= 5) {
-            setAlert({ show: true, message: 'ต้องมีอย่างน้อย 5 แถว' });
+            toast('ต้องมีอย่างน้อย 5 แถว', 'error');
             return;
         }
         setFormData(prev => ({
             ...prev,
             lines: prev.lines.filter((_, i) => i !== index).map((line, i) => ({ ...line, line_no: i + 1 })),
         }));
-    }, [formData.lines.length]);
+    }, [formData.lines.length, toast]);
 
     const handleSave = async () => {
         // --- Basic Validation ---
@@ -151,7 +152,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
             errors.push('กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ');
         }
         if (errors.length > 0) {
-            setAlert({ show: true, message: errors.join('\n') });
+            toast(errors.join('\n'), 'error');
             return;
         }
 
@@ -168,7 +169,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
             onClose();
         } catch (error) {
             logger.error('Failed to save RFQ:', error);
-            setAlert({ show: true, message: 'เกิดข้อผิดพลาดในการบันทึก RFQ' });
+            toast('เกิดข้อผิดพลาดในการบันทึก RFQ', 'error');
         } finally {
             setIsSaving(false);
         }
@@ -219,8 +220,6 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         isSaving,
         activeTab,
         setActiveTab,
-        alert,
-        setAlert,
         branches,
         items,
         units,

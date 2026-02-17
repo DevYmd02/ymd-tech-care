@@ -1,5 +1,5 @@
-
-import type { PurchaseReturn, PrtItem } from '@/modules/procurement/types/prt/prt-types';
+import type { PurchaseReturn, PrtItem, PRTStatus } from '@/modules/procurement/types/prt/prt-types';
+import { sanitizeId } from '@/core/api/mockUtils';
 
 export const MOCK_PRT_ITEMS: PrtItem[] = [
     { id: 'item-1', code: 'ITM-001', name: 'คอมพิวเตอร์ Notebook Dell Inspiron', uom: 'PCS', price: 25000 },
@@ -23,7 +23,7 @@ export const MOCK_PRT_DATA: PurchaseReturn[] = [
         is_multicurrency: false,
         total_qty: 10,
         total_amount: 250000.00,
-        status: 'POSTED',
+        status: 'POSTED' as PRTStatus,
         created_by: 'สมชาย ใจดี',
         created_at: '2024-01-20T10:00:00Z',
         updated_at: '2024-01-20T10:00:00Z',
@@ -40,7 +40,7 @@ export const MOCK_PRT_DATA: PurchaseReturn[] = [
         ref_grn_no: 'GRN2024-005',
         total_qty: 5,
         total_amount: 125000.00,
-        status: 'DRAFT',
+        status: 'DRAFT' as PRTStatus,
         created_by: 'สมหญิง รักดี',
         created_at: '2024-01-21T14:30:00Z',
         updated_at: '2024-01-21T14:30:00Z',
@@ -57,7 +57,7 @@ export const MOCK_PRT_DATA: PurchaseReturn[] = [
         ref_grn_no: '-',
         total_qty: 15,
         total_amount: 75000.00,
-        status: 'CANCELLED',
+        status: 'CANCELLED' as PRTStatus,
         created_by: 'วิชัย มากการ',
         created_at: '2024-01-22T09:15:00Z',
         updated_at: '2024-01-22T16:00:00Z',
@@ -74,10 +74,15 @@ export const MOCK_PRT_DATA: PurchaseReturn[] = [
         ref_grn_no: 'GRN2024-012',
         total_qty: 2,
         total_amount: 5000.00,
-        status: 'DRAFT',
+        status: 'DRAFT' as PRTStatus,
         created_by: 'สมชาย ใจดี',
         created_at: '2024-01-23T11:45:00Z',
         updated_at: '2024-01-23T11:45:00Z',
         items: []
     }
-];
+].map(item => ({
+    ...item,
+    prt_id: sanitizeId(item.prt_id),
+    vendor_id: sanitizeId(item.vendor_id),
+    ref_grn_id: sanitizeId(item.ref_grn_id),
+}));

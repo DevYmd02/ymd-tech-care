@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { FileText, Plus, Trash2, Search, MoreHorizontal, FileBox } from 'lucide-react';
 import { useWatch } from 'react-hook-form';
 
-import { WindowFormLayout, SystemAlert } from '@ui';
+import { WindowFormLayout } from '@ui';
 import { MasterDataService } from '@/core/api/master-data.service';
 import type { UnitListItem } from '@/modules/master-data/types/master-data-types';
 import { ProductSearchModal } from '@/modules/inventory/components/selector/ProductSearchModal';
@@ -31,7 +31,6 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ }
   const [units, setUnits] = useState<UnitListItem[]>([]);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
-  const [alertState, setAlertState] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
 
   // -- Effects --
   useEffect(() => {
@@ -90,7 +89,7 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ }
         </div>
       }
     >
-      {alertState.show && <SystemAlert message={alertState.message} onClose={() => setAlertState({ ...alertState, show: false })} />}
+      {/* Alert removed - now using toast */}
 
       <ProductSearchModal 
         isOpen={isProductModalOpen}

@@ -6,8 +6,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Edit2, Trash2, Award } from 'lucide-react';
 import { BrandFormModal } from './BrandFormModal';
-import { BrandService } from '../../services/inventory-master.service';
-import type { Brand } from '../../types/inventory-master.types';
+import { BrandService } from '@/modules/master-data/inventory/services/inventory-master.service';
+import type { Brand } from '@/modules/master-data/inventory/types/inventory-master.types';
 import { ActiveStatusBadge } from '@ui';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';

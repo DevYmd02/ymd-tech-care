@@ -9,11 +9,13 @@ import {
     Save, 
     History
 } from 'lucide-react';
+import { styles } from '@/shared/constants/styles';
 import type { 
     VendorMaster
 } from '@/modules/master-data/vendor/types/vendor-types';
 
-import { DialogFormLayout, SystemAlert } from '@ui';
+import { DialogFormLayout } from '@ui';
+import { useToast } from '@/shared/components/ui/feedback/Toast';
 
 import { VendorGeneralInfo } from './components/VendorGeneralInfo';
 import { VendorContactInfo } from './components/VendorContactInfo';
@@ -38,6 +40,7 @@ interface VendorFormModalProps {
 export function VendorFormModal(props: VendorFormModalProps) {
     const { isOpen, onClose, initialData, vendorId } = props;
     const isEdit = !!vendorId || !!initialData;
+    const { toast } = useToast();
     
     const {
         formData,
@@ -58,9 +61,7 @@ export function VendorFormModal(props: VendorFormModalProps) {
         handleSameAsRegisteredChange,
         handleCreditLimitChange,
         handleSubmit,
-        systemAlert,
-        setSystemAlert
-    } = useVendorForm(props);
+    } = useVendorForm({ ...props, toast });
 
     // Footer Content
     const FormFooter = (
@@ -84,7 +85,7 @@ export function VendorFormModal(props: VendorFormModalProps) {
             <button 
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 font-medium transition"
+                className={styles.btnSecondary}
             >
                 ยกเลิก
             </button>
@@ -93,7 +94,7 @@ export function VendorFormModal(props: VendorFormModalProps) {
                 type="submit"
                 form="vendor-form"
                 disabled={isSubmitting}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-lg hover:shadow-blue-500/30 transition flex items-center gap-2"
+                className={`${styles.btnPrimary} flex items-center gap-2`}
             >
                 <Save size={18} />
                 {isSubmitting ? 'กำลังบันทึก...' : (isEdit ? 'บันทึกการแก้ไข' : 'บันทึก')}
@@ -102,81 +103,68 @@ export function VendorFormModal(props: VendorFormModalProps) {
     );
 
     return (
-        <>
-            {/* Validation Feedback Toast - Rendered outside DialogFormLayout to ensure visibility if needed, 
-                though DialogFormLayout has z-50. SystemAlert should have higher z-index or use a portal. 
-                Assuming SystemAlert adheres to fixed positioning. */}
-            {systemAlert && (
-                <SystemAlert
-                    message={systemAlert.message}
-                    onClose={() => setSystemAlert(null)}
-                    duration={5000}
+        <DialogFormLayout
+            isOpen={isOpen}
+            onClose={onClose}
+            title={headerTitle}
+            subtitle="กรอกข้อมูลเจ้าหนี้/ซัพพลายเออร์"
+            footer={FormFooter}
+            isLoading={isLoading}
+        >
+             <form id="vendor-form" onSubmit={handleSubmit} className="space-y-8">
+                
+                <VendorGeneralInfo 
+                    formData={formData} 
+                    onChange={handleChange} 
+                    errors={errors}
                 />
-            )}
 
-            <DialogFormLayout
-                isOpen={isOpen}
-                onClose={onClose}
-                title={headerTitle}
-                subtitle="กรอกข้อมูลเจ้าหนี้/ซัพพลายเออร์"
-                footer={FormFooter}
-                isLoading={isLoading}
-            >
-                 <form id="vendor-form" onSubmit={handleSubmit} className="space-y-8">
-                    
-                    <VendorGeneralInfo 
-                        formData={formData} 
-                        onChange={handleChange} 
-                        errors={errors}
-                    />
+                <VendorContactInfo 
+                    formData={formData} 
+                    onChange={handleChange} 
+                    errors={errors}
+                />
 
-                    <VendorContactInfo 
-                        formData={formData} 
-                        onChange={handleChange} 
-                        errors={errors}
-                    />
+                <VendorAddressList 
+                    formData={formData}
+                    errors={errors}
+                    addAddress={addAddress}
+                    removeAddress={removeAddress}
+                    updateAddress={updateAddress}
+                    handleSameAsRegisteredChange={handleSameAsRegisteredChange}
+                />
 
-                    <VendorAddressList 
-                        formData={formData}
-                        errors={errors}
-                        addAddress={addAddress}
-                        removeAddress={removeAddress}
-                        updateAddress={updateAddress}
-                        handleSameAsRegisteredChange={handleSameAsRegisteredChange}
-                    />
+                <VendorPaymentConditions 
+                    formData={formData}
+                    onChange={handleChange}
+                    onCreditLimitChange={handleCreditLimitChange}
+                    errors={errors}
+                />
 
-                    <VendorPaymentConditions 
-                        formData={formData}
-                        onChange={handleChange}
-                        onCreditLimitChange={handleCreditLimitChange}
-                        errors={errors}
-                    />
+                <VendorBankInfo 
+                    formData={formData}
+                    addBankAccount={addBankAccount}
+                    removeBankAccount={removeBankAccount}
+                    updateBankAccount={updateBankAccount}
+                    errors={errors}
+                />
 
-                    <VendorBankInfo 
-                        formData={formData}
-                        addBankAccount={addBankAccount}
-                        removeBankAccount={removeBankAccount}
-                        updateBankAccount={updateBankAccount}
-                        errors={errors}
-                    />
+                <VendorAdditionalContacts 
+                    formData={formData}
+                    addContactPerson={addContactPerson}
+                    removeContactPerson={removeContactPerson}
+                    updateContactPerson={updateContactPerson}
+                    errors={errors}
+                />
 
-                    <VendorAdditionalContacts 
-                        formData={formData}
-                        addContactPerson={addContactPerson}
-                        removeContactPerson={removeContactPerson}
-                        updateContactPerson={updateContactPerson}
-                        errors={errors}
-                    />
+                <VendorRemarks 
+                    formData={formData}
+                    onChange={handleChange}
+                    errors={errors}
+                />
 
-                    <VendorRemarks 
-                        formData={formData}
-                        onChange={handleChange}
-                        errors={errors}
-                    />
-
-                </form>
-            </DialogFormLayout>
-        </>
+            </form>
+        </DialogFormLayout>
     );
 }
 

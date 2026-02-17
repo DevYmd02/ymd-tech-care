@@ -61,13 +61,19 @@ export const Toast: React.FC<ToastProps> = ({ message, onClose, type = 'error', 
   if (!isVisible) return null;
 
   return (
-    <div className={`fixed top-4 right-4 z-[9999] bg-white border-l-4 ${borderColors[type]} shadow-xl rounded-md p-4 flex items-start space-x-3 animate-bounce-in transition-all min-w-[300px]`}>
-       <Icon className={iconColors[type]} size={24} />
-       <div className="flex-1">
-          <h4 className="font-bold text-gray-800 text-sm">{titles[type]}</h4>
-          <p className="text-gray-600 text-xs mt-1">{message}</p>
+    <div className={`fixed top-4 right-4 z-[9999] bg-white dark:bg-gray-800 border ${borderColors[type]} dark:border-gray-700 shadow-xl shadow-black/20 dark:shadow-black/50 rounded-md p-4 flex items-start space-x-3 animate-bounce-in transition-all min-w-[300px]`}>
+       <div className={`p-2 rounded-full hidden sm:block ${type === 'success' ? 'bg-green-50 dark:bg-green-900/20' : type === 'error' ? 'bg-red-50 dark:bg-red-900/20' : 'bg-blue-50 dark:bg-blue-900/20'}`}>
+         <Icon className={iconColors[type]} size={20} />
        </div>
-       <button onClick={onClose} type="button" className="text-gray-400 hover:text-gray-600">
+       <div className="flex-1 pt-1">
+          <h4 className="font-bold text-gray-900 dark:text-gray-100 text-sm leading-tight">{titles[type]}</h4>
+          <p className="text-gray-600 dark:text-gray-400 text-xs mt-1">{message}</p>
+       </div>
+       <button 
+         onClick={onClose} 
+         type="button" 
+         className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 transition-colors"
+       >
          <X size={16} />
        </button>
     </div>

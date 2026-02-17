@@ -49,6 +49,10 @@ export default function GRNListPage() {
     // 1. Filter State
     const { filters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<GRNStatus>({
         defaultStatus: 'ALL',
+        customParamKeys: {
+            search: 'grn_no',
+            search2: 'po_no'
+        }
     });
 
     const apiFilters: GRNListParams = {
@@ -146,6 +150,8 @@ export default function GRNListPage() {
                 subtitle="Goods Receipt Note (GRN)"
                 icon={Package}
                 accentColor="blue"
+                totalCount={data?.total}
+                totalCountLoading={isLoading}
                 isLoading={isLoading}
                 searchForm={
                     <FilterFormBuilder

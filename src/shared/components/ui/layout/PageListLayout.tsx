@@ -50,6 +50,10 @@ export interface PageListLayoutProps {
     children: React.ReactNode;
     /** Loading state */
     isLoading?: boolean;
+    /** Total record count for the list */
+    totalCount?: number;
+    /** Whether the record count is still loading */
+    totalCountLoading?: boolean;
 }
 
 // ====================================================================================
@@ -109,6 +113,8 @@ export const PageListLayout: React.FC<PageListLayoutProps> = ({
     searchFormTitle = 'ฟอร์มค้นหาข้อมูล',
     children,
     isLoading = false,
+    totalCount,
+    totalCountLoading = false,
 }) => {
     const colors = colorMaps[accentColor];
 
@@ -120,7 +126,9 @@ export const PageListLayout: React.FC<PageListLayoutProps> = ({
                     <div className="flex items-center gap-3">
                         <Icon size={24} className="text-white shrink-0" />
                         <div>
-                            <h1 className="text-xl font-bold text-white break-words">{title}</h1>
+                            <div className="flex items-center gap-2">
+                                <h1 className="text-xl font-bold text-white break-words">{title}</h1>
+                            </div>
                             {subtitle && (
                                 <p className="text-white/80 text-sm break-words">{subtitle}</p>
                             )}
@@ -144,6 +152,17 @@ export const PageListLayout: React.FC<PageListLayoutProps> = ({
                         </h2>
                     </div>
                     {searchForm}
+                </div>
+            )}
+
+            {/* ==================== RECORD SUMMARY ==================== */}
+            {totalCountLoading ? (
+                <div className="mb-4 h-7 w-48 bg-gray-200 dark:bg-gray-700 animate-pulse rounded-md" />
+            ) : typeof totalCount === 'number' && (
+                <div className="mb-4 animate-in fade-in slide-in-from-left-2 duration-500">
+                    <p className="text-lg font-bold text-gray-700 dark:text-gray-200">
+                        พบข้อมูล <span className="text-blue-600 dark:text-blue-400 mx-1">{totalCount.toLocaleString()}</span> รายการ
+                    </p>
                 </div>
             )}
 

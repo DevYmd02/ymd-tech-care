@@ -12,7 +12,7 @@ import { Tag, Save, X } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
 import { logger } from '@/shared/utils/logger';
-import { VendorTypeService } from '../../services/vendor-type.service';
+import { VendorTypeService } from '@/modules/master-data/vendor/services/vendor-type.service';
 
 // ====================================================================================
 // SCHEMA

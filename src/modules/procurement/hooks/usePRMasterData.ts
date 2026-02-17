@@ -1,12 +1,21 @@
 import { useState, useEffect, useCallback } from 'react';
 import { MasterDataService } from '@/core/api/master-data.service';
 import type { ItemListItem, CostCenter, Project, WarehouseListItem } from '@/modules/master-data/types/master-data-types';
+import { TaxService } from '@/modules/master-data/tax/services/tax.service';
+import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
+
+export interface MappedOption<T> {
+    value: string;
+    label: string;
+    original?: T;
+}
 
 export const usePRMasterData = () => {
-    const [products, setProducts] = useState<ItemListItem[]>([]);
-    const [warehouses, setWarehouses] = useState<WarehouseListItem[]>([]);
-    const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
-    const [projects, setProjects] = useState<Project[]>([]);
+     const [products, setProducts] = useState<ItemListItem[]>([]);
+     const [warehouses, setWarehouses] = useState<MappedOption<WarehouseListItem>[]>([]);
+     const [costCenters, setCostCenters] = useState<MappedOption<CostCenter>[]>([]);
+     const [projects, setProjects] = useState<MappedOption<Project>[]>([]);
+     const [purchaseTaxOptions, setPurchaseTaxOptions] = useState<MappedOption<TaxCode>[]>([]);
     
     // Loading States
     const [isLoading, setIsLoading] = useState(true);
@@ -19,14 +28,39 @@ export const usePRMasterData = () => {
         const fetchMasterData = async () => {
           try {
             setIsLoading(true);
-            const [wh, cc, prj] = await Promise.all([
+            const [wh, cc, prj, taxCodes] = await Promise.all([
               MasterDataService.getWarehouses(),
               MasterDataService.getCostCenters(),
-              MasterDataService.getProjects()
+              MasterDataService.getProjects(),
+              TaxService.getTaxCodes()
             ]);
-            setWarehouses(wh);
-            setCostCenters(cc);
-            setProjects(prj);
+             setWarehouses(wh.map(w => ({
+               value: w.warehouse_id,
+               label: `${w.warehouse_code} - ${w.warehouse_name}`,
+               original: w
+             })));
+             
+             setCostCenters(cc.map(item => ({
+               value: item.cost_center_id,
+               label: `${item.cost_center_code} - ${item.cost_center_name}`,
+               original: item
+             })));
+             
+             setProjects(prj.map(p => ({
+               value: p.project_id,
+               label: `${p.project_code} - ${p.project_name}`,
+               original: p
+             })));
+             
+             // ⚠️ Purchase Context Filter: PR is a PURCHASE document
+             const filtered = taxCodes.filter(
+               t => (t.tax_type === 'PURCHASE' || t.tax_type === 'EXEMPT') && t.is_active
+             );
+             setPurchaseTaxOptions(filtered.map(t => ({
+               value: t.tax_id,
+               label: `${t.tax_code} (${t.tax_rate}%)`,
+               original: t
+             })));
           } catch (err) {
             console.error('Failed to fetch master data:', err);
             setError(err instanceof Error ? err : new Error('Failed to fetch master data'));
@@ -38,14 +72,13 @@ export const usePRMasterData = () => {
       }, []);
 
     // Product Search Function
-    const searchProducts = useCallback(async (query: string, vendorId?: string) => {
+    const searchProducts = useCallback(async (query: string, vendorId?: number | string) => {
         try {
             setIsSearchingProducts(true);
             const items = await MasterDataService.getItems(query, vendorId);
             setProducts(items);
         } catch (err) {
             console.error('Failed to search products:', err);
-            // Optionally handle error specific to search
         } finally {
             setIsSearchingProducts(false);
         }
@@ -56,9 +89,10 @@ export const usePRMasterData = () => {
         warehouses,
         costCenters,
         projects,
+        purchaseTaxOptions,
         isLoading,
-        isSearchingProducts, // Export new state
-        searchProducts,      // Export new function
+        isSearchingProducts,
+        searchProducts,
         error
     };
 };

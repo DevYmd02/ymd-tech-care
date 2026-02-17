@@ -13,7 +13,7 @@
 
 import React, { type ReactNode } from 'react';
 import { Search, X, Plus } from 'lucide-react';
-import { FilterField, type FilterFieldType, type SelectOption } from '../inputs/FilterField';
+import { FilterField, type FilterFieldType, type SelectOption } from './FilterField';
 
 // ====================================================================================
 // TYPES

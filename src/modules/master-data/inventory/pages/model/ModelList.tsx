@@ -4,8 +4,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Edit2, Trash2, Box } from 'lucide-react';
 import { ModelFormModal } from './ModelFormModal';
-import { ModelService } from '../../services/inventory-master.service';
-import type { Model } from '../../types/inventory-master.types';
+import { ModelService } from '@/modules/master-data/inventory/services/inventory-master.service';
+import type { Model } from '@/modules/master-data/inventory/types/inventory-master.types';
 import { ActiveStatusBadge } from '@ui';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';

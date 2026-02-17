@@ -44,13 +44,7 @@ export interface FilterFieldProps {
 // COLOR MAPPINGS
 // ====================================================================================
 
-const ringColors = {
-    emerald: 'ring-emerald-500 focus:ring-emerald-500',
-    blue: 'ring-blue-500 focus:ring-blue-500',
-    purple: 'ring-purple-500 focus:ring-purple-500',
-    teal: 'ring-teal-500 focus:ring-teal-500',
-    indigo: 'ring-indigo-500 focus:ring-indigo-500',
-};
+// Local ringColors removed in favor of styles.focusRing
 
 // ====================================================================================
 // COMPONENT
@@ -67,7 +61,7 @@ export const FilterField: React.FC<FilterFieldProps> = ({
     disabled = false,
     className = '',
 }) => {
-    const baseInputClass = styles.input.replace('ring-blue-500', ringColors[accentColor]);
+    const baseInputClass = styles.input.replace('ring-blue-500', styles.focusRing[accentColor] || styles.focusRing.blue);
     // Merge base class with custom class
     const inputClass = `${baseInputClass} ${className} ${disabled ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''}`;
     const labelClass = styles.label;

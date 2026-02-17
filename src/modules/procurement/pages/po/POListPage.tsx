@@ -91,6 +91,11 @@ export default function POListPage() {
 
     const { filters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<POStatus>({
         defaultStatus: 'ALL',
+        customParamKeys: {
+            search: 'po_no',
+            search2: 'pr_no',
+            search3: 'vendor_name'
+        }
     });
 
     // Convert to API filter format
@@ -101,7 +106,6 @@ export default function POListPage() {
         status: filters.status === 'ALL' ? undefined : filters.status,
         date_from: filters.dateFrom || undefined,
         date_to: filters.dateTo || undefined,
-        // POListParams likely has pagination like others
         page: filters.page,
         limit: filters.limit,
         sort: filters.sort || undefined,
@@ -299,6 +303,8 @@ export default function POListPage() {
                 subtitle="Purchase Order (PO) Master"
                 icon={FileText}
                 accentColor="blue"
+                totalCount={data?.total}
+                totalCountLoading={isLoading}
                 isLoading={isLoading}
                 searchForm={
                     <FilterFormBuilder

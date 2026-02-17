@@ -9,8 +9,7 @@ import { useState, useMemo } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { Scale, FileText, Eye } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
-import { FilterFormBuilder } from '@/shared/components/ui/layout/FilterFormBuilder';
-import { PageListLayout, SmartTable, QCStatusBadge } from '@ui';
+import { PageListLayout, SmartTable, QCStatusBadge, FilterFormBuilder } from '@ui';
 import type { FilterFieldConfig } from '@ui';
 import { useTableFilters, type TableFilters } from '@/shared/hooks';
 import { QCFormModal } from './components';
@@ -230,6 +229,8 @@ export default function QCListPage() {
                 subtitle="Quote Comparison Master (QC)"
                 icon={Scale}
                 accentColor="indigo"
+                totalCount={data?.total}
+                totalCountLoading={isLoading}
                 isLoading={isLoading}
                 searchForm={
                     <FilterFormBuilder

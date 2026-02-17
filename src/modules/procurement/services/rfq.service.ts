@@ -12,60 +12,32 @@ const ENDPOINTS = {
 
 export const RFQService = {
   getList: async (params?: RFQFilterCriteria): Promise<RFQListResponse> => {
-    try {
-      return await api.get<RFQListResponse>(ENDPOINTS.list, { params });
-    } catch (error) {
-      logger.error('[RFQService] getList error:', error);
-      return { data: [], total: 0, page: 1, limit: 10 };
-    }
+    logger.info('[RFQService] Fetching RFQ List', params);
+    return await api.get<RFQListResponse>(ENDPOINTS.list, { params });
   },
 
-  getById: async (id: string): Promise<RFQHeader | null> => {
-    try {
-      return await api.get<RFQHeader>(ENDPOINTS.detail(id));
-    } catch (error) {
-      logger.error('[RFQService] getById error:', error);
-      return null;
-    }
+  getById: async (id: string): Promise<RFQHeader> => {
+    logger.info(`[RFQService] Fetching RFQ Detail: ${id}`);
+    return await api.get<RFQHeader>(ENDPOINTS.detail(id));
   },
 
-  create: async (data: RFQCreateData): Promise<{ success: boolean; data?: RFQHeader; message?: string }> => {
-    try {
-      const response = await api.post<RFQHeader>(ENDPOINTS.create, data);
-      return { success: true, data: response };
-    } catch (error) {
-      logger.error('[RFQService] create error:', error);
-      return { success: false, message: 'เกิดข้อผิดพลาดในการสร้าง RFQ' };
-    }
+  create: async (data: RFQCreateData): Promise<RFQHeader> => {
+    logger.info('[RFQService] Creating RFQ');
+    return await api.post<RFQHeader>(ENDPOINTS.create, data);
   },
 
-  update: async (id: string, data: Partial<RFQCreateData>): Promise<{ success: boolean; message?: string }> => {
-    try {
-      await api.put<SuccessResponse>(ENDPOINTS.detail(id), data);
-      return { success: true };
-    } catch (error) {
-      logger.error('[RFQService] update error:', error);
-      return { success: false, message: 'เกิดข้อผิดพลาดในการอัพเดท RFQ' };
-    }
+  update: async (id: string, data: Partial<RFQCreateData>): Promise<SuccessResponse> => {
+    logger.info(`[RFQService] Updating RFQ: ${id}`);
+    return await api.put<SuccessResponse>(ENDPOINTS.detail(id), data);
   },
 
-  delete: async (id: string): Promise<boolean> => {
-    try {
-      await api.delete<SuccessResponse>(ENDPOINTS.detail(id));
-      return true;
-    } catch (error) {
-      logger.error('[RFQService] delete error:', error);
-      return false;
-    }
+  delete: async (id: string): Promise<SuccessResponse> => {
+    logger.info(`[RFQService] Deleting RFQ: ${id}`);
+    return await api.delete<SuccessResponse>(ENDPOINTS.detail(id));
   },
 
-  sendToVendors: async (rfqId: string, vendorIds: string[]): Promise<{ success: boolean; message?: string }> => {
-    try {
-      await api.post<SuccessResponse>(ENDPOINTS.sendToVendors(rfqId), { vendor_ids: vendorIds });
-      return { success: true };
-    } catch (error) {
-      logger.error('[RFQService] sendToVendors error:', error);
-      return { success: false, message: 'เกิดข้อผิดพลาดในการส่ง RFQ' };
-    }
+  sendToVendors: async (rfqId: string, vendorIds: string[]): Promise<SuccessResponse> => {
+    logger.info(`[RFQService] Sending RFQ ${rfqId} to vendors`);
+    return await api.post<SuccessResponse>(ENDPOINTS.sendToVendors(rfqId), { vendor_ids: vendorIds });
   }
 };

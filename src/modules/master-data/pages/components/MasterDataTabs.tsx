@@ -1,5 +1,5 @@
 import React from 'react';
-import type { TabConfig, TabType } from '../../types';
+import type { TabConfig, TabType } from '@/modules/master-data/types';
 
 interface MasterDataTabsProps {
     tabs: TabConfig[];

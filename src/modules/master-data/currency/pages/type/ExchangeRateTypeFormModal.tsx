@@ -9,10 +9,10 @@ import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Layers, Save, X } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
-import { CurrencyService } from '../../services/currency.service';
+import { CurrencyService } from '@/modules/master-data/currency/services/currency.service';
 import { DialogFormLayout } from '@ui';
 import { logger } from '@/shared/utils/logger';
-import { exchangeRateTypeSchema, type ExchangeRateTypeFormValues, type ExchangeRateType } from '../../../types/currency-types';
+import { exchangeRateTypeSchema, type ExchangeRateTypeFormValues, type ExchangeRateType } from '@/modules/master-data/types/currency-types';
 
 interface Props {
     isOpen: boolean;

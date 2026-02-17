@@ -1,20 +1,21 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import type { FieldErrors, Path, FieldPathValue } from 'react-hook-form';
-import type { PRFormData, PRLineFormData, CreatePRPayload, VendorSelection } from '@/modules/procurement/types/pr-types';
+import type { PRFormData, PRLineFormData, CreatePRPayload, VendorSelection, PRLine } from '@/modules/procurement/types/pr-types';
 import { PRService } from '@/modules/procurement/services/pr.service';
 import { fetchExchangeRate } from '@/modules/master-data/currency/services/mockExchangeRateService';
-import { TaxService } from '@/modules/master-data/tax/services/tax.service';
 import { logger } from '@/shared/utils/logger';
 import type { ItemListItem } from '@/modules/master-data/types/master-data-types';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
+import type { UserProfile } from '@/modules/auth/services/auth.service';
 import { usePRMasterData } from './usePRMasterData';
 import { usePRActions } from './usePRActions';
 import { PRFormSchema } from '@/modules/procurement/types/pr-schemas';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/shared/components/ui/feedback/Toast';
 
 
 
@@ -31,27 +32,59 @@ const getNextWeekDate = (): string => {
   return date.toISOString().split('T')[0];
 };
 
+// Standardized on string for all IDs
+
 export type ExtendedLine = PRLineFormData;
 
 const createEmptyLine = (): ExtendedLine => ({
-  item_id: '', item_code: '', item_name: '', item_description: '', quantity: 0, uom: '', uom_id: undefined,
-  est_unit_price: 0, est_amount: 0, needed_date: getTodayDate(), preferred_vendor_id: undefined, remark: '',
-  warehouse: '', location: '', discount: 0, discount_input: '',
+  item_id: '', 
+  item_code: '', 
+  item_name: '', 
+  description: '', 
+  qty: 0, 
+  uom: '', 
+  uom_id: '',
+  est_unit_price: 0, 
+  est_amount: 0, 
+  needed_date: getTodayDate(), 
+  preferred_vendor_id: undefined, 
+  remark: '',
+  warehouse_id: '', 
+  location: '', 
+  discount: 0, 
+  line_discount_raw: '',
 });
 
 const getInitialLines = () => Array(PR_CONFIG.INITIAL_LINES).fill(null).map(() => createEmptyLine());
 
-const getDefaultFormValues = (): PRFormData => ({
-  pr_no: '', request_date: getTodayDate(), required_date: '', requester_name: 'นางสาว กรรลิกา สารมาท',
-  cost_center_id: '', project_id: undefined, purpose: '', currency_id: '', lines: getInitialLines(), total_amount: 0,
+const getDefaultFormValues = (user: UserProfile | null): PRFormData => ({
+  preparer_name: user?.employee?.employee_fullname || user?.username || '', // Decoupled: Read-only
+  requester_name: user?.employee?.employee_fullname || user?.username || '', // Decoupled: Editable
+  pr_no: '',
+  pr_date: getTodayDate(),
+  need_by_date: '',
+  cost_center_id: '', // Empty string for unselected dropdown
+  project_id: undefined,
+  purpose: '',
+  pr_base_currency_code: 'THB',
+  pr_quote_currency_code: '',
+  lines: getInitialLines(),
+  total_amount: 0,
   is_on_hold: 'N',
-  delivery_date: getNextWeekDate(), credit_days: 30, vendor_quote_no: '', shipping_method: '', remarks: '',
-  is_multicurrency: false, exchange_rate: 1, rate_date: new Date().toISOString().split('T')[0],
-  currency_type_id: '',
+  delivery_date: getNextWeekDate(),
+  credit_days: 30,
+  vendor_quote_no: '',
+  shipping_method: '',
+  remark: '',
+  is_multicurrency: false,
+  pr_exchange_rate: 1,
+  pr_exchange_rate_date: new Date().toISOString().split('T')[0],
   cancelflag: 'N',
   status: 'DRAFT',
-  discount_input: '',
-  tax_rate: 7, 
+  pr_discount_raw: '',
+  pr_tax_code_id: '', // Empty string for unselected dropdown
+  pr_tax_rate: 7, // Default safe fallback
+  requester_user_id: String(user?.id || '1'),
 });
 
 export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onSuccess?: () => void) => {
@@ -67,30 +100,50 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     warehouses, 
     costCenters, 
     projects, 
+    purchaseTaxOptions,
     isLoading: isMasterDataLoading,
     searchProducts,
     isSearchingProducts 
   } = usePRMasterData();
+
+
   const { createPRMutation, updatePR, deletePR, approvePR, cancelPR } = usePRActions();
   
+  const { toast } = useToast();
+  const showAlert = useCallback((message: string) => toast(message, 'error'), [toast]);
   const [isActionLoading, setIsActionLoading] = useState(false);
-  const [alertState, setAlertState] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
   const [activeTab, setActiveTab] = useState('detail');
   
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
-  const prevCurrencyId = useRef<string>(getDefaultFormValues().currency_id);
-  const prevCurrencyTypeId = useRef<string | undefined>(getDefaultFormValues().currency_type_id);
+  const prevCurrencyId = useRef<string>(getDefaultFormValues(user).pr_base_currency_code);
+  const prevCurrencyTypeId = useRef<string | undefined>(getDefaultFormValues(user).pr_quote_currency_code);
 
   const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showAllItems, setShowAllItems] = useState(false);
 
   const formMethods = useForm<PRFormData>({
-    defaultValues: getDefaultFormValues(),
+    defaultValues: getDefaultFormValues(user),
     resolver: zodResolver(PRFormSchema),
     mode: 'onBlur',
   });
   
   const { handleSubmit, setValue, reset, watch, setFocus, control, getFieldState, formState: { isSubmitting, errors } } = formMethods;
+
+   // Effect: Set Default Tax Code (Safe Lookup)
+   useEffect(() => {
+     if (purchaseTaxOptions.length > 0 && !formMethods.getValues('pr_tax_code_id')) {
+       // Find 'VAT-IN-7' safely by code, fallback to first purchase tax, or 7% default
+       const defaultTax = purchaseTaxOptions.find(t => t.original?.tax_code === 'VAT-IN-7') || 
+                          purchaseTaxOptions.find(t => t.original?.tax_rate === 7) ||
+                          purchaseTaxOptions[0];
+       
+       if (defaultTax) {
+         setValue('pr_tax_code_id', defaultTax.value);
+         setValue('pr_tax_rate', defaultTax.original?.tax_rate || 0);
+       }
+     }
+   }, [purchaseTaxOptions, setValue, formMethods]);
 
   // Field Array for Lines
   const { fields: lines, append, remove, update: updateFieldArray } = useFieldArray({
@@ -100,25 +153,48 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
 
   // Error handler
   const handleFormError = useCallback((fieldErrors: FieldErrors<PRFormData>) => {
-    const firstKey = Object.keys(fieldErrors)[0] as keyof PRFormData | undefined;
+    // Helper to find the first error message recursively
+    interface FormErrorNode {
+      message?: string;
+      [key: string]: FormErrorNode | string | undefined | object | object[];
+    }
+
+    const getFirstErrorMessage = (error: FormErrorNode | undefined): string | undefined => {
+      if (!error) return undefined;
+      
+      if (typeof error.message === 'string' && error.message) return error.message;
+      
+      for (const key in error) {
+        if (key === 'ref' || key === 'type' || key === 'message') continue;
+        const child = error[key];
+        if (child && typeof child === 'object') {
+            const msg = getFirstErrorMessage(child as FormErrorNode);
+            if (msg) return msg;
+        }
+      }
+      return undefined;
+    };
+
+    const firstKey = Object.keys(fieldErrors)[0];
     if (firstKey) {
-      const msg = fieldErrors[firstKey]?.message;
-      if (msg && typeof msg === 'string') {
+      // Use type assertion to our safe interface for recursion
+      const msg = getFirstErrorMessage(fieldErrors[firstKey as keyof PRFormData] as FormErrorNode);
+      if (msg) {
         showAlert(msg);
       }
       try {
-        setFocus(firstKey);
+        setFocus(firstKey as Path<PRFormData>);
       } catch { /* ignore */ }
     }
-  }, [setFocus]);
+  }, [setFocus, showAlert]);
 
   // Fetch Default Tax Rate on Mount
   useEffect(() => {
     if (id) return;
     const fetchTax = async () => {
       try {
-        const rate = await TaxService.getDefaultTaxRate();
-        setValue('tax_rate', rate);
+        const rateId = '1'; // Maps to VAT-OUT-7 in MOCK_TAX_CODES
+        setValue('pr_tax_code_id', rateId); 
       } catch (error) {
         logger.error('Failed to fetch default tax rate', error);
       }
@@ -132,24 +208,26 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
         if (id) {
           try {
             setIsActionLoading(true);
-            const pr = await PRService.getById(id);
+            setIsActionLoading(true);
+            const pr = await PRService.getDetail(id);
             if (pr) {
-              const mappedLines: ExtendedLine[] = (pr.lines || []).map(line => ({
+              const mappedLines: ExtendedLine[] = (pr.lines || []).map((line: PRLine) => ({
                 item_id: line.item_id,
                 item_code: line.item_code,
                 item_name: line.item_name,
-                item_description: line.item_description,
-                quantity: line.quantity,
+                description: line.description || line.item_name,
+                qty: line.qty,
                 uom: line.uom,
+                uom_id: line.uom_id,
                 est_unit_price: line.est_unit_price,
                 est_amount: line.est_amount,
                 needed_date: line.needed_date,
                 preferred_vendor_id: line.preferred_vendor_id,
                 remark: line.remark,
-                warehouse: '', 
+                warehouse_id: pr.warehouse_id || '1', 
                 location: '',
                 discount: 0,
-                discount_input: ''
+                line_discount_raw: ''
               }));
 
               while (mappedLines.length < PR_CONFIG.MIN_LINES) {
@@ -158,14 +236,19 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
 
               const formData: PRFormData = {
                 ...pr,
-                currency_id: pr.currency_code || 'THB',
-                is_multicurrency: pr.currency_code !== 'THB',
-                exchange_rate: 1,
+                pr_no: pr.pr_no || 'DRAFT-TEMP', // Ensure string
+                ...(pr.project_id !== undefined && { project_id: pr.project_id || undefined }),
+                preparer_name: pr.requester_name, // If we don't have preparer_name from API yet
+                requester_name: pr.requester_name,
+                pr_base_currency_code: pr.pr_base_currency_code || 'THB',
+                pr_quote_currency_code: pr.pr_quote_currency_code || '',
+                is_multicurrency: (pr.pr_base_currency_code || 'THB') !== 'THB',
+                pr_exchange_rate: pr.pr_exchange_rate || 1,
                 lines: mappedLines,
                 is_on_hold: pr.status === 'DRAFT' ? 'Y' : 'N',
-                tax_rate: pr.tax_rate ?? 7,
-                discount_input: '', // PRHeader doesn't have this, default to empty
-                remarks: pr.remarks || '',
+                pr_tax_code_id: pr.pr_tax_code_id || '1',
+                pr_discount_raw: pr.pr_discount_raw || '',
+                remark: pr.remark || '',
                 shipping_method: pr.shipping_method || '',
               };
 
@@ -178,51 +261,50 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
           }
         } else {
           const nextPRNo = await PRService.generateNextDocumentNo();
-          reset({ ...getDefaultFormValues(), pr_no: nextPRNo });
+          reset({ ...getDefaultFormValues(user), pr_no: nextPRNo.document_no });
         }
       }, 0);
       return () => clearTimeout(timer);
     }
     prevIsOpenRef.current = isOpen;
-  }, [isOpen, reset, id]);
+  }, [isOpen, reset, id, user]);
 
   // Currency Sync
-  const sourceCurrencyId = watch('currency_id');
-  const targetCurrencyId = watch('currency_type_id'); 
+  const sourceCurrencyCode = watch('pr_base_currency_code');
+  const targetCurrencyCode = watch('pr_quote_currency_code'); 
   
   useEffect(() => {
-    if (!sourceCurrencyId) return;
-    if (sourceCurrencyId === targetCurrencyId) {
-      setValue('exchange_rate', 1, { shouldDirty: false });
-      setValue('is_multicurrency', sourceCurrencyId !== 'THB');
-      prevCurrencyId.current = sourceCurrencyId;
-      prevCurrencyTypeId.current = targetCurrencyId;
+    if (!sourceCurrencyCode) return;
+    if (sourceCurrencyCode === targetCurrencyCode) {
+      setValue('pr_exchange_rate', 1, { shouldDirty: false });
+      setValue('is_multicurrency', String(sourceCurrencyCode) !== 'THB');
+      prevCurrencyId.current = sourceCurrencyCode;
+      prevCurrencyTypeId.current = targetCurrencyCode;
       return;
     }
-    const isSourceChanged = prevCurrencyId.current !== sourceCurrencyId;
-    const isTargetChanged = prevCurrencyTypeId.current !== targetCurrencyId;
+    const isSourceChanged = prevCurrencyId.current !== sourceCurrencyCode;
+    const isTargetChanged = prevCurrencyTypeId.current !== targetCurrencyCode;
     const fetchRate = async () => {
-      if (isSourceChanged && (targetCurrencyId === prevCurrencyId.current || !targetCurrencyId)) {
-        setValue('currency_type_id', 'THB');
+      if (isSourceChanged && (targetCurrencyCode === prevCurrencyId.current || !targetCurrencyCode)) {
+        setValue('pr_quote_currency_code', 'THB');
       }
-      const { isDirty } = getFieldState('exchange_rate');
+      const { isDirty } = getFieldState('pr_exchange_rate');
       if (isSourceChanged || isTargetChanged || !isDirty) {
         try {
-          const finalTarget = (isSourceChanged && !targetCurrencyId) ? 'THB' : targetCurrencyId;
-          const rate = await fetchExchangeRate(sourceCurrencyId, finalTarget);
-          setValue('exchange_rate', rate, { shouldValidate: true, shouldDirty: false });
-          setValue('is_multicurrency', sourceCurrencyId !== 'THB' || finalTarget !== 'THB');
+          const finalTarget = (isSourceChanged && !targetCurrencyCode) ? 'THB' : targetCurrencyCode;
+          const rate = await fetchExchangeRate(sourceCurrencyCode, finalTarget);
+          setValue('pr_exchange_rate', rate, { shouldValidate: true, shouldDirty: false });
+          setValue('is_multicurrency', String(sourceCurrencyCode) !== 'THB' || String(finalTarget) !== 'THB');
         } catch (error) {
           logger.error('Failed to fetch exchange rate:', error);
         }
       }
     };
     fetchRate();
-    prevCurrencyId.current = sourceCurrencyId;
-    prevCurrencyTypeId.current = targetCurrencyId;
-  }, [sourceCurrencyId, targetCurrencyId, setValue, getFieldState]);
+    prevCurrencyId.current = sourceCurrencyCode;
+    prevCurrencyTypeId.current = targetCurrencyCode;
+  }, [sourceCurrencyCode, targetCurrencyCode, setValue, getFieldState]);
 
-  const showAlert = (message: string) => setAlertState({ show: true, message });
 
   const addLine = useCallback(() => append(createEmptyLine()), [append]);
   
@@ -232,7 +314,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
       return;
     }
     remove(index);
-  }, [lines, remove]);
+  }, [lines, remove, showAlert]);
   
   const clearLine = useCallback((index: number) => {
     updateFieldArray(index, createEmptyLine());
@@ -247,9 +329,9 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     const currentLines = watch('lines');
     const line = { ...currentLines[index] };
     
-    if (field === 'discount_input') {
+    if (field === 'line_discount_raw') {
       const input = String(value || '');
-      const totalBeforeDiscount = (line.est_unit_price || 0) * (line.quantity || 0);
+      const totalBeforeDiscount = (line.est_unit_price || 0) * (line.qty || 0);
       let discAmount = 0;
       if (input.trim().endsWith('%')) {
         const percent = parseFloat(input.replace('%', ''));
@@ -264,13 +346,13 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
       
       setValue(discountPath, finalDiscount as FieldPathValue<PRFormData, typeof discountPath>);
       setValue(amountPath, (totalBeforeDiscount - finalDiscount) as FieldPathValue<PRFormData, typeof amountPath>);
-    } else if (field === 'quantity' || field === 'est_unit_price') {
-      const quantity = field === 'quantity' ? (parseFloat(String(value || 0)) || 0) : (line.quantity || 0);
+    } else if (field === 'qty' || field === 'est_unit_price') {
+      const qty = field === 'qty' ? (parseFloat(String(value || 0)) || 0) : (line.qty || 0);
       const unitPrice = field === 'est_unit_price' ? (parseFloat(String(value || 0)) || 0) : (line.est_unit_price || 0);
       
-      const totalBeforeDiscount = quantity * unitPrice;
+      const totalBeforeDiscount = qty * unitPrice;
       let discAmount = 0;
-      const input = line.discount_input || '';
+      const input = line.line_discount_raw || '';
       if (input.trim().endsWith('%')) {
         const percent = parseFloat(input.replace('%', ''));
         if (!isNaN(percent)) discAmount = totalBeforeDiscount * (percent / 100);
@@ -306,41 +388,44 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     if (activeRowIndex !== null) {
       const currentLines = watch('lines');
       const targetIndex = activeRowIndex;
-      const line = {
-        ...currentLines[targetIndex],
-        item_id: product.item_id,
-        item_code: product.item_code,
-        item_name: product.item_name,
-        warehouse: product.warehouse || '', 
-        location: product.location || '', 
-        uom: product.unit_name || '',
-        uom_id: product.unit_id,
-        est_unit_price: product.standard_cost || 0,
-        quantity: 1,
-        est_amount: (product.standard_cost || 0) * 1,
-      };
+        const line = {
+          ...currentLines[targetIndex],
+          item_id: product.item_id,
+          item_code: product.item_code,
+          item_name: product.item_name,
+          warehouse_id: '1', // Default since ItemListItem only has 'warehouse' string name
+          location: product.location || '', 
+          uom: product.unit_name || '',
+          uom_id: product.unit_id || '1',
+          est_unit_price: product.standard_cost || 0,
+          qty: 1,
+          est_amount: (product.standard_cost || 0) * 1,
+        };
       updateFieldArray(targetIndex, line);
     }
     setIsProductModalOpen(false);
   };
 
-  const debouncedSearchTerm = useDebounce(searchTerm, 500);
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const selectedVendorId = watch('preferred_vendor_id');
 
   useEffect(() => {
-     if (isProductModalOpen) searchProducts(debouncedSearchTerm, selectedVendorId);
-  }, [debouncedSearchTerm, selectedVendorId, isProductModalOpen, searchProducts]);
+    if (isProductModalOpen) {
+      // If showAllItems is true, we pass undefined to bypass the vendor filter in the backend mock
+      searchProducts(debouncedSearchTerm, showAllItems ? undefined : selectedVendorId);
+    }
+  }, [debouncedSearchTerm, selectedVendorId, isProductModalOpen, searchProducts, showAllItems]);
 
-  useEffect(() => {
-     if (isMasterDataLoading || !user?.employee?.branch_id || warehouses.length === 0) return;
-     const branchWarehouse = warehouses.find(w => w.branch_id === String(user.employee.branch_id));
-     if (branchWarehouse) setValue('warehouse_id', Number(branchWarehouse.warehouse_id) || 1);
-  }, [isMasterDataLoading, user?.employee?.branch_id, warehouses, setValue]);
+   useEffect(() => {
+      if (isMasterDataLoading || !user?.employee?.branch_id || warehouses.length === 0) return;
+       const branchWarehouse = warehouses.find(w => String(w.original?.branch_id) === String(user.employee.branch_id));
+       if (branchWarehouse) setValue('warehouse_id', branchWarehouse.value);
+   }, [isMasterDataLoading, user?.employee?.branch_id, warehouses, setValue]);
 
-  const handleVendorSelect = (vendor: VendorSelection | null) => {
-    if (vendor) {
-      setValue("preferred_vendor_id", vendor.vendor_id);
-      setValue("vendor_name", vendor.vendor_name);
+   const handleVendorSelect = (vendor: VendorSelection | null) => {
+     if (vendor) {
+       setValue("preferred_vendor_id", vendor.vendor_id);
+       setValue("vendor_name", vendor.vendor_name);
       setValue("credit_days", vendor.payment_term_days ?? 30);
     } else {
       setValue("preferred_vendor_id", undefined);
@@ -352,30 +437,48 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
   const handleSaveData = async (data: PRFormData) => {
     setIsActionLoading(true);
     try {
-        const activeLines = (data.lines || []).filter(l => l.item_code);
-        const payload: CreatePRPayload = { 
-            pr_date: data.request_date,
-            remark: data.remarks || data.purpose,
-            department_id: data.cost_center_id,
-            project_id: data.project_id,
+        const activeLines = (data.lines || []).filter(l => l.item_id && l.item_code);
+        
+        // Type guard handled by Zod validation - cost_center_id will be number after validation
+        const payload: CreatePRPayload = {
+            pr_date: data.pr_date,
+            remark: data.remark || data.purpose,
+            cost_center_id: data.cost_center_id,
+            project_id: data.project_id || undefined,
             requester_name: data.requester_name,
-            required_date: data.required_date,
+            need_by_date: data.need_by_date,
             items: activeLines.map(line => ({
-               item_id: line.item_id, item_code: line.item_code, item_name: line.item_name,
-               qty: line.quantity, uom: line.uom, uom_id: line.uom_id,
-               price: line.est_unit_price, needed_date: line.needed_date, remark: line.remark, discount: line.discount
+                item_id: line.item_id, 
+                item_code: line.item_code, 
+                item_name: line.item_name || '',
+                description: line.item_name, 
+                qty: Number(line.qty) || 0, 
+                uom: line.uom || '', 
+                uom_id: line.uom_id || '1',
+                est_unit_price: Number(line.est_unit_price) || 0, 
+                needed_date: line.needed_date || data.need_by_date, 
+                remark: line.remark || '', 
+                line_discount_raw: line.line_discount_raw || '',
+               warehouse_id: line.warehouse_id || data.warehouse_id || '1',
+               location: line.location || '',
+               required_receipt_type: 'FULL' // Postman default
             })),
             delivery_date: data.delivery_date,
-            credit_days: data.credit_days || 30,
-            payment_term_days: data.credit_days || 30,
+            credit_days: Number(data.credit_days) || 30,
+            payment_term_days: Number(data.payment_term_days) || Number(data.credit_days) || 30,
             vendor_quote_no: data.vendor_quote_no,
             shipping_method: data.shipping_method,
             preferred_vendor_id: data.preferred_vendor_id,
             vendor_name: data.vendor_name,
-            requester_user_id: user?.id || 1, 
-            branch_id: user?.employee?.branch_id || 1, 
-            warehouse_id: data.warehouse_id || 1,
-            tax_rate: data.tax_rate       
+            requester_user_id: String(user?.id || '1'), 
+            branch_id: String(user?.employee?.branch_id || '1'), 
+            warehouse_id: data.warehouse_id || '1',
+            pr_tax_code_id: data.pr_tax_code_id || '1',
+            pr_exchange_rate_date: data.pr_exchange_rate_date || data.pr_date,
+            pr_base_currency_code: data.pr_base_currency_code || 'THB',
+            pr_quote_currency_code: data.pr_quote_currency_code || 'THB',
+            pr_exchange_rate: Number(data.pr_exchange_rate) || 1,
+            pr_discount_raw: data.pr_discount_raw || '0'
         };
         
         if (isEditMode && id) {
@@ -403,12 +506,12 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
   };
 
   const onSubmit = async (data: PRFormData) => {
-    if (!data.required_date) { showAlert('กรุณาระบุวันที่ต้องการใช้'); return; }
+    if (!data.need_by_date) { showAlert('กรุณาระบุวันที่ต้องการใช้'); return; }
     if (!data.requester_name) { showAlert('กรุณาระบุชื่อผู้ขอซื้อ'); return; }
     if (!data.cost_center_id) { showAlert('กรุณาเลือกศูนย์ต้นทุน'); return; }
     if (!data.purpose) { showAlert('กรุณาระบุวัตถุประสงค์'); return; }
     if (!data.shipping_method) { showAlert('กรุณาเลือกประเภทการขนส่ง'); return; }
-    const activeLines = (data.lines || []).filter(l => l.item_code);
+    const activeLines = (data.lines || []).filter(l => l.item_id && l.item_code);
     if (activeLines.length === 0) { showAlert('กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ'); return; }
     const isConfirmed = await confirm({
         title: isEditMode ? 'ยืนยันการแก้ไข' : 'ยืนยันการบันทึก',
@@ -468,10 +571,11 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
   return {
     isEditMode, lines, activeTab, setActiveTab,
     isProductModalOpen, setIsProductModalOpen, searchTerm, setSearchTerm,
+    showAllItems, setShowAllItems,
     handleSubmit, setValue, watch, isSubmitting, isActionLoading, errors, handleFormError,
-    alertState, setAlertState, products, costCenters, projects, isSearchingProducts,
+    products, costCenters, projects, purchaseTaxOptions, isSearchingProducts,
     addLine, removeLine, clearLine, updateLine, handleClearLines,
     openProductSearch, selectProduct, handleVendorSelect, onSubmit, handleDelete, handleApprove,
-    handleVoid, control, reset, formMethods
+    handleVoid, control, reset, formMethods, user
   };
 };

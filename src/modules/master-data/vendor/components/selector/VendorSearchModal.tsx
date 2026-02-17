@@ -10,7 +10,8 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, Check, Building2 } from 'lucide-react';
+import { Check, Building2 } from 'lucide-react';
+import { DialogFormLayout } from '@ui';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
 import { VendorStatusBadge } from '@/modules/master-data/vendor/components/VendorStatusBadge';
 import type { 
@@ -124,38 +125,15 @@ export const VendorSearchModalBase: React.FC<VendorSearchModalBaseProps> = ({
         onClose();
     }, [onSelect, onClose]);
 
-    // Handle click outside to close
-    const handleBackdropClick = (e: React.MouseEvent) => {
-        if (e.target === e.currentTarget) {
-            onClose();
-        }
-    };
-
-    if (!isOpen) return null;
-
     return (
-        <div 
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-            onClick={handleBackdropClick}
+        <DialogFormLayout
+            isOpen={isOpen}
+            onClose={onClose}
+            title={title}
+            titleIcon={<Building2 size={24} />}
+            width="max-w-6xl" // Maps to xl
         >
-            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
-                {/* ==================== HEADER ==================== */}
-                <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <Building2 className="text-white" size={24} />
-                        <div>
-                            <h2 className="text-xl font-bold text-white">{title}</h2>
-                            <p className="text-purple-100 text-sm">เลือกผู้ขายจากรายการ Master Data</p>
-                        </div>
-                    </div>
-                    <button 
-                        onClick={onClose}
-                        className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg p-2 transition-colors"
-                    >
-                        <X size={24} />
-                    </button>
-                </div>
-
+            <div className="flex flex-col h-full max-h-[75vh]">
                 {/* ==================== SEARCH & FILTER SECTION ==================== */}
                 <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -312,7 +290,7 @@ export const VendorSearchModalBase: React.FC<VendorSearchModalBaseProps> = ({
                     </button>
                 </div>
             </div>
-        </div>
+        </DialogFormLayout>
     );
 };
 

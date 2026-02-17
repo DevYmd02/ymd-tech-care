@@ -1,7 +1,7 @@
 import React from 'react';
 import { Plus, Search, Filter } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
-import type { TabConfig, TabLabel } from '../../types';
+import type { TabConfig, TabLabel } from '@/modules/master-data/types';
 
 interface MasterDataToolbarProps {
     currentTab: TabConfig;

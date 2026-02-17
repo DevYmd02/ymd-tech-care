@@ -69,8 +69,8 @@ export interface VendorAddressFormItem {
  * VendorAddress (Backend Schema)
  */
 export interface VendorAddress {
-    vendor_address_id: number;
-    vendor_id: number;
+    vendor_address_id: string;
+    vendor_id: string;
     address_type: VendorAddressType;
     address: string;
     sub_district?: string | null;
@@ -90,8 +90,8 @@ export interface VendorAddress {
  * VendorContact (Backend Schema)
  */
 export interface VendorContact {
-    contact_id: number;
-    vendor_id: number;
+    contact_id: string;
+    vendor_id: string;
     contact_name: string;
     position?: string;
     phone?: string;
@@ -105,8 +105,8 @@ export interface VendorContact {
  */
 export interface VendorBankAccountData {
     // Renamed to avoid conflict with frontend form type
-    bank_account_id: number;
-    vendor_id: number;
+    bank_account_id: string;
+    vendor_id: string;
     bank_name: string;
     bank_branch?: string; // Renamed from branch_name
     account_no: string;   // Renamed from account_number
@@ -311,6 +311,8 @@ export interface VendorCreateRequest {
     vendor_name_en?: string;
     tax_id?: string;
     vendor_type?: VendorType; // Backend uses vendor_type_id instead
+    
+    vendor_id?: string;
     
     vendor_type_id: number;
     vendor_group_id: number;
@@ -588,7 +590,7 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
     const contactsArray = vendor.contacts || vendorAny.vendorContacts || [];
     const formContacts: VendorContactPerson[] = (contactsArray.length > 0)
         ? contactsArray.map((c: {
-            contact_id?: number;
+            contact_id?: string | number;
             contact_name: string;
             position?: string;
             phone?: string;
@@ -610,7 +612,7 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
     const bankAccountsArray = vendor.bank_accounts || vendorAny.vendorBankAccounts || [];
     const formBankAccounts: VendorBankAccount[] = (bankAccountsArray.length > 0)
         ? bankAccountsArray.map((b: {
-            bank_account_id?: number;
+            bank_account_id?: string | number;
             bank_name: string;
             bank_branch?: string;
             account_no: string;

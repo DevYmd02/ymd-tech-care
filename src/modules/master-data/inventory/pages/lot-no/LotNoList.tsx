@@ -4,8 +4,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Edit2, Trash2, Hash } from 'lucide-react';
 import { LotNoFormModal } from './LotNoFormModal';
-import { LotNoService } from '../../services/inventory-master.service';
-import type { LotNo } from '../../types/inventory-master.types';
+import { LotNoService } from '@/modules/master-data/inventory/services/inventory-master.service';
+import type { LotNo } from '@/modules/master-data/inventory/types/inventory-master.types';
 import { ActiveStatusBadge } from '@ui';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';

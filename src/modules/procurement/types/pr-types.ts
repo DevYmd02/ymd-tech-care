@@ -8,6 +8,7 @@
 // PR STATUS - ตาม pr_header.status
 // ====================================================================================
 
+
 export type PRStatus = 
   | 'DRAFT'                 // ร่าง
   | 'PENDING'               // รออนุมัติ
@@ -23,33 +24,40 @@ export type PRStatus =
 export interface PRHeader {
   pr_id: string;                    // UUID - Primary Key
   pr_no: string;                    // VARCHAR(50) - เลขที่เอกสาร PR-202601-0001
-  branch_id: string;                // UUID FK → org_branch
-  requester_user_id: string;        // UUID FK → users
+  branch_id: string;            // FK → org_branch
+  requester_user_id: string;    // FK → users
   requester_name: string;           // VARCHAR(200)
-  request_date: string;             // DATE - วันที่ขอซื้อ
-  required_date: string;            // DATE - วันที่ต้องการใช้
-  cost_center_id: string;           // UUID FK → cost_center
-  project_id?: string;              // UUID FK → project (Optional)
+  pr_date: string;                  // DATE - วันที่ขอซื้อ
+  need_by_date: string;             // DATE - วันที่ต้องการใช้
+  cost_center_id: string;       // FK → cost_center
+  project_id?: string;          // FK → project (Optional)
   purpose: string;                  // TEXT - วัตถุประสงค์
   status: PRStatus;
-  currency_code: string;            // VARCHAR(3) - THB, USD
+  pr_base_currency_code: string;    // VARCHAR(3) - THB
+  pr_quote_currency_code?: string;  // VARCHAR(3) - USD
+  pr_exchange_rate?: number;        // Postman: pr_exchange_rate
+  pr_exchange_rate_date?: string;   // Postman: pr_exchange_rate_date
+  pr_discount_raw?: string;         // Postman: pr_discount_raw
   total_amount: number;             // DECIMAL(18,2)
   attachment_count: number;         // INTEGER
   created_at: string;               // TIMESTAMP
   updated_at: string;               // TIMESTAMP
   cancelflag?: 'Y' | 'N';           // CHAR(1) - Void/Cancel Flag
-  created_by_user_id: string;       // UUID FK
-  updated_by_user_id: string;       // UUID FK
+  created_by_user_id: string;       // FK
+  updated_by_user_id: string;       // FK
   
-  // New Fields (Info Bar & Remarks & Vendor)
+  // New Fields (Info Bar & Remark & Vendor)
   delivery_date?: string;           // DATE - วันที่กำหนดส่ง
   credit_days?: number;             // INTEGER
+  payment_term_days?: number;       // INTEGER (Postman uses this)
   vendor_quote_no?: string;         // VARCHAR(100)
   shipping_method?: string;         // VARCHAR(100)
-  remarks?: string;                 // TEXT
-  preferred_vendor_id?: string;     // UUID FK → vendor
+  remark?: string;                  // TEXT (Singular per Postman)
+  preferred_vendor_id?: string; // FK → vendor
   vendor_name?: string;             // VARCHAR(200)
-  tax_rate?: number;                // DECIMAL(5,2) - Tax Rate Snapshot
+  pr_tax_code_id?: string;          // INTEGER (Postman: pr_tax_code_id)
+  pr_tax_rate?: number;             // Added for Snapshotting Tax Rate
+  warehouse_id?: string;            // Added for fetching
 
   // Relations (populated by API)
   lines?: PRLine[];
@@ -64,17 +72,21 @@ export interface PRLine {
   pr_line_id: string;               // UUID - Primary Key
   pr_id: string;                    // UUID FK → pr_header
   line_no: number;                  // INTEGER - ลำดับ (1, 2, 3...)
-  item_id: string;                  // UUID FK → item
+  item_id: string;                  // FK → item
   item_code: string;                // VARCHAR(50)
   item_name: string;                // VARCHAR(500)
-  item_description?: string;        // TEXT
-  quantity: number;                 // DECIMAL(18,4)
+  description?: string;             // TEXT (Postman uses 'description' inside lines)
+  qty: number;                      // DECIMAL(18,4) (Postman: qty)
   uom: string;                      // VARCHAR(50) - หน่วยนับ
+  uom_id: string;                   // INTEGER
+  warehouse_id?: string;            // Postman: warehouse_id
+  location?: string;                // Postman: location
   est_unit_price: number;           // DECIMAL(18,2) - ราคาต่อหน่วยโดยประมาณ
   est_amount: number;               // DECIMAL(18,2) - มูลค่ารวมโดยประมาณ
   needed_date: string;              // DATE - วันที่ต้องการสินค้า
-  preferred_vendor_id?: string;     // UUID FK → vendor (Optional)
+  preferred_vendor_id?: string; // FK → vendor (Optional)
   remark?: string;                  // TEXT - หมายเหตุ
+  line_discount_raw?: string;       // Postman: line_discount_raw
 }
 
 // ====================================================================================
@@ -92,7 +104,7 @@ export interface ApprovalTask {
   document_type: 'PR' | 'RFQ' | 'PO';
   document_id: string;              // UUID → pr_id
   document_no: string;              // เลขที่เอกสาร
-  approver_user_id: string;         // UUID → users
+  approver_user_id: string;         // Adjusted to number if users use numeric IDs
   approver_name: string;
   approver_position: string;
   status: ApprovalTaskStatus;
@@ -113,66 +125,69 @@ export type { CostCenter, Project, ProjectStatus } from '@/modules/master-data/t
 
 /** ข้อมูลสำหรับ Form สร้าง PR ใหม่ */
 export interface PRFormData {
+  // Metadata for UI
+  preparer_name: string;            // ชื่อผู้จัดทำ (Fixed)
+
   // Header fields
   pr_no: string;                    // Auto-generated
-  request_date: string;             // วันที่ขอซื้อ
-  required_date: string;            // วันที่ต้องการใช้
-  requester_name: string;            // ชื่อผู้ขอ
-  cost_center_id: string;           // ศูนย์ต้นทุน
-  project_id?: string;              // โครงการ (optional)
-  purpose: string;                  // วัตถุประสงค์
-  currency_id: string;              // UUID (Schema: currency_id)
-  is_multicurrency: boolean;        // เปิดใช้งาน Multi-Currency
-  exchange_rate: number;            // อัตราแลกเปลี่ยน (Schema: buy_rate/sale_rate applied)
-  rate_date?: string;               // วันที่อัตราแลกเปลี่ยน (Schema: rate_date)
-  currency_type_id?: string;        // ประเภทอัตราแลกเปลี่ยน (Schema: currency_type_id)
-  
-  // Optional Schema fields
-  exchange_round?: number;          // Schema: exchange_round
-  allow_adjust?: number;            // Schema: allow_adjust
-  
-  // Vendor Info
-  preferred_vendor_id?: string;     // ผู้ขายที่แนะนำ
-  vendor_name?: string;             // ชื่อผู้ขาย (สำหรับแสดงผล)
-
-  // New Fields (Info Bar & Remarks)
-  delivery_date?: string;
-  credit_days?: number;
-  vendor_quote_no?: string;
-  shipping_method: string;
-  remarks?: string;
-  discount_input?: string;
-  tax_rate?: number;                // Tax Rate used for calculation
-  warehouse_id?: number;            // Added for dynamic warehouse selection
+  pr_date: string;                  // วันที่ขอซื้อ (Postman: pr_date)
+  need_by_date: string;             // วันที่ต้องการใช้ (Postman: need_by_date)
+   requester_name: string;           // ชื่อผู้ขอ (Editable per user request)
+   cost_center_id: string;              // ศูนย์ต้นทุน
+   project_id?: string;                 // โครงการ (Optional)
+   requester_user_id: string;           // ID ผู้ขอซื้อ
+   purpose: string;                  // วัตถุประสงค์ (UI legacy, maps to payload)
+   pr_base_currency_code: string;    // Postman: pr_base_currency_code
+   pr_quote_currency_code?: string;   // Postman: pr_quote_currency_code
+   is_multicurrency: boolean;        // UI Only
+   pr_exchange_rate: number;         // Postman: pr_exchange_rate
+   pr_exchange_rate_date?: string;   // Postman: pr_exchange_rate_date
+   
+   // Vendor Info
+   preferred_vendor_id?: string;       // ผู้ขายที่แนะนำ
+   vendor_name?: string;             // ชื่อผู้ขาย (สำหรับแสดงผล)
+ 
+   // New Fields (Info Bar & Remark)
+   delivery_date?: string;
+   credit_days?: number;
+   payment_term_days?: number;
+   vendor_quote_no?: string;
+   shipping_method: string;
+   remark?: string;                  // Singular
+   pr_discount_raw?: string;         // Postman: pr_discount_raw
+   pr_tax_code_id?: string;             // ภาษี
+   pr_tax_rate?: number;             // Added for Snapshotting Tax Rate
+   branch_id?: string;                  // สาขา
+   warehouse_id?: string;               // คลัง
   
   // Line items
   lines: PRLineFormData[];
   
-  is_on_hold: boolean | string;              // พักเรื่อง ('Y' | 'N')
+  is_on_hold: boolean | string;     // พักเรื่อง ('Y' | 'N')
   cancelflag?: 'Y' | 'N';           // ยกเลิกเอกสาร ('Y' | 'N')
   status?: PRStatus;                // สถานะเอกสาร
   total_amount: number;
 }
 
-/** ข้อมูลรายการสินค้าใน Form */
-export interface PRLineFormData {
-  item_id: string;
-  item_code: string;
-  item_name: string;
-  item_description?: string;
-  quantity: number;
-  uom: string;
-  uom_id?: string | number;
-  est_unit_price: number;
-  est_amount: number;
-  needed_date: string;
-  preferred_vendor_id?: string;
-  remark?: string;
-  discount?: number;
-  discount_input?: string;
-  warehouse?: string;
-  location?: string;
-}
+ /** ข้อมูลรายการสินค้าใน Form */
+ export interface PRLineFormData {
+   item_id: string;
+   item_code: string;
+   item_name: string;
+   description?: string;
+   qty?: number;
+   uom?: string;
+   uom_id?: string;
+   est_unit_price?: number;
+   est_amount?: number;
+   needed_date?: string;
+   preferred_vendor_id?: string;
+   remark?: string;
+   discount?: number;
+   line_discount_raw?: string;
+   warehouse_id?: string;
+   location?: string;
+ }
 
 // ====================================================================================
 // LEGACY TYPES - สำหรับ Backward Compatibility (จะลบภายหลัง)
@@ -240,40 +255,49 @@ export interface PRFormValues {
 // ====================================================================================
 
 export interface CreatePRLineItem {
-    item_id?: string;
+    item_id: string;       // Postman: item_id
     item_code: string;
-    item_name: string;
-    qty: number;
+    item_name?: string;             // UI helper
+    description: string;            // Postman: description
+    qty: number;                    // Postman: qty
     uom: string;
-    uom_id?: string | number; // Added
-    price: number;
+    uom_id: string;        // Postman: uom_id
+    est_unit_price: number;         // Postman: est_unit_price
     needed_date?: string;
     remark?: string;
-    discount?: number;
+    line_discount_raw?: string;     // Postman: line_discount_raw
+    warehouse_id: string;  // Postman: warehouse_id
+    location?: string;
+    required_receipt_type?: string; // Postman: required_receipt_type
 }
 
 export interface CreatePRPayload {
-    pr_date: string;
-    remark?: string; // Backend 'remark'
-    department_id?: string; // Maps to cost_center_id
+    pr_date: string;                // Postman: pr_date
+    remark?: string;                // Postman: remark
+    cost_center_id: string; // Maps to Backend cost_center_id
     project_id?: string;
-    requester_name?: string;
-    requester_user_id?: number; // Backend 'requester_user_id'
-    branch_id?: number;         // Backend 'branch_id'
-    warehouse_id?: number;      // Backend 'warehouse_id'
+    requester_name: string;         // Postman: requester_name
+    requester_user_id: string; // Postman: requester_user_id
+    branch_id: string;     // Postman: branch_id
+    warehouse_id: string;  // Postman: warehouse_id
     
-    required_date?: string;
+    need_by_date: string;           // Postman: need_by_date
     items: CreatePRLineItem[];
     
     // Additional fields supported by UI
-    delivery_date?: string;
-    credit_days?: number;
-    payment_term_days?: number; // Backend 'payment_term_days'
-    vendor_quote_no?: string;
-    shipping_method?: string;
-    preferred_vendor_id?: string;
+    delivery_date?: string;         // Postman: delivery_date
+    credit_days?: number;           // Postman: credit_days
+    payment_term_days?: number;     // Postman: payment_term_days
+    vendor_quote_no?: string;       // Postman: vendor_quote_no
+    shipping_method?: string;       // Postman: shipping_method
+    preferred_vendor_id?: string;   // Postman: preferred_vendor_id
     vendor_name?: string;
-    tax_rate?: number;                // Added for Audit Trail
+    pr_tax_code_id: string;         // Postman: pr_tax_code_id
+    pr_exchange_rate_date: string;  // Postman: pr_exchange_rate_date
+    pr_base_currency_code: string;  // Postman: pr_base_currency_code
+    pr_quote_currency_code: string; // Postman: pr_quote_currency_code
+    pr_exchange_rate: number;       // Postman: pr_exchange_rate
+    pr_discount_raw: string;        // Postman: pr_discount_raw
 }
 
 // ====================================================================================

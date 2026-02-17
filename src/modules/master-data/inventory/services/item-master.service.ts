@@ -20,12 +20,10 @@ export const ItemMasterService = {
            );
        }
 
-       if (params?.vendor_id) {
-           // If product has preferred_vendor_id, it should match. 
-           // If no preferred_vendor_id, we assume it's available for all? 
-           // Or strict filtering? Let's assume strict for "Preferred Vendors" logic.
-           items = items.filter(i => !i.preferred_vendor_id || i.preferred_vendor_id === params.vendor_id);
-       }
+        if (params?.vendor_id) {
+            // Strict filtering: Only show items explicitly assigned to this vendor
+            items = items.filter(i => i.preferred_vendor_id === params.vendor_id);
+        }
 
        return {
            items: items.slice(0, params?.limit || 10), // Simulate pagination limit

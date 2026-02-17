@@ -156,6 +156,26 @@ const statusConfig: Record<ModuleType, ModuleStatusConfig> = {
 };
 
 // ====================================================================================
+// INTERNAL COMPONENT - BaseBadge
+// ====================================================================================
+
+/**
+ * BaseBadge component for shared styling across all badge types.
+ */
+const BaseBadge: React.FC<{ 
+  className?: string; 
+  children: React.ReactNode;
+  size?: 'sm' | 'md';
+}> = ({ className = '', children, size = 'sm' }) => {
+  const sizeClasses = size === 'sm' ? 'px-2.5 py-0.5 text-xs' : 'px-3 py-1 text-sm';
+  return (
+    <span className={`inline-flex items-center rounded-full font-semibold whitespace-nowrap ${sizeClasses} ${className}`}>
+      {children}
+    </span>
+  );
+};
+
+// ====================================================================================
 // MAIN COMPONENT - Module-Based StatusBadge
 // ====================================================================================
 
@@ -172,16 +192,16 @@ export const ModuleStatusBadge: React.FC<ModuleStatusBadgeProps> = ({
   // Fallback if status not found in config
   if (!config) {
     return (
-      <span className={`px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 ${className}`}>
+      <BaseBadge className={`bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 ${className}`}>
         {status}
-      </span>
+      </BaseBadge>
     );
   }
 
   return (
-    <span className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${config.colorClass} ${className}`}>
+    <BaseBadge className={`${config.colorClass} ${className}`}>
       {config.label}
-    </span>
+    </BaseBadge>
   );
 };
 
@@ -235,25 +255,19 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
     const label = labelMap?.[status] || status;
 
     return (
-      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${colorClass} ${className}`}>
+      <BaseBadge className={`${colorClass} ${className}`} size={size}>
         {label}
-      </span>
+      </BaseBadge>
     );
   }
 
   // Otherwise, use variant mapping (for generic status)
   const resolvedVariant = variant || statusVariantMap[status.toLowerCase()] || 'neutral';
-  const sizeClasses = size === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-3 py-1 text-sm';
 
   return (
-    <span className={`
-      inline-flex items-center rounded-full font-semibold border whitespace-nowrap
-      ${sizeClasses}
-      ${variantClasses[resolvedVariant]}
-      ${className}
-    `}>
+    <BaseBadge className={`border ${variantClasses[resolvedVariant]} ${className}`} size={size}>
       {status}
-    </span>
+    </BaseBadge>
   );
 };
 
@@ -307,15 +321,15 @@ export const ActiveStatusBadge: React.FC<ActiveStatusBadgeProps> = ({
   className = '',
 }) => {
   return isActive ? (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 whitespace-nowrap ${className}`}>
+    <BaseBadge className={`gap-1.5 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 ${className}`}>
       <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
       {activeLabel}
-    </span>
+    </BaseBadge>
   ) : (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 whitespace-nowrap ${className}`}>
+    <BaseBadge className={`gap-1.5 bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 ${className}`}>
       <span className="w-1.5 h-1.5 rounded-full bg-gray-500" />
       {inactiveLabel}
-    </span>
+    </BaseBadge>
   );
 };
 
@@ -358,10 +372,10 @@ export const VendorStatusBadge: React.FC<VendorStatusBadgeProps> = ({ status, cl
   const config = vendorStatusConfig[status] || vendorStatusConfig.INACTIVE;
   
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full whitespace-nowrap ${config.colorClass} ${className}`}>
+    <BaseBadge className={`gap-1.5 ${config.colorClass} ${className}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${config.dotColor}`} />
       {config.label}
-    </span>
+    </BaseBadge>
   );
 };
 

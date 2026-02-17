@@ -112,9 +112,10 @@ export const VendorService = {
             currency_id: data.currency_id,
             
             // Map Relations
+            // Map Relations
             addresses: data.addresses.map((a, i) => ({
-                vendor_address_id: Math.floor(Math.random() * 10000),
-                vendor_id: 0, // Mock doesn't care
+                vendor_address_id: String(Math.floor(Math.random() * 10000)),
+                vendor_id: '0', // Mock doesn't care
                 address_type: a.address_type || (i === 0 ? 'REGISTERED' : 'CONTACT'),
                 address: a.address || '',
                 district: a.district,
@@ -130,8 +131,8 @@ export const VendorService = {
             })),
             
             contacts: data.contacts.map((c) => ({
-                contact_id: Math.floor(Math.random() * 10000),
-                vendor_id: 0,
+                contact_id: String(Math.floor(Math.random() * 10000)),
+                vendor_id: '0',
                 contact_name: c.contact_name || '',
                 position: c.position,
                 phone: c.phone,
@@ -141,8 +142,8 @@ export const VendorService = {
             })),
 
             bank_accounts: data.bank_accounts.map((b) => ({
-                bank_account_id: Math.floor(Math.random() * 10000),
-                vendor_id: 0,
+                bank_account_id: String(Math.floor(Math.random() * 10000)),
+                vendor_id: '0',
                 bank_name: b.bank_name || '',
                 bank_branch: b.bank_branch,
                 account_no: b.account_no || '',

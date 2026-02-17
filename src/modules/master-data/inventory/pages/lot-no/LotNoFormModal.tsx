@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { Hash, Save, X } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
-import { LotNoService } from '../../services/inventory-master.service';
+import { LotNoService } from '@/modules/master-data/inventory/services/inventory-master.service';
 
 const schema = z.object({ code: z.string().min(1, 'กรุณากรอกรหัส').max(50), nameTh: z.string().min(1, 'กรุณากรอกชื่อ').max(200), nameEn: z.string().max(200), isActive: z.boolean() });
 type FormValues = z.infer<typeof schema>;

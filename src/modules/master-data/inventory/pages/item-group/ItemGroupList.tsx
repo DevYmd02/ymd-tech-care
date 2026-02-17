@@ -6,8 +6,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Edit2, Trash2, Layers } from 'lucide-react';
 import { ItemGroupFormModal } from './ItemGroupFormModal';
-import { ItemGroupService } from '../../services/inventory-master.service';
-import type { ItemGroup } from '../../types/inventory-master.types';
+import { ItemGroupService } from '@/modules/master-data/inventory/services/inventory-master.service';
+import type { ItemGroup } from '@/modules/master-data/inventory/types/inventory-master.types';
 import { ActiveStatusBadge } from '@ui';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
