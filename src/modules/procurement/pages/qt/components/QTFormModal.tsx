@@ -3,7 +3,7 @@ import { FileText, Plus, Trash2, Search, MoreHorizontal, FileBox } from 'lucide-
 import { useWatch } from 'react-hook-form';
 
 import { WindowFormLayout } from '@ui';
-import { MasterDataService } from '@/core/api/master-data.service';
+import { MasterDataService } from '@/modules/master-data';
 import type { UnitListItem } from '@/modules/master-data/types/master-data-types';
 import { ProductSearchModal } from '@/modules/inventory/components/selector/ProductSearchModal';
 import type { ProductLookup } from '@/modules/master-data/inventory/mocks/products';

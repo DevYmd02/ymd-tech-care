@@ -8,17 +8,20 @@ export const setupRFQHandlers = (mock: MockAdapter) => {
   // 1. GET RFQ List
   mock.onGet('/rfq').reply((config: AxiosRequestConfig) => {
     const params = config.params || {};
-    const filtered = [...MOCK_RFQS];
-    
-    // Sanitizer Layer for List
-    const sanitized = filtered.map(rfq => ({
+    // Sanitizer Layer for List (Sanitize BEFORE filtering)
+    const sanitizedData = MOCK_RFQS.map(rfq => ({
         ...rfq,
         rfq_id: sanitizeId(rfq.rfq_id),
         pr_id: sanitizeId(rfq.pr_id ?? ''),
         branch_id: sanitizeId(rfq.branch_id ?? ''),
     }));
 
-    return [200, applyMockFilters(sanitized, params)];
+    const result = applyMockFilters(sanitizedData, params, {
+        searchableFields: ['rfq_no'],
+        dateField: 'rfq_date'
+    });
+
+    return [200, result];
   });
 
   // 2. GET RFQ Detail

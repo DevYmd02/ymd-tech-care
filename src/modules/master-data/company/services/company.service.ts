@@ -90,7 +90,7 @@ export const SalesTargetService = {
   delete: (id: string) => api.delete<boolean>(`/org-sales-targets/${id}`),
 };
 
-export const EmployeeService = {
+export const OrgEmployeeService = {
   getList: (params?: Partial<TableFilters>) => api.get<PaginatedListResponse<EmployeeListItem>>('/org-employees', { params }),
   get: (id: string) => api.get<EmployeeListItem>(`/org-employees/${id}`),
   create: (data: EmployeeFormData) => api.post<{ success: boolean; data?: EmployeeListItem; message?: string }>('/org-employees', data),

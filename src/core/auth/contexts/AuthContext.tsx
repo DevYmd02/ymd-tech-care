@@ -30,7 +30,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setIsAuthenticated(true);
       if (storedUser) {
         try {
-          setUser(JSON.parse(storedUser));
+          setUser(JSON.parse(storedUser) as UserProfile);
         } catch (e) {
           logger.error('Failed to parse user profile', e);
           localStorage.removeItem('user_profile');

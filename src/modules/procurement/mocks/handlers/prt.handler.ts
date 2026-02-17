@@ -7,27 +7,20 @@ export const setupPRTHandlers = (mock: MockAdapter) => {
   // 1. GET PRT List
   mock.onGet('/prt').reply((config) => {
     const params = config.params || {};
-    let filtered = [...MOCK_PRT_DATA];
-    
-    if (params.prt_no) {
-       filtered = filtered.filter((p: PurchaseReturn) => p.prt_no.toLowerCase().includes(String(params.prt_no).toLowerCase()));
-    }
-    if (params.vendor_name) {
-       filtered = filtered.filter((p: PurchaseReturn) => p.vendor_name.toLowerCase().includes(String(params.vendor_name).toLowerCase()));
-    }
-    if (params.status && params.status !== 'ALL') {
-       filtered = filtered.filter((p: PurchaseReturn) => p.status === params.status);
-    }
-
-    // Sanitizer Layer for List
-    const sanitized = filtered.map(prt => ({
+    // Sanitizer Layer for List (Sanitize BEFORE filtering)
+    const sanitizedData = MOCK_PRT_DATA.map(prt => ({
         ...prt,
         prt_id: sanitizeId(prt.prt_id),
         vendor_id: sanitizeId(prt.vendor_id),
         ref_grn_id: sanitizeId(prt.ref_grn_id),
     }));
 
-    return [200, applyMockFilters(sanitized, params)];
+    const result = applyMockFilters(sanitizedData, params, {
+        searchableFields: ['prt_no', 'vendor_name'],
+        dateField: 'created_at'
+    });
+
+    return [200, result];
   });
 
   // 2. GET PRT Detail

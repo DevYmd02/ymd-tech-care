@@ -13,6 +13,7 @@ import {
   mockEmployees 
 } from '@/modules/master-data/mocks/masterDataMocks';
 import { applyMockFilters } from '@/core/api/mockUtils';
+import type { FilterValue } from '@/core/api/mockUtils';
 import type { 
   EmployeeGroupListItem, 
   EmployeeListItem 
@@ -20,7 +21,7 @@ import type {
 
 export const setupMasterDataHandlers = (mock: MockAdapter) => {
   // --- BRANCHES ---
-  mock.onGet('/org-branches').reply((config) => [200, applyMockFilters(mockBranches, config.params || {})]);
+  mock.onGet('/org-branches').reply((config) => [200, applyMockFilters(mockBranches, (config.params || {}) as Record<string, FilterValue>)]);
   mock.onGet('/org-branches/dropdown').reply(200, mockBranchDropdown);
   mock.onGet(/\/org-branches\/.+/).reply((config) => {
     const id = config.url?.split('/').pop();
@@ -29,19 +30,19 @@ export const setupMasterDataHandlers = (mock: MockAdapter) => {
   });
 
   // --- DEPARTMENTS ---
-  mock.onGet('/org-departments').reply((config) => [200, applyMockFilters(mockDepartments, config.params || {})]);
+  mock.onGet('/org-departments').reply((config) => [200, applyMockFilters(mockDepartments, (config.params || {}) as Record<string, FilterValue>)]);
 
   // --- SECTIONS ---
-  mock.onGet('/org-sections').reply((config) => [200, applyMockFilters(mockSections, config.params || {})]);
+  mock.onGet('/org-sections').reply((config) => [200, applyMockFilters(mockSections, (config.params || {}) as Record<string, FilterValue>)]);
 
   // --- JOBS ---
-  mock.onGet('/org-jobs').reply((config) => [200, applyMockFilters(mockJobs, config.params || {})]);
+  mock.onGet('/org-jobs').reply((config) => [200, applyMockFilters(mockJobs, (config.params || {}) as Record<string, FilterValue>)]);
 
   // --- POSITIONS ---
-  mock.onGet('/org-positions').reply((config) => [200, applyMockFilters(mockPositions, config.params || {})]);
+  mock.onGet('/org-positions').reply((config) => [200, applyMockFilters(mockPositions, (config.params || {}) as Record<string, FilterValue>)]);
 
   // --- EMPLOYEE GROUPS ---
-  mock.onGet('/org-employee-groups').reply((config) => [200, applyMockFilters(mockEmployeeGroups, config.params || {})]);
+  mock.onGet('/org-employee-groups').reply((config) => [200, applyMockFilters(mockEmployeeGroups, (config.params || {}) as Record<string, FilterValue>)]);
   mock.onGet(/\/org-employee-groups\/.+/).reply((config) => {
     const id = config.url?.split('/').pop();
     const found = mockEmployeeGroups.find((g: EmployeeGroupListItem) => g.group_id === id);
@@ -49,7 +50,7 @@ export const setupMasterDataHandlers = (mock: MockAdapter) => {
   });
 
   // --- EMPLOYEES ---
-  mock.onGet('/org-employees').reply((config) => [200, applyMockFilters(mockEmployees, config.params || {})]);
+  mock.onGet('/org-employees').reply((config) => [200, applyMockFilters(mockEmployees, (config.params || {}) as Record<string, FilterValue>)]);
   mock.onGet(/\/org-employees\/.+/).reply((config) => {
     const id = config.url?.split('/').pop();
     const found = mockEmployees.find((e: EmployeeListItem) => e.employee_id === id);
@@ -68,7 +69,7 @@ export const setupMasterDataHandlers = (mock: MockAdapter) => {
   ];
 
   mock.onGet('/master-data/currencies').reply((config) => 
-    [200, applyMockFilters(mockCurrencies, config.params || {})]
+    [200, applyMockFilters(mockCurrencies, (config.params || {}) as Record<string, FilterValue>)]
   );
 
   const mockExchangeRateTypes = [
@@ -76,7 +77,7 @@ export const setupMasterDataHandlers = (mock: MockAdapter) => {
   ];
 
   mock.onGet('/master-data/exchange-rate-types').reply((config) => 
-    [200, applyMockFilters(mockExchangeRateTypes, config.params || {})]
+    [200, applyMockFilters(mockExchangeRateTypes, (config.params || {}) as Record<string, FilterValue>)]
   );
 
   mock.onGet(/\/master-data\/exchange-rates\/latest/).reply((config) => {

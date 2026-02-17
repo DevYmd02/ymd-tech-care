@@ -12,6 +12,7 @@ import { setupPRTHandlers } from '@/modules/procurement/mocks/handlers/prt.handl
 import { setupQTHandlers } from '@/modules/procurement/mocks/handlers/qt.handler';
 import { setupQCHandlers } from '@/modules/procurement/mocks/handlers/qc.handler';
 import { setupGRNHandlers } from '@/modules/procurement/mocks/handlers/grn.handler';
+import { setupCustomerHandlers } from '@/modules/master-data/customer/mocks/handlers/customer.handler';
 
 /**
  * Setup Centralized Mocks Registry
@@ -44,6 +45,7 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
     setupPOHandlers(mock);
     setupGRNHandlers(mock);
     setupPRTHandlers(mock);
+    setupCustomerHandlers(mock);
 
     logger.info('✅ [MockAdapter] All Modular Handlers Registered Successfully');
   } catch (error) {

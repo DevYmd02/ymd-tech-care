@@ -15,7 +15,7 @@ import {
 
 // Import services (NOT static mock data - services handle mock/real switching internally)
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
-import { MasterDataService } from '@/core/api/master-data.service';
+import { MasterDataService } from '@/modules/master-data';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
 
 // Import Form Modals

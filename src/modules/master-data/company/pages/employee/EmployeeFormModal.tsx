@@ -10,7 +10,7 @@ import { z } from 'zod';
 import { Save, X, User } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
-import { EmployeeService, DepartmentService, PositionService } from '@/modules/master-data/company/services/company.service';
+import { OrgEmployeeService, DepartmentService, PositionService } from '@/modules/master-data/company/services/company.service';
 import type { DepartmentListItem, PositionListItem } from '@/modules/master-data/types/master-data-types';
 
 
@@ -76,7 +76,7 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
 
             if (isEdit && editId) {
                 // Fetch data for edit
-                EmployeeService.get(editId).then((data) => {
+                OrgEmployeeService.get(editId).then((data) => {
                     if (data) {
                         setValue('employeeCode', data.employee_code);
                         setValue('firstName', data.first_name || '');
@@ -108,9 +108,9 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
         try {
             let res;
             if (isEdit && editId) {
-                res = await EmployeeService.update(editId, data);
+                res = await OrgEmployeeService.update(editId, data);
             } else {
-                res = await EmployeeService.create(data);
+                res = await OrgEmployeeService.create(data);
             }
 
             if (res.success) {

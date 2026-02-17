@@ -1,8 +1,17 @@
 import type MockAdapter from 'axios-mock-adapter';
 import type { AxiosRequestConfig } from 'axios';
-import { MOCK_PRS } from '../data/prData';
+import { MOCK_PRS, DEPARTMENT_MOCK_MAP } from '../data/prData';
 import { applyMockFilters, sanitizeId } from '@/core/api/mockUtils';
 import type { PRHeader, CreatePRPayload, CreatePRLineItem } from '@/modules/procurement/types/pr-types';
+
+/**
+ * Interface for Mock List Processing
+ * Includes synthetic fields for filtering/sorting that aren't in the DB schema
+ */
+interface MockPRListItem extends PRHeader {
+    department: string;  // Mapped from cost_center_id
+    pr_date_no: string;  // Synthetic sort key
+}
 
 /**
  * Helper: Generate next PR Number (PR-YYYYMM-XXXX)
@@ -26,27 +35,30 @@ export const setupPRHandlers = (mock: MockAdapter) => {
     // 1. GET PR List
     mock.onGet('/pr').reply((config: AxiosRequestConfig) => {
         const params = config.params || {};
-        let filtered = [...MOCK_PRS];
-        
-        if (params.q) {
-            const q = String(params.q).toLowerCase();
-            filtered = filtered.filter(p => p.pr_no.toLowerCase().includes(q));
-        }
 
-        if (params.status && params.status !== 'ALL') {
-            filtered = filtered.filter(p => p.status === params.status);
-        }
+        // Sanitizer & Enhancement Layer
+        // We map to MockPRListItem to include 'department' and 'pr_date_no' for the generic filter to work
+        const enhancedData: MockPRListItem[] = MOCK_PRS.map(pr => {
+            const costCenterId = sanitizeId(pr.cost_center_id);
+            return {
+                ...pr,
+                pr_id: sanitizeId(pr.pr_id),
+                branch_id: sanitizeId(pr.branch_id),
+                requester_user_id: sanitizeId(pr.requester_user_id),
+                cost_center_id: costCenterId,
+                
+                // Synthetic Fields for Filter/Sort
+                department: DEPARTMENT_MOCK_MAP[costCenterId] || '', 
+                pr_date_no: `${pr.pr_date}_${pr.pr_no}`
+            };
+        });
 
-        // Sanitizer Layer for List
-        const sanitized = filtered.map(pr => ({
-            ...pr,
-            pr_id: sanitizeId(pr.pr_id),
-            branch_id: sanitizeId(pr.branch_id),
-            requester_user_id: sanitizeId(pr.requester_user_id),
-            cost_center_id: sanitizeId(pr.cost_center_id),
-        }));
+        const result = applyMockFilters(enhancedData, params, {
+            searchableFields: ['pr_no', 'requester_name', 'purpose', 'department'],
+            dateField: 'pr_date'
+        });
 
-        return [200, applyMockFilters(sanitized, params)];
+        return [200, result];
     });
 
     // 2. GET PR Detail

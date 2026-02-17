@@ -8,10 +8,8 @@ export const setupPOHandlers = (mock: MockAdapter) => {
   // 1. GET PO List
   mock.onGet('/purchase-orders').reply((config: AxiosRequestConfig) => {
     const params = config.params || {};
-    const filtered = [...MOCK_POS];
-    
-    // Sanitizer Layer for List
-    const sanitized = filtered.map(po => ({
+    // Sanitizer Layer for List (Sanitize BEFORE filtering)
+    const sanitizedData = MOCK_POS.map(po => ({
         ...po,
         po_id: sanitizeId(po.po_id),
         pr_id: sanitizeId(po.pr_id),
@@ -19,7 +17,12 @@ export const setupPOHandlers = (mock: MockAdapter) => {
         branch_id: sanitizeId(po.branch_id),
     }));
 
-    return [200, applyMockFilters(sanitized, params)];
+    const result = applyMockFilters(sanitizedData, params, {
+        searchableFields: ['po_no', 'vendor_name'],
+        dateField: 'po_date'
+    });
+
+    return [200, result];
   });
 
   // 2. GET PO Detail

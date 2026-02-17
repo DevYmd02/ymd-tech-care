@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { MasterDataService } from '@/core/api/master-data.service';
+import { MasterDataService } from '@/modules/master-data';
 import type { BranchListItem, ItemListItem, UnitListItem } from '@/modules/master-data/types/master-data-types';
 import type { RFQFormData, RFQLineFormData } from '@/modules/procurement/types/rfq-types';
 import { initialRFQFormData, initialRFQLineFormData } from '@/modules/procurement/types/rfq-types';

@@ -92,6 +92,13 @@ const ExchangeRateList = React.lazy(() => import('@/modules/master-data/currency
 const TaxCodeList = React.lazy(() => import('@/modules/master-data/tax/pages/code/TaxCodeList'));
 const TaxGroupList = React.lazy(() => import('@/modules/master-data/tax/pages/group/TaxGroupList'));
 
+// Customer Pages
+const CustomerList = React.lazy(() => import('@customer/pages/customer-master/CustomerListPage'));
+const BusinessTypeList = React.lazy(() => import('@customer/pages/business-type/BusinessTypeList'));
+const CustomerTypeList = React.lazy(() => import('@customer/pages/customer-type/CustomerTypeList'));
+const CustomerGroupList = React.lazy(() => import('@customer/pages/customer-group/CustomerGroupList'));
+const BillingGroupList = React.lazy(() => import('@customer/pages/billing-group/BillingGroupList'));
+
 // Auth Pages (from modules)
 const LoginPage = React.lazy(() => import('./modules/auth/pages/LoginPage'));
 const RegisterPage = React.lazy(() => import('./modules/auth/pages/RegisterPage'));
@@ -248,6 +255,13 @@ function App() {
             {/* Tax Master Data */}
             <Route path="master-data/tax/code" element={<TaxCodeList />} />
             <Route path="master-data/tax/group" element={<TaxGroupList />} />
+
+            {/* Customer Master Data */}
+            <Route path="master-data/customer" element={<CustomerList />} />
+            <Route path="master-data/customer-business-type" element={<BusinessTypeList />} />
+            <Route path="master-data/customer-type" element={<CustomerTypeList />} />
+            <Route path="master-data/customer-group" element={<CustomerGroupList />} />
+            <Route path="master-data/customer-billing-group" element={<BillingGroupList />} />
 
             {/* Generic Coming Soon for Work in Progress */}
             <Route path="/coming-soon" element={<ComingSoon />} />

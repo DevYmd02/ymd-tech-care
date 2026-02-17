@@ -18,8 +18,8 @@ export const PRFormSummary: React.FC<PRFormSummaryProps> = ({ purchaseTaxOptions
     const discountInput = watch('pr_discount_raw') ?? '';
 
     // Derive VAT rate from selected tax code (instead of hardcoded 7)
-    const selectedTax = purchaseTaxOptions.find(t => t.value === taxCodeId);
-    const vatRate = selectedTax?.original?.tax_rate ?? 7;
+    const selectedTax = purchaseTaxOptions.find(t => String(t.value) === String(taxCodeId));
+    const vatRate = selectedTax?.original?.tax_rate ?? 0;
 
     // Use self-sufficient calculation hook
     const {

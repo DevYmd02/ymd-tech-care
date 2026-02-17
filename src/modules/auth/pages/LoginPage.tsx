@@ -42,7 +42,7 @@ const LoginPage = () => {
              // Check if it's an Axios Error with response data
             if (err instanceof AxiosError && err.response?.data) {
                 // Try to extract message from common patterns
-                const data = err.response.data as ApiErrorResponse | unknown;
+                const data = err.response.data as ApiErrorResponse;
                 if (typeof data === 'object' && data !== null && 'message' in data) {
                      msg = (data as ApiErrorResponse).message;
                 }

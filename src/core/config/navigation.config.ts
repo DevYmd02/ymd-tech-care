@@ -333,6 +333,17 @@ export const sidebarMenuItems: MenuItem[] = [
                 ]
             },
             {
+                id: 'master-data-customer',
+                label: 'Master Data ลูกหนี้',
+                subItems: [
+                    { id: 'customer-management', label: 'กำหนดรหัสลูกหนี้', path: '/master-data/customer' },
+                    { id: 'customer-business-type', label: 'กำหนดประเภทธุรกิจลูกหนี้', path: '/master-data/customer-business-type' },
+                    { id: 'customer-type', label: 'กำหนดรหัสประเภทลูกหนี้', path: '/master-data/customer-type' },
+                    { id: 'customer-group', label: 'กำหนดรหัสกลุ่มลูกหนี้', path: '/master-data/customer-group' },
+                    { id: 'customer-billing-group', label: 'กำหนดรหัสกลุ่มวางบิล', path: '/master-data/customer-billing-group' },
+                ]
+            },
+            {
                 id: 'master-data-tax',
                 label: 'Master Data ภาษี',
                 subItems: [
