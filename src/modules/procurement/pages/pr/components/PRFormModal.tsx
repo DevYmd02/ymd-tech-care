@@ -110,7 +110,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                         <th className="px-2 py-1.5 text-left border-r border-blue-500 w-48 font-semibold">วันที่กำหนดส่ง</th>
                         <th className="px-2 py-1.5 text-left border-r border-blue-500 w-24 font-semibold">เครดิต (วัน)</th>
                         <th className="px-2 py-1.5 text-left border-r border-blue-500 font-semibold">Vendor Quote No.</th>
-                        <th className="px-2 py-1.5 text-left border-r border-blue-500 font-semibold">ขนส่งโดย <span className="text-red-500">*</span></th>
+                        <th className="px-2 py-1.5 text-left border-r border-blue-500 font-semibold">ขนส่งโดย</th>
                         <th className="px-2 py-1.5 text-left font-semibold">ผู้จัดทำ</th>
                         </tr>
                     </thead>
@@ -128,7 +128,6 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                             <option value="รถยนต์">รถยนต์</option>
                             <option value="รถบรรทุก">รถบรรทุก</option>
                             </select>
-                            {errors?.shipping_method && <p className="text-red-500 text-[10px] mt-0.5">{errors.shipping_method.message}</p>}
                         </td>
                         <td className="px-2 py-1 text-gray-900 dark:text-white">{user?.employee?.employee_fullname || user?.username || 'N/A'}</td>
                         </tr>

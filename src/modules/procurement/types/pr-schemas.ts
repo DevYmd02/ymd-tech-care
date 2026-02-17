@@ -44,7 +44,7 @@ export const PRFormSchema = z.object({
   credit_days: z.number().optional(),
   payment_term_days: z.number().optional(),
   vendor_quote_no: z.string().optional(),
-  shipping_method: z.string().trim().min(1, 'กรุณาเลือกวิธีการจัดส่ง'),
+  shipping_method: z.string().trim(),
   remark: z.string().optional(),
   // 🔧 FIX #4: Lines validated as array — empty row filtering done in onSubmit handler
   lines: z.array(PRLineSchema),

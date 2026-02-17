@@ -514,7 +514,6 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     if (!data.requester_name) { showAlert('กรุณาระบุชื่อผู้ขอซื้อ'); return; }
     if (!data.cost_center_id) { showAlert('กรุณาเลือกศูนย์ต้นทุน'); return; }
     if (!data.purpose) { showAlert('กรุณาระบุวัตถุประสงค์'); return; }
-    if (!data.shipping_method) { showAlert('กรุณาเลือกประเภทการขนส่ง'); return; }
     const activeLines = (data.lines || []).filter(l => l.item_id && l.item_code);
     if (activeLines.length === 0) { showAlert('กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ'); return; }
     const isConfirmed = await confirm({
