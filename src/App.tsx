@@ -35,9 +35,7 @@ const QTListPage = React.lazy(() => import('./modules/procurement/pages/qt/QTLis
 const QCListPage = React.lazy(() => import('./modules/procurement/pages/qc/QCListPage'));
 const POListPage = React.lazy(() => import('./modules/procurement/pages/po/POListPage'));
 const GRNListPage = React.lazy(() => import('./modules/procurement/pages/grn/GRNListPage'));
-
-const GoodsReceiptNoteListPage = React.lazy(() => import('@/modules/procurement/pages/ProcurementComingSoon').then(module => ({ default: module.GoodsReceiptNoteListPage })));
-const PurchaseReturnListPage = React.lazy(() => import('@/modules/procurement/pages/prt/PRTListPage'));
+const PRTListPage = React.lazy(() => import('@/modules/procurement/pages/prt/PRTListPage'));
 
 // Roles Pages
 const RolesDashboard = React.lazy(() => import('@/modules/admin/pages/roles/RolesDashboard'));
@@ -198,8 +196,7 @@ function App() {
               <Route path="qc" element={<QCListPage />} />
               <Route path="po" element={<POListPage />} />
               <Route path="grn" element={<GRNListPage />} />
-              <Route path="grn-coming-soon" element={<GoodsReceiptNoteListPage />} /> {/* Keep old GRN route as coming soon */}
-              <Route path="prt" element={<PurchaseReturnListPage />} />
+              <Route path="prt" element={<PRTListPage />} />
             </Route>
 
             {/* Roles - Implemented */}
