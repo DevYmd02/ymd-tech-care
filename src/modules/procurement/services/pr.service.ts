@@ -66,7 +66,7 @@ export const PRService = {
         if (params?.department) {
              const q = params.department.toLowerCase();
              items = items.filter(i => {
-                const deptName = (DEPARTMENT_MOCK_MAP[i.cost_center_id as unknown as number] || '').toLowerCase();
+                const deptName = (DEPARTMENT_MOCK_MAP[Number(i.cost_center_id)] || '').toLowerCase();
                 const deptId = String(i.cost_center_id).toLowerCase();
                 return deptName.includes(q) || deptId.includes(q);
              });
@@ -176,8 +176,8 @@ export const PRService = {
             const newPR: PRHeader = {
                 pr_id: prId,
                 pr_no: prNo,
-                branch_id: Number(payload.branch_id) || 1,
-                requester_user_id: Number(payload.requester_user_id) || 1,
+                branch_id: String(payload.branch_id || '1'),
+                requester_user_id: String(payload.requester_user_id || '1'),
                 requester_name: payload.requester_name || 'Mock Requester',
                 pr_date: payload.pr_date,
                 need_by_date: payload.need_by_date || '',
@@ -190,8 +190,8 @@ export const PRService = {
                 attachment_count: 0,
                 created_at: createdDate,
                 updated_at: createdDate,
-                created_by_user_id: Number(payload.requester_user_id) || 1,
-                updated_by_user_id: Number(payload.requester_user_id) || 1,
+                created_by_user_id: String(payload.requester_user_id || '1'),
+                updated_by_user_id: String(payload.requester_user_id || '1'),
                 delivery_date: payload.delivery_date,
                 credit_days: payload.credit_days,
                 vendor_quote_no: payload.vendor_quote_no,
@@ -203,12 +203,12 @@ export const PRService = {
                     pr_line_id: `line-${Date.now()}-${idx}`,
                     pr_id: prId,
                     line_no: idx + 1,
-                    item_id: Number(item.item_id) || 0,
+                    item_id: String(item.item_id || '0'),
                     item_code: item.item_code,
                     item_name: item.description,
                     qty: item.qty,
                     uom: item.uom,
-                    uom_id: Number(item.uom_id) || 1,
+                    uom_id: String(item.uom_id || '1'),
                     est_unit_price: item.est_unit_price,
                     est_amount: item.qty * item.est_unit_price,
                     needed_date: item.needed_date || payload.need_by_date || '',
@@ -248,15 +248,15 @@ export const PRService = {
             vendor_name: payload.vendor_name,
             lines: payload.items.map((item, index) => ({
               line_no: index + 1,
-              item_id: Number(item.item_id) || undefined,
+              item_id: item.item_id ? Number(item.item_id) : undefined,
               item_code: item.item_code,
               description: item.description,
               qty: item.qty,
-              uom_id: Number(item.uom_id) || 1,
+              uom_id: item.uom_id ? Number(item.uom_id) : 1,
               est_unit_price: item.est_unit_price,
               total_price: item.qty * item.est_unit_price,
-              cost_center_id: payload.cost_center_id || 'CC001',
-              project_id: payload.project_id || undefined, 
+              cost_center_id: payload.cost_center_id,
+              project_id: payload.project_id ? Number(payload.project_id) : undefined, 
               needed_date: item.needed_date || payload.need_by_date || new Date().toISOString(),
               remark: item.remark || ''
             }))
@@ -282,7 +282,7 @@ export const PRService = {
                     ...(data.pr_date && { pr_date: data.pr_date }),
                     ...(data.requester_name && { requester_name: data.requester_name }),
                     ...(data.cost_center_id !== undefined && { cost_center_id: String(data.cost_center_id) }),
-                    ...(data.project_id !== undefined && { project_id: data.project_id ? String(data.project_id) : null }),
+                    ...(data.project_id !== undefined && { project_id: data.project_id || undefined }),
                     ...(data.status && { status: data.status }),
                     ...(data.remark !== undefined && { remark: data.remark }),
                     ...(data.preferred_vendor_id !== undefined && { preferred_vendor_id: data.preferred_vendor_id ? String(data.preferred_vendor_id) : undefined }),
@@ -297,12 +297,12 @@ export const PRService = {
                             pr_line_id: `line-${Date.now()}-${idx}`,
                             pr_id: prId,
                             line_no: idx + 1,
-                            item_id: item.item_id as string | number,
+                            item_id: String(item.item_id),
                             item_code: item.item_code,
                             item_name: item.description || '',
                             qty: Number(item.qty) || 0,
                             uom: item.uom || '',
-                            uom_id: (item.uom_id as string | number) || '1',
+                            uom_id: String(item.uom_id || '1'),
                             est_unit_price: Number(item.est_unit_price) || 0,
                             est_amount: (Number(item.qty) || 0) * (Number(item.est_unit_price) || 0),
                             needed_date: item.needed_date || data.need_by_date || '',

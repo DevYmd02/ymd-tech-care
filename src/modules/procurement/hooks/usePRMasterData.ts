@@ -3,10 +3,9 @@ import { MasterDataService } from '@/core/api/master-data.service';
 import type { ItemListItem, CostCenter, Project, WarehouseListItem } from '@/modules/master-data/types/master-data-types';
 import { TaxService } from '@/modules/master-data/tax/services/tax.service';
 import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
-import type { MasterDataId } from '@/modules/procurement/types/pr-types';
 
 export interface MappedOption<T> {
-    value: MasterDataId;
+    value: string;
     label: string;
     original?: T;
 }

@@ -75,19 +75,19 @@ describe('PRService Unit Tests', () => {
       const payload: CreatePRPayload = {
         pr_date: '2024-02-09',
         requester_name: 'John Doe',
-        requester_user_id: 1,
-        branch_id: 1,
-        warehouse_id: 1,
-        cost_center_id: 1,
+        requester_user_id: '1',
+        branch_id: '1',
+        warehouse_id: '1',
+        cost_center_id: '1',
         need_by_date: '2024-02-20',
         pr_base_currency_code: 'THB',
         pr_quote_currency_code: 'THB',
         pr_exchange_rate: 1,
         pr_exchange_rate_date: '2024-02-09',
-        pr_tax_code_id: 1,
+        pr_tax_code_id: '1',
         pr_discount_raw: '',
         items: [
-          { item_id: 101, item_code: 'ITM-01', description: 'Item 1', qty: 2, est_unit_price: 500, uom: 'ชิ้น', uom_id: 1, warehouse_id: 1 }
+          { item_id: '101', item_code: 'ITM-01', description: 'Item 1', qty: 2, est_unit_price: 500, uom: 'ชิ้น', uom_id: '1', warehouse_id: '1' }
         ]
       };
 

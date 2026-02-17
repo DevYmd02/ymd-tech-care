@@ -32,7 +32,7 @@ const getNextWeekDate = (): string => {
   return date.toISOString().split('T')[0];
 };
 
-// Removed smartParseId in favor of direct MasterDataId handling
+// Standardized on string for all IDs
 
 export type ExtendedLine = PRLineFormData;
 
@@ -84,7 +84,7 @@ const getDefaultFormValues = (user: UserProfile | null): PRFormData => ({
   pr_discount_raw: '',
   pr_tax_code_id: '', // Empty string for unselected dropdown
   pr_tax_rate: 7, // Default safe fallback
-  requester_user_id: user?.id || '1',
+  requester_user_id: String(user?.id || '1'),
 });
 
 export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onSuccess?: () => void) => {
@@ -193,7 +193,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     if (id) return;
     const fetchTax = async () => {
       try {
-        const rateId = 1; // Maps to VAT-OUT-7 in MOCK_TAX_CODES
+        const rateId = '1'; // Maps to VAT-OUT-7 in MOCK_TAX_CODES
         setValue('pr_tax_code_id', rateId); 
       } catch (error) {
         logger.error('Failed to fetch default tax rate', error);
@@ -223,7 +223,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
                 needed_date: line.needed_date,
                 preferred_vendor_id: line.preferred_vendor_id,
                 remark: line.remark,
-                warehouse_id: Number(pr.warehouse_id) || 1, 
+                warehouse_id: pr.warehouse_id || '1', 
                 location: '',
                 discount: 0,
                 line_discount_raw: ''
@@ -235,7 +235,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
 
               const formData: PRFormData = {
                 ...pr,
-                project_id: pr.project_id || undefined,
+                ...(pr.project_id !== undefined && { project_id: pr.project_id || undefined }),
                 preparer_name: pr.requester_name, // If we don't have preparer_name from API yet
                 requester_name: pr.requester_name,
                 pr_base_currency_code: pr.pr_base_currency_code || 'THB',
@@ -244,7 +244,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
                 pr_exchange_rate: pr.pr_exchange_rate || 1,
                 lines: mappedLines,
                 is_on_hold: pr.status === 'DRAFT' ? 'Y' : 'N',
-                pr_tax_code_id: pr.pr_tax_code_id || 1,
+                pr_tax_code_id: pr.pr_tax_code_id || '1',
                 pr_discount_raw: pr.pr_discount_raw || '',
                 remark: pr.remark || '',
                 shipping_method: pr.shipping_method || '',
@@ -391,10 +391,10 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
           item_id: product.item_id,
           item_code: product.item_code,
           item_name: product.item_name,
-          warehouse_id: 1, // product.warehouse is string, default to 1 for now or find numeric ID
+          warehouse_id: '1', // Default since ItemListItem only has 'warehouse' string name
           location: product.location || '', 
           uom: product.unit_name || '',
-          uom_id: product.unit_id,
+          uom_id: product.unit_id || '1',
           est_unit_price: product.standard_cost || 0,
           qty: 1,
           est_amount: (product.standard_cost || 0) * 1,
@@ -442,7 +442,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
             pr_date: data.pr_date,
             remark: data.remark || data.purpose,
             cost_center_id: data.cost_center_id,
-            project_id: data.project_id || null,
+            project_id: data.project_id || undefined,
             requester_name: data.requester_name,
             need_by_date: data.need_by_date,
             items: activeLines.map(line => ({
@@ -468,8 +468,8 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
             shipping_method: data.shipping_method,
             preferred_vendor_id: data.preferred_vendor_id,
             vendor_name: data.vendor_name,
-            requester_user_id: user?.id || 1, 
-            branch_id: user?.employee?.branch_id || 1, 
+            requester_user_id: String(user?.id || '1'), 
+            branch_id: String(user?.employee?.branch_id || '1'), 
             warehouse_id: data.warehouse_id || '1',
             pr_tax_code_id: data.pr_tax_code_id || '1',
             pr_exchange_rate_date: data.pr_exchange_rate_date || data.pr_date,
