@@ -47,7 +47,8 @@
       "@utils": ["./src/utils"],
       "@utils/*": ["./src/utils/*"],
       "@pr": ["./src/pages/procurement/pr"],
-      "@pr/*": ["./src/pages/procurement/pr/*"]
+      "@pr/*": ["./src/pages/procurement/pr/*"],
+      "@customer/*": ["./src/modules/master-data/customer/*"]
     }
   },
   "include": ["src"]

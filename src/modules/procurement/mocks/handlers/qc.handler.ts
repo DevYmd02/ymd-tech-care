@@ -7,17 +7,20 @@ export const setupQCHandlers = (mock: MockAdapter) => {
   // 1. GET QC List
   mock.onGet('/qc').reply((config: AxiosRequestConfig) => {
     const params = config.params || {};
-    const filtered = [...MOCK_QCS];
-    
-    // Sanitizer Layer for List
-    const sanitized = filtered.map(qc => ({
+    // Sanitizer Layer for List (Sanitize BEFORE filtering)
+    const sanitizedData = MOCK_QCS.map(qc => ({
         ...qc,
         qc_id: sanitizeId(qc.qc_id),
         pr_id: sanitizeId(qc.pr_id),
         lowest_bidder_vendor_id: sanitizeId(qc.lowest_bidder_vendor_id),
     }));
 
-    return [200, applyMockFilters(sanitized, params)];
+    const result = applyMockFilters(sanitizedData, params, {
+        searchableFields: ['qc_id'], // QC might not have a separate 'no', using ID for now
+        // dateField: 'created_at' // QC might typically not be date-filtered or use created_at if available
+    });
+
+    return [200, result];
   });
 
   // 2. GET QC Detail

@@ -32,8 +32,8 @@ export const usePRCalculations = (props?: UsePRCalculationsProps): PRCalculation
   const watchedDiscountInput = context?.watch('pr_discount_raw');
 
   const lines = useMemo(() => props?.lines ?? watchedLines ?? [], [props?.lines, watchedLines]);
-  // Default to 7% for VAT calculation if tax code is not yet resolved to a percentage
-  const vatRate = useMemo(() => props?.vatRate ?? 7, [props?.vatRate]); 
+  // Default to 0% for VAT calculation if tax code is not yet resolved to a percentage
+  const vatRate = useMemo(() => props?.vatRate ?? 0, [props?.vatRate]); 
   const globalDiscountInput = useMemo(() => props?.globalDiscountInput ?? watchedDiscountInput ?? '', [props?.globalDiscountInput, watchedDiscountInput]);
   
   // 1. Calculate Line-Level Totals

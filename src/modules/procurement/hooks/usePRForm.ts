@@ -188,19 +188,23 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     }
   }, [setFocus, showAlert]);
 
-  // Fetch Default Tax Rate on Mount
+  // Fetch Default Tax Rate on Mount (Standardized on VAT 7% for Purchase)
   useEffect(() => {
-    if (id) return;
-    const fetchTax = async () => {
-      try {
-        const rateId = '1'; // Maps to VAT-OUT-7 in MOCK_TAX_CODES
-        setValue('pr_tax_code_id', rateId); 
-      } catch (error) {
-        logger.error('Failed to fetch default tax rate', error);
+    if (id || purchaseTaxOptions.length === 0) return;
+    
+    const currentTaxId = formMethods.getValues('pr_tax_code_id');
+    if (!currentTaxId) {
+      // Find 'VAT-IN-7' or fallback to 7% rate
+      const defaultTax = purchaseTaxOptions.find(t => t.original?.tax_code === 'VAT-IN-7') || 
+                         purchaseTaxOptions.find(t => t.original?.tax_rate === 7) ||
+                         purchaseTaxOptions[0];
+      
+      if (defaultTax) {
+        setValue('pr_tax_code_id', defaultTax.value);
+        setValue('pr_tax_rate', defaultTax.original?.tax_rate || 0);
       }
-    };
-    fetchTax();
-  }, [id, setValue]);
+    }
+  }, [id, purchaseTaxOptions, setValue, formMethods]);
 
   useEffect(() => {
     if (isOpen && !prevIsOpenRef.current) {

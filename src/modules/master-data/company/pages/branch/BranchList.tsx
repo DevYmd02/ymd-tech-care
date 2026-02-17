@@ -11,7 +11,7 @@ import {
     Building2
 } from 'lucide-react';
 import { BranchFormModal } from './BranchFormModal';
-import { BranchService } from '@/core/api/branch.service';
+import { BranchService } from '@/modules/master-data';
 import type { BranchListItem } from '@/modules/master-data/types/master-data-types';
 import { ActiveStatusBadge } from '@ui';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';

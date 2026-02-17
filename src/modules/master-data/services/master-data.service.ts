@@ -10,14 +10,14 @@ import type {
 } from '@/modules/master-data/types/master-data-types';
 
 // Import services
-import { BranchService } from '@/core/api/branch.service';
-import { WarehouseService } from '@/modules/master-data/inventory/services/warehouse.service';
-import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
-import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
-import { CostCenterService } from '@/core/api/cost-center.service';
-import { ProjectService } from '@/core/api/project.service';
-import { ProductCategoryService } from '@/modules/master-data/inventory/services/product-category.service';
-import { ItemTypeService } from '@/modules/master-data/inventory/services/item-type.service';
+import { BranchService } from '../company/services/branch.service';
+import { WarehouseService } from '../inventory/services/warehouse.service';
+import { ItemMasterService } from '../inventory/services/item-master.service';
+import { UnitService } from '../inventory/services/unit.service';
+import { CostCenterService } from '../accounting/services/cost-center.service';
+import { ProjectService } from '../project/services/project.service';
+import { ProductCategoryService } from '../inventory/services/product-category.service';
+import { ItemTypeService } from '../inventory/services/item-type.service';
 
 export const MasterDataService = {
   getBranches: async (): Promise<BranchListItem[]> => {

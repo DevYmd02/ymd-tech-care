@@ -7,17 +7,20 @@ export const setupQTHandlers = (mock: MockAdapter) => {
   // 1. GET QT List
   mock.onGet('/qt').reply((config: AxiosRequestConfig) => {
     const params = config.params || {};
-    const filtered = [...MOCK_QTS];
-    
-    // Sanitizer Layer for List
-    const sanitized = filtered.map(qt => ({
+    // Sanitizer Layer for List (Sanitize BEFORE filtering)
+    const sanitizedData = MOCK_QTS.map(qt => ({
         ...qt,
         quotation_id: sanitizeId(qt.quotation_id),
         qc_id: sanitizeId(qt.qc_id),
         vendor_id: sanitizeId(qt.vendor_id),
     }));
 
-    return [200, applyMockFilters(sanitized, params)];
+    const result = applyMockFilters(sanitizedData, params, {
+        searchableFields: ['quotation_no', 'vendor_name'],
+        dateField: 'quotation_date'
+    });
+
+    return [200, result];
   });
 
   // 2. GET QT Detail

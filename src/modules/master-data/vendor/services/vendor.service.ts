@@ -105,7 +105,7 @@ export const VendorService = {
             vendor_name: data.vendor_name,
             vendor_name_en: data.vendor_name_en,
             tax_id: data.tax_id,
-            vendor_type: data.vendor_type_id === 2 ? 'INDIVIDUAL' : 'COMPANY', // Simple logic
+            vendor_type: data.vendor_type_id === '2' ? 'INDIVIDUAL' : 'COMPANY', // Simple logic
             status: 'ACTIVE',
             vendor_type_id: data.vendor_type_id,
             vendor_group_id: data.vendor_group_id,

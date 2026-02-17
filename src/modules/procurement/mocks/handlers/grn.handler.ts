@@ -7,10 +7,8 @@ export const setupGRNHandlers = (mock: MockAdapter) => {
   // 1. GET GRN List
   mock.onGet('/procurement/grn').reply((config: AxiosRequestConfig) => {
     const params = config.params || {};
-    const filtered = [...MOCK_GRNS];
-    
-    // Sanitizer Layer for List
-    const sanitized = filtered.map(grn => ({
+    // Sanitizer Layer for List (Sanitize BEFORE filtering)
+    const sanitizedData = MOCK_GRNS.map(grn => ({
         ...grn,
         grn_id: sanitizeId(grn.grn_id),
         po_id: sanitizeId(grn.po_id),
@@ -18,7 +16,12 @@ export const setupGRNHandlers = (mock: MockAdapter) => {
         received_by: sanitizeId(grn.received_by),
     }));
 
-    return [200, applyMockFilters(sanitized, params)];
+    const result = applyMockFilters(sanitizedData, params, {
+        searchableFields: ['grn_no'],
+        dateField: 'received_date'
+    });
+
+    return [200, result];
   });
 
   // 2. GET GRN Detail

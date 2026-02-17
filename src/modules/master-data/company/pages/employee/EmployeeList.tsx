@@ -10,7 +10,7 @@ import {
     User
 } from 'lucide-react';
 import { EmployeeFormModal } from './EmployeeFormModal';
-import { EmployeeService } from '@/modules/master-data/company/services/company.service';
+import { OrgEmployeeService } from '@/modules/master-data/company/services/company.service';
 import type { EmployeeListItem } from '@/modules/master-data/types/master-data-types';
 import { ActiveStatusBadge } from '@ui';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
@@ -78,7 +78,7 @@ export default function EmployeeList() {
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
-            const response = await EmployeeService.getList(filters);
+            const response = await OrgEmployeeService.getList(filters);
             setAllEmployees(response.items);
             setTotalCount(response.total);
         } catch (error) {
@@ -108,7 +108,7 @@ export default function EmployeeList() {
 
     const handleDelete = useCallback((id: string) => {
         if (confirm('คุณต้องการลบข้อมูลพนักงานนี้หรือไม่?')) {
-            EmployeeService.delete(id).then(() => fetchData());
+            OrgEmployeeService.delete(id).then(() => fetchData());
         }
     }, [fetchData]);
 

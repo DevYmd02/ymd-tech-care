@@ -14,7 +14,7 @@ export {
     SalesZoneService,
     SalesChannelService,
     SalesTargetService,
-    EmployeeService,
+    OrgEmployeeService,
 } from './services/company.service';
 
 // Branch Pages

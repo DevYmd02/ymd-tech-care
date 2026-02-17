@@ -128,10 +128,10 @@ export interface VendorMaster {
     vendor_type: VendorType;
     status: VendorStatus;
     
-    // Numeric IDs matching Backend JSON
-    vendor_type_id: number;
-    vendor_group_id: number;
-    currency_id: number;
+    // Numeric IDs matching Backend JSON -> Changed to String for Consistency
+    vendor_type_id: string;
+    vendor_group_id: string;
+    currency_id: string;
 
     // Relational Data (Matches JSON structure)
     addresses: VendorAddress[];
@@ -314,9 +314,9 @@ export interface VendorCreateRequest {
     
     vendor_id?: string;
     
-    vendor_type_id: number;
-    vendor_group_id: number;
-    currency_id: number;
+    vendor_type_id: string;
+    vendor_group_id: string;
+    currency_id: string;
     
     // New Structure Matches JSON Response
     addresses: Partial<VendorAddress>[];
@@ -414,9 +414,9 @@ export function toVendorCreateRequest(form: VendorFormData): VendorCreateRequest
         vendor_name: form.vendorNameTh,
         vendor_name_en: form.vendorNameEn,
         tax_id: form.taxId || undefined,
-        vendor_type_id: Number(form.vendorTypeId) || 1,
-        vendor_group_id: Number(form.vendorGroupId) || 1,
-        currency_id: Number(form.currencyId) || 1,
+        vendor_type_id: form.vendorTypeId,
+        vendor_group_id: form.vendorGroupId,
+        currency_id: form.currencyId,
         addresses: addresses,
         contacts: contacts,
         bank_accounts: bank_accounts,

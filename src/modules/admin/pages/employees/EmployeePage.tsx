@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Users, AlertCircle, RefreshCw } from 'lucide-react';
 import { EmployeeFormModal } from '@/modules/master-data/company/pages/employee/EmployeeFormModal';
-import { EmployeeService } from '@/core/api/employee.service';
+import { EmployeeService } from '@/modules/master-data';
 import type { IEmployee } from '@/modules/master-data/company/types/employee-types';
 import { logger } from '@/shared/utils/logger';
 
