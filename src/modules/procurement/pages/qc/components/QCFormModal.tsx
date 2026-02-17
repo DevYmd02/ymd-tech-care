@@ -153,12 +153,12 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
 
       const result = await QCService.create(qcData);
       
-      if (result.success) {
-        window.alert(result.message || 'บันทึกใบเปรียบเทียบราคาสำเร็จ!');
+      if (result && result.qc_id) {
+        window.alert('บันทึกใบเปรียบเทียบราคาสำเร็จ!');
         onSuccess?.();
         onClose();
       } else {
-        window.alert(result.message || 'เกิดข้อผิดพลาดในการบันทึก');
+        window.alert('เกิดข้อผิดพลาดในการบันทึก');
       }
     } catch (error) {
       console.error('Save QC failed:', error);

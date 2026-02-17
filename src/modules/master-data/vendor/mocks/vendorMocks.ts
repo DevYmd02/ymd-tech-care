@@ -2,8 +2,8 @@ import type { VendorMaster } from "../types/vendor-types";
 
 // Helper function to create addresses
 const createAddress = (type: 'REGISTERED' | 'CONTACT', isDefault = false) => ({
-    vendor_address_id: Math.floor(Math.random() * 10000),
-    vendor_id: 0,
+    vendor_address_id: `addr-${Math.floor(Math.random() * 10000)}`,
+    vendor_id: '0',
     address_type: type,
     address: '123 ถนนสุขุมวิท แขวงคลองเตย เขตคลองเตย',
     district: 'คลองเตย',

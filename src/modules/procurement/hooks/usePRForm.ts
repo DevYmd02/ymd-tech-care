@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import type { FieldErrors, Path, FieldPathValue } from 'react-hook-form';
-import type { PRFormData, PRLineFormData, CreatePRPayload, VendorSelection } from '@/modules/procurement/types/pr-types';
+import type { PRFormData, PRLineFormData, CreatePRPayload, VendorSelection, PRLine } from '@/modules/procurement/types/pr-types';
 import { PRService } from '@/modules/procurement/services/pr.service';
 import { fetchExchangeRate } from '@/modules/master-data/currency/services/mockExchangeRateService';
 import { logger } from '@/shared/utils/logger';
@@ -208,9 +208,10 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
         if (id) {
           try {
             setIsActionLoading(true);
-            const pr = await PRService.getById(id);
+            setIsActionLoading(true);
+            const pr = await PRService.getDetail(id);
             if (pr) {
-              const mappedLines: ExtendedLine[] = (pr.lines || []).map(line => ({
+              const mappedLines: ExtendedLine[] = (pr.lines || []).map((line: PRLine) => ({
                 item_id: line.item_id,
                 item_code: line.item_code,
                 item_name: line.item_name,
@@ -235,6 +236,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
 
               const formData: PRFormData = {
                 ...pr,
+                pr_no: pr.pr_no || 'DRAFT-TEMP', // Ensure string
                 ...(pr.project_id !== undefined && { project_id: pr.project_id || undefined }),
                 preparer_name: pr.requester_name, // If we don't have preparer_name from API yet
                 requester_name: pr.requester_name,
@@ -259,7 +261,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
           }
         } else {
           const nextPRNo = await PRService.generateNextDocumentNo();
-          reset({ ...getDefaultFormValues(user), pr_no: nextPRNo });
+          reset({ ...getDefaultFormValues(user), pr_no: nextPRNo.document_no });
         }
       }, 0);
       return () => clearTimeout(timer);

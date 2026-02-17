@@ -21,7 +21,7 @@ import { createColumnHelper } from '@tanstack/react-table';
 import { PRService, type PRListParams } from '@/modules/procurement/services/pr.service';
 import { logger } from '@/shared/utils/logger';
 import type { PRHeader, PRStatus } from '@/modules/procurement/types/pr-types';
-import { DEPARTMENT_MOCK_MAP } from '@/modules/procurement/mocks/procurementMocks';
+import { DEPARTMENT_MOCK_MAP } from '@/modules/procurement/mocks/data/prData';
 
 // ====================================================================================
 // STATUS OPTIONS
