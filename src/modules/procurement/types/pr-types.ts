@@ -28,13 +28,13 @@ export type PRStatus =
 export interface PRHeader {
   pr_id: string;                    // UUID - Primary Key
   pr_no: string;                    // VARCHAR(50) - เลขที่เอกสาร PR-202601-0001
-  branch_id: number;                // INTEGER FK → org_branch
-  requester_user_id: number;        // INTEGER FK → users
+  branch_id: MasterDataId;            // FK → org_branch
+  requester_user_id: MasterDataId;    // FK → users
   requester_name: string;           // VARCHAR(200)
   pr_date: string;                  // DATE - วันที่ขอซื้อ
   need_by_date: string;             // DATE - วันที่ต้องการใช้
-  cost_center_id: string;           // VARCHAR FK → cost_center
-  project_id?: string | null;       // VARCHAR FK → project (Optional)
+  cost_center_id: MasterDataId;       // FK → cost_center
+  project_id?: MasterDataId | null;   // FK → project (Optional)
   purpose: string;                  // TEXT - วัตถุประสงค์
   status: PRStatus;
   pr_base_currency_code: string;    // VARCHAR(3) - THB
@@ -57,7 +57,7 @@ export interface PRHeader {
   vendor_quote_no?: string;         // VARCHAR(100)
   shipping_method?: string;         // VARCHAR(100)
   remark?: string;                  // TEXT (Singular per Postman)
-  preferred_vendor_id?: string;     // FK → vendor
+  preferred_vendor_id?: MasterDataId; // FK → vendor
   vendor_name?: string;             // VARCHAR(200)
   pr_tax_code_id?: string | number;          // INTEGER (Postman: pr_tax_code_id)
   pr_tax_rate?: number;             // Added for Snapshotting Tax Rate
@@ -88,7 +88,7 @@ export interface PRLine {
   est_unit_price: number;           // DECIMAL(18,2) - ราคาต่อหน่วยโดยประมาณ
   est_amount: number;               // DECIMAL(18,2) - มูลค่ารวมโดยประมาณ
   needed_date: string;              // DATE - วันที่ต้องการสินค้า
-  preferred_vendor_id?: number;     // INTEGER FK → vendor (Optional)
+  preferred_vendor_id?: MasterDataId; // FK → vendor (Optional)
   remark?: string;                  // TEXT - หมายเหตุ
   line_discount_raw?: string;       // Postman: line_discount_raw
 }
