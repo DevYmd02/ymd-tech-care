@@ -36,10 +36,11 @@ export const PRActionsCell = ({
                 <>
                     <button 
                         onClick={() => onEdit(item.pr_id)}
-                        className="p-1.5 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-md transition-all"
+                        className="flex items-center gap-1 pl-1.5 pr-2 py-1 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded shadow-sm border border-transparent hover:border-amber-200 dark:hover:border-amber-800 transition-all whitespace-nowrap"
                         title="แก้ไข"
                     >
-                        <Edit size={16} />
+                        <Edit size={14} /> 
+                        <span className="text-[10px] font-bold">แก้ไข</span>
                     </button>
 
 

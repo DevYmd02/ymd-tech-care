@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { z } from 'zod';
 import { MasterDataService } from '@/modules/master-data';
 import type { BranchListItem, ItemListItem, UnitListItem } from '@/modules/master-data/types/master-data-types';
+import type { VendorSearchItem } from '@/modules/master-data/vendor/types/vendor-types';
 import type { RFQFormData, RFQLineFormData } from '@/modules/procurement/types/rfq-types';
 import { initialRFQFormData, initialRFQLineFormData } from '@/modules/procurement/types/rfq-types';
 import type { PRHeader } from '@/modules/procurement/types/pr-types';
@@ -287,6 +288,47 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         setActiveRowIndex(null);
     };
 
+    // Vendor Search State
+    const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
+    const [activeVendorIndex, setActiveVendorIndex] = useState<number | null>(null);
+
+    // Vendor Handlers
+    const handleAddVendor = useCallback(() => {
+        setFormData(prev => ({
+            ...prev,
+            vendors: [...prev.vendors, { vendor_code: '', vendor_name: '', vendor_name_display: '' }]
+        }));
+    }, []);
+
+    const handleRemoveVendor = useCallback((index: number) => {
+        setFormData(prev => ({
+            ...prev,
+            vendors: prev.vendors.filter((_, i) => i !== index)
+        }));
+    }, []);
+
+    const handleOpenVendorModal = (index: number) => {
+        setActiveVendorIndex(index);
+        setIsVendorModalOpen(true);
+    };
+
+    const handleVendorSelect = (vendor: VendorSearchItem) => {
+        if (activeVendorIndex !== null) {
+            setFormData(prev => {
+                const newVendors = [...prev.vendors];
+                newVendors[activeVendorIndex] = {
+                    vendor_id: vendor.vendor_id,
+                    vendor_code: vendor.code,
+                    vendor_name: vendor.name,
+                    vendor_name_display: `${vendor.code} - ${vendor.name}`
+                };
+                return { ...prev, vendors: newVendors };
+            });
+        }
+        setIsVendorModalOpen(false);
+        setActiveVendorIndex(null);
+    };
+
     const filteredProducts = items.filter(p => 
         p.item_code.toLowerCase().includes(productSearchTerm.toLowerCase()) || 
         p.item_name.toLowerCase().includes(productSearchTerm.toLowerCase())
@@ -314,6 +356,15 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         
         handleOpenProductSearch,
         handleProductSelect,
+        
+        // Vendor Exports
+        isVendorModalOpen,
+        setIsVendorModalOpen,
+        handleAddVendor,
+        handleRemoveVendor,
+        handleOpenVendorModal,
+        handleVendorSelect,
+
         errors, 
         validateForm
     };

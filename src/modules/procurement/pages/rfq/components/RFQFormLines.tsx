@@ -74,7 +74,7 @@ export const RFQFormLines: React.FC<RFQFormLinesProps> = ({
                                         placeholder="รายละเอียดสินค้า"
                                         value={line.item_description}
                                         onChange={(e) => handleLineChange(index, 'item_description', e.target.value)}
-                                        className="w-full px-2 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                                        className={`${inputStyle} text-left`}
                                     />
                                 </td>
                                 <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">

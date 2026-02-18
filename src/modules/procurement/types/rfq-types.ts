@@ -138,6 +138,17 @@ export interface RFQFormData {
     
     // Lines
     lines: RFQLineFormData[];
+    
+    // Vendors
+    vendors: RFQVendorFormData[];
+}
+
+/** RFQ Vendor Form Data */
+export interface RFQVendorFormData {
+    vendor_id?: string;
+    vendor_code: string;
+    vendor_name: string;
+    vendor_name_display: string;
 }
 
 /** RFQ Line Form Data */
@@ -184,6 +195,7 @@ export const initialRFQFormData: RFQFormData = {
     remarks: '',
     isMulticurrency: false,
     lines: [{ ...initialRFQLineFormData }],
+    vendors: [{ vendor_code: '', vendor_name: '', vendor_name_display: '' }]
 };
 
 // ====================================================================================
