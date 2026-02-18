@@ -7,7 +7,7 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { FileText, Eye, Send } from 'lucide-react';
+import { FileText, Eye, Send, Edit } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { PageListLayout, FilterFormBuilder, SmartTable, RFQStatusBadge } from '@ui';
 import type { FilterFieldConfig } from '@/shared/components/ui/filters/FilterFormBuilder';
@@ -193,13 +193,22 @@ export default function RFQListPage() {
                         </button>
                         
                         {item.status === 'DRAFT' && (
-                            <button 
-                                className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1 transition-colors shadow-sm"
-                                title="ส่ง RFQ"
-                            >
-                                <Send size={14} />
-                                ส่ง RFQ
-                            </button>
+                            <>
+                                <button 
+                                    className="flex items-center gap-1 pl-1.5 pr-2 py-1 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded shadow-sm border border-transparent hover:border-amber-200 dark:hover:border-amber-800 transition-all whitespace-nowrap"
+                                    title="แก้ไข"
+                                >
+                                    <Edit size={14} /> 
+                                    <span className="text-[10px] font-bold">แก้ไข</span>
+                                </button>
+
+                                <button 
+                                    className="flex items-center gap-1 pl-1.5 pr-2 py-1 ml-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap"
+                                    title="ส่ง RFQ"
+                                >
+                                    <Send size={12} /> ส่ง RFQ
+                                </button>
+                            </>
                         )}
 
                         {item.status === 'SENT' && (
