@@ -90,13 +90,18 @@ export const setupPRHandlers = (mock: MockAdapter) => {
     mock.onPost('/pr').reply((config: AxiosRequestConfig) => {
         const data = JSON.parse(config.data || '{}') as CreatePRPayload;
         const newPrId = `pr-${Date.now()}`;
-        const newPrNo = `DRAFT-TEMP-${Date.now()}`;
+        
+        // Logic Fix: Check if status is PENDING (submitted immediately)
+        const isPending = data.status === 'PENDING';
+        const newPrNo = isPending 
+            ? generateNextPRNumber(MOCK_PRS) 
+            : `DRAFT-TEMP-${Date.now()}`;
 
         const newPR: PRHeader = {
             ...data,
             pr_id: newPrId,
             pr_no: newPrNo,
-            status: 'DRAFT',
+            status: isPending ? 'PENDING' : 'DRAFT',
             total_amount: 0, 
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),

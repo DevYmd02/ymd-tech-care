@@ -5,7 +5,8 @@ import { PRHeader } from './PRHeader';
 import { PRFormLines } from './PRFormLines';
 import { PRFormSummary } from './PRFormSummary';
 import { ProductSearchModal } from './ProductSearchModal';
-import { WindowFormLayout, CollapsibleSection } from '@ui';
+import { WindowFormLayout } from '@ui';
+import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWrapper';
 import { usePRForm } from '@/modules/procurement/hooks/usePRForm';
 import type { PRFormData } from '@/modules/procurement/types/pr-types';
 
@@ -30,7 +31,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
     user
   } = usePRForm(isOpen, onClose, id, onSuccess);
 
-  const { register, watch, formState: { errors } } = formMethods;
+  const { register, control, watch, formState: { errors } } = formMethods;
 
   // Tabs state
   const [activeTab, setActiveTab] = useState('detail');
@@ -71,7 +72,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                   disabled={isSubmitting || isActionLoading} 
                   className="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md text-sm font-medium"
                 >
-                  บันทึก
+                  {watch('is_on_hold') === 'Y' ? 'บันทึกแบบร่าง (Draft)' : 'บันทึกและส่งอนุมัติ'}
                 </button>
             </div>
           </div>
@@ -136,13 +137,9 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                 </div>
             </div>
 
-            <CollapsibleSection 
-              title="ข้อมูลสกุลเงินและอัตราแลกเปลี่ยน (Currency & Rate)" 
-              defaultOpen={true}
-              icon={<Coins size={16} />}
-              accentColor="amber"
-              className="mt-1"
-            >
+            {/* Multicurrency Toggle Section */}
+            {/* Multicurrency Toggle Section */}
+            <MulticurrencyWrapper control={control} name="isMulticurrency">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
                     <div>
                         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">วันที่อัตราแลกเปลี่ยน</label>
@@ -196,7 +193,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                         )}
                     </div>
                 </div>
-            </CollapsibleSection>
+            </MulticurrencyWrapper>
 
             <PRFormLines 
                 lines={lines}

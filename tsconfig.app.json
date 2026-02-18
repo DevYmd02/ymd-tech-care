@@ -48,7 +48,8 @@
       "@utils/*": ["./src/utils/*"],
       "@pr": ["./src/pages/procurement/pr"],
       "@pr/*": ["./src/pages/procurement/pr/*"],
-      "@customer/*": ["./src/modules/master-data/customer/*"]
+      "@customer/*": ["./src/modules/master-data/customer/*"],
+      "@currency/*": ["./src/modules/master-data/currency/*"]
     }
   },
   "include": ["src"]

@@ -80,6 +80,30 @@ export const setupMasterDataHandlers = (mock: MockAdapter) => {
     [200, applyMockFilters(mockExchangeRateTypes, (config.params || {}) as Record<string, FilterValue>)]
   );
 
+  // --- EXCHANGE RATES ---
+  const mockExchangeRates = [
+    { exchange_id: '1', currency_id: '1', currency_type_id: '1', buy_rate: 1, sale_rate: 1, rate_date: '2026-02-17', exchange_round: 2, allow_adjust: 1, is_active: true },
+    { exchange_id: '2', currency_id: '2', currency_type_id: '1', buy_rate: 35.5, sale_rate: 35.8, rate_date: '2026-02-17', exchange_round: 2, allow_adjust: 1, is_active: true },
+  ];
+
+  mock.onGet('/master-data/exchange-rates').reply((config) => {
+    try {
+      const joinedRates = mockExchangeRates.map(rate => {
+        const currency = mockCurrencies.find(c => c.currency_id === rate.currency_id);
+        const type = mockExchangeRateTypes.find(t => t.currency_type_id === rate.currency_type_id);
+        return {
+          ...rate,
+          currency_code: currency?.currency_code || 'N/A',
+          type_name: type?.name_en || 'N/A'
+        };
+      });
+      return [200, applyMockFilters(joinedRates, (config.params || {}) as Record<string, FilterValue>)];
+    } catch (error) {
+      console.error('[Mock] Error in GET /master-data/exchange-rates:', error);
+      return [500, { message: 'Internal Server Error in Mock Handler' }];
+    }
+  });
+
   mock.onGet(/\/master-data\/exchange-rates\/latest/).reply((config) => {
       const params = config.params || {};
       const currencyId = params.currency_id;

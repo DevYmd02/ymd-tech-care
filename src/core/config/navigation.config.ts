@@ -99,6 +99,8 @@ export const sidebarMenuItems: MenuItem[] = [
         icon: ShoppingCart,
         subItems: [
             { id: 'sales-dashboard', label: 'Sales Dashboard', path: '/sales/dashboard' },
+            { id: 'inquiry', label: 'สำรวจความต้องการ (Inquiry)', path: '/sales/inquiry' },
+            { id: 'estimate', label: 'ประมาณราคา (Estimate)', path: '/sales/estimate' },
             { id: 'quotation', label: 'ใบเสนอราคา (Quotation)', path: '/sales/quotation' },
             { id: 'sales-order', label: 'คำสั่งขาย (Sales Order)', path: '/sales/order' },
             { id: 'delivery', label: 'จัดส่งสินค้า (Delivery / DO)', path: '/sales/delivery' },

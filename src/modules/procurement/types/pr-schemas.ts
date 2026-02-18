@@ -35,7 +35,7 @@ export const PRFormSchema = z.object({
   purpose: z.string().trim().min(1, 'กรุณาระบุวัตถุประสงค์ในการขอซื้อ'),
   pr_base_currency_code: z.string(),
   pr_quote_currency_code: z.string().optional(),
-  is_multicurrency: z.boolean(),
+  isMulticurrency: z.boolean(),
   pr_exchange_rate: z.number(),
   pr_exchange_rate_date: z.string().optional(),
   preferred_vendor_id: z.string().optional(),

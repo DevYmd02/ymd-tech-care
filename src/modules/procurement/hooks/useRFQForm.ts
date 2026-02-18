@@ -1,21 +1,18 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { z } from 'zod';
 import { MasterDataService } from '@/modules/master-data';
 import type { BranchListItem, ItemListItem, UnitListItem } from '@/modules/master-data/types/master-data-types';
 import type { RFQFormData, RFQLineFormData } from '@/modules/procurement/types/rfq-types';
 import { initialRFQFormData, initialRFQLineFormData } from '@/modules/procurement/types/rfq-types';
 import type { PRHeader } from '@/modules/procurement/types/pr-types';
-import type { VendorSearchItem } from '@/modules/master-data/vendor/types/vendor-types';
+
+import { PRService } from '@/modules/procurement/services/pr.service';
 import { logger } from '@/shared/utils/logger';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 
-interface VendorSelection {
-    vendor_code: string;
-    vendor_name: string;
-    vendor_name_display: string;
-}
+
 
 export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRHeader | null, onSuccess?: () => void) => {
-    const prevIsOpenRef = useRef(false);
     const [formData, setFormData] = useState<RFQFormData>({
         ...initialRFQFormData,
         rfq_no: `RFQ2024-007`,
@@ -31,14 +28,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
     const [isSaving, setIsSaving] = useState(false);
     const [activeTab, setActiveTab] = useState('detail');
     
-    // Vendor Selection State
-    const [selectedVendors, setSelectedVendors] = useState<VendorSelection[]>([
-        { vendor_code: '', vendor_name: '', vendor_name_display: '' },
-        { vendor_code: '', vendor_name: '', vendor_name_display: '' },
-        { vendor_code: '', vendor_name: '', vendor_name_display: '' },
-    ]);
-    const [activeVendorIndex, setActiveVendorIndex] = useState<number | null>(null);
-    const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
+
 
     // Master Data State
     const [branches, setBranches] = useState<BranchListItem[]>([]);
@@ -70,48 +60,161 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         fetchMasterData();
     }, [isOpen]);
 
-    // Reset/Prefill Logic
+    // Fetch PR Data & Reset/Prefill Logic
+    // Fetch PR Data & Reset/Prefill Logic
     useEffect(() => {
-        if (isOpen && !prevIsOpenRef.current) {
-            const timer = setTimeout(() => {
-                if (initialPR) {
-                    setFormData({
-                        ...initialRFQFormData,
-                        rfq_no: `RFQ-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(4, '0')}`,
-                        rfq_date: new Date().toLocaleDateString('en-CA'),
-                        pr_no: initialPR.pr_no,
-                        created_by_name: 'ระบบจะกรอกอัตโนมัติ',
-                        lines: Array.from({ length: 5 }, (_, i) => ({
-                            ...initialRFQLineFormData,
-                            line_no: i + 1,
-                        })),
-                        remarks: `Generated from PR: ${initialPR.pr_no}`
-                    });
-                } else {
-                    setFormData({
-                        ...initialRFQFormData,
-                        rfq_no: `RFQ2024-007`,
-                        rfq_date: new Date().toLocaleDateString('en-CA'),
-                        created_by_name: 'ระบบจะกรอกอัตโนมัติ',
-                        lines: Array.from({ length: 5 }, (_, i) => ({
-                            ...initialRFQLineFormData,
-                            line_no: i + 1,
-                        })),
-                    });
-                }
-                
-                setSelectedVendors([
-                    { vendor_code: '', vendor_name: '', vendor_name_display: '' },
-                    { vendor_code: '', vendor_name: '', vendor_name_display: '' },
-                    { vendor_code: '', vendor_name: '', vendor_name_display: '' },
-                ]);
-            }, 0);
-            return () => clearTimeout(timer);
-        }
-        prevIsOpenRef.current = isOpen;
-    }, [isOpen, initialPR]);
+        if (isOpen && initialPR?.pr_id) {
+            const fetchPRDetails = async () => {
+                try {
+                    const fullPR = await PRService.getDetail(initialPR.pr_id);
+                    // Map PR Lines to RFQ Lines
+                    const rfqLines: RFQLineFormData[] = (fullPR.lines || []).map((line, index) => ({
+                        line_no: index + 1,
+                        item_code: line.item_code,
+                        item_name: line.item_name,
+                        item_description: line.description || line.item_name,
+                        required_qty: line.qty,
+                        uom: line.uom,
+                        required_date: line.needed_date ? line.needed_date.split('T')[0] : '', // Format YYYY-MM-DD
+                        remarks: line.remark || '',
+                    }));
 
-    const handleChange = useCallback((field: keyof RFQFormData, value: string | number) => {
+                    // Fill remaining lines to minimum 5
+                    while (rfqLines.length < 5) {
+                        rfqLines.push({
+                            ...initialRFQLineFormData,
+                            line_no: rfqLines.length + 1
+                        });
+                    }
+
+                    // Determine Multicurrency State from PR
+                    const isMulti = fullPR.pr_base_currency_code !== 'THB';
+
+                    setFormData({
+                        ...initialRFQFormData,
+                        rfq_no: `RFQ-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`, // Mock Type
+                        rfq_date: new Date().toLocaleDateString('en-CA'),
+                        pr_id: fullPR.pr_id,
+                        pr_no: fullPR.pr_no,
+                        branch_id: fullPR.branch_id,
+                        project_id: fullPR.project_id || null, // Map Project
+                        created_by_name: 'ระบบจะกรอกอัตโนมัติ', // This should typically come from auth context
+                        status: 'DRAFT',
+                        quote_due_date: '', // User must fill
+                        
+                        // Multicurrency Mapping
+                        isMulticurrency: isMulti,
+                        currency: fullPR.pr_base_currency_code,
+                        target_currency: fullPR.pr_quote_currency_code || 'THB',
+                        exchange_rate: fullPR.pr_exchange_rate || 1,
+                        exchange_rate_date: fullPR.pr_exchange_rate_date ? fullPR.pr_exchange_rate_date.split('T')[0] : '',
+
+                        payment_terms: '', // Default or from Vendor if selected
+                        incoterm: '',
+                        remarks: `Generated from PR: ${fullPR.pr_no}`,
+                        lines: rfqLines
+                    });
+                    
+                    // Clear any previous errors
+                    setErrors({});
+
+                } catch (error) {
+                    logger.error('Failed to fetch PR details for RFQ:', error);
+                    toast('ไม่สามารถดึงข้อมูล PR ได้', 'error');
+                }
+            };
+            fetchPRDetails();
+        } else if (isOpen && !initialPR) {
+             // Reset to empty if no PR (Create New standalone)
+             setFormData({
+                ...initialRFQFormData,
+                 rfq_no: `RFQ-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
+                 lines: Array.from({ length: 5 }, (_, i) => ({
+                    ...initialRFQLineFormData,
+                    line_no: i + 1,
+                })),
+            });
+            setErrors({});
+        }
+    }, [isOpen, initialPR, toast]);
+
+
+    // Validation State & Schema
+    const [errors, setErrors] = useState<Record<string, string>>({});
+
+    const rfqSchema = z.object({
+        isMulticurrency: z.boolean(),
+        currency: z.string(),
+        exchange_rate: z.number(),
+    }).superRefine((data, ctx) => {
+        if (data.isMulticurrency) {
+             if (!data.currency || data.currency === 'THB') {
+                 ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: "กรุณาระบุสกุลเงินต่างประเทศ",
+                    path: ["currency"]
+                });
+            }
+            if (!data.exchange_rate || data.exchange_rate <= 0) {
+                 ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: "กรุณาระบุอัตราแลกเปลี่ยน",
+                    path: ["exchange_rate"]
+                });
+            }
+        }
+    });
+
+    const validateForm = (data: RFQFormData) => {
+        try {
+             // Validate Zod schema
+            rfqSchema.parse(data);
+             // Basic manual validation
+             const manualErrors: Record<string, string> = {};
+             if (!data.quote_due_date) manualErrors['quote_due_date'] = 'กรุณาระบุ ใช้ได้ถึงวันที่ (Quote Due Date)';
+             
+             const hasValidLine = data.lines.some(l => l.item_code && l.item_code.trim() !== '');
+             if (!hasValidLine) manualErrors['lines'] = 'กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ';
+
+             if (Object.keys(manualErrors).length > 0) {
+                 setErrors(manualErrors);
+                 return false;
+             }
+            
+            setErrors({});
+            return true;
+        } catch (error) {
+            if (error instanceof z.ZodError) {
+                const newErrors: Record<string, string> = {};
+                error.issues.forEach(err => {
+                    if (err.path[0]) newErrors[err.path[0] as string] = err.message;
+                });
+                setErrors(newErrors);
+            }
+            return false;
+        }
+    };
+
+    // Effect: Reset currency when isMulticurrency is turned off
+    useEffect(() => {
+        if (!formData.isMulticurrency) {
+             setFormData(prev => {
+                if (prev.currency !== 'THB' || prev.exchange_rate !== 1) {
+                    return { ...prev, currency: 'THB', exchange_rate: 1 };
+                }
+                return prev;
+             });
+             // Clear errors for currency fields
+             setErrors(prev => {
+                 const newErrors = { ...prev };
+                 delete newErrors.currency;
+                 delete newErrors.exchange_rate;
+                 return newErrors;
+             });
+        }
+    }, [formData.isMulticurrency]);
+
+    const handleChange = useCallback((field: keyof RFQFormData, value: string | number | boolean) => {
         setFormData(prev => ({ ...prev, [field]: value }));
     }, []);
 
@@ -142,17 +245,8 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
     }, [formData.lines.length, toast]);
 
     const handleSave = async () => {
-        // --- Basic Validation ---
-        const errors: string[] = [];
-        if (!formData.quote_due_date) {
-            errors.push('กรุณาระบุ ใช้ได้ถึงวันที่ (Quote Due Date)');
-        }
-        const hasValidLine = formData.lines.some(l => l.item_code && l.item_code.trim() !== '');
-        if (!hasValidLine) {
-            errors.push('กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ');
-        }
-        if (errors.length > 0) {
-            toast(errors.join('\n'), 'error');
+        if (!validateForm(formData)) {
+            toast('กรุณาตรวจสอบข้อมูลให้ถูกต้อง', 'error');
             return;
         }
 
@@ -160,7 +254,9 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         try {
             // Simulate API save with delay
             await new Promise(resolve => setTimeout(resolve, 1000));
-            logger.log('Save RFQ:', formData);
+            logger.log('Save RFQ with Currency:', {
+                ...formData
+            });
 
             // Call onSuccess callback (async - updates PR status to COMPLETED)
             if (onSuccess) {
@@ -173,25 +269,6 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         } finally {
             setIsSaving(false);
         }
-    };
-
-    const handleOpenVendorModal = (index: number) => {
-        setActiveVendorIndex(index);
-        setIsVendorModalOpen(true);
-    };
-
-    const handleVendorSelect = (vendor: VendorSearchItem) => {
-        if (activeVendorIndex !== null) {
-            const newVendors = [...selectedVendors];
-            newVendors[activeVendorIndex] = {
-                vendor_code: vendor.code,
-                vendor_name: vendor.name,
-                vendor_name_display: `${vendor.code} - ${vendor.name}`,
-            };
-            setSelectedVendors(newVendors);
-        }
-        setIsVendorModalOpen(false);
-        setActiveVendorIndex(null);
     };
 
     const handleOpenProductSearch = (index: number) => {
@@ -223,9 +300,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         branches,
         items,
         units,
-        selectedVendors,
-        isVendorModalOpen,
-        setIsVendorModalOpen,
+        
         isProductModalOpen,
         setIsProductModalOpen,
         productSearchTerm,
@@ -236,9 +311,10 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         handleAddLine,
         handleRemoveLine,
         handleSave,
-        handleOpenVendorModal,
-        handleVendorSelect,
+        
         handleOpenProductSearch,
-        handleProductSelect
+        handleProductSelect,
+        errors, 
+        validateForm
     };
 };

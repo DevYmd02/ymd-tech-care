@@ -1,12 +1,12 @@
 import React from 'react';
 import { FileText, Info, MoreHorizontal, Star, AlignLeft, History, Search } from 'lucide-react';
-import { VendorSearchModal } from '@/modules/master-data/vendor/components/selector/VendorSearchModal';
+// VendorSearchModal removed
 import { WindowFormLayout, TabPanel } from '@ui';
 import type { PRHeader } from '@/modules/procurement/types/pr-types';
 import { useRFQForm } from '@/modules/procurement/hooks/useRFQForm';
 import { RFQFormHeader } from './RFQFormHeader';
 import { RFQFormLines } from './RFQFormLines';
-import { RFQVendorSelection } from './RFQVendorSelection';
+// RFQVendorSelection removed
 
 interface Props {
     isOpen: boolean;
@@ -19,13 +19,13 @@ interface Props {
 export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialPR }) => {
     const {
         formData, isSaving, activeTab, setActiveTab,
-        branches, units, selectedVendors,
-        isVendorModalOpen, setIsVendorModalOpen,
+        branches, units,
+        
         isProductModalOpen, setIsProductModalOpen,
         productSearchTerm, setProductSearchTerm,
         filteredProducts,
         handleChange, handleLineChange, handleAddLine, handleRemoveLine,
-        handleSave, handleOpenVendorModal, handleVendorSelect,
+        handleSave, 
         handleOpenProductSearch, handleProductSelect
     } = useRFQForm(isOpen, onClose, initialPR, onSuccess);
 
@@ -88,12 +88,7 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, init
                 />
             </div>
 
-            <div className={cardClass}>
-                <RFQVendorSelection 
-                    selectedVendors={selectedVendors} 
-                    handleOpenVendorModal={handleOpenVendorModal} 
-                />
-            </div>
+            {/* Vendor Selection Removed */}
 
             <div className={cardClass}>
                 <div className="p-4">
@@ -167,11 +162,7 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, init
                 </div>
             )}
 
-            <VendorSearchModal
-                isOpen={isVendorModalOpen}
-                onClose={() => setIsVendorModalOpen(false)}
-                onSelect={handleVendorSelect}
-            />
+            {/* VendorSearchModal Removed */}
         </WindowFormLayout>
     );
 };

@@ -2,11 +2,12 @@ import React from 'react';
 import { FileText } from 'lucide-react';
 import type { RFQFormData } from '@/modules/procurement/types/rfq-types';
 import type { BranchListItem } from '@/modules/master-data/types/master-data-types';
+import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWrapper';
 
 interface RFQFormHeaderProps {
     formData: RFQFormData;
     branches: BranchListItem[];
-    handleChange: (field: keyof RFQFormData, value: string | number) => void;
+    handleChange: (field: keyof RFQFormData, value: string | number | boolean) => void;
 }
 
 export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches, handleChange }) => {
@@ -56,8 +57,24 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                 </div>
             </div>
 
-            {/* Row 2: สาขา, ผู้สร้าง, สถานะ */}
+            {/* Row 2: QC ต้นทาง, สาขา, ผู้สร้าง */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div>
+                    <label className={labelStyle}>QC ต้นทาง</label>
+                    <div className="flex gap-2">
+                        <input
+                            type="text"
+                            placeholder="QC2024-xxx"
+                            value={formData.qc_no || ''}
+                            onChange={(e) => handleChange('qc_no', e.target.value)}
+                            className={inputStyle}
+                        />
+                        <button className="px-4 py-1.5 bg-teal-600 hover:bg-teal-500 text-white rounded-lg transition-colors shrink-0 font-medium text-sm">
+                            เลือก
+                        </button>
+                    </div>
+                    <p className={hintStyle}>อ้างถึง qc_id (FK)</p>
+                </div>
                 <div>
                     <label className={labelStyle}>สาขาที่สร้าง RFQ</label>
                     <select 
@@ -72,6 +89,7 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                             </option>
                         ))}
                     </select>
+                    <p className={hintStyle}>อ้างถึง branch_id (FK)</p>
                 </div>
                 <div>
                     <label className={labelStyle}>ผู้สร้าง RFQ</label>
@@ -81,7 +99,12 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                         readOnly
                         className={`${inputStyle} bg-gray-200 dark:bg-gray-700`}
                     />
+                    <p className={hintStyle}>อ้างถึง user_id (FK)</p>
                 </div>
+            </div>
+
+            {/* Row 3: สถานะ, กำหนดส่งใบเสนอราคา, สถานที่รับของ */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div>
                     <label className={labelStyle}>สถานะ <span className="text-red-500">*</span></label>
                     <select
@@ -94,56 +117,34 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                         <option value="CLOSED">CLOSED - ปิดแล้ว</option>
                         <option value="CANCELLED">CANCELLED - ยกเลิก</option>
                     </select>
+                    <p className={hintStyle}>สถานะ: DRAFT/SENT/CLOSED/CANCELLED</p>
                 </div>
-            </div>
-
-            {/* Row 3: ใช้ได้ถึงวันที่, สกุลเงิน, อัตราแลกเปลี่ยน */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div>
-                    <label className={labelStyle}>ใช้ได้ถึงวันที่ <span className="text-red-500">*</span></label>
+                    <label className={labelStyle}>กำหนดส่งใบเสนอราคา <span className="text-red-500">*</span></label>
                     <input
                         type="date"
                         value={formData.quote_due_date}
                         onChange={(e) => handleChange('quote_due_date', e.target.value)}
                         className={inputStyle}
+                        placeholder="เลือกวันที่"
                     />
+                    <p className={hintStyle}>วันหมดอายุการเสนอราคา (quotation_due_date)</p>
                 </div>
                 <div>
-                    <label className={labelStyle}>สกุลเงิน</label>
-                    <select
-                        value={formData.currency}
-                        onChange={(e) => handleChange('currency', e.target.value)}
-                        className={selectStyle}
-                    >
-                        <option value="THB">THB - บาท</option>
-                        <option value="USD">USD - ดอลลาร์สหรัฐ</option>
-                        <option value="EUR">EUR - ยูโร</option>
-                    </select>
-                </div>
-                <div>
-                    <label className={labelStyle}>อัตราแลกเปลี่ยน</label>
-                    <input
-                        type="number"
-                        step="0.000001"
-                        value={formData.exchange_rate}
-                        onChange={(e) => handleChange('exchange_rate', parseFloat(e.target.value) || 1)}
-                        className={inputStyle}
-                    />
-                </div>
-            </div>
-
-            {/* Row 4: สถานที่จัดส่ง, เงื่อนไขการชำระ */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                    <label className={labelStyle}>สถานที่จัดส่ง/ส่งมอบ</label>
+                    <label className={labelStyle}>สถานที่รับของ</label>
                     <input
                         type="text"
-                        placeholder="ระบุสถานที่ส่งมอบ"
+                        placeholder="ระบุสถานที่รับของ"
                         value={formData.delivery_location}
                         onChange={(e) => handleChange('delivery_location', e.target.value)}
                         className={inputStyle}
                     />
+                    <p className={hintStyle}>สถานที่รับของ (receive_location)</p>
                 </div>
+            </div>
+
+            {/* Row 4: เงื่อนไขการชำระ, เงื่อนไขส่งมอบ, หมายเหตุ */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div>
                     <label className={labelStyle}>เงื่อนไขการชำระ</label>
                     <input
@@ -153,11 +154,8 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                         onChange={(e) => handleChange('payment_terms', e.target.value)}
                         className={inputStyle}
                     />
+                    <p className={hintStyle}>แนวทางเงื่อนไขที่ต้องการ (payment_term_hint)</p>
                 </div>
-            </div>
-
-            {/* Row 5: เงื่อนไขส่งมอบ, หมายเหตุ */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label className={labelStyle}>เงื่อนไขส่งมอบ (Incoterm)</label>
                     <input
@@ -167,6 +165,7 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                         onChange={(e) => handleChange('incoterm', e.target.value)}
                         className={inputStyle}
                     />
+                    <p className={hintStyle}>เงื่อนไขส่งมอบ (incoterm)</p>
                 </div>
                 <div>
                     <label className={labelStyle}>หมายเหตุเพิ่มเติม</label>
@@ -174,10 +173,89 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                         placeholder="ระบุหมายเหตุ..."
                         value={formData.remarks}
                         onChange={(e) => handleChange('remarks', e.target.value)}
-                        rows={2}
-                        className={`${inputStyle} h-auto resize-none`}
+                        rows={1}
+                        className={`${inputStyle} h-8 resize-none py-1.5`}
                     />
                 </div>
+            </div>
+
+            {/* Multicurrency Section */}
+            <div className="mb-4">
+                <MulticurrencyWrapper 
+                    name="isMulticurrency"
+                    checked={formData.isMulticurrency} 
+                    onCheckedChange={(checked) => {
+                        handleChange('isMulticurrency', checked);
+                        if (!checked) {
+                            handleChange('exchange_rate_date', '');
+                            handleChange('currency', 'THB');
+                            handleChange('target_currency', '');
+                            handleChange('exchange_rate', 1);
+                        }
+                    }}
+                >
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">วันที่อัตราแลกเปลี่ยน</label>
+                            <input 
+                                type="date" 
+                                value={formData.exchange_rate_date || ''}
+                                onChange={(e) => handleChange('exchange_rate_date', e.target.value)}
+                                className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
+                                disabled={!formData.isMulticurrency}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">รหัสสกุลเงิน</label>
+                            <select 
+                                value={formData.currency}
+                                onChange={(e) => handleChange('currency', e.target.value)}
+                                className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                                disabled={!formData.isMulticurrency}
+                            >
+                                <option value="THB">THB - บาท</option>
+                                <option value="USD">USD - ดอลลาร์สหรัฐ</option>
+                                <option value="EUR">EUR - ยูโร</option>
+                                <option value="JPY">JPY - เยน</option>
+                                <option value="CNY">CNY - หยวน</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">ไปยังสกุลเงิน (Target)</label>
+                            <select 
+                                value={formData.target_currency || ''}
+                                onChange={(e) => handleChange('target_currency', e.target.value)}
+                                className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                                disabled={!formData.isMulticurrency}
+                            >
+                                <option value="">เลือกสกุลเงิน</option>
+                                <option value="THB">THB - บาท</option>
+                                <option value="USD">USD - ดอลลาร์สหรัฐ</option>
+                                <option value="EUR">EUR - ยูโร</option>
+                                <option value="JPY">JPY - เยน</option>
+                                <option value="CNY">CNY - หยวน</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">อัตราแลกเปลี่ยน</label>
+                            <input 
+                                type="number"
+                                step="0.0001"
+                                value={formData.exchange_rate}
+                                onChange={(e) => handleChange('exchange_rate', parseFloat(e.target.value) || 0)}
+                                readOnly={formData.currency === 'THB'}
+                                className={`w-full h-9 px-3 text-sm text-right border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition-colors ${formData.currency === 'THB' ? 'bg-gray-50 dark:bg-gray-800/50 italic text-gray-500' : 'bg-white dark:bg-gray-800 font-semibold'}`}
+                                disabled={!formData.isMulticurrency}
+                                placeholder="0.0000"
+                            />
+                            {formData.currency && formData.currency !== 'THB' && (
+                                <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 text-right font-medium">
+                                    1 {formData.currency} ≈ {Number(formData.exchange_rate || 0).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })} THB
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </MulticurrencyWrapper>
             </div>
         </div>
     );

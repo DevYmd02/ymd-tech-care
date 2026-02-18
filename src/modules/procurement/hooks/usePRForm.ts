@@ -76,7 +76,7 @@ const getDefaultFormValues = (user: UserProfile | null): PRFormData => ({
   vendor_quote_no: '',
   shipping_method: '',
   remark: '',
-  is_multicurrency: false,
+  isMulticurrency: false,
   pr_exchange_rate: 1,
   pr_exchange_rate_date: new Date().toISOString().split('T')[0],
   cancelflag: 'N',
@@ -246,7 +246,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
                 requester_name: pr.requester_name,
                 pr_base_currency_code: pr.pr_base_currency_code || 'THB',
                 pr_quote_currency_code: pr.pr_quote_currency_code || '',
-                is_multicurrency: (pr.pr_base_currency_code || 'THB') !== 'THB',
+                isMulticurrency: (pr.pr_base_currency_code || 'THB') !== 'THB',
                 pr_exchange_rate: pr.pr_exchange_rate || 1,
                 lines: mappedLines,
                 is_on_hold: pr.status === 'DRAFT' ? 'Y' : 'N',
@@ -281,7 +281,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     if (!sourceCurrencyCode) return;
     if (sourceCurrencyCode === targetCurrencyCode) {
       setValue('pr_exchange_rate', 1, { shouldDirty: false });
-      setValue('is_multicurrency', String(sourceCurrencyCode) !== 'THB');
+      // Removed auto-set of isMulticurrency to allow manual toggle control
       prevCurrencyId.current = sourceCurrencyCode;
       prevCurrencyTypeId.current = targetCurrencyCode;
       return;
@@ -298,7 +298,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
           const finalTarget = (isSourceChanged && !targetCurrencyCode) ? 'THB' : targetCurrencyCode;
           const rate = await fetchExchangeRate(sourceCurrencyCode, finalTarget);
           setValue('pr_exchange_rate', rate, { shouldValidate: true, shouldDirty: false });
-          setValue('is_multicurrency', String(sourceCurrencyCode) !== 'THB' || String(finalTarget) !== 'THB');
+          // Removed auto-set of isMulticurrency to allow manual toggle control
         } catch (error) {
           logger.error('Failed to fetch exchange rate:', error);
         }
@@ -308,6 +308,22 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     prevCurrencyId.current = sourceCurrencyCode;
     prevCurrencyTypeId.current = targetCurrencyCode;
   }, [sourceCurrencyCode, targetCurrencyCode, setValue, getFieldState]);
+
+  // Multicurrency Reset Logic
+  const isMulticurrency = watch('isMulticurrency');
+  useEffect(() => {
+    if (!isMulticurrency) {
+      const currentBase = formMethods.getValues('pr_base_currency_code');
+      const currentRate = formMethods.getValues('pr_exchange_rate');
+      
+      // Only reset if needed to avoid infinite loops
+      if (currentBase !== 'THB' || currentRate !== 1) {
+        setValue('pr_base_currency_code', 'THB');
+        setValue('pr_quote_currency_code', 'THB');
+        setValue('pr_exchange_rate', 1);
+      }
+    }
+  }, [isMulticurrency, setValue, formMethods]);
 
 
   const addLine = useCallback(() => append(createEmptyLine()), [append]);
@@ -443,6 +459,9 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     try {
         const activeLines = (data.lines || []).filter(l => l.item_id && l.item_code);
         
+        const isOnHold = data.is_on_hold === 'Y' || data.is_on_hold === true;
+        const targetStatus = isOnHold ? 'DRAFT' : 'PENDING';
+        
         // Type guard handled by Zod validation - cost_center_id will be number after validation
         const payload: CreatePRPayload = {
             pr_date: data.pr_date,
@@ -482,20 +501,29 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
             pr_base_currency_code: data.pr_base_currency_code || 'THB',
             pr_quote_currency_code: data.pr_quote_currency_code || 'THB',
             pr_exchange_rate: Number(data.pr_exchange_rate) || 1,
-            pr_discount_raw: data.pr_discount_raw || '0'
+            pr_discount_raw: data.pr_discount_raw || '0',
+            
+            // Winspeed-Style ON HOLD Logic (Agent 2 Fix)
+            is_on_hold: isOnHold ? 'Y' : 'N',
+            on_hold: !!isOnHold, // Alias to ensure backend compatibility
+            status: targetStatus
         };
         
         if (isEditMode && id) {
             await updatePR(id, payload);
-            await confirm({ title: 'แก้ไขสำเร็จ', description: 'แก้ไขเอกสารเรียบร้อยแล้ว', confirmText: 'ตกลง', variant: 'success' });
+            await confirm({ 
+                title: 'แก้ไขสำเร็จ', 
+                description: isOnHold ? 'บันทึกเป็นแบบร่างแล้ว (On Hold)' : 'ส่งอนุมัติเรียบร้อยแล้ว', 
+                confirmText: 'ตกลง', variant: 'success' 
+            });
             onSuccess?.(); onClose();
             queryClient.invalidateQueries({ queryKey: ['prs'] });
         } else {
             const { newPR } = await createPRMutation.mutateAsync(payload);
             const displayNo = newPR.pr_no.startsWith('DRAFT-TEMP') ? 'รอรันเลข (NEW)' : newPR.pr_no;
             await confirm({
-                title: 'บันทึกแบบร่างสำเร็จ!',
-                description: `เลขที่เอกสาร: ${displayNo}\nสถานะ: แบบร่าง (Draft)`,
+                title: isOnHold ? 'บันทึกแบบร่างสำเร็จ!' : 'สร้างใบขอซื้อสำเร็จ!',
+                description: `เลขที่เอกสาร: ${displayNo}\nสถานะ: ${isOnHold ? 'แบบร่าง (On Hold)' : 'รออนุมัติ (Pending)'}`,
                 confirmText: 'ตกลง', hideCancel: true, variant: 'success'
             });
             onSuccess?.(); onClose();

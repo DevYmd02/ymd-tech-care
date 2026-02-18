@@ -9,10 +9,10 @@ import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Layers, Save, X } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
-import { CurrencyService } from '@/modules/master-data/currency/services/currency.service';
-import { DialogFormLayout } from '@ui';
+import { CurrencyService } from '@currency/services/currency.service';
+import { DialogFormLayout, useToast } from '@ui';
 import { logger } from '@/shared/utils/logger';
-import { exchangeRateTypeSchema, type ExchangeRateTypeFormValues, type ExchangeRateType } from '@/modules/master-data/types/currency-types';
+import { exchangeRateTypeSchema, type ExchangeRateTypeFormValues, type ExchangeRateType } from '@currency/types/currency-types';
 
 interface Props {
     isOpen: boolean;
@@ -22,6 +22,7 @@ interface Props {
 }
 
 export function ExchangeRateTypeFormModal({ isOpen, onClose, editId, onSuccess }: Props) {
+    const { toast } = useToast();
     const {
         register,
         handleSubmit,
@@ -87,14 +88,15 @@ export function ExchangeRateTypeFormModal({ isOpen, onClose, editId, onSuccess }
 
             if (res.success) {
                 logger.log('Saved Exchange Rate Type:', data);
+                toast('ข้อมูลประเภทอัตราแลกเปลี่ยนถูกบันทึกเรียบร้อยแล้ว', 'success');
                 if (onSuccess) onSuccess();
                 onClose();
             } else {
-                alert(res.message || 'เกิดข้อผิดพลาดในการบันทึก');
+                toast(res.message || 'ไม่สามารถบันทึกข้อมูลได้', 'error');
             }
         } catch (error) {
             logger.error('Error saving rate type:', error);
-            alert('เกิดข้อผิดพลาดในการบันทึก');
+            toast('ไม่สามารถเชื่อมต่อกับระบบได้', 'error');
         }
     };
 
@@ -148,7 +150,7 @@ export function ExchangeRateTypeFormModal({ isOpen, onClose, editId, onSuccess }
                     {errors.code ? (
                         <p className="text-red-500 text-xs mt-1">{errors.code.message}</p>
                     ) : (
-                        <p className="text-gray-400 text-xs mt-1">varchar(30) - ห้ามเว้นว่าง (ไม่ซ้ำ)</p>
+                        <p className="text-gray-400 text-xs mt-1">รหัสเอกสาร (ไม่เกิน 30 ตัวอักษร)</p>
                     )}
                 </div>
 
@@ -166,7 +168,7 @@ export function ExchangeRateTypeFormModal({ isOpen, onClose, editId, onSuccess }
                     {errors.nameTh ? (
                         <p className="text-red-500 text-xs mt-1">{errors.nameTh.message}</p>
                     ) : (
-                        <p className="text-gray-400 text-xs mt-1">varchar(200) - ห้ามเว้นว่าง</p>
+                        <p className="text-gray-400 text-xs mt-1">ชื่อประเภทภาษาไทย (ไม่เกิน 200 ตัวอักษร)</p>
                     )}
                 </div>
 
@@ -184,7 +186,7 @@ export function ExchangeRateTypeFormModal({ isOpen, onClose, editId, onSuccess }
                     {errors.nameEn ? (
                         <p className="text-red-500 text-xs mt-1">{errors.nameEn.message}</p>
                     ) : (
-                        <p className="text-gray-400 text-xs mt-1">varchar(200) - ห้ามเว้นว่าง</p>
+                        <p className="text-gray-400 text-xs mt-1">ชื่อประเภทภาษาอังกฤษ (ไม่เกิน 200 ตัวอักษร)</p>
                     )}
                 </div>
 
@@ -201,7 +203,7 @@ export function ExchangeRateTypeFormModal({ isOpen, onClose, editId, onSuccess }
                         <option value="true">ใช้งาน (Active)</option>
                         <option value="false">ไม่ใช้งาน (Inactive)</option>
                     </select>
-                    <p className="text-gray-400 text-xs mt-1">boolean, default TRUE</p>
+                    <p className="text-gray-400 text-xs mt-1">สถานะการใช้งานของข้อมูล</p>
                 </div>
             </div>
         </DialogFormLayout>

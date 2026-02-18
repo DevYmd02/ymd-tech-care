@@ -119,16 +119,22 @@ export interface RFQFormData {
     rfq_date: string;
     pr_id: string | null;
     pr_no: string | null;
+    qc_id?: string | null; // QC ต้นทาง (Optional)
+    qc_no?: string | null; // เลขที่ QC (Optional)
     branch_id: string | null;
+    project_id?: string | null; // โครงการ (Optional)
     created_by_name: string;
     status: RFQStatus;
     quote_due_date: string;
     currency: string;
+    target_currency?: string; // ไปยังสกุลเงิน (Optional)
+    exchange_rate_date?: string; // วันที่อัตราแลกเปลี่ยน (Optional)
     exchange_rate: number;
     delivery_location: string;
     payment_terms: string;
     incoterm: string;
     remarks: string;
+    isMulticurrency: boolean;
     
     // Lines
     lines: RFQLineFormData[];
@@ -176,6 +182,7 @@ export const initialRFQFormData: RFQFormData = {
     payment_terms: '',
     incoterm: '',
     remarks: '',
+    isMulticurrency: false,
     lines: [{ ...initialRFQLineFormData }],
 };
 

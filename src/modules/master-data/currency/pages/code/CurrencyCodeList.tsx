@@ -5,7 +5,7 @@ import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { ActiveStatusBadge } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
-import type { Currency } from '@/modules/master-data/types/currency-types';
+import type { Currency } from '@currency/types/currency-types';
 import { CurrencyService } from '@/modules/master-data/currency/services/currency.service';
 import { logger } from '@/shared/utils/logger';
 import { CurrencyFormModal } from './CurrencyCodeFormModal';

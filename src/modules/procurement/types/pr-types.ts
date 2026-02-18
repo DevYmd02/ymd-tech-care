@@ -139,7 +139,7 @@ export interface PRFormData {
    purpose: string;                  // วัตถุประสงค์ (UI legacy, maps to payload)
    pr_base_currency_code: string;    // Postman: pr_base_currency_code
    pr_quote_currency_code?: string;   // Postman: pr_quote_currency_code
-   is_multicurrency: boolean;        // UI Only
+   isMulticurrency: boolean;        // UI Only
    pr_exchange_rate: number;         // Postman: pr_exchange_rate
    pr_exchange_rate_date?: string;   // Postman: pr_exchange_rate_date
    
@@ -298,6 +298,9 @@ export interface CreatePRPayload {
     pr_quote_currency_code: string; // Postman: pr_quote_currency_code
     pr_exchange_rate: number;       // Postman: pr_exchange_rate
     pr_discount_raw: string;        // Postman: pr_discount_raw
+    is_on_hold?: string | boolean;  // Winspeed-Style ON HOLD Logic
+    on_hold?: boolean;              // Alias for Agent 2 Logic
+    status?: PRStatus;              // Allow status override (DRAFT vs PENDING)
 }
 
 // ====================================================================================

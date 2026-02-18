@@ -12,7 +12,7 @@ import { styles } from '@/shared/constants/styles';
 import { CurrencyService } from '@/modules/master-data/currency/services/currency.service';
 import { DialogFormLayout } from '@ui';
 import { logger } from '@/shared/utils/logger';
-import { currencySchema, type CurrencyFormValues, type Currency } from '@/modules/master-data/types/currency-types';
+import { currencySchema, type CurrencyFormValues, type Currency } from '@currency/types/currency-types';
 
 interface Props {
     isOpen: boolean;

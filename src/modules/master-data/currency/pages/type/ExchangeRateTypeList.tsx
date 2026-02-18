@@ -5,8 +5,8 @@ import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { ActiveStatusBadge } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
-import type { ExchangeRateType } from '@/modules/master-data/types/currency-types';
-import { CurrencyService } from '@/modules/master-data/currency/services/currency.service';
+import type { ExchangeRateType } from '@currency/types/currency-types';
+import { CurrencyService } from '@currency/services/currency.service';
 import { logger } from '@/shared/utils/logger';
 import { ExchangeRateTypeFormModal } from './ExchangeRateTypeFormModal';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
@@ -49,11 +49,11 @@ export default function ExchangeRateTypeList() {
         });
 
         if (isConfirmed) {
-            const success = await CurrencyService.deleteExchangeRateType(id);
-            if (success) {
+            const res = await CurrencyService.deleteExchangeRateType(id);
+            if (res.success) {
                 fetchData();
             } else {
-                alert('เกิดข้อผิดพลาดในการลบข้อมูล');
+                alert(res.message || 'เกิดข้อผิดพลาดในการลบข้อมูล');
             }
         }
     }, [confirm, fetchData]);
