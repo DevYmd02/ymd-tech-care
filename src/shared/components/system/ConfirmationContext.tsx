@@ -11,6 +11,7 @@ interface ConfirmationOptions {
     variant?: ConfirmationVariant;
     hideCancel?: boolean;
     icon?: React.ElementType;
+    onConfirm?: () => Promise<void>;
 }
 
 export interface ConfirmationContextType {
@@ -22,6 +23,7 @@ export const ConfirmationContext = createContext<ConfirmationContextType | undef
 
 export const ConfirmationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [isOpen, setIsOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
     const [options, setOptions] = useState<ConfirmationOptions>({
         title: '',
         description: '',
@@ -36,13 +38,29 @@ export const ConfirmationProvider: React.FC<{ children: ReactNode }> = ({ childr
         });
     }, []);
 
-    const handleConfirm = useCallback(() => {
-        if (resolver) {
-            resolver.resolve(true);
+    const handleConfirm = useCallback(async () => {
+        if (options.onConfirm) {
+            setIsLoading(true);
+            try {
+                await options.onConfirm();
+                // If onConfirm succeeds, we consider it confirmed
+                if (resolver) resolver.resolve(true);
+                setIsOpen(false);
+            } catch (error) {
+                console.error("Async confirmation failed", error);
+                // Keep modal open on error, stop loading
+            } finally {
+                setIsLoading(false);
+            }
+        } else {
+            // Synchronous / Standard confirmation
+            if (resolver) {
+                resolver.resolve(true);
+            }
+            setIsOpen(false);
+            setResolver(null);
         }
-        setIsOpen(false);
-        setResolver(null);
-    }, [resolver]);
+    }, [resolver, options]);
 
     const handleCancel = useCallback(() => {
         if (resolver) {
@@ -66,6 +84,7 @@ export const ConfirmationProvider: React.FC<{ children: ReactNode }> = ({ childr
                 variant={options.variant}
                 hideCancel={options.hideCancel}
                 icon={options.icon}
+                isLoading={isLoading}
             />
         </ConfirmationContext.Provider>
     );

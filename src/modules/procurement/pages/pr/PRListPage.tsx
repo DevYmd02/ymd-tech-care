@@ -7,12 +7,14 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { FileText, Plus, Search, Send, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { FileText, Plus, Search, Send, AlertTriangle } from 'lucide-react';
 import { PageListLayout, SmartTable, PRStatusBadge, FilterField } from '@ui';
 import { useTableFilters, useDebounce, type TableFilters, useConfirmation } from '@/shared/hooks';
 import RFQFormModal from '@/modules/procurement/pages/rfq/components/RFQFormModal';
 import { PRFormModal } from './components/PRFormModal';
 import { PRActionsCell } from './components/PRActionsCell';
+import { usePRActions } from '@/modules/procurement/hooks/usePRActions';
+import { RejectReasonModal } from '@/modules/procurement/components/RejectReasonModal';
 
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { createColumnHelper } from '@tanstack/react-table';
@@ -60,18 +62,6 @@ export default function PRListPage() {
     });
     const { confirm } = useConfirmation();
 
-//     // Convert to API filter format - REPLACED BY DEBOUNCED VERSION BELOW
-//     const apiFilters: PRListParams = {
-//         pr_no: filters.search || undefined,
-//         requester_name: filters.search2 || undefined,
-//         department: filters.search3 || undefined,
-//         status: filters.status === 'ALL' ? undefined : filters.status,
-//         date_from: filters.dateFrom || undefined,
-//         date_to: filters.dateTo || undefined,
-//         page: filters.page,
-//         limit: filters.limit
-//     };
-
     // Debounce filters to prevent API flooding
     const debouncedFilters = useDebounce(filters, 500);
 
@@ -97,9 +87,6 @@ export default function PRListPage() {
         refetchOnWindowFocus: true, // Refetch when window gains focus
     });
 
-    // Window Manager
-    // const { openWindow } = useWindowManager();
-
     // Modal States
     const [isRFQModalOpen, setIsRFQModalOpen] = useState(false);
     const [selectedPR, setSelectedPR] = useState<PRHeader | null>(null);
@@ -108,31 +95,36 @@ export default function PRListPage() {
     const [isPRModalOpen, setIsPRModalOpen] = useState(false);
     const [selectedPRId, setSelectedPRId] = useState<string | undefined>(undefined);
 
-
-    // Confirmation Modal State
-    // Removed manual states in favor of useConfirmation hook
+    // Hook Actions
+    const { 
+        handleApprove, 
+        approvingId, 
+        handleReject, 
+        submitReject, 
+        closeRejectModal, 
+        isRejectReasonOpen, 
+        isRejecting 
+    } = usePRActions();
 
     // Handlers
     const handleFilterChange = (name: PRFilterKeys, value: string) => {
         setFilters({ [name]: value });
     };
 
-    const handleCreateRFQ = (pr: PRHeader) => {
+    const handleCreateRFQ = useCallback((pr: PRHeader) => {
         setSelectedPR(pr);
         setIsRFQModalOpen(true);
-    };
+    }, []);
 
     const handleRFQSuccess = useCallback(async () => {
         if (!selectedPR) return;
         
         try {
-            // Update PR status to COMPLETED after RFQ is successfully created
             await PRService.update(selectedPR.pr_id, { status: 'COMPLETED' as PRStatus });
             logger.log(`PR ${selectedPR.pr_no} status updated to COMPLETED`);
         } catch (error) {
             logger.error('Failed to update PR status to COMPLETED', error);
         }
-        // Always refetch the list to show latest data
         refetch();
     }, [selectedPR, refetch]);
 
@@ -141,16 +133,15 @@ export default function PRListPage() {
         setIsPRModalOpen(true);
     };
 
-    const handleEdit = (id: string) => {
+    const handleEdit = useCallback((id: string) => {
         setSelectedPRId(id);
         setIsPRModalOpen(true);
-    };
+    }, []);
 
     const handleClosePRModal = () => {
         setIsPRModalOpen(false);
         setSelectedPRId(undefined);
     };
-
 
     const handleSendApproval = useCallback(async (id: string) => {
         const isConfirmed = await confirm({
@@ -197,55 +188,9 @@ export default function PRListPage() {
         }
     }, [confirm, refetch]);
 
-
-
-    const handleApprove = useCallback(async (id: string) => {
-        const isConfirmed = await confirm({
-            title: 'ยืนยันการอนุมัติ',
-            description: 'คุณต้องการอนุมัติเอกสารนี้ใช่หรือไม่?',
-            confirmText: 'อนุมัติ',
-            cancelText: 'ยกเลิก',
-            variant: 'success',
-            icon: CheckCircle
-        });
-
-        if (!isConfirmed) return;
-
-        try {
-            const success = await PRService.approve(id);
-            if (success) {
-                refetch();
-            } else {
-                await confirm({ title: 'อนุมัติไม่สำเร็จ', description: 'เกิดข้อผิดพลาด', confirmText: 'ตกลง', hideCancel: true, variant: 'warning' });
-            }
-        } catch (error) {
-            logger.error('Approve failed', error);
-             await confirm({ title: 'เกิดข้อผิดพลาด', description: 'เกิดข้อผิดพลาดในการอนุมัติ', confirmText: 'ตกลง', hideCancel: true, variant: 'danger' });
-        }
-    }, [confirm, refetch]);
-
-    const handleReject = useCallback(async (id: string) => {
-         const isConfirmed = await confirm({
-            title: 'ยืนยันการไม่อนุมัติ',
-            description: "คุณต้องการ 'ไม่อนุมัติ' เอกสารนี้ใช่หรือไม่?",
-            confirmText: 'ยืนยัน',
-            cancelText: 'ยกเลิก',
-            variant: 'danger',
-            icon: XCircle
-        });
-
-        if (!isConfirmed) return;
-
-        try {
-            await PRService.reject(id, "Rejected by Approver");
-            refetch();
-        } catch (error) {
-            logger.error('Reject failed', error);
-            await confirm({ title: 'เกิดข้อผิดพลาด', description: 'เกิดข้อผิดพลาดในการไม่อนุมัติ', confirmText: 'ตกลง', hideCancel: true, variant: 'danger' });
-        }
-    }, [confirm, refetch]);
-
-
+    const onApproveClick = useCallback((id: string) => {
+        handleApprove(id, { onSuccess: refetch });
+    }, [handleApprove, refetch]);
 
     // Columns Definition
     const columnHelper = createColumnHelper<PRHeader>();
@@ -389,9 +334,10 @@ export default function PRListPage() {
                     row={row.original}
                     onEdit={handleEdit}
                     onSendApproval={handleSendApproval}
-                    onApprove={handleApprove}
+                    onApprove={onApproveClick}
                     onReject={handleReject}
                     onCreateRFQ={handleCreateRFQ}
+                    isApproving={approvingId === row.original.pr_id}
                 />
             ),
             footer: () => {
@@ -405,7 +351,7 @@ export default function PRListPage() {
             size: 120, 
             enableSorting: false,
         }),
-    ], [columnHelper, filters.page, filters.limit, data?.items, handleSendApproval, handleApprove, handleReject]); 
+    ], [columnHelper, filters.page, filters.limit, data?.items, handleSendApproval, onApproveClick, handleReject, approvingId, handleEdit, handleCreateRFQ]);
 
     // ====================================================================================
     // RENDER
@@ -538,8 +484,12 @@ export default function PRListPage() {
                 />
             )}
 
-            {/* <ConfirmationModal>s removed in favor of useConfirmation hook */ }
+            <RejectReasonModal
+                isOpen={isRejectReasonOpen}
+                onClose={closeRejectModal}
+                onConfirm={(reason) => submitReject(reason, { onSuccess: refetch })}
+                isSubmitting={isRejecting}
+            />
         </>
     );
 }
-

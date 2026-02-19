@@ -19,6 +19,7 @@ import { useToast } from '@/shared/components/ui/feedback/Toast';
 
 
 
+
 const PR_CONFIG = {
   MIN_LINES: 5,
   INITIAL_LINES: 5,
@@ -107,11 +108,17 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
   } = usePRMasterData();
 
 
-  const { createPRMutation, updatePR, deletePR, approvePR, cancelPR } = usePRActions();
+  const { 
+    createPRMutation, updatePR, deletePR, handleApprove, cancelPR, 
+    approvingId, isActionLoading, setIsActionLoading,
+    handleReject, submitReject, closeRejectModal, isRejectReasonOpen, isRejecting 
+  } = usePRActions();
   
+  const isApproving = !!id && approvingId === id;
+
   const { toast } = useToast();
   const showAlert = useCallback((message: string) => toast(message, 'error'), [toast]);
-  const [isActionLoading, setIsActionLoading] = useState(false);
+  
   const [activeTab, setActiveTab] = useState('detail');
   
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -271,7 +278,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
       return () => clearTimeout(timer);
     }
     prevIsOpenRef.current = isOpen;
-  }, [isOpen, reset, id, user]);
+  }, [isOpen, reset, id, user, setIsActionLoading]);
 
   // Currency Sync
   const sourceCurrencyCode = watch('pr_base_currency_code');
@@ -571,19 +578,15 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     }
   };
 
-  const handleApprove = async () => {
+  const onApproveClick = useCallback(async () => {
     if (!id) return;
-    const isConfirmed = await confirm({ title: 'ยืนยันการอนุมัติ', description: 'คุณต้องการอนุมัติเอกสารนี้ใช่หรือไม่?', confirmText: 'อนุมัติ', cancelText: 'ข้าม', variant: 'success' });
-    if (isConfirmed) {
-      setIsActionLoading(true);
-      try {
-        if (await approvePR(id)) {
-          await confirm({ title: 'อนุมัติสำเร็จ', description: 'เอกสารได้รับการอนุมัติเรียบร้อยแล้ว', confirmText: 'ตกลง', variant: 'success' });
-          onSuccess?.(); onClose();
-        }
-      } finally { setIsActionLoading(false); }
-    }
-  };
+    handleApprove(id, { 
+        onSuccess: () => {
+             onSuccess?.(); 
+             onClose(); 
+        } 
+    });
+  }, [id, handleApprove, onSuccess, onClose]);
 
   const handleVoid = async () => {
     if (!id) return;
@@ -592,7 +595,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
       setIsActionLoading(true);
       try {
         if (await cancelPR(id)) {
-          await confirm({ title: 'ยกเลิกสำเร็จ', description: 'เอกสารได้รับการยกเลิกเรียบร้อยแล้ว', confirmText: 'ตกลง', variant: 'success' });
+          await confirm({ title: 'ยกเลิกสำเร็จ', description: 'เอกสารได้รับการยกเลิกเรียบร้อยแล้ว', confirmText: 'ตกลง', variant: 'success', hideCancel: true });
           onSuccess?.(); onClose();
         }
       } finally { setIsActionLoading(false); }
@@ -606,7 +609,9 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     handleSubmit, setValue, watch, isSubmitting, isActionLoading, errors, handleFormError,
     products, costCenters, projects, purchaseTaxOptions, isSearchingProducts,
     addLine, removeLine, clearLine, updateLine, handleClearLines,
-    openProductSearch, selectProduct, handleVendorSelect, onSubmit, handleDelete, handleApprove,
-    handleVoid, control, reset, formMethods, user
+    openProductSearch, selectProduct, handleVendorSelect, onSubmit, handleDelete, handleApprove: onApproveClick,
+    handleVoid, control, reset, formMethods, user, isApproving,
+    // Reject Logic
+    handleReject, submitReject, closeRejectModal, isRejectReasonOpen, isRejecting
   };
 };

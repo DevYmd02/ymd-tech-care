@@ -9,6 +9,7 @@ interface PRActionsCellProps {
     onApprove: (id: string) => void;
     onReject: (id: string) => void;
     onCreateRFQ: (item: PRHeader) => void;
+    isApproving?: boolean;
 }
 
 export const PRActionsCell = ({ 
@@ -18,7 +19,8 @@ export const PRActionsCell = ({
     onSendApproval, 
     onApprove, 
     onReject, 
-    onCreateRFQ 
+    onCreateRFQ,
+    isApproving = false
 }: PRActionsCellProps) => {
 
     return (
@@ -59,14 +61,25 @@ export const PRActionsCell = ({
                 <>
                     <button 
                         onClick={() => onApprove(item.pr_id)}
-                        className="flex items-center gap-1 pl-1.5 pr-2 py-1 ml-1 bg-green-600 hover:bg-green-700 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap"
+                        disabled={isApproving}
+                        className={`flex items-center gap-1 pl-1.5 pr-2 py-1 ml-1 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap ${
+                            isApproving 
+                            ? 'bg-gray-400 cursor-not-allowed opacity-70' 
+                            : 'bg-green-600 hover:bg-green-700'
+                        }`}
                         title="อนุมัติ"
                     >
-                        <CheckCircle size={12} /> อนุมัติ
+                        <CheckCircle size={12} /> 
+                        อนุมัติ
                     </button>
                     <button 
                         onClick={() => onReject(item.pr_id)}
-                        className="flex items-center gap-1 pl-1.5 pr-2 py-1 ml-1 bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap"
+                        disabled={isApproving}
+                        className={`flex items-center gap-1 pl-1.5 pr-2 py-1 ml-1 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap ${
+                            isApproving
+                            ? 'bg-gray-400 cursor-not-allowed opacity-70'
+                            : 'bg-red-600 hover:bg-red-700'
+                        }`}
                         title="ไม่อนุมัติ"
                     >
                         <XCircle size={12} /> ไม่อนุมัติ

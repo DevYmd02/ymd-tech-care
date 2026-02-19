@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FormProvider } from 'react-hook-form';
-import { FileText, Printer, Copy, CheckCircle, FileBox, MoreHorizontal, Coins, FileBarChart, History as HistoryIcon } from 'lucide-react';
+import { FileText, Printer, Copy, CheckCircle, FileBox, MoreHorizontal, Coins, FileBarChart, History as HistoryIcon, XCircle, Loader2 } from 'lucide-react';
 import { PRHeader } from './PRHeader';
 import { PRFormLines } from './PRFormLines';
 import { PRFormSummary } from './PRFormSummary';
@@ -8,6 +8,7 @@ import { ProductSearchModal } from './ProductSearchModal';
 import { WindowFormLayout } from '@ui';
 import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWrapper';
 import { usePRForm } from '@/modules/procurement/hooks/usePRForm';
+import { RejectReasonModal } from '@/modules/procurement/components/RejectReasonModal';
 import type { PRFormData } from '@/modules/procurement/types/pr-types';
 
 interface Props {
@@ -28,7 +29,9 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
     handleVoid,
     handleFormError,
     formMethods,
-    user
+    user,
+    // Reject Logic
+    handleReject, submitReject, closeRejectModal, isRejectReasonOpen, isRejecting
   } = usePRForm(isOpen, onClose, id, onSuccess);
 
   const { register, control, watch, formState: { errors } } = formMethods;
@@ -63,14 +66,25 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
             <div className="flex items-center gap-2">
                 <button type="button" onClick={onClose} disabled={isSubmitting || isActionLoading} className="px-4 py-2 border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-md text-sm font-medium">ยกเลิก</button>
                 {isEditMode && (
-                    <button type="button" onClick={handleApprove} disabled={isSubmitting || isActionLoading} className="px-6 py-2 bg-green-600 text-white hover:bg-green-700 rounded-md text-sm font-medium flex items-center gap-2"><CheckCircle size={16} /> อนุมัติ</button>
+                    <>
+                        <button 
+                            type="button" 
+                            onClick={() => handleReject(id!)} 
+                            disabled={isSubmitting || isActionLoading} 
+                            className="px-4 py-2 bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 rounded-md text-sm font-medium flex items-center gap-2 border border-red-200 dark:border-red-800/50"
+                        >
+                            <XCircle size={16} /> ไม่อนุมัติ
+                        </button>
+                        <button type="button" onClick={handleApprove} disabled={isSubmitting || isActionLoading} className="px-6 py-2 bg-green-600 text-white hover:bg-green-700 rounded-md text-sm font-medium flex items-center gap-2"><CheckCircle size={16} /> อนุมัติ</button>
+                    </>
                 )}
                 <button 
                   type="button" 
                   onClick={() => formMethods.handleSubmit(handleSubmitWrapper, handleFormError)()} 
                   disabled={isSubmitting || isActionLoading} 
-                  className="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md text-sm font-medium"
+                  className="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md text-sm font-medium flex items-center justify-center gap-2"
                 >
+                  {(isSubmitting || isActionLoading) && <Loader2 className="animate-spin" size={16} />}
                   {watch('is_on_hold') === 'Y' ? 'บันทึกแบบร่าง (Draft)' : 'บันทึกและส่งอนุมัติ'}
                 </button>
             </div>
@@ -136,7 +150,6 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                 </div>
             </div>
 
-            {/* Multicurrency Toggle Section */}
             {/* Multicurrency Toggle Section */}
             <MulticurrencyWrapper control={control} name="isMulticurrency">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
@@ -230,7 +243,13 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
             </div>
         </div>
       </FormProvider>
+
+      <RejectReasonModal
+          isOpen={isRejectReasonOpen}
+          onClose={closeRejectModal}
+          onConfirm={(reason: string) => submitReject(reason, { onSuccess: () => { onSuccess?.(); onClose(); } })}
+          isSubmitting={isRejecting}
+      />
     </WindowFormLayout>
   );
 };
-

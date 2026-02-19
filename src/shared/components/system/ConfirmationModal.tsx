@@ -1,6 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { Save, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Save, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
 
 export type ConfirmationVariant = 'info' | 'danger' | 'warning' | 'success';
 
@@ -15,6 +15,7 @@ interface ConfirmationModalProps {
     variant?: ConfirmationVariant;
     hideCancel?: boolean;
     icon?: React.ElementType;
+    isLoading?: boolean;
 }
 
 export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
@@ -27,7 +28,8 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     cancelText = 'Cancel',
     variant = 'info',
     hideCancel = false,
-    icon
+    icon,
+    isLoading = false
 }) => {
     if (!isOpen) return null;
 
@@ -64,8 +66,8 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 
     return createPortal(
         <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            {/* Backdrop click to close */}
-            <div className="absolute inset-0" onClick={onClose} />
+            {/* Backdrop click to close - Disabled when loading */}
+            <div className={`absolute inset-0 ${isLoading ? 'pointer-events-none' : ''}`} onClick={onClose} />
 
             <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
                 <div className="p-6 text-center">
@@ -77,7 +79,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                     <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
                         {title}
                     </h3>
-                    <p className="text-gray-600 dark:text-gray-400 mb-6">
+                    <p className="text-gray-600 dark:text-gray-400 mb-6 whitespace-pre-line">
                         {description}
                     </p>
 
@@ -85,15 +87,18 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                         {!hideCancel && cancelText && (
                             <button
                                 onClick={onClose}
-                                className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium transition-colors"
+                                disabled={isLoading}
+                                className={`px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium transition-colors ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                                 {cancelText}
                             </button>
                         )}
                         <button
                             onClick={onConfirm}
-                            className={`px-4 py-2 rounded-lg text-white font-medium shadow-sm transition-colors flex items-center gap-2 ${config.confirmBtn}`}
+                            disabled={isLoading}
+                            className={`px-4 py-2 rounded-lg text-white font-medium shadow-sm transition-colors flex items-center gap-2 ${config.confirmBtn} ${isLoading ? 'opacity-80 cursor-wait' : ''}`}
                         >
+                            {isLoading && <Loader2 className="animate-spin" size={16} />}
                             {confirmText}
                         </button>
                     </div>
