@@ -148,15 +148,25 @@ export interface CreatePOPayload {
     remarks?: string;
     subtotal?: number;
     tax_amount?: number;
+    // Multicurrency
+    currency?: string;
+    exchange_rate?: number;
     total_amount?: number;
 }
 
 export interface POFormData {
     vendor_id?: string;
+    po_no?: string; // Should be added if not present
     po_date?: string;
     delivery_date?: string;
     payment_term_days?: number;
     remarks?: string;
     items?: POLineItemInput[]; 
     tax_rate?: number;
+    is_vat_included?: boolean; // Add if missing from interface but present in form
+    
+    // Multicurrency
+    isMulticurrency?: boolean;
+    currency?: string;
+    exchange_rate?: number;
 }

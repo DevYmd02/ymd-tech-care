@@ -90,6 +90,8 @@ export const placeholderRoutes: Record<string, PlaceholderRoute[]> = {
     sales: [
         { path: 'sales/dashboard', title: 'Sales Dashboard' },
         { path: 'sales/quotation', title: 'Quotation' },
+        { path: 'sales/inquiry', title: 'Inquiry' },
+        { path: 'sales/estimate', title: 'Estimate' },
         { path: 'sales/order', title: 'Sales Order' },
         { path: 'sales/delivery', title: 'Delivery / DO' },
         { path: 'sales/invoice', title: 'Sales Invoice' },

@@ -12,6 +12,7 @@ interface VendorSearchProps {
   label?: string;
   placeholder?: string;
   error?: string;
+  disabled?: boolean;
 }
 
 export const VendorSearch: React.FC<VendorSearchProps> = ({
@@ -19,7 +20,8 @@ export const VendorSearch: React.FC<VendorSearchProps> = ({
   selectedVendorName,
   label = "ผู้ขายที่แนะนำ (Preferred Vendor)",
   placeholder = "ค้นหาผู้ขายตามชื่อ, รหัส หรือ เลขผู้เสียภาษี...",
-  error
+  error,
+  disabled = false
 }) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<VendorMaster[]>([]);
@@ -121,7 +123,8 @@ export const VendorSearch: React.FC<VendorSearchProps> = ({
             type="text"
             value={query}
             onChange={handleInputChange}
-            onFocus={() => setIsOpen(true)}
+            onFocus={() => !disabled && setIsOpen(true)}
+            disabled={disabled}
             placeholder={placeholder}
             className={`h-8 w-full pl-8 pr-8 text-sm border border-gray-300 dark:border-gray-600 rounded-l-md focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white ${error ? 'border-red-500' : ''}`}
           />
@@ -142,7 +145,8 @@ export const VendorSearch: React.FC<VendorSearchProps> = ({
         
         <button
           type="button"
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => !disabled && setIsModalOpen(true)}
+          disabled={disabled}
           className="h-8 w-8 bg-blue-600 text-white rounded-r-md flex items-center justify-center hover:bg-blue-700 transition-colors border border-blue-600"
           title="ค้นหาขั้นสูง"
         >

@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { FormProvider } from 'react-hook-form';
-import { FileText, Trash2, Printer, Copy, CheckCircle, FileBox, MoreHorizontal, Coins, FileBarChart, History as HistoryIcon } from 'lucide-react';
+import { FileText, Printer, Copy, CheckCircle, FileBox, MoreHorizontal, Coins, FileBarChart, History as HistoryIcon, XCircle, Loader2 } from 'lucide-react';
 import { PRHeader } from './PRHeader';
 import { PRFormLines } from './PRFormLines';
 import { PRFormSummary } from './PRFormSummary';
 import { ProductSearchModal } from './ProductSearchModal';
-import { WindowFormLayout, CollapsibleSection } from '@ui';
-import { usePRForm } from '@/modules/procurement/hooks/usePRForm';
+import { WindowFormLayout } from '@ui';
+import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWrapper';
+import { usePRForm } from '@/modules/procurement/hooks/pr';
+import { RejectReasonModal } from '@/modules/procurement/components/RejectReasonModal';
 import type { PRFormData } from '@/modules/procurement/types/pr-types';
 
 interface Props {
@@ -14,23 +16,30 @@ interface Props {
   onClose: () => void;
   id?: string;
   onSuccess?: () => void;
+  readOnly?: boolean;
 }
 
-export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess }) => {
+export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, readOnly: readOnlyProp = false }) => {
   const {
     isEditMode, lines, isProductModalOpen, setIsProductModalOpen, searchTerm, setSearchTerm,
     showAllItems, setShowAllItems,
     isSubmitting, isActionLoading,
     products, costCenters, projects, purchaseTaxOptions, isSearchingProducts,
     addLine, removeLine, clearLine, updateLine, handleClearLines,
-    openProductSearch, selectProduct, handleVendorSelect, onSubmit, handleDelete, handleApprove,
+    openProductSearch, selectProduct, handleVendorSelect, onSubmit, handleApprove,
     handleVoid,
     handleFormError,
     formMethods,
-    user
+    user,
+    // Reject Logic
+    handleReject, submitReject, closeRejectModal, isRejectReasonOpen, isRejecting
   } = usePRForm(isOpen, onClose, id, onSuccess);
 
-  const { register, watch, formState: { errors } } = formMethods;
+  const { register, control, watch, formState: { errors } } = formMethods;
+
+  // V-04: Force readOnly if status is not DRAFT (prevent editing APPROVED/PENDING PRs)
+  const currentStatus = watch('status');
+  const readOnly = readOnlyProp || (!!id && currentStatus !== undefined && currentStatus !== 'DRAFT');
 
   // Tabs state
   const [activeTab, setActiveTab] = useState('detail');
@@ -46,7 +55,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
     <WindowFormLayout
       isOpen={isOpen}
       onClose={onClose}
-      title={isEditMode ? "แก้ไขใบขอซื้อ (Edit Purchase Requisition)" : "สร้างใบขอซื้อ (Create Purchase Requisition)"}
+      title={readOnly ? "รายละเอียดใบขอซื้อ (Purchase Requisition Details)" : (isEditMode ? "แก้ไขใบขอซื้อ (Edit Purchase Requisition)" : "สร้างใบขอซื้อ (Create Purchase Requisition)")}
       titleIcon={<div className="bg-red-500 p-1 rounded-md shadow-sm"><FileText size={14} strokeWidth={3} /></div>}
       headerColor="bg-blue-600 [&_div.flex.items-center.space-x-1>button:not(:last-child)]:hidden"
       footer={
@@ -54,25 +63,39 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
              <div className="flex items-center gap-2">
                  {isEditMode && (
                     <>
-                        <button type="button" onClick={handleDelete} disabled={isSubmitting || isActionLoading} className="flex items-center px-4 py-2 border border-red-300 dark:border-red-600 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md text-sm font-medium"><Trash2 size={16} className="mr-2" /> ลบเอกสาร</button>
                         <button type="button" disabled className="flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md text-sm font-medium"><Printer size={16} className="mr-2" /> พิมพ์</button>
                         <button type="button" disabled className="flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md text-sm font-medium"><Copy size={16} className="mr-2" /> คัดลอก</button>
                     </>
                  )}
             </div>
             <div className="flex items-center gap-2">
-                <button type="button" onClick={onClose} disabled={isSubmitting || isActionLoading} className="px-4 py-2 border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-md text-sm font-medium">ยกเลิก</button>
-                {isEditMode && (
-                    <button type="button" onClick={handleApprove} disabled={isSubmitting || isActionLoading} className="px-6 py-2 bg-green-600 text-white hover:bg-green-700 rounded-md text-sm font-medium flex items-center gap-2"><CheckCircle size={16} /> อนุมัติ</button>
+                <button type="button" onClick={onClose} disabled={isSubmitting || isActionLoading} className="px-4 py-2 border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-md text-sm font-medium">{readOnly ? 'ปิด' : 'ยกเลิก'}</button>
+                {!readOnly && (
+                  <>
+                    {isEditMode && (
+                      <>
+                        <button 
+                            type="button" 
+                            onClick={() => handleReject(id!)} 
+                            disabled={isSubmitting || isActionLoading} 
+                            className="px-4 py-2 bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 rounded-md text-sm font-medium flex items-center gap-2 border border-red-200 dark:border-red-800/50"
+                        >
+                            <XCircle size={16} /> ไม่อนุมัติ
+                        </button>
+                        <button type="button" onClick={handleApprove} disabled={isSubmitting || isActionLoading} className="px-6 py-2 bg-green-600 text-white hover:bg-green-700 rounded-md text-sm font-medium flex items-center gap-2"><CheckCircle size={16} /> อนุมัติ</button>
+                      </>
+                    )}
+                    <button 
+                      type="button" 
+                      onClick={() => formMethods.handleSubmit(handleSubmitWrapper, handleFormError)()} 
+                      disabled={isSubmitting || isActionLoading} 
+                      className="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md text-sm font-medium flex items-center justify-center gap-2"
+                    >
+                      {(isSubmitting || isActionLoading) && <Loader2 className="animate-spin" size={16} />}
+                      {watch('is_on_hold') === 'Y' ? 'บันทึกแบบร่าง (Draft)' : 'บันทึกและส่งอนุมัติ'}
+                    </button>
+                  </>
                 )}
-                <button 
-                  type="button" 
-                  onClick={() => formMethods.handleSubmit(handleSubmitWrapper, handleFormError)()} 
-                  disabled={isSubmitting || isActionLoading} 
-                  className="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md text-sm font-medium"
-                >
-                  บันทึก
-                </button>
             </div>
           </div>
       }
@@ -99,6 +122,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                     onVendorSelect={handleVendorSelect}
                     isEditMode={isEditMode}
                     onVoid={handleVoid}
+                    readOnly={readOnly}
                 />
             </div>
 
@@ -116,12 +140,13 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                     </thead>
                     <tbody>
                         <tr className="bg-white dark:bg-gray-800">
-                        <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700"><input type="date" {...register('delivery_date')} className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded px-2 py-0.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" /></td>
+                        <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700"><input type="date" {...register('delivery_date')} disabled={readOnly} className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded px-2 py-0.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" /></td>
                         <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700 text-center text-gray-900 dark:text-white">{watch('credit_days')}</td>
-                        <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700"><input {...register('vendor_quote_no')} placeholder="Quote No" className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded px-2 py-0.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" /></td>
+                        <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700"><input {...register('vendor_quote_no')} disabled={readOnly} placeholder="Quote No" className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded px-2 py-0.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" /></td>
                         <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700">
                             <select 
                             {...register('shipping_method')}
+                            disabled={readOnly}
                             className={`w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white border rounded px-2 py-0.5 focus:outline-none ${errors?.shipping_method ? 'border-red-500 ring-1 ring-red-500 focus:border-red-500' : 'border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500'}`}
                             >
                             <option value="">เลือก</option>
@@ -136,19 +161,15 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                 </div>
             </div>
 
-            <CollapsibleSection 
-              title="ข้อมูลสกุลเงินและอัตราแลกเปลี่ยน (Currency & Rate)" 
-              defaultOpen={true}
-              icon={<Coins size={16} />}
-              accentColor="amber"
-              className="mt-1"
-            >
+            {/* Multicurrency Toggle Section */}
+            <MulticurrencyWrapper control={control} name="isMulticurrency" disabled={readOnly}>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
                     <div>
                         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">วันที่อัตราแลกเปลี่ยน</label>
                         <input 
                             type="date" 
                             {...register('pr_exchange_rate_date')}
+                            disabled={readOnly}
                             className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
                         />
                     </div>
@@ -156,6 +177,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">รหัสสกุลเงิน</label>
                         <select 
                             {...register('pr_base_currency_code')}
+                            disabled={readOnly}
                             className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                         >
                             <option value="">เลือกสกุลเงิน</option>
@@ -170,6 +192,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">ไปยังสกุลเงิน (Target)</label>
                         <select 
                             {...register('pr_quote_currency_code')}
+                            disabled={readOnly}
                             className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                         >
                             <option value="">เลือกสกุลเงิน</option>
@@ -186,8 +209,8 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                             type="number"
                             step="0.0001"
                             {...register('pr_exchange_rate', { valueAsNumber: true })}
-                            readOnly={watch('pr_base_currency_code') === 'THB'}
-                            className={`w-full h-9 px-3 text-sm text-right border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition-colors ${watch('pr_base_currency_code') === 'THB' ? 'bg-gray-50 dark:bg-gray-800/50 italic text-gray-500' : 'bg-white dark:bg-gray-800 font-semibold'}`}
+                            disabled={readOnly || watch('pr_base_currency_code') === 'THB'}
+                            className={`w-full h-9 px-3 text-sm text-right border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition-colors ${watch('pr_base_currency_code') === 'THB' || readOnly ? 'bg-gray-50 dark:bg-gray-800/50 italic text-gray-500' : 'bg-white dark:bg-gray-800 font-semibold'}`}
                         />
                         {watch('pr_base_currency_code') && watch('pr_base_currency_code') !== 'THB' && (
                         <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 text-right font-medium">
@@ -196,7 +219,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                         )}
                     </div>
                 </div>
-            </CollapsibleSection>
+            </MulticurrencyWrapper>
 
             <PRFormLines 
                 lines={lines}
@@ -206,6 +229,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                 addLine={addLine}
                 handleClearLines={handleClearLines}
                 openProductSearch={openProductSearch}
+                readOnly={readOnly}
             />
 
             <PRFormSummary purchaseTaxOptions={purchaseTaxOptions} />
@@ -222,6 +246,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                 {activeTab === 'detail' && (
                 <textarea 
                     {...register('remark')}
+                    disabled={readOnly}
                     placeholder="กรอกหมายเหตุเพิ่มเติม..." 
                     className="w-full h-20 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 resize-none" 
                 />
@@ -234,7 +259,13 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
             </div>
         </div>
       </FormProvider>
+
+      <RejectReasonModal
+          isOpen={isRejectReasonOpen}
+          onClose={closeRejectModal}
+          onConfirm={(reason: string) => submitReject(reason, { onSuccess: () => { onSuccess?.(); onClose(); } })}
+          isSubmitting={isRejecting}
+      />
     </WindowFormLayout>
   );
 };
-

@@ -28,6 +28,7 @@ export default defineConfig({
       '@utils': path.resolve(__dirname, './src/utils'),
       "@pr": path.resolve(__dirname, './src/pages/procurement/pr'),
       "@customer": path.resolve(__dirname, './src/modules/master-data/customer'),
+      "@currency": path.resolve(__dirname, './src/modules/master-data/currency'),
     },
   },
   server: {

@@ -11,7 +11,7 @@ import type { PRFormData, VendorSelection } from '@/modules/procurement/types/pr
 import type { CostCenter, Project } from '@/modules/master-data/types/master-data-types';
 import { VendorSearch } from '@/modules/master-data/vendor/components/selector/VendorSearch';
 import { StatusCheckbox } from '@ui';
-import type { MappedOption } from '@/modules/procurement/hooks/usePRMasterData';
+import type { MappedOption } from '@/modules/procurement/hooks/pr';
 
 interface Props {
   costCenters: MappedOption<CostCenter>[];
@@ -19,9 +19,10 @@ interface Props {
   onVendorSelect: (vendor: VendorSelection | null) => void;
   isEditMode: boolean;
   onVoid?: () => void;
+  readOnly?: boolean;
 }
 
-export const PRHeader: React.FC<Props> = ({ costCenters, projects, onVendorSelect, isEditMode, onVoid }) => {
+export const PRHeader: React.FC<Props> = ({ costCenters, projects, onVendorSelect, isEditMode, onVoid, readOnly = false }) => {
   const { register, watch, control, formState: { errors } } = useFormContext<PRFormData>();
   // Watch for vendor values to display in the selector
   const preferredVendorId = watch("preferred_vendor_id");
@@ -80,13 +81,13 @@ export const PRHeader: React.FC<Props> = ({ costCenters, projects, onVendorSelec
 
         <div className="col-span-12 md:col-span-3">
           <label className={labelClass}>วันที่ขอซื้อ <span className="text-red-500">*</span></label>
-          <input {...register("pr_date")} type="date" className={`${inputClass} ${errors?.pr_date ? errorInputClass : ''}`} />
+          <input {...register("pr_date")} type="date" disabled={readOnly} className={`${inputClass} ${errors?.pr_date ? errorInputClass : ''}`} />
           {errors?.pr_date && <p className={errorMsgClass}>{errors.pr_date.message}</p>}
         </div>
 
         <div className="col-span-12 md:col-span-3">
           <label className={labelClass}>วันที่ต้องการใช้ <span className="text-red-500">*</span></label>
-          <input {...register("need_by_date")} type="date" className={`${inputClass} ${errors?.need_by_date ? errorInputClass : ''}`} />
+          <input {...register("need_by_date")} type="date" disabled={readOnly} className={`${inputClass} ${errors?.need_by_date ? errorInputClass : ''}`} />
           {errors?.need_by_date && <p className={errorMsgClass}>{errors.need_by_date.message}</p>}
         </div>
 
@@ -101,6 +102,7 @@ export const PRHeader: React.FC<Props> = ({ costCenters, projects, onVendorSelec
                   label="ON HOLD"
                   trueValue="Y"
                   falseValue="N"
+                  disabled={readOnly}
                   className="flex-1 px-2 h-full hover:bg-orange-50 dark:hover:bg-orange-950/20"
                 />
 
@@ -108,7 +110,7 @@ export const PRHeader: React.FC<Props> = ({ costCenters, projects, onVendorSelec
                 <div className="w-px h-5 bg-gray-200 dark:bg-gray-700"></div>
 
                 {/* 2. VOID Button - Visible in Edit Mode, only if not already voided/approved */}
-                {isEditMode && watch('status') !== 'CANCELLED' && watch('status') !== 'APPROVED' && watch('cancelflag') !== 'Y' ? (
+                {isEditMode && !readOnly && watch('status') !== 'CANCELLED' && watch('status') !== 'APPROVED' && watch('cancelflag') !== 'Y' ? (
                   <button
                     type="button"
                     onClick={onVoid}
@@ -126,7 +128,7 @@ export const PRHeader: React.FC<Props> = ({ costCenters, projects, onVendorSelec
         {/* Row 2: ผู้ขอซื้อ, ศูนย์ต้นทุน, โครงการ */}
         <div className="col-span-12 md:col-span-4">
           <label className={labelClass}><User size={11} className="inline mr-1" />ชื่อผู้ขอซื้อ <span className="text-red-500">*</span></label>
-          <input {...register("requester_name")} placeholder="ชื่อ-นามสกุล ผู้ขอ" className={`${inputClass} rounded-md ${errors?.requester_name ? errorInputClass : ''}`} />
+          <input {...register("requester_name")} disabled={readOnly} placeholder="ชื่อ-นามสกุล ผู้ขอ" className={`${inputClass} rounded-md ${errors?.requester_name ? errorInputClass : ''}`} />
           {errors?.requester_name && <p className={errorMsgClass}>{errors.requester_name.message}</p>}
         </div>
 
@@ -137,6 +139,7 @@ export const PRHeader: React.FC<Props> = ({ costCenters, projects, onVendorSelec
            control={control}
            render={({ field }) => (
              <select
+               disabled={readOnly}
                className={`${selectClass} ${errors?.cost_center_id ? errorInputClass : ''}`}
                ref={field.ref}
                name={field.name}
@@ -167,6 +170,7 @@ export const PRHeader: React.FC<Props> = ({ costCenters, projects, onVendorSelec
            control={control}
            render={({ field }) => (
              <select
+               disabled={readOnly}
                className={selectClass}
                ref={field.ref}
                name={field.name}
@@ -195,12 +199,13 @@ export const PRHeader: React.FC<Props> = ({ costCenters, projects, onVendorSelec
           <div className="flex items-center gap-2">
              <textarea 
                 {...register("purpose")}
+                disabled={readOnly}
                 placeholder="ระบุเหตุผลและวัตถุประสงค์ในการขอซื้อ..."
               className={`w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white resize-none ${errors?.purpose ? errorInputClass : ''}`}
                 rows={1}
               />
-              {errors?.purpose && <p className={errorMsgClass}>{errors.purpose.message}</p>}
-          </div>
+           </div>
+           {errors?.purpose && <p className={errorMsgClass}>{errors.purpose.message}</p>}
          
         </div>
 
@@ -211,6 +216,7 @@ export const PRHeader: React.FC<Props> = ({ costCenters, projects, onVendorSelec
               selectedVendorName={vendorName}
               label="ผู้ขายที่แนะนำ (Preferred Vendor)"
               placeholder="ค้นหาผู้ขาย..."
+              disabled={readOnly}
           />
         </div>
       </div>

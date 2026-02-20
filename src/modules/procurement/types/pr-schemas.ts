@@ -35,7 +35,7 @@ export const PRFormSchema = z.object({
   purpose: z.string().trim().min(1, 'กรุณาระบุวัตถุประสงค์ในการขอซื้อ'),
   pr_base_currency_code: z.string(),
   pr_quote_currency_code: z.string().optional(),
-  is_multicurrency: z.boolean(),
+  isMulticurrency: z.boolean(),
   pr_exchange_rate: z.number(),
   pr_exchange_rate_date: z.string().optional(),
   preferred_vendor_id: z.string().optional(),
@@ -58,7 +58,8 @@ export const PRFormSchema = z.object({
   branch_id: z.string().optional(),
   warehouse_id: z.string().optional(),
 }).superRefine((data, ctx) => {
-  // Removed manual cost_center_id validation as it's now handled by .refine in the schema
+  // V-02: Determine if saving as draft (skip strict validation)
+  const isDraft = data.is_on_hold === 'Y';
 
   // Validate at least 1 active product line (filter out empty rows)
   const activeLines = data.lines.filter(
@@ -68,6 +69,15 @@ export const PRFormSchema = z.object({
     ctx.addIssue({
       path: ['lines'],
       message: 'กรุณาเพิ่มสินค้าอย่างน้อย 1 รายการ',
+      code: z.ZodIssueCode.custom,
+    });
+  }
+
+  // V-02: Block zero-value PR from being submitted for approval
+  if (!isDraft && data.total_amount <= 0) {
+    ctx.addIssue({
+      path: ['total_amount'],
+      message: 'มูลค่ารวมต้องมากกว่า 0 บาท เพื่อส่งอนุมัติ',
       code: z.ZodIssueCode.custom,
     });
   }

@@ -1,5 +1,5 @@
 import api from '@/core/api/api';
-import type { Currency, ExchangeRateType, ExchangeRate } from '@/modules/master-data/types/currency-types';
+import type { Currency, ExchangeRateType, ExchangeRate } from '@currency/types/currency-types';
 import { logger } from '@/shared/utils/logger';
 
 export interface BaseResponse<T> {
@@ -49,13 +49,13 @@ export const CurrencyService = {
         }
     },
 
-    deleteCurrency: async (id: string): Promise<boolean> => {
+    deleteCurrency: async (id: string): Promise<{ success: boolean; message?: string }> => {
         try {
             await api.delete(`/master-data/currencies/${id}`);
-            return true;
+            return { success: true };
         } catch (error) {
             logger.error('[CurrencyService] deleteCurrency error:', error);
-            return false;
+            return { success: false, message: 'เกิดข้อผิดพลาดในการลบข้อมูล' };
         }
     },
 
@@ -98,13 +98,13 @@ export const CurrencyService = {
         }
     },
 
-    deleteExchangeRateType: async (id: string): Promise<boolean> => {
+    deleteExchangeRateType: async (id: string): Promise<{ success: boolean; message?: string }> => {
         try {
             await api.delete(`/master-data/exchange-rate-types/${id}`);
-            return true;
+            return { success: true };
         } catch (error) {
             logger.error('[CurrencyService] deleteExchangeRateType error:', error);
-            return false;
+            return { success: false, message: 'เกิดข้อผิดพลาดในการลบข้อมูล' };
         }
     },
 
@@ -147,13 +147,13 @@ export const CurrencyService = {
         }
     },
 
-    deleteExchangeRate: async (id: string): Promise<boolean> => {
+    deleteExchangeRate: async (id: string): Promise<{ success: boolean; message?: string }> => {
         try {
             await api.delete(`/master-data/exchange-rates/${id}`);
-            return true;
+            return { success: true };
         } catch (error) {
             logger.error('[CurrencyService] deleteExchangeRate error:', error);
-            return false;
+            return { success: false, message: 'เกิดข้อผิดพลาดในการลบข้อมูล' };
         }
     }
 };

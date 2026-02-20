@@ -1,10 +1,11 @@
 import { useEffect, useMemo } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
-import type { Control, SubmitHandler } from 'react-hook-form';
+import type { Control, SubmitHandler, Resolver } from 'react-hook-form';
 import { z } from 'zod'; // Assumed z is available or will be installed
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Save, FileText, Plus, Trash2 } from 'lucide-react';
 import { WindowFormLayout } from '@ui';
+import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWrapper';
 import { POService } from '@/modules/procurement/services';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
 import type { VendorDropdownItem } from '@/modules/master-data/vendor/types/vendor-types';
@@ -30,11 +31,33 @@ const poSchema = z.object({
     po_date: z.string().refine(val => !isNaN(Date.parse(val)), 'วันที่ไม่ถูกต้อง'),
     vendor_id: z.string().min(1, 'กรุณาเลือกผู้ขาย'),
     delivery_date: z.string().optional(),
-    payment_term_days: z.number().min(0),
+    payment_term_days: z.number().min(0).default(30),
     remarks: z.string().optional(),
     items: z.array(poLineSchema).min(1, 'ต้องมีรายการสินค้าอย่างน้อย 1 รายการ'),
-    tax_rate: z.number(),
-    is_vat_included: z.boolean()
+    tax_rate: z.number().default(7),
+    is_vat_included: z.boolean().default(false),
+    
+    // Multicurrency
+    isMulticurrency: z.boolean().default(false),
+    currency: z.string().optional(),
+    exchange_rate: z.number().default(1),
+}).superRefine((data, ctx) => {
+    if (data.isMulticurrency) {
+        if (!data.currency || data.currency === 'THB') {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "กรุณาระบุสกุลเงินต่างประเทศ",
+                path: ["currency"]
+            });
+        }
+        if (!data.exchange_rate || data.exchange_rate <= 0) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "กรุณาระบุอัตราแลกเปลี่ยน",
+                path: ["exchange_rate"]
+            });
+        }
+    }
 });
 
 type POFormValues = z.infer<typeof poSchema>;
@@ -110,9 +133,10 @@ export default function POFormModal({ isOpen, onClose, onSuccess, initialValues 
         register,
         handleSubmit,
         reset,
+        setValue,
         formState: { errors }
     } = useForm<POFormValues>({
-        resolver: zodResolver(poSchema),
+        resolver: zodResolver(poSchema) as Resolver<POFormValues>,
         defaultValues: {
             po_date: new Date().toISOString().split('T')[0],
             vendor_id: '',
@@ -120,9 +144,26 @@ export default function POFormModal({ isOpen, onClose, onSuccess, initialValues 
             payment_term_days: 30,
             tax_rate: 7,
             is_vat_included: false,
+            isMulticurrency: false,
+            currency: 'THB',
+            exchange_rate: 1
             // We use reset() in useEffect to handle initialValues, so no spread here avoids type errors
         }
     });
+
+    // Reset currency when isMulticurrency is turned off
+    const isMulticurrency = useWatch({ control, name: 'isMulticurrency' });
+    const currentCurrency = useWatch({ control, name: 'currency' });
+    const currentRate = useWatch({ control, name: 'exchange_rate' });
+
+    useEffect(() => {
+        if (!isMulticurrency) {
+            if (currentCurrency !== 'THB' || currentRate !== 1) {
+                setValue('currency', 'THB');
+                setValue('exchange_rate', 1);
+            }
+        }
+    }, [isMulticurrency, currentCurrency, currentRate, setValue]);
 
     const { fields, append, remove } = useFieldArray({
         control,
@@ -299,6 +340,46 @@ export default function POFormModal({ isOpen, onClose, onSuccess, initialValues 
                                         className="w-full p-3 bg-white dark:bg-slate-700/50 border border-gray-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-blue-500 outline-none resize-none text-gray-900 dark:text-white"
                                         placeholder="ระบุหมายเหตุเพิ่มเติม..."
                                     />
+                                </div>
+
+                                {/* Multicurrency Section */}
+                                <div className="col-span-full">
+                                    <MulticurrencyWrapper control={control} name="isMulticurrency">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-1 block">สกุลเงิน <span className="text-red-500">*</span></label>
+                                                <select
+                                                    {...register('currency')}
+                                                    className="w-full h-9 px-3 text-sm bg-white dark:bg-slate-700/50 border border-gray-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white disabled:opacity-50"
+                                                    disabled={!isMulticurrency}
+                                                >
+                                                    <option value="THB">THB - บาท</option>
+                                                    <option value="USD">USD - ดอลลาร์สหรัฐ</option>
+                                                    <option value="EUR">EUR - ยูโร</option>
+                                                    <option value="JPY">JPY - เยน</option>
+                                                    <option value="CNY">CNY - หยวน</option>
+                                                </select>
+                                                {errors.currency && <p className="text-red-500 text-xs mt-1">{errors.currency.message}</p>}
+                                            </div>
+                                            <div>
+                                                <label className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-1 block">อัตราแลกเปลี่ยน <span className="text-red-500">*</span></label>
+                                                <input
+                                                    type="number"
+                                                    step="0.0001"
+                                                    {...register('exchange_rate', { valueAsNumber: true })}
+                                                    className="w-full h-9 px-3 text-sm bg-white dark:bg-slate-700/50 border border-gray-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white disabled:opacity-50"
+                                                    disabled={!isMulticurrency}
+                                                    placeholder="0.0000"
+                                                />
+                                                {currentCurrency && currentCurrency !== 'THB' && (
+                                                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                                                        1 {currentCurrency} ≈ {currentRate} THB
+                                                    </p>
+                                                )}
+                                                {errors.exchange_rate && <p className="text-red-500 text-xs mt-1">{errors.exchange_rate.message}</p>}
+                                            </div>
+                                        </div>
+                                    </MulticurrencyWrapper>
                                 </div>
                             </div>
                         </div>

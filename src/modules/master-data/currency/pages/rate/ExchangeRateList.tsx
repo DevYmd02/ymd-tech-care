@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { TrendingUp, Edit2, Trash2 } from 'lucide-react';
-import type { ExchangeRate } from '@/modules/master-data/types/currency-types';
+import type { ExchangeRate } from '@currency/types/currency-types';
 import { ActiveStatusBadge } from '@ui';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
