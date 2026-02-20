@@ -1,6 +1,6 @@
 import type MockAdapter from 'axios-mock-adapter';
 import type { AxiosRequestConfig } from 'axios';
-import { MOCK_RFQS, MOCK_RFQ_VENDORS } from '../data/rfqData';
+import { MOCK_RFQS, MOCK_RFQ_VENDORS, VENDOR_POOL } from '../data/rfqData';
 import { applyMockFilters, sanitizeId } from '@/core/api/mockUtils';
 import type { RFQHeader, RFQLine } from '@/modules/procurement/types/rfq-types';
 
@@ -63,14 +63,19 @@ export const setupRFQHandlers = (mock: MockAdapter) => {
   mock.onPost(/\/rfq\/.+\/send/).reply((config: AxiosRequestConfig) => {
     const urlParts = config.url?.split('/') || [];
     const id = sanitizeId(urlParts[urlParts.length - 2]); // ID is before '/send'
-    const found = MOCK_RFQS.find(r => sanitizeId(r.rfq_id) === id);
-    if (found) {
+    const foundIndex = MOCK_RFQS.findIndex(r => sanitizeId(r.rfq_id) === id);
+    if (foundIndex !== -1) {
       const body = config.data ? JSON.parse(config.data) : {};
       const vendorIds: string[] = body.vendor_ids || [];
+      
+      // FIX: State Synchronization. Mutate the mock store in-memory so subsequent GET requests return the accurate state.
+      MOCK_RFQS[foundIndex].status = 'SENT';
+      MOCK_RFQS[foundIndex].updated_at = new Date().toISOString();
+
       return [200, {
         success: true,
-        message: `RFQ ${found.rfq_no} sent to ${vendorIds.length} vendor(s)`,
-        data: { ...found, status: 'SENT' }
+        message: `RFQ ${MOCK_RFQS[foundIndex].rfq_no} sent to ${vendorIds.length} vendor(s)`,
+        data: { ...MOCK_RFQS[foundIndex] }
       }];
     }
     return [404, { message: 'RFQ Not Found' }];
@@ -107,18 +112,130 @@ export const setupRFQHandlers = (mock: MockAdapter) => {
     const foundIndex = MOCK_RFQS.findIndex(r => sanitizeId(r.rfq_id) === id);
     if (foundIndex !== -1) {
       const body = config.data ? JSON.parse(config.data) : {};
+      const targetRFQ = MOCK_RFQS[foundIndex];
 
       // Mutate in-memory: persist status and vendor_count changes
       if (body.status) {
-        MOCK_RFQS[foundIndex].status = body.status;
+        targetRFQ.status = body.status;
       }
-      if (body.vendor_ids) {
-        MOCK_RFQS[foundIndex].vendor_count = body.vendor_ids.length;
-      }
-      MOCK_RFQS[foundIndex].updated_at = new Date().toISOString();
+      
+      // SYNC VENDORS: If vendor_ids is provided, update the junction table
+      if (body.vendor_ids && Array.isArray(body.vendor_ids)) {
+        targetRFQ.vendor_count = body.vendor_ids.length;
+        
+        // 1. Remove existing vendors for this RFQ
+        const otherVendors = MOCK_RFQ_VENDORS.filter(v => sanitizeId(v.rfq_id) !== id);
+        
+        // 2. Create new vendor entries with robust lookup
+        const newVendorEntries = body.vendor_ids.map((vId: string, index: number) => {
+          // Robust match: case-insensitive and dash-resilient
+          const cleanId = vId.replace(/-/g, '').toLowerCase();
+          const poolVendor = VENDOR_POOL.find(p => 
+            p.id.replace(/-/g, '').toLowerCase() === cleanId || 
+            p.code.replace(/-/g, '').toLowerCase() === cleanId
+          );
 
-      return [200, { success: true, message: `RFQ ${MOCK_RFQS[foundIndex].rfq_no} updated`, data: { ...MOCK_RFQS[foundIndex] } }];
+          return {
+            rfq_vendor_id: `rv-${id}-${index + 1}`,
+            rfq_id: targetRFQ.rfq_id,
+            vendor_id: poolVendor?.id || vId,
+            sent_date: null,
+            sent_via: 'EMAIL',
+            email_sent_to: poolVendor?.email || null,
+            response_date: null,
+            status: 'PENDING',
+            remark: null,
+            vendor_name: poolVendor?.name || vId,
+            vendor_code: poolVendor?.code || vId,
+          };
+        });
+
+        // 3. Update the global mock array
+        MOCK_RFQ_VENDORS.length = 0;
+        MOCK_RFQ_VENDORS.push(...otherVendors, ...newVendorEntries);
+      }
+
+      targetRFQ.updated_at = new Date().toISOString();
+
+      return [200, { success: true, message: `RFQ ${targetRFQ.rfq_no} updated`, data: { ...targetRFQ } }];
     }
     return [404, { message: 'RFQ Not Found' }];
+  });
+
+  // 6. POST Vendor Response (Auto-Transition Logic)
+  mock.onPost(/\/rfq\/.+\/vendor-response/).reply((config: AxiosRequestConfig) => {
+    const urlParts = config.url?.split('/') || [];
+    const id = sanitizeId(urlParts[urlParts.length - 2]); // ID before '/vendor-response'
+    
+    const rfqIndex = MOCK_RFQS.findIndex(r => sanitizeId(r.rfq_id) === id);
+    if (rfqIndex === -1) return [404, { message: 'RFQ Not Found' }];
+    
+    const body = config.data ? JSON.parse(config.data) : {};
+    const vendorId = body.vendor_id;
+    const responseStatus = body.response_status; // 'RESPONDED' | 'DECLINED'
+    
+    if (!vendorId || !responseStatus) {
+        return [400, { message: 'Missing vendor_id or response_status' }];
+    }
+
+    // 1. Find and update the vendor in MOCK_RFQ_VENDORS
+    const vendorIndex = MOCK_RFQ_VENDORS.findIndex(v => v.rfq_id === id && v.vendor_id === vendorId);
+    if (vendorIndex !== -1) {
+        MOCK_RFQ_VENDORS[vendorIndex].status = responseStatus;
+        MOCK_RFQ_VENDORS[vendorIndex].response_date = new Date().toISOString();
+    }
+
+    // 2. Recalculate responded vendors count
+    const relatedVendors = MOCK_RFQ_VENDORS.filter(v => v.rfq_id === id);
+    const respondedCount = relatedVendors.filter(v => v.status === 'RESPONDED' || v.status === 'DECLINED').length;
+    
+    MOCK_RFQS[rfqIndex].responded_vendors_count = respondedCount;
+
+    // 3. State Machine Trigger: SENT -> IN_PROGRESS
+    if (MOCK_RFQS[rfqIndex].status === 'SENT' && respondedCount > 0) {
+        MOCK_RFQS[rfqIndex].status = 'IN_PROGRESS';
+    }
+    
+    MOCK_RFQS[rfqIndex].updated_at = new Date().toISOString();
+
+    return [200, { 
+        success: true, 
+        message: `Vendor response recorded`, 
+        data: { ...MOCK_RFQS[rfqIndex] } 
+    }];
+  });
+  // 7. POST Vendor Decline (Explicit Decline Action)
+  mock.onPost(/\/rfq\/.+\/vendor\/.+\/decline/).reply((config: AxiosRequestConfig) => {
+    const urlParts = config.url?.split('/') || [];
+    const vendorId = sanitizeId(urlParts.pop()); // Last is vendor
+    const id = sanitizeId(urlParts[urlParts.length - 2]); // ID before /vendor
+    
+    const rfqIndex = MOCK_RFQS.findIndex(r => sanitizeId(r.rfq_id) === id);
+    if (rfqIndex === -1) return [404, { message: 'RFQ Not Found' }];
+
+    // 1. Find and update the vendor
+    const vendorIndex = MOCK_RFQ_VENDORS.findIndex(v => v.rfq_id === id && v.vendor_id === vendorId);
+    if (vendorIndex !== -1) {
+        MOCK_RFQ_VENDORS[vendorIndex].status = 'DECLINED';
+        MOCK_RFQ_VENDORS[vendorIndex].response_date = new Date().toISOString();
+    }
+
+    // 2. Recalculate responded vendors count
+    const relatedVendors = MOCK_RFQ_VENDORS.filter(v => v.rfq_id === id);
+    const respondedCount = relatedVendors.filter(v => v.status === 'RESPONDED' || v.status === 'DECLINED').length;
+    MOCK_RFQS[rfqIndex].responded_vendors_count = respondedCount;
+
+    // 3. State Machine Trigger: SENT -> IN_PROGRESS
+    if (MOCK_RFQS[rfqIndex].status === 'SENT' && respondedCount > 0) {
+        MOCK_RFQS[rfqIndex].status = 'IN_PROGRESS';
+    }
+    
+    MOCK_RFQS[rfqIndex].updated_at = new Date().toISOString();
+
+    return [200, { 
+        success: true, 
+        message: `Vendor declined`, 
+        data: { ...MOCK_RFQS[rfqIndex] } 
+    }];
   });
 };

@@ -1,27 +1,22 @@
 import React from 'react';
-import { FileText, Plus, Trash2, Search } from 'lucide-react';
+import { FileText, Trash2 } from 'lucide-react';
 import type { RFQLineFormData } from '@/modules/procurement/types/rfq-types';
-import type { UnitListItem } from '@/modules/master-data/types/master-data-types';
 
 interface RFQFormLinesProps {
     lines: RFQLineFormData[];
-    units: UnitListItem[];
     handleLineChange: (index: number, field: keyof RFQLineFormData, value: string | number) => void;
-    handleAddLine: () => void;
     handleRemoveLine: (index: number) => void;
-    handleOpenProductSearch: (index: number) => void;
 }
 
 export const RFQFormLines: React.FC<RFQFormLinesProps> = ({
     lines,
-    units,
     handleLineChange,
-    handleAddLine,
     handleRemoveLine,
-    handleOpenProductSearch
 }) => {
-    const inputStyle = "w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent dark:text-white transition-all";
-    const selectStyle = "w-full h-8 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent dark:text-white";
+
+    // Locked styles for inherited PR data
+    const lockedInputCenter = "w-full h-8 px-3 text-sm bg-gray-100/70 dark:bg-gray-800/70 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded text-center cursor-not-allowed font-medium";
+    const lockedInputLeft = "w-full h-8 px-3 text-sm bg-gray-100/70 dark:bg-gray-800/70 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded text-left cursor-not-allowed font-medium";
 
     return (
         <div className="p-4">
@@ -55,17 +50,10 @@ export const RFQFormLines: React.FC<RFQFormLinesProps> = ({
                                         <input
                                             type="text"
                                             value={line.item_code}
-                                            onChange={(e) => handleLineChange(index, 'item_code', e.target.value)}
-                                            className={`${inputStyle} text-center`}
+                                            readOnly
+                                            className={lockedInputCenter}
                                             placeholder="รหัสสินค้า"
                                         />
-                                        <button
-                                            type="button"
-                                            onClick={() => handleOpenProductSearch(index)}
-                                            className="p-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-md transition-colors shadow-sm"
-                                        >
-                                            <Search size={14} />
-                                        </button>
                                     </div>
                                 </td>
                                 <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">
@@ -73,30 +61,26 @@ export const RFQFormLines: React.FC<RFQFormLinesProps> = ({
                                         type="text"
                                         placeholder="รายละเอียดสินค้า"
                                         value={line.item_description}
-                                        onChange={(e) => handleLineChange(index, 'item_description', e.target.value)}
-                                        className={`${inputStyle} text-left`}
+                                        readOnly
+                                        className={lockedInputLeft}
                                     />
                                 </td>
-                                <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">
+                                <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700 p-1">
                                     <input
-                                        type="number"
-                                        min="0"
+                                        type="text"
                                         value={line.required_qty || 0}
-                                        onChange={(e) => handleLineChange(index, 'required_qty', parseFloat(e.target.value) || 0)}
-                                        className="w-full px-2 py-1.5 text-sm text-center border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800 dark:text-white"
+                                        readOnly
+                                        className={lockedInputCenter}
                                     />
                                 </td>
-                                <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">
-                                    <select
+                                <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700 p-1">
+                                    <input
+                                        type="text"
                                         value={line.uom}
-                                        onChange={(e) => handleLineChange(index, 'uom', e.target.value)}
-                                        className={selectStyle}
-                                    >
-                                        <option value="">เลือก</option>
-                                        {units.map(unit => (
-                                            <option key={unit.unit_id} value={unit.unit_name}>{unit.unit_name}</option>
-                                        ))}
-                                    </select>
+                                        readOnly
+                                        className={lockedInputCenter}
+                                        placeholder="หน่วย"
+                                    />
                                 </td>
                                 <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">
                                     <input
@@ -117,10 +101,12 @@ export const RFQFormLines: React.FC<RFQFormLinesProps> = ({
                                 </td>
                                 <td className="px-1 py-1 text-center">
                                     <div className="flex items-center justify-center gap-1">
-                                        <button type="button" onClick={handleAddLine} className="p-1 text-green-600 hover:bg-green-50 rounded transition-colors">
-                                            <Plus size={16} />
-                                        </button>
-                                        <button type="button" onClick={() => handleRemoveLine(index)} className="p-1 text-red-500 hover:bg-red-50 rounded transition-colors">
+                                        <button 
+                                            type="button" 
+                                            onClick={() => handleRemoveLine(index)} 
+                                            className="p-1.5 text-rose-500 hover:text-white hover:bg-rose-500 rounded transition-colors"
+                                            title="ลบรายการนี้ออกจากการขอใบเสนอราคา (ไม่ลบออกจาก PR)"
+                                        >
                                             <Trash2 size={16} />
                                         </button>
                                     </div>

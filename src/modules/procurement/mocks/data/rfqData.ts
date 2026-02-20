@@ -36,11 +36,14 @@ const createMockRFQ = (
 
     // Vendor Logic
     let responseCount = 0;
+    let hasQuotation = false;
     if (status === 'IN_PROGRESS' || status === 'CLOSED') {
         responseCount = Math.floor(Math.random() * vendorCount) + 1; // At least 1 response
         if (responseCount > vendorCount) responseCount = vendorCount;
+        hasQuotation = responseCount > 0 && Math.random() > 0.5;
     } else if (status === 'DRAFT' || status === 'SENT') {
         responseCount = 0;
+        hasQuotation = false;
     }
 
     return {
@@ -65,6 +68,7 @@ const createMockRFQ = (
         // New Required Fields
         purpose: purpose,
         responded_vendors_count: responseCount,
+        has_quotation: hasQuotation,
         vendor_responded: responseCount, // Keep for compatibility if needed
         
         // Form Fields (Defaults)
@@ -93,9 +97,37 @@ const _mockRFQs: RFQHeader[] = [
     createMockRFQ(6, 'SENT', true, 5),
 
     // 7-9: IN_PROGRESS (Some responses received)
-    createMockRFQ(7, 'IN_PROGRESS', true, 3), // Responses > 0
+    createMockRFQ(7, 'IN_PROGRESS', true, 3), // Responses >= 1
     createMockRFQ(8, 'IN_PROGRESS', true, 4),
     createMockRFQ(9, 'IN_PROGRESS', false, 2),
+
+    // NEW: TEST CASE FOR "LIMBO STATE" (has_quotation = false)
+    {
+        rfq_id: 'rfq-limbo-test',
+        rfq_no: 'RFQ-202602-TEST',
+        pr_id: 'pr-limbo-test',
+        branch_id: '1',
+        rfq_date: new Date().toISOString().split('T')[0],
+        quote_due_date: getFutureDate(new Date().toISOString().split('T')[0], 7),
+        status: 'IN_PROGRESS',
+        created_by_user_id: 'user-1',
+        created_at: `${new Date().toISOString().split('T')[0]}T10:00:00Z`,
+        updated_at: `${new Date().toISOString().split('T')[0]}T10:00:00Z`,
+        pr_no: 'PR-202602-TEST-PR',
+        ref_pr_no: 'PR-202602-TEST-PR',
+        branch_name: 'สำนักงานใหญ่',
+        created_by_name: 'System Admin',
+        vendor_count: 3,
+        purpose: 'ทดสอบแสดงผล Limbo State (Vendors 1/3, No QT)',
+        responded_vendors_count: 1,
+        vendor_responded: 1,
+        has_quotation: false,
+        currency: 'THB',
+        exchange_rate: 1,
+        delivery_location: 'Head Office',
+        payment_terms: 'Cash',
+        remarks: 'Test Limbo State'
+    },
 
     // 10-11: CLOSED (Awarded)
     createMockRFQ(10, 'CLOSED', true, 3),
@@ -111,18 +143,16 @@ export const MOCK_RFQS: RFQHeader[] = _mockRFQs;
 export const MOCK_RFQ_LINES = [];
 
 // ====================================================================================
-// MOCK VENDOR DATA — Generated per RFQ based on vendor_count
+// MOCK VENDOR DATA — Synced with Master Data
 // ====================================================================================
+import { MOCK_VENDORS } from '@/modules/master-data/vendor/mocks/vendorMocks';
 
-const VENDOR_POOL = [
-    { id: 'v001', code: 'V001', name: 'IT Supply Co.', email: 'sales@itsupply.co.th' },
-    { id: 'v002', code: 'V002', name: 'OfficeMate', email: 'procurement@officemate.co.th' },
-    { id: 'v003', code: 'V003', name: 'B2S', email: 'b2b@b2s.co.th' },
-    { id: 'v004', code: 'V004', name: 'Local Store', email: 'info@localstore.co.th' },
-    { id: 'v005', code: 'V005', name: 'Smart Tech', email: 'contact@smarttech.co.th' },
-    { id: 'v006', code: 'V006', name: 'Industrial Part Ltd.', email: 'sales@industrialpart.co.th' },
-    { id: 'v007', code: 'V007', name: 'Global Oil Co.', email: 'info@globaloil.co.th' },
-];
+export const VENDOR_POOL = MOCK_VENDORS.map(v => ({
+    id: v.vendor_id,
+    code: v.vendor_code,
+    name: v.vendor_name,
+    email: v.email || (v.addresses?.[0]?.email) || `sales@${v.vendor_name_en?.toLowerCase().replace(/\s+/g, '') || 'vendor'}.co.th`
+}));
 
 function generateVendorsForRFQ(rfq: RFQHeader): RFQVendor[] {
     const count = rfq.vendor_count || 0;
@@ -139,7 +169,12 @@ function generateVendorsForRFQ(rfq: RFQHeader): RFQVendor[] {
         } else if (rfq.status === 'SENT') {
             status = 'SENT';
         } else if (rfq.status === 'IN_PROGRESS' || rfq.status === 'CLOSED') {
-            status = i < responded ? 'RESPONDED' : 'SENT';
+            if (i < responded) {
+                // Guarantee the 2nd responding vendor is 'DECLINED' if possible, otherwise mostly 'RESPONDED'
+                status = (i === 1 || Math.random() > 0.8) ? 'DECLINED' : 'RESPONDED';
+            } else {
+                status = 'SENT'; // waiting
+            }
         }
 
         return {

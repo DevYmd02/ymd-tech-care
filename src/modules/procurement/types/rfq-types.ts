@@ -46,6 +46,7 @@ export interface RFQHeader {
     // New Required Fields
     purpose: string;                    // REQUIRED: เรื่อง/วัตถุประสงค์
     responded_vendors_count: number;    // REQUIRED: จำนวนผู้ขายที่เสนอราคามาแล้ว
+    has_quotation?: boolean;            // มีการสร้างใบเสนอราคา (QT) ในระบบแล้วหรือไม่
     
     // Form-related fields
     currency?: string;                  // สกุลเงิน
@@ -123,8 +124,6 @@ export interface RFQFormData {
     rfq_date: string;
     pr_id: string | null;
     pr_no: string | null;
-    qc_id?: string | null; // QC ต้นทาง (Optional)
-    qc_no?: string | null; // เลขที่ QC (Optional)
     branch_id: string | null;
     project_id?: string | null; // โครงการ (Optional)
     created_by_name: string;

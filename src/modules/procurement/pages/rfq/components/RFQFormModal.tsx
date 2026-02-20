@@ -1,12 +1,12 @@
-import React from 'react';
-import { FileText, Info, MoreHorizontal, Star, AlignLeft, History, Search, Trash2, XCircle } from 'lucide-react';
+import { FileText, Info, MoreHorizontal, Star, AlignLeft, History, Trash2, XCircle } from 'lucide-react';
 import { useRFQForm } from '@/modules/procurement/hooks/rfq';
-import type { ItemListItem } from '@/modules/master-data/types/master-data-types';
 import { RFQFormHeader } from './RFQFormHeader';
 import { RFQFormLines } from './RFQFormLines';
 import { RFQVendorSelection } from './RFQVendorSelection';
+import { VendorTrackingTable } from './VendorTrackingTable';
 import { VendorSearchModal } from '@/modules/master-data/vendor/components/selector/VendorSearchModal';
-import { WindowFormLayout, TabPanel, ModalLayout } from '@ui';
+import { PRSelectionModal } from '@/modules/procurement/components/selector/PRSelectionModal';
+import { WindowFormLayout, TabPanel } from '@ui';
 import type { PRHeader } from '@/modules/procurement/types/pr-types';
 
 interface Props {
@@ -18,17 +18,16 @@ interface Props {
     readOnly?: boolean;
 }
 
-export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialPR, editId, readOnly = false }) => {
+export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, readOnly = false }: Props) => {
     const {
-        formData, isSaving, activeTab, setActiveTab,
-        branches, units,
+        formData, errors, isSaving, activeTab, setActiveTab, trackingVendors,
+        branches,
         
-        isProductModalOpen, setIsProductModalOpen,
-        productSearchTerm, setProductSearchTerm,
-        filteredProducts,
-        handleChange, handleLineChange, handleAddLine, handleRemoveLine,
+        handleChange, handleLineChange, handleRemoveLine,
         handleSave, 
-        handleOpenProductSearch, handleProductSelect,
+
+        // PR Logic
+        isPRSelectionModalOpen, setIsPRSelectionModalOpen, handlePRSelect,
 
         // Vendor Props
         isVendorModalOpen, setIsVendorModalOpen,
@@ -50,7 +49,7 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, init
         <WindowFormLayout
             isOpen={isOpen}
             onClose={onClose}
-            title={readOnly ? "ดูใบขอเสนอราคา (View RFQ)" : "สร้าง/แก้ไขใบขอเสนอราคา (RFQ)"}
+            title={readOnly ? "ดูใบขอเสนอราคา (View RFQ)" : (editId ? `แก้ไขใบขอเสนอราคา (${formData.rfq_no})` : "สร้างใบขอเสนอราคา (RFQ)")}
             titleIcon={<div className="bg-white/20 p-1 rounded-md shadow-sm"><FileText size={14} strokeWidth={3} /></div>}
             headerColor={readOnly ? "bg-gray-600" : "bg-teal-600"}
             footer={
@@ -109,29 +108,33 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, init
                     <RFQFormHeader 
                         formData={formData} 
                         branches={branches} 
-                        handleChange={handleChange} 
+                        handleChange={handleChange}
+                        errors={errors}
+                        onOpenPRModal={() => setIsPRSelectionModalOpen(true)}
                     />
                 </div>
 
                 <div className={cardClass}>
                     <RFQFormLines 
                         lines={formData.lines} 
-                        units={units} 
                         handleLineChange={handleLineChange}
-                        handleAddLine={handleAddLine}
                         handleRemoveLine={handleRemoveLine}
-                        handleOpenProductSearch={handleOpenProductSearch}
                     />
                 </div>
 
                 {/* Vendor Logic Restored */}
                 <div className={cardClass}>
-                    <RFQVendorSelection 
-                        vendors={formData.vendors}
-                        onAdd={handleAddVendor}
-                        onRemove={handleRemoveVendor}
-                        handleOpenVendorModal={handleOpenVendorModal}
-                    />
+                    {(!!formData.status && formData.status !== 'DRAFT') ? (
+                        <VendorTrackingTable vendors={trackingVendors} />
+                    ) : (
+                        <RFQVendorSelection  
+                            vendors={formData.vendors}
+                            onAdd={handleAddVendor}
+                            onRemove={handleRemoveVendor}
+                            handleOpenVendorModal={handleOpenVendorModal}
+                            isViewMode={readOnly}
+                        />
+                    )}
                 </div>
 
                 <div className={cardClass}>
@@ -158,73 +161,19 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, init
                 </div>
             </div>
 
-            {/* Product Search Modal */}
-            <ModalLayout
-                isOpen={isProductModalOpen}
-                onClose={() => setIsProductModalOpen(false)}
-                title="ค้นหาสินค้า"
-                titleIcon={<Search className="text-teal-600" size={20} />}
-                size="lg"
-            >
-                <div className="space-y-4">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                        <input 
-                            value={productSearchTerm} 
-                            onChange={(e) => setProductSearchTerm(e.target.value)} 
-                            placeholder="ค้นหาด้วยรหัส หรือชื่อสินค้า..." 
-                            className="w-full h-10 pl-10 pr-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
-                            autoFocus 
-                        />
-                    </div>
-                    
-                    <div className="max-h-[400px] overflow-auto border border-gray-200 dark:border-gray-700 rounded-lg shadow-inner">
-                        <table className="w-full text-sm text-left">
-                            <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0">
-                                <tr className="border-b border-gray-200 dark:border-gray-700">
-                                    <th className="px-4 py-3 text-center w-20 font-bold text-gray-600 dark:text-gray-200">เลือก</th>
-                                    <th className="px-4 py-3 font-bold text-gray-600 dark:text-gray-200">รหัสสินค้า</th>
-                                    <th className="px-4 py-3 font-bold text-gray-600 dark:text-gray-200">ชื่อสินค้า</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-gray-900">
-                                {filteredProducts.length > 0 ? (
-                                    filteredProducts.map((item: ItemListItem) => (
-                                        <tr key={item.item_id} className="hover:bg-teal-50/50 dark:hover:bg-teal-900/10 transition-all duration-200 group">
-                                            <td className="px-4 py-3 text-center">
-                                                <button 
-                                                    onClick={() => handleProductSelect(item)} 
-                                                    className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-md shadow-sm text-xs font-semibold transform active:scale-95 transition-all"
-                                                >
-                                                    เลือก
-                                                </button>
-                                            </td>
-                                            <td className="px-4 py-3 font-semibold text-gray-800 dark:text-gray-100 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
-                                                {item.item_code}
-                                            </td>
-                                            <td className="px-4 py-3 text-gray-700 dark:text-gray-200">
-                                                {item.item_name}
-                                            </td>
-                                        </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan={3} className="px-4 py-12 text-center text-gray-400 dark:text-gray-500 font-medium">
-                                            ไม่พบข้อมูลสินค้าที่ท่านค้นหา
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </ModalLayout>
 
             {/* Vendor Search Modal */}
             <VendorSearchModal 
                 isOpen={isVendorModalOpen}
                 onClose={() => setIsVendorModalOpen(false)}
                 onSelect={handleVendorSelect}
+            />
+
+            {/* PR Selection Modal */}
+            <PRSelectionModal
+                isOpen={isPRSelectionModalOpen}
+                onClose={() => setIsPRSelectionModalOpen(false)}
+                onSelect={handlePRSelect}
             />
         </WindowFormLayout>
     );

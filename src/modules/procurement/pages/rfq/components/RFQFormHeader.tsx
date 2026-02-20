@@ -8,13 +8,19 @@ interface RFQFormHeaderProps {
     formData: RFQFormData;
     branches: BranchListItem[];
     handleChange: (field: keyof RFQFormData, value: string | number | boolean) => void;
+    errors: Record<string, string>;
+    onOpenPRModal: () => void;
 }
 
-export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches, handleChange }) => {
+export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches, handleChange, errors, onOpenPRModal }) => {
     const inputStyle = "w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent dark:text-white transition-all";
     const selectStyle = "w-full h-8 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent dark:text-white";
     const labelStyle = "text-sm font-medium text-teal-700 dark:text-teal-300 mb-1 block";
     const hintStyle = "text-xs text-gray-400 dark:text-gray-500 mt-1";
+    
+    // Validation Styles (Mirroring PRHeader)
+    const errorInputClass = "border-red-500 ring-1 ring-red-500 focus:ring-red-500";
+    const errorMsgClass = "text-red-500 text-[10px] mt-0.5 font-medium";
 
     return (
         <div className="p-4">
@@ -36,8 +42,9 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                         type="date"
                         value={formData.rfq_date}
                         onChange={(e) => handleChange('rfq_date', e.target.value)}
-                        className={inputStyle}
+                        className={`${inputStyle} ${errors.rfq_date ? errorInputClass : ''}`}
                     />
+                    {errors.rfq_date && <p className={errorMsgClass}>{errors.rfq_date}</p>}
                 </div>
                 <div>
                     <label className={labelStyle}>PR ต้นทาง <span className="text-red-500">*</span></label>
@@ -47,33 +54,38 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                             placeholder="PR2024-xxx"
                             value={formData.pr_no || ''}
                             onChange={(e) => handleChange('pr_no', e.target.value)}
-                            className={inputStyle}
+                            className={`${inputStyle} ${errors.pr_no ? errorInputClass : ''}`}
                         />
-                        <button className="px-4 py-1.5 bg-teal-600 hover:bg-teal-500 text-white rounded-lg transition-colors shrink-0 font-medium text-sm">
+                        <button 
+                            type="button"
+                            onClick={onOpenPRModal}
+                            className="px-4 py-1.5 bg-teal-600 hover:bg-teal-500 text-white rounded-lg transition-colors shrink-0 font-medium text-sm"
+                        >
                             เลือก
                         </button>
                     </div>
+
+                    {errors.pr_no && <p className={errorMsgClass}>{errors.pr_no}</p>}
                     <p className={hintStyle}>อ้างถึง pr_header.pr_id (PR ต้นทาง)</p>
                 </div>
             </div>
 
-            {/* Row 2: QC ต้นทาง, สาขา, ผู้สร้าง */}
+            {/* Row 2: สถานะ, สาขา, ผู้สร้าง */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div>
-                    <label className={labelStyle}>QC ต้นทาง</label>
-                    <div className="flex gap-2">
-                        <input
-                            type="text"
-                            placeholder="QC2024-xxx"
-                            value={formData.qc_no || ''}
-                            onChange={(e) => handleChange('qc_no', e.target.value)}
-                            className={inputStyle}
-                        />
-                        <button className="px-4 py-1.5 bg-teal-600 hover:bg-teal-500 text-white rounded-lg transition-colors shrink-0 font-medium text-sm">
-                            เลือก
-                        </button>
-                    </div>
-                    <p className={hintStyle}>อ้างถึง qc_id (FK)</p>
+                    <label className={labelStyle}>สถานะ <span className="text-red-500">*</span></label>
+                    <select
+                        value={formData.status}
+                        onChange={(e) => handleChange('status', e.target.value)}
+                        className={`${selectStyle} ${errors.status ? errorInputClass : ''}`}
+                    >
+                        <option value="DRAFT">DRAFT - แบบร่าง</option>
+                        <option value="SENT">SENT - ส่งแล้ว</option>
+                        <option value="CLOSED">CLOSED - ปิดแล้ว</option>
+                        <option value="CANCELLED">CANCELLED - ยกเลิก</option>
+                    </select>
+                    {errors.status && <p className={errorMsgClass}>{errors.status}</p>}
+                    <p className={hintStyle}>สถานะ: DRAFT/SENT/CLOSED/CANCELLED</p>
                 </div>
                 <div>
                     <label className={labelStyle}>สาขาที่สร้าง RFQ</label>
@@ -103,34 +115,21 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                 </div>
             </div>
 
-            {/* Row 3: สถานะ, กำหนดส่งใบเสนอราคา, สถานที่รับของ */}
+            {/* Row 3: กำหนดส่งใบเสนอราคา, สถานที่รับของ */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div>
-                    <label className={labelStyle}>สถานะ <span className="text-red-500">*</span></label>
-                    <select
-                        value={formData.status}
-                        onChange={(e) => handleChange('status', e.target.value)}
-                        className={selectStyle}
-                    >
-                        <option value="DRAFT">DRAFT - แบบร่าง</option>
-                        <option value="SENT">SENT - ส่งแล้ว</option>
-                        <option value="CLOSED">CLOSED - ปิดแล้ว</option>
-                        <option value="CANCELLED">CANCELLED - ยกเลิก</option>
-                    </select>
-                    <p className={hintStyle}>สถานะ: DRAFT/SENT/CLOSED/CANCELLED</p>
-                </div>
                 <div>
                     <label className={labelStyle}>กำหนดส่งใบเสนอราคา <span className="text-red-500">*</span></label>
                     <input
                         type="date"
                         value={formData.quote_due_date}
                         onChange={(e) => handleChange('quote_due_date', e.target.value)}
-                        className={inputStyle}
+                        className={`${inputStyle} ${errors.quote_due_date ? errorInputClass : ''}`}
                         placeholder="เลือกวันที่"
                     />
+                    {errors.quote_due_date && <p className={errorMsgClass}>{errors.quote_due_date}</p>}
                     <p className={hintStyle}>วันหมดอายุการเสนอราคา (quotation_due_date)</p>
                 </div>
-                <div>
+                <div className="md:col-span-2">
                     <label className={labelStyle}>สถานที่รับของ</label>
                     <input
                         type="text"

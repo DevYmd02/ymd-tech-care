@@ -281,11 +281,19 @@ export default function RFQListPage() {
             cell: (info) => {
                 const responded = info.row.original.responded_vendors_count || 0;
                 const total = info.row.original.vendor_count || 0;
+                const status = info.row.original.status;
+
                 return (
-                    <div className="flex justify-center items-center h-full py-2">
-                        <span className="text-gray-700 dark:text-gray-300 font-medium">
-                            {responded}/{total}
+                    <div className="flex flex-col items-center justify-center h-full py-2">
+                        <span className="text-gray-700 dark:text-gray-300 font-medium leading-none mb-0.5">
+                            {`${responded}/${total}`}
                         </span>
+                        {status === 'SENT' && (
+                            <span className="text-[10px] text-slate-500 leading-none">รอตอบกลับ</span>
+                        )}
+                        {(status === 'IN_PROGRESS' || status === 'CLOSED') && (
+                            <span className="text-[9px] text-slate-500 leading-none">ตอบกลับแล้ว</span>
+                        )}
                     </div>
                 );
             },
@@ -310,91 +318,96 @@ export default function RFQListPage() {
         // ==========================================================================
         columnHelper.display({
             id: 'actions',
-            header: () => <div className="flex justify-center items-center w-full h-full">จัดการ</div>,
+            header: () => <div className="text-center w-full">จัดการ</div>,
             cell: ({ row }) => {
                 const item = row.original;
-                const responded = item.responded_vendors_count || 0;
                 const total = item.vendor_count || 0;
+                const responded = item.responded_vendors_count || 0;
                 const allResponded = total > 0 && responded >= total;
 
                 return (
-                    <div className="flex justify-center items-center gap-1.5 whitespace-nowrap w-full h-full py-2">
-                        {/* ===== [ดูรายละเอียด] — ทุกสถานะ (ghost icon) ===== */}
+                    // 1. Container: flex row, centered vertically.
+                    <div className="flex items-center justify-center gap-3 w-full h-full py-1">
+                        
+                        {/* 2. Left Element: Eye icon, horizontally un-cluttered */}
                         <button 
-                            className="p-1 text-slate-400 hover:text-blue-600 transition-colors" 
+                            className="flex-shrink-0 p-1.5 text-slate-400 hover:text-blue-600 transition-colors" 
                             title="ดูรายละเอียด"
                             onClick={() => handleView(item.rfq_id)}
                         >
                             <Eye className="w-4 h-4" />
                         </button>
                         
-                        {/* ===== DRAFT: [แก้ไข] + [ส่ง RFQ] ===== */}
-                        {item.status === 'DRAFT' && (
-                            <>
-                                <button 
-                                    className="flex items-center gap-0.5 px-2 py-1 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded border border-transparent hover:border-amber-200 dark:hover:border-amber-800 transition-all"
-                                    title="แก้ไข"
-                                    onClick={() => handleEdit(item.rfq_id)}
-                                >
-                                    <Edit className="w-3.5 h-3.5" /> 
-                                    <span className="text-xs font-medium">แก้ไข</span>
-                                </button>
+                        {/* 3. Right Element: Button Stack (flex-col, gap-1) */}
+                        {item.status !== 'CLOSED' && item.status !== 'CANCELLED' && (
+                            <div className="flex flex-col gap-1 min-w-[130px]">
+                                {/* ===== DRAFT: [แก้ไข] + [ส่ง RFQ] ===== */}
+                                {item.status === 'DRAFT' && (
+                                    <>
+                                        <button 
+                                            className="flex items-center justify-center gap-1.5 w-full px-2 py-1 text-[11px] font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded border border-transparent hover:border-amber-200 dark:hover:border-amber-800 transition-all"
+                                            title="แก้ไข"
+                                            onClick={() => handleEdit(item.rfq_id)}
+                                        >
+                                            <Edit className="w-3.5 h-3.5" /> แก้ไข
+                                        </button>
+                                        <button 
+                                            className="flex items-center justify-center gap-1.5 w-full px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-medium rounded shadow-sm transition-all"
+                                            title="ส่ง RFQ"
+                                            onClick={() => handleSendRFQ(item)}
+                                        >
+                                            <Send className="w-3.5 h-3.5" /> ส่ง RFQ
+                                        </button>
+                                    </>
+                                )}
 
-                                <button 
-                                    className="flex items-center gap-0.5 px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium rounded shadow-sm transition-all"
-                                    title="ส่ง RFQ"
-                                    onClick={() => handleSendRFQ(item)}
-                                >
-                                    <Send className="w-3.5 h-3.5" /> ส่ง RFQ
-                                </button>
-                            </>
+                                {/* ===== SENT: [ดูใบเสนอราคา] (Hide if no QT) ===== */}
+                                {item.status === 'SENT' && item.has_quotation && (
+                                    <button 
+                                        onClick={() => handleViewQTs(item.rfq_no)}
+                                        className="flex items-center justify-center gap-1 w-full px-2 py-1 text-[11px] font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800 hover:border-blue-400 transition-all"
+                                        title="ดูใบเสนอราคาในหน้า QT"
+                                    >
+                                        <ExternalLink className="w-3.5 h-3.5" /> ดูใบเสนอราคา
+                                    </button>
+                                )}
+
+                                {/* ===== IN_PROGRESS: Stack [ดูใบเสนอราคา] and [ปิดรับราคา] ===== */}
+                                {item.status === 'IN_PROGRESS' && (
+                                    <>
+                                        {/* Top: View QT */}
+                                        {item.has_quotation && (
+                                            <button 
+                                                onClick={() => handleViewQTs(item.rfq_no)}
+                                                className="flex items-center justify-center gap-1 w-full px-2 py-1 text-[11px] font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800 hover:border-blue-400 transition-all"
+                                                title="ดูใบเสนอราคาในหน้า QT"
+                                            >
+                                                <ExternalLink className="w-3.5 h-3.5" /> ดูใบเสนอราคา
+                                            </button>
+                                        )}
+
+                                        {/* Bottom: Close Bidding */}
+                                        {item.has_quotation && (
+                                            <button 
+                                                onClick={() => handleCloseBidding(item)}
+                                                className={`flex items-center justify-center gap-1 w-full px-2 py-1 rounded shadow-sm transition-all text-[11px] font-medium ${
+                                                    allResponded
+                                                        ? 'bg-rose-600 text-white hover:bg-rose-700 animate-pulse border border-transparent'
+                                                        : 'text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 hover:border-rose-400'
+                                                }`}
+                                                title={allResponded ? `ตอบครบแล้ว รอกดปิดรับราคาได้เลย!` : 'ปิดรับราคา'}
+                                            >
+                                                <XCircle className="w-3.5 h-3.5" /> ปิดรับราคา
+                                            </button>
+                                        )}
+                                    </>
+                                )}
+                            </div>
                         )}
-
-                        {/* ===== SENT: [ดูใบเสนอราคา] — Navigate to QT page ===== */}
-                        {item.status === 'SENT' && (
-                            <button 
-                                onClick={() => handleViewQTs(item.rfq_no)}
-                                className="flex items-center gap-0.5 px-2 py-1 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800 hover:border-blue-400 transition-all"
-                                title="ดูใบเสนอราคาในหน้า QT"
-                            >
-                                <ExternalLink className="w-3.5 h-3.5" />
-                                <span className="text-xs font-medium">ดูใบเสนอราคา</span>
-                            </button>
-                        )}
-
-                        {/* ===== IN_PROGRESS: [ดูใบเสนอราคา] + [ปิดรับราคา] ===== */}
-                        {item.status === 'IN_PROGRESS' && (
-                            <>
-                                <button 
-                                    onClick={() => handleViewQTs(item.rfq_no)}
-                                    className="flex items-center gap-0.5 px-2 py-1 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800 hover:border-blue-400 transition-all"
-                                    title="ดูใบเสนอราคาในหน้า QT"
-                                >
-                                    <ExternalLink className="w-3.5 h-3.5" />
-                                    <span className="text-xs font-medium">ดูใบเสนอราคา</span>
-                                </button>
-
-                                {/* Pulse when all vendors responded → signals buyer to close */}
-                                <button 
-                                    onClick={() => handleCloseBidding(item)}
-                                    className={`flex items-center gap-0.5 px-2 py-1 rounded shadow-sm transition-all ${
-                                        allResponded
-                                            ? 'bg-rose-600 text-white hover:bg-rose-700 animate-pulse'
-                                            : 'text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 hover:border-rose-400'
-                                    }`}
-                                    title={allResponded ? `Vendors ตอบครบ ${responded}/${total} แล้ว — กดปิดรับราคาได้เลย!` : 'หยุดรับซองราคา, สถานะจะเปลี่ยนเป็น ปิดแล้ว'}
-                                >
-                                    <XCircle className="w-3.5 h-3.5" />
-                                    <span className="text-xs font-medium">ปิดรับราคา</span>
-                                </button>
-                            </>
-                        )}
-
-                        {/* ===== CLOSED / CANCELLED: [ดูรายละเอียด] only (already rendered above) ===== */}
                     </div>
                 );
             },
-            size: 220, 
+            size: 210, 
             enableSorting: false,
         }),
     ], [columnHelper, filters.page, filters.limit, handleView, handleEdit, handleSendRFQ, handleViewQTs, handleCloseBidding]);

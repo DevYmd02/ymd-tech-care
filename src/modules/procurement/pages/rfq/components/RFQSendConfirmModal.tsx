@@ -1,13 +1,13 @@
 /**
  * @file RFQSendConfirmModal.tsx
  * @description Pre-flight Review Modal before sending RFQ to vendors.
- * Features: Zero-Vendor Trap, Selective Sending (checkboxes), Double-Submit Prevention.
+ * Features: Zero-Vendor Trap, Pure Read-Only Confirmation.
  * Data is fetched on-open via RFQService.getById() to get vendor list.
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Send, AlertTriangle, Users, Loader2, CheckSquare, Square, Mail } from 'lucide-react';
+import { Send, AlertTriangle, Users, Loader2, Mail } from 'lucide-react';
 import type { RFQHeader } from '@/modules/procurement/types/rfq-types';
 import { RFQService } from '@/modules/procurement/services/rfq.service';
 
@@ -44,17 +44,15 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
     onConfirm,
     isLoading = false,
 }) => {
-    // Local state for vendor data & selection
+    // Local state for vendor data (Read Only)
     const [vendors, setVendors] = useState<VendorDetail[]>([]);
     const [isFetching, setIsFetching] = useState(false);
     const [fetchError, setFetchError] = useState<string | null>(null);
-    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
     // Fetch vendor data when modal opens
     useEffect(() => {
         if (!isOpen || !rfq) {
             setVendors([]);
-            setSelectedIds(new Set());
             setFetchError(null);
             return;
         }
@@ -70,8 +68,6 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
                 // The detail response now includes vendors[] from mock handler
                 const vendorList: VendorDetail[] = (detail as unknown as { vendors?: VendorDetail[] }).vendors || [];
                 setVendors(vendorList);
-                // Default: ALL vendors selected
-                setSelectedIds(new Set(vendorList.map(v => v.vendor_id)));
             } catch (err) {
                 if (!cancelled) {
                     setFetchError('ไม่สามารถโหลดข้อมูลผู้ขายได้');
@@ -86,32 +82,8 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
         return () => { cancelled = true; };
     }, [isOpen, rfq]);
 
-    // Toggle single vendor
-    const toggleVendor = (vendorId: string) => {
-        setSelectedIds(prev => {
-            const next = new Set(prev);
-            if (next.has(vendorId)) {
-                next.delete(vendorId);
-            } else {
-                next.add(vendorId);
-            }
-            return next;
-        });
-    };
-
-    // Toggle all
-    const allSelected = useMemo(() => vendors.length > 0 && selectedIds.size === vendors.length, [vendors, selectedIds]);
-    const toggleAll = () => {
-        if (allSelected) {
-            setSelectedIds(new Set());
-        } else {
-            setSelectedIds(new Set(vendors.map(v => v.vendor_id)));
-        }
-    };
-
-    const selectedCount = selectedIds.size;
-    const canConfirm = selectedCount > 0 && !isLoading && !isFetching;
     const hasVendors = vendors.length > 0;
+    const canConfirm = hasVendors && !isLoading && !isFetching;
 
     if (!isOpen || !rfq) return null;
 
@@ -178,71 +150,44 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
                         </div>
                     )}
 
-                    {/* ===== VENDOR SELECTION LIST ===== */}
+                    {/* ===== VENDOR READ ONLY LIST ===== */}
                     {!isFetching && !fetchError && hasVendors && (
                         <>
                             {/* Header bar */}
-                            <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-200 dark:border-gray-700">
-                                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-                                    <Users size={16} className="text-gray-400" />
-                                    <span>ผู้ขายที่จะส่ง RFQ ({selectedCount}/{vendors.length} ราย)</span>
+                            <div className="flex items-center mb-3 pb-2 border-b border-gray-200 dark:border-gray-700">
+                                <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    <Users size={16} className="text-gray-500" />
+                                    <span>ผู้ขายที่จะส่ง RFQ ({vendors.length} ราย)</span>
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={toggleAll}
-                                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
-                                >
-                                    {allSelected ? 'ยกเลิกทั้งหมด' : 'เลือกทั้งหมด'}
-                                </button>
                             </div>
 
                             {/* Vendor rows */}
                             <div className="space-y-2">
-                                {vendors.map((vendor) => {
-                                    const isChecked = selectedIds.has(vendor.vendor_id);
-                                    return (
-                                        <label
-                                            key={vendor.vendor_id}
-                                            className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
-                                                isChecked
-                                                    ? 'bg-emerald-50 dark:bg-emerald-900/15 border-emerald-200 dark:border-emerald-800'
-                                                    : 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 opacity-60'
-                                            }`}
-                                        >
-                                            {/* Checkbox icon */}
-                                            <button
-                                                type="button"
-                                                onClick={(e) => { e.preventDefault(); toggleVendor(vendor.vendor_id); }}
-                                                className="shrink-0"
-                                            >
-                                                {isChecked
-                                                    ? <CheckSquare className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                                                    : <Square className="w-5 h-5 text-gray-400" />
-                                                }
-                                            </button>
-
-                                            {/* Vendor info */}
-                                            <div className="flex-1 min-w-0">
-                                                <p className="font-medium text-gray-900 dark:text-gray-100 truncate">
-                                                    {vendor.vendor_name || vendor.vendor_code || vendor.vendor_id}
-                                                </p>
-                                                {vendor.email_sent_to && (
-                                                    <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                                        <Mail size={11} />
-                                                        <span className="truncate">{vendor.email_sent_to}</span>
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* Vendor code badge */}
-                                            {vendor.vendor_code && (
-                                                <span className="text-[10px] font-bold text-gray-500 bg-gray-200 dark:bg-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-full shrink-0">
-                                                    {vendor.vendor_code}
-                                                </span>
+                                {vendors.map((vendor) => (
+                                    <div
+                                        key={vendor.vendor_id}
+                                        className="flex items-center justify-between gap-3 p-3 rounded-lg border bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 transition-colors"
+                                    >
+                                        <div className="flex flex-col min-w-0">
+                                            <p className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                                                {vendor.vendor_name || vendor.vendor_code || vendor.vendor_id}
+                                            </p>
+                                            {vendor.email_sent_to && (
+                                                <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                    <Mail size={12} />
+                                                    <span className="truncate">{vendor.email_sent_to}</span>
+                                                </div>
                                             )}
-                                        </label>
-                                    );
-                                })}
+                                        </div>
+
+                                        {/* Vendor code badge */}
+                                        {vendor.vendor_code && (
+                                            <span className="text-[11px] font-semibold text-gray-600 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 px-2.5 py-1 rounded-full shrink-0 shadow-sm border border-gray-300/50 dark:border-gray-600">
+                                                {vendor.vendor_code}
+                                            </span>
+                                        )}
+                                    </div>
+                                ))}
                             </div>
                         </>
                     )}
@@ -262,11 +207,11 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
                     </button>
                     <button
                         type="button"
-                        onClick={() => onConfirm(Array.from(selectedIds))}
+                        onClick={() => onConfirm(vendors.map(v => v.vendor_id))}
                         disabled={!canConfirm}
                         className={`px-5 py-2 rounded-lg text-white font-bold shadow-sm transition-all flex items-center gap-2 ${
                             canConfirm
-                                ? 'bg-emerald-600 hover:bg-emerald-700'
+                                ? 'bg-emerald-600 hover:bg-emerald-700 hover:shadow-md'
                                 : 'bg-gray-400 cursor-not-allowed'
                         }`}
                     >
@@ -274,9 +219,7 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
                         <Send size={14} />
                         {isLoading
                             ? 'กำลังส่ง...'
-                            : hasVendors
-                                ? `ยืนยันการส่ง (${selectedCount} ราย)`
-                                : 'ยืนยันการส่ง'
+                            : `ยืนยันการส่ง (${vendors.length} ราย)`
                         }
                     </button>
                 </div>

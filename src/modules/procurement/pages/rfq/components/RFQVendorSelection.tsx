@@ -7,13 +7,15 @@ interface RFQVendorSelectionProps {
     onAdd: () => void;
     onRemove: (index: number) => void;
     handleOpenVendorModal: (index: number) => void;
+    isViewMode?: boolean;
 }
 
 export const RFQVendorSelection: React.FC<RFQVendorSelectionProps> = ({ 
     vendors, 
     onAdd, 
     onRemove, 
-    handleOpenVendorModal 
+    handleOpenVendorModal,
+    isViewMode = false
 }) => {
     const labelStyle = "text-sm font-medium text-teal-700 dark:text-teal-300 mb-1 block";
     const inputStyle = "w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent dark:text-white transition-all";
@@ -64,17 +66,20 @@ export const RFQVendorSelection: React.FC<RFQVendorSelectionProps> = ({
                                         placeholder="กดปุ่มค้นหา..."
                                         value={vendor.vendor_code}
                                         readOnly
-                                        className={`${inputStyle} flex-1 bg-white dark:bg-gray-900 cursor-pointer hover:border-teal-400`}
-                                        onClick={() => handleOpenVendorModal(index)}
+                                        disabled={isViewMode}
+                                        className={`${inputStyle} flex-1 ${isViewMode ? 'bg-slate-800/50 text-slate-400 cursor-not-allowed border-slate-700' : 'bg-white dark:bg-gray-900 cursor-pointer hover:border-teal-400'}`}
+                                        onClick={() => !isViewMode && handleOpenVendorModal(index)}
                                     />
-                                    <button
-                                        type="button"
-                                        onClick={() => handleOpenVendorModal(index)}
-                                        className="h-8 w-10 flex items-center justify-center bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors shrink-0 shadow-sm"
-                                        title="ค้นหาผู้ขาย"
-                                    >
-                                        <Search size={16} />
-                                    </button>
+                                    {!isViewMode && (
+                                        <button
+                                            type="button"
+                                            onClick={() => handleOpenVendorModal(index)}
+                                            className="h-8 w-10 flex items-center justify-center bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors shrink-0 shadow-sm"
+                                            title="ค้นหาผู้ขาย"
+                                        >
+                                            <Search size={16} />
+                                        </button>
+                                    )}
                                 </div>
                             </div>
 
@@ -86,36 +91,41 @@ export const RFQVendorSelection: React.FC<RFQVendorSelectionProps> = ({
                                     placeholder="ชื่อผู้ขายจะแสดงอัตโนมัติ"
                                     value={vendor.vendor_name_display}
                                     readOnly
-                                    className={`${inputStyle} bg-gray-100 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 cursor-not-allowed`}
+                                    disabled={isViewMode}
+                                    className={`${inputStyle} ${isViewMode ? 'bg-slate-800/50 text-slate-400 cursor-not-allowed border-slate-700' : 'bg-gray-100 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 cursor-not-allowed'}`}
                                 />
                             </div>
 
                             {/* Remove Button */}
                             <div className="md:col-span-1 flex justify-end">
-                                <button
-                                    type="button"
-                                    onClick={() => onRemove(index)}
-                                    className="h-8 w-8 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
-                                    title="ลบรายการ"
-                                >
-                                    <Trash2 size={16} />
-                                </button>
+                                {!isViewMode && (
+                                    <button
+                                        type="button"
+                                        onClick={() => onRemove(index)}
+                                        className="h-8 w-8 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
+                                        title="ลบรายการ"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>
                         ))}
 
                         {/* Add Button (Below List) */}
-                        <button
-                            type="button"
-                            onClick={onAdd}
-                            className="w-full py-2 flex items-center justify-center gap-2 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-teal-500 dark:hover:border-teal-500 text-gray-500 hover:text-teal-600 dark:text-gray-400 dark:hover:text-teal-400 rounded-lg transition-all hover:bg-teal-50 dark:hover:bg-teal-900/20 group"
-                        >
-                            <div className="bg-gray-200 dark:bg-gray-700 p-1 rounded-full group-hover:bg-teal-100 dark:group-hover:bg-teal-900 transition-colors">
-                                <Plus size={16} />
-                            </div>
-                            <span className="font-medium text-sm">เพิ่มผู้ขาย (Add Vendor)</span>
-                        </button>
+                        {!isViewMode && (
+                            <button
+                                type="button"
+                                onClick={onAdd}
+                                className="w-full py-2 flex items-center justify-center gap-2 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-teal-500 dark:hover:border-teal-500 text-gray-500 hover:text-teal-600 dark:text-gray-400 dark:hover:text-teal-400 rounded-lg transition-all hover:bg-teal-50 dark:hover:bg-teal-900/20 group"
+                            >
+                                <div className="bg-gray-200 dark:bg-gray-700 p-1 rounded-full group-hover:bg-teal-100 dark:group-hover:bg-teal-900 transition-colors">
+                                    <Plus size={16} />
+                                </div>
+                                <span className="font-medium text-sm">เพิ่มผู้ขาย (Add Vendor)</span>
+                            </button>
+                        )}
                     </>
                 )}
             </div>

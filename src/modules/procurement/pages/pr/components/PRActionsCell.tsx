@@ -6,7 +6,7 @@ interface PRActionsCellProps {
     onEdit: (id: string) => void;
     onView: (id: string) => void;
 
-    onSendApproval: (id: string) => void;
+    onSendApproval: (row: PRHeader) => void;
     onApprove: (id: string) => void;
     onReject: (id: string) => void;
     onCreateRFQ: (item: PRHeader) => void;
@@ -50,7 +50,7 @@ export const PRActionsCell = ({
 
 
                     <button 
-                        onClick={() => onSendApproval(item.pr_id)}
+                        onClick={() => onSendApproval(item)}
                         className="flex items-center gap-1 pl-1.5 pr-2 py-1 ml-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap"
                         title="ส่งอนุมัติ"
                     >

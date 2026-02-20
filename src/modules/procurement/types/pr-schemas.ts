@@ -74,7 +74,14 @@ export const PRFormSchema = z.object({
   }
 
   // V-02: Block zero-value PR from being submitted for approval
-  if (!isDraft && data.total_amount <= 0) {
+  // Calculate validation total dynamically from active lines
+  const validationTotal = activeLines.reduce((sum, line) => {
+    const qty = Number(line.qty) || 0;
+    const price = Number(line.est_unit_price) || 0;
+    return sum + (qty * price);
+  }, 0);
+
+  if (!isDraft && validationTotal <= 0) {
     ctx.addIssue({
       path: ['total_amount'],
       message: 'มูลค่ารวมต้องมากกว่า 0 บาท เพื่อส่งอนุมัติ',

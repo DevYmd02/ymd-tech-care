@@ -71,12 +71,17 @@ export default function QTListPage() {
 
     // Clear the URL filter (React Router — no hard refresh)
     const handleClearRfqFilter = useCallback(() => {
-        const newParams = new URLSearchParams(searchParams);
-        newParams.delete('rfq_no');
-        setSearchParams(newParams, { replace: true });
-        setFilters({ search3: '', page: 1 });
+        setSearchParams((prev) => {
+            const newParams = new URLSearchParams(prev);
+            newParams.delete('rfq_no');     // Remove shortcut param
+            newParams.delete('search3');    // Remove filter param mapped to rfq_no reference
+            // If custom keys mapped search3 -> ref_rfq_no, clear both just in case
+            newParams.delete('ref_rfq_no');
+            newParams.set('page', '1');
+            return newParams;
+        }, { replace: true });
         hasInjected.current = false;
-    }, [searchParams, setSearchParams, setFilters]);
+    }, [setSearchParams]);
 
     // Convert to API filter format
     const apiFilters: QTListParams = {

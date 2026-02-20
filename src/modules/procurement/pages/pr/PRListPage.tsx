@@ -158,16 +158,16 @@ export default function PRListPage() {
         setIsReadOnly(false);
     };
 
-    const handleSendApproval = useCallback((id: string) => {
+    const handleSendApproval = useCallback((pr: PRHeader) => {
         confirm({
             title: 'ยืนยันการส่งอนุมัติ',
-            description: 'คุณต้องการส่งเอกสารนี้เพื่อขออนุมัติใช่หรือไม่?',
+            description: `คุณต้องการส่งเอกสาร ${pr.pr_no} เพื่อขออนุมัติใช่หรือไม่?\nยอดรวม: ${pr.total_amount?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท`,
             confirmText: 'ส่งอนุมัติ',
             cancelText: 'ยกเลิก',
             variant: 'info',
             icon: Send,
             onConfirm: async () => {
-                 const result = await PRService.submit(id);
+                 const result = await PRService.submit(pr.pr_id);
                  if (!result.success) {
                      throw new Error(result.message || 'ส่งอนุมัติไม่สำเร็จ');
                  }
@@ -314,13 +314,13 @@ export default function PRListPage() {
             enableSorting: false,
         }),
         columnHelper.accessor('total_amount', {
-            header: () => <div className="text-right whitespace-nowrap">ยอดรวม (บาท)</div>,
+            header: () => <div className="text-right pr-10 whitespace-nowrap">ยอดรวม (บาท)</div>,
             cell: (info) => (
-                <div className="text-right font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
+                <div className="text-right pr-10 font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
                      {new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(info.getValue() || 0)}
                 </div>
             ),
-            size: 130,
+            size: 110,
             enableSorting: true,
         }),
         columnHelper.accessor(row => row.status, {
