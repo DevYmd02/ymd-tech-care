@@ -34,7 +34,7 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, init
         isVendorModalOpen, setIsVendorModalOpen,
         handleAddVendor, handleRemoveVendor,
         handleOpenVendorModal, handleVendorSelect
-    } = useRFQForm(isOpen, onClose, initialPR, onSuccess);
+    } = useRFQForm(isOpen, onClose, initialPR, onSuccess, editId);
 
     const tabs = [
         { id: 'detail', label: 'Detail', icon: <Info size={16} /> },

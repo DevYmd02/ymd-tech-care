@@ -1,36 +1,28 @@
 /**
  * @file RFQListPage.tsx
  * @description หน้ารายการใบขอใบเสนอราคา (Request for Quotation List)
+ * @role "Request Manager & Monitor" — NO data-entry actions (ย้ายไป QT/QC แล้ว)
  * @route /procurement/rfq
  * @refactored Uses PageListLayout, FilterFormBuilder, useTableFilters, React Query, SmartTable
  */
 
 import { useState, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { FileText, Eye, Send, Edit, CheckCircle, Search, Plus } from 'lucide-react';
+import { FileText, Eye, Send, Edit, ExternalLink, XCircle, Search, Plus } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { PageListLayout, SmartTable, RFQStatusBadge, FilterField } from '@ui';
-// FilterFieldConfig removed
 import { useTableFilters } from '@/shared/hooks';
 import { createColumnHelper } from '@tanstack/react-table';
 import type { ColumnDef } from '@tanstack/react-table';
-import { QTFormModal } from '@/modules/procurement/pages/qt/components';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal';
 
 // Services & Types
 import { RFQService } from '@/modules/procurement/services';
 import type { RFQFilterCriteria, RFQHeader, RFQStatus } from '@/modules/procurement/types/rfq-types';
-import { RFQFormModal } from './components';
+import { RFQFormModal, RFQSendConfirmModal } from './components';
 
-// ... (STATUS OPTIONS and FILTER CONFIG omitted for brevity if unchanged, but I need to be careful not to delete them if I targeted a range. 
-// I'll target specific blocks to be safe.
-// Wait, the Instruction says "Replace Modal States and Handlers".
-// I'll check the lines again. 
-// Imports are lines 8-22.
-// State/Handlers are lines 87-100.
-// I can do multiple replaces or one big one.
-// Let's do Imports first. Then State/Handlers.
 
 
 
@@ -99,17 +91,21 @@ export default function RFQListPage() {
 
     const { toast } = useToast();
 
-    // Modal States
+    const navigate = useNavigate();
+
+    // Modal States (RFQ Form only — QT modal removed, belongs to QT page)
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [isQTModalOpen, setIsQTModalOpen] = useState(false);
-    const [selectedRFQForQT, setSelectedRFQForQT] = useState<RFQHeader | null>(null);
     const [selectedRFQId, setSelectedRFQId] = useState<string | null>(null);
     const [isReadOnly, setIsReadOnly] = useState(false);
-    
-    // Confirmation Modal State
-    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-    const [rfqToConfirm, setRfqToConfirm] = useState<RFQHeader | null>(null);
-    const [isConfirming, setIsConfirming] = useState(false);
+
+    // Send RFQ Modal State (replaces old ConfirmationModal)
+    const [sendingRFQ, setSendingRFQ] = useState<RFQHeader | null>(null);
+    const [isSending, setIsSending] = useState(false);
+
+    // Confirmation Modal State (ปิดรับราคา / Close Bidding)
+    const [isCloseBiddingOpen, setIsCloseBiddingOpen] = useState(false);
+    const [rfqToClose, setRfqToClose] = useState<RFQHeader | null>(null);
+    const [isClosing, setIsClosing] = useState(false);
 
     // Handlers
     const handleFilterChange = (name: string, value: string) => {
@@ -140,53 +136,61 @@ export default function RFQListPage() {
         setIsReadOnly(false);
     };
 
+    // --- Send RFQ: opens Pre-flight modal ---
     const handleSendRFQ = useCallback((rfq: RFQHeader) => {
-        setRfqToConfirm(rfq);
-        setIsConfirmOpen(true);
+        setSendingRFQ(rfq);
     }, []);
 
-    const executeSendRFQ = async () => {
-        if (!rfqToConfirm) return;
+    const executeSendRFQ = async (selectedVendorIds: string[]) => {
+        if (!sendingRFQ) return;
         
-        setIsConfirming(true);
+        setIsSending(true);
         try {
-            // Updated to match RFQService.update signature (id, data)
-            // Assuming updating status to 'SENT' is the goal here, though previous logic didn't show exact payload.
-            // Previous logic just showed toast. I will assume status update is needed or just success for now as per plan "Mock or equivalent"
-            // But looking at RFQService, we have update() and sendToVendors(). 
-            // The original alert said "Send to X vendors". 
-            // I'll assume we used to use sendToVendors logic conceptually, or just update status. 
-            // Given "Need to refresh data so status changes from Draft to Sent", I'll use update().
+            // Use sendToVendors API with filtered vendor IDs (Clean Payload)
+            await RFQService.sendToVendors(sendingRFQ.rfq_id, selectedVendorIds);
             
-            // Mocking the API call delay as requested "loading 2 seconds" logic simulation or real call?
-            // "When sending confirmed (executeSendRFQ), if system takes 2 seconds..." -> implies real await.
-            
-            // Using sending to vendors if vendors > 0? 
-            // The user said "Change status from Draft to Sent". 
-            // I will use update status to SENT.
-            
-            await RFQService.update(rfqToConfirm.rfq_id, { status: 'SENT' as RFQStatus });
-            
-            toast(`ส่ง RFQ ${rfqToConfirm.rfq_no} เรียบร้อยแล้ว`, 'success');
+            toast(`ส่ง RFQ ${sendingRFQ.rfq_no} ไปยังผู้ขาย ${selectedVendorIds.length} ราย เรียบร้อยแล้ว`, 'success');
             refetch();
-            cancelConfirm();
+            setSendingRFQ(null);
         } catch (error) {
             toast('เกิดข้อผิดพลาดในการส่ง RFQ', 'error');
             console.error(error);
         } finally {
-            setIsConfirming(false);
+            setIsSending(false);
         }
     };
 
-    const cancelConfirm = () => {
-        setIsConfirmOpen(false);
-        setRfqToConfirm(null);
-        setIsConfirming(false);
+    // --- Navigation: ดูใบเสนอราคา (View QTs) — shortcut to QT page filtered by this RFQ ---
+    const handleViewQTs = useCallback((rfqNo: string) => {
+        navigate(`/procurement/qt?rfq_no=${encodeURIComponent(rfqNo)}`);
+    }, [navigate]);
+
+    // --- Close Bidding: ปิดรับราคา (Lock bidding, status → CLOSED) ---
+    const handleCloseBidding = useCallback((rfq: RFQHeader) => {
+        setRfqToClose(rfq);
+        setIsCloseBiddingOpen(true);
+    }, []);
+
+    const executeCloseBidding = async () => {
+        if (!rfqToClose) return;
+        setIsClosing(true);
+        try {
+            await RFQService.update(rfqToClose.rfq_id, { status: 'CLOSED' as RFQStatus });
+            toast(`ปิดรับราคา RFQ ${rfqToClose.rfq_no} เรียบร้อยแล้ว`, 'success');
+            refetch();
+            cancelCloseBidding();
+        } catch (error) {
+            toast('เกิดข้อผิดพลาดในการปิดรับราคา', 'error');
+            console.error(error);
+        } finally {
+            setIsClosing(false);
+        }
     };
 
-    const handleOpenQTModal = (rfq: RFQHeader) => {
-        setSelectedRFQForQT(rfq);
-        setIsQTModalOpen(true);
+    const cancelCloseBidding = () => {
+        setIsCloseBiddingOpen(false);
+        setRfqToClose(null);
+        setIsClosing(false);
     };
 
     // Columns
@@ -244,11 +248,30 @@ export default function RFQListPage() {
         }),
         columnHelper.accessor('quote_due_date', {
             header: 'ครบกำหนด',
-            cell: (info) => (
-                <span className="text-orange-600 dark:text-orange-400 whitespace-nowrap py-2 block">
-                    {info.getValue() ? formatThaiDate(info.getValue()!) : '-'}
-                </span>
-            ),
+            cell: (info) => {
+                const dateStr = info.getValue();
+                if (!dateStr) return <span className="text-slate-400 py-2 block text-center">-</span>;
+
+                // Smart date color: Overdue → rose, Approaching (0-3 days) → amber, Future → slate
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const dueDate = new Date(dateStr);
+                dueDate.setHours(0, 0, 0, 0);
+                const diffDays = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+                let colorClass = 'text-slate-600 dark:text-slate-400'; // Future (> 3 days)
+                if (diffDays < 0) {
+                    colorClass = 'text-rose-600 dark:text-rose-400 font-semibold'; // Overdue
+                } else if (diffDays <= 3) {
+                    colorClass = 'text-amber-600 dark:text-amber-400 font-semibold'; // Approaching
+                }
+
+                return (
+                    <span className={`${colorClass} whitespace-nowrap py-2 block`}>
+                        {formatThaiDate(dateStr)}
+                    </span>
+                );
+            },
             size: 110,
             enableSorting: true,
         }),
@@ -280,69 +303,101 @@ export default function RFQListPage() {
             size: 100,
             enableSorting: false,
         }),
+        // ==========================================================================
+        // ACTION COLUMN — Strict State Machine
+        // Role: RFQ = "Request Manager & Monitor" ONLY
+        // Data entry → QTListPage | Comparison → QCListPage
+        // ==========================================================================
         columnHelper.display({
             id: 'actions',
             header: () => <div className="flex justify-center items-center w-full h-full">จัดการ</div>,
             cell: ({ row }) => {
                 const item = row.original;
+                const responded = item.responded_vendors_count || 0;
+                const total = item.vendor_count || 0;
+                const allResponded = total > 0 && responded >= total;
+
                 return (
-                    <div className="flex justify-center items-center gap-2 w-full h-full py-2 min-w-[100px]">
+                    <div className="flex justify-center items-center gap-1.5 whitespace-nowrap w-full h-full py-2">
+                        {/* ===== [ดูรายละเอียด] — ทุกสถานะ (ghost icon) ===== */}
                         <button 
-                            className="p-1 text-gray-500 hover:text-blue-600 transition-colors" 
+                            className="p-1 text-slate-400 hover:text-blue-600 transition-colors" 
                             title="ดูรายละเอียด"
                             onClick={() => handleView(item.rfq_id)}
                         >
-                            <Eye size={18} />
+                            <Eye className="w-4 h-4" />
                         </button>
                         
+                        {/* ===== DRAFT: [แก้ไข] + [ส่ง RFQ] ===== */}
                         {item.status === 'DRAFT' && (
                             <>
                                 <button 
-                                    className="flex items-center gap-1 pl-1.5 pr-2 py-1 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded shadow-sm border border-transparent hover:border-amber-200 dark:hover:border-amber-800 transition-all whitespace-nowrap"
+                                    className="flex items-center gap-0.5 px-2 py-1 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded border border-transparent hover:border-amber-200 dark:hover:border-amber-800 transition-all"
                                     title="แก้ไข"
                                     onClick={() => handleEdit(item.rfq_id)}
                                 >
-                                    <Edit size={14} /> 
-                                    <span className="text-[10px] font-bold">แก้ไข</span>
+                                    <Edit className="w-3.5 h-3.5" /> 
+                                    <span className="text-xs font-medium">แก้ไข</span>
                                 </button>
 
                                 <button 
-                                    className="flex items-center gap-1 pl-1.5 pr-2 py-1 ml-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap"
+                                    className="flex items-center gap-0.5 px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium rounded shadow-sm transition-all"
                                     title="ส่ง RFQ"
                                     onClick={() => handleSendRFQ(item)}
                                 >
-                                    <Send size={12} /> ส่ง RFQ
+                                    <Send className="w-3.5 h-3.5" /> ส่ง RFQ
                                 </button>
                             </>
                         )}
 
+                        {/* ===== SENT: [ดูใบเสนอราคา] — Navigate to QT page ===== */}
                         {item.status === 'SENT' && (
                             <button 
-                                onClick={() => handleOpenQTModal(item)}
-                                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1 transition-colors shadow-sm"
-                                title="บันทึกราคา"
+                                onClick={() => handleViewQTs(item.rfq_no)}
+                                className="flex items-center gap-0.5 px-2 py-1 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800 hover:border-blue-400 transition-all"
+                                title="ดูใบเสนอราคาในหน้า QT"
                             >
-                                <FileText size={14} />
-                                บันทึกราคา
+                                <ExternalLink className="w-3.5 h-3.5" />
+                                <span className="text-xs font-medium">ดูใบเสนอราคา</span>
                             </button>
                         )}
 
+                        {/* ===== IN_PROGRESS: [ดูใบเสนอราคา] + [ปิดรับราคา] ===== */}
                         {item.status === 'IN_PROGRESS' && (
-                            <button 
-                                className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1 transition-colors shadow-sm"
-                                title="สรุปผลการคัดเลือก"
-                            >
-                                <CheckCircle size={14} />
-                                สรุปผล/ปิดรับ
-                            </button>
+                            <>
+                                <button 
+                                    onClick={() => handleViewQTs(item.rfq_no)}
+                                    className="flex items-center gap-0.5 px-2 py-1 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800 hover:border-blue-400 transition-all"
+                                    title="ดูใบเสนอราคาในหน้า QT"
+                                >
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                    <span className="text-xs font-medium">ดูใบเสนอราคา</span>
+                                </button>
+
+                                {/* Pulse when all vendors responded → signals buyer to close */}
+                                <button 
+                                    onClick={() => handleCloseBidding(item)}
+                                    className={`flex items-center gap-0.5 px-2 py-1 rounded shadow-sm transition-all ${
+                                        allResponded
+                                            ? 'bg-rose-600 text-white hover:bg-rose-700 animate-pulse'
+                                            : 'text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 hover:border-rose-400'
+                                    }`}
+                                    title={allResponded ? `Vendors ตอบครบ ${responded}/${total} แล้ว — กดปิดรับราคาได้เลย!` : 'หยุดรับซองราคา, สถานะจะเปลี่ยนเป็น ปิดแล้ว'}
+                                >
+                                    <XCircle className="w-3.5 h-3.5" />
+                                    <span className="text-xs font-medium">ปิดรับราคา</span>
+                                </button>
+                            </>
                         )}
+
+                        {/* ===== CLOSED / CANCELLED: [ดูรายละเอียด] only (already rendered above) ===== */}
                     </div>
                 );
             },
-            size: 200, 
+            size: 220, 
             enableSorting: false,
         }),
-    ], [columnHelper, filters.page, filters.limit, handleView, handleEdit, handleSendRFQ]);
+    ], [columnHelper, filters.page, filters.limit, handleView, handleEdit, handleSendRFQ, handleViewQTs, handleCloseBidding]);
 
     // ====================================================================================
     // RENDER
@@ -467,31 +522,27 @@ export default function RFQListPage() {
                 />
             )}
 
-            {isQTModalOpen && (
-                <QTFormModal
-                    isOpen={isQTModalOpen}
-                    onClose={() => {
-                        setIsQTModalOpen(false);
-                        setSelectedRFQForQT(null);
-                    }}
-                    initialRFQ={selectedRFQForQT}
-                    onSuccess={() => {
-                       refetch();
-                       setIsQTModalOpen(false);
-                    }}
-                />
-            )}
-
-            <ConfirmationModal
-                isOpen={isConfirmOpen}
-                onClose={cancelConfirm}
+            {/* ===== Pre-flight Review: ส่ง RFQ ===== */}
+            <RFQSendConfirmModal
+                isOpen={!!sendingRFQ}
+                rfq={sendingRFQ}
+                onClose={() => setSendingRFQ(null)}
                 onConfirm={executeSendRFQ}
-                title="ยืนยันการส่ง RFQ"
-                description={`ต้องการส่ง RFQ เลขที่ ${rfqToConfirm?.rfq_no} ไปยังผู้ขายจำนวน ${rfqToConfirm?.vendor_count || 0} ราย ใช่หรือไม่?`}
-                variant="info"
-                confirmText="ตกลง"
+                isLoading={isSending}
+            />
+
+
+            {/* ===== Confirmation: ปิดรับราคา (Close Bidding) ===== */}
+            <ConfirmationModal
+                isOpen={isCloseBiddingOpen}
+                onClose={cancelCloseBidding}
+                onConfirm={executeCloseBidding}
+                title="ยืนยันการปิดรับราคา"
+                description={`ต้องการปิดรับราคา RFQ เลขที่ ${rfqToClose?.rfq_no} ใช่หรือไม่? เมื่อปิดแล้ว ผู้ขายจะไม่สามารถส่งราคาเพิ่มเติมได้อีก`}
+                variant="danger"
+                confirmText="ปิดรับราคา"
                 cancelText="ยกเลิก"
-                isLoading={isConfirming}
+                isLoading={isClosing}
             />
         </>
     );

@@ -1,4 +1,4 @@
-import type { RFQHeader, RFQStatus } from '@/modules/procurement/types/rfq-types';
+import type { RFQHeader, RFQStatus, RFQVendor, RFQVendorStatus } from '@/modules/procurement/types/rfq-types';
 
 /**
  * Helper to generate a future date string
@@ -81,10 +81,11 @@ const createMockRFQ = (
 // ====================================================================================
 
 const _mockRFQs: RFQHeader[] = [
-    // 1-3: DRAFT (Mixed Linked/Direct)
+    // 1-2: DRAFT (0 vendors — tests Zero-Vendor Trap)
     createMockRFQ(1, 'DRAFT', false, 0),   // Direct (No PR)
     createMockRFQ(2, 'DRAFT', true, 0),    // Linked
-    createMockRFQ(3, 'DRAFT', true, 0),
+    // 3: DRAFT with vendors (tests Happy Path — checkbox list)
+    createMockRFQ(3, 'DRAFT', true, 2),
 
     // 4-6: SENT (Waiting for Vendors)
     createMockRFQ(4, 'SENT', true, 3),     // 3 Vendors selected
@@ -106,6 +107,56 @@ const _mockRFQs: RFQHeader[] = [
 
 export const MOCK_RFQS: RFQHeader[] = _mockRFQs;
 
-// Exports for lines and vendors (empty for now or could be generated too)
+// Exports for lines (empty for now)
 export const MOCK_RFQ_LINES = [];
-export const MOCK_RFQ_VENDORS = [];
+
+// ====================================================================================
+// MOCK VENDOR DATA — Generated per RFQ based on vendor_count
+// ====================================================================================
+
+const VENDOR_POOL = [
+    { id: 'v001', code: 'V001', name: 'IT Supply Co.', email: 'sales@itsupply.co.th' },
+    { id: 'v002', code: 'V002', name: 'OfficeMate', email: 'procurement@officemate.co.th' },
+    { id: 'v003', code: 'V003', name: 'B2S', email: 'b2b@b2s.co.th' },
+    { id: 'v004', code: 'V004', name: 'Local Store', email: 'info@localstore.co.th' },
+    { id: 'v005', code: 'V005', name: 'Smart Tech', email: 'contact@smarttech.co.th' },
+    { id: 'v006', code: 'V006', name: 'Industrial Part Ltd.', email: 'sales@industrialpart.co.th' },
+    { id: 'v007', code: 'V007', name: 'Global Oil Co.', email: 'info@globaloil.co.th' },
+];
+
+function generateVendorsForRFQ(rfq: RFQHeader): RFQVendor[] {
+    const count = rfq.vendor_count || 0;
+    if (count === 0) return [];
+
+    const responded = rfq.responded_vendors_count || 0;
+
+    return Array.from({ length: count }, (_, i) => {
+        const vendor = VENDOR_POOL[i % VENDOR_POOL.length];
+        let status: RFQVendorStatus = 'PENDING';
+
+        if (rfq.status === 'DRAFT') {
+            status = 'PENDING';
+        } else if (rfq.status === 'SENT') {
+            status = 'SENT';
+        } else if (rfq.status === 'IN_PROGRESS' || rfq.status === 'CLOSED') {
+            status = i < responded ? 'RESPONDED' : 'SENT';
+        }
+
+        return {
+            rfq_vendor_id: `rv-${rfq.rfq_id}-${i + 1}`,
+            rfq_id: rfq.rfq_id,
+            vendor_id: vendor.id,
+            sent_date: rfq.status !== 'DRAFT' ? rfq.rfq_date : null,
+            sent_via: 'EMAIL',
+            email_sent_to: vendor.email,
+            response_date: status === 'RESPONDED' ? getFutureDate(rfq.rfq_date, i + 2) : null,
+            status,
+            remark: null,
+            // UI display fields (not in RFQVendor type, but useful for mock)
+            vendor_name: vendor.name,
+            vendor_code: vendor.code,
+        } as RFQVendor & { vendor_name: string; vendor_code: string };
+    });
+}
+
+export const MOCK_RFQ_VENDORS = _mockRFQs.flatMap(generateVendorsForRFQ);

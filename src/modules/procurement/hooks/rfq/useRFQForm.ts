@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { MasterDataService } from '@/modules/master-data';
 import type { BranchListItem, ItemListItem, UnitListItem } from '@/modules/master-data/types/master-data-types';
 import type { VendorSearchItem } from '@/modules/master-data/vendor/types/vendor-types';
-import type { RFQFormData, RFQLineFormData, RFQCreateData } from '@/modules/procurement/types/rfq-types';
+import type { RFQFormData, RFQLineFormData, RFQCreateData, RFQHeader } from '@/modules/procurement/types/rfq-types';
 import { initialRFQFormData, initialRFQLineFormData } from '@/modules/procurement/types/rfq-types';
 import type { PRHeader } from '@/modules/procurement/types/pr-types';
 
@@ -14,7 +14,7 @@ import { useToast } from '@/shared/components/ui/feedback/Toast';
 
 
 
-export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRHeader | null, onSuccess?: () => void) => {
+export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRHeader | null, onSuccess?: () => void, editId?: string | null) => {
     const [formData, setFormData] = useState<RFQFormData>({
         ...initialRFQFormData,
         rfq_no: `RFQ2024-007`,
@@ -28,6 +28,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
 
     const { toast } = useToast();
     const [isSaving, setIsSaving] = useState(false);
+    const [isLoadingEdit, setIsLoadingEdit] = useState(false);
     const [activeTab, setActiveTab] = useState('detail');
     
 
@@ -62,10 +63,77 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         fetchMasterData();
     }, [isOpen]);
 
-    // Fetch PR Data & Reset/Prefill Logic
-    // Fetch PR Data & Reset/Prefill Logic
+    // ========================================================================
+    // BRANCH 1: Edit Existing RFQ (editId provided)
+    // ========================================================================
     useEffect(() => {
-        if (isOpen && initialPR?.pr_id) {
+        if (!isOpen || !editId) return;
+
+        const fetchRFQDetails = async () => {
+            setIsLoadingEdit(true);
+            try {
+                const rfq = await RFQService.getById(editId) as RFQHeader & {
+                    vendors?: Array<{ vendor_id: string; vendor_code: string; vendor_name: string }>;
+                    lines?: RFQLineFormData[];
+                };
+
+                // Map vendors from API response → RFQVendorFormData[]
+                const mappedVendors = (rfq.vendors || []).map((v: { vendor_id: string; vendor_code: string; vendor_name: string }) => ({
+                    vendor_id: v.vendor_id,
+                    vendor_code: v.vendor_code || '',
+                    vendor_name: v.vendor_name || '',
+                    vendor_name_display: v.vendor_code ? `${v.vendor_code} - ${v.vendor_name}` : v.vendor_name || '',
+                }));
+
+                // Map lines (fill to minimum 5)
+                const rfqLines: RFQLineFormData[] = (rfq.lines || []).map((line: RFQLineFormData, i: number) => ({
+                    ...initialRFQLineFormData,
+                    ...line,
+                    line_no: i + 1,
+                }));
+                while (rfqLines.length < 5) {
+                    rfqLines.push({ ...initialRFQLineFormData, line_no: rfqLines.length + 1 });
+                }
+
+                setFormData({
+                    ...initialRFQFormData,
+                    rfq_no: rfq.rfq_no,
+                    rfq_date: rfq.rfq_date?.split('T')[0] || new Date().toLocaleDateString('en-CA'),
+                    pr_id: rfq.pr_id || null,
+                    pr_no: rfq.pr_no || null,
+                    branch_id: rfq.branch_id || null,
+                    created_by_name: rfq.created_by_name || '',
+                    status: rfq.status || 'DRAFT',
+                    quote_due_date: rfq.quote_due_date?.split('T')[0] || '',
+                    currency: rfq.currency || 'THB',
+                    exchange_rate: rfq.exchange_rate || 1,
+                    payment_terms: rfq.payment_terms || '',
+                    incoterm: rfq.incoterm || '',
+                    remarks: rfq.remarks || '',
+                    purpose: rfq.purpose || '',
+                    delivery_location: rfq.delivery_location || '',
+                    lines: rfqLines,
+                    vendors: mappedVendors,
+                });
+                setErrors({});
+                logger.log('[RFQ] Loaded for edit', { rfq_no: rfq.rfq_no, vendors: mappedVendors.length });
+            } catch (error) {
+                logger.error('Failed to fetch RFQ for edit:', error);
+                toast('ไม่สามารถดึงข้อมูล RFQ ได้', 'error');
+            } finally {
+                setIsLoadingEdit(false);
+            }
+        };
+        fetchRFQDetails();
+    }, [isOpen, editId, toast]);
+
+    // ========================================================================
+    // BRANCH 2: Create from PR (initialPR provided, no editId)
+    // ========================================================================
+    useEffect(() => {
+        if (!isOpen || editId) return; // Skip if editing existing
+
+        if (initialPR?.pr_id) {
             const fetchPRDetails = async () => {
                 try {
                     const fullPR = await PRService.getDetail(initialPR.pr_id);
@@ -150,7 +218,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                 }
             };
             fetchPRDetails();
-        } else if (isOpen && !initialPR) {
+        } else {
              // Reset to empty if no PR (Create New standalone)
              setFormData({
                 ...initialRFQFormData,
@@ -162,7 +230,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
             });
             setErrors({});
         }
-    }, [isOpen, initialPR, toast]);
+    }, [isOpen, editId, initialPR, toast]);
 
 
     // Validation State & Schema
@@ -278,7 +346,6 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
 
         setIsSaving(true);
         try {
-            // V-08: Build proper payload and call RFQService instead of setTimeout
             const payload: RFQCreateData = {
                 ...formData,
                 // Filter out empty lines (no item_code)
@@ -289,10 +356,17 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                     .map(v => v.vendor_id!),
             };
 
-            await RFQService.create(payload);
-            logger.log('[RFQ] Created successfully', { rfq_no: formData.rfq_no, pr_id: formData.pr_id });
+            if (editId) {
+                // ── Edit mode: update existing RFQ ──
+                await RFQService.update(editId, payload);
+                logger.log('[RFQ] Updated successfully', { rfq_no: formData.rfq_no, editId });
+            } else {
+                // ── Create mode: new RFQ ──
+                await RFQService.create(payload);
+                logger.log('[RFQ] Created successfully', { rfq_no: formData.rfq_no, pr_id: formData.pr_id });
+            }
 
-            // Call onSuccess callback (async - updates PR status to COMPLETED)
+            // Call onSuccess callback (async - refetch list + close)
             if (onSuccess) {
                 await onSuccess();
             }
@@ -326,11 +400,10 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
     const [activeVendorIndex, setActiveVendorIndex] = useState<number | null>(null);
 
     // Vendor Handlers
+    // "Add Vendor" → opens modal directly (no empty slot)
     const handleAddVendor = useCallback(() => {
-        setFormData(prev => ({
-            ...prev,
-            vendors: [...prev.vendors, { vendor_code: '', vendor_name: '', vendor_name_display: '' }]
-        }));
+        setActiveVendorIndex(null); // null = append mode
+        setIsVendorModalOpen(true);
     }, []);
 
     const handleRemoveVendor = useCallback((index: number) => {
@@ -340,24 +413,38 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         }));
     }, []);
 
+    // "Search icon" on existing row → opens modal to replace that slot
     const handleOpenVendorModal = (index: number) => {
         setActiveVendorIndex(index);
         setIsVendorModalOpen(true);
     };
 
     const handleVendorSelect = (vendor: VendorSearchItem) => {
-        if (activeVendorIndex !== null) {
-            setFormData(prev => {
+        setFormData(prev => {
+            // ── Duplicate Prevention ──
+            const alreadyExists = prev.vendors.some(v => v.vendor_id === vendor.vendor_id);
+            if (alreadyExists) {
+                toast('ผู้ขายรายนี้อยู่ในรายการแล้ว', 'warning');
+                return prev; // No mutation
+            }
+
+            const newVendorEntry = {
+                vendor_id: vendor.vendor_id,
+                vendor_code: vendor.code,
+                vendor_name: vendor.name,
+                vendor_name_display: `${vendor.code} - ${vendor.name}`
+            };
+
+            if (activeVendorIndex !== null) {
+                // Replace existing slot (Search icon flow)
                 const newVendors = [...prev.vendors];
-                newVendors[activeVendorIndex] = {
-                    vendor_id: vendor.vendor_id,
-                    vendor_code: vendor.code,
-                    vendor_name: vendor.name,
-                    vendor_name_display: `${vendor.code} - ${vendor.name}`
-                };
+                newVendors[activeVendorIndex] = newVendorEntry;
                 return { ...prev, vendors: newVendors };
-            });
-        }
+            } else {
+                // Append new vendor (Add flow)
+                return { ...prev, vendors: [...prev.vendors, newVendorEntry] };
+            }
+        });
         setIsVendorModalOpen(false);
         setActiveVendorIndex(null);
     };
@@ -370,6 +457,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
     return {
         formData,
         isSaving,
+        isLoadingEdit,
         activeTab,
         setActiveTab,
         branches,
