@@ -3,11 +3,12 @@ import { z } from 'zod';
 import { MasterDataService } from '@/modules/master-data';
 import type { BranchListItem, ItemListItem, UnitListItem } from '@/modules/master-data/types/master-data-types';
 import type { VendorSearchItem } from '@/modules/master-data/vendor/types/vendor-types';
-import type { RFQFormData, RFQLineFormData } from '@/modules/procurement/types/rfq-types';
+import type { RFQFormData, RFQLineFormData, RFQCreateData } from '@/modules/procurement/types/rfq-types';
 import { initialRFQFormData, initialRFQLineFormData } from '@/modules/procurement/types/rfq-types';
 import type { PRHeader } from '@/modules/procurement/types/pr-types';
 
 import { PRService } from '@/modules/procurement/services/pr.service';
+import { RFQService } from '@/modules/procurement/services/rfq.service';
 import { logger } from '@/shared/utils/logger';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 
@@ -68,7 +69,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
             const fetchPRDetails = async () => {
                 try {
                     const fullPR = await PRService.getDetail(initialPR.pr_id);
-                    // Map PR Lines to RFQ Lines
+                    // V-07: Map PR Lines to RFQ Lines with full data carryover
                     const rfqLines: RFQLineFormData[] = (fullPR.lines || []).map((line, index) => ({
                         line_no: index + 1,
                         item_code: line.item_code,
@@ -76,8 +77,13 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                         item_description: line.description || line.item_name,
                         required_qty: line.qty,
                         uom: line.uom,
-                        required_date: line.needed_date ? line.needed_date.split('T')[0] : '', // Format YYYY-MM-DD
+                        required_date: line.needed_date ? line.needed_date.split('T')[0] : '',
                         remarks: line.remark || '',
+                        // V-07: Traceability & pricing fields
+                        item_id: line.item_id || undefined,
+                        pr_line_id: line.pr_line_id || undefined,
+                        est_unit_price: line.est_unit_price || 0,
+                        est_amount: line.est_amount || 0,
                     }));
 
                     // Fill remaining lines to minimum 5
@@ -91,17 +97,27 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                     // Determine Multicurrency State from PR
                     const isMulti = fullPR.pr_base_currency_code !== 'THB';
 
+                    // V-07: Pre-fill vendor from PR's preferred_vendor_id
+                    const initialVendors = fullPR.preferred_vendor_id 
+                        ? [{
+                            vendor_id: fullPR.preferred_vendor_id,
+                            vendor_code: '',
+                            vendor_name: fullPR.vendor_name || '',
+                            vendor_name_display: fullPR.vendor_name || '(Preferred Vendor from PR)',
+                        }]
+                        : [{ vendor_code: '', vendor_name: '', vendor_name_display: '' }];
+
                     setFormData({
                         ...initialRFQFormData,
-                        rfq_no: `RFQ-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`, // Mock Type
+                        rfq_no: `RFQ-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
                         rfq_date: new Date().toLocaleDateString('en-CA'),
                         pr_id: fullPR.pr_id,
                         pr_no: fullPR.pr_no,
                         branch_id: fullPR.branch_id,
-                        project_id: fullPR.project_id || null, // Map Project
-                        created_by_name: 'ระบบจะกรอกอัตโนมัติ', // This should typically come from auth context
+                        project_id: fullPR.project_id || null,
+                        created_by_name: 'ระบบจะกรอกอัตโนมัติ',
                         status: 'DRAFT',
-                        quote_due_date: '', // User must fill
+                        quote_due_date: '',
                         
                         // Multicurrency Mapping
                         isMulticurrency: isMulti,
@@ -110,10 +126,19 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                         exchange_rate: fullPR.pr_exchange_rate || 1,
                         exchange_rate_date: fullPR.pr_exchange_rate_date ? fullPR.pr_exchange_rate_date.split('T')[0] : '',
 
-                        payment_terms: '', // Default or from Vendor if selected
+                        payment_terms: '',
                         incoterm: '',
-                        remarks: `Generated from PR: ${fullPR.pr_no}`,
-                        lines: rfqLines
+                        // V-07: Carry over original remark + append PR reference
+                        remarks: fullPR.remark
+                            ? `${fullPR.remark}\n[PR: ${fullPR.pr_no}]`
+                            : `Generated from PR: ${fullPR.pr_no}`,
+                        // V-07: Carry over purpose, cost center, tax
+                        purpose: fullPR.purpose || '',
+                        cost_center_id: fullPR.cost_center_id || undefined,
+                        pr_tax_code_id: fullPR.pr_tax_code_id || undefined,
+                        pr_tax_rate: fullPR.pr_tax_rate || undefined,
+                        lines: rfqLines,
+                        vendors: initialVendors,
                     });
                     
                     // Clear any previous errors
@@ -253,11 +278,19 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
 
         setIsSaving(true);
         try {
-            // Simulate API save with delay
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            logger.log('Save RFQ with Currency:', {
-                ...formData
-            });
+            // V-08: Build proper payload and call RFQService instead of setTimeout
+            const payload: RFQCreateData = {
+                ...formData,
+                // Filter out empty lines (no item_code)
+                lines: formData.lines.filter(l => l.item_code?.trim()),
+                // Extract vendor IDs for the junction table
+                vendor_ids: formData.vendors
+                    .filter(v => v.vendor_id)
+                    .map(v => v.vendor_id!),
+            };
+
+            await RFQService.create(payload);
+            logger.log('[RFQ] Created successfully', { rfq_no: formData.rfq_no, pr_id: formData.pr_id });
 
             // Call onSuccess callback (async - updates PR status to COMPLETED)
             if (onSuccess) {

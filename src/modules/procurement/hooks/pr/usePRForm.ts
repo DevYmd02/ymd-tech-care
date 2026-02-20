@@ -10,7 +10,9 @@ import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
 import type { UserProfile } from '@/modules/auth/services/auth.service';
-import { usePRMasterData } from './usePRMasterData';
+import { usePRMasterData, type MappedOption } from './usePRMasterData';
+import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
+import type { WarehouseListItem } from '@/modules/master-data/types/master-data-types';
 import { usePRActions } from './usePRActions';
 import { PRFormSchema } from '@/modules/procurement/types/pr-schemas';
 import { useDebounce } from '@/shared/hooks/useDebounce';
@@ -35,7 +37,10 @@ const getNextWeekDate = (): string => {
 
 // Standardized on string for all IDs
 
-export type ExtendedLine = PRLineFormData;
+export interface ExtendedLine extends PRLineFormData {
+  _standard_cost?: number;  // W-04: Original standard cost from master data for variance check
+  _item_vendor_id?: string;  // Vendor-Item: Track item's source vendor for mismatch detection
+}
 
 const createEmptyLine = (): ExtendedLine => ({
   item_id: '', 
@@ -141,8 +146,9 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
    useEffect(() => {
      if (purchaseTaxOptions.length > 0 && !formMethods.getValues('pr_tax_code_id')) {
        // Find 'VAT-IN-7' safely by code, fallback to first purchase tax, or 7% default
-       const defaultTax = purchaseTaxOptions.find(t => t.original?.tax_code === 'VAT-IN-7') || 
-                          purchaseTaxOptions.find(t => t.original?.tax_rate === 7) ||
+       // Find 'VAT-IN-7' safely by code, fallback to first purchase tax, or 7% default
+       const defaultTax = purchaseTaxOptions.find((t: MappedOption<TaxCode>) => t.original?.tax_code === 'VAT-IN-7') || 
+                          purchaseTaxOptions.find((t: MappedOption<TaxCode>) => t.original?.tax_rate === 7) ||
                           purchaseTaxOptions[0];
        
        if (defaultTax) {
@@ -202,8 +208,9 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     const currentTaxId = formMethods.getValues('pr_tax_code_id');
     if (!currentTaxId) {
       // Find 'VAT-IN-7' or fallback to 7% rate
-      const defaultTax = purchaseTaxOptions.find(t => t.original?.tax_code === 'VAT-IN-7') || 
-                         purchaseTaxOptions.find(t => t.original?.tax_rate === 7) ||
+      // Find 'VAT-IN-7' or fallback to 7% rate
+      const defaultTax = purchaseTaxOptions.find((t: MappedOption<TaxCode>) => t.original?.tax_code === 'VAT-IN-7') || 
+                         purchaseTaxOptions.find((t: MappedOption<TaxCode>) => t.original?.tax_rate === 7) ||
                          purchaseTaxOptions[0];
       
       if (defaultTax) {
@@ -236,9 +243,19 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
                 preferred_vendor_id: line.preferred_vendor_id,
                 remark: line.remark,
                 warehouse_id: pr.warehouse_id || '1', 
-                location: '',
-                discount: 0,
-                line_discount_raw: ''
+                location: line.location || '',
+                // Calculate discount amount from raw string (same logic as updateLine)
+                discount: (() => {
+                  const gross = (line.qty || 0) * (line.est_unit_price || 0);
+                  const raw = line.line_discount_raw || '';
+                  if (!raw) return 0;
+                  if (raw.endsWith('%')) {
+                    const pct = parseFloat(raw.replace('%', ''));
+                    return isNaN(pct) ? 0 : gross * (pct / 100);
+                  }
+                  return parseFloat(raw) || 0;
+                })(),
+                line_discount_raw: line.line_discount_raw || ''
               }));
 
               while (mappedLines.length < PR_CONFIG.MIN_LINES) {
@@ -393,8 +410,19 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
       
       setValue(discountPath, finalDiscount as FieldPathValue<PRFormData, typeof discountPath>);
       setValue(amountPath, (totalBeforeDiscount - finalDiscount) as FieldPathValue<PRFormData, typeof amountPath>);
+
+      // W-04: Price variance warning when user edits est_unit_price
+      if (field === 'est_unit_price') {
+        const stdCost = (line as ExtendedLine)._standard_cost;
+        if (stdCost && stdCost > 0 && unitPrice > 0) {
+          const variance = Math.abs(unitPrice - stdCost) / stdCost;
+          if (variance > 0.15) {
+            toast(`⚠️ ราคาเบี่ยงเบน ${(variance * 100).toFixed(0)}% จาก Standard Cost (${stdCost.toLocaleString()})`, 'warning');
+          }
+        }
+      }
     }
-  }, [setValue, watch]);
+  }, [setValue, watch, toast]);
 
   const handleClearLines = useCallback(async () => {
     const isConfirmed = await confirm({
@@ -415,25 +443,47 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     if (activeRowIndex !== null) {
       const currentLines = watch('lines');
       const targetIndex = activeRowIndex;
-        const line = {
+
+        // W-01: Determine correct UoM — prioritize purchasing unit over base unit
+        const usePurchasingUnit = !!product.purchasing_unit_name;
+        const unitName = usePurchasingUnit
+          ? product.purchasing_unit_name!
+          : (product.unit_name || '');
+        const unitId = usePurchasingUnit
+          ? (product.purchasing_unit_id || product.unit_id || '')
+          : (product.unit_id || '');
+
+        // W-01: Apply conversion factor to standard cost when using purchasing unit
+        const baseCost = product.standard_cost || 0;
+        const conversionFactor = product.purchasing_conversion_factor || 1;
+        const unitPrice = usePurchasingUnit && conversionFactor > 1
+          ? baseCost * conversionFactor
+          : baseCost;
+
+        const line: ExtendedLine = {
           ...currentLines[targetIndex],
           item_id: product.item_id,
           item_code: product.item_code,
           item_name: product.item_name,
-          warehouse_id: '1', // Default since ItemListItem only has 'warehouse' string name
-          location: product.location || '', 
-          uom: product.unit_name || '',
-          uom_id: product.unit_id || '1',
-          est_unit_price: product.standard_cost || 0,
+          // W-01: Map warehouse from master data instead of hardcoded '1'
+          warehouse_id: product.warehouse_id || product.warehouse || '',
+          location: product.location || '',
+          uom: unitName,
+          uom_id: unitId,
+          est_unit_price: unitPrice,
           qty: 1,
-          est_amount: (product.standard_cost || 0) * 1,
+          est_amount: unitPrice * 1,
+          // W-04: Store original standard cost for variance check
+          _standard_cost: unitPrice,
+          // Vendor-Item: Track item's preferred vendor for mismatch detection
+          _item_vendor_id: product.preferred_vendor_id || undefined,
         };
       updateFieldArray(targetIndex, line);
     }
     setIsProductModalOpen(false);
   };
 
-  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);  // V-01: Bumped from 300ms for scalability
   const selectedVendorId = watch('preferred_vendor_id');
 
   useEffect(() => {
@@ -445,7 +495,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
 
    useEffect(() => {
       if (isMasterDataLoading || !user?.employee?.branch_id || warehouses.length === 0) return;
-       const branchWarehouse = warehouses.find(w => String(w.original?.branch_id) === String(user.employee.branch_id));
+       const branchWarehouse = warehouses.find((w: MappedOption<WarehouseListItem>) => String(w.original?.branch_id) === String(user.employee.branch_id));
        if (branchWarehouse) setValue('warehouse_id', branchWarehouse.value);
    }, [isMasterDataLoading, user?.employee?.branch_id, warehouses, setValue]);
 
@@ -465,6 +515,28 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     setIsActionLoading(true);
     try {
         const activeLines = (data.lines || []).filter(l => l.item_id && l.item_code);
+
+        // Vendor-Item Mismatch Check: Warn before saving if items don't match header vendor
+        const headerVendorId = data.preferred_vendor_id;
+        if (headerVendorId) {
+          const mismatchedLines = activeLines.filter(l => {
+            const itemVendor = (l as ExtendedLine)._item_vendor_id;
+            return itemVendor && itemVendor !== headerVendorId;
+          });
+          if (mismatchedLines.length > 0) {
+            const shouldContinue = await confirm({
+              title: 'ตรวจพบสินค้าไม่ตรง Vendor',
+              description: `ตรวจพบสินค้า ${mismatchedLines.length} รายการที่ไม่ได้ผูกกับผู้ขายเจ้านี้ คุณยังต้องการดำเนินการต่อหรือไม่?`,
+              confirmText: 'ยืนยัน',
+              cancelText: 'กลับไปแก้ไข',
+              variant: 'warning'
+            });
+            if (!shouldContinue) {
+              setIsActionLoading(false);
+              return;
+            }
+          }
+        }
         
         const isOnHold = data.is_on_hold === 'Y' || data.is_on_hold === true;
         const targetStatus = isOnHold ? 'DRAFT' : 'PENDING';
@@ -590,16 +662,34 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
 
   const handleVoid = async () => {
     if (!id) return;
-    const isConfirmed = await confirm({ title: 'ยืนยันการยกเลิกเอกสาร', description: 'คุณต้องการยกเลิกเอกสารใบขอซื้อนี้ใช่หรือไม่?', confirmText: 'ยกเลิกเอกสาร', cancelText: 'ย้อนกลับ', variant: 'danger' });
-    if (isConfirmed) {
-      setIsActionLoading(true);
-      try {
-        if (await cancelPR(id)) {
-          await confirm({ title: 'ยกเลิกสำเร็จ', description: 'เอกสารได้รับการยกเลิกเรียบร้อยแล้ว', confirmText: 'ตกลง', variant: 'success', hideCancel: true });
-          onSuccess?.(); onClose();
+    
+    confirm({
+        title: 'ยืนยันการยกเลิกเอกสาร',
+        description: 'คุณต้องการยกเลิกเอกสารใบขอซื้อนี้ใช่หรือไม่?',
+        confirmText: 'ยกเลิกเอกสาร',
+        cancelText: 'ย้อนกลับ',
+        variant: 'danger',
+        onConfirm: async () => {
+             const success = await cancelPR(id);
+             if (!success) {
+                 throw new Error('ไม่สามารถยกเลิกเอกสารได้');
+             }
         }
-      } finally { setIsActionLoading(false); }
-    }
+    }).then((confirmed) => {
+        if (confirmed) {
+            confirm({ 
+                title: 'ยกเลิกสำเร็จ', 
+                description: 'เอกสารได้รับการยกเลิกเรียบร้อยแล้ว', 
+                confirmText: 'ตกลง', 
+                variant: 'success', 
+                hideCancel: true 
+            });
+            onSuccess?.(); 
+            onClose();
+        }
+    }).catch((error) => {
+        logger.error('Void Action Failed', error);
+    });
   };
 
   return {

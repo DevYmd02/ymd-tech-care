@@ -226,6 +226,12 @@ export interface ItemListItem {
     preferred_vendor_id?: string;
     is_active: boolean;
     created_at: string;
+    // W-01: Extended fields for proper PR mapping
+    warehouse_id?: string;
+    warehouse_code?: string;
+    purchasing_unit_id?: string;
+    purchasing_unit_name?: string;
+    purchasing_conversion_factor?: number;  // conversion_factor for purchasing unit
 }
 
 export const initialItemMasterFormData: ItemMasterFormData = {

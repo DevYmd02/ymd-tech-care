@@ -4,6 +4,7 @@ import type { PRHeader } from '@/modules/procurement/types/pr-types';
 interface PRActionsCellProps {
     row: PRHeader;
     onEdit: (id: string) => void;
+    onView: (id: string) => void;
 
     onSendApproval: (id: string) => void;
     onApprove: (id: string) => void;
@@ -15,6 +16,7 @@ interface PRActionsCellProps {
 export const PRActionsCell = ({ 
     row: item, 
     onEdit, 
+    onView,
 
     onSendApproval, 
     onApprove, 
@@ -27,6 +29,7 @@ export const PRActionsCell = ({
         <div className="flex items-center justify-center gap-1">
             {/* 1. VIEW: Always Visible */}
             <button 
+                onClick={() => onView(item.pr_id)}
                 className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-all" 
                 title="ดูรายละเอียด"
             >

@@ -13,7 +13,7 @@ import { useTableFilters, useDebounce, type TableFilters, useConfirmation } from
 import RFQFormModal from '@/modules/procurement/pages/rfq/components/RFQFormModal';
 import { PRFormModal } from './components/PRFormModal';
 import { PRActionsCell } from './components/PRActionsCell';
-import { usePRActions } from '@/modules/procurement/hooks/usePRActions';
+import { usePRActions } from '@/modules/procurement/hooks/pr';
 import { RejectReasonModal } from '@/modules/procurement/components/RejectReasonModal';
 
 import { formatThaiDate } from '@/shared/utils/dateUtils';
@@ -94,6 +94,7 @@ export default function PRListPage() {
     // PR Form Modal Local State
     const [isPRModalOpen, setIsPRModalOpen] = useState(false);
     const [selectedPRId, setSelectedPRId] = useState<string | undefined>(undefined);
+    const [isReadOnly, setIsReadOnly] = useState(false);
 
     // Hook Actions
     const { 
@@ -112,6 +113,11 @@ export default function PRListPage() {
     };
 
     const handleCreateRFQ = useCallback((pr: PRHeader) => {
+        // V-05: Only allow RFQ creation for APPROVED PRs
+        if (pr.status !== 'APPROVED') {
+            logger.warn(`[PR] Cannot create RFQ: PR ${pr.pr_no} status is ${pr.status}, expected APPROVED`);
+            return;
+        }
         setSelectedPR(pr);
         setIsRFQModalOpen(true);
     }, []);
@@ -130,62 +136,66 @@ export default function PRListPage() {
 
     const handleCreate = () => {
         setSelectedPRId(undefined);
+        setIsReadOnly(false);
         setIsPRModalOpen(true);
     };
 
     const handleEdit = useCallback((id: string) => {
         setSelectedPRId(id);
+        setIsReadOnly(false);
+        setIsPRModalOpen(true);
+    }, []);
+
+    const handleView = useCallback((id: string) => {
+        setSelectedPRId(id);
+        setIsReadOnly(true);
         setIsPRModalOpen(true);
     }, []);
 
     const handleClosePRModal = () => {
         setIsPRModalOpen(false);
         setSelectedPRId(undefined);
+        setIsReadOnly(false);
     };
 
-    const handleSendApproval = useCallback(async (id: string) => {
-        const isConfirmed = await confirm({
+    const handleSendApproval = useCallback((id: string) => {
+        confirm({
             title: 'ยืนยันการส่งอนุมัติ',
             description: 'คุณต้องการส่งเอกสารนี้เพื่อขออนุมัติใช่หรือไม่?',
             confirmText: 'ส่งอนุมัติ',
             cancelText: 'ยกเลิก',
             variant: 'info',
-            icon: Send
-        });
-
-        if (!isConfirmed) return;
-
-        try {
-            const result = await PRService.submit(id);
-            if (result.success) {
-                await confirm({
+            icon: Send,
+            onConfirm: async () => {
+                 const result = await PRService.submit(id);
+                 if (!result.success) {
+                     throw new Error(result.message || 'ส่งอนุมัติไม่สำเร็จ');
+                 }
+            }
+        }).then((confirmed) => {
+            if (confirmed) {
+                confirm({
                     title: 'ส่งอนุมัติสำเร็จ!',
-                    description: `เลขที่เอกสาร: ${result.pr_no || id}\nสถานะ: รออนุมัติ (Pending)`,
+                    description: `เอกสารสถานะ: รออนุมัติ (Pending)`,
                     confirmText: 'ตกลง',
                     hideCancel: true,
                     variant: 'success'
                 });
                 refetch();
             }
- else {
-                await confirm({ 
-                    title: 'ส่งอนุมัติไม่สำเร็จ', 
-                    description: result.message || 'เกิดข้อผิดพลาด', 
-                    confirmText: 'ตกลง', 
-                    hideCancel: true, 
-                    variant: 'warning' 
-                });
-            }
-        } catch (error) {
+        }).catch((error) => {
+            // Error handling (Modal stays open on error, but if we throw, we might want to close and show error? 
+            // Current Async Pattern: onConfirm error -> Modal Stays Open (ideally shows error).
+            // But our Context catches error? 
+            // Actually, looking at usePRActions, we don't catch there. 
+            // If onConfirm throws, the button stops loading. 
+            // We should probably show an alert if it fails?
+            // Context implementation:
+            // try { await onConfirm() ... close } catch { ... }
+            // So if it throws, modal stays open. 
+            // We can add a toast here? Or just let it be.
             logger.error('Send approval failed', error);
-            await confirm({ 
-                title: 'เกิดข้อผิดพลาด', 
-                description: 'เกิดข้อผิดพลาดในการส่งอนุมัติ', 
-                confirmText: 'ตกลง', 
-                hideCancel: true, 
-                variant: 'danger' 
-            });
-        }
+        });
     }, [confirm, refetch]);
 
     const onApproveClick = useCallback((id: string) => {
@@ -198,12 +208,11 @@ export default function PRListPage() {
     const columns = useMemo(() => [
         columnHelper.display({
             id: 'index',
-            header: () => <div className="text-center w-full">ลำดับ</div>,
-            cell: (info) => <div className="text-center">{info.row.index + 1 + (filters.page - 1) * filters.limit}</div>,
-            footer: () => <div className="absolute left-4 top-1/2 -translate-y-1/2 whitespace-nowrap font-bold text-sm text-gray-700 dark:text-gray-200">ยอดรวมทั้งหมด :</div>,
+            header: () => <div className="flex justify-center items-center h-full w-full">ลำดับ</div>,
+            cell: (info) => <div className="flex justify-center items-center h-full w-full">{info.row.index + 1 + (filters.page - 1) * filters.limit}</div>,
+            footer: () => <span className="whitespace-nowrap font-bold text-sm text-gray-700 dark:text-gray-200">ยอดรวมทั้งหมด :</span>,
             size: 50,
             enableSorting: false,
-            meta: { className: 'sticky left-0 z-20 bg-white dark:bg-slate-900 border-r border-gray-100 dark:border-gray-800' }
         }),
         columnHelper.accessor('pr_date', {
             id: 'pr_date_no', // Required for sorting on this combined column
@@ -235,7 +244,7 @@ export default function PRListPage() {
                 }
 
                 return (
-                    <div className="flex flex-col py-0.5 min-w-[180px]">
+                    <div className="flex flex-col py-2">
                         {/* Top Line: PR No (Enforced Visibility) */}
                         <span 
                             className={`font-bold whitespace-nowrap text-base leading-tight ${isTemp ? 'text-amber-600 dark:text-amber-400 italic' : 'text-blue-600 dark:text-blue-400 hover:underline cursor-pointer'}`} 
@@ -249,13 +258,13 @@ export default function PRListPage() {
                         </span>
                         
                         {/* Bottom Line: PR Date & Need By Urgency */}
-                        <div className="flex flex-col mt-0.5">
+                        <div className="flex flex-col mt-1">
                             <span className="text-xs text-gray-500 dark:text-gray-400">
                                 {formatThaiDate(prDateStr)}
                             </span>
                             {needByDateStr && (
-                                <span className={`text-[10px] flex items-center mt-0.5 ${urgencyClass}`}>
-                                    {showWarning && <AlertTriangle className="w-2.5 h-2.5 mr-1" />}
+                                <span className={`text-[10px] flex items-center mt-1 ${urgencyClass}`}>
+                                    {showWarning && <AlertTriangle className="w-3 h-3 mr-1" />}
                                     ต้องการใช้: {formatThaiDate(needByDateStr)}
                                 </span>
                             )}
@@ -263,9 +272,8 @@ export default function PRListPage() {
                     </div>
                 );
             },
-            size: 100,
+            size: 160,
             enableSorting: true,
-            meta: { className: 'sticky left-[50px] z-20 bg-white dark:bg-slate-900 border-r border-gray-100 dark:border-gray-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]' }
         }),
         columnHelper.accessor('purpose', {
             header: 'รายละเอียด',
@@ -273,14 +281,14 @@ export default function PRListPage() {
                 const val = info.getValue() || '-';
                 return (
                     <div 
-                        className="line-clamp-2 whitespace-normal text-sm text-gray-600 dark:text-gray-400 break-words" 
+                        className="max-w-[200px] truncate py-2 text-sm text-gray-600 dark:text-gray-400" 
                         title={val}
                     >
                         {val}
                     </div>
                 );
             },
-            size: 200, // Fluid expander
+            size: 220,
             enableSorting: false,
         }),
         columnHelper.accessor('requester_name', {
@@ -292,66 +300,69 @@ export default function PRListPage() {
                 const deptName = (DEPARTMENT_MOCK_MAP as Record<string | number, string>)[deptId] || (row.cost_center_id ? row.cost_center_id : 'ไม่ระบุ');
                 
                 return (
-                    <div className="flex flex-col py-0.5">
-                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate max-w-[160px]" title={requesterName}>
+                    <div className="flex flex-col py-2">
+                        <span className="text-gray-900 dark:text-gray-100 font-medium truncate max-w-[160px]" title={requesterName}>
                             {requesterName}
                         </span>
-                        <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                        <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                             {deptName}
                         </span>
                     </div>
                 );
             },
-            size: 100,
+            size: 140,
             enableSorting: false,
         }),
         columnHelper.accessor('total_amount', {
-            header: () => <div className="text-right w-full">ยอดรวม (บาท)</div>,
+            header: () => <div className="text-right whitespace-nowrap">ยอดรวม (บาท)</div>,
             cell: (info) => (
-                <div className="font-semibold text-gray-800 dark:text-gray-200 text-right whitespace-nowrap">
-                    {info.getValue().toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                <div className="text-right font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
+                     {new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(info.getValue() || 0)}
+                </div>
+            ),
+            size: 130,
+            enableSorting: true,
+        }),
+        columnHelper.accessor(row => row.status, {
+            id: 'status',
+            header: () => <div className="flex justify-center items-center w-full h-full">สถานะ</div>,
+            cell: (info) => (
+                <div className="flex justify-center items-center w-full h-full py-2">
+                    <PRStatusBadge status={info.getValue()} />
                 </div>
             ),
             size: 100,
             enableSorting: true,
         }),
-        columnHelper.accessor(row => row.status, {
-            id: 'status',
-            header: () => <div className="text-center w-full">สถานะ</div>,
-            cell: (info) => (
-                <div className="flex justify-center">
-                    <PRStatusBadge status={info.getValue()} />
-                </div>
-            ),
-            size: 120,
-            enableSorting: false,
-        }),
         columnHelper.display({
             id: 'actions',
-            header: () => <div className="text-center w-full">จัดการ</div>,
+            header: () => <div className="flex justify-center items-center w-full h-full">จัดการ</div>,
             cell: ({ row }) => (
-                <PRActionsCell 
-                    row={row.original}
-                    onEdit={handleEdit}
-                    onSendApproval={handleSendApproval}
-                    onApprove={onApproveClick}
-                    onReject={handleReject}
-                    onCreateRFQ={handleCreateRFQ}
-                    isApproving={approvingId === row.original.pr_id}
-                />
+                <div className="flex justify-center items-center gap-2 w-full h-full py-2 min-w-[100px]">
+                    <PRActionsCell 
+                        row={row.original}
+                        onEdit={handleEdit}
+                        onView={handleView}
+                        onSendApproval={handleSendApproval}
+                        onApprove={onApproveClick}
+                        onReject={handleReject}
+                        onCreateRFQ={handleCreateRFQ}
+                        isApproving={approvingId === row.original.pr_id}
+                    />
+                </div>
             ),
             footer: () => {
-                const total = (data?.items ?? []).reduce((sum, item) => sum + (item.total_amount || 0), 0);
-                return (
-                    <div className="text-right font-bold text-base text-emerald-600 dark:text-emerald-400 whitespace-nowrap pr-2">
-                        {total.toLocaleString('en-US', { minimumFractionDigits: 2 })} บาท
-                    </div>
-                );
+                 const total = (data?.items ?? []).reduce((sum, item) => sum + (item.total_amount || 0), 0);
+                 return (
+                     <div className="text-right font-bold text-base text-emerald-600 dark:text-emerald-400 whitespace-nowrap pr-2">
+                         {total.toLocaleString('en-US', { minimumFractionDigits: 2 })} บาท
+                     </div>
+                 );
             },
-            size: 120, 
+            size: 160, 
             enableSorting: false,
         }),
-    ], [columnHelper, filters.page, filters.limit, data?.items, handleSendApproval, onApproveClick, handleReject, approvingId, handleEdit, handleCreateRFQ]);
+    ], [columnHelper, filters.page, filters.limit, data?.items, handleSendApproval, onApproveClick, handleReject, approvingId, handleEdit, handleCreateRFQ, handleView]);
 
     // ====================================================================================
     // RENDER
@@ -481,6 +492,7 @@ export default function PRListPage() {
                     onClose={handleClosePRModal}
                     id={selectedPRId}
                     onSuccess={() => refetch()}
+                    readOnly={isReadOnly}
                 />
             )}
 

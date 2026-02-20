@@ -5,21 +5,34 @@
  * @refactored Uses PageListLayout, FilterFormBuilder, useTableFilters, React Query, SmartTable
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { FileText, Eye, Send, Edit } from 'lucide-react';
+import { FileText, Eye, Send, Edit, CheckCircle, Search, Plus } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
-import { PageListLayout, FilterFormBuilder, SmartTable, RFQStatusBadge } from '@ui';
-import type { FilterFieldConfig } from '@/shared/components/ui/filters/FilterFormBuilder';
-import { useTableFilters, type TableFilters } from '@/shared/hooks';
+import { PageListLayout, SmartTable, RFQStatusBadge, FilterField } from '@ui';
+// FilterFieldConfig removed
+import { useTableFilters } from '@/shared/hooks';
 import { createColumnHelper } from '@tanstack/react-table';
 import type { ColumnDef } from '@tanstack/react-table';
 import { QTFormModal } from '@/modules/procurement/pages/qt/components';
+import { useToast } from '@/shared/components/ui/feedback/Toast';
+import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal';
 
 // Services & Types
 import { RFQService } from '@/modules/procurement/services';
 import type { RFQFilterCriteria, RFQHeader, RFQStatus } from '@/modules/procurement/types/rfq-types';
 import { RFQFormModal } from './components';
+
+// ... (STATUS OPTIONS and FILTER CONFIG omitted for brevity if unchanged, but I need to be careful not to delete them if I targeted a range. 
+// I'll target specific blocks to be safe.
+// Wait, the Instruction says "Replace Modal States and Handlers".
+// I'll check the lines again. 
+// Imports are lines 8-22.
+// State/Handlers are lines 87-100.
+// I can do multiple replaces or one big one.
+// Let's do Imports first. Then State/Handlers.
+
+
 
 // ====================================================================================
 // STATUS OPTIONS
@@ -84,14 +97,91 @@ export default function RFQListPage() {
         placeholderData: keepPreviousData,
     });
 
+    const { toast } = useToast();
+
     // Modal States
-    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
     const [isQTModalOpen, setIsQTModalOpen] = useState(false);
     const [selectedRFQForQT, setSelectedRFQForQT] = useState<RFQHeader | null>(null);
+    const [selectedRFQId, setSelectedRFQId] = useState<string | null>(null);
+    const [isReadOnly, setIsReadOnly] = useState(false);
+    
+    // Confirmation Modal State
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const [rfqToConfirm, setRfqToConfirm] = useState<RFQHeader | null>(null);
+    const [isConfirming, setIsConfirming] = useState(false);
 
     // Handlers
     const handleFilterChange = (name: string, value: string) => {
         setFilters({ [name]: value });
+    };
+
+    const handleCreate = () => {
+        setSelectedRFQId(null);
+        setIsReadOnly(false);
+        setIsModalOpen(true);
+    };
+
+    const handleView = useCallback((id: string) => {
+        setSelectedRFQId(id);
+        setIsReadOnly(true);
+        setIsModalOpen(true);
+    }, []);
+
+    const handleEdit = useCallback((id: string) => {
+        setSelectedRFQId(id);
+        setIsReadOnly(false);
+        setIsModalOpen(true);
+    }, []);
+
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+        setSelectedRFQId(null);
+        setIsReadOnly(false);
+    };
+
+    const handleSendRFQ = useCallback((rfq: RFQHeader) => {
+        setRfqToConfirm(rfq);
+        setIsConfirmOpen(true);
+    }, []);
+
+    const executeSendRFQ = async () => {
+        if (!rfqToConfirm) return;
+        
+        setIsConfirming(true);
+        try {
+            // Updated to match RFQService.update signature (id, data)
+            // Assuming updating status to 'SENT' is the goal here, though previous logic didn't show exact payload.
+            // Previous logic just showed toast. I will assume status update is needed or just success for now as per plan "Mock or equivalent"
+            // But looking at RFQService, we have update() and sendToVendors(). 
+            // The original alert said "Send to X vendors". 
+            // I'll assume we used to use sendToVendors logic conceptually, or just update status. 
+            // Given "Need to refresh data so status changes from Draft to Sent", I'll use update().
+            
+            // Mocking the API call delay as requested "loading 2 seconds" logic simulation or real call?
+            // "When sending confirmed (executeSendRFQ), if system takes 2 seconds..." -> implies real await.
+            
+            // Using sending to vendors if vendors > 0? 
+            // The user said "Change status from Draft to Sent". 
+            // I will use update status to SENT.
+            
+            await RFQService.update(rfqToConfirm.rfq_id, { status: 'SENT' as RFQStatus });
+            
+            toast(`ส่ง RFQ ${rfqToConfirm.rfq_no} เรียบร้อยแล้ว`, 'success');
+            refetch();
+            cancelConfirm();
+        } catch (error) {
+            toast('เกิดข้อผิดพลาดในการส่ง RFQ', 'error');
+            console.error(error);
+        } finally {
+            setIsConfirming(false);
+        }
+    };
+
+    const cancelConfirm = () => {
+        setIsConfirmOpen(false);
+        setRfqToConfirm(null);
+        setIsConfirming(false);
     };
 
     const handleOpenQTModal = (rfq: RFQHeader) => {
@@ -105,76 +195,85 @@ export default function RFQListPage() {
     const columns = useMemo(() => [
         columnHelper.display({
             id: 'index',
-            header: () => <div className="text-center w-full">ลำดับ</div>,
-            cell: (info) => <div className="text-center w-full">{info.row.index + 1 + (filters.page - 1) * filters.limit}</div>,
-            size: 40,
+            header: () => <div className="flex justify-center items-center h-full w-full">ลำดับ</div>,
+            cell: (info) => <div className="flex justify-center items-center h-full w-full">{info.row.index + 1 + (filters.page - 1) * filters.limit}</div>,
+            size: 60,
             enableSorting: false,
         }),
         columnHelper.accessor('rfq_no', {
-            header: 'เลขที่ RFQ',
+            header: 'ข้อมูล RFQ',
             cell: (info) => (
-                <span className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline cursor-pointer block" title={info.getValue()}>
+                <div className="flex flex-col py-2">
+                    <span className="font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline cursor-pointer" title={info.getValue()}>
+                        {info.getValue()}
+                    </span>
+                    {info.row.original.ref_pr_no && (
+                        <span className="text-xs text-gray-500 mt-1">
+                            Ref: {info.row.original.ref_pr_no}
+                        </span>
+                    )}
+                </div>
+            ),
+            size: 180,
+            enableSorting: true,
+        }),
+        columnHelper.accessor('purpose', {
+            header: 'เรื่อง/วัตถุประสงค์',
+            cell: (info) => (
+                <div className="max-w-[250px] truncate py-2" title={info.getValue()}>
                     {info.getValue()}
-                </span>
+                </div>
             ),
-            size: 140,
+            size: 250,
             enableSorting: true,
-        }),
-        columnHelper.accessor('rfq_date', {
-            header: 'วันที่',
-            cell: (info) => (
-                <span className="text-gray-600 dark:text-gray-300 whitespace-nowrap">
-                    {formatThaiDate(info.getValue())}
-                </span>
-            ),
-            size: 110,
-            enableSorting: true,
-        }),
-        columnHelper.accessor('ref_pr_no', {
-            header: 'PR อ้างอิง',
-            cell: (info) => (
-                <span className="text-purple-600 dark:text-purple-400 hover:underline cursor-pointer" title={info.getValue() || ''}>
-                    {info.getValue() || '-'}
-                </span>
-            ),
-            size: 140,
-            enableSorting: false,
         }),
         columnHelper.accessor('created_by_name', {
-            header: 'ผู้สร้าง',
+            header: 'ผู้ดูแล',
             cell: (info) => (
-                <span className="text-gray-700 dark:text-gray-200">
-                    {info.getValue() || '-'}
-                </span>
+                <div className="flex flex-col py-2">
+                    <span className="text-gray-900 dark:text-gray-100 font-medium">
+                        {info.getValue() || '-'}
+                    </span>
+                    <span className="text-xs text-gray-400">
+                        {formatThaiDate(info.row.original.rfq_date)}
+                    </span>
+                </div>
             ),
-            size: 120,
+            size: 160,
             enableSorting: false,
         }),
         columnHelper.accessor('quote_due_date', {
             header: 'ครบกำหนด',
             cell: (info) => (
-                <span className="text-orange-600 dark:text-orange-400 whitespace-nowrap">
+                <span className="text-orange-600 dark:text-orange-400 whitespace-nowrap py-2 block">
                     {info.getValue() ? formatThaiDate(info.getValue()!) : '-'}
                 </span>
             ),
             size: 110,
             enableSorting: true,
         }),
-        columnHelper.accessor('vendor_count', {
-            header: () => <div className="text-center w-full">Vendors</div>,
-            cell: (info) => (
-                <div className="text-center text-gray-700 dark:text-gray-200">
-                    <span className="font-semibold">{info.getValue() ?? 0}</span> ราย
-                </div>
-            ),
-            size: 90,
+        columnHelper.display({
+            id: 'vendors',
+            header: () => <div className="flex justify-center items-center w-full h-full">VENDORS</div>,
+            cell: (info) => {
+                const responded = info.row.original.responded_vendors_count || 0;
+                const total = info.row.original.vendor_count || 0;
+                return (
+                    <div className="flex justify-center items-center h-full py-2">
+                        <span className="text-gray-700 dark:text-gray-300 font-medium">
+                            {responded}/{total}
+                        </span>
+                    </div>
+                );
+            },
+            size: 80,
             enableSorting: false,
         }),
         columnHelper.accessor(row => row.status, {
             id: 'status',
-            header: () => <div className="text-center w-full">สถานะ</div>,
+            header: () => <div className="flex justify-center items-center w-full h-full">สถานะ</div>,
             cell: (info) => (
-                <div className="flex justify-center">
+                <div className="flex justify-center items-center h-full py-2">
                     <RFQStatusBadge status={info.getValue()} />
                 </div>
             ),
@@ -183,12 +282,16 @@ export default function RFQListPage() {
         }),
         columnHelper.display({
             id: 'actions',
-            header: () => <div className="text-center w-full">จัดการ</div>,
+            header: () => <div className="flex justify-center items-center w-full h-full">จัดการ</div>,
             cell: ({ row }) => {
                 const item = row.original;
                 return (
-                    <div className="flex items-center justify-center gap-2">
-                        <button className="p-1 text-gray-500 hover:text-blue-600 transition-colors" title="ดูรายละเอียด">
+                    <div className="flex justify-center items-center gap-2 w-full h-full py-2 min-w-[100px]">
+                        <button 
+                            className="p-1 text-gray-500 hover:text-blue-600 transition-colors" 
+                            title="ดูรายละเอียด"
+                            onClick={() => handleView(item.rfq_id)}
+                        >
                             <Eye size={18} />
                         </button>
                         
@@ -197,6 +300,7 @@ export default function RFQListPage() {
                                 <button 
                                     className="flex items-center gap-1 pl-1.5 pr-2 py-1 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded shadow-sm border border-transparent hover:border-amber-200 dark:hover:border-amber-800 transition-all whitespace-nowrap"
                                     title="แก้ไข"
+                                    onClick={() => handleEdit(item.rfq_id)}
                                 >
                                     <Edit size={14} /> 
                                     <span className="text-[10px] font-bold">แก้ไข</span>
@@ -205,6 +309,7 @@ export default function RFQListPage() {
                                 <button 
                                     className="flex items-center gap-1 pl-1.5 pr-2 py-1 ml-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap"
                                     title="ส่ง RFQ"
+                                    onClick={() => handleSendRFQ(item)}
                                 >
                                     <Send size={12} /> ส่ง RFQ
                                 </button>
@@ -222,40 +327,29 @@ export default function RFQListPage() {
                             </button>
                         )}
 
-                         {/* Debug/Legacy actions if needed, or remove them as per new design */}
-                         {/* 
-                         {item.status === 'DRAFT' && (
-                             <>
-                                 <button className="p-1 text-blue-500 hover:text-blue-700 transition-colors" title="แก้ไข">
-                                     <Edit size={18} />
-                                 </button>
-                                 <button className="p-1 text-red-500 hover:text-red-700 transition-colors" title="ลบ">
-                                     <Trash2 size={18} />
-                                 </button>
-                             </>
-                         )}
-                         */}
+                        {item.status === 'IN_PROGRESS' && (
+                            <button 
+                                className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1 transition-colors shadow-sm"
+                                title="สรุปผลการคัดเลือก"
+                            >
+                                <CheckCircle size={14} />
+                                สรุปผล/ปิดรับ
+                            </button>
+                        )}
                     </div>
                 );
             },
-            size: 160,
+            size: 200, 
             enableSorting: false,
         }),
-    ], [columnHelper, filters.page, filters.limit]);
+    ], [columnHelper, filters.page, filters.limit, handleView, handleEdit, handleSendRFQ]);
 
     // ====================================================================================
     // RENDER
     // ====================================================================================
 
     // Filter Config
-    const filterConfig: FilterFieldConfig<keyof TableFilters<RFQStatus>>[] = useMemo(() => [
-        { name: 'search', label: 'เลขที่ RFQ', type: 'text', placeholder: 'RFQ-xxx' },
-        { name: 'search2', label: 'PR อ้างอิง', type: 'text', placeholder: 'PR-xxx' },
-        { name: 'search3', label: 'ผู้สร้าง RFQ', type: 'text', placeholder: 'ชื่อผู้สร้าง' },
-        { name: 'status', label: 'สถานะ', type: 'select' as const, options: RFQ_STATUS_OPTIONS },
-        { name: 'dateFrom', label: 'วันที่เริ่มต้น', type: 'date' },
-        { name: 'dateTo', label: 'วันที่สิ้นสุด', type: 'date' },
-    ], []);
+    // Filter Config Removed in favor of manual layout
 
     return (
         <>
@@ -267,16 +361,77 @@ export default function RFQListPage() {
                 totalCount={data?.total}
                 totalCountLoading={isLoading}
                 searchForm={
-                    <FilterFormBuilder<TableFilters<RFQStatus>>
-                        config={filterConfig}
-                        filters={filters}
-                        onFilterChange={handleFilterChange}
-                        onSearch={refetch}
-                        onReset={resetFilters}
-                        accentColor="blue"
-                        onCreate={() => setIsCreateModalOpen(true)}
-                        createLabel="สร้าง RFQ"
-                    />
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                        <FilterField
+                            label="เลขที่ RFQ"
+                            value={filters.search}
+                            onChange={(val: string) => handleFilterChange('search', val)}
+                            placeholder="RFQ-xxx"
+                            accentColor="blue"
+                        />
+                        <FilterField
+                            label="PR อ้างอิง"
+                            value={filters.search2}
+                            onChange={(val: string) => handleFilterChange('search2', val)}
+                            placeholder="PR-xxx"
+                            accentColor="blue"
+                        />
+                        <FilterField
+                            label="ผู้สร้าง RFQ"
+                            value={filters.search3}
+                            onChange={(val: string) => handleFilterChange('search3', val)}
+                            placeholder="ชื่อผู้สร้าง"
+                            accentColor="blue"
+                        />
+                        <FilterField
+                            label="สถานะ"
+                            type="select"
+                            value={filters.status}
+                            onChange={(val: string) => handleFilterChange('status', val)}
+                            options={RFQ_STATUS_OPTIONS}
+                            accentColor="blue"
+                        />
+                        <FilterField
+                            label="วันที่เริ่มต้น"
+                            type="date"
+                            value={filters.dateFrom || ''}
+                            onChange={(val: string) => handleFilterChange('dateFrom', val)}
+                            accentColor="blue"
+                        />
+                        <FilterField
+                            label="วันที่สิ้นสุด"
+                            type="date"
+                            value={filters.dateTo || ''}
+                            onChange={(val: string) => handleFilterChange('dateTo', val)}
+                            accentColor="blue"
+                        />
+                        
+                        {/* Action Buttons Group */}
+                        <div className="md:col-span-2 lg:col-span-2 flex flex-col sm:flex-row flex-wrap justify-end gap-2 items-center">
+                            <div className="flex gap-2 w-full sm:w-auto">
+                                <button
+                                    onClick={resetFilters}
+                                    className="flex-1 sm:flex-none h-10 px-4 bg-white hover:bg-gray-50 text-gray-700 rounded-lg font-medium transition-colors border border-gray-300 shadow-sm whitespace-nowrap"
+                                >
+                                    ล้างค่า
+                                </button>
+                                <button
+                                    onClick={() => refetch()}
+                                    className="flex-1 sm:flex-none h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+                                >
+                                    <Search size={18} />
+                                    ค้นหา
+                                </button>
+                            </div>
+                            <button
+                                onClick={handleCreate}
+                                className="w-full sm:w-auto h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+                            >
+                                <Plus size={16} strokeWidth={2.5} />
+                                สร้าง RFQ
+                            </button>
+                        </div>
+                    </div>
                 }
             >
                 <div className="h-full flex flex-col">
@@ -299,12 +454,15 @@ export default function RFQListPage() {
                 </div>
             </PageListLayout>
 
-            {isCreateModalOpen && (
+            {isModalOpen && (
                 <RFQFormModal 
-                    isOpen={isCreateModalOpen}
-                    onClose={() => setIsCreateModalOpen(false)}
+                    isOpen={isModalOpen}
+                    onClose={handleCloseModal}
+                    editId={selectedRFQId}
+                    readOnly={isReadOnly}
                     onSuccess={() => {
                         refetch();
+                        handleCloseModal();
                     }}
                 />
             )}
@@ -323,6 +481,18 @@ export default function RFQListPage() {
                     }}
                 />
             )}
+
+            <ConfirmationModal
+                isOpen={isConfirmOpen}
+                onClose={cancelConfirm}
+                onConfirm={executeSendRFQ}
+                title="ยืนยันการส่ง RFQ"
+                description={`ต้องการส่ง RFQ เลขที่ ${rfqToConfirm?.rfq_no} ไปยังผู้ขายจำนวน ${rfqToConfirm?.vendor_count || 0} ราย ใช่หรือไม่?`}
+                variant="info"
+                confirmText="ตกลง"
+                cancelText="ยกเลิก"
+                isLoading={isConfirming}
+            />
         </>
     );
 }

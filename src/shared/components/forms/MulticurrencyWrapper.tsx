@@ -9,6 +9,7 @@ interface MulticurrencyWrapperProps<T extends FieldValues> {
   checked?: boolean;
   onCheckedChange?: (checked: boolean) => void;
   layout?: 'stacked' | 'inline';
+  disabled?: boolean;
 }
 
 const MulticurrencyUI: React.FC<{
@@ -18,7 +19,8 @@ const MulticurrencyUI: React.FC<{
     children: React.ReactNode;
     name: string;
     layout?: 'stacked' | 'inline';
-}> = ({ isChecked, onToggle, label, children, name, layout = 'stacked' }) => {
+    disabled?: boolean;
+}> = ({ isChecked, onToggle, label, children, name, layout = 'stacked', disabled = false }) => {
     if (layout === 'inline') {
         return (
             <div className="flex items-center gap-4 py-2">
@@ -28,6 +30,7 @@ const MulticurrencyUI: React.FC<{
                         id={name}
                         checked={isChecked}
                         onChange={(e) => onToggle(e.target.checked)}
+                        disabled={disabled}
                         className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
                     />
                     <label htmlFor={name} className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer select-none">
@@ -51,6 +54,7 @@ const MulticurrencyUI: React.FC<{
                     id={name}
                     checked={isChecked}
                     onChange={(e) => onToggle(e.target.checked)}
+                    disabled={disabled}
                     className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
                 />
                 <label htmlFor={name} className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer select-none">
@@ -69,7 +73,7 @@ const MulticurrencyUI: React.FC<{
     );
 };
 
-const RHFMulticurrencyWrapper = <T extends FieldValues>({ control, name, label, children, layout = 'stacked' }: MulticurrencyWrapperProps<T>) => {
+const RHFMulticurrencyWrapper = <T extends FieldValues>({ control, name, label, children, layout = 'stacked', disabled }: MulticurrencyWrapperProps<T>) => {
     const { field } = useController({
         name,
         control,
@@ -81,6 +85,7 @@ const RHFMulticurrencyWrapper = <T extends FieldValues>({ control, name, label, 
             label={label || "ระบุสกุลเงินต่างประเทศ (Multicurrency)"} 
             name={name}
             layout={layout}
+            disabled={disabled}
         >
             {children}
         </MulticurrencyUI>
@@ -99,6 +104,7 @@ export const MulticurrencyWrapper = <T extends FieldValues>(props: Multicurrency
         label={props.label || "ระบุสกุลเงินต่างประเทศ (Multicurrency)"}
         name={props.name}
         layout={props.layout}
+        disabled={props.disabled}
     >
         {props.children}
     </MulticurrencyUI>

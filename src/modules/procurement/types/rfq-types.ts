@@ -43,6 +43,10 @@ export interface RFQHeader {
     vendor_count?: number;              // From COUNT(rfq_vendor)
     vendor_responded?: number;          // From COUNT where responded
     
+    // New Required Fields
+    purpose: string;                    // REQUIRED: เรื่อง/วัตถุประสงค์
+    responded_vendors_count: number;    // REQUIRED: จำนวนผู้ขายที่เสนอราคามาแล้ว
+    
     // Form-related fields
     currency?: string;                  // สกุลเงิน
     exchange_rate?: number;             // อัตราแลกเปลี่ยน
@@ -136,6 +140,12 @@ export interface RFQFormData {
     remarks: string;
     isMulticurrency: boolean;
     
+    // V-07: Fields carried over from PR
+    purpose?: string;              // วัตถุประสงค์ (จาก PR)
+    cost_center_id?: string;       // ศูนย์ต้นทุน (จาก PR)
+    pr_tax_code_id?: string;       // รหัสภาษี (จาก PR)
+    pr_tax_rate?: number;          // อัตราภาษี (จาก PR)
+    
     // Lines
     lines: RFQLineFormData[];
     
@@ -161,6 +171,11 @@ export interface RFQLineFormData {
     uom: string;
     required_date: string;
     remarks: string;
+    // V-07: Traceability & pricing fields from PR
+    item_id?: string;              // FK → item (for traceability)
+    pr_line_id?: string;           // FK → pr_line (for traceability)
+    est_unit_price?: number;       // ราคาต่อหน่วยโดยประมาณ from PR
+    est_amount?: number;           // มูลค่ารวมโดยประมาณ from PR
 }
 
 // ====================================================================================
@@ -176,6 +191,8 @@ export const initialRFQLineFormData: RFQLineFormData = {
     uom: '',
     required_date: '',
     remarks: '',
+    est_unit_price: 0,
+    est_amount: 0,
 };
 
 export const initialRFQFormData: RFQFormData = {
@@ -194,6 +211,7 @@ export const initialRFQFormData: RFQFormData = {
     incoterm: '',
     remarks: '',
     isMulticurrency: false,
+    purpose: '', // Initial value
     lines: [{ ...initialRFQLineFormData }],
     vendors: [{ vendor_code: '', vendor_name: '', vendor_name_display: '' }]
 };

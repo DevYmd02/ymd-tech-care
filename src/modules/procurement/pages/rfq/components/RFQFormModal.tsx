@@ -1,6 +1,7 @@
 import React from 'react';
-import { FileText, Info, MoreHorizontal, Star, AlignLeft, History, Search } from 'lucide-react';
-import { useRFQForm } from '@/modules/procurement/hooks/useRFQForm';
+import { FileText, Info, MoreHorizontal, Star, AlignLeft, History, Search, Trash2, XCircle } from 'lucide-react';
+import { useRFQForm } from '@/modules/procurement/hooks/rfq';
+import type { ItemListItem } from '@/modules/master-data/types/master-data-types';
 import { RFQFormHeader } from './RFQFormHeader';
 import { RFQFormLines } from './RFQFormLines';
 import { RFQVendorSelection } from './RFQVendorSelection';
@@ -14,9 +15,10 @@ interface Props {
     onSuccess?: () => void;
     editId?: string | null;
     initialPR?: PRHeader | null;
+    readOnly?: boolean;
 }
 
-export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialPR }) => {
+export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialPR, editId, readOnly = false }) => {
     const {
         formData, isSaving, activeTab, setActiveTab,
         branches, units,
@@ -48,27 +50,57 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, init
         <WindowFormLayout
             isOpen={isOpen}
             onClose={onClose}
-            title="สร้างใบขอเสนอราคา (RFQ) - Request for Quotation"
+            title={readOnly ? "ดูใบขอเสนอราคา (View RFQ)" : "สร้าง/แก้ไขใบขอเสนอราคา (RFQ)"}
             titleIcon={<div className="bg-white/20 p-1 rounded-md shadow-sm"><FileText size={14} strokeWidth={3} /></div>}
-            headerColor="bg-teal-600 [&_div.flex.items-center.space-x-1>button:not(:last-child)]:hidden"
+            headerColor={readOnly ? "bg-gray-600" : "bg-teal-600"}
             footer={
-                <div className="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-end items-center bg-white dark:bg-gray-900 sticky bottom-0 z-10 gap-x-2">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        disabled={isSaving}
-                        className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md text-sm font-medium transition-colors disabled:opacity-50"
-                    >
-                        ยกเลิก
-                    </button>
-                    <button
-                        type="button"
-                        onClick={handleSave}
-                        disabled={isSaving}
-                        className="px-6 py-2 bg-teal-600 text-white hover:bg-teal-700 rounded-md text-sm font-medium shadow-sm transition-colors disabled:opacity-50"
-                    >
-                        บันทึก
-                    </button>
+                <div className="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-between items-center bg-white dark:bg-gray-900 sticky bottom-0 z-10 gap-x-2">
+                    <div className="flex items-center gap-2">
+                        {/* Destructive Actions - Hide in ReadOnly mode usually, or keep if relevant? Prompt implies ReadOnly is for View. */}
+                        {!readOnly && formData.status === 'DRAFT' && editId && (
+                            <button
+                                type="button"
+                                className="flex items-center gap-1.5 px-3 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md text-sm font-medium transition-colors border border-transparent hover:border-red-200 dark:hover:border-red-800"
+                                onClick={() => console.log('Delete RFQ', editId)}
+                                title="ลบเอกสาร"
+                            >
+                                <Trash2 size={16} />
+                                <span className="hidden sm:inline">ลบเอกสาร</span>
+                            </button>
+                        )}
+                        {!readOnly && (formData.status === 'SENT' || formData.status === 'IN_PROGRESS') && editId && (
+                            <button
+                                type="button"
+                                className="flex items-center gap-1.5 px-3 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md text-sm font-medium transition-colors border border-transparent hover:border-red-200 dark:hover:border-red-800"
+                                onClick={() => console.log('Cancel RFQ', editId)}
+                                title="ยกเลิก RFQ"
+                            >
+                                <XCircle size={16} />
+                                <span className="hidden sm:inline">ยกเลิก RFQ</span>
+                            </button>
+                        )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            disabled={isSaving}
+                            className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md text-sm font-medium transition-colors disabled:opacity-50"
+                        >
+                            ปิดหน้าต่าง
+                        </button>
+                        {!readOnly && (
+                            <button
+                                type="button"
+                                onClick={handleSave}
+                                disabled={isSaving}
+                                className="px-6 py-2 bg-teal-600 text-white hover:bg-teal-700 rounded-md text-sm font-medium shadow-sm transition-colors disabled:opacity-50"
+                            >
+                                บันทึก
+                            </button>
+                        )}
+                    </div>
                 </div>
             }
         >
@@ -157,7 +189,7 @@ export const RFQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, init
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-gray-900">
                                 {filteredProducts.length > 0 ? (
-                                    filteredProducts.map((item) => (
+                                    filteredProducts.map((item: ItemListItem) => (
                                         <tr key={item.item_id} className="hover:bg-teal-50/50 dark:hover:bg-teal-900/10 transition-all duration-200 group">
                                             <td className="px-4 py-3 text-center">
                                                 <button 
