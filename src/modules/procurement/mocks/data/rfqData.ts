@@ -1,4 +1,4 @@
-import type { RFQHeader, RFQStatus } from '@/modules/procurement/types/rfq-types';
+import type { RFQHeader, RFQStatus, RFQVendor, RFQVendorStatus } from '@/modules/procurement/types/rfq-types';
 
 /**
  * Helper to generate a future date string
@@ -36,11 +36,14 @@ const createMockRFQ = (
 
     // Vendor Logic
     let responseCount = 0;
+    let hasQuotation = false;
     if (status === 'IN_PROGRESS' || status === 'CLOSED') {
         responseCount = Math.floor(Math.random() * vendorCount) + 1; // At least 1 response
         if (responseCount > vendorCount) responseCount = vendorCount;
+        hasQuotation = responseCount > 0 && Math.random() > 0.5;
     } else if (status === 'DRAFT' || status === 'SENT') {
         responseCount = 0;
+        hasQuotation = false;
     }
 
     return {
@@ -65,6 +68,7 @@ const createMockRFQ = (
         // New Required Fields
         purpose: purpose,
         responded_vendors_count: responseCount,
+        has_quotation: hasQuotation,
         vendor_responded: responseCount, // Keep for compatibility if needed
         
         // Form Fields (Defaults)
@@ -81,10 +85,11 @@ const createMockRFQ = (
 // ====================================================================================
 
 const _mockRFQs: RFQHeader[] = [
-    // 1-3: DRAFT (Mixed Linked/Direct)
+    // 1-2: DRAFT (0 vendors — tests Zero-Vendor Trap)
     createMockRFQ(1, 'DRAFT', false, 0),   // Direct (No PR)
     createMockRFQ(2, 'DRAFT', true, 0),    // Linked
-    createMockRFQ(3, 'DRAFT', true, 0),
+    // 3: DRAFT with vendors (tests Happy Path — checkbox list)
+    createMockRFQ(3, 'DRAFT', true, 2),
 
     // 4-6: SENT (Waiting for Vendors)
     createMockRFQ(4, 'SENT', true, 3),     // 3 Vendors selected
@@ -92,9 +97,37 @@ const _mockRFQs: RFQHeader[] = [
     createMockRFQ(6, 'SENT', true, 5),
 
     // 7-9: IN_PROGRESS (Some responses received)
-    createMockRFQ(7, 'IN_PROGRESS', true, 3), // Responses > 0
+    createMockRFQ(7, 'IN_PROGRESS', true, 3), // Responses >= 1
     createMockRFQ(8, 'IN_PROGRESS', true, 4),
     createMockRFQ(9, 'IN_PROGRESS', false, 2),
+
+    // NEW: TEST CASE FOR "LIMBO STATE" (has_quotation = false)
+    {
+        rfq_id: 'rfq-limbo-test',
+        rfq_no: 'RFQ-202602-TEST',
+        pr_id: 'pr-limbo-test',
+        branch_id: '1',
+        rfq_date: new Date().toISOString().split('T')[0],
+        quote_due_date: getFutureDate(new Date().toISOString().split('T')[0], 7),
+        status: 'IN_PROGRESS',
+        created_by_user_id: 'user-1',
+        created_at: `${new Date().toISOString().split('T')[0]}T10:00:00Z`,
+        updated_at: `${new Date().toISOString().split('T')[0]}T10:00:00Z`,
+        pr_no: 'PR-202602-TEST-PR',
+        ref_pr_no: 'PR-202602-TEST-PR',
+        branch_name: 'สำนักงานใหญ่',
+        created_by_name: 'System Admin',
+        vendor_count: 3,
+        purpose: 'ทดสอบแสดงผล Limbo State (Vendors 1/3, No QT)',
+        responded_vendors_count: 1,
+        vendor_responded: 1,
+        has_quotation: false,
+        currency: 'THB',
+        exchange_rate: 1,
+        delivery_location: 'Head Office',
+        payment_terms: 'Cash',
+        remarks: 'Test Limbo State'
+    },
 
     // 10-11: CLOSED (Awarded)
     createMockRFQ(10, 'CLOSED', true, 3),
@@ -106,6 +139,59 @@ const _mockRFQs: RFQHeader[] = [
 
 export const MOCK_RFQS: RFQHeader[] = _mockRFQs;
 
-// Exports for lines and vendors (empty for now or could be generated too)
+// Exports for lines (empty for now)
 export const MOCK_RFQ_LINES = [];
-export const MOCK_RFQ_VENDORS = [];
+
+// ====================================================================================
+// MOCK VENDOR DATA — Synced with Master Data
+// ====================================================================================
+import { MOCK_VENDORS } from '@/modules/master-data/vendor/mocks/vendorMocks';
+
+export const VENDOR_POOL = MOCK_VENDORS.map(v => ({
+    id: v.vendor_id,
+    code: v.vendor_code,
+    name: v.vendor_name,
+    email: v.email || (v.addresses?.[0]?.email) || `sales@${v.vendor_name_en?.toLowerCase().replace(/\s+/g, '') || 'vendor'}.co.th`
+}));
+
+function generateVendorsForRFQ(rfq: RFQHeader): RFQVendor[] {
+    const count = rfq.vendor_count || 0;
+    if (count === 0) return [];
+
+    const responded = rfq.responded_vendors_count || 0;
+
+    return Array.from({ length: count }, (_, i) => {
+        const vendor = VENDOR_POOL[i % VENDOR_POOL.length];
+        let status: RFQVendorStatus = 'PENDING';
+
+        if (rfq.status === 'DRAFT') {
+            status = 'PENDING';
+        } else if (rfq.status === 'SENT') {
+            status = 'SENT';
+        } else if (rfq.status === 'IN_PROGRESS' || rfq.status === 'CLOSED') {
+            if (i < responded) {
+                // Guarantee the 2nd responding vendor is 'DECLINED' if possible, otherwise mostly 'RESPONDED'
+                status = (i === 1 || Math.random() > 0.8) ? 'DECLINED' : 'RESPONDED';
+            } else {
+                status = 'SENT'; // waiting
+            }
+        }
+
+        return {
+            rfq_vendor_id: `rv-${rfq.rfq_id}-${i + 1}`,
+            rfq_id: rfq.rfq_id,
+            vendor_id: vendor.id,
+            sent_date: rfq.status !== 'DRAFT' ? rfq.rfq_date : null,
+            sent_via: 'EMAIL',
+            email_sent_to: vendor.email,
+            response_date: status === 'RESPONDED' ? getFutureDate(rfq.rfq_date, i + 2) : null,
+            status,
+            remark: null,
+            // UI display fields (not in RFQVendor type, but useful for mock)
+            vendor_name: vendor.name,
+            vendor_code: vendor.code,
+        } as RFQVendor & { vendor_name: string; vendor_code: string };
+    });
+}
+
+export const MOCK_RFQ_VENDORS = _mockRFQs.flatMap(generateVendorsForRFQ);

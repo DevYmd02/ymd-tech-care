@@ -2,12 +2,14 @@
  * @file QTListPage.tsx
  * @description หน้ารายการใบเสนอราคา (Quotation List)
  * @route /procurement/qt
+ * @supports URL auto-filter: /procurement/qt?rfq_no=XXX (from RFQ navigation)
  * @refactored Uses PageListLayout, FilterFormBuilder, useTableFilters, React Query, SmartTable
  */
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { FileText, Eye, Edit, RefreshCw } from 'lucide-react';
+import { FileText, Eye, Edit, RefreshCw, X, Filter } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { PageListLayout, FilterFormBuilder, SmartTable, QTStatusBadge } from '@ui';
 import type { FilterFieldConfig } from '@/shared/components/ui/filters/FilterFormBuilder';
@@ -43,6 +45,12 @@ const QT_STATUS_OPTIONS = [
 // ====================================================================================
 
 export default function QTListPage() {
+    // ==========================================================================
+    // URL Query Parameter: ?rfq_no=XXX (received from RFQ navigation shortcut)
+    // ==========================================================================
+    const [searchParams, setSearchParams] = useSearchParams();
+    const rfqNoFilter = searchParams.get('rfq_no');
+
     const { filters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<QTStatus>({
         defaultStatus: 'ALL',
         customParamKeys: {
@@ -51,6 +59,29 @@ export default function QTListPage() {
             search3: 'ref_rfq_no'
         }
     });
+
+    // Auto-inject rfq_no from URL into search3 filter (runs once on mount or when param changes)
+    const hasInjected = useRef(false);
+    useEffect(() => {
+        if (rfqNoFilter && !hasInjected.current) {
+            setFilters({ search3: rfqNoFilter, page: 1 });
+            hasInjected.current = true;
+        }
+    }, [rfqNoFilter, setFilters]);
+
+    // Clear the URL filter (React Router — no hard refresh)
+    const handleClearRfqFilter = useCallback(() => {
+        setSearchParams((prev) => {
+            const newParams = new URLSearchParams(prev);
+            newParams.delete('rfq_no');     // Remove shortcut param
+            newParams.delete('search3');    // Remove filter param mapped to rfq_no reference
+            // If custom keys mapped search3 -> ref_rfq_no, clear both just in case
+            newParams.delete('ref_rfq_no');
+            newParams.set('page', '1');
+            return newParams;
+        }, { replace: true });
+        hasInjected.current = false;
+    }, [setSearchParams]);
 
     // Convert to API filter format
     const apiFilters: QTListParams = {
@@ -249,6 +280,26 @@ export default function QTListPage() {
                 }
             >
                 <div className="h-full flex flex-col">
+                    {/* ===== Active Filter Banner (shows only when filtered via URL param) ===== */}
+                    {rfqNoFilter && (
+                        <div className="flex items-center justify-between gap-3 px-4 py-2.5 mb-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-lg">
+                            <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300">
+                                <Filter size={15} className="text-blue-500 shrink-0" />
+                                <span>
+                                    กำลังแสดงใบเสนอราคาสำหรับ RFQ อ้างอิง: <strong className="text-blue-900 dark:text-blue-100">{rfqNoFilter}</strong>
+                                </span>
+                            </div>
+                            <button
+                                onClick={handleClearRfqFilter}
+                                className="flex items-center gap-1 px-3 py-1 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-md border border-blue-300 dark:border-blue-700 transition-colors whitespace-nowrap"
+                                title="ล้างตัวกรอง แสดงทั้งหมด"
+                            >
+                                <X size={13} />
+                                ล้างตัวกรอง
+                            </button>
+                        </div>
+                    )}
+
                     <SmartTable
                         data={data?.data ?? []}
                         columns={columns as ColumnDef<QTListItem>[]}

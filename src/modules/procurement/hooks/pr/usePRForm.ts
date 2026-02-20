@@ -23,8 +23,8 @@ import { useToast } from '@/shared/components/ui/feedback/Toast';
 
 
 const PR_CONFIG = {
-  MIN_LINES: 5,
-  INITIAL_LINES: 5,
+  MIN_LINES: 1,
+  INITIAL_LINES: 1,
 } as const;
 
 const getTodayDate = (): string => new Date().toISOString().split('T')[0];
