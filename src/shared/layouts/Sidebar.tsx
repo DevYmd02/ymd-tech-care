@@ -9,13 +9,21 @@
  * @refactored ใช้ menu configuration จาก routes.ts
  */
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
     ChevronDown,
+    LogOut,
+    User,
+    Settings,
+    Moon,
+    Sun,
 } from 'lucide-react';
 import { sidebarMenuItems } from '@/core/config/navigation.config';
 import type { MenuItem, SubMenuItem } from '@/core/config/navigation.config';
+import { useAuth } from '@/core/auth/contexts/AuthContext';
+import { useConfirmation } from '@/shared/hooks/useConfirmation';
+import { useTheme } from '@/core/contexts/ThemeContext';
 
 // ====================================================================================
 // COMPONENT - Sidebar
@@ -28,19 +36,51 @@ interface SidebarProps {
 export default function Sidebar({ isOpen }: SidebarProps) {
     // ใช้ useLocation เพื่อตรวจสอบ active menu
     const location = useLocation();
+    const { user, logout } = useAuth();
+    const { confirm } = useConfirmation();
+    const { theme, setTheme } = useTheme();
 
     // State เก็บรายการเมนูที่กำลังเปิดอยู่ (expanded)
     const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
+    const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const profileRef = useRef<HTMLDivElement>(null);
+
+    // Close profile dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+                setIsProfileOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const handleLogout = async () => {
+        setIsProfileOpen(false);
+        const isConfirmed = await confirm({
+            title: 'ต้องการออกจากระบบหรือไม่?',
+            description: 'เซสชันของคุณจะสิ้นสุดลง และต้องลงชื่อเข้าใช้ใหม่อีกครั้งเพื่อใช้งานต่อ',
+            confirmText: 'ออกจากระบบ',
+            cancelText: 'ยกเลิก',
+            variant: 'danger',
+            icon: LogOut
+        });
+
+        if (isConfirmed) {
+            logout();
+        }
+    };
 
     /**
      * Toggle การเปิด/ปิดเมนูย่อย
      * @param menuId - รหัสเมนูที่ต้องการ toggle
      */
     const toggleMenu = (menuId: string) => {
-        setExpandedMenus(prev =>
+        setExpandedMenus((prev: string[]) =>
             prev.includes(menuId)
-                ? prev.filter(id => id !== menuId)  // ถ้าเปิดอยู่ -> ปิด
-                : [...prev, menuId]                  // ถ้าปิดอยู่ -> เปิด
+                ? prev.filter((id: string) => id !== menuId)  // ถ้าเปิดอยู่ -> ปิด
+                : [...prev, menuId]                          // ถ้าปิดอยู่ -> เปิด
         );
     };
 
@@ -185,16 +225,79 @@ export default function Sidebar({ isOpen }: SidebarProps) {
             </div>
 
             {/* ==================== USER PROFILE SECTION ==================== */}
-            <div className="border-t border-gray-200 dark:border-gray-700 p-3 flex items-center space-x-2 flex-shrink-0">
-                {/* Avatar */}
-                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                    A
+            <div className="border-t border-gray-200 dark:border-gray-700 p-3 relative" ref={profileRef}>
+                {/* Profile Dropdown Menu */}
+                <div className={`
+                    absolute bottom-full left-3 right-3 mb-2 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-200 origin-bottom
+                    ${isProfileOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0 pointer-events-none'}
+                `}>
+                    <div className="p-2 space-y-1">
+                        <button className="w-full flex items-center gap-3 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors group">
+                            <div className="p-1.5 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-md group-hover:scale-110 transition-transform">
+                                <User size={14} />
+                            </div>
+                            <span>โปรไฟล์ของฉัน</span>
+                        </button>
+                        
+                        <div className="h-px bg-gray-100 dark:bg-gray-700 my-1 mx-2" />
+                        
+                        <button 
+                            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                            className="w-full flex items-center gap-3 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors group"
+                        >
+                            <div className="p-1.5 bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400 rounded-md group-hover:rotate-12 transition-transform">
+                                {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+                            </div>
+                            <span>โหมด{theme === 'dark' ? 'สว่าง' : 'มืด'}</span>
+                            <span className="ml-auto text-[10px] text-gray-400 uppercase">{theme}</span>
+                        </button>
+
+                        <button className="w-full flex items-center gap-3 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors group">
+                            <div className="p-1.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-md">
+                                <Settings size={14} />
+                            </div>
+                            <span>ตั้งค่าการใช้งาน</span>
+                        </button>
+
+                        <div className="h-px bg-gray-100 dark:bg-gray-700 my-1 mx-2" />
+
+                        <button 
+                            onClick={handleLogout}
+                            className="w-full flex items-center gap-3 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors group"
+                        >
+                            <div className="p-1.5 bg-red-100 dark:bg-red-900/40 text-red-600 rounded-md group-hover:translate-x-1 transition-transform">
+                                <LogOut size={14} />
+                            </div>
+                            <span>ออกจากระบบ</span>
+                        </button>
+                    </div>
                 </div>
-                {/* User Info */}
-                <div className="flex-1 min-w-0">
-                    <div className="text-xs font-semibold text-gray-800 dark:text-white truncate">Admin User</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate">admin@company.com</div>
-                </div>
+
+                {/* Profile Toggle Button */}
+                <button 
+                    onClick={() => setIsProfileOpen(!isProfileOpen)}
+                    className={`
+                        w-full flex items-center space-x-3 p-2 rounded-xl transition-all duration-200
+                        ${isProfileOpen ? 'bg-gray-100 dark:bg-gray-700 ring-1 ring-gray-200 dark:ring-gray-600' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'}
+                    `}
+                >
+                    {/* Avatar */}
+                    <div className="w-9 h-9 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0 shadow-lg shadow-blue-500/20 ring-2 ring-white dark:ring-gray-800">
+                        {user?.employee?.employee_fullname?.charAt(0) || 'A'}
+                    </div>
+                    {/* User Info */}
+                    <div className="flex-1 min-w-0 text-left">
+                        <div className="text-[11px] font-bold text-gray-800 dark:text-white truncate">
+                            {user?.employee?.employee_fullname || 'Admin User'}
+                        </div>
+                        <div className="text-[9px] text-gray-500 dark:text-gray-400 truncate font-medium">
+                            {user?.username || 'admin'}
+                        </div>
+                    </div>
+                    <div className={`text-gray-400 transition-transform duration-200 ${isProfileOpen ? 'rotate-180' : ''}`}>
+                        <ChevronDown size={14} />
+                    </div>
+                </button>
             </div>
         </div>
     );

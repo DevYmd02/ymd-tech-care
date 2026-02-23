@@ -143,7 +143,7 @@ export function SmartTable<TData>({
                                     return (
                                         <th
                                             key={header.id}
-                                            style={{ width: header.getSize() !== 150 ? header.getSize() : undefined }}
+                                            style={{ width: header.getSize() }}
                                             className={`px-4 py-3 font-semibold select-none group transition-all ${
                                                 canSort ? `cursor-pointer ${styles.state.hover}` : ''
                                             } ${sortConfig?.key === header.column.id ? styles.state.active : ''}`}
@@ -155,7 +155,7 @@ export function SmartTable<TData>({
                                                 }
                                             }}
                                         >
-                                            <div className="flex items-center gap-1 w-full">
+                                            <div className={`flex items-center gap-1 w-full whitespace-nowrap ${(header.column.columnDef.meta as { align?: string })?.align === 'right' ? 'justify-end pr-10' : ''}`}>
                                                 {flexRender(
                                                     header.column.columnDef.header,
                                                     header.getContext()
@@ -190,8 +190,8 @@ export function SmartTable<TData>({
                                     ))}
                                 </tr>
                             ))
-                        ) : data.length > 0 ? (
-                            table.getRowModel().rows.map(row => (
+                        ) : (data?.length ?? 0) > 0 ? (
+                            table.getRowModel()?.rows?.map(row => (
                                 <tr
                                     key={row.id}
                                     onClick={() => onRowClick && onRowClick(row.original)}

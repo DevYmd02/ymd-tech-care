@@ -2,10 +2,7 @@ import React, { useState, type ReactNode } from 'react';
 import { WindowManagerContext, type WindowType, type WindowState } from './window-context';
 
 export const WindowManagerProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [windows, setWindows] = useState<Record<WindowType, WindowState>>({
-    PR: { isOpen: false },
-    RFQ: { isOpen: false },
-  });
+  const [windows, setWindows] = useState<Record<WindowType, WindowState>>({});
 
   const openWindow = (type: WindowType, props?: Record<string, unknown>) => {
     setWindows(prev => ({
@@ -15,10 +12,14 @@ export const WindowManagerProvider: React.FC<{ children: ReactNode }> = ({ child
   };
 
   const closeWindow = (type: WindowType) => {
-    setWindows(prev => ({
-      ...prev,
-      [type]: { ...prev[type], isOpen: false } // Keep props for a moment if needed, or clear them
-    }));
+    setWindows(prev => {
+      // If the window doesn't exist in state, no need to update
+      if (!prev[type]) return prev;
+      return {
+        ...prev,
+        [type]: { ...prev[type], isOpen: false }
+      };
+    });
   };
 
   return (

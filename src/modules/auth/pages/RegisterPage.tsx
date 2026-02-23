@@ -10,7 +10,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff, Lock, User, ArrowRight, LayoutDashboard, Briefcase, AlertCircle } from 'lucide-react';
 import { AxiosError } from 'axios';
 import { AuthLayout, AuthInput, AuthLabel, AuthButton } from '@/shared/layouts/AuthLayout';
-import { AuthService } from '@/modules/auth/services/auth.service';
+import { AuthService } from '@/core/auth/auth.service';
 import { logger } from '@/shared/utils/logger';
 
 interface ApiErrorResponse {

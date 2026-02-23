@@ -14,8 +14,9 @@ import { ErrorFallback } from '@/shared/components/system/ErrorBoundary';
 import { GlobalLoading } from '@/shared/components/system/GlobalLoading';
 import { Toaster } from 'react-hot-toast';
 
-import { placeholderRoutes } from '@/core/config/routes';
-import { AuthProvider } from '@/core/auth/contexts/AuthContext';
+import { placeholderRoutes, ROUTES } from '@/core/config/routes';
+import { AuthProvider, useAuth } from '@/core/auth/contexts/AuthContext';
+import { ProtectedRoute } from '@/core/auth/components/ProtectedRoute';
 import { PlaceholderPage } from '@ui';
 import { ToastProvider } from '@ui';
 
@@ -29,12 +30,12 @@ const EmployeePage = React.lazy(() => import('@/modules/admin/pages/employees/Em
 
 // Procurement Pages
 const ProcurementDashboard = React.lazy(() => import('@/modules/procurement/pages/dashboard/ProcurementDashboard'));
-const PRListPage = React.lazy(() => import('./modules/procurement/pages/pr/PRListPage'));
-const RFQListPage = React.lazy(() => import('./modules/procurement/pages/rfq/RFQListPage'));
-const QTListPage = React.lazy(() => import('./modules/procurement/pages/qt/QTListPage'));
-const QCListPage = React.lazy(() => import('./modules/procurement/pages/qc/QCListPage'));
-const POListPage = React.lazy(() => import('./modules/procurement/pages/po/POListPage'));
-const GRNListPage = React.lazy(() => import('./modules/procurement/pages/grn/GRNListPage'));
+const PRListPage = React.lazy(() => import('@/modules/procurement/pages/pr/PRListPage'));
+const RFQListPage = React.lazy(() => import('@/modules/procurement/pages/rfq/RFQListPage'));
+const QTListPage = React.lazy(() => import('@/modules/procurement/pages/qt/QTListPage'));
+const QCListPage = React.lazy(() => import('@/modules/procurement/pages/qc/QCListPage'));
+const POListPage = React.lazy(() => import('@/modules/procurement/pages/po/POListPage'));
+const GRNListPage = React.lazy(() => import('@/modules/procurement/pages/grn/GRNListPage'));
 const PRTListPage = React.lazy(() => import('@/modules/procurement/pages/prt/PRTListPage'));
 
 // Roles Pages
@@ -98,12 +99,12 @@ const CustomerGroupList = React.lazy(() => import('@customer/pages/customer-grou
 const BillingGroupList = React.lazy(() => import('@customer/pages/billing-group/BillingGroupList'));
 
 // Auth Pages (from modules)
-const LoginPage = React.lazy(() => import('./modules/auth/pages/LoginPage'));
-const RegisterPage = React.lazy(() => import('./modules/auth/pages/RegisterPage'));
-const ForgotPasswordPage = React.lazy(() => import('./modules/auth/pages/ForgotPasswordPage'));
+const LoginPage = React.lazy(() => import('@/modules/auth/pages/LoginPage'));
+const RegisterPage = React.lazy(() => import('@/modules/auth/pages/RegisterPage'));
+const ForgotPasswordPage = React.lazy(() => import('@/modules/auth/pages/ForgotPasswordPage'));
 
 // Common Pages
-const ComingSoon = React.lazy(() => import('./shared/pages/ComingSoon'));
+const ComingSoon = React.lazy(() => import('@/shared/pages/ComingSoon'));
 
 
 
@@ -113,9 +114,16 @@ const ComingSoon = React.lazy(() => import('./shared/pages/ComingSoon'));
 
 
 
-function App() {
+function AppContent() {
+  const { isLoading } = useAuth();
+
+  // Root-level loading guard (Perfection Point #3)
+  if (isLoading) {
+    return <GlobalLoading message="Initializing Application..." />;
+  }
+
   return (
-    <AuthProvider>
+    <>
       <Toaster 
         position="top-right" 
         reverseOrder={false}
@@ -143,51 +151,52 @@ function App() {
       />
       <ToastProvider>
         <Routes>
-          {/* ... (Auth Routes) ... */}
-          
-          <Route path="/auth/login" element={
+          {/* Auth Routes - Public */}
+          <Route path={ROUTES.AUTH.LOGIN} element={
             <React.Suspense fallback={<GlobalLoading message="Loading Login..." />}>
               <LoginPage />
             </React.Suspense>
           } />
           
-          <Route path="/auth/register" element={
+          <Route path={ROUTES.AUTH.REGISTER} element={
             <React.Suspense fallback={<GlobalLoading message="Loading Register..." />}>
               <RegisterPage />
             </React.Suspense>
           } />
 
-          <Route path="/auth/forgot-password" element={
+          <Route path={ROUTES.AUTH.FORGOT_PASSWORD} element={
             <React.Suspense fallback={<GlobalLoading message="Loading..." />}>
               <ForgotPasswordPage />
             </React.Suspense>
           } />
 
-          {/* Legacy Redirects (Optional: to prevent broken links) */}
-          <Route path="/login" element={<Navigate to="/auth/login" replace />} />
-          <Route path="/register" element={<Navigate to="/auth/register" replace />} />
-          <Route path="/forgot-password" element={<Navigate to="/auth/forgot-password" replace />} />
+          {/* Legacy Redirects */}
+          <Route path="/login" element={<Navigate to={ROUTES.AUTH.LOGIN} replace />} />
+          <Route path="/register" element={<Navigate to={ROUTES.AUTH.REGISTER} replace />} />
+          <Route path="/forgot-password" element={<Navigate to={ROUTES.AUTH.FORGOT_PASSWORD} replace />} />
 
 
-          {/* Main Layout Routes - With Sidebar & Header */}
+          {/* Main Layout Routes - Protected */}
           <Route path="/" element={
-             <ErrorBoundary FallbackComponent={ErrorFallback} onReset={() => window.location.reload()}>
-               <React.Suspense fallback={<GlobalLoading />}>
+            <ProtectedRoute>
+              <ErrorBoundary FallbackComponent={ErrorFallback} onReset={() => window.location.reload()}>
+                <React.Suspense fallback={<GlobalLoading />}>
                   <MainLayout />
-               </React.Suspense>
-             </ErrorBoundary>
+                </React.Suspense>
+              </ErrorBoundary>
+            </ProtectedRoute>
           }>
-            {/* Redirect root to admin (or login if we had logic) */}
-            <Route index element={<Navigate to="/admin" replace />} />
+            {/* Redirect root to admin dashboard */}
+            <Route index element={<Navigate to={ROUTES.ADMIN.DASHBOARD} replace />} />
 
-            {/* ==================== IMPLEMENTED ROUTES ==================== */}
+            {/* Admin Modules - Nested for path consistency */}
+            <Route path="admin">
+              <Route index element={<AdminDashboard />} />
+              <Route path="employees" element={<EmployeePage />} />
+              <Route path="roles" element={<RolesDashboard />} />
+            </Route>
 
-            {/* Admin Dashboard */}
-            <Route path="admin" element={<AdminDashboard />} />
-            <Route path="admin/employees" element={<EmployeePage />} />
-            <Route path="admin/roles" element={<RolesDashboard />} />
-
-            {/* Procurement */}
+            {/* Procurement Modules */}
             <Route path="procurement">
               <Route path="dashboard" element={<ProcurementDashboard />} />
               <Route path="pr" element={<PRListPage />} />
@@ -198,6 +207,8 @@ function App() {
               <Route path="grn" element={<GRNListPage />} />
               <Route path="prt" element={<PRTListPage />} />
             </Route>
+
+            {/* Other Inner Routes ... */}
 
             {/* Roles - Implemented */}
             <Route path="roles/dashboard" element={<RolesDashboard />} />
@@ -334,6 +345,14 @@ function App() {
           </Route>
         </Routes>
       </ToastProvider>
+    </>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
     </AuthProvider>
   );
 }

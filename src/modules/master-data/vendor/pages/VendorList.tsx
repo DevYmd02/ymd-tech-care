@@ -85,7 +85,10 @@ export default function VendorList() {
             // Note: In a real API, we would pass filters to getList
             // But since getList currently returns everything or handles basic filtering, we simulate it here to match ItemMasterList pattern
             const result = await VendorService.getList();
-            let items = result.items || [];
+            
+            // Defensive mapping: Handle both raw array (Legacy/Direct) and paginated object (Standard)
+            const allItems = Array.isArray(result) ? result : (result?.items ?? []);
+            let items = [...allItems];
             
             // Client-side filtering (mocking server behavior if needed)
             if (filters.status && filters.status !== 'ALL') {

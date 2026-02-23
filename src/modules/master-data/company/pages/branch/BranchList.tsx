@@ -80,8 +80,13 @@ export default function BranchList() {
         setIsLoading(true);
         try {
             const response = await BranchService.getList(filters);
-            setAllBranches(response.items);
-            setTotalCount(response.total);
+            
+            // Normalize: Handle both Paginated object and raw Array formats
+            const allItems = Array.isArray(response) ? response : (response?.items ?? []);
+            const total = Array.isArray(response) ? response.length : (response?.total ?? 0);
+            
+            setAllBranches(allItems);
+            setTotalCount(total);
         } catch (error) {
             console.error('Failed to fetch branches:', error);
         } finally {

@@ -23,7 +23,7 @@ import { createColumnHelper } from '@tanstack/react-table';
 import { PRService, type PRListParams } from '@/modules/procurement/services/pr.service';
 import { logger } from '@/shared/utils/logger';
 import type { PRHeader, PRStatus } from '@/modules/procurement/types/pr-types';
-import { DEPARTMENT_MOCK_MAP } from '@/modules/procurement/mocks/data/prData';
+import { DEPARTMENT_NAME_MAP } from '@/modules/procurement/constants/procurement.constants';
 
 // ====================================================================================
 // STATUS OPTIONS
@@ -297,7 +297,7 @@ export default function PRListPage() {
                 const row = info.row.original;
                 const requesterName = info.getValue() || '-';
                 const deptId = row.cost_center_id;
-                const deptName = (DEPARTMENT_MOCK_MAP as Record<string | number, string>)[deptId] || (row.cost_center_id ? row.cost_center_id : 'ไม่ระบุ');
+                const deptName = (DEPARTMENT_NAME_MAP as Record<string | number, string>)[deptId] || (row.cost_center_id ? row.cost_center_id : 'ไม่ระบุ');
                 
                 return (
                     <div className="flex flex-col py-2">
@@ -314,13 +314,14 @@ export default function PRListPage() {
             enableSorting: false,
         }),
         columnHelper.accessor('total_amount', {
-            header: () => <div className="text-right pr-10 whitespace-nowrap">ยอดรวม (บาท)</div>,
+            header: () => <span className="whitespace-nowrap">ยอดรวม (บาท)</span>,
+            meta: { align: 'right' },
             cell: (info) => (
                 <div className="text-right pr-10 font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
                      {new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(info.getValue() || 0)}
                 </div>
             ),
-            size: 110,
+            size: 180,
             enableSorting: true,
         }),
         columnHelper.accessor(row => row.status, {
@@ -332,7 +333,7 @@ export default function PRListPage() {
                 </div>
             ),
             size: 100,
-            enableSorting: true,
+            enableSorting: false,
         }),
         columnHelper.display({
             id: 'actions',

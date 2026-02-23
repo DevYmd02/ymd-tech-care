@@ -6,16 +6,9 @@ const IS_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
 // =============================================================================
 // MOCK CONSTANTS (Sanitized to Strings)
 // =============================================================================
-export const DEPARTMENT_MOCK_MAP: Record<string, string> = {
-    '1': 'Information Technology',
-    '2': 'Human Resources',
-    '3': 'Accounting',
-    '4': 'Marketing',
-    'CC001': 'แผนกไอที',
-    'CC002': 'แผนกทรัพยากรบุคคล',
-    'CC003': 'แผนกบัญชี',
-    'CC004': 'แผนกการตลาด',
-};
+import { DEPARTMENT_NAME_MAP } from '@/modules/procurement/constants/procurement.constants';
+
+export const DEPARTMENT_MOCK_MAP = DEPARTMENT_NAME_MAP;
 
 // =============================================================================
 // HELPER: Financial Calculation

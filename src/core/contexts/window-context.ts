@@ -1,6 +1,6 @@
 import { createContext } from 'react';
 
-export type WindowType = 'PR' | 'RFQ';
+export type WindowType = string;
 
 export interface WindowState {
   isOpen: boolean;

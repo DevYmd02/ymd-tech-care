@@ -82,5 +82,16 @@ export const AuthService = {
             }
             throw error;
         }
+    },
+
+    getProfile: async (): Promise<UserProfile> => {
+        try {
+            const response = await api.get<UserProfile>('/auth/me');
+            logger.info('👤 [AuthService] Get Profile Response:', response);
+            return response;
+        } catch (error: unknown) {
+            logger.error('❌ [AuthService] Get profile failed:', error);
+            throw error;
+        }
     }
 };

@@ -12,7 +12,19 @@ const ENDPOINT = '/org-branches';
 
 export const BranchService = {
   getList: async (params?: Partial<TableFilters>): Promise<PaginatedListResponse<BranchListItem>> => {
-    return api.get<PaginatedListResponse<BranchListItem>>(ENDPOINT, { params });
+    const response = await api.get<PaginatedListResponse<BranchListItem> | BranchListItem[]>(ENDPOINT, { params });
+    
+    // Normalize: Handle raw array response (Real API)
+    if (Array.isArray(response)) {
+      return {
+        items: response,
+        total: response.length,
+        page: params?.page || 1,
+        limit: params?.limit || 10
+      };
+    }
+    
+    return response;
   },
 
   getDropdown: async (): Promise<BranchDropdownItem[]> => {
@@ -25,7 +37,7 @@ export const BranchService = {
 
   create: async (data: BranchCreateRequest): Promise<{ success: boolean; message?: string }> => {
     try {
-      await api.post<unknown>(ENDPOINT, data);
+      await api.post<void>(ENDPOINT, data);
       return { success: true };
     } catch {
       return { success: false, message: 'เกิดข้อผิดพลาดในการสร้างสาขา' };
@@ -34,7 +46,7 @@ export const BranchService = {
 
   update: async (data: BranchUpdateRequest): Promise<{ success: boolean; message?: string }> => {
     try {
-      await api.put<unknown>(`${ENDPOINT}/${data.branch_id}`, data);
+      await api.put<void>(`${ENDPOINT}/${data.branch_id}`, data);
       return { success: true };
     } catch {
       return { success: false, message: 'เกิดข้อผิดพลาดในการอัพเดทสาขา' };
@@ -43,7 +55,7 @@ export const BranchService = {
 
   delete: async (id: string): Promise<boolean> => {
     try {
-      await api.delete<unknown>(`${ENDPOINT}/${id}`);
+      await api.delete<void>(`${ENDPOINT}/${id}`);
       return true;
     } catch {
       return false;
