@@ -17,6 +17,12 @@
     --sb-thumb-hover: #6b7280; /* gray-500 */
   }
 
+  html,
+  body {
+    @apply bg-white dark:bg-[#0B1120] transition-colors duration-300;
+    min-height: 100vh;
+  }
+
   /* Webkit Scrollbar (Chrome, Safari, Edge) */
   ::-webkit-scrollbar {
     width: 6px;

@@ -1,6 +1,7 @@
 import api, { USE_MOCK } from '@/core/api/api';
 import type {
   VendorMaster,
+  VendorListItem,
   VendorListResponse,
   VendorCreateRequest,
   VendorResponse,
@@ -32,8 +33,19 @@ export const VendorService = {
     }
     try {
       // Trust Global Interceptor - it unwraps { success, data } -> data
-      const response = await api.get<VendorListResponse>('/vendors');
-      return response;
+      const response = await api.get<VendorListResponse | VendorListItem[]>('/vendors');
+      
+      // Handle raw array response (Real API) or standard paginated response
+      if (Array.isArray(response)) {
+        return {
+          items: response,
+          total: response.length,
+          page: 1,
+          limit: Math.max(response.length, 100)
+        };
+      }
+      
+      return response as VendorListResponse;
     } catch (error) {
       logger.error('[VendorService] getList error:', error);
       return {

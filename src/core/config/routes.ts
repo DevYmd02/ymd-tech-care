@@ -32,11 +32,45 @@ export const implementedRoutes = {
         dashboard: '/it-governance/dashboard',
     },
     auth: {
-        login: '/login',
-        register: '/register',
-        forgotPassword: '/forgot-password',
+        login: '/auth/login',
+        register: '/auth/register',
+        forgotPassword: '/auth/forgot-password',
     },
 };
+
+/**
+ * Global Route Constants
+ * Use these instead of hardcoded strings to prevent broken links
+ */
+export const ROUTES = {
+  HOME: '/',
+  AUTH: {
+    LOGIN: '/auth/login',
+    REGISTER: '/auth/register',
+    FORGOT_PASSWORD: '/auth/forgot-password',
+  },
+  ADMIN: {
+    DASHBOARD: '/admin',
+    EMPLOYEES: '/admin/employees',
+    ROLES: '/admin/roles',
+  },
+  PROCUREMENT: {
+    DASHBOARD: '/procurement/dashboard',
+    PR: '/procurement/pr',
+    RFQ: '/procurement/rfq',
+    QT: '/procurement/qt',
+    QC: '/procurement/qc',
+    PO: '/procurement/po',
+    GRN: '/procurement/grn',
+    PRT: '/procurement/prt',
+  },
+  MASTER_DATA: {
+    DASHBOARD: '/master-data',
+    VENDOR: '/master-data/vendor',
+    BRANCH: '/master-data/branch',
+    SECTION: '/master-data/section',
+  }
+} as const;
 
 // ====================================================================================
 // PLACEHOLDER ROUTES - Routes ที่ยังไม่พัฒนา (Coming Soon)

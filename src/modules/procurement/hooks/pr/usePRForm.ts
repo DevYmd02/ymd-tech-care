@@ -9,7 +9,7 @@ import type { ItemListItem } from '@/modules/master-data/types/master-data-types
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
-import type { UserProfile } from '@/modules/auth/services/auth.service';
+import type { UserProfile } from '@/core/auth/auth.service';
 import { usePRMasterData, type MappedOption } from './usePRMasterData';
 import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
 import type { WarehouseListItem } from '@/modules/master-data/types/master-data-types';

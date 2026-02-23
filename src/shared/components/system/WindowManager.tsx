@@ -9,15 +9,15 @@ export const WindowManager: React.FC = () => {
   return (
     <>
       <RFQFormModal
-        isOpen={windows.RFQ.isOpen}
+        isOpen={!!windows.RFQ?.isOpen}
         onClose={() => closeWindow('RFQ')}
-        {...windows.RFQ.props}
+        {...windows.RFQ?.props}
       />
       
       <PRFormModal
-        isOpen={windows.PR.isOpen}
+        isOpen={!!windows.PR?.isOpen}
         onClose={() => closeWindow('PR')}
-        {...windows.PR.props}
+        {...windows.PR?.props}
       />
     </>
   );
