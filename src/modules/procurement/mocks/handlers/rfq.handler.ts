@@ -65,12 +65,26 @@ export const setupRFQHandlers = (mock: MockAdapter) => {
     const id = sanitizeId(urlParts[urlParts.length - 2]); // ID is before '/send'
     const foundIndex = MOCK_RFQS.findIndex(r => sanitizeId(r.rfq_id) === id);
     if (foundIndex !== -1) {
-      const body = config.data ? JSON.parse(config.data) : {};
+      const body = config.data ? (typeof config.data === 'string' ? JSON.parse(config.data) : config.data) : {};
       const vendorIds: string[] = body.vendor_ids || [];
       
-      // FIX: State Synchronization. Mutate the mock store in-memory so subsequent GET requests return the accurate state.
+      // FIX: State Synchronization.
       MOCK_RFQS[foundIndex].status = 'SENT';
+      
+      // Increment sent count (Logic change: X/Y is sent progress)
+      const currentSentCount = MOCK_RFQS[foundIndex].sent_vendors_count || 0;
+      MOCK_RFQS[foundIndex].sent_vendors_count = currentSentCount + vendorIds.length;
+      
       MOCK_RFQS[foundIndex].updated_at = new Date().toISOString();
+
+      // Update junction table for these vendors
+      vendorIds.forEach(vId => {
+          const vIndex = MOCK_RFQ_VENDORS.findIndex(v => v.rfq_id === id && v.vendor_id === vId);
+          if (vIndex !== -1) {
+              MOCK_RFQ_VENDORS[vIndex].status = 'SENT';
+              MOCK_RFQ_VENDORS[vIndex].sent_date = new Date().toISOString();
+          }
+      });
 
       return [200, {
         success: true,
@@ -83,8 +97,8 @@ export const setupRFQHandlers = (mock: MockAdapter) => {
 
   // 4. POST Create RFQ (new)
   mock.onPost('/rfq').reply((config: AxiosRequestConfig) => {
-    const body = config.data ? JSON.parse(config.data) : {};
-    const vendorIds: string[] = body.vendor_ids || [];
+    const body = config.data ? (typeof config.data === 'string' ? JSON.parse(config.data) : config.data) : {};
+    const vendorIds: string[] = (body.vendor_ids as string[]) || [];
     const newRFQ = {
       rfq_id: `rfq-${Date.now()}`,
       rfq_no: body.rfq_no || `RFQ-${new Date().getFullYear()}-${String(MOCK_RFQS.length + 1).padStart(4, '0')}`,
@@ -96,6 +110,7 @@ export const setupRFQHandlers = (mock: MockAdapter) => {
       status: 'DRAFT' as const,
       vendor_count: vendorIds.length,
       responded_vendors_count: 0,
+      sent_vendors_count: 0,
       purpose: body.purpose || '',
       quote_due_date: body.quote_due_date || null,
       created_by_name: body.created_by_name || 'Admin',
@@ -111,7 +126,7 @@ export const setupRFQHandlers = (mock: MockAdapter) => {
     const id = sanitizeId(config.url?.split('/').pop());
     const foundIndex = MOCK_RFQS.findIndex(r => sanitizeId(r.rfq_id) === id);
     if (foundIndex !== -1) {
-      const body = config.data ? JSON.parse(config.data) : {};
+      const body = config.data ? (typeof config.data === 'string' ? JSON.parse(config.data) : config.data) : {};
       const targetRFQ = MOCK_RFQS[foundIndex];
 
       // Mutate in-memory: persist status and vendor_count changes

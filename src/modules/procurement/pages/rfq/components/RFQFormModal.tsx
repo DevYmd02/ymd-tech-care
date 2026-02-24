@@ -3,7 +3,7 @@ import { useRFQForm } from '@/modules/procurement/hooks/rfq';
 import { RFQFormHeader } from './RFQFormHeader';
 import { RFQFormLines } from './RFQFormLines';
 import { RFQVendorSelection } from './RFQVendorSelection';
-import { VendorTrackingTable } from './VendorTrackingTable';
+import { VendorDispatchTable } from './VendorDispatchTable';
 import { VendorSearchModal } from '@/modules/master-data/vendor/components/selector/VendorSearchModal';
 import { PRSelectionModal } from '@/modules/procurement/components/selector/PRSelectionModal';
 import { WindowFormLayout, TabPanel } from '@ui';
@@ -16,15 +16,17 @@ interface Props {
     editId?: string | null;
     initialPR?: PRHeader | null;
     readOnly?: boolean;
+    isInviteMode?: boolean;
 }
 
-export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, readOnly = false }: Props) => {
+export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, readOnly = false, isInviteMode = false }: Props) => {
     const {
         formData, errors, isSaving, activeTab, setActiveTab, trackingVendors,
         branches,
         
-        handleChange, handleLineChange, handleRemoveLine,
+        handleChange, handleLineChange, handleResetLines, handleRemoveLine,
         handleSave, 
+        originalLinesCount,
 
         // PR Logic
         isPRSelectionModalOpen, setIsPRSelectionModalOpen, handlePRSelect,
@@ -49,14 +51,14 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
         <WindowFormLayout
             isOpen={isOpen}
             onClose={onClose}
-            title={readOnly ? "ดูใบขอเสนอราคา (View RFQ)" : (editId ? `แก้ไขใบขอเสนอราคา (${formData.rfq_no})` : "สร้างใบขอเสนอราคา (RFQ)")}
+            title={readOnly ? "ดูใบขอเสนอราคา (View RFQ)" : (isInviteMode && editId ? `ส่งใบเสนอราคาเพิ่ม (${formData.rfq_no})` : (editId ? `แก้ไขใบขอเสนอราคา (${formData.rfq_no})` : "สร้างใบขอเสนอราคา (RFQ)"))}
             titleIcon={<div className="bg-white/20 p-1 rounded-md shadow-sm"><FileText size={14} strokeWidth={3} /></div>}
-            headerColor={readOnly ? "bg-gray-600" : "bg-teal-600"}
+            headerColor={readOnly ? "bg-gray-600" : (isInviteMode ? "bg-blue-600" : "bg-teal-600")}
             footer={
                 <div className="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-between items-center bg-white dark:bg-gray-900 sticky bottom-0 z-10 gap-x-2">
                     <div className="flex items-center gap-2">
                         {/* Destructive Actions - Hide in ReadOnly mode usually, or keep if relevant? Prompt implies ReadOnly is for View. */}
-                        {!readOnly && formData.status === 'DRAFT' && editId && (
+                        {!readOnly && !isInviteMode && formData.status === 'DRAFT' && editId && (
                             <button
                                 type="button"
                                 className="flex items-center gap-1.5 px-3 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md text-sm font-medium transition-colors border border-transparent hover:border-red-200 dark:hover:border-red-800"
@@ -67,7 +69,7 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
                                 <span className="hidden sm:inline">ลบเอกสาร</span>
                             </button>
                         )}
-                        {!readOnly && (formData.status === 'SENT' || formData.status === 'IN_PROGRESS') && editId && (
+                        {!readOnly && !isInviteMode && (formData.status === 'SENT' || formData.status === 'IN_PROGRESS') && editId && (
                             <button
                                 type="button"
                                 className="flex items-center gap-1.5 px-3 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md text-sm font-medium transition-colors border border-transparent hover:border-red-200 dark:hover:border-red-800"
@@ -94,9 +96,9 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
                                 type="button"
                                 onClick={handleSave}
                                 disabled={isSaving}
-                                className="px-6 py-2 bg-teal-600 text-white hover:bg-teal-700 rounded-md text-sm font-medium shadow-sm transition-colors disabled:opacity-50"
+                                className={`px-6 py-2 text-white rounded-md text-sm font-medium shadow-sm transition-colors disabled:opacity-50 ${isInviteMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-teal-600 hover:bg-teal-700'}`}
                             >
-                                บันทึก
+                                {isInviteMode ? 'บันทึกผู้ขายที่ส่งเพิ่ม' : 'บันทึก'}
                             </button>
                         )}
                     </div>
@@ -111,6 +113,8 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
                         handleChange={handleChange}
                         errors={errors}
                         onOpenPRModal={() => setIsPRSelectionModalOpen(true)}
+                        readOnly={readOnly}
+                        isInviteMode={isInviteMode}
                     />
                 </div>
 
@@ -119,13 +123,17 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
                         lines={formData.lines} 
                         handleLineChange={handleLineChange}
                         handleRemoveLine={handleRemoveLine}
+                        handleResetLines={handleResetLines}
+                        originalLinesCount={originalLinesCount}
+                        readOnly={readOnly}
+                        isInviteMode={isInviteMode}
                     />
                 </div>
 
                 {/* Vendor Logic Restored */}
                 <div className={cardClass}>
-                    {(!!formData.status && formData.status !== 'DRAFT') ? (
-                        <VendorTrackingTable vendors={trackingVendors} />
+                    {(!!formData.status && formData.status !== 'DRAFT' && !isInviteMode) ? (
+                        <VendorDispatchTable vendors={trackingVendors} />
                     ) : (
                         <RFQVendorSelection  
                             vendors={formData.vendors}
@@ -133,6 +141,7 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
                             onRemove={handleRemoveVendor}
                             handleOpenVendorModal={handleOpenVendorModal}
                             isViewMode={readOnly}
+                            isInviteMode={isInviteMode}
                         />
                     )}
                 </div>

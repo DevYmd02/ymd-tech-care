@@ -9,7 +9,15 @@
 // ====================================================================================
 
 /** Quotation Status - สถานะใบเสนอราคาจากผู้ขาย */
-export type QuotationStatus = 'DRAFT' | 'SUBMITTED' | 'SELECTED' | 'REJECTED';
+export type QuotationStatus = 
+    | 'DRAFT' 
+    | 'SUBMITTED' // legacy eq for received
+    | 'RECEIVED'  // target
+    | 'IN_PROGRESS' 
+    | 'CLOSED' 
+    | 'SELECTED'  // legacy eq for compared
+    | 'COMPARED'  // target
+    | 'REJECTED';
 
 // ====================================================================================
 // QUOTATION HEADER - ตาราง quotation_header
@@ -34,6 +42,7 @@ export interface QuotationHeader {
     vendor_name?: string;               // Display
     vendor_code?: string;               // Display
     rfq_no?: string;                    // Display
+    pr_no?: string;                     // Display - Reference PR
 }
 
 // ====================================================================================
@@ -76,6 +85,7 @@ export interface QTListParams {
   quotation_no?: string;
   vendor_name?: string;
   rfq_no?: string;
+  pr_no?: string;
   status?: string;
   date_from?: string;
   date_to?: string;

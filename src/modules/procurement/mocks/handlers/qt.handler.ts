@@ -17,7 +17,7 @@ export const setupQTHandlers = (mock: MockAdapter) => {
     }));
 
     const result = applyMockFilters(sanitizedData, params, {
-        searchableFields: ['quotation_no', 'vendor_name'],
+        searchableFields: ['quotation_no', 'vendor_name', 'rfq_no', 'pr_no'],
         dateField: 'quotation_date'
     });
 

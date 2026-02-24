@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { MasterDataService } from '@/modules/master-data';
 import type { BranchListItem, ItemListItem, UnitListItem } from '@/modules/master-data/types/master-data-types';
 import type { VendorSearchItem } from '@/modules/master-data/vendor/types/vendor-types';
-import type { RFQFormData, RFQLineFormData, RFQCreateData, RFQHeader, RFQVendor } from '@/modules/procurement/types/rfq-types';
+import type { RFQFormData, RFQLineFormData, RFQCreateData, RFQVendor, RFQVendorFormData } from '@/modules/procurement/types/rfq-types';
 import { initialRFQFormData, initialRFQLineFormData } from '@/modules/procurement/types/rfq-types';
 import type { PRHeader } from '@/modules/procurement/types/pr-types';
 
@@ -22,6 +22,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         created_by_name: 'ระบบจะกรอกอัตโนมัติ',
         lines: [],
     });
+    const [originalPRLines, setOriginalPRLines] = useState<RFQLineFormData[]>([]);
 
     const { toast } = useToast();
     const [isSaving, setIsSaving] = useState(false);
@@ -69,27 +70,33 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         const fetchRFQDetails = async () => {
             setIsLoadingEdit(true);
             try {
-                const rfq = await RFQService.getById(editId) as RFQHeader & {
-                    vendors?: Array<RFQVendor & { vendor_code?: string; vendor_name?: string }>;
-                    lines?: RFQLineFormData[];
-                };
+                const rfq = await RFQService.getById(editId);
 
                 // Store raw enriched vendors for the tracking dashboard
                 setTrackingVendors(rfq.vendors || []);
 
                 // Map vendors from API response → RFQVendorFormData[]
-                const mappedVendors = (rfq.vendors || []).map(v => ({
+                const mappedVendors: RFQVendorFormData[] = (rfq.vendors || []).map(v => ({
                     vendor_id: v.vendor_id,
                     vendor_code: v.vendor_code || '',
                     vendor_name: v.vendor_name || '',
                     vendor_name_display: v.vendor_code ? `${v.vendor_code} - ${v.vendor_name}` : v.vendor_name || '',
+                    is_existing: true
                 }));
 
                 // Map lines
-                const rfqLines: RFQLineFormData[] = (rfq.lines || []).map((line: RFQLineFormData, i: number) => ({
+                const rfqLines: RFQLineFormData[] = (rfq.lines || []).map((line, i: number) => ({
                     ...initialRFQLineFormData,
-                    ...line,
                     line_no: i + 1,
+                    item_code: line.item_code,
+                    item_name: line.item_name,
+                    item_description: line.item_description || '',
+                    required_qty: line.required_qty,
+                    uom: line.uom,
+                    required_date: line.required_date || '',
+                    remarks: line.remark || '',
+                    item_id: line.item_id || undefined,
+                    pr_line_id: line.pr_line_id || undefined,
                 }));
                 setFormData({
                     ...initialRFQFormData,
@@ -112,6 +119,38 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                     vendors: mappedVendors,
                 });
                 setErrors({});
+                
+                // --- Deep Data Mapping Fix: If RFQ lines are empty, fetch and map PR lines ---
+                if (rfqLines.length === 0 && rfq.pr_id) {
+                     logger.log('[RFQ] Found mapped PR but no lines. Fetching PR items...', { pr_id: rfq.pr_id });
+                     try {
+                         const prDetail = await PRService.getDetail(rfq.pr_id);
+                         if (prDetail.lines && prDetail.lines.length > 0) {
+                             const mappedPrLines: RFQLineFormData[] = prDetail.lines.map((line, index) => ({
+                                line_no: index + 1,
+                                item_code: line.item_code,
+                                item_name: line.item_name,
+                                item_description: line.description || line.item_name,
+                                required_qty: line.qty,
+                                uom: line.uom,
+                                required_date: line.needed_date ? line.needed_date.split('T')[0] : '',
+                                remarks: line.remark || '',
+                                item_id: line.item_id || undefined,
+                                pr_line_id: line.pr_line_id || undefined,
+                                est_unit_price: line.est_unit_price || 0,
+                                est_amount: line.est_amount || 0,
+                            }));
+                            // Overwrite empty lines with safely mapped PR lines
+                            setFormData(prev => ({ ...prev, lines: mappedPrLines }));
+                            // Save original PR lines state for reset functionality
+                            setOriginalPRLines(mappedPrLines);
+                         }
+                     } catch (prError) {
+                         logger.error('Failed to fetch fallback PR details:', prError);
+                     }
+                }
+                // --- End Deep Data Mapping Fix ---
+
                 logger.log('[RFQ] Loaded for edit', { rfq_no: rfq.rfq_no, vendors: mappedVendors.length });
             } catch (error) {
                 logger.error('Failed to fetch RFQ for edit:', error);
@@ -149,6 +188,8 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                         est_unit_price: line.est_unit_price || 0,
                         est_amount: line.est_amount || 0,
                     }));
+                    
+                    setOriginalPRLines(rfqLines);
                     // Determine Multicurrency State from PR
                     const isMulti = fullPR.pr_base_currency_code !== 'THB';
 
@@ -219,6 +260,62 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         }
     }, [isOpen, editId, initialPR, toast]);
 
+
+    // ========================================================================
+    // BRANCH 3: Deep PR ID Cascade Watch 
+    // Automatically inherit PR items if pr_id changes AND table is empty
+    // ========================================================================
+    useEffect(() => {
+        if (!isOpen) return;
+        
+        const tryFetchPRLines = async () => {
+            if (!formData.pr_id) return;
+            
+            // Overwrite Guard: ONLY overwrite if lines are empty OR explicitly requested.
+            // We check if the table truly has no entered data.
+            const hasData = formData.lines.some(l => l.item_code && l.item_code.trim() !== '');
+            if (hasData) return; // Never blindly overwrite user data
+            
+            try {
+                const prDetail = await PRService.getDetail(formData.pr_id);
+                if (prDetail.lines && prDetail.lines.length > 0) {
+                    const mappedPrLines: RFQLineFormData[] = prDetail.lines.map((line, index) => ({
+                        line_no: index + 1,
+                        item_code: line.item_code,
+                        item_name: line.item_name,
+                        item_description: line.description || line.item_name,
+                        required_qty: line.qty,
+                        uom: line.uom,
+                        required_date: line.needed_date ? line.needed_date.split('T')[0] : '',
+                        remarks: line.remark || '',
+                        item_id: line.item_id || undefined,
+                        pr_line_id: line.pr_line_id || undefined,
+                        est_unit_price: line.est_unit_price || 0,
+                        est_amount: line.est_amount || 0,
+                    }));
+                    
+                    // Replace empty table with mapped PR data
+                    setFormData(prev => ({ ...prev, lines: mappedPrLines }));
+                    setOriginalPRLines(mappedPrLines);
+                    
+                    // Auto-sync currency settings if the table was empty
+                    const isMulti = prDetail.pr_base_currency_code !== 'THB';
+                    setFormData(prev => ({
+                        ...prev,
+                        isMulticurrency: isMulti,
+                        currency: prDetail.pr_base_currency_code,
+                        target_currency: prDetail.pr_quote_currency_code || prev.target_currency,
+                        exchange_rate: prDetail.pr_exchange_rate || 1,
+                    }));
+                }
+            } catch (error) {
+                logger.error('Failed to auto-fetch PR lines:', error);
+            }
+        };
+
+        tryFetchPRLines();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [formData.pr_id, isOpen]);
 
     // Validation State & Schema
     const [errors, setErrors] = useState<Record<string, string>>({});
@@ -322,10 +419,24 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
             lines: [...prev.lines, { ...initialRFQLineFormData, line_no: prev.lines.length + 1 }],
         }));
     }, []);
+    
+    const handleResetLines = useCallback(() => {
+        if (originalPRLines.length === 0) return;
+        
+        // Deep copy to prevent reference mutation
+        const resetLines = originalPRLines.map(line => ({ ...line }));
+        
+        setFormData(prev => ({
+            ...prev,
+            lines: resetLines
+        }));
+        
+        toast('คืนค่ารายการสินค้าจาก PR เรียบร้อย', 'success');
+    }, [originalPRLines, toast]);
 
     const handleRemoveLine = useCallback((index: number) => {
-        if (formData.lines.length <= 5) {
-            toast('ต้องมีอย่างน้อย 5 แถว', 'error');
+        if (formData.lines.length <= 1) {
+            toast('ต้องมีอย่างน้อย 1 รายการ', 'error');
             return;
         }
         setFormData(prev => ({
@@ -415,6 +526,8 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                 est_unit_price: line.est_unit_price || 0,
                 est_amount: line.est_amount || 0,
             }));
+
+            setOriginalPRLines(rfqLines);
 
             const isMulti = fullPR.pr_base_currency_code !== 'THB';
             
@@ -527,9 +640,13 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         handlePRSelect,
         handleChange,
         handleLineChange,
+        handleResetLines,
         handleAddLine,
         handleRemoveLine,
         handleSave,
+        
+        // RFQ Reset Info
+        originalLinesCount: originalPRLines.length,
         
         // Vendor Exports
         isVendorModalOpen,

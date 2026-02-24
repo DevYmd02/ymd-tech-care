@@ -22,6 +22,7 @@ export interface TableFilterOptions<TStatus extends string = string> {
   defaultSearch?: string;
   defaultSearch2?: string;
   defaultSearch3?: string;
+  defaultSearch4?: string;
   defaultStatus?: TStatus | 'ALL';
   defaultSort?: string;
   defaultDateFrom?: string;
@@ -32,6 +33,7 @@ export interface TableFilterOptions<TStatus extends string = string> {
     search?: string;
     search2?: string;
     search3?: string;
+    search4?: string;
     status?: string;
     sort?: string;
     dateFrom?: string;
@@ -46,6 +48,7 @@ export interface TableFilters<TStatus extends string = string> {
   search: string;
   search2: string;
   search3: string;
+  search4: string;
   status: TStatus | 'ALL';
   sort: string;
   dateFrom: string;
@@ -84,6 +87,9 @@ export interface UseTableFiltersReturn<TStatus extends string = string> {
   /** Change tertiary search term (resets page to 1) */
   handleSearch3Change: (value: string) => void;
   
+  /** Change quaternary search term (resets page to 1) */
+  handleSearch4Change: (value: string) => void;
+  
   /** Change sorting (Single-Column Logic) */
   handleSortChange: (key: string) => void;
 
@@ -104,6 +110,7 @@ const PARAM_KEYS = {
   search: 'search',
   search2: 'search2',
   search3: 'search3',
+  search4: 'search4',
   status: 'status',
   sort: 'sort',
   dateFrom: 'dateFrom',
@@ -147,11 +154,12 @@ export function useTableFilters<TStatus extends string = string>(
     search: cpk?.search ?? PARAM_KEYS.search,
     search2: cpk?.search2 ?? PARAM_KEYS.search2,
     search3: cpk?.search3 ?? PARAM_KEYS.search3,
+    search4: cpk?.search4 ?? PARAM_KEYS.search4,
     status: cpk?.status ?? PARAM_KEYS.status,
     sort: cpk?.sort ?? PARAM_KEYS.sort,
     dateFrom: cpk?.dateFrom ?? PARAM_KEYS.dateFrom,
     dateTo: cpk?.dateTo ?? PARAM_KEYS.dateTo,
-  }), [cpk?.page, cpk?.limit, cpk?.search, cpk?.search2, cpk?.search3, cpk?.status, cpk?.sort, cpk?.dateFrom, cpk?.dateTo]);
+  }), [cpk?.page, cpk?.limit, cpk?.search, cpk?.search2, cpk?.search3, cpk?.search4, cpk?.status, cpk?.sort, cpk?.dateFrom, cpk?.dateTo]);
 
   // ------------------------------------------------------------
   // Derive filters from URL params (memoized for performance)
@@ -164,6 +172,7 @@ export function useTableFilters<TStatus extends string = string>(
       search: options.defaultSearch || '',
       search2: options.defaultSearch2 || '',
       search3: options.defaultSearch3 || '',
+      search4: options.defaultSearch4 || '',
       status: (options.defaultStatus || 'ALL') as TStatus | 'ALL',
       sort: options.defaultSort || '',
       dateFrom: options.defaultDateFrom || '',
@@ -179,12 +188,13 @@ export function useTableFilters<TStatus extends string = string>(
       search: searchParams.get(keys.search) ?? defaultInternalFilters.search,
       search2: searchParams.get(keys.search2) ?? defaultInternalFilters.search2,
       search3: searchParams.get(keys.search3) ?? defaultInternalFilters.search3,
+      search4: searchParams.get(keys.search4) ?? defaultInternalFilters.search4,
       status: (searchParams.get(keys.status) ?? defaultInternalFilters.status) as TStatus | 'ALL',
       sort: searchParams.get(keys.sort) ?? defaultInternalFilters.sort,
       dateFrom: searchParams.get(keys.dateFrom) ?? defaultInternalFilters.dateFrom,
       dateTo: searchParams.get(keys.dateTo) ?? defaultInternalFilters.dateTo,
     };
-  }, [searchParams, keys, options.defaultPage, options.defaultLimit, options.defaultSearch, options.defaultSearch2, options.defaultSearch3, options.defaultStatus, options.defaultSort, options.defaultDateFrom, options.defaultDateTo]);
+  }, [searchParams, keys, options.defaultPage, options.defaultLimit, options.defaultSearch, options.defaultSearch2, options.defaultSearch3, options.defaultSearch4, options.defaultStatus, options.defaultSort, options.defaultDateFrom, options.defaultDateTo]);
 
   // ------------------------------------------------------------
   // Single-Column Sort Config derivation (key:direction)
@@ -233,7 +243,7 @@ export function useTableFilters<TStatus extends string = string>(
   const setFilters = useCallback(
     (updates: Partial<TableFilters<TStatus>>) => {
       // If search or status is changing, reset page
-      const shouldResetPage = 'search' in updates || 'search2' in updates || 'search3' in updates || 'status' in updates || 'dateFrom' in updates || 'dateTo' in updates;
+      const shouldResetPage = 'search' in updates || 'search2' in updates || 'search3' in updates || 'search4' in updates || 'status' in updates || 'dateFrom' in updates || 'dateTo' in updates;
       updateParams(updates, shouldResetPage && !('page' in updates));
     },
     [updateParams]
@@ -298,6 +308,16 @@ export function useTableFilters<TStatus extends string = string>(
     },
     [updateParams]
   );
+  
+  // ------------------------------------------------------------
+  // Handler: Quaternary search change (resets page to 1)
+  // ------------------------------------------------------------
+  const handleSearch4Change = useCallback(
+    (value: string) => {
+      updateParams({ search4: value } as Partial<TableFilters<TStatus>>, true);
+    },
+    [updateParams]
+  );
 
   // ------------------------------------------------------------
   // Handler: Sort change (Single-Column Logic: New=DESC, Same=Toggle)
@@ -334,6 +354,7 @@ export function useTableFilters<TStatus extends string = string>(
     handleSearchChange,
     handleSearch2Change,
     handleSearch3Change,
+    handleSearch4Change,
     handleStatusChange,
     handleDateRangeChange,
     handleSortChange,

@@ -15,21 +15,22 @@ import { RFQService } from '@/modules/procurement/services/rfq.service';
 // TYPES
 // ====================================================================================
 
-/** Vendor data returned from detail API (embedded in response) */
-interface VendorDetail {
+/** Details of a vendor in the response, mapped for UI */
+interface VendorDetailDisplay {
     rfq_vendor_id: string;
     vendor_id: string;
-    vendor_name?: string;
-    vendor_code?: string;
+    vendor_name: string;
+    vendor_code: string;
     email_sent_to: string | null;
     status: string;
+    sent_date: string | null;
 }
 
 interface RFQSendConfirmModalProps {
     isOpen: boolean;
     rfq: RFQHeader | null;
     onClose: () => void;
-    onConfirm: (selectedVendorIds: string[]) => void;
+    onConfirm: (selectedVendorIds: string[], methods: string[]) => void;
     isLoading?: boolean; // Controlled externally for API call state
 }
 
@@ -45,15 +46,21 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
     isLoading = false,
 }) => {
     // Local state for vendor data (Read Only)
-    const [vendors, setVendors] = useState<VendorDetail[]>([]);
+    const [vendors, setVendors] = useState<VendorDetailDisplay[]>([]);
     const [isFetching, setIsFetching] = useState(false);
     const [fetchError, setFetchError] = useState<string | null>(null);
+
+    // Multi-select state
+    const [selectedVendorIds, setSelectedVendorIds] = useState<string[]>([]);
+    const [selectedMethods, setSelectedMethods] = useState<string[]>(['EMAIL']);
 
     // Fetch vendor data when modal opens
     useEffect(() => {
         if (!isOpen || !rfq) {
             setVendors([]);
             setFetchError(null);
+            setSelectedVendorIds([]);
+            setSelectedMethods(['EMAIL']);
             return;
         }
 
@@ -62,12 +69,27 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
             setIsFetching(true);
             setFetchError(null);
             try {
-                const detail = await RFQService.getById(rfq.rfq_id);
+                // Type-safe fetch using RFQDetailResponse
+                const response = await RFQService.getById(rfq.rfq_id);
                 if (cancelled) return;
 
-                // The detail response now includes vendors[] from mock handler
-                const vendorList: VendorDetail[] = (detail as unknown as { vendors?: VendorDetail[] }).vendors || [];
+                // Map results to display interface
+                const vendorList: VendorDetailDisplay[] = response.vendors.map(v => ({
+                    rfq_vendor_id: v.rfq_vendor_id,
+                    vendor_id: v.vendor_id,
+                    vendor_name: v.vendor_name || '',
+                    vendor_code: v.vendor_code || '',
+                    email_sent_to: v.email_sent_to,
+                    status: v.status,
+                    sent_date: v.sent_date
+                }));
+
                 setVendors(vendorList);
+                
+                // Intelligent selection: 
+                // 1. All already sent vendors are locked in (checked)
+                // 2. All PENDING vendors are pre-selected for this new dispatch
+                setSelectedVendorIds(vendorList.map(v => v.vendor_id));
             } catch (err) {
                 if (!cancelled) {
                     setFetchError('ไม่สามารถโหลดข้อมูลผู้ขายได้');
@@ -82,8 +104,59 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
         return () => { cancelled = true; };
     }, [isOpen, rfq]);
 
+    // Checkbox toggles
+    const handleToggleVendor = (vendorId: string) => {
+        setSelectedVendorIds(prev =>
+            prev.includes(vendorId)
+                ? prev.filter(id => id !== vendorId)
+                : [...prev, vendorId]
+        );
+    };
+
+    const handleSelectAllVendors = () => {
+        const interactiveVendors = vendors.filter(v => v.status === 'PENDING');
+        const allInteractiveSelected = interactiveVendors.every(v => selectedVendorIds.includes(v.vendor_id));
+
+        if (allInteractiveSelected) {
+            // Uncheck only interactive ones (locked ones stay)
+            const lockedIds = vendors.filter(v => v.status !== 'PENDING').map(v => v.vendor_id);
+            setSelectedVendorIds(lockedIds);
+        } else {
+            // Check everything
+            setSelectedVendorIds(vendors.map(v => v.vendor_id));
+        }
+    };
+
+    const handleConfirm = () => {
+        // We only want to send/re-send the vendors who are in PENDING status but currently SELECTED
+        const newVendorIdsToSend = vendors
+            .filter(v => v.status === 'PENDING' && selectedVendorIds.includes(v.vendor_id))
+            .map(v => v.vendor_id);
+            
+        onConfirm(newVendorIdsToSend, selectedMethods);
+    };
+
+    const handleToggleMethod = (method: string) => {
+        setSelectedMethods(prev =>
+            prev.includes(method)
+                ? prev.filter(m => m !== method)
+                : [...prev, method]
+        );
+    };
+
     const hasVendors = vendors.length > 0;
-    const canConfirm = hasVendors && !isLoading && !isFetching;
+    const isEmailMethodSelected = selectedMethods.includes('EMAIL');
+    const isPdfMethodSelected = selectedMethods.includes('PDF');
+
+    const isAllSentMode = vendors.length > 0 && vendors.every(v => v.status !== 'PENDING');
+
+    // Validation targets only the newly selected vendors (not the locked ones)
+    const newSelectedVendors = vendors.filter(v => v.status === 'PENDING' && selectedVendorIds.includes(v.vendor_id));
+    const vendorsMissingEmail = newSelectedVendors.filter(v => !v.email_sent_to);
+    const hasEmailError = isEmailMethodSelected && vendorsMissingEmail.length > 0;
+
+    const hasNewSelection = newSelectedVendors.length > 0 && selectedMethods.length > 0;
+    const canConfirm = hasNewSelection && !hasEmailError && !isLoading && !isFetching;
 
     if (!isOpen || !rfq) return null;
 
@@ -150,78 +223,185 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
                         </div>
                     )}
 
-                    {/* ===== VENDOR READ ONLY LIST ===== */}
+                    {/* ===== VENDOR SELECTION LIST ===== */}
                     {!isFetching && !fetchError && hasVendors && (
                         <>
                             {/* Header bar */}
-                            <div className="flex items-center mb-3 pb-2 border-b border-gray-200 dark:border-gray-700">
+                            <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-200 dark:border-gray-700">
                                 <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                                     <Users size={16} className="text-gray-500" />
                                     <span>ผู้ขายที่จะส่ง RFQ ({vendors.length} ราย)</span>
                                 </div>
+                                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer hover:text-emerald-600 dark:hover:text-emerald-400">
+                                    <input 
+                                        type="checkbox" 
+                                        className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer w-4 h-4"
+                                        checked={selectedVendorIds.length === vendors.length && vendors.length > 0}
+                                        onChange={handleSelectAllVendors}
+                                    />
+                                    เลือกทั้งหมด
+                                </label>
                             </div>
 
                             {/* Vendor rows */}
                             <div className="space-y-2">
-                                {vendors.map((vendor) => (
-                                    <div
-                                        key={vendor.vendor_id}
-                                        className="flex items-center justify-between gap-3 p-3 rounded-lg border bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 transition-colors"
-                                    >
-                                        <div className="flex flex-col min-w-0">
-                                            <p className="font-medium text-gray-900 dark:text-gray-100 truncate">
-                                                {vendor.vendor_name || vendor.vendor_code || vendor.vendor_id}
-                                            </p>
-                                            {vendor.email_sent_to && (
-                                                <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                    <Mail size={12} />
-                                                    <span className="truncate">{vendor.email_sent_to}</span>
+                                {vendors.map((vendor) => {
+                                    const isSelected = selectedVendorIds.includes(vendor.vendor_id);
+                                    const isLocked = vendor.status !== 'PENDING';
+                                    const missingEmail = !isLocked && isEmailMethodSelected && isSelected && !vendor.email_sent_to;
+                                    
+                                    return (
+                                        <label
+                                            key={vendor.vendor_id}
+                                            className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                                                isLocked 
+                                                    ? 'bg-gray-100 dark:bg-gray-800/80 border-gray-200 dark:border-gray-700 cursor-default opacity-80' // Locked/Already Sent
+                                                    : isSelected 
+                                                        ? missingEmail 
+                                                            ? 'bg-red-50 dark:bg-red-900/10 border-red-300 dark:border-red-800 cursor-pointer' // Selected but missing email error
+                                                            : 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-300 dark:border-emerald-800 cursor-pointer' // Selected valid
+                                                        : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 cursor-pointer' // Not selected
+                                            }`}
+                                        >
+                                            <input 
+                                                type="checkbox" 
+                                                className={`rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4 mt-1 self-start ${isLocked ? 'cursor-default' : 'cursor-pointer'}`}
+                                                checked={isSelected}
+                                                disabled={isLocked}
+                                                onChange={() => !isLocked && handleToggleVendor(vendor.vendor_id)}
+                                            />
+                                            <div className="flex flex-col min-w-0 flex-1">
+                                                <div className="flex items-center gap-2">
+                                                    <p className={`font-medium truncate transition-colors ${
+                                                        isLocked ? 'text-gray-500 dark:text-gray-400' : isSelected && !missingEmail ? 'text-emerald-900 dark:text-emerald-100' : 'text-gray-900 dark:text-gray-100'
+                                                    }`}>
+                                                        {vendor.vendor_name || vendor.vendor_code || vendor.vendor_id}
+                                                    </p>
+                                                    {isLocked && (
+                                                        <span className="text-[10px] font-bold bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                                                            ส่งแล้ว
+                                                        </span>
+                                                    )}
                                                 </div>
-                                            )}
-                                        </div>
+                                                <div className="flex items-center gap-1.5 text-xs mt-1">
+                                                    <Mail size={12} className={missingEmail ? 'text-red-500' : 'text-gray-500'} />
+                                                    <span className={`truncate ${missingEmail ? 'text-red-500 font-medium' : isLocked ? 'text-gray-400 dark:text-gray-500' : 'text-gray-500 dark:text-gray-400'}`}>
+                                                        {vendor.email_sent_to || 'ไม่มีอีเมลในระบบ'}
+                                                    </span>
+                                                </div>
+                                            </div>
 
-                                        {/* Vendor code badge */}
-                                        {vendor.vendor_code && (
-                                            <span className="text-[11px] font-semibold text-gray-600 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 px-2.5 py-1 rounded-full shrink-0 shadow-sm border border-gray-300/50 dark:border-gray-600">
-                                                {vendor.vendor_code}
-                                            </span>
-                                        )}
-                                    </div>
-                                ))}
+                                            {/* Vendor code badge */}
+                                            {vendor.vendor_code && (
+                                                <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full shrink-0 shadow-sm border ${
+                                                    isLocked
+                                                        ? 'bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-600 border-gray-200 dark:border-gray-800'
+                                                        : isSelected && !missingEmail
+                                                            ? 'bg-emerald-100 dark:bg-emerald-800/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-700'
+                                                            : 'text-gray-600 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 border-gray-300/50 dark:border-gray-600'
+                                                }`}>
+                                                    {vendor.vendor_code}
+                                                </span>
+                                            )}
+                                        </label>
+                                    );
+                                })}
+                            </div>
+
+                            {/* ===== DISPATCH METHODS ===== */}
+                            <div className="mt-6 pt-5 border-t border-gray-200 dark:border-gray-700">
+                                <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                                    <Send size={16} className="text-gray-500" />
+                                    <span>ช่องทางการส่ง (Dispatch Methods)</span>
+                                </div>
+                                <div className="flex flex-col sm:flex-row gap-3">
+                                    <label className={`flex-1 flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                                        isEmailMethodSelected 
+                                            ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-300 dark:border-emerald-800' 
+                                            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                                    }`}>
+                                        <input 
+                                            type="checkbox" 
+                                            className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer"
+                                            checked={isEmailMethodSelected}
+                                            onChange={() => handleToggleMethod('EMAIL')}
+                                        />
+                                        <div className="flex flex-col">
+                                            <span className={`font-medium text-sm ${isEmailMethodSelected ? 'text-emerald-900 dark:text-emerald-100' : 'text-gray-700 dark:text-gray-300'}`}>ส่งอีเมล (Email)</span>
+                                            <span className="text-xs text-gray-500">ส่งลิงก์เพื่อให้ผู้ขายเสนอราคาออนไลน์</span>
+                                        </div>
+                                    </label>
+                                    
+                                    <label className={`flex-1 flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                                        isPdfMethodSelected 
+                                            ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-300 dark:border-emerald-800' 
+                                            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                                    }`}>
+                                        <input 
+                                            type="checkbox" 
+                                            className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer"
+                                            checked={isPdfMethodSelected}
+                                            onChange={() => handleToggleMethod('PDF')}
+                                        />
+                                        <div className="flex flex-col">
+                                            <span className={`font-medium text-sm ${isPdfMethodSelected ? 'text-emerald-900 dark:text-emerald-100' : 'text-gray-700 dark:text-gray-300'}`}>พิมพ์เอกสาร (PDF)</span>
+                                            <span className="text-xs text-gray-500">สร้างเอกสาร PDF สำหรับพิมพ์/ดาวน์โหลด</span>
+                                        </div>
+                                    </label>
+                                </div>
+                                
+                                {selectedMethods.length === 0 && (
+                                    <p className="text-xs text-red-500 mt-2 font-medium">กรุณาเลือกช่องทางการส่งอย่างน้อย 1 วิธี</p>
+                                )}
                             </div>
                         </>
                     )}
                 </div>
 
                 {/* ===== FOOTER ===== */}
-                <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex items-center justify-end gap-3">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        disabled={isLoading}
-                        className={`px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 font-medium transition-colors ${
-                            isLoading ? 'opacity-50 cursor-not-allowed' : ''
-                        }`}
-                    >
-                        ยกเลิก
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => onConfirm(vendors.map(v => v.vendor_id))}
-                        disabled={!canConfirm}
-                        className={`px-5 py-2 rounded-lg text-white font-bold shadow-sm transition-all flex items-center gap-2 ${
-                            canConfirm
-                                ? 'bg-emerald-600 hover:bg-emerald-700 hover:shadow-md'
-                                : 'bg-gray-400 cursor-not-allowed'
-                        }`}
-                    >
-                        {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                        <Send size={14} />
-                        {isLoading
-                            ? 'กำลังส่ง...'
-                            : `ยืนยันการส่ง (${vendors.length} ราย)`
-                        }
-                    </button>
+                <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div className="w-full sm:w-auto">
+                        {isPdfMethodSelected && selectedVendorIds.length > 0 && (
+                            <button
+                                type="button"
+                                disabled={isLoading}
+                                className="w-full sm:w-auto px-4 py-2 rounded-lg border-2 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 font-medium transition-colors whitespace-nowrap"
+                            >
+                                Print Preview
+                            </button>
+                        )}
+                    </div>
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            disabled={isLoading}
+                            className={`px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 font-medium transition-colors flex-1 sm:flex-none ${
+                                isLoading ? 'opacity-50 cursor-not-allowed' : ''
+                            }`}
+                        >
+                            ยกเลิก
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleConfirm}
+                            disabled={!canConfirm}
+                            className={`px-5 py-2 rounded-lg text-white font-bold shadow-sm transition-all flex items-center justify-center gap-2 flex-1 sm:flex-none whitespace-nowrap ${
+                                canConfirm
+                                    ? 'bg-emerald-600 hover:bg-emerald-700 hover:shadow-md'
+                                    : 'bg-gray-400 cursor-not-allowed'
+                            }`}
+                        >
+                            {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                            <Send size={14} />
+                            {isLoading
+                                ? 'กำลังประมวลผล...'
+                                : isAllSentMode 
+                                    ? 'ส่งแล้ว (ครบกำหนด)'
+                                    : `ยืนยันการดำเนินการ (${newSelectedVendors.length})`
+                            }
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>,
