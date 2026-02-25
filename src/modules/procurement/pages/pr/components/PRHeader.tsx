@@ -11,11 +11,11 @@ import type { PRFormData, VendorSelection } from '@/modules/procurement/types/pr
 import type { CostCenter, Project } from '@/modules/master-data/types/master-data-types';
 import { VendorSearch } from '@/modules/master-data/vendor/components/selector/VendorSearch';
 import { StatusCheckbox } from '@ui';
-import type { MappedOption } from '@/modules/procurement/hooks/pr';
+
 
 interface Props {
-  costCenters: MappedOption<CostCenter>[];
-  projects: MappedOption<Project>[];
+  costCenters: CostCenter[];
+  projects: Project[];
   onVendorSelect: (vendor: VendorSelection | null) => void;
   isEditMode: boolean;
   onVoid?: () => void;
@@ -145,16 +145,12 @@ export const PRHeader: React.FC<Props> = ({ costCenters, projects, onVendorSelec
                name={field.name}
                onBlur={field.onBlur}
                value={field.value || ''}
-               onChange={(e) => {
-                 const val = e.target.value;
-                 const selected = costCenters.find(cc => String(cc.value) === val);
-                 field.onChange(selected ? selected.value : val);
-               }}
+               onChange={(e) => field.onChange(e.target.value)}
              >
                <option value="">-- เลือกศูนย์ต้นทุน --</option>
-               {costCenters.map((cc) => (
-                 <option key={cc.value} value={cc.value}>
-                   {cc.label}
+               {costCenters?.map((cc) => (
+                 <option key={cc.cost_center_id} value={cc.cost_center_id}>
+                   {cc.cost_center_code} - {cc.cost_center_name}
                  </option>
                ))}
              </select>
@@ -176,16 +172,12 @@ export const PRHeader: React.FC<Props> = ({ costCenters, projects, onVendorSelec
                name={field.name}
                onBlur={field.onBlur}
                value={field.value || ''}
-               onChange={(e) => {
-                 const val = e.target.value;
-                 const selected = projects.find(p => String(p.value) === val);
-                 field.onChange(selected ? selected.value : val);
-               }}
+               onChange={(e) => field.onChange(e.target.value)}
              >
                <option value="">-- ไม่ระบุโครงการ --</option>
-               {projects.map((project) => (
-                 <option key={project.value} value={project.value}>
-                   {project.label}
+               {projects?.map((proj) => (
+                 <option key={proj.project_id} value={proj.project_id}>
+                   {proj.project_code} - {proj.project_name}
                  </option>
                ))}
              </select>
@@ -214,7 +206,7 @@ export const PRHeader: React.FC<Props> = ({ costCenters, projects, onVendorSelec
               onVendorSelect={onVendorSelect}
               selectedVendorId={preferredVendorId ? String(preferredVendorId) : undefined}
               selectedVendorName={vendorName}
-              label="ผู้ขายที่แนะนำ (Preferred Vendor)"
+              label="รหัสผู้ขาย"
               placeholder="ค้นหาผู้ขาย..."
               disabled={readOnly}
           />

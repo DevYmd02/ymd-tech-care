@@ -288,8 +288,14 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
             setIsActionLoading(false);
           }
         } else {
-          const nextPRNo = await PRService.generateNextDocumentNo();
-          reset({ ...getDefaultFormValues(user), pr_no: nextPRNo.document_no });
+          try {
+            const nextPRNo = await PRService.generateNextDocumentNo();
+            reset({ ...getDefaultFormValues(user), pr_no: nextPRNo.document_no });
+          } catch (err) {
+            logger.error('[usePRForm] Failed to generate PR No:', err);
+            // Fallback securely so the form doesn't crash
+            reset({ ...getDefaultFormValues(user), pr_no: 'DRAFT-TEMP' });
+          }
         }
       }, 0);
       return () => clearTimeout(timer);

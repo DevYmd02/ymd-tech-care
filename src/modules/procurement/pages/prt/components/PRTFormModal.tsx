@@ -12,6 +12,7 @@ import { PrtService } from '@/modules/procurement/services/prt.service';
 import { prtSchema } from '@/modules/procurement/types/prt/prt-types';
 import type { PrtItem, PrtFormValues } from '@/modules/procurement/types/prt/prt-types';
 import { PrtItemsTable } from './PrtItemsTable';
+import { logger } from '@/shared/utils/logger';
 
 // ====================================================================================
 // TYPES & MOCKS (Moved to prt-types.ts)
@@ -166,7 +167,7 @@ export default function PRTFormModal({ isOpen, onClose, onSuccess, initialValues
                 const rate = await PrtService.getExchangeRate(currencyId, rateDate);
                 setValue('exchange_rate', rate);
             } catch (error) {
-                console.error('Failed to fetch exchange rate:', error);
+                logger.error('[PRTFormModal] Failed to fetch exchange rate:', error);
             } finally {
                 setIsRateLoading(false);
             }

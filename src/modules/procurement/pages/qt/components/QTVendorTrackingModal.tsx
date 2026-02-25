@@ -6,6 +6,7 @@ import { RFQService } from '@/modules/procurement/services';
 import type { RFQDetailResponse } from '@/modules/procurement/types/rfq-types';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { VendorTrackingTable, type ExtendedVendor } from './VendorTrackingTable';
+import { logger } from '@/shared/utils/logger';
 
 interface QTVendorTrackingModalProps {
     isOpen: boolean;
@@ -37,7 +38,7 @@ export const QTVendorTrackingModal: React.FC<QTVendorTrackingModalProps> = ({
                 setVendors(vendorList);
                 setRfqHeader(rfqDetail);
             } catch (error) {
-                console.error('Failed to fetch RFQ vendors:', error);
+                logger.error('[QTVendorTrackingModal] Failed to fetch RFQ vendors:', error);
                 toast('ไม่สามารถดึงข้อมูลผู้ขายได้', 'error');
             } finally {
                 setIsLoading(false);

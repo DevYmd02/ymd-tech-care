@@ -5,6 +5,7 @@ import { POService } from '@/modules/procurement/services';
 import { GRNService } from '@/modules/procurement/services/grn.service';
 import type { POListItem } from '@/modules/procurement/types/po-types';
 import type { CreateGRNPayload, GRNLineItemInput } from '@/modules/procurement/types/grn-types';
+import { logger } from '@/shared/utils/logger';
 
 // ====================================================================================
 // PROPS
@@ -164,7 +165,7 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
             if (onSuccess) onSuccess();
             onClose();
         } catch (error) {
-            console.error(error);
+            logger.error('[GRNFormModal] handleSubmit error:', error);
             window.alert('เกิดข้อผิดพลาดในการบันทึก');
         }
     };

@@ -7,6 +7,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { logger } from '@/shared/utils/logger';
 import { 
     Users, Package, Building2, Warehouse as WarehouseIcon, 
     DollarSign, FolderKanban,
@@ -187,39 +188,82 @@ export default function MasterDataDashboard() {
                 }
             }
         } catch (error) {
-            console.error('[MasterDataDashboard] fetchData error:', error);
+            logger.error('[MasterDataDashboard] fetchData error:', error);
+            // Graceful Fallback: explicitly clear the state to show 0 records instead of breaking UI
+            switch (activeTab) {
+                case 'vendor': setVendors([]); break;
+                case 'branch': setBranches([]); break;
+                case 'warehouse': setWarehouses([]); break;
+                case 'cost-center': setCostCenters([]); break;
+                case 'project': setProjects([]); break;
+            }
+        } finally {
+            setIsLoading(false);
         }
-        
-        setIsLoading(false);
     }, [activeTab]);
 
     // Pre-fetch ALL tab counts on initial mount (so tab headers show correct counts)
+    // NOTE: Skip the currently active tab — fetchData already handles it, preventing duplicate API calls.
     useEffect(() => {
         const fetchAllCounts = async () => {
-            try {
-                // Fetch all data in parallel for tab counts
-                const [vendorRes, branchRes, warehouseRes, costCenterRes, projectRes] = await Promise.all([
-                    VendorService.getList(),
-                    MasterDataService.getBranches(),
-                    MasterDataService.getWarehouses(),
-                    // Items handled by useQuery
-                    MasterDataService.getCostCenters(),
-                    MasterDataService.getProjects()
-                ]);
-                
-                setVendors(vendorRes.items || []);
-                setBranches(branchRes || []);
-                setWarehouses(warehouseRes || []);
-                // items handled by useQuery
-                setCostCenters(costCenterRes || []);
-                setProjects(projectRes || []);
-            } catch (error) {
-                console.error('[MasterDataDashboard] fetchAllCounts error:', error);
+            const skipTab = activeTab; // snapshot the active tab at mount time
+
+            if (skipTab !== 'vendor') {
+                try {
+                    const vendorRes = await VendorService.getList();
+                    setVendors(vendorRes.items || []);
+                } catch (error) {
+                    logger.error('Failed to fetch vendors for counts', error);
+                    setVendors([]);
+                }
+            }
+
+            if (skipTab !== 'branch') {
+                try {
+                    const branchRes = await MasterDataService.getBranches();
+                    setBranches(branchRes || []);
+                } catch (error) {
+                    logger.error('Failed to fetch branches for counts', error);
+                    setBranches([]);
+                }
+            }
+
+            if (skipTab !== 'warehouse') {
+                try {
+                    const warehouseRes = await MasterDataService.getWarehouses();
+                    setWarehouses(warehouseRes || []);
+                } catch (error) {
+                    logger.error('Failed to fetch warehouses for counts', error);
+                    setWarehouses([]);
+                }
+            }
+
+            // Items handled by useQuery — skip
+
+            if (skipTab !== 'cost-center') {
+                try {
+                    const costCenterRes = await MasterDataService.getCostCenters();
+                    setCostCenters(costCenterRes || []);
+                } catch (error) {
+                    logger.error('Failed to fetch cost centers for counts', error);
+                    setCostCenters([]);
+                }
+            }
+
+            if (skipTab !== 'project') {
+                try {
+                    const projectRes = await MasterDataService.getProjects();
+                    setProjects(projectRes || []);
+                } catch (error) {
+                    logger.error('Failed to fetch projects for counts', error);
+                    setProjects([]);
+                }
             }
         };
         
         fetchAllCounts();
-    }, []); // Run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Run once on mount — activeTab is snapshot intentionally
 
     useEffect(() => {
         fetchData();
@@ -252,7 +296,7 @@ export default function MasterDataDashboard() {
                     setIsModalOpen(true);
                 }
             } catch (error) {
-                console.error('Error fetching vendor for edit:', error);
+                logger.error('Error fetching vendor for edit:', error);
             }
             return;
         }

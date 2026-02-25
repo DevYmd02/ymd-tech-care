@@ -14,6 +14,7 @@ import { PageListLayout, SmartTable, RFQStatusBadge, FilterField } from '@ui';
 import { useTableFilters } from '@/shared/hooks';
 import { createColumnHelper } from '@tanstack/react-table';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
+import { logger } from '@/shared/utils/logger';
 
 // Services & Types
 import { RFQService } from '@/modules/procurement/services';
@@ -151,7 +152,7 @@ export default function RFQListPage() {
             setSendingRFQ(null);
         } catch (error) {
             toast('เกิดข้อผิดพลาดในการส่ง RFQ', 'error');
-            console.error(error);
+            logger.error('[RFQListPage] executeSendRFQ error:', error);
         } finally {
             setIsSending(false);
         }

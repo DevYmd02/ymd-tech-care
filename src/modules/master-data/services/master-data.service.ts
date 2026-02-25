@@ -7,7 +7,9 @@ import type {
   ProductCategoryListItem,
   ItemTypeListItem,
   ItemListItem,
+  DepartmentListItem,
 } from '@/modules/master-data/types/master-data-types';
+import { logger } from '@/shared/utils/logger';
 
 // Import services
 import { BranchService } from '../company/services/branch.service';
@@ -18,6 +20,7 @@ import { CostCenterService } from '../accounting/services/cost-center.service';
 import { ProjectService } from '../project/services/project.service';
 import { ProductCategoryService } from '../inventory/services/product-category.service';
 import { ItemTypeService } from '../inventory/services/item-type.service';
+import { DepartmentService } from '../company/services/company.service';
 
 export const MasterDataService = {
   getBranches: async (): Promise<BranchListItem[]> => {
@@ -42,6 +45,16 @@ export const MasterDataService = {
 
   getCostCenters: async (): Promise<CostCenter[]> => {
     return CostCenterService.getList();
+  },
+
+  getDepartments: async (): Promise<DepartmentListItem[]> => {
+    try {
+      const response = await DepartmentService.getList({ limit: 100 });
+      return response?.items || [];
+    } catch (error) {
+      logger.error('[MasterDataService] getDepartments error:', error);
+      return [];
+    }
   },
 
   getProjects: async (): Promise<Project[]> => {

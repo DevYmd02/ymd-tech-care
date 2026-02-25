@@ -12,6 +12,7 @@ import type { VendorDropdownItem } from '@/modules/master-data/vendor/types/vend
 import type { POFormData, CreatePOPayload } from '@/modules/procurement/types/po-types';
 import { useQuery } from '@tanstack/react-query'; // React Query for vendors
 import { calculatePricingSummary } from '@/modules/procurement/utils/pricing.utils';
+import { logger } from '@/shared/utils/logger';
 
 // ====================================================================================
 // ZOD SCHEMA
@@ -230,7 +231,7 @@ export default function POFormModal({ isOpen, onClose, onSuccess, initialValues 
             if (onSuccess) onSuccess();
             onClose();
         } catch (error) {
-            console.error('Create PO Error:', error);
+            logger.error('[POFormModal] Create PO error:', error);
             window.alert('เกิดข้อผิดพลาดในการบันทึก');
         }
     };

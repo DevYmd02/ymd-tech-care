@@ -11,6 +11,7 @@ import { WindowFormLayout } from '@ui';
 import { VendorSearchModal } from '@/modules/master-data/vendor/components/selector/VendorSearchModal';
 import { QCService, type QCCreateData } from '@/modules/procurement/services/qc.service';
 import type { VendorSearchItem } from '@/modules/master-data/vendor/types/vendor-types';
+import { logger } from '@/shared/utils/logger';
 
 interface QCFormModalProps {
   isOpen: boolean;
@@ -161,7 +162,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
         window.alert('เกิดข้อผิดพลาดในการบันทึก');
       }
     } catch (error) {
-      console.error('Save QC failed:', error);
+      logger.error('[QCFormModal] Save QC failed:', error);
       window.alert('เกิดข้อผิดพลาดในการบันทึก');
     } finally {
       setIsLoading(false);

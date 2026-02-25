@@ -10,6 +10,7 @@ import { createPortal } from 'react-dom';
 import { Send, AlertTriangle, Users, Loader2, Mail } from 'lucide-react';
 import type { RFQHeader } from '@/modules/procurement/types/rfq-types';
 import { RFQService } from '@/modules/procurement/services/rfq.service';
+import { logger } from '@/shared/utils/logger';
 
 // ====================================================================================
 // TYPES
@@ -93,7 +94,7 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
             } catch (err) {
                 if (!cancelled) {
                     setFetchError('ไม่สามารถโหลดข้อมูลผู้ขายได้');
-                    console.error('[RFQSendConfirmModal] Fetch error:', err);
+                    logger.error('[RFQSendConfirmModal] Fetch error:', err);
                 }
             } finally {
                 if (!cancelled) setIsFetching(false);
