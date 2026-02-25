@@ -36,14 +36,21 @@ const createMockRFQ = (
 
     // Vendor Logic
     let responseCount = 0;
+    let sentCount = 0;
     let hasQuotation = false;
-    if (status === 'IN_PROGRESS' || status === 'CLOSED') {
-        responseCount = Math.floor(Math.random() * vendorCount) + 1; // At least 1 response
-        if (responseCount > vendorCount) responseCount = vendorCount;
-        hasQuotation = responseCount > 0 && Math.random() > 0.5;
-    } else if (status === 'DRAFT' || status === 'SENT') {
+    
+    if (status === 'SENT') {
+        responseCount = vendorCount > 1 ? Math.floor(vendorCount / 2) : (vendorCount > 0 ? 1 : 0);
+        // Dispatch Progress simulation: some are partially sent
+        sentCount = index % 3 === 0 ? Math.max(1, Math.floor(vendorCount / 2)) : vendorCount;
+    } else if (status === 'DRAFT' || status === 'CANCELLED') {
         responseCount = 0;
+        sentCount = 0;
         hasQuotation = false;
+    } else if (status === 'IN_PROGRESS' || status === 'CLOSED') {
+        responseCount = vendorCount;
+        sentCount = vendorCount; // Must have been sent to all if in progress/closed
+        hasQuotation = true;
     }
 
     return {
@@ -68,6 +75,7 @@ const createMockRFQ = (
         // New Required Fields
         purpose: purpose,
         responded_vendors_count: responseCount,
+        sent_vendors_count: sentCount,
         has_quotation: hasQuotation,
         vendor_responded: responseCount, // Keep for compatibility if needed
         
@@ -96,10 +104,10 @@ const _mockRFQs: RFQHeader[] = [
     createMockRFQ(5, 'SENT', false, 2),    // Direct, 2 Vendors
     createMockRFQ(6, 'SENT', true, 5),
 
-    // 7-9: IN_PROGRESS (Some responses received)
-    createMockRFQ(7, 'IN_PROGRESS', true, 3), // Responses >= 1
-    createMockRFQ(8, 'IN_PROGRESS', true, 4),
-    createMockRFQ(9, 'IN_PROGRESS', false, 2),
+    // 7-9: SENT (Some more sent RFQs)
+    createMockRFQ(7, 'SENT', true, 3),
+    createMockRFQ(8, 'SENT', true, 4),
+    createMockRFQ(9, 'SENT', false, 2),
 
     // NEW: TEST CASE FOR "LIMBO STATE" (has_quotation = false)
     {
@@ -109,7 +117,7 @@ const _mockRFQs: RFQHeader[] = [
         branch_id: '1',
         rfq_date: new Date().toISOString().split('T')[0],
         quote_due_date: getFutureDate(new Date().toISOString().split('T')[0], 7),
-        status: 'IN_PROGRESS',
+        status: 'SENT',
         created_by_user_id: 'user-1',
         created_at: `${new Date().toISOString().split('T')[0]}T10:00:00Z`,
         updated_at: `${new Date().toISOString().split('T')[0]}T10:00:00Z`,
@@ -119,8 +127,9 @@ const _mockRFQs: RFQHeader[] = [
         created_by_name: 'System Admin',
         vendor_count: 3,
         purpose: 'ทดสอบแสดงผล Limbo State (Vendors 1/3, No QT)',
-        responded_vendors_count: 1,
-        vendor_responded: 1,
+        responded_vendors_count: 0,
+        sent_vendors_count: 1, // Partial dispatch
+        vendor_responded: 0,
         has_quotation: false,
         currency: 'THB',
         exchange_rate: 1,
@@ -129,9 +138,9 @@ const _mockRFQs: RFQHeader[] = [
         remarks: 'Test Limbo State'
     },
 
-    // 10-11: CLOSED (Awarded)
-    createMockRFQ(10, 'CLOSED', true, 3),
-    createMockRFQ(11, 'CLOSED', true, 2),
+    // 10-11: CANCELLED
+    createMockRFQ(10, 'CANCELLED', true, 3),
+    createMockRFQ(11, 'CANCELLED', true, 2),
 
     // 12: CANCELLED
     createMockRFQ(12, 'CANCELLED', true, 0),
@@ -185,12 +194,13 @@ function generateVendorsForRFQ(rfq: RFQHeader): RFQVendor[] {
             sent_via: 'EMAIL',
             email_sent_to: vendor.email,
             response_date: status === 'RESPONDED' ? getFutureDate(rfq.rfq_date, i + 2) : null,
+            qt_no: status === 'RESPONDED' ? `QT-2026-${String(Math.floor(Math.random() * 9000) + 1000)}` : undefined,
             status,
             remark: null,
             // UI display fields (not in RFQVendor type, but useful for mock)
             vendor_name: vendor.name,
             vendor_code: vendor.code,
-        } as RFQVendor & { vendor_name: string; vendor_code: string };
+        } as RFQVendor & { vendor_name: string; vendor_code: string; qt_no?: string };
     });
 }
 

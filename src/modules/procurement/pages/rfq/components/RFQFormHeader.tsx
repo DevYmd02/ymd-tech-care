@@ -10,17 +10,21 @@ interface RFQFormHeaderProps {
     handleChange: (field: keyof RFQFormData, value: string | number | boolean) => void;
     errors: Record<string, string>;
     onOpenPRModal: () => void;
+    readOnly?: boolean;
+    isInviteMode?: boolean;
 }
 
-export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches, handleChange, errors, onOpenPRModal }) => {
-    const inputStyle = "w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent dark:text-white transition-all";
-    const selectStyle = "w-full h-8 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent dark:text-white";
+export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches, handleChange, errors, onOpenPRModal, readOnly, isInviteMode }) => {
+    const inputStyle = "w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent dark:text-white transition-all disabled:opacity-70 disabled:cursor-not-allowed";
+    const selectStyle = "w-full h-8 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent dark:text-white disabled:opacity-70 disabled:cursor-not-allowed disabled:bg-gray-50";
     const labelStyle = "text-sm font-medium text-teal-700 dark:text-teal-300 mb-1 block";
     const hintStyle = "text-xs text-gray-400 dark:text-gray-500 mt-1";
     
     // Validation Styles (Mirroring PRHeader)
     const errorInputClass = "border-red-500 ring-1 ring-red-500 focus:ring-red-500";
     const errorMsgClass = "text-red-500 text-[10px] mt-0.5 font-medium";
+
+    const isLocked = readOnly || isInviteMode;
 
     return (
         <div className="p-4">
@@ -33,7 +37,7 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div>
                     <label className={labelStyle}>เลขที่ RFQ <span className="text-red-500">*</span></label>
-                    <input type="text" value={formData.rfq_no} readOnly className={inputStyle} />
+                    <input type="text" value={formData.rfq_no} readOnly className={inputStyle} disabled={isLocked} />
                     <p className={hintStyle}>เลขที่เอกสาร RFQ (Running จาก sequence_running)</p>
                 </div>
                 <div>
@@ -43,6 +47,7 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                         value={formData.rfq_date}
                         onChange={(e) => handleChange('rfq_date', e.target.value)}
                         className={`${inputStyle} ${errors.rfq_date ? errorInputClass : ''}`}
+                        disabled={isLocked}
                     />
                     {errors.rfq_date && <p className={errorMsgClass}>{errors.rfq_date}</p>}
                 </div>
@@ -55,11 +60,13 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                             value={formData.pr_no || ''}
                             onChange={(e) => handleChange('pr_no', e.target.value)}
                             className={`${inputStyle} ${errors.pr_no ? errorInputClass : ''}`}
+                            disabled={isLocked}
                         />
                         <button 
                             type="button"
                             onClick={onOpenPRModal}
-                            className="px-4 py-1.5 bg-teal-600 hover:bg-teal-500 text-white rounded-lg transition-colors shrink-0 font-medium text-sm"
+                            disabled={isLocked}
+                            className="px-4 py-1.5 bg-teal-600 hover:bg-teal-500 text-white rounded-lg transition-colors shrink-0 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             เลือก
                         </button>
@@ -78,6 +85,7 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                         value={formData.status}
                         onChange={(e) => handleChange('status', e.target.value)}
                         className={`${selectStyle} ${errors.status ? errorInputClass : ''}`}
+                        disabled={isLocked}
                     >
                         <option value="DRAFT">DRAFT - แบบร่าง</option>
                         <option value="SENT">SENT - ส่งแล้ว</option>
@@ -93,6 +101,7 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                         value={formData.branch_id || ''} 
                         onChange={(e) => handleChange('branch_id', e.target.value)}
                         className={selectStyle}
+                        disabled={isLocked}
                     >
                         <option value="">เลือกสาขา</option>
                         {branches.map(branch => (
@@ -110,6 +119,7 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                         value="ระบบจะกรอกอัตโนมัติ"
                         readOnly
                         className={`${inputStyle} bg-gray-200 dark:bg-gray-700`}
+                        disabled={isLocked}
                     />
                     <p className={hintStyle}>อ้างถึง user_id (FK)</p>
                 </div>
@@ -125,6 +135,7 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                         onChange={(e) => handleChange('quote_due_date', e.target.value)}
                         className={`${inputStyle} ${errors.quote_due_date ? errorInputClass : ''}`}
                         placeholder="เลือกวันที่"
+                        disabled={isLocked}
                     />
                     {errors.quote_due_date && <p className={errorMsgClass}>{errors.quote_due_date}</p>}
                     <p className={hintStyle}>วันหมดอายุการเสนอราคา (quotation_due_date)</p>
@@ -137,6 +148,7 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                         value={formData.delivery_location}
                         onChange={(e) => handleChange('delivery_location', e.target.value)}
                         className={inputStyle}
+                        disabled={isLocked}
                     />
                     <p className={hintStyle}>สถานที่รับของ (receive_location)</p>
                 </div>
@@ -152,6 +164,7 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                         value={formData.payment_terms}
                         onChange={(e) => handleChange('payment_terms', e.target.value)}
                         className={inputStyle}
+                        disabled={isLocked}
                     />
                     <p className={hintStyle}>แนวทางเงื่อนไขที่ต้องการ (payment_term_hint)</p>
                 </div>
@@ -163,6 +176,7 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                         value={formData.incoterm}
                         onChange={(e) => handleChange('incoterm', e.target.value)}
                         className={inputStyle}
+                        disabled={isLocked}
                     />
                     <p className={hintStyle}>เงื่อนไขส่งมอบ (incoterm)</p>
                 </div>
@@ -174,6 +188,7 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                         onChange={(e) => handleChange('remarks', e.target.value)}
                         rows={1}
                         className={`${inputStyle} h-8 resize-none py-1.5`}
+                        disabled={isLocked}
                     />
                 </div>
             </div>
@@ -184,6 +199,7 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                     name="isMulticurrency"
                     checked={formData.isMulticurrency} 
                     onCheckedChange={(checked) => {
+                        if (isLocked) return;
                         handleChange('isMulticurrency', checked);
                         if (!checked) {
                             handleChange('exchange_rate_date', '');
@@ -200,8 +216,8 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                                 type="date" 
                                 value={formData.exchange_rate_date || ''}
                                 onChange={(e) => handleChange('exchange_rate_date', e.target.value)}
-                                className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
-                                disabled={!formData.isMulticurrency}
+                                className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow disabled:opacity-70 disabled:cursor-not-allowed"
+                                disabled={!formData.isMulticurrency || isLocked}
                             />
                         </div>
                         <div>
@@ -209,8 +225,8 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                             <select 
                                 value={formData.currency}
                                 onChange={(e) => handleChange('currency', e.target.value)}
-                                className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                                disabled={!formData.isMulticurrency}
+                                className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed disabled:bg-gray-50"
+                                disabled={!formData.isMulticurrency || isLocked}
                             >
                                 <option value="THB">THB - บาท</option>
                                 <option value="USD">USD - ดอลลาร์สหรัฐ</option>
@@ -224,8 +240,8 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                             <select 
                                 value={formData.target_currency || ''}
                                 onChange={(e) => handleChange('target_currency', e.target.value)}
-                                className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                                disabled={!formData.isMulticurrency}
+                                className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed disabled:bg-gray-50"
+                                disabled={!formData.isMulticurrency || isLocked}
                             >
                                 <option value="">เลือกสกุลเงิน</option>
                                 <option value="THB">THB - บาท</option>
@@ -243,8 +259,8 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                                 value={formData.exchange_rate}
                                 onChange={(e) => handleChange('exchange_rate', parseFloat(e.target.value) || 0)}
                                 readOnly={formData.currency === 'THB'}
-                                className={`w-full h-9 px-3 text-sm text-right border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition-colors ${formData.currency === 'THB' ? 'bg-gray-50 dark:bg-gray-800/50 italic text-gray-500' : 'bg-white dark:bg-gray-800 font-semibold'}`}
-                                disabled={!formData.isMulticurrency}
+                                className={`w-full h-9 px-3 text-sm text-right border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition-colors disabled:opacity-70 disabled:cursor-not-allowed ${formData.currency === 'THB' ? 'bg-gray-50 dark:bg-gray-800/50 italic text-gray-500' : 'bg-white dark:bg-gray-800 font-semibold'}`}
+                                disabled={!formData.isMulticurrency || isLocked}
                                 placeholder="0.0000"
                             />
                             {formData.currency && formData.currency !== 'THB' && (

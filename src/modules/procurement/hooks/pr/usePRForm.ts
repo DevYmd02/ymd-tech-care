@@ -24,7 +24,7 @@ import { useToast } from '@/shared/components/ui/feedback/Toast';
 
 const PR_CONFIG = {
   MIN_LINES: 1,
-  INITIAL_LINES: 1,
+  INITIAL_LINES: 5,
 } as const;
 
 const getTodayDate = (): string => new Date().toISOString().split('T')[0];
@@ -514,7 +514,20 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
   const handleSaveData = async (data: PRFormData) => {
     setIsActionLoading(true);
     try {
-        const activeLines = (data.lines || []).filter(l => l.item_id && l.item_code);
+        // Smart Clean-up: Only filter out rows that are 100% empty
+        // If a row has partial data (like qty > 0 but no item_id), keep it so validation can catch it
+        const activeLines = (data.lines || []).filter(line => {
+          const isItemIdEmpty = !line.item_id || line.item_id === '';
+          const isItemCodeEmpty = !line.item_code || line.item_code === '';
+          const isQtyZero = !line.qty || Number(line.qty) === 0;
+          const isPriceZero = !line.est_unit_price || Number(line.est_unit_price) === 0;
+          const isDescriptionEmpty = !line.description || line.description.trim() === '';
+          
+          // Row is 100% empty if all key fields are empty/zero
+          const isCompletelyEmpty = isItemIdEmpty && isItemCodeEmpty && isQtyZero && isPriceZero && isDescriptionEmpty;
+          
+          return !isCompletelyEmpty;
+        });
 
         // Vendor-Item Mismatch Check: Warn before saving if items don't match header vendor
         const headerVendorId = data.preferred_vendor_id;
@@ -621,7 +634,19 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     if (!data.requester_name) { showAlert('กรุณาระบุชื่อผู้ขอซื้อ'); return; }
     if (!data.cost_center_id) { showAlert('กรุณาเลือกศูนย์ต้นทุน'); return; }
     if (!data.purpose) { showAlert('กรุณาระบุวัตถุประสงค์'); return; }
-    const activeLines = (data.lines || []).filter(l => l.item_id && l.item_code);
+    
+    // Smart Clean-up: Identical logic to handleSaveData to ensure consistency
+    const activeLines = (data.lines || []).filter(line => {
+      const isItemIdEmpty = !line.item_id || line.item_id === '';
+      const isItemCodeEmpty = !line.item_code || line.item_code === '';
+      const isQtyZero = !line.qty || Number(line.qty) === 0;
+      const isPriceZero = !line.est_unit_price || Number(line.est_unit_price) === 0;
+      const isDescriptionEmpty = !line.description || line.description?.trim() === '';
+      
+      const isCompletelyEmpty = isItemIdEmpty && isItemCodeEmpty && isQtyZero && isPriceZero && isDescriptionEmpty;
+      return !isCompletelyEmpty;
+    });
+
     if (activeLines.length === 0) { showAlert('กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ'); return; }
     const isConfirmed = await confirm({
         title: isEditMode ? 'ยืนยันการแก้ไข' : 'ยืนยันการบันทึก',

@@ -8,6 +8,7 @@ interface RFQVendorSelectionProps {
     onRemove: (index: number) => void;
     handleOpenVendorModal: (index: number) => void;
     isViewMode?: boolean;
+    isInviteMode?: boolean;
 }
 
 export const RFQVendorSelection: React.FC<RFQVendorSelectionProps> = ({ 
@@ -15,7 +16,8 @@ export const RFQVendorSelection: React.FC<RFQVendorSelectionProps> = ({
     onAdd, 
     onRemove, 
     handleOpenVendorModal,
-    isViewMode = false
+    isViewMode = false,
+    isInviteMode = false
 }) => {
     const labelStyle = "text-sm font-medium text-teal-700 dark:text-teal-300 mb-1 block";
     const inputStyle = "w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent dark:text-white transition-all";
@@ -54,7 +56,9 @@ export const RFQVendorSelection: React.FC<RFQVendorSelectionProps> = ({
                 ) : (
                     /* Vendor List */
                     <>
-                        {vendors.map((vendor, index) => (
+                        {vendors.map((vendor, index) => {
+                            const isRowLocked = isViewMode || (isInviteMode && vendor.is_existing);
+                            return (
                     <div key={index} className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 relative group">
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
                             {/* Vendor Code */}
@@ -66,11 +70,11 @@ export const RFQVendorSelection: React.FC<RFQVendorSelectionProps> = ({
                                         placeholder="กดปุ่มค้นหา..."
                                         value={vendor.vendor_code}
                                         readOnly
-                                        disabled={isViewMode}
-                                        className={`${inputStyle} flex-1 ${isViewMode ? 'bg-slate-800/50 text-slate-400 cursor-not-allowed border-slate-700' : 'bg-white dark:bg-gray-900 cursor-pointer hover:border-teal-400'}`}
-                                        onClick={() => !isViewMode && handleOpenVendorModal(index)}
+                                        disabled={isRowLocked}
+                                        className={`${inputStyle} flex-1 ${isRowLocked ? 'bg-gray-100 dark:bg-slate-800/50 text-gray-500 dark:text-slate-400 cursor-not-allowed border-gray-200 dark:border-slate-700' : 'bg-white dark:bg-gray-900 cursor-pointer hover:border-teal-400'}`}
+                                        onClick={() => !isRowLocked && handleOpenVendorModal(index)}
                                     />
-                                    {!isViewMode && (
+                                    {!isRowLocked && (
                                         <button
                                             type="button"
                                             onClick={() => handleOpenVendorModal(index)}
@@ -91,14 +95,14 @@ export const RFQVendorSelection: React.FC<RFQVendorSelectionProps> = ({
                                     placeholder="ชื่อผู้ขายจะแสดงอัตโนมัติ"
                                     value={vendor.vendor_name_display}
                                     readOnly
-                                    disabled={isViewMode}
-                                    className={`${inputStyle} ${isViewMode ? 'bg-slate-800/50 text-slate-400 cursor-not-allowed border-slate-700' : 'bg-gray-100 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 cursor-not-allowed'}`}
+                                    disabled={isRowLocked}
+                                    className={`${inputStyle} ${isRowLocked ? 'bg-gray-100 dark:bg-slate-800/50 text-gray-500 dark:text-slate-400 cursor-not-allowed border-gray-200 dark:border-slate-700' : 'bg-gray-100 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 cursor-not-allowed'}`}
                                 />
                             </div>
 
                             {/* Remove Button */}
                             <div className="md:col-span-1 flex justify-end">
-                                {!isViewMode && (
+                                {!isRowLocked && (
                                     <button
                                         type="button"
                                         onClick={() => onRemove(index)}
@@ -111,7 +115,8 @@ export const RFQVendorSelection: React.FC<RFQVendorSelectionProps> = ({
                             </div>
                         </div>
                     </div>
-                        ))}
+                            );
+                        })}
 
                         {/* Add Button (Below List) */}
                         {!isViewMode && (

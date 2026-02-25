@@ -61,10 +61,17 @@ export const PRFormSchema = z.object({
   // V-02: Determine if saving as draft (skip strict validation)
   const isDraft = data.is_on_hold === 'Y';
 
-  // Validate at least 1 active product line (filter out empty rows)
-  const activeLines = data.lines.filter(
-    (line) => line.item_id !== '' && line.item_id !== undefined && line.item_id !== null
-  );
+  // Validate at least 1 active product line (filter out 100% empty rows)
+  const activeLines = data.lines.filter((line) => {
+    const isItemIdEmpty = !line.item_id || line.item_id === '';
+    const isItemCodeEmpty = !line.item_code || line.item_code === '';
+    const isQtyZero = !line.qty || Number(line.qty) === 0;
+    const isPriceZero = !line.est_unit_price || Number(line.est_unit_price) === 0;
+    const isDescriptionEmpty = !line.description || line.description?.trim() === '';
+    
+    return !(isItemIdEmpty && isItemCodeEmpty && isQtyZero && isPriceZero && isDescriptionEmpty);
+  });
+
   if (activeLines.length === 0) {
     ctx.addIssue({
       path: ['lines'],
@@ -72,6 +79,17 @@ export const PRFormSchema = z.object({
       code: z.ZodIssueCode.custom,
     });
   }
+
+  // Check for partial fills: if a row has data but no item_id, it should trigger an error
+  activeLines.forEach((line, index) => {
+    if (!line.item_id || line.item_id === '') {
+      ctx.addIssue({
+        path: ['lines', index, 'item_id'],
+        message: 'กรุณาเลือกสินค้า',
+        code: z.ZodIssueCode.custom,
+      });
+    }
+  });
 
   // V-02: Block zero-value PR from being submitted for approval
   // Calculate validation total dynamically from active lines

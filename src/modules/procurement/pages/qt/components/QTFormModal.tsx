@@ -61,7 +61,7 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ }
   };
 
   const cardClass = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden shadow-sm';
-  const tabClass = (tab: string) => `px-6 py-2 text-sm font-medium flex items-center gap-2 cursor-pointer border-b-2 transition-colors ${activeTab === tab ? 'border-blue-600 text-blue-600 bg-blue-50 dark:bg-blue-900/30' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`;
+  const tabClass = (tab: string) => `px-6 py-2 text-sm font-medium flex items-center gap-2 cursor-pointer border-b-2 transition-colors ${activeTab === tab ? 'border-blue-600 text-blue-600 bg-blue-50 dark:bg-[#1e2330]' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`;
 
   // Helper to watch net_amount for display (since it's calculated)
   // We can't easily map over 'fields' and get live values without watching.
@@ -75,9 +75,9 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ }
     <WindowFormLayout
       isOpen={isOpen}
       onClose={onClose}
-      title="สร้างใบเสนอราคา (Create Quotation) - Refactored"
+      title="เสนอราคา (Reply Quotation) - RFQ Reference"
       titleIcon={<div className="bg-blue-500 p-1 rounded-md shadow-sm"><FileText size={14} strokeWidth={3} className="text-white" /></div>}
-      headerColor="bg-blue-600 [&_div.flex.items-center.space-x-1>button:not(:last-child)]:hidden"
+      headerColor="bg-gray-100 dark:bg-[#1e2330] text-gray-800 dark:text-white"
       footer={
         <div className="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-end items-center bg-white dark:bg-gray-900 sticky bottom-0 z-10 gap-x-2">
             <button type="button" onClick={onClose} className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md text-sm font-medium transition-colors">
@@ -162,39 +162,48 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ }
                   </div>
                   
                   <div className="overflow-x-auto bg-white dark:bg-[#1e1e1e] p-4 rounded-lg border border-gray-200 dark:border-gray-800">
-                     <table className="w-full min-w-[1000px] border-collapse bg-white dark:bg-[#1e1e1e] text-sm">
-                         <thead className="bg-gray-100 dark:bg-blue-900 border-b-2 border-blue-600/50 text-gray-700 dark:text-blue-100">
+                     <table className="w-full min-w-[1100px] border-collapse bg-white dark:bg-[#1e1e1e] text-sm">
+                         <thead className="bg-gray-100 dark:bg-[#1e2330] border-y border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400 font-semibold">
                              <tr>
                                  <th className="p-3 w-12 text-center">#</th>
-                                 <th className="p-3 w-48 text-center">รหัสสินค้า</th>
-                                 <th className="p-3 min-w-[200px] text-center">รายละเอียดสินค้า</th>
-                                 <th className="p-3 w-24 text-center">จำนวน</th>
-                                 <th className="p-3 w-28 text-center">หน่วยนับ</th>
-                                 <th className="p-3 w-32 text-center">ราคา/หน่วย</th>
-                                 <th className="p-3 w-24 text-center">ส่วนลด</th>
-                                 <th className="p-3 w-32 text-center">ยอดรวม</th>
-                                 <th className="p-3 w-24 text-center">จัดการ</th>
+                                 <th className="p-3 w-40 text-left">รหัสสินค้า</th>
+                                 <th className="p-3 min-w-[200px] text-left">รายละเอียดสินค้า</th>
+                                 <th className="p-3 w-20 text-center">จำนวน</th>
+                                 <th className="p-3 w-20 text-center">หน่วยนับ</th>
+                                 <th className="p-3 w-28 text-right">ราคา/หน่วย</th>
+                                 <th className="p-3 w-28 text-right">ส่วนลด (บาท)</th>
+                                 <th className="p-3 w-32 text-right">ยอดรวม</th>
+                                 <th className="p-3 w-32 text-center text-rose-500 dark:text-rose-400">ไม่เสนอราคา (No Quote)</th>
+                                 <th className="p-3 w-20 text-center cursor-help" title="สามารถเพิ่มลดแถวอิสระ เช่น ค่าขนส่ง">จัดการ</th>
                              </tr>
                          </thead>
                          <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
-                             {fields.map((field, idx) => (
-                                 <tr key={field.id} className="hover:bg-gray-50 dark:hover:bg-[#2d2d2d] transition-colors">
+                             {fields.map((field, idx) => {
+                                 const isNoQuote = watchedLines[idx]?.no_quote;
+                                 return (
+                                 <tr key={field.id} className={`transition-colors ${isNoQuote ? 'bg-rose-50/50 dark:bg-rose-950/20' : 'hover:bg-gray-50 dark:hover:bg-gray-800/30'}`}>
                                      <td className="p-2 text-center text-gray-500 dark:text-gray-400 border-r border-gray-200 dark:border-gray-800">{idx + 1}</td>
                                      
-                                     {/* Item Code */}
+                                     {/* Item Code (Read-Only context usually from RFQ) */}
                                      <td className="p-2 border-r border-gray-200 dark:border-gray-800">
+                                        {initialRFQ ? (
+                                            <input {...register(`lines.${idx}.item_code`)} className="w-full h-9 px-3 border rounded text-sm bg-gray-50 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-700 cursor-not-allowed" readOnly />
+                                        ) : (
                                          <div className="flex items-center gap-1">
-                                            <input {...register(`lines.${idx}.item_code`)} className="w-full h-9 px-3 bg-white dark:bg-[#2d2d2d] border border-gray-300 dark:border-gray-700 rounded" />
-                                            <button type="button" onClick={() => openProductSearch(idx)} className="h-9 w-9 flex items-center justify-center bg-blue-600 hover:bg-blue-500 text-white rounded shadow-sm">
+                                            <input {...register(`lines.${idx}.item_code`)} className="w-full h-9 px-3 bg-white dark:bg-[#2d2d2d] border border-gray-300 dark:border-gray-700 rounded text-sm" />
+                                            <button type="button" onClick={() => openProductSearch(idx)} className="h-9 w-9 flex items-center justify-center bg-blue-600 hover:bg-blue-500 text-white rounded shadow-sm flex-shrink-0">
                                                 <Search size={16} />
                                             </button>
                                          </div>
+                                        )}
                                      </td>
 
+                                     {/* Item Description (Read-Only) */}
                                      <td className="p-2 border-r border-gray-200 dark:border-gray-800">
-                                         <input {...register(`lines.${idx}.item_name`)} className="w-full h-9 px-3 bg-white dark:bg-[#2d2d2d] border border-gray-300 dark:border-gray-700 rounded" />
+                                         <input {...register(`lines.${idx}.item_name`)} className={`w-full h-9 px-3 border rounded text-sm ${initialRFQ ? 'bg-gray-50 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-700 cursor-not-allowed' : 'bg-white dark:bg-[#2d2d2d] border-gray-300 dark:border-gray-700'}`} readOnly={!!initialRFQ} />
                                      </td>
                                      
+                                     {/* Qty (Read-Only) */}
                                      <td className="p-2 border-r border-gray-200 dark:border-gray-800">
                                          <input 
                                             type="number" step="any"
@@ -202,58 +211,85 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ }
                                                 valueAsNumber: true, 
                                                 onChange: (e) => updateLineCalculation(idx, 'qty', parseFloat(e.target.value))
                                             })} 
-                                            className="w-full h-9 px-3 bg-white dark:bg-[#2d2d2d] border border-gray-300 dark:border-gray-700 rounded text-center text-blue-600 dark:text-blue-400 font-medium" 
+                                            className={`w-full h-9 px-3 border rounded text-center text-sm font-medium ${initialRFQ ? 'bg-gray-50 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-700 cursor-not-allowed' : 'bg-white dark:bg-[#2d2d2d] border-gray-300 dark:border-gray-700 text-blue-600 dark:text-blue-400'}`} 
+                                            readOnly={!!initialRFQ}
                                          />
                                      </td>
                                      
-                                     {/* Unit Dropdown */}
+                                     {/* Unit (Read-Only or Dropdown) */}
                                      <td className="p-2 border-r border-gray-200 dark:border-gray-800">
-                                        <select {...register(`lines.${idx}.uom_name`)} className="w-full h-9 px-2 bg-white dark:bg-[#2d2d2d] border border-gray-300 dark:border-gray-700 rounded text-center cursor-pointer">
-                                            <option value="" hidden>เลือก</option>
-                                            {units.map(u => (
-                                                <option key={u.unit_id} value={u.unit_name}>{u.unit_name}</option>
-                                            ))}
-                                        </select>
+                                        {initialRFQ ? (
+                                            <input {...register(`lines.${idx}.uom_name`)} className="w-full h-9 px-2 bg-gray-50 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-700 rounded text-center text-sm cursor-not-allowed" readOnly />
+                                        ) : (
+                                            <select {...register(`lines.${idx}.uom_name`)} className="w-full h-9 px-2 bg-white dark:bg-[#2d2d2d] border border-gray-300 dark:border-gray-700 rounded text-center text-sm cursor-pointer">
+                                                <option value="" hidden>เลือก</option>
+                                                {units.map(u => (
+                                                    <option key={u.unit_id} value={u.unit_name}>{u.unit_name}</option>
+                                                ))}
+                                            </select>
+                                        )}
                                      </td>
 
+                                     {/* Unit Price (Premium Input) */}
                                      <td className="p-2 border-r border-gray-200 dark:border-gray-800">
                                          <input 
-                                            type="number" step="any"
+                                            type="number" step="any" disabled={isNoQuote}
                                             {...register(`lines.${idx}.unit_price`, { 
                                                 valueAsNumber: true,
                                                 onChange: (e) => updateLineCalculation(idx, 'unit_price', parseFloat(e.target.value))
                                             })} 
-                                            className="w-full h-9 px-3 bg-white dark:bg-[#2d2d2d] border border-gray-300 dark:border-gray-700 rounded text-right" 
+                                            className="w-full h-9 px-3 bg-white dark:bg-[#0B1120] border border-gray-300 dark:border-gray-700/60 focus:ring-1 focus:ring-blue-500 rounded text-right text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-gray-800 transition-colors" 
+                                            placeholder="0.00"
                                          />
                                      </td>
 
+                                     {/* Discount Amount (Baht) */}
                                      <td className="p-2 border-r border-gray-200 dark:border-gray-800">
                                          <input 
-                                            type="number" step="any"
+                                            type="number" step="any" disabled={isNoQuote}
                                             {...register(`lines.${idx}.discount_amount`, { 
                                                 valueAsNumber: true,
                                                 onChange: (e) => updateLineCalculation(idx, 'discount_amount', parseFloat(e.target.value))
                                             })} 
-                                            className="w-full h-9 px-3 bg-white dark:bg-[#2d2d2d] border border-gray-300 dark:border-gray-700 rounded text-right" 
+                                            className="w-full h-9 px-3 bg-white dark:bg-[#0B1120] border border-gray-300 dark:border-gray-700/60 focus:ring-1 focus:ring-blue-500 rounded text-right text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-gray-800 transition-colors" 
+                                            placeholder="0.00"
                                          />
                                      </td>
                                      
+                                     {/* Net Amount (Calculated) */}
                                      <td className="p-2 border-r border-gray-200 dark:border-gray-800">
                                          <input 
                                             value={(watchedLines[idx]?.net_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})} 
                                             readOnly 
-                                            className="w-full h-9 px-3 bg-gray-50 dark:bg-[#1e1e1e] border border-transparent rounded text-right text-emerald-600 dark:text-emerald-500 font-bold focus:outline-none" 
+                                            className="w-full h-9 px-3 bg-gray-50 dark:bg-[#1e1e1e] border border-transparent rounded text-right text-emerald-600 dark:text-emerald-500 font-bold focus:outline-none cursor-not-allowed text-sm" 
                                          />
                                      </td>
                                      
+                                     {/* No Quote Toggle */}
+                                     <td className="p-2 text-center border-r border-gray-200 dark:border-gray-800 bg-rose-50/10 dark:bg-rose-900/10">
+                                        <div className="flex items-center justify-center h-full">
+                                            <label className="flex items-center cursor-pointer relative">
+                                                <input 
+                                                    type="checkbox"
+                                                    {...register(`lines.${idx}.no_quote`, {
+                                                        onChange: (e) => updateLineCalculation(idx, 'no_quote', e.target.checked)
+                                                    })}
+                                                    className="w-5 h-5 text-rose-600 bg-gray-100 border-gray-300 rounded focus:ring-rose-500 dark:focus:ring-rose-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 cursor-pointer shadow-sm transition-all"
+                                                />
+                                            </label>
+                                        </div>
+                                     </td>
+
+                                     {/* Actions (Add/Remove) */}
                                      <td className="p-2 text-center">
                                          <div className="flex items-center justify-center gap-2">
-                                             <button type="button" onClick={() => insert(idx + 1, createEmptyLine())} className="text-green-500 hover:text-green-400 p-1"><Plus size={18} /></button>
-                                             <button type="button" onClick={() => remove(idx)} className="text-red-500 hover:text-red-400 p-1"><Trash2 size={18} /></button>
+                                             <button type="button" onClick={() => insert(idx + 1, createEmptyLine())} className="text-gray-400 hover:text-green-500 transition-colors p-1" title="เพิ่มบรรทัดใหม่"><Plus size={18} /></button>
+                                             <button type="button" onClick={() => remove(idx)} className="text-gray-400 hover:text-red-500 transition-colors p-1" title="ลบบรรทัด"><Trash2 size={18} /></button>
                                          </div>
                                      </td>
                                  </tr>
-                             ))}
+                                 );
+                             })}
                          </tbody>
                      </table>
                      
@@ -316,5 +352,3 @@ const QTFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ }
 };
 
 export default QTFormModal;
-
-

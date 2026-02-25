@@ -9,10 +9,12 @@
 // ====================================================================================
 
 /** RFQ Status - สถานะใบขอเสนอราคา */
-export type RFQStatus = 'DRAFT' | 'SENT' | 'IN_PROGRESS' | 'CLOSED' | 'CANCELLED';
+export const RFQ_STATUS_OPTIONS = ['DRAFT', 'SENT', 'IN_PROGRESS', 'CLOSED', 'CANCELLED'] as const;
+export type RFQStatus = typeof RFQ_STATUS_OPTIONS[number];
 
 /** RFQ Vendor Status - สถานะการส่ง RFQ ไปยังเจ้าหนี้ */
-export type RFQVendorStatus = 'PENDING' | 'SENT' | 'RESPONDED' | 'NO_RESPONSE' | 'DECLINED';
+export const RFQ_VENDOR_STATUS_OPTIONS = ['PENDING', 'SENT', 'RESPONDED', 'NO_RESPONSE', 'DECLINED'] as const;
+export type RFQVendorStatus = typeof RFQ_VENDOR_STATUS_OPTIONS[number];
 
 
 
@@ -46,6 +48,7 @@ export interface RFQHeader {
     // New Required Fields
     purpose: string;                    // REQUIRED: เรื่อง/วัตถุประสงค์
     responded_vendors_count: number;    // REQUIRED: จำนวนผู้ขายที่เสนอราคามาแล้ว
+    sent_vendors_count: number;         // REQUIRED: จำนวนผู้ขายที่ส่ง RFQ ออกไปแล้ว
     has_quotation?: boolean;            // มีการสร้างใบเสนอราคา (QT) ในระบบแล้วหรือไม่
     
     // Form-related fields
@@ -75,6 +78,7 @@ export interface RFQLine {
     uom: string;                        // VARCHAR(50) - หน่วยนับ
     required_date: string | null;       // DATE - วันที่ต้องการสินค้า
     technical_spec: string | null;      // TEXT - ข้อกำหนดทางเทคนิค
+    remark: string | null;              // TEXT - หมายเหตุ
 }
 
 // ====================================================================================
@@ -158,6 +162,7 @@ export interface RFQVendorFormData {
     vendor_code: string;
     vendor_name: string;
     vendor_name_display: string;
+    is_existing?: boolean;
 }
 
 /** RFQ Line Form Data */
@@ -249,4 +254,14 @@ export interface RFQCreateData extends Omit<RFQFormData, 'lines'> {
     lines: RFQLineFormData[];
     vendor_ids?: string[];
     terms_and_conditions?: string;
+}
+
+/** RFQ Detail Response - สำหรับ API GET /rfq/{id} */
+export interface RFQDetailResponse extends RFQHeader {
+    vendors: (RFQVendor & { 
+        vendor_name: string; 
+        vendor_code: string; 
+        qt_no?: string; 
+    })[];
+    lines: RFQLine[];
 }
