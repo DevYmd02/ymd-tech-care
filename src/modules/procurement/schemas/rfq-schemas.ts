@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { 
     RFQ_STATUS_OPTIONS,
     RFQ_VENDOR_STATUS_OPTIONS
-} from './rfq-types';
+} from '@/modules/procurement/types/rfq-types';
 
 // ====================================================================================
 // SHARED MESSAGE CONSTANTS (Mirrors qt-schemas.ts style)

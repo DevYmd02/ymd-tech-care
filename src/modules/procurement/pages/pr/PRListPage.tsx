@@ -22,7 +22,7 @@ import { createColumnHelper } from '@tanstack/react-table';
 // Services & Types - Updated imports to use new module structure
 import { PRService, type PRListParams } from '@/modules/procurement/services/pr.service';
 import { logger } from '@/shared/utils/logger';
-import type { PRHeader, PRStatus } from '@/modules/procurement/types/pr-types';
+import type { PRHeader, PRStatus } from '@/modules/procurement/types';
 import { DEPARTMENT_NAME_MAP } from '@/modules/procurement/constants/procurement.constants';
 
 // ====================================================================================
@@ -275,7 +275,8 @@ export default function PRListPage() {
             size: 160,
             enableSorting: true,
         }),
-        columnHelper.accessor('purpose', {
+        columnHelper.accessor(row => row.purpose || row.remark, {
+            id: 'purpose',
             header: 'รายละเอียด',
             cell: (info) => {
                 const val = info.getValue() || '-';
@@ -313,12 +314,13 @@ export default function PRListPage() {
             size: 140,
             enableSorting: false,
         }),
-        columnHelper.accessor('total_amount', {
+        columnHelper.accessor(row => row.total_amount ?? Number(row.pr_base_total_amount ?? 0), {
+            id: 'total_amount',
             header: () => <span className="whitespace-nowrap">ยอดรวม (บาท)</span>,
             meta: { align: 'right' },
             cell: (info) => (
                 <div className="text-right pr-10 font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
-                     {new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(info.getValue() || 0)}
+                     {new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(info.getValue() || 0))}
                 </div>
             ),
             size: 180,
@@ -353,7 +355,7 @@ export default function PRListPage() {
                 </div>
             ),
             footer: () => {
-                 const total = (data?.items ?? []).reduce((sum, item) => sum + (item.total_amount || 0), 0);
+                 const total = (data?.data ?? []).reduce((sum, item) => sum + (item.total_amount ?? Number(item.pr_base_total_amount ?? 0)), 0);
                  return (
                      <div className="text-right font-bold text-base text-emerald-600 dark:text-emerald-400 whitespace-nowrap pr-2">
                          {total.toLocaleString('en-US', { minimumFractionDigits: 2 })} บาท
@@ -363,7 +365,7 @@ export default function PRListPage() {
             size: 160, 
             enableSorting: false,
         }),
-    ], [columnHelper, filters.page, filters.limit, data?.items, handleSendApproval, onApproveClick, handleReject, approvingId, handleEdit, handleCreateRFQ, handleView]);
+    ], [columnHelper, filters.page, filters.limit, data?.data, handleSendApproval, onApproveClick, handleReject, approvingId, handleEdit, handleCreateRFQ, handleView]);
 
     // ====================================================================================
     // RENDER
@@ -456,7 +458,7 @@ export default function PRListPage() {
             >
                 <div className="h-full flex flex-col">
                     <SmartTable
-                        data={data?.items ?? []}
+                        data={data?.data ?? []}
                         columns={columns}
                         isLoading={isLoading}
                         pagination={{

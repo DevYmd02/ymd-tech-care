@@ -9,7 +9,7 @@ import { POStatusBadge } from '@ui';
 import type { FilterFieldConfig } from '@ui';
 import { useTableFilters, type TableFilters } from '@/shared/hooks';
 import { POService } from '@/modules/procurement/services';
-import type { POListParams, POStatus, POListItem, POFormData } from '@/modules/procurement/types/po-types';
+import type { POListParams, POStatus, POListItem, POFormData } from '@/modules/procurement/types';
 import { createColumnHelper } from '@tanstack/react-table';
 import type { ColumnDef } from '@tanstack/react-table';
 import { POFormModal, POApprovalModal } from './components';

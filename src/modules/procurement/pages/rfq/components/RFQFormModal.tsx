@@ -7,7 +7,7 @@ import { VendorDispatchTable } from './VendorDispatchTable';
 import { VendorSearchModal } from '@/modules/master-data/vendor/components/selector/VendorSearchModal';
 import { PRSelectionModal } from '@/modules/procurement/components/selector/PRSelectionModal';
 import { WindowFormLayout, TabPanel } from '@ui';
-import type { PRHeader } from '@/modules/procurement/types/pr-types';
+import type { PRHeader } from '@/modules/procurement/types';
 import { logger } from '@/shared/utils/logger';
 
 interface Props {

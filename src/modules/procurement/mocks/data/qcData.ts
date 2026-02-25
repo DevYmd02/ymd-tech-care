@@ -1,4 +1,4 @@
-import type { QCListItem } from '@/modules/procurement/types/qc-types';
+import type { QCListItem } from '@/modules/procurement/types';
 import { sanitizeId } from '@/core/api/mockUtils';
 
 const _mockQCs: QCListItem[] = [

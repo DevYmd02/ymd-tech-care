@@ -2,7 +2,7 @@ import type MockAdapter from 'axios-mock-adapter';
 import type { AxiosRequestConfig } from 'axios';
 import { MOCK_RFQS, MOCK_RFQ_VENDORS, VENDOR_POOL } from '../data/rfqData';
 import { applyMockFilters, sanitizeId } from '@/core/api/mockUtils';
-import type { RFQHeader, RFQLine } from '@/modules/procurement/types/rfq-types';
+import type { RFQHeader, RFQLine } from '@/modules/procurement/types';
 
 export const setupRFQHandlers = (mock: MockAdapter) => {
   // 1. GET RFQ List

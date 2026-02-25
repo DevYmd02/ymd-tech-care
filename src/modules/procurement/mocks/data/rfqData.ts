@@ -1,4 +1,4 @@
-import type { RFQHeader, RFQStatus, RFQVendor, RFQVendorStatus } from '@/modules/procurement/types/rfq-types';
+import type { RFQHeader, RFQStatus, RFQVendor, RFQVendorStatus } from '@/modules/procurement/types';
 
 /**
  * Helper to generate a future date string

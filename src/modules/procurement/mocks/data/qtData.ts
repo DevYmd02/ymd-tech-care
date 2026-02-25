@@ -1,4 +1,4 @@
-import type { QTListItem, QuotationStatus } from '@/modules/procurement/types/qt-types';
+import type { QTListItem, QuotationStatus } from '@/modules/procurement/types';
 import { sanitizeId } from '@/core/api/mockUtils';
 
 export const MOCK_QTS: QTListItem[] = [

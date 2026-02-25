@@ -7,7 +7,7 @@ import React from 'react';
 import { useFormContext, Controller } from 'react-hook-form';
 
 import { Building2, FolderKanban, User, XCircle } from 'lucide-react';
-import type { PRFormData, VendorSelection } from '@/modules/procurement/types/pr-types';
+import type { PRFormData, VendorSelection } from '@/modules/procurement/types';
 import type { CostCenter, Project } from '@/modules/master-data/types/master-data-types';
 import { VendorSearch } from '@/modules/master-data/vendor/components/selector/VendorSearch';
 import { StatusCheckbox } from '@ui';

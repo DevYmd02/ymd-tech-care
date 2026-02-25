@@ -9,8 +9,8 @@ import { VendorService } from '@/modules/master-data/vendor/services/vendor.serv
 import type { VendorDropdownItem } from '@/modules/master-data/vendor/types/vendor-types';
 import { useQuery } from '@tanstack/react-query';
 import { PrtService } from '@/modules/procurement/services/prt.service';
-import { prtSchema } from '@/modules/procurement/types/prt/prt-types';
-import type { PrtItem, PrtFormValues } from '@/modules/procurement/types/prt/prt-types';
+import { prtSchema } from '@/modules/procurement/types/prt-types';
+import type { PrtItem, PrtFormValues } from '@/modules/procurement/types/prt-types';
 import { PrtItemsTable } from './PrtItemsTable';
 import { logger } from '@/shared/utils/logger';
 

@@ -1,4 +1,4 @@
-import type { PurchaseReturn, PrtItem, PRTStatus } from '@/modules/procurement/types/prt/prt-types';
+import type { PurchaseReturn, PrtItem, PRTStatus } from '@/modules/procurement/types';
 import { sanitizeId } from '@/core/api/mockUtils';
 
 export const MOCK_PRT_ITEMS: PrtItem[] = [

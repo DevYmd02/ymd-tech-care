@@ -1,5 +1,5 @@
 import { FileText, Trash2, RefreshCcw } from 'lucide-react';
-import type { RFQLineFormData } from '@/modules/procurement/types/rfq-types';
+import type { RFQLineFormData } from '@/modules/procurement/types';
 
 interface RFQFormLinesProps {
     lines: RFQLineFormData[];

@@ -1,5 +1,5 @@
 import api from '@/core/api/api';
-import type { QTListParams, QTListResponse, QTCreateData, QTListItem } from '@/modules/procurement/types/qt-types';
+import type { QTListParams, QTListResponse, QTCreateData, QTListItem } from '@/modules/procurement/types';
 import { logger } from '@/shared/utils/logger';
 import type { SuccessResponse } from '@/shared/types/api-response.types';
 

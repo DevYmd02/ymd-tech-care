@@ -22,8 +22,8 @@ import { createColumnHelper } from '@tanstack/react-table';
 // Services & Types
 import { QTService, type QTListParams } from '@/modules/procurement/services/qt.service';
 import { RFQService } from '@/modules/procurement/services/rfq.service';
-import type { QTListItem, QTStatus } from '@/modules/procurement/types/qt-types';
-import type { RFQHeader } from '@/modules/procurement/types/rfq-types';
+import type { QTListItem, QTStatus } from '@/modules/procurement/types';
+import type { RFQHeader } from '@/modules/procurement/types';
 import { QTFormModal, QTVendorTrackingModal } from './components';
 import { QCFormModal } from '@/modules/procurement/pages/qc/components';
 import { Users } from 'lucide-react';

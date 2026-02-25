@@ -14,7 +14,7 @@ import { usePRMasterData, type MappedOption } from './usePRMasterData';
 import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
 import type { WarehouseListItem } from '@/modules/master-data/types/master-data-types';
 import { usePRActions } from './usePRActions';
-import { PRFormSchema } from '@/modules/procurement/types/pr-schemas';
+import { PRFormSchema } from '@/modules/procurement/schemas/pr-schemas';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
@@ -127,6 +127,8 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
   const [activeTab, setActiveTab] = useState('detail');
   
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [isWarehouseModalOpen, setIsWarehouseModalOpen] = useState(false);
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const prevCurrencyId = useRef<string>(getDefaultFormValues(user).pr_base_currency_code);
   const prevCurrencyTypeId = useRef<string | undefined>(getDefaultFormValues(user).pr_quote_currency_code);
 
@@ -445,6 +447,36 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     setIsProductModalOpen(true);
   };
   
+  const openWarehouseSearch = (index: number) => {
+    setActiveRowIndex(index);
+    setIsWarehouseModalOpen(true);
+  };
+
+  const openLocationSearch = (index: number) => {
+    const currentWarehouse = formMethods.getValues(`lines.${index}.warehouse_id` as Path<PRFormData>);
+    if (!currentWarehouse) {
+      showAlert('กรุณาเลือกคลังก่อนเลือกที่เก็บ');
+      return;
+    }
+    setActiveRowIndex(index);
+    setIsLocationModalOpen(true);
+  };
+
+  const selectWarehouse = (data: { warehouse_id: string; warehouse_name: string }) => {
+    if (activeRowIndex !== null) {
+      setValue(`lines.${activeRowIndex}.warehouse_id` as Path<PRFormData>, data.warehouse_id as FieldPathValue<PRFormData, Path<PRFormData>>);
+      setValue(`lines.${activeRowIndex}.location` as Path<PRFormData>, '' as FieldPathValue<PRFormData, Path<PRFormData>>);
+      setIsWarehouseModalOpen(false);
+    }
+  };
+
+  const selectLocation = (data: { location_id: string; location_name: string }) => {
+    if (activeRowIndex !== null) {
+      setValue(`lines.${activeRowIndex}.location` as Path<PRFormData>, data.location_name as FieldPathValue<PRFormData, Path<PRFormData>>);
+      setIsLocationModalOpen(false);
+    }
+  };
+  
   const selectProduct = (product: ItemListItem) => {
     if (activeRowIndex !== null) {
       const currentLines = watch('lines');
@@ -723,14 +755,21 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     });
   };
 
+  // Derive currently active warehouse dynamically
+  const activeWarehouseId = activeRowIndex !== null 
+    ? watch(`lines.${activeRowIndex}.warehouse_id` as Path<PRFormData>) as string || null 
+    : null;
+
   return {
     isEditMode, lines, activeTab, setActiveTab,
     isProductModalOpen, setIsProductModalOpen, searchTerm, setSearchTerm,
+    isWarehouseModalOpen, setIsWarehouseModalOpen,
+    isLocationModalOpen, setIsLocationModalOpen, activeWarehouseId,
     showAllItems, setShowAllItems,
     handleSubmit, setValue, watch, isSubmitting, isActionLoading, errors, handleFormError,
     products, costCenters, projects, purchaseTaxOptions, isSearchingProducts,
     addLine, removeLine, clearLine, updateLine, handleClearLines,
-    openProductSearch, selectProduct, handleVendorSelect, onSubmit, handleDelete, handleApprove: onApproveClick,
+    openProductSearch, openWarehouseSearch, openLocationSearch, selectProduct, selectWarehouse, selectLocation, handleVendorSelect, onSubmit, handleDelete, handleApprove: onApproveClick,
     handleVoid, control, reset, formMethods, user, isApproving,
     // Reject Logic
     handleReject, submitReject, closeRejectModal, isRejectReasonOpen, isRejecting

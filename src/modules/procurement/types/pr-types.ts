@@ -1,7 +1,7 @@
 /**
  * @file pr-types.ts
  * @description Types สำหรับ Purchase Requisition Module - ตาม Database Schema
- * @usage import { PRHeader, PRLine, PRStatus, ApprovalTask } from '@/modules/procurement/types/pr-types';
+ * @usage import { PRHeader, PRLine, PRStatus, ApprovalTask } from '@/modules/procurement/types';
  */
 
 // ====================================================================================
@@ -39,6 +39,7 @@ export interface PRHeader {
   pr_exchange_rate_date?: string;   // Postman: pr_exchange_rate_date
   pr_discount_raw?: string;         // Postman: pr_discount_raw
   total_amount: number;             // DECIMAL(18,2)
+  pr_base_total_amount?: string | number; // Field returned in PR List response
   attachment_count: number;         // INTEGER
   created_at: string;               // TIMESTAMP
   updated_at: string;               // TIMESTAMP
@@ -323,7 +324,7 @@ export interface PRListParams {
 }
 
 export interface PRListResponse {
-  items: PRHeader[];
+  data: PRHeader[];
   total: number;
   page: number;
   limit: number;

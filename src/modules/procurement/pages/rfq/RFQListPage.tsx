@@ -18,7 +18,7 @@ import { logger } from '@/shared/utils/logger';
 
 // Services & Types
 import { RFQService } from '@/modules/procurement/services';
-import type { RFQFilterCriteria, RFQHeader, RFQStatus } from '@/modules/procurement/types/rfq-types';
+import type { RFQFilterCriteria, RFQHeader, RFQStatus } from '@/modules/procurement/types';
 import { RFQFormModal, RFQSendConfirmModal } from './components';
 
 

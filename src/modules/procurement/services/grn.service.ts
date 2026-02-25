@@ -1,6 +1,6 @@
 import api from '@/core/api/api';
 import { logger } from '@/shared/utils/logger';
-import type { GRNListParams, GRNListResponse, GRNListItem, GRNSummaryCounts, CreateGRNPayload } from '@/modules/procurement/types/grn-types';
+import type { GRNListParams, GRNListResponse, GRNListItem, GRNSummaryCounts, CreateGRNPayload } from '@/modules/procurement/types';
 import type { SuccessResponse } from '@/shared/types/api-response.types';
 
 const BASE_URL = '/procurement/grn';

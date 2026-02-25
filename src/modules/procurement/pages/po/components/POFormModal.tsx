@@ -9,7 +9,7 @@ import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWra
 import { POService } from '@/modules/procurement/services';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
 import type { VendorDropdownItem } from '@/modules/master-data/vendor/types/vendor-types';
-import type { POFormData, CreatePOPayload } from '@/modules/procurement/types/po-types';
+import type { POFormData, CreatePOPayload } from '@/modules/procurement/types';
 import { useQuery } from '@tanstack/react-query'; // React Query for vendors
 import { calculatePricingSummary } from '@/modules/procurement/utils/pricing.utils';
 import { logger } from '@/shared/utils/logger';

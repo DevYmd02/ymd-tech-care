@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { X, AlertCircle, Calendar, DollarSign, Wallet, FileText, CheckCircle, Clock } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { POService } from '@/modules/procurement/services';
-import type { POListItem } from '@/modules/procurement/types/po-types';
+import type { POListItem } from '@/modules/procurement/types';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { logger } from '@/shared/utils/logger';
 

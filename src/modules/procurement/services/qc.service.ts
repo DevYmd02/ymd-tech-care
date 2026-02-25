@@ -1,5 +1,5 @@
 import api from '@/core/api/api';
-import type { QCListParams, QCListResponse, QCCreateData } from '@/modules/procurement/types/qc-types';
+import type { QCListParams, QCListResponse, QCCreateData } from '@/modules/procurement/types';
 import { logger } from '@/shared/utils/logger';
 
 const ENDPOINTS = {

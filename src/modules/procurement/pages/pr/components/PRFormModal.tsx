@@ -9,7 +9,9 @@ import { WindowFormLayout } from '@ui';
 import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWrapper';
 import { usePRForm } from '@/modules/procurement/hooks/pr';
 import { RejectReasonModal } from '@/modules/procurement/components/RejectReasonModal';
-import type { PRFormData } from '@/modules/procurement/types/pr-types';
+import { WarehouseSearchModal } from '@/modules/procurement/components/shared/WarehouseSearchModal';
+import { LocationSearchModal } from '@/modules/procurement/components/shared/LocationSearchModal';
+import type { PRFormData } from '@/modules/procurement/types';
 
 interface Props {
   isOpen: boolean;
@@ -22,11 +24,13 @@ interface Props {
 export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, readOnly: readOnlyProp = false }) => {
   const {
     isEditMode, lines, isProductModalOpen, setIsProductModalOpen, searchTerm, setSearchTerm,
+    isWarehouseModalOpen, setIsWarehouseModalOpen,
+    isLocationModalOpen, setIsLocationModalOpen, activeWarehouseId,
     showAllItems, setShowAllItems,
     isSubmitting, isActionLoading,
     products, costCenters, projects, purchaseTaxOptions, isSearchingProducts,
     addLine, removeLine, clearLine, updateLine, handleClearLines,
-    openProductSearch, selectProduct, handleVendorSelect, onSubmit, handleApprove,
+    openProductSearch, openWarehouseSearch, openLocationSearch, selectProduct, selectWarehouse, selectLocation, handleVendorSelect, onSubmit, handleApprove,
     handleVoid,
     handleFormError,
     formMethods,
@@ -112,6 +116,17 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
             selectProduct={selectProduct}
             showAllItems={showAllItems}
             setShowAllItems={setShowAllItems}
+          />
+          <WarehouseSearchModal
+            isOpen={isWarehouseModalOpen}
+            onClose={() => setIsWarehouseModalOpen(false)}
+            onSelect={selectWarehouse}
+          />
+          <LocationSearchModal
+            isOpen={isLocationModalOpen}
+            onClose={() => setIsLocationModalOpen(false)}
+            warehouseId={activeWarehouseId}
+            onSelect={selectLocation}
           />
 
           <div className="flex-1 overflow-auto bg-gray-100 dark:bg-gray-800 p-1.5 space-y-1">
@@ -229,6 +244,8 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
                 addLine={addLine}
                 handleClearLines={handleClearLines}
                 openProductSearch={openProductSearch}
+                openWarehouseSearch={openWarehouseSearch}
+                openLocationSearch={openLocationSearch}
                 readOnly={readOnly}
             />
 

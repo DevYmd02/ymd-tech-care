@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Eye, Plus, Users, Loader2 } from 'lucide-react';
 import { WindowFormLayout } from '@ui';
 import { RFQService } from '@/modules/procurement/services';
-import type { RFQDetailResponse } from '@/modules/procurement/types/rfq-types';
+import type { RFQDetailResponse } from '@/modules/procurement/types';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { VendorTrackingTable, type ExtendedVendor } from './VendorTrackingTable';
 import { logger } from '@/shared/utils/logger';

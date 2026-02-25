@@ -1,5 +1,5 @@
 import api from '@/core/api/api';
-import type { RFQHeader, RFQListResponse, RFQCreateData, RFQFilterCriteria, RFQDetailResponse } from '@/modules/procurement/types/rfq-types';
+import type { RFQHeader, RFQListResponse, RFQCreateData, RFQFilterCriteria, RFQDetailResponse } from '@/modules/procurement/types';
 import { logger } from '@/shared/utils/logger';
 import type { SuccessResponse } from '@/shared/types/api-response.types';
 

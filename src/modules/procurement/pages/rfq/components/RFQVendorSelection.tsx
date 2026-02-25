@@ -1,6 +1,6 @@
 import React from 'react';
 import { Users, Search, Trash2, Plus } from 'lucide-react';
-import type { RFQVendorFormData } from '@/modules/procurement/types/rfq-types';
+import type { RFQVendorFormData } from '@/modules/procurement/types';
 
 interface RFQVendorSelectionProps {
     vendors: RFQVendorFormData[];
