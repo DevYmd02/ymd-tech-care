@@ -9,7 +9,7 @@ import { setupPRHandlers } from '@/modules/procurement/mocks/handlers/pr.handler
 import { setupRFQHandlers } from '@/modules/procurement/mocks/handlers/rfq.handler';
 import { setupPOHandlers } from '@/modules/procurement/mocks/handlers/po.handler';
 import { setupPRTHandlers } from '@/modules/procurement/mocks/handlers/prt.handler';
-import { setupQTHandlers } from '@/modules/procurement/mocks/handlers/qt.handler';
+import { setupVQHandlers } from '@/modules/procurement/mocks/handlers/vq.handler';
 import { setupQCHandlers } from '@/modules/procurement/mocks/handlers/qc.handler';
 import { setupGRNHandlers } from '@/modules/procurement/mocks/handlers/grn.handler';
 import { setupCustomerHandlers } from '@/modules/master-data/customer/mocks/handlers/customer.handler';
@@ -40,7 +40,7 @@ export const setupMocks = (axiosInstance: AxiosInstance) => {
     setupMasterDataHandlers(mock);
     setupPRHandlers(mock);
     setupRFQHandlers(mock);
-    setupQTHandlers(mock);
+    setupVQHandlers(mock);
     setupQCHandlers(mock);
     setupPOHandlers(mock);
     setupGRNHandlers(mock);

@@ -9,7 +9,7 @@
 // ====================================================================================
 
 /** QC Status - สถานะใบเปรียบเทียบราคา */
-export type QCStatus = 'WAITING_FOR_PO' | 'PO_CREATED';
+export type QCStatus = 'DRAFT' | 'WAITING_FOR_PO' | 'PO_CREATED';
 
 /** Quotation Comparison Header - ใบเปรียบเทียบราคา */
 export interface QCHeader {
@@ -62,7 +62,7 @@ export interface QCCreateData {
   vendor_lines: Array<{
     vendor_code: string;
     vendor_name: string;
-    qt_no: string;
+    vq_no: string;
     total_amount: number;
     payment_term_days: number;
     lead_time_days: number;

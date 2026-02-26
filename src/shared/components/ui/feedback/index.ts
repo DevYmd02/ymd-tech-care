@@ -3,7 +3,7 @@ export {
   ModuleStatusBadge, 
   PRStatusBadge, 
   RFQStatusBadge, 
-  QTStatusBadge, 
+  VQStatusBadge, 
   QCStatusBadge, 
   POStatusBadge, 
   ActiveStatusBadge, 

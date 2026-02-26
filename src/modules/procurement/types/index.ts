@@ -18,8 +18,8 @@ export * from './grn-types';
 // QC Types
 export * from './qc-types';
 
-// QT Types
-export * from './qt-types';
+// VQ Types
+export * from './vq-types';
 
 // PRT Types (Purchase Return)
 export * from './prt-types';

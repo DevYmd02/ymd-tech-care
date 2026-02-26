@@ -1,15 +1,26 @@
 import type MockAdapter from 'axios-mock-adapter';
 import type { AxiosRequestConfig } from 'axios';
-import { MOCK_QTS } from '../data/qtData';
+import { MOCK_VQS } from '../data/vqData';
 import { MOCK_RFQS, MOCK_RFQ_VENDORS } from '../data/rfqData';
 import { applyMockFilters, sanitizeId } from '@/core/api/mockUtils';
 
-export const setupQTHandlers = (mock: MockAdapter) => {
-  // 1. GET QT List
-  mock.onGet('/qt').reply((config: AxiosRequestConfig) => {
+export const setupVQHandlers = (mock: MockAdapter) => {
+  // 1. GET VQ List
+  mock.onGet('/vq').reply((config: AxiosRequestConfig) => {
     const params = config.params || {};
+    
+    // Custom mapping for filter keys that don't match mock fields
+    if (params.ref_rfq_no) {
+      params.rfq_no = params.ref_rfq_no;
+      delete params.ref_rfq_no;
+    }
+    if (params.ref_pr_no) {
+      params.pr_no = params.ref_pr_no;
+      delete params.ref_pr_no;
+    }
+
     // Sanitizer Layer for List (Sanitize BEFORE filtering)
-    const sanitizedData = MOCK_QTS.map(qt => ({
+    const sanitizedData = MOCK_VQS.map(qt => ({
         ...qt,
         quotation_id: sanitizeId(qt.quotation_id),
         qc_id: sanitizeId(qt.qc_id),
@@ -24,10 +35,10 @@ export const setupQTHandlers = (mock: MockAdapter) => {
     return [200, result];
   });
 
-  // 2. GET QT Detail
-  mock.onGet(/\/qt\/(?!.*\/send).+/).reply((config: AxiosRequestConfig) => {
+  // 2. GET VQ Detail
+  mock.onGet(/\/vq\/(?!.*\/send).+/).reply((config: AxiosRequestConfig) => {
     const id = sanitizeId(config.url?.split('/').pop());
-    const found = MOCK_QTS.find(q => sanitizeId(q.quotation_id) === id);
+    const found = MOCK_VQS.find(q => sanitizeId(q.quotation_id) === id);
     
     if (found) {
         const sanitized = {
@@ -38,25 +49,25 @@ export const setupQTHandlers = (mock: MockAdapter) => {
         };
         return [200, sanitized];
     }
-    return [404, { message: 'Quotation Not Found' }];
+    return [404, { message: 'Vendor Quotation Not Found' }];
   });
 
-  // 3. POST Create QT (Integrates with RFQ State Machine)
-  mock.onPost('/qt').reply((config: AxiosRequestConfig) => {
+  // 3. POST Create VQ (Integrates with RFQ State Machine)
+  mock.onPost('/vq').reply((config: AxiosRequestConfig) => {
     const body = config.data ? JSON.parse(config.data) : {};
     
-    const newQT = {
+    const newVQ = {
       ...body,
-      quotation_id: `qt-${Date.now()}`,
-      quotation_no: body.quotation_no || `QT-2026-${String(MOCK_QTS.length + 1).padStart(4, '0')}`,
+      quotation_id: `vq-${Date.now()}`,
+      quotation_no: body.quotation_no || `VQ-2026-${String(MOCK_VQS.length + 1).padStart(4, '0')}`,
       status: body.status || 'DRAFT',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
 
-    MOCK_QTS.unshift(newQT);
+    MOCK_VQS.unshift(newVQ);
 
-    // --- STATE MACHINE TRIGGER: IF QT IS LINKED TO RFQ ---
+    // --- STATE MACHINE TRIGGER: IF VQ IS LINKED TO RFQ ---
     if (body.rfq_id && body.vendor_id) {
         const rfqIndex = MOCK_RFQS.findIndex(r => r.rfq_id === body.rfq_id);
         if (rfqIndex !== -1) {
@@ -80,6 +91,6 @@ export const setupQTHandlers = (mock: MockAdapter) => {
         }
     }
 
-    return [201, { success: true, data: newQT }];
+    return [201, { success: true, data: newVQ }];
   });
 };

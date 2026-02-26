@@ -1,0 +1,267 @@
+import { useEffect, useMemo } from 'react';
+import { useForm, useFieldArray, useWatch, type Resolver } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { QuotationHeaderSchema, type QuotationFormData, type QuotationLineFormData } from '@/modules/procurement/schemas/vq-schemas';
+import { VQService } from '@/modules/procurement/services/vq.service';
+import { logger } from '@/shared/utils/logger';
+import type { VQListItem, QuotationLine } from '@/modules/procurement/types/vq-types';
+import type { RFQHeader, RFQDetailResponse } from '@/modules/procurement/types/rfq-types';
+import { useConfirmation } from '@/shared/hooks/useConfirmation';
+
+/** Type for RFQ with incidental vendor info often passed in VQ creation flow */
+export interface ExtendedRFQHeader extends RFQHeader {
+    vendor_id?: string;
+    vendor_name?: string;
+    isMulticurrency?: boolean;
+    exchange_rate_date?: string;
+    target_currency?: string;
+}
+
+const createEmptyLine = (): QuotationLineFormData => ({
+  item_code: '',
+  item_name: '',
+  qty: 0,
+  unit_price: 0,
+  discount_amount: 0,
+  net_amount: 0,
+  uom_name: '',
+  warehouse: '',
+  location: '',
+  no_quote: false,
+});
+
+export const useVQForm = (
+  isOpen: boolean, 
+  onClose: () => void, 
+  initialRFQ?: ExtendedRFQHeader | null, 
+  onSuccess?: () => void,
+  vqId?: string | null,
+  isViewMode?: boolean
+) => {
+  const { confirm } = useConfirmation();
+
+  const methods = useForm<QuotationFormData>({
+    resolver: zodResolver(QuotationHeaderSchema) as Resolver<QuotationFormData>,
+    defaultValues: {
+      quotation_no: '',
+      quotation_date: new Date().toISOString().split('T')[0],
+      vendor_id: '',
+      currency_code: 'THB',
+      is_multicurrency: false,
+      exchange_rate_date: '',
+      target_currency_code: '',
+      exchange_rate: 1,
+      lines: [createEmptyLine(), createEmptyLine(), createEmptyLine(), createEmptyLine(), createEmptyLine()],
+      payment_term_days: 30,
+      lead_time_days: 7,
+      remark: '',
+    }
+  });
+
+  const { control, reset, handleSubmit, setValue, getValues } = methods;
+  const { fields, append, remove, insert } = useFieldArray({
+    control,
+    name: "lines"
+  });
+
+  // Reset form when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      if (vqId) {
+        // --- VIEW / EDIT MODE: Fetch Existing VQ ---
+        VQService.getById(vqId).then((data: VQListItem) => {
+            reset({
+                quotation_no: data.quotation_no,
+                quotation_date: data.quotation_date?.split('T')[0],
+                vendor_id: data.vendor_id,
+                vendor_name: data.vendor_name,
+                contact_person: data.contact_person,
+                contact_email: data.contact_email,
+                contact_phone: data.contact_phone,
+                currency_code: data.currency_code,
+                is_multicurrency: data.is_multicurrency || false,
+                exchange_rate_date: data.exchange_rate_date,
+                target_currency_code: data.target_currency_code,
+                exchange_rate: data.exchange_rate,
+                payment_term_days: data.payment_term_days || 0,
+                lead_time_days: data.lead_time_days || 0,
+                valid_until: data.valid_until?.split('T')[0],
+                qc_id: data.qc_id,
+                remark: data.remarks,
+                lines: data.lines?.map((l: QuotationLine) => ({
+                    item_code: l.item_code || '',
+                    item_name: l.item_name || '',
+                    qty: l.qty || 0,
+                    unit_price: l.unit_price || 0,
+                    discount_amount: l.discount_amount || 0,
+                    net_amount: l.net_amount || 0,
+                    uom_name: l.uom_name || '',
+                    warehouse: l.warehouse || '',
+                    location: l.location || '',
+                    no_quote: Boolean(l.no_quote)
+                })) || []
+            });
+        }).catch(err => {
+            logger.error('[useVQForm] Failed to fetch VQ detail:', err);
+        });
+      } else if (initialRFQ) {
+        // --- CREATE MODE: Auto-fill from RFQ ---
+        // Ensure initialRFQ is treated as the correct type if it has lines
+        const rfqDetail = initialRFQ as RFQDetailResponse;
+        let mappedLines: QuotationLineFormData[] = [];
+        
+        if (rfqDetail.lines && rfqDetail.lines.length > 0) {
+            mappedLines = rfqDetail.lines.map((line) => ({
+                item_code: line.item_code || '',
+                item_name: line.item_name || '',
+                qty: line.required_qty || 0,
+                uom_name: line.uom || '',
+                unit_price: 0,
+                discount_amount: 0,
+                net_amount: 0,
+                no_quote: false,
+                warehouse: '',
+                location: '',
+            }));
+        } else {
+            mappedLines = Array(5).fill(null).map(() => createEmptyLine());
+        }
+
+        reset({
+          quotation_no: `VQ-${new Date().getFullYear()}-xxx (Auto)`,
+          quotation_date: new Date().toISOString().split('T')[0],
+          vendor_id: initialRFQ.vendor_id || '', 
+          currency_code: initialRFQ.currency || 'THB',
+          is_multicurrency: initialRFQ.isMulticurrency || false,
+          exchange_rate_date: initialRFQ.exchange_rate_date || '',
+          target_currency_code: initialRFQ.target_currency || '',
+          exchange_rate: initialRFQ.exchange_rate || 1,
+          lines: mappedLines,
+          payment_term_days: 30,
+          lead_time_days: 7,
+          qc_id: initialRFQ.rfq_no || '',
+          remark: '',
+          valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // Default +30 days
+        });
+      } else {
+        // --- BLANK CREATE MODE ---
+        reset({
+          quotation_no: '',
+          quotation_date: new Date().toISOString().split('T')[0],
+          vendor_id: '',
+          currency_code: 'THB',
+          is_multicurrency: false,
+          exchange_rate_date: '',
+          target_currency_code: '',
+          exchange_rate: 1,
+          lines: [createEmptyLine(), createEmptyLine(), createEmptyLine(), createEmptyLine(), createEmptyLine()],
+          payment_term_days: 30,
+          lead_time_days: 7,
+          remark: '',
+          valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        });
+      }
+    }
+  }, [isOpen, initialRFQ, vqId, reset]);
+
+  // Calculations
+  const lines = useWatch({ control, name: 'lines' });
+  const vatRate = 7;
+
+  const totals = useMemo(() => {
+    const subtotal = lines.reduce((sum, line) => sum + (line.net_amount || 0), 0);
+    const vatAmount = subtotal * (vatRate / 100);
+    const grandTotal = subtotal + vatAmount;
+    return { subtotal, vatAmount, grandTotal };
+  }, [lines, vatRate]);
+
+  // Handlers
+  const handleSave = handleSubmit(async (data: QuotationFormData) => {
+    if (isViewMode) return;
+    try {
+      if (!data.vendor_id) {
+         // Should be caught by validation, but double check
+         return;
+      }
+      
+      const payload = {
+          ...data,
+          total_amount: totals.grandTotal,
+          lines: data.lines.filter(l => l.item_code) // Filter empty lines
+      };
+
+      await VQService.create(payload);
+      
+      await confirm({
+          title: 'บันทึกสำเร็จ',
+          description: 'บันทึกใบเสนอราคาเรียบร้อยแล้ว',
+          confirmText: 'ตกลง',
+          hideCancel: true,
+          variant: 'success'
+      });
+      
+      onSuccess?.();
+      onClose();
+    } catch (error) {
+      logger.error('Save VQ failed:', error);
+      await confirm({
+          title: 'เกิดข้อผิดพลาด',
+          description: 'ไม่สามารถบันทึกข้อมูลได้',
+          confirmText: 'ตกลง',
+          hideCancel: true,
+          variant: 'danger'
+      });
+    }
+  });
+
+  const updateLineCalculation = (index: number, field: keyof QuotationLineFormData, value: number | boolean) => {
+      const currentLine = lines[index];
+      if (!currentLine) return;
+
+      // Handle the 'No Quote' toggle
+      if (field === 'no_quote') {
+          setValue(`lines.${index}.no_quote`, Boolean(value));
+          if (value === true) {
+              setValue(`lines.${index}.unit_price`, 0);
+              setValue(`lines.${index}.discount_amount`, 0);
+              setValue(`lines.${index}.net_amount`, 0);
+          } else {
+              // Recalculate based on current form values using getValues to ensure fresh state
+              const currentQty = getValues(`lines.${index}.qty`) || 0;
+              const currentPrice = getValues(`lines.${index}.unit_price`) || 0;
+              const currentDiscount = getValues(`lines.${index}.discount_amount`) || 0;
+              const net = (currentQty * currentPrice) - currentDiscount;
+              setValue(`lines.${index}.net_amount`, net);
+          }
+          return; // Exit early since we handled the forced reset
+      }
+
+      const isNoQuote = currentLine.no_quote;
+      // If toggled 'No Quote', disallow any price updates
+      if (isNoQuote && (field === 'unit_price' || field === 'discount_amount')) {
+          return;
+      }
+
+      const qty = field === 'qty' ? (value as number) : currentLine.qty;
+      const price = field === 'unit_price' ? (value as number) : currentLine.unit_price;
+      const discount = field === 'discount_amount' ? (value as number) : (currentLine.discount_amount || 0);
+
+      // Simple calculation
+      const net = (qty * price) - discount;
+      
+      setValue(`lines.${index}.net_amount`, net);
+  };
+
+  return {
+    methods,
+    fields,
+    append,
+    remove,
+    insert,
+    totals,
+    handleSave,
+    updateLineCalculation,
+    vatRate,
+    createEmptyLine
+  };
+};

@@ -8,14 +8,14 @@ import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { VendorTrackingTable, type ExtendedVendor } from './VendorTrackingTable';
 import { logger } from '@/shared/utils/logger';
 
-interface QTVendorTrackingModalProps {
+interface VQVendorTrackingModalProps {
     isOpen: boolean;
     onClose: () => void;
     rfqId: string | null;
     rfqNo: string;
 }
 
-export const QTVendorTrackingModal: React.FC<QTVendorTrackingModalProps> = ({
+export const VQVendorTrackingModal: React.FC<VQVendorTrackingModalProps> = ({
     isOpen,
     onClose,
     rfqId,
@@ -38,7 +38,7 @@ export const QTVendorTrackingModal: React.FC<QTVendorTrackingModalProps> = ({
                 setVendors(vendorList);
                 setRfqHeader(rfqDetail);
             } catch (error) {
-                logger.error('[QTVendorTrackingModal] Failed to fetch RFQ vendors:', error);
+                logger.error('[VQVendorTrackingModal] Failed to fetch RFQ vendors:', error);
                 toast('ไม่สามารถดึงข้อมูลผู้ขายได้', 'error');
             } finally {
                 setIsLoading(false);
@@ -49,12 +49,12 @@ export const QTVendorTrackingModal: React.FC<QTVendorTrackingModalProps> = ({
     }, [isOpen, rfqId, toast]);
 
     const handleViewQT = (vendorName: string) => {
-        navigate(`/procurement/qt?rfq_no=${encodeURIComponent(rfqNo)}&vendor_name=${encodeURIComponent(vendorName)}`);
+        navigate(`/procurement/vq?rfq_no=${encodeURIComponent(rfqNo)}&vendor_name=${encodeURIComponent(vendorName)}`);
     };
 
     const handleCreateQT = (vendorId: string) => {
         if (!rfqId) return;
-        navigate(`/procurement/qt?create=true&rfq_id=${rfqId}&vendor_id=${vendorId}`);
+        navigate(`/procurement/vq?create=true&rfq_id=${rfqId}&vendor_id=${vendorId}`);
     };
 
     return (
@@ -118,7 +118,7 @@ export const QTVendorTrackingModal: React.FC<QTVendorTrackingModalProps> = ({
                                 vendors={vendors}
                                 actionComponent={(vendor) => (
                                     <div className="flex justify-end">
-                                        {vendor.qt_no ? (
+                                        {vendor.vq_no ? (
                                             <button
                                                 onClick={() => handleViewQT(vendor.vendor_name || '')}
                                                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors
@@ -126,7 +126,7 @@ export const QTVendorTrackingModal: React.FC<QTVendorTrackingModalProps> = ({
                                                            dark:text-blue-400 dark:bg-blue-900/20 dark:border-blue-700/40 dark:hover:bg-blue-900/40"
                                             >
                                                 <Eye size={12} />
-                                                ดู QT
+                                                ดู VQ
                                             </button>
                                         ) : (
                                             <button

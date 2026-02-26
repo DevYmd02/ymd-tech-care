@@ -197,7 +197,7 @@ export default function RFQListPage() {
             enableSorting: false,
         }),
         columnHelper.accessor('created_by_name', {
-            header: 'ผู้ดูแล',
+            header: 'ผู้สร้าง RFQ',
             cell: (info) => (
                 <div className="flex flex-col py-2">
                     <span className="text-gray-900 dark:text-gray-100 font-medium">

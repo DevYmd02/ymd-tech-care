@@ -5,9 +5,9 @@
  * @refactored Uses PageListLayout, FilterFormBuilder, useTableFilters, React Query, SmartTable
  */
 
-import { useState, useMemo } from 'react';
-import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { Scale, FileText, Eye } from 'lucide-react';
+import { useState, useMemo, useCallback } from 'react';
+import { useQuery, keepPreviousData, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Scale, FileText, Eye, RefreshCw } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { PageListLayout, SmartTable, QCStatusBadge, FilterFormBuilder } from '@ui';
 import type { FilterFieldConfig } from '@ui';
@@ -15,6 +15,7 @@ import { useTableFilters, type TableFilters } from '@/shared/hooks';
 import { QCFormModal } from './components';
 import { createColumnHelper } from '@tanstack/react-table';
 import type { ColumnDef } from '@tanstack/react-table';
+import { useNavigate } from 'react-router-dom';
 
 // Services & Types
 import { QCService } from '@/modules/procurement/services';
@@ -29,6 +30,7 @@ import { POFormModal } from '@/modules/procurement/pages/po/components';
 
 const QC_STATUS_OPTIONS = [
     { value: 'ALL', label: 'ทั้งหมด' },
+    { value: 'DRAFT', label: 'แบบร่าง' },
     { value: 'WAITING_FOR_PO', label: 'รอเปิดใบสั่งซื้อ' },
     { value: 'PO_CREATED', label: 'เปิดใบสั่งซื้อแล้ว' },
 ];
@@ -52,6 +54,8 @@ const QC_FILTER_CONFIG: FilterFieldConfig<QCFilterKeys>[] = [
 // ====================================================================================
 
 export default function QCListPage() {
+    const navigate = useNavigate();
+
     // URL-based Filter State
     const { filters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<QCStatus>({
         defaultStatus: 'ALL',
@@ -82,6 +86,27 @@ export default function QCListPage() {
     // PO Modal State
     const [isPOModalOpen, setIsPOModalOpen] = useState(false);
     const [poInitialValues, setPoInitialValues] = useState<Partial<POFormData> | undefined>(undefined);
+
+    const queryClient = useQueryClient();
+
+    // Price Comparison Mutation
+    const compareMutation = useMutation({
+        mutationFn: (id: string) => QCService.compare(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['quote-comparisons'] });
+            window.alert('ส่งเปรียบเทียบราคาสำเร็จ!');
+        },
+        onError: (error) => {
+            console.error('Comparison failed:', error);
+            window.alert('เกิดข้อผิดพลาดในการส่งเปรียบเทียบราคา');
+        }
+    });
+
+    const handleCompare = useCallback((id: string) => {
+        if (window.confirm('คุณต้องการส่งเปรียบเทียบราคารายการนี้ใช่หรือไม่?')) {
+            compareMutation.mutate(id);
+        }
+    }, [compareMutation]);
 
     // Handlers
     const handleFilterChange = (name: QCFilterKeys, value: string) => {
@@ -186,6 +211,20 @@ export default function QCListPage() {
                         >
                             <Eye size={18} />
                         </button>
+
+                        {/* Send for Comparison Button (Migrated from VQ) */}
+                        {item.status === 'DRAFT' && (
+                            <button 
+                                onClick={() => handleCompare(item.qc_id)}
+                                disabled={compareMutation.isPending}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#a855f7] hover:bg-[#9333ea] text-white text-[10px] font-bold rounded shadow transition-all whitespace-nowrap h-8 disabled:opacity-50"
+                                title="ส่งเปรียบเทียบราคา"
+                            >
+                                <RefreshCw size={12} className={compareMutation.isPending && compareMutation.variables === item.qc_id ? "animate-spin" : ""} />
+                                <span>{compareMutation.isPending && compareMutation.variables === item.qc_id ? "กำลังส่ง..." : "ส่งเปรียบเทียบราคา"}</span>
+                            </button>
+                        )}
+
                         {item.status === 'WAITING_FOR_PO' && (
                             <button 
                                 onClick={() => {
@@ -216,7 +255,7 @@ export default function QCListPage() {
             size: 130, // Optimized for text button
             enableSorting: false,
         }),
-    ], [columnHelper, filters.page, filters.limit, data?.data]);
+    ], [columnHelper, filters.page, filters.limit, data?.data, handleCompare, compareMutation.isPending, compareMutation.variables]);
 
     // ====================================================================================
     // RENDER
@@ -241,8 +280,10 @@ export default function QCListPage() {
                         onReset={resetFilters}
                         accentColor="indigo"
                         columns={{ sm: 1, md: 2, lg: 4, xl: 4 }}
-                        actionColSpan={{ md: 2, lg: 3, xl: 3 }}
-                        actionAlign="start"
+                        actionColSpan={{ md: 2, lg: 4, xl: 4 }}
+                        actionAlign="end"
+                        onCreate={() => setIsCreateModalOpen(true)}
+                        createLabel="สร้างใบเปรียบเทียบราคา"
                     />
                 }
             >
@@ -326,6 +367,17 @@ export default function QCListPage() {
                                                 <Eye size={14} /> ดู
                                             </button>
 
+                                            {item.status === 'DRAFT' && (
+                                                <button 
+                                                    onClick={() => handleCompare(item.qc_id)}
+                                                    disabled={compareMutation.isPending}
+                                                    className="flex-[2] bg-[#a855f7] hover:bg-[#9333ea] text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm disabled:opacity-50"
+                                                >
+                                                    <RefreshCw size={14} className={compareMutation.isPending && compareMutation.variables === item.qc_id ? "animate-spin" : ""} />
+                                                    ส่งเปรียบเทียบราคา
+                                                </button>
+                                            )}
+
                                             {item.status === 'WAITING_FOR_PO' && (
                                                 <button 
                                                     onClick={() => {
@@ -389,15 +441,7 @@ export default function QCListPage() {
                 onClose={() => setIsPOModalOpen(false)}
                 initialValues={poInitialValues}
                 onSuccess={() => {
-                     // Maybe navigate to PO list or just refresh?
-                     // User said they haven't saved, so after save maybe we SHOULD go to PO list?
-                     // Or just stay here. Let's stay here for now or alert.
-                     // Actually standard flow after create is often to view it.
-                     // Let's just reload strictly for now as per previous pattern or do nothing?
-                     // The previous pattern was window.location.reload() in POListPage.
-                     // Let's do nothing but close, and maybe show success.
-                     // POFormModal handles success alert.
-                     window.location.href = '/procurement/po'; // Navigate to PO List to see the result
+                     navigate('/procurement/po');
                 }}
             />
         </>

@@ -8,6 +8,13 @@ export const setupRFQHandlers = (mock: MockAdapter) => {
   // 1. GET RFQ List
   mock.onGet('/rfq').reply((config: AxiosRequestConfig) => {
     const params = config.params || {};
+    
+    // Custom mapping for filter keys that don't match mock fields
+    if (params.creator_name) {
+      params.created_by_name = params.creator_name;
+      delete params.creator_name;
+    }
+    
     // Sanitizer Layer for List (Sanitize BEFORE filtering)
     const sanitizedData = MOCK_RFQS.map(rfq => ({
         ...rfq,

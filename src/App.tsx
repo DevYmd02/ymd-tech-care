@@ -32,7 +32,7 @@ const EmployeePage = React.lazy(() => import('@/modules/admin/pages/employees/Em
 const ProcurementDashboard = React.lazy(() => import('@/modules/procurement/pages/dashboard/ProcurementDashboard'));
 const PRListPage = React.lazy(() => import('@/modules/procurement/pages/pr/PRListPage'));
 const RFQListPage = React.lazy(() => import('@/modules/procurement/pages/rfq/RFQListPage'));
-const QTListPage = React.lazy(() => import('@/modules/procurement/pages/qt/QTListPage'));
+const VQListPage = React.lazy(() => import('@/modules/procurement/pages/vq/VQListPage'));
 const QCListPage = React.lazy(() => import('@/modules/procurement/pages/qc/QCListPage'));
 const POListPage = React.lazy(() => import('@/modules/procurement/pages/po/POListPage'));
 const GRNListPage = React.lazy(() => import('@/modules/procurement/pages/grn/GRNListPage'));
@@ -201,7 +201,7 @@ function AppContent() {
               <Route path="dashboard" element={<ProcurementDashboard />} />
               <Route path="pr" element={<PRListPage />} />
               <Route path="rfq" element={<RFQListPage />} />
-              <Route path="qt" element={<QTListPage />} />
+              <Route path="vq" element={<VQListPage />} />
               <Route path="qc" element={<QCListPage />} />
               <Route path="po" element={<POListPage />} />
               <Route path="grn" element={<GRNListPage />} />
