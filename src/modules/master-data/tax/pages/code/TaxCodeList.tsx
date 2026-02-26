@@ -2,7 +2,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Edit2, Trash2, Database } from 'lucide-react';
-import { TaxService } from '@/modules/master-data/tax/services/tax.service';
+import { TaxCodeService } from '@/modules/master-data/tax/services/tax-code.service';
 import { TaxCodeFormModal } from '@/modules/master-data/tax/pages/code/TaxCodeFormModal';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';
@@ -92,7 +92,7 @@ export default function TaxCodeList() {
     const { data: response, isLoading } = useQuery({
         queryKey: ['tax-codes', filters],
         queryFn: async () => {
-            const result = await TaxService.getTaxCodes();
+            const result = await TaxCodeService.getTaxCodes();
             let items = result || [];
             
             // Client-side filtering (mock data)
@@ -155,7 +155,7 @@ export default function TaxCodeList() {
         });
 
         if (isConfirmed) {
-            await TaxService.deleteTaxCode(id);
+            await TaxCodeService.deleteTaxCode(id);
             queryClient.invalidateQueries({ queryKey: ['tax-codes'] });
         }
     }, [queryClient, confirm]);
@@ -164,7 +164,7 @@ export default function TaxCodeList() {
     const columns = useMemo<ColumnDef<TaxCode>[]>(() => [
         {
             id: 'sequence',
-            header: '#',
+            header: 'ลำดับ',
             accessorFn: (_, index) => (filters.page - 1) * filters.limit + index + 1,
             size: 50,
         },
@@ -174,7 +174,7 @@ export default function TaxCodeList() {
             cell: ({ getValue, row }) => (
                 <span 
                     className="font-medium text-blue-600 cursor-pointer hover:underline"
-                    onClick={() => handleEdit(row.original.tax_id)}
+                    onClick={() => handleEdit(String(row.original.tax_code_id || row.original.tax_id))}
                 >
                     {getValue() as string}
                 </span>
@@ -242,14 +242,14 @@ export default function TaxCodeList() {
             cell: ({ row }) => (
                 <div className="flex items-center justify-center gap-2">
                     <button 
-                        onClick={() => handleEdit(row.original.tax_id)}
+                        onClick={() => handleEdit(String(row.original.tax_code_id || row.original.tax_id))}
                         className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
                         title="แก้ไข"
                     >
                         <Edit2 size={16} />
                     </button>
                     <button 
-                        onClick={() => handleDelete(row.original.tax_id)}
+                        onClick={() => handleDelete(String(row.original.tax_code_id || row.original.tax_id))}
                         className="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
                         title="ลบ"
                     >

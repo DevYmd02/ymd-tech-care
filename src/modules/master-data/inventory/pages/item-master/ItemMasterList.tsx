@@ -119,7 +119,7 @@ export default function ItemMasterList() {
 
             return { items: paginatedItems, total };
         },
-        staleTime: 1000 * 60 * 5, // 5 minutes stale time
+        refetchOnMount: true,
         refetchOnWindowFocus: false,
     });
 

@@ -39,11 +39,11 @@ export const usePRCalculations = (props?: UsePRCalculationsProps): PRCalculation
   // 1. Calculate Line-Level Totals
   const { subtotal, totalGross, totalLineDiscount } = useMemo(() => {
     return lines.reduce((acc, line) => {
-      const qty = line.qty || 0;
-      const price = line.est_unit_price || 0;
+      const qty = Number(line.qty) || 0;
+      const price = Number(line.est_unit_price) || 0;
       const gross = qty * price;
-      const lineTotal = line.est_amount || 0; // est_amount is already (gross - discount)
-      const lineDiscount = line.discount || 0;
+      const lineDiscount = Number(line.discount) || 0;
+      const lineTotal = gross - lineDiscount;
 
       acc.totalGross += gross;
       acc.subtotal += lineTotal;

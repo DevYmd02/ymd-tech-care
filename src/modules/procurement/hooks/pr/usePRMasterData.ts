@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { MasterDataService } from '@/modules/master-data';
-import type { ItemListItem, CostCenter, Project, WarehouseListItem } from '@/modules/master-data/types/master-data-types';
-import { TaxService } from '@/modules/master-data/tax/services/tax.service';
+import type { ItemListItem, CostCenter, Project, WarehouseListItem, UnitListItem } from '@/modules/master-data/types/master-data-types';
+import { TaxCodeService } from '@/modules/master-data/tax/services/tax-code.service';
 import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
 import { logger } from '@/shared/utils/logger';
 
@@ -18,9 +18,12 @@ export const usePRMasterData = () => {
      const [projects, setProjects] = useState<Project[]>([]);
      const [purchaseTaxOptions, setPurchaseTaxOptions] = useState<MappedOption<TaxCode>[]>([]);
     
-    // Loading States
     const [isLoading, setIsLoading] = useState(true);
     const [isSearchingProducts, setIsSearchingProducts] = useState(false);
+    
+    // Add master arrays for hydration
+    const [masterItems, setMasterItems] = useState<ItemListItem[]>([]);
+    const [masterUnits, setMasterUnits] = useState<UnitListItem[]>([]);
     
     const [error, setError] = useState<Error | null>(null);
 
@@ -35,13 +38,17 @@ export const usePRMasterData = () => {
               MasterDataService.getWarehouses(),
               MasterDataService.getCostCenters(),
               MasterDataService.getProjects(),
-              TaxService.getTaxCodes()
+              TaxCodeService.getTaxCodes(),
+              MasterDataService.getItems(),
+              MasterDataService.getUnits()
             ]);
 
             const wh = results[0].status === 'fulfilled' ? results[0].value : [];
             const cc = results[1].status === 'fulfilled' ? results[1].value : [];
             const prj = results[2].status === 'fulfilled' ? results[2].value : [];
             const taxCodes = results[3].status === 'fulfilled' ? results[3].value : [];
+            const itemsResult = results[4].status === 'fulfilled' ? results[4].value : [];
+            const unitsResult = results[5].status === 'fulfilled' ? results[5].value : [];
 
             if (results[3].status === 'rejected') {
               logger.error('[usePRMasterData] Tax fetch error:', results[3].reason);
@@ -68,14 +75,21 @@ export const usePRMasterData = () => {
              
              setCostCenters(extractArray(cc));
              setProjects(extractArray(prj));
+             setMasterItems(extractArray(itemsResult));
+             setMasterUnits(extractArray(unitsResult));
              
-             // ⚠️ Purchase Context Filter: PR is a PURCHASE document
+             // Tax Filter: Default to active when is_active is not provided by API
              const taxArray = extractArray(taxCodes);
              const filtered = taxArray.filter(
-               (t: TaxCode) => (t.tax_type === 'PURCHASE' || t.tax_type === 'EXEMPT') && t.is_active
+               (t: TaxCode) => {
+                 // If is_active is not provided by the API, default to active
+                 if (t.is_active === undefined || t.is_active === null) return true;
+                 if (typeof t.is_active === 'boolean') return t.is_active;
+                 return String(t.is_active).toUpperCase() === 'Y' || String(t.is_active) === '1' || String(t.is_active).toLowerCase() === 'true';
+               }
              );
              setPurchaseTaxOptions(filtered.map((t: TaxCode) => ({
-               value: t.tax_id,
+               value: String(t.tax_code_id || t.tax_id),
                label: `${t.tax_code} (${t.tax_rate}%)`,
                original: t
              })));
@@ -108,6 +122,8 @@ export const usePRMasterData = () => {
         costCenters,
         projects,
         purchaseTaxOptions,
+        masterItems,
+        masterUnits,
         isLoading,
         isSearchingProducts,
         searchProducts,

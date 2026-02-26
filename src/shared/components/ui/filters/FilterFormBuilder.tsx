@@ -12,7 +12,7 @@
  */
 
 import React, { type ReactNode } from 'react';
-import { Search, X, Plus } from 'lucide-react';
+import { Search, Plus } from 'lucide-react';
 import { FilterField, type FilterFieldType, type SelectOption } from './FilterField';
 
 // ====================================================================================
@@ -144,7 +144,6 @@ export function FilterFormBuilder<
     searchLabel = 'ค้นหา',
     resetLabel = 'ล้างค่า',
     columns = { sm: 2, md: 5, lg: 6, xl: 8 },
-    actionColSpan = { sm: 'full', md: 2, lg: 2, xl: 2 },
     actionAlign = 'end',
 }: FilterFormBuilderProps<TFilters, TFilterKeys>): React.ReactElement {
     // Grid column mappings to ensure Tailwind scanner picks them up
@@ -184,6 +183,7 @@ export function FilterFormBuilder<
         xlCols,
         'gap-4',
         'w-full',
+        'items-end',
     ].filter(Boolean).join(' ');
 
     // Column span mapping for fields
@@ -201,22 +201,6 @@ export function FilterFormBuilder<
         11: 'col-span-11',
         12: 'col-span-12',
     };
-
-    // Helper to generate col-span classes for action buttons
-    const getActionColSpanClass = (span: number | 'full' | undefined, prefix: string) => {
-        if (!span) return '';
-        if (span === 'full') return `${prefix}col-span-full`;
-        // Safe check for number type to satisfy TypeScript
-        if (typeof span === 'number' && colSpanMap[span]) {
-            return `${prefix}${colSpanMap[span]}`;
-        }
-        return '';
-    };
-
-    const actionSmSpan = getActionColSpanClass(actionColSpan.sm, 'sm:');
-    const actionMdSpan = getActionColSpanClass(actionColSpan.md, 'md:');
-    const actionLgSpan = getActionColSpanClass(actionColSpan.lg, 'lg:');
-    const actionXlSpan = getActionColSpanClass(actionColSpan.xl, 'xl:');
 
     // Handle form submission (prevent default and trigger search)
     const handleSubmit = (e: React.FormEvent) => {
@@ -280,45 +264,47 @@ export function FilterFormBuilder<
                     );
                 })}
 
-                {/* Action Buttons */}
-                <div className={`flex flex-col sm:flex-row flex-wrap items-end ${justifyClass} gap-2 min-w-0 col-span-1 ${actionSmSpan} ${actionMdSpan} ${actionLgSpan} ${actionXlSpan}`}>
+                {/* Action Buttons - spans remaining cells to force exact right alignment like RFQ */}
+                <div 
+                    className={`flex flex-col sm:flex-row flex-wrap items-center ${justifyClass} gap-2 min-w-0 md:col-span-2 lg:col-span-2`} 
+                    style={{ gridColumnEnd: '-1' }} /* Auto-fills rest of row to enforce right alignment */
+                >
                     
                     <div className="flex gap-2 w-full sm:w-auto">
-                        {/* Reset Button */}
+                        {/* Reset Button (RFQ Style: No X icon) */}
                         <button
                             type="button"
                             onClick={onReset}
-                            className="flex-1 sm:flex-none h-10 px-4 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-lg border border-gray-300 flex items-center justify-center gap-2 transition-colors whitespace-nowrap shadow-sm"
+                            className="flex-1 sm:flex-none h-10 px-4 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-lg border border-gray-300 flex items-center justify-center transition-colors whitespace-nowrap shadow-sm"
                         >
-                            <X size={16} />
                             {resetLabel}
                         </button>
 
-                        {/* Search Button */}
+                        {/* Search Button (RFQ Style: Search size 18) */}
                         <button
                             type="submit"
                             className={`flex-1 sm:flex-none h-10 px-6 ${buttonColors[accentColor]} text-white font-bold rounded-lg flex items-center justify-center gap-2 transition-colors whitespace-nowrap shadow-sm`}
                         >
-                            <Search size={16} />
+                            <Search size={18} />
                             {searchLabel}
                         </button>
                     </div>
 
-                    {/* Create Button - rendered if onCreate is provided */}
+                    {/* Create Button (RFQ Style: Plus size 16, stroke 2.5) */}
                     {onCreate && (
                         <button
                             type="button"
                             onClick={onCreate}
                             className="w-full sm:w-auto h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg flex items-center justify-center gap-2 transition-colors whitespace-nowrap shadow-sm"
                         >
-                            <Plus size={18} />
+                            <Plus size={16} strokeWidth={2.5} />
                             {createLabel}
                         </button>
                     )}
 
                     {/* Additional Action Buttons */}
                     {actionButtons && (
-                         <div className="w-full md:w-auto flex flex-wrap gap-2">
+                         <div className="w-full sm:w-auto flex flex-wrap gap-2">
                             {actionButtons}
                          </div>
                     )}

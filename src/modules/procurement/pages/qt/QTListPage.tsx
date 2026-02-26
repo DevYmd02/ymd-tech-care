@@ -284,25 +284,24 @@ export default function QTListPage() {
             size: 120,
             enableSorting: true,
         }),
-        columnHelper.accessor('valid_until', {
-            header: () => <div className="text-center">ใช้ได้ถึง</div>,
-            cell: (info) => (
-                <div className="text-gray-600 dark:text-gray-300 whitespace-nowrap">
-                    {info.getValue() ? formatThaiDate(info.getValue()!) : '-'}
-                </div>
-            ),
-            size: 90,
-            enableSorting: true,
-        }),
-        columnHelper.accessor(row => row.status, {
-            id: 'status',
-            header: () => <div className="text-center w-full">สถานะ</div>,
-            cell: (info) => (
-                <div className="flex justify-center">
-                    <QTStatusBadge status={info.getValue()} />
-                </div>
-            ),
-            size: 85,
+        columnHelper.display({
+            id: 'valid_and_status',
+            header: () => <div className="text-left w-full">หมดเขต / สถานะ</div>,
+            cell: ({ row }) => {
+                const dateVal = row.original.valid_until;
+                const formattedDate = dateVal ? formatThaiDate(dateVal) : '-';
+                return (
+                    <div className="flex flex-col items-start gap-1.5 py-1">
+                        <span className="text-[13px] font-medium text-gray-600 dark:text-gray-300">
+                            {formattedDate}
+                        </span>
+                        <div>
+                            <QTStatusBadge status={row.original.status} />
+                        </div>
+                    </div>
+                );
+            },
+            size: 140,
             enableSorting: false,
         }),
         columnHelper.display({

@@ -8,13 +8,7 @@ interface WarehouseSearchModalProps {
   onSelect: (data: { warehouse_id: string; warehouse_name: string }) => void;
 }
 
-// Temporary Mock Data for Warehouses
-const MOCK_WAREHOUSES = [
-  { warehouse_id: 'WH001', warehouse_name: 'คลังสำนักงานใหญ่' },
-  { warehouse_id: 'WH002', warehouse_name: 'คลังกรุงเทพ 1' },
-  { warehouse_id: 'WH003', warehouse_name: 'คลังเชียงใหม่' },
-  { warehouse_id: 'WH004', warehouse_name: 'คลังวัตถุดิบหลัก' },
-];
+import { MOCK_WAREHOUSES } from '@/modules/procurement/mocks/data/warehouseData';
 
 export const WarehouseSearchModal: React.FC<WarehouseSearchModalProps> = ({ isOpen, onClose, onSelect }) => {
   const [searchTerm, setSearchTerm] = useState('');

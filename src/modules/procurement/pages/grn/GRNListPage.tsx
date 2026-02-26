@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { Eye, Package, Plus } from 'lucide-react';
+import { Eye, Package } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { FilterFormBuilder } from '@ui';
 import { SmartTable } from '@ui';
@@ -163,15 +163,8 @@ export default function GRNListPage() {
                         accentColor="blue"
                         columns={{ sm: 1, md: 2, xl: 4 }}
                         actionColSpan={{ md: 2, xl: 2 }}
-                        actionButtons={
-                            <button 
-                                onClick={() => setIsCreateModalOpen(true)}
-                                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 shadow-sm transition-colors whitespace-nowrap w-full sm:w-auto font-medium"
-                            >
-                                <Plus size={20} />
-                                สร้างใบรับสินค้า
-                            </button>
-                        }
+                        onCreate={() => setIsCreateModalOpen(true)}
+                        createLabel="สร้างใบรับสินค้าใหม่"
                     />
                 }
             >

@@ -2,7 +2,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Edit2, Trash2, Database } from 'lucide-react';
-import { TaxService } from '@/modules/master-data/tax/services/tax.service';
+import { TaxGroupService } from '@/modules/master-data/tax/services/tax-group.service';
 import { TaxGroupFormModal } from '@/modules/master-data/tax/pages/group/TaxGroupFormModal';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';
@@ -82,7 +82,7 @@ export default function TaxGroupList() {
     const { data: response, isLoading } = useQuery({
         queryKey: ['tax-groups', filters],
         queryFn: async () => {
-            const result = await TaxService.getTaxGroups();
+            const result = await TaxGroupService.getTaxGroups();
             let items = result || [];
             
             // Client-side filtering (mock data)
@@ -141,7 +141,7 @@ export default function TaxGroupList() {
         });
 
         if (isConfirmed) {
-            await TaxService.deleteTaxGroup(id);
+            await TaxGroupService.deleteTaxGroup(id);
             queryClient.invalidateQueries({ queryKey: ['tax-groups'] });
         }
     }, [queryClient, confirm]);
@@ -150,7 +150,7 @@ export default function TaxGroupList() {
     const columns = useMemo<ColumnDef<TaxGroup>[]>(() => [
         {
             id: 'sequence',
-            header: '#',
+            header: 'ลำดับ',
             accessorFn: (_, index) => (filters.page - 1) * filters.limit + index + 1,
             size: 60,
         },

@@ -9,7 +9,7 @@
  *   - '@/modules/master-data/sales/types/sales-structure.types' for sales org types
  *   - '@/modules/master-data/inventory/types/warehouse-types' for warehouse types
  *   - '@/modules/master-data/inventory/types/product-types' for product/item types
- *   - '@/core/types/project-types' for project/cost center types
+ *   - '@/modules/master-data/project/types/project-types' for project/cost center types
  */
 
 // ====================================================================================
@@ -38,4 +38,4 @@ export * from '@/modules/master-data/inventory/types/product-types';
 // ====================================================================================
 // RE-EXPORTS FROM CORE
 // ====================================================================================
-export * from '@/core/types/project-types';
+export * from '@/modules/master-data/project/types/project-types';

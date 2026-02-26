@@ -107,6 +107,8 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     costCenters, 
     projects, 
     purchaseTaxOptions,
+    masterItems,
+    masterUnits,
     isLoading: isMasterDataLoading,
     searchProducts,
     isSearchingProducts 
@@ -155,7 +157,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
        
        if (defaultTax) {
          setValue('pr_tax_code_id', defaultTax.value);
-         setValue('pr_tax_rate', defaultTax.original?.tax_rate || 0);
+         setValue('pr_tax_rate', Number(defaultTax.original?.tax_rate || 0));
        }
      }
    }, [purchaseTaxOptions, setValue, formMethods]);
@@ -217,48 +219,56 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
       
       if (defaultTax) {
         setValue('pr_tax_code_id', defaultTax.value);
-        setValue('pr_tax_rate', defaultTax.original?.tax_rate || 0);
+        setValue('pr_tax_rate', Number(defaultTax.original?.tax_rate || 0));
       }
     }
   }, [id, purchaseTaxOptions, setValue, formMethods]);
 
   useEffect(() => {
-    if (isOpen && !prevIsOpenRef.current) {
+    // Phase 1 & 2: Safe hydration ensures we only execute PR fetching and mapping WHEN master data is completely loaded
+    if (isOpen && !isMasterDataLoading && !prevIsOpenRef.current) {
+      prevIsOpenRef.current = true; // Mark as executed for this opencycle so we don't re-fetch
+
       const timer = setTimeout(async () => {
         if (id) {
           try {
             setIsActionLoading(true);
-            setIsActionLoading(true);
             const pr = await PRService.getDetail(id);
             if (pr) {
-              const mappedLines: ExtendedLine[] = (pr.lines || []).map((line: PRLine) => ({
-                item_id: line.item_id,
-                item_code: line.item_code,
-                item_name: line.item_name,
-                description: line.description || line.item_name,
-                qty: line.qty,
-                uom: line.uom,
-                uom_id: line.uom_id,
-                est_unit_price: line.est_unit_price,
-                est_amount: line.est_amount,
-                needed_date: line.needed_date,
-                preferred_vendor_id: line.preferred_vendor_id,
-                remark: line.remark,
-                warehouse_id: pr.warehouse_id || '1', 
-                location: line.location || '',
-                // Calculate discount amount from raw string (same logic as updateLine)
-                discount: (() => {
-                  const gross = (line.qty || 0) * (line.est_unit_price || 0);
-                  const raw = line.line_discount_raw || '';
-                  if (!raw) return 0;
-                  if (raw.endsWith('%')) {
-                    const pct = parseFloat(raw.replace('%', ''));
-                    return isNaN(pct) ? 0 : gross * (pct / 100);
-                  }
-                  return parseFloat(raw) || 0;
-                })(),
-                line_discount_raw: line.line_discount_raw || ''
-              }));
+              const mappedLines: ExtendedLine[] = (pr.lines || []).map((line: PRLine) => {
+                // Phase 3: The Safe Hydration Loop - Active lookup against loaded master array
+                const matchedItem = masterItems?.find(i => String(i.item_id) === String(line.item_id));
+                const matchedUnit = masterUnits?.find(u => String(u.uom_id || u.unit_id) === String(line.uom_id));
+
+                return {
+                  item_id: line.item_id,
+                  item_code: matchedItem?.item_code || line.item_code || '',
+                  item_name: matchedItem?.item_name || line.item_name || '',
+                  description: line.description || line.item_name || matchedItem?.item_name || '',
+                  qty: Number(line.qty) || 0,
+                  uom: matchedUnit?.uom_name || matchedUnit?.unit_name || line.uom || '',
+                  uom_id: line.uom_id,
+                  est_unit_price: Number(line.est_unit_price) || 0,
+                  est_amount: Number(line.line_net_amount ?? line.est_amount) || 0,
+                  needed_date: line.needed_date,
+                  preferred_vendor_id: line.preferred_vendor_id,
+                  remark: line.remark,
+                  warehouse_id: pr.warehouse_id || '1', 
+                  location: line.location || '',
+                  // Calculate discount amount from raw string (same logic as updateLine)
+                  discount: (() => {
+                    const gross = (Number(line.qty) || 0) * (Number(line.est_unit_price) || 0);
+                    const raw = line.line_discount_raw || '';
+                    if (!raw) return 0;
+                    if (raw.endsWith('%')) {
+                      const pct = parseFloat(raw.replace('%', ''));
+                      return isNaN(pct) ? 0 : gross * (pct / 100);
+                    }
+                    return parseFloat(raw) || 0;
+                  })(),
+                  line_discount_raw: line.line_discount_raw || ''
+                };
+              });
 
               while (mappedLines.length < PR_CONFIG.MIN_LINES) {
                 mappedLines.push(createEmptyLine());
@@ -276,8 +286,9 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
                 pr_exchange_rate: pr.pr_exchange_rate || 1,
                 lines: mappedLines,
                 is_on_hold: pr.status === 'DRAFT' ? 'Y' : 'N',
-                pr_tax_code_id: pr.pr_tax_code_id || '1',
-                pr_discount_raw: pr.pr_discount_raw || '',
+                pr_tax_code_id: pr.pr_tax_code_id ? String(pr.pr_tax_code_id) : '',
+                pr_tax_rate: pr.pr_tax_rate != null ? Number(pr.pr_tax_rate) : undefined,
+                pr_discount_raw: pr.pr_discount_raw != null ? String(pr.pr_discount_raw) : '',
                 remark: pr.remark || '',
                 shipping_method: pr.shipping_method || '',
               };
@@ -301,9 +312,10 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
         }
       }, 0);
       return () => clearTimeout(timer);
+    } else if (!isOpen) {
+      prevIsOpenRef.current = false;
     }
-    prevIsOpenRef.current = isOpen;
-  }, [isOpen, reset, id, user, setIsActionLoading]);
+  }, [isOpen, isMasterDataLoading, reset, id, user, setIsActionLoading, masterItems, masterUnits]);
 
   // Currency Sync
   const sourceCurrencyCode = watch('pr_base_currency_code');

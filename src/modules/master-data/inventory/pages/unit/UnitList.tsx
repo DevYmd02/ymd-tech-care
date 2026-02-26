@@ -84,11 +84,11 @@ export default function UnitList() {
             }
             if (filters.search) {
                 const term = filters.search.toLowerCase();
-                items = items.filter(u => u.unit_code.toLowerCase().includes(term));
+                items = items.filter(u => String(u.uom_code || u.unit_code || '').toLowerCase().includes(term));
             }
              if (filters.search2) {
                 const term = filters.search2.toLowerCase();
-                items = items.filter(u => u.unit_name.toLowerCase().includes(term));
+                items = items.filter(u => String(u.uom_name || u.unit_name || '').toLowerCase().includes(term));
             }
             
             // Sorting
@@ -146,26 +146,27 @@ export default function UnitList() {
             size: 60,
         },
         {
-            accessorKey: 'unit_code',
+            id: 'uom_code',
             header: 'รหัส',
-            cell: ({ getValue, row }) => (
+            cell: ({ row }) => (
                 <span 
                     className="font-medium text-blue-600 dark:text-blue-400 cursor-pointer hover:underline"
-                    onClick={() => handleEdit(row.original.unit_id)}
+                    onClick={() => handleEdit(String(row.original.uom_id || row.original.unit_id))}
                 >
-                    {getValue() as string}
+                    {String(row.original.uom_code || row.original.unit_code || '-')}
                 </span>
             ),
             size: 150,
         },
         {
-            accessorKey: 'unit_name',
+            id: 'uom_name',
             header: 'ชื่อ (ไทย)',
+            cell: ({ row }) => <span>{String(row.original.uom_name || row.original.unit_name || '-')}</span>
         },
         {
-            accessorKey: 'unit_name_en',
+            id: 'uom_nameeng',
             header: 'ชื่อ (EN)',
-            cell: ({ getValue }) => <span className="text-gray-500">{getValue() as string || '-'}</span>
+            cell: ({ row }) => <span className="text-gray-500">{String(row.original.uom_nameeng || row.original.unit_name_en || '-')}</span>
         },
         {
             accessorKey: 'is_active',
@@ -184,14 +185,14 @@ export default function UnitList() {
             cell: ({ row }) => (
                 <div className="flex items-center justify-center gap-2">
                     <button 
-                        onClick={() => handleEdit(row.original.unit_id)}
+                        onClick={() => handleEdit(String(row.original.uom_id || row.original.unit_id))}
                         className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                         title="แก้ไข"
                     >
                         <Edit2 size={18} />
                     </button>
                     <button 
-                        onClick={() => handleDelete(row.original.unit_id)}
+                        onClick={() => handleDelete(String(row.original.uom_id || row.original.unit_id))}
                         className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                         title="ลบ"
                     >

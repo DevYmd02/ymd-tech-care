@@ -226,7 +226,7 @@ export default function QCListPage() {
         <>
             <PageListLayout
                 title="รายการใบเปรียบเทียบราคา"
-                subtitle="Quote Comparison Master (QC)"
+                subtitle="Quote Comparison (QC)"
                 icon={Scale}
                 accentColor="indigo"
                 totalCount={data?.total}

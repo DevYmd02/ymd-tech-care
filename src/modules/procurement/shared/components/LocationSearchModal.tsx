@@ -9,14 +9,7 @@ interface LocationSearchModalProps {
   onSelect: (data: { location_id: string; location_name: string }) => void;
 }
 
-// Temporary Mock Data for Locations (Dependent on Warehouse)
-const MOCK_LOCATIONS = [
-  { warehouse_id: 'WH001', location_id: 'LOC-A', location_name: 'โซน A (ปกติ)' },
-  { warehouse_id: 'WH001', location_id: 'LOC-B', location_name: 'โซน B (สำรอง)' },
-  { warehouse_id: 'WH002', location_id: 'BKK-01', location_name: 'ชั้น 1 กรุงเทพ' },
-  { warehouse_id: 'WH003', location_id: 'CNX-M', location_name: 'Main Storage เชียงใหม่' },
-  { warehouse_id: 'WH004', location_id: 'RM-01', location_name: 'ห้องวัตถุดิบ 1' },
-];
+import { MOCK_LOCATIONS } from '@/modules/procurement/mocks/data/warehouseData';
 
 export const LocationSearchModal: React.FC<LocationSearchModalProps> = ({ isOpen, onClose, warehouseId, onSelect }) => {
   const [searchTerm, setSearchTerm] = useState('');

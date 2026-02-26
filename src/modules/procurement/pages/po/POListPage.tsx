@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
-import { FileText, Plus, Eye, Send, CheckCircle, Package, Edit } from 'lucide-react';
+import { FileText, Eye, Send, CheckCircle, Package, Edit } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { FilterFormBuilder } from '@ui';
 import { PageListLayout, SmartTable } from '@ui';
@@ -316,15 +316,8 @@ export default function POListPage() {
                         accentColor="blue"
                         columns={{ sm: 1, md: 2, xl: 4 }}
                         actionColSpan={{ md: 2, xl: 2 }}
-                        actionButtons={
-                            <button
-                                onClick={() => setSearchParams({ mode: 'create' })}
-                                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm font-medium w-full sm:w-auto whitespace-nowrap"
-                            >
-                                <Plus size={20} />
-                                สร้างใบสั่งซื้อใหม่
-                            </button>
-                        }
+                        onCreate={() => setSearchParams({ mode: 'create' })}
+                        createLabel="สร้างใบสั่งซื้อใหม่"
                     />
                 }
             >
@@ -514,5 +507,3 @@ export default function POListPage() {
         </>
     );
 }
-
-
