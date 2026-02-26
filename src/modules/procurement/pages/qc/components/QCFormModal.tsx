@@ -1,7 +1,7 @@
 /**
  * @file QCFormModal.tsx
  * @description Modal สำหรับสร้างใบเปรียบเทียบราคา (Quote Comparison)
- * @usage เรียกจาก QTListPage เมื่อกดปุ่ม "ส่งเปรียบเทียบราคา"
+ * @usage เรียกจาก VQListPage เมื่อกดปุ่ม "ส่งเปรียบเทียบราคา"
  */
 
 import React, { useState, useEffect } from 'react';
@@ -25,7 +25,7 @@ interface QCVendorLine {
   line_no: number;
   vendor_code: string;
   vendor_name: string;
-  qt_no: string;
+  vq_no: string;
   total_amount: number;
   payment_term_days: number;
   lead_time_days: number;
@@ -36,7 +36,7 @@ const createEmptyLine = (lineNo: number): QCVendorLine => ({
   line_no: lineNo,
   vendor_code: '',
   vendor_name: '',
-  qt_no: '',
+  vq_no: '',
   total_amount: 0,
   payment_term_days: 30,
   lead_time_days: 7,
@@ -144,7 +144,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
         vendor_lines: vendorLines.map(line => ({
           vendor_code: line.vendor_code,
           vendor_name: line.vendor_name,
-          qt_no: line.qt_no,
+          vq_no: line.vq_no,
           total_amount: line.total_amount,
           payment_term_days: line.payment_term_days,
           lead_time_days: line.lead_time_days,
@@ -341,9 +341,9 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
                       <td className="px-2 py-2">
                         <input
                           type="text"
-                          value={line.qt_no}
-                          onChange={(e) => updateLine(index, 'qt_no', e.target.value)}
-                          placeholder="QT-xxx"
+                          value={line.vq_no}
+                          onChange={(e) => updateLine(index, 'vq_no', e.target.value)}
+                          placeholder="VQ-xxx"
                           className={tableInputClass}
                         />
                       </td>

@@ -15,5 +15,5 @@ export { GRNService } from './grn.service';
 export { QCService } from './qc.service';
 export type { QCListParams, QCListResponse, QCCreateData } from './qc.service';
 
-export { QTService } from './qt.service';
-export type { QTListParams, QTListResponse, QTCreateData } from './qt.service';
+export { VQService } from './vq.service';
+export type { VQListParams, VQListResponse, VQCreateData } from './vq.service';

@@ -5,6 +5,7 @@ import { logger } from '@/shared/utils/logger';
 const ENDPOINTS = {
   list: '/qc',
   create: '/qc',
+  compare: '/qc/compare',
 };
 
 export const QCService = {
@@ -16,6 +17,11 @@ export const QCService = {
   create: async (data: QCCreateData): Promise<{ qc_id: string }> => {
     logger.info('[QCService] Creating QC');
     return await api.post<{ qc_id: string }>(ENDPOINTS.create, data);
+  },
+
+  compare: async (id: string): Promise<{ success: boolean }> => {
+    logger.info(`[QCService] Triggering Price Comparison for ${id}`);
+    return await api.post<{ success: boolean }>(`${ENDPOINTS.compare}/${id}`);
   }
 };
 

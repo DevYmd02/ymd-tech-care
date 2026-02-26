@@ -126,7 +126,7 @@ const _mockRFQs: RFQHeader[] = [
         branch_name: 'สำนักงานใหญ่',
         created_by_name: 'System Admin',
         vendor_count: 3,
-        purpose: 'ทดสอบแสดงผล Limbo State (Vendors 1/3, No QT)',
+        purpose: 'ทดสอบแสดงผล Limbo State (Vendors 1/3, No VQ)',
         responded_vendors_count: 0,
         sent_vendors_count: 1, // Partial dispatch
         vendor_responded: 0,
@@ -194,13 +194,13 @@ function generateVendorsForRFQ(rfq: RFQHeader): RFQVendor[] {
             sent_via: 'EMAIL',
             email_sent_to: vendor.email,
             response_date: status === 'RESPONDED' ? getFutureDate(rfq.rfq_date, i + 2) : null,
-            qt_no: status === 'RESPONDED' ? `QT-2026-${String(Math.floor(Math.random() * 9000) + 1000)}` : undefined,
+            vq_no: status === 'RESPONDED' ? `VQ-2026-${String(Math.floor(Math.random() * 9000) + 1000)}` : undefined,
             status,
             remark: null,
             // UI display fields (not in RFQVendor type, but useful for mock)
             vendor_name: vendor.name,
             vendor_code: vendor.code,
-        } as RFQVendor & { vendor_name: string; vendor_code: string; qt_no?: string };
+        } as RFQVendor & { vendor_name: string; vendor_code: string; vq_no?: string };
     });
 }
 

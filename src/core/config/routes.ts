@@ -58,7 +58,7 @@ export const ROUTES = {
     DASHBOARD: '/procurement/dashboard',
     PR: '/procurement/pr',
     RFQ: '/procurement/rfq',
-    QT: '/procurement/qt',
+    VQ: '/procurement/vq',
     QC: '/procurement/qc',
     PO: '/procurement/po',
     GRN: '/procurement/grn',

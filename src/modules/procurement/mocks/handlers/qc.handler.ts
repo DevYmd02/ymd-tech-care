@@ -16,7 +16,7 @@ export const setupQCHandlers = (mock: MockAdapter) => {
     }));
 
     const result = applyMockFilters(sanitizedData, params, {
-        searchableFields: ['qc_id'], // QC might not have a separate 'no', using ID for now
+        searchableFields: ['qc_no', 'pr_no', 'lowest_bidder_name'], 
         // dateField: 'created_at' // QC might typically not be date-filtered or use created_at if available
     });
 
@@ -36,6 +36,18 @@ export const setupQCHandlers = (mock: MockAdapter) => {
             lowest_bidder_vendor_id: sanitizeId(found.lowest_bidder_vendor_id),
         };
         return [200, sanitized];
+    }
+    return [404, { message: 'QC Not Found' }];
+  });
+
+  // 3. POST QC Comparison (Status Transition: DRAFT -> WAITING_FOR_PO)
+  mock.onPost(/\/qc\/compare\/.+/).reply((config: AxiosRequestConfig) => {
+    const id = sanitizeId(config.url?.split('/').pop());
+    const found = MOCK_QCS.find(q => sanitizeId(q.qc_id) === id);
+    
+    if (found) {
+        found.status = 'WAITING_FOR_PO';
+        return [200, { success: true }];
     }
     return [404, { message: 'QC Not Found' }];
   });

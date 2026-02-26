@@ -1,15 +1,15 @@
 // Services
 export { 
-    PRService, POService, RFQService, GRNService, QCService, QTService 
+    PRService, POService, RFQService, GRNService, QCService, VQService 
 } from './services';
 
 // Types
 export type { 
     PRHeader, PRStatus, POHeader, POStatus, RFQHeader, RFQStatus, 
-    GRNHeader, GRNStatus, QCHeader, QCStatus, QuotationHeader, QTStatus 
+    GRNHeader, GRNStatus, QCHeader, QCStatus, QuotationHeader, VQStatus 
 } from './types';
 
 // Pages
 export { 
-    PRListPage, RFQListPage, POListPage, GRNListPage, QCListPage, QTListPage 
+    PRListPage, RFQListPage, POListPage, GRNListPage, QCListPage, VQListPage 
 } from './pages';

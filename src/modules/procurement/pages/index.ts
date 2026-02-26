@@ -13,5 +13,5 @@ export { GRNListPage } from './grn';
 // QC - Quality Control
 export { QCListPage } from './qc';
 
-// QT - Quotation
-export { QTListPage } from './qt';
+// VQ - Vendor Quotation
+export { VQListPage } from './vq';

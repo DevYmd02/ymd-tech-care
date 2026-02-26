@@ -6,7 +6,7 @@ import { formatThaiDate } from '@/shared/utils/dateUtils';
 export type ExtendedVendor = RFQVendor & {
     vendor_name?: string;
     vendor_code?: string;
-    qt_no?: string;
+    vq_no?: string;
     sent_via?: string | null;
     email_sent_to?: string | null;
     reject_reason?: string | null;
@@ -28,8 +28,8 @@ export const VendorTrackingTable: React.FC<VendorTrackingTableProps> = ({ vendor
      * Determine if we should show the "Actions" (จัดการ) column.
      * Hidden if actionComponent is not provided AND no vendor has a QT number to display.
      */
-    const hasAnyQt = vendors.some(v => !!v.qt_no);
-    const showActions = !!actionComponent || hasAnyQt;
+    const hasAnyVq = vendors.some(v => !!v.vq_no);
+    const showActions = !!actionComponent || hasAnyVq;
 
     /**
      * Shared Grid Configuration
@@ -196,9 +196,9 @@ export const VendorTrackingTable: React.FC<VendorTrackingTableProps> = ({ vendor
                                                         <div className="opacity-90 hover:opacity-100 transition-opacity">
                                                             {actionComponent(vendor)}
                                                         </div>
-                                                    ) : vendor.qt_no ? (
+                                                    ) : vendor.vq_no ? (
                                                         <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/20 px-2.5 py-1 rounded-lg border border-blue-200/50 dark:border-blue-700/40 whitespace-nowrap shadow-sm">
-                                                            QT: {vendor.qt_no}
+                                                            VQ: {vendor.vq_no}
                                                         </span>
                                                     ) : (
                                                         <div className="w-8 h-8 rounded-full bg-gray-50 dark:bg-gray-800/40 flex items-center justify-center border border-gray-100 dark:border-gray-800/50 opacity-30">

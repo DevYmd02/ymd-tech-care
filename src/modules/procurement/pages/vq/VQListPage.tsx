@@ -1,39 +1,35 @@
 /**
- * @file QTListPage.tsx
+ * @file VQListPage.tsx
  * @description หน้ารายการใบเสนอราคา (Quotation List)
- * @route /procurement/qt
- * @supports URL auto-filter: /procurement/qt?rfq_no=XXX (from RFQ navigation)
+ * @route /procurement/vq
+ * @supports URL auto-filter: /procurement/vq?rfq_no=XXX (from RFQ navigation)
  * @refactored Uses PageListLayout, FilterFormBuilder, useTableFilters, React Query, SmartTable
  */
 
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { FileText, Eye, Edit, RefreshCw, X, Filter, XCircle } from 'lucide-react';
+import { Eye, Edit, Filter, FileText, X } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
-import { PageListLayout, FilterFormBuilder, SmartTable, QTStatusBadge } from '@ui';
-import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal';
-import { useToast } from '@/shared/components/ui/feedback/Toast';
+import { PageListLayout, FilterFormBuilder, SmartTable, VQStatusBadge } from '@ui';
 import type { FilterFieldConfig } from '@/shared/components/ui/filters/FilterFormBuilder';
 import { useTableFilters, type TableFilters } from '@/shared/hooks';
 import type { ColumnDef } from '@tanstack/react-table';
 import { createColumnHelper } from '@tanstack/react-table';
 
 // Services & Types
-import { QTService, type QTListParams } from '@/modules/procurement/services/qt.service';
+import { VQService, type VQListParams } from '@/modules/procurement/services/vq.service';
 import { RFQService } from '@/modules/procurement/services/rfq.service';
-import type { QTListItem, QTStatus } from '@/modules/procurement/types';
+import type { VQListItem, VQStatus } from '@/modules/procurement/types';
 import type { RFQHeader } from '@/modules/procurement/types';
-import { QTFormModal, QTVendorTrackingModal } from './components';
-import { QCFormModal } from '@/modules/procurement/pages/qc/components';
-import { Users } from 'lucide-react';
+import { VQFormModal } from './components';
 import { logger } from '@/shared/utils/logger';
 
 // ====================================================================================
 // STATUS OPTIONS
 // ====================================================================================
 
-const QT_STATUS_OPTIONS = [
+const VQ_STATUS_OPTIONS = [
     { value: 'ALL', label: 'ทั้งหมด' },
     { value: 'DRAFT', label: 'แบบร่าง' },
     { value: 'RECEIVED', label: 'ได้รับแล้ว' },
@@ -53,16 +49,14 @@ const QT_STATUS_OPTIONS = [
 // MAIN COMPONENT
 // ====================================================================================
 
-export default function QTListPage() {
-    const { toast } = useToast();
-
+export default function VQListPage() {
     // ==========================================================================
     // URL Query Parameter: ?rfq_no=XXX (received from RFQ navigation shortcut)
     // ==========================================================================
     const [searchParams, setSearchParams] = useSearchParams();
     const rfqNoFilter = searchParams.get('rfq_no');
 
-    const { filters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<QTStatus>({
+    const { filters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<VQStatus>({
         defaultStatus: 'ALL',
         customParamKeys: {
             search: 'quotation_no',
@@ -73,18 +67,15 @@ export default function QTListPage() {
     });
 
     // Modal States
-    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const [isQCModalOpen, setIsQCModalOpen] = useState(false);
-    const [selectedQTForQC, setSelectedQTForQC] = useState<QTListItem | null>(null);
-
-    // Tracking Modal State
-    const [isTrackModalOpen, setIsTrackModalOpen] = useState(false);
-    const [qtForTracking, setQtForTracking] = useState<QTListItem | null>(null);
-
-    // Confirmation Modal State (ปิดรับราคา / Close Bidding)
-    const [isCloseBiddingOpen, setIsCloseBiddingOpen] = useState(false);
-    const [qtToClose, setQtToClose] = useState<QTListItem | null>(null);
-    const [isClosing, setIsClosing] = useState(false);
+    const [modalConfig, setModalConfig] = useState<{
+        isOpen: boolean;
+        isViewMode: boolean;
+        vqId: string | null;
+    }>({
+        isOpen: false,
+        isViewMode: false,
+        vqId: null
+    });
 
     // Auto-inject rfq_no from URL into search3 filter (runs once on mount or when param changes)
     const hasInjected = useRef(false);
@@ -101,7 +92,7 @@ export default function QTListPage() {
         const rfqId = searchParams.get('rfq_id');
         const vendorId = searchParams.get('vendor_id');
 
-        if (shouldCreate && !isCreateModalOpen) {
+        if (shouldCreate && !modalConfig.isOpen) {
             if (rfqId) {
                 // Fetch RFQ Detail to get items
                 RFQService.getById(rfqId).then((rfqData: RFQHeader) => {
@@ -111,13 +102,13 @@ export default function QTListPage() {
                         header.vendor_id = vendorId; 
                     }
                     setInitialRFQForCreate(header as RFQHeader);
-                    setIsCreateModalOpen(true);
+                    setModalConfig({ isOpen: true, isViewMode: false, vqId: null });
                 }).catch((err: Error) => {
-                    logger.error('[QTListPage] Failed to fetch RFQ for auto-creation:', err);
-                    setIsCreateModalOpen(true); // Open anyway, just empty
+                    logger.error('[VQListPage] Failed to fetch RFQ for auto-creation:', err);
+                    setModalConfig({ isOpen: true, isViewMode: false, vqId: null }); // Open anyway, just empty
                 });
             } else {
-                setIsCreateModalOpen(true);
+                setModalConfig({ isOpen: true, isViewMode: false, vqId: null });
             }
             
             // Clear the creation params from URL to prevent reopening on refresh
@@ -129,7 +120,7 @@ export default function QTListPage() {
                 return next;
             }, { replace: true });
         }
-    }, [rfqNoFilter, setFilters, searchParams, isCreateModalOpen, setSearchParams]);
+    }, [rfqNoFilter, setFilters, searchParams, modalConfig.isOpen, setSearchParams]);
 
     // Clear the URL filter (React Router — no hard refresh)
     const handleClearRfqFilter = useCallback(() => {
@@ -143,7 +134,7 @@ export default function QTListPage() {
     }, [setSearchParams]);
 
     // Convert to API filter format
-    const apiFilters: QTListParams = {
+    const apiFilters: VQListParams = {
         quotation_no: filters.search || undefined,
         vendor_name: filters.search2 || undefined,
         rfq_no: filters.search3 || undefined,
@@ -158,8 +149,8 @@ export default function QTListPage() {
 
     // Data Fetching with React Query
     const { data, isLoading, refetch } = useQuery({
-        queryKey: ['quotations', apiFilters],
-        queryFn: () => QTService.getList(apiFilters),
+        queryKey: ['vendor-quotations', apiFilters],
+        queryFn: () => VQService.getList(apiFilters),
         placeholderData: keepPreviousData,
     });
 
@@ -168,46 +159,25 @@ export default function QTListPage() {
         setFilters({ [name]: value });
     };
 
-    const handleOpenQCModal = useCallback((qt: QTListItem) => {
-        setSelectedQTForQC(qt);
-        setIsQCModalOpen(true);
-    }, []);
-
-    const handleOpenTracking = useCallback((qt: QTListItem) => {
-        setQtForTracking(qt);
-        setIsTrackModalOpen(true);
-    }, []);
-
-    // --- Close Bidding: ปิดรับราคา (Lock bidding, status → CLOSED) ---
-    const handleCloseQuotationPhase = useCallback((qt: QTListItem) => {
-        setQtToClose(qt);
-        setIsCloseBiddingOpen(true);
-    }, []);
-
-    const executeCloseQuotation = async () => {
-        if (!qtToClose) return;
-        setIsClosing(true);
-        try {
-            await QTService.update(qtToClose.quotation_id, { status: 'CLOSED' });
-            toast(`ปิดรับราคาสำหรับ ${qtToClose.rfq_no} เรียบร้อยแล้ว`, 'success');
-            refetch();
-            cancelCloseQuotation();
-        } catch (error) {
-            toast('เกิดข้อผิดพลาดในการปิดรับราคา', 'error');
-            logger.error('[QTListPage] executeCloseQuotation error:', error);
-        } finally {
-            setIsClosing(false);
-        }
+    const handleOpenView = (vqId: string) => {
+        setModalConfig({ isOpen: true, isViewMode: true, vqId });
     };
 
-    const cancelCloseQuotation = () => {
-        setIsCloseBiddingOpen(false);
-        setQtToClose(null);
-        setIsClosing(false);
+    const handleOpenEdit = (vqId: string) => {
+        setModalConfig({ isOpen: true, isViewMode: false, vqId });
+    };
+
+    const handleOpenCreate = () => {
+        setModalConfig({ isOpen: true, isViewMode: false, vqId: null });
+    };
+
+    const handleCloseModal = () => {
+        setModalConfig({ isOpen: false, isViewMode: false, vqId: null });
+        setInitialRFQForCreate(null);
     };
 
     // Columns Definition
-    const columnHelper = createColumnHelper<QTListItem>();
+    const columnHelper = createColumnHelper<VQListItem>();
 
     const columns = useMemo(() => [
         columnHelper.display({
@@ -215,27 +185,27 @@ export default function QTListPage() {
             header: () => <div className="text-center w-full">ลำดับ</div>,
             cell: (info) => <div className="text-center">{info.row.index + 1 + (filters.page - 1) * filters.limit}</div>,
             footer: () => <div className="absolute left-4 top-1/2 -translate-y-1/2 whitespace-nowrap font-bold text-sm text-gray-700 dark:text-gray-200">ยอดรวมทั้งหมด :</div>,
-            size: 40,
+            size: 60,
             enableSorting: false,
         }),
         columnHelper.accessor('quotation_no', {
-            header: 'เลขที่ QT',
+            header: 'เลขที่ VQ',
             cell: (info) => (
                 <span className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline cursor-pointer block" title={info.getValue()}>
                     {info.getValue()}
                 </span>
             ),
-            size: 155,
+            size: 140,
             enableSorting: true,
         }),
         columnHelper.accessor('quotation_date', {
-            header: 'วันที่',
+            header: () => <div className="text-center w-full">วันที่เอกสาร</div>,
             cell: (info) => (
-                <span className="text-gray-600 dark:text-gray-300 whitespace-nowrap">
+                <div className="text-center text-gray-600 dark:text-gray-300 whitespace-nowrap font-medium">
                     {formatThaiDate(info.getValue())}
-                </span>
+                </div>
             ),
-            size: 90,
+            size: 110,
             enableSorting: true,
         }),
         columnHelper.accessor('vendor_name', {
@@ -243,15 +213,17 @@ export default function QTListPage() {
             cell: (info) => {
                 const item = info.row.original;
                 return (
-                    <div>
-                        <span className="text-gray-700 dark:text-gray-200 block truncate" title={info.getValue() || ''}>{info.getValue() || ''}</span>
-                        <div className="text-[10px] text-gray-500 dark:text-gray-400 truncate" title={`เครดิต ${item.payment_term_days || '-'} วัน | Lead ${item.lead_time_days || '-'} วัน`}>
+                    <div className="flex flex-col min-w-0">
+                        <span className="text-gray-900 dark:text-gray-100 font-medium truncate" title={info.getValue() || ''}>
+                            {info.getValue() || ''}
+                        </span>
+                        <div className="text-[10px] text-gray-500 dark:text-gray-400 truncate mt-0.5">
                             เครดิต {item.payment_term_days || '-'} วัน | Lead {item.lead_time_days || '-'} วัน
                         </div>
                     </div>
                 );
             },
-            size: 200,
+            size: 180,
             enableSorting: false,
         }),
         columnHelper.accessor('rfq_no', {
@@ -259,23 +231,23 @@ export default function QTListPage() {
             cell: (info) => {
                 const item = info.row.original;
                 return (
-                    <div className="flex flex-col py-1">
-                        <span className="text-purple-600 dark:text-purple-400 font-medium hover:underline cursor-pointer leading-tight truncate" title={item.rfq_no || ''}>
+                    <div className="flex flex-col py-1 min-w-0">
+                        <span className="text-purple-600 dark:text-purple-400 font-semibold hover:underline cursor-pointer leading-tight truncate" title={item.rfq_no || ''}>
                             {item.rfq_no || '-'}
                         </span>
                         {item.pr_no && (
-                            <span className="text-[10px] text-gray-400 dark:text-gray-500 truncate leading-tight mt-0.5" title={`Ref: ${item.pr_no}`}>
+                            <span className="text-[10px] text-gray-400 dark:text-gray-500 truncate leading-tight mt-1" title={`Ref: ${item.pr_no}`}>
                                 Ref: {item.pr_no}
                             </span>
                         )}
                     </div>
                 );
             },
-            size: 155,
+            size: 140,
             enableSorting: false,
         }),
         columnHelper.accessor('total_amount', {
-            header: () => <div className="text-right whitespace-nowrap">ยอดรวม (บาท)</div>,
+            header: () => <div className="text-right w-full">ยอดสุทธิ</div>,
             cell: (info) => (
                 <div className="text-right font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
                     {info.getValue().toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -284,24 +256,24 @@ export default function QTListPage() {
             size: 120,
             enableSorting: true,
         }),
-        columnHelper.display({
-            id: 'valid_and_status',
-            header: () => <div className="text-left w-full">หมดเขต / สถานะ</div>,
-            cell: ({ row }) => {
-                const dateVal = row.original.valid_until;
-                const formattedDate = dateVal ? formatThaiDate(dateVal) : '-';
-                return (
-                    <div className="flex flex-col items-start gap-1.5 py-1">
-                        <span className="text-[13px] font-medium text-gray-600 dark:text-gray-300">
-                            {formattedDate}
-                        </span>
-                        <div>
-                            <QTStatusBadge status={row.original.status} />
-                        </div>
-                    </div>
-                );
-            },
-            size: 140,
+        columnHelper.accessor('valid_until', {
+            header: () => <div className="text-center w-full">วันหมดเขต</div>,
+            cell: (info) => (
+                <div className="text-center text-[12.5px] text-gray-500 dark:text-gray-400 font-medium">
+                    {info.getValue() ? formatThaiDate(info.getValue() as string) : '-'}
+                </div>
+            ),
+            size: 110,
+            enableSorting: true,
+        }),
+        columnHelper.accessor('status', {
+            header: () => <div className="text-center w-full">สถานะ</div>,
+            cell: (info) => (
+                <div className="flex justify-center">
+                    <VQStatusBadge status={info.getValue()} />
+                </div>
+            ),
+            size: 100,
             enableSorting: false,
         }),
         columnHelper.display({
@@ -309,57 +281,23 @@ export default function QTListPage() {
             header: () => <div className="text-center w-full">จัดการ</div>,
             cell: ({ row }) => {
                 const item = row.original;
-                const isInProgress = item.status === 'IN_PROGRESS';
-                
                 return (
-                    <div className={isInProgress ? "flex flex-col items-center justify-center gap-2 py-1.5" : "flex flex-row items-center justify-center gap-3 whitespace-nowrap"}>
-                        {/* Icon Actions Group (Always horizontal) */}
-                        <div className="flex items-center justify-center gap-1.5">
+                    <div className="flex flex-row items-center justify-center gap-3 whitespace-nowrap">
+                        <button 
+                            onClick={() => handleOpenView(item.quotation_id)}
+                            className="p-1 text-gray-500 hover:text-blue-600 transition-colors" 
+                            title="ดูรายละเอียด"
+                        >
+                            <Eye size={18} />
+                        </button>
+                        
+                        {(item.status === 'RECEIVED' || item.status === 'DRAFT') && (
                             <button 
-                                onClick={() => handleOpenTracking(item)}
-                                className="p-1 text-gray-500 hover:text-blue-600 transition-colors" 
-                                title="ดูสถานะการตอบกลับ"
+                                onClick={() => handleOpenEdit(item.quotation_id)}
+                                className="p-1 text-blue-500 hover:text-blue-700 transition-colors" 
+                                title="แก้ไข"
                             >
-                                <Eye size={16} />
-                            </button>
-                            
-                            {item.status === 'SUBMITTED' && (
-                                <button className="p-1 text-blue-500 hover:text-blue-700 transition-colors" title="แก้ไข">
-                                    <Edit size={16} />
-                                </button>
-                            )}
-                        </div>
-
-                        {/* Status-specific Action Buttons */}
-                        {item.status === 'IN_PROGRESS' && (
-                            <div className="flex flex-col items-center gap-2">
-                                <button 
-                                    onClick={() => handleCloseQuotationPhase(item)}
-                                    className="flex items-center justify-center gap-1.5 w-[150px] px-3 py-1.5 text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 hover:border-rose-400 text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap"
-                                    title="ปิดรับราคา"
-                                >
-                                    <XCircle size={12} /> ปิดรับราคา
-                                </button>
-                                
-                                {item.rfq_no && (
-                                    <button 
-                                        onClick={() => handleOpenTracking(item)}
-                                        className="flex items-center justify-center gap-1.5 w-[150px] px-3 py-1.5 text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 hover:border-blue-400 text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap"
-                                        title="ติดตามการขอราคา"
-                                    >
-                                        <Users size={12} /> ติดตามการขอราคา
-                                    </button>
-                                )}
-                            </div>
-                        )}
-
-                        {item.status === 'CLOSED' && (
-                            <button 
-                                onClick={() => handleOpenQCModal(item)}
-                                className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#a855f7] hover:bg-[#9333ea] text-white text-[10px] font-bold rounded shadow transition-colors whitespace-nowrap"
-                                title="ส่งเปรียบเทียบราคา"
-                            >
-                                <RefreshCw size={12} /> ส่งเปรียบเทียบราคา
+                                <Edit size={18} />
                             </button>
                         )}
                     </div>
@@ -373,17 +311,17 @@ export default function QTListPage() {
                      </div>
                  );
             },
-            size: 190,
+            size: 140,
             enableSorting: false,
         }),
-    ], [columnHelper, filters.page, filters.limit, handleOpenQCModal, handleCloseQuotationPhase, handleOpenTracking, data?.data]);
+    ], [columnHelper, filters.page, filters.limit, data?.data]);
 
-    const filterConfig: FilterFieldConfig<keyof TableFilters<QTStatus>>[] = useMemo(() => [
-        { name: 'search', label: 'เลขที่ใบเสนอราคา', type: 'text', placeholder: 'QT-xxx' },
+    const filterConfig: FilterFieldConfig<keyof TableFilters<VQStatus>>[] = useMemo(() => [
+        { name: 'search', label: 'เลขที่ใบเสนอราคา', type: 'text', placeholder: 'VQ-xxx' },
         { name: 'search2', label: 'ชื่อผู้ขาย', type: 'text', placeholder: 'ชื่อผู้ขาย' },
         { name: 'search3', label: 'เลขที่ RFQ อ้างอิง', type: 'text', placeholder: 'RFQ-xxx' },
         { name: 'search4', label: 'เลขที่ PR อ้างอิง', type: 'text', placeholder: 'PR-xxx' },
-        { name: 'status', label: 'สถานะ', type: 'select' as const, options: QT_STATUS_OPTIONS },
+        { name: 'status', label: 'สถานะ', type: 'select' as const, options: VQ_STATUS_OPTIONS },
         { name: 'dateFrom', label: 'วันที่เริ่มต้น', type: 'date' },
         { name: 'dateTo', label: 'วันที่สิ้นสุด', type: 'date' },
     ], []);
@@ -392,20 +330,20 @@ export default function QTListPage() {
         <>
             <PageListLayout
                 title="รายการใบเสนอราคา"
-                subtitle={rfqNoFilter ? `รายการใบเสนอราคาสำหรับ RFQ: ${rfqNoFilter} (ตอบกลับแล้ว ${data?.total || 0} ราย)` : 'Vendor Quotation (QT)'}
+                subtitle={rfqNoFilter ? `รายการใบเสนอราคาสำหรับ RFQ: ${rfqNoFilter} (ตอบกลับแล้ว ${data?.total || 0} ราย)` : 'Vendor Quotation (VQ)'}
                 icon={FileText}
                 accentColor="blue"
                 totalCount={data?.total}
                 totalCountLoading={isLoading}
                 searchForm={
-                    <FilterFormBuilder<TableFilters<QTStatus>>
+                    <FilterFormBuilder<TableFilters<VQStatus>>
                         config={filterConfig}
                         filters={filters}
                         onFilterChange={handleFilterChange}
                         onSearch={refetch}
                         onReset={resetFilters}
                         accentColor="blue"
-                        onCreate={() => setIsCreateModalOpen(true)}
+                        onCreate={handleOpenCreate}
                         createLabel="สร้างใบเสนอราคาใหม่"
                     />
                 }
@@ -433,7 +371,7 @@ export default function QTListPage() {
 
                     <SmartTable
                         data={data?.data ?? []}
-                        columns={columns as ColumnDef<QTListItem>[]}
+                        columns={columns as ColumnDef<VQListItem>[]}
                         isLoading={isLoading}
                         pagination={{
                             pageIndex: filters.page,
@@ -451,55 +389,17 @@ export default function QTListPage() {
                 </div>
             </PageListLayout>
 
-            {/* Modals - Only mount when open */}
-            {isCreateModalOpen && (
-                <QTFormModal 
-                    isOpen={isCreateModalOpen} 
-                    onClose={() => {
-                        setIsCreateModalOpen(false);
-                        setInitialRFQForCreate(null);
-                    }} 
-                    onSuccess={() => refetch()}
+             {/* Modals - Only mount when open */}
+            {modalConfig.isOpen && (
+                <VQFormModal 
+                    isOpen={modalConfig.isOpen}
+                    onClose={handleCloseModal}
+                    onSuccess={refetch}
                     initialRFQ={initialRFQForCreate}
+                    vqId={modalConfig.vqId}
+                    isViewMode={modalConfig.isViewMode}
                 />
             )}
-
-            {isQCModalOpen && (
-                <QCFormModal
-                    isOpen={isQCModalOpen}
-                    onClose={() => {
-                        setIsQCModalOpen(false);
-                        setSelectedQTForQC(null);
-                    }}
-                    initialRFQNo={selectedQTForQC?.rfq_no}
-                    onSuccess={() => refetch()}
-                />
-            )}
-
-            {isTrackModalOpen && (
-                <QTVendorTrackingModal
-                    isOpen={isTrackModalOpen}
-                    onClose={() => {
-                        setIsTrackModalOpen(false);
-                        setQtForTracking(null);
-                    }}
-                    rfqId={qtForTracking?.qc_id || null}
-                    rfqNo={qtForTracking?.rfq_no || '-'}
-                />
-            )}
-
-            {/* ===== Confirmation: ปิดรับราคา (Close Bidding) ===== */}
-            <ConfirmationModal
-                isOpen={isCloseBiddingOpen}
-                onClose={cancelCloseQuotation}
-                onConfirm={executeCloseQuotation}
-                title="ยืนยันการปิดรับราคา"
-                description={`ต้องการปิดรับราคาสำหรับ RFQ อ้างอิง ${qtToClose?.rfq_no} ใช่หรือไม่? เมื่อปิดแล้วระบบจะพร้อมให้ทำการเทียบราคาต่อไป`}
-                variant="danger"
-                confirmText="ปิดรับราคา"
-                cancelText="ยกเลิก"
-                isLoading={isClosing}
-            />
         </>
     );
 }

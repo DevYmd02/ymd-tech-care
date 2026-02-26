@@ -49,7 +49,7 @@ export interface RFQHeader {
     purpose: string;                    // REQUIRED: เรื่อง/วัตถุประสงค์
     responded_vendors_count: number;    // REQUIRED: จำนวนผู้ขายที่เสนอราคามาแล้ว
     sent_vendors_count: number;         // REQUIRED: จำนวนผู้ขายที่ส่ง RFQ ออกไปแล้ว
-    has_quotation?: boolean;            // มีการสร้างใบเสนอราคา (QT) ในระบบแล้วหรือไม่
+    has_quotation?: boolean;            // มีการสร้างใบเสนอราคา (VQ) ในระบบแล้วหรือไม่
     
     // Form-related fields
     currency?: string;                  // สกุลเงิน
@@ -261,7 +261,7 @@ export interface RFQDetailResponse extends RFQHeader {
     vendors: (RFQVendor & { 
         vendor_name: string; 
         vendor_code: string; 
-        qt_no?: string; 
+        vq_no?: string; 
     })[];
     lines: RFQLine[];
 }

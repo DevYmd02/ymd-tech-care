@@ -1,6 +1,6 @@
 /**
- * @file qt-types.ts
- * @description Type definitions for Quotation (QT) module
+ * @file vq-types.ts
+ * @description Type definitions for Vendor Quotation (VQ) module
  * @tables quotation_header, quotation_line
  */
 
@@ -34,15 +34,23 @@ export interface QuotationHeader {
     payment_term_days: number | null;   // INTEGER
     lead_time_days: number | null;      // INTEGER - ระยะส่งของ (days)
     currency_code: string;              // VARCHAR(3) - e.g. THB, USD
-    exchange_rate: number;              // NUMERIC(18,6)
+    is_multicurrency?: boolean;
+    exchange_rate_date?: string;
+    target_currency_code?: string;
+    exchange_rate?: number;              // NUMERIC(18,6)
     total_amount: number;               // DECIMAL(18,2)
     status: QuotationStatus;            // VARCHAR(50)
+    remarks?: string;
+    contact_person?: string;
+    contact_email?: string;
+    contact_phone?: string;
     
     // UI Extended Fields
     vendor_name?: string;               // Display
     vendor_code?: string;               // Display
     rfq_no?: string;                    // Display
     pr_no?: string;                     // Display - Reference PR
+    lines?: QuotationLine[];            // Detail items
 }
 
 // ====================================================================================
@@ -51,37 +59,41 @@ export interface QuotationHeader {
 
 /** Quotation Line - รายการสินค้าในใบเสนอราคา */
 export interface QuotationLine {
-    quotation_line_id: string;          // UUID (vq_line_id)
-    quotation_id: string;               // FK (vq_id)
+    quotation_line_id?: string;         // UUID (Primary Key)
+    quotation_id?: string;              // UUID (Foreign Key)
     pr_line_id?: string;                // FK
     item_id?: string;                   // FK
-    item_code?: string;                 // Display
-    item_name?: string;                 // Display
-    qty: number;                        // NUMERIC(18,3)
-    uom_id: string;                     // UUID
+    item_code: string;                  // Required
+    item_name: string;                  // Required
+    qty: number;                        // Required
+    uom_id?: string;                    // UUID
     uom_name?: string;                  // Display
-    unit_price: number;                 // NUMERIC(18,4)
-    discount_amount: number;            // NUMERIC(18,2)
+    unit_price?: number;                // NUMERIC(18,4)
+    discount_amount?: number;           // NUMERIC(18,2)
     tax_code?: string;                  // VARCHAR(20)
-    net_amount: number;                 // NUMERIC(18,2)
+    net_amount: number;                 // Required
+    no_quote?: boolean;
+    remark?: string;
+    warehouse?: string;
+    location?: string;
 }
 
 // ====================================================================================
 // UI DISPLAY TYPES
 // ====================================================================================
 
-/** QT List Item - สำหรับแสดงในตาราง */
-export type QTListItem = QuotationHeader;
+/** VQ List Item - สำหรับแสดงในตาราง */
+export type VQListItem = QuotationHeader;
 
 /** Alias for QuotationStatus (for backward compatibility) */
-export type QTStatus = QuotationStatus;
+export type VQStatus = QuotationStatus;
 
 
 // ====================================================================================
 // SERVICE TYPES - REQUEST/RESPONSE
 // ====================================================================================
 
-export interface QTListParams {
+export interface VQListParams {
   quotation_no?: string;
   vendor_name?: string;
   rfq_no?: string;
@@ -94,11 +106,11 @@ export interface QTListParams {
   sort?: string;
 }
 
-export interface QTListResponse {
-  data: QTListItem[];
+export interface VQListResponse {
+  data: VQListItem[];
   total: number;
   page: number;
   limit: number;
 }
 
-export type QTCreateData = Partial<QTListItem> & { lines?: Partial<QuotationLine>[] };
+export type VQCreateData = Partial<VQListItem> & { lines?: Partial<QuotationLine>[] };
