@@ -17,8 +17,24 @@ export const UnitService = {
        };
     }
     try {
-      const response = await api.get<PaginatedListResponse<UnitListItem>>('/units', { params });
-      return response;
+      type UomResponse = UnitListItem[] | { data?: UnitListItem[]; items?: UnitListItem[] };
+      const response = await api.get<UomResponse>('/uom', { params });
+      
+      let uomArray: UnitListItem[] = [];
+      if (Array.isArray(response)) {
+        uomArray = response;
+      } else if (response && 'data' in response && Array.isArray(response.data)) {
+        uomArray = response.data;
+      } else if (response && 'items' in response && Array.isArray(response.items)) {
+         uomArray = response.items;
+      }
+
+      return {
+        items: uomArray,
+        total: uomArray.length,
+        page: 1,
+        limit: uomArray.length || 10
+      };
     } catch (error) {
       logger.error('[UnitService] getAll error:', error);
       return { items: [], total: 0, page: 1, limit: 10 };
@@ -28,7 +44,7 @@ export const UnitService = {
   get: async (id: string): Promise<UnitListItem | null> => {
     if (USE_MOCK) return mockUnits.find(u => u.unit_id === id) || null;
     try {
-      return await api.get<UnitListItem>(`/units/${id}`);
+      return await api.get<UnitListItem>(`/uom/${id}`);
     } catch (error) {
       logger.error('[UnitService] get error:', error);
       return null;
@@ -40,7 +56,7 @@ export const UnitService = {
         return { success: true, message: 'Mock Create Success' };
     }
     try {
-      return await api.post<{ success: boolean; data?: UnitListItem; message?: string }>('/units', data);
+      return await api.post<{ success: boolean; data?: UnitListItem; message?: string }>('/uom', data);
     } catch (error) {
       logger.error('[UnitService] create error:', error);
       return { success: false, message: 'เกิดข้อผิดพลาดในการสร้างข้อมูล' };
@@ -52,7 +68,7 @@ export const UnitService = {
         return { success: true, message: 'Mock Update Success' };
     }
     try {
-      return await api.put<{ success: boolean; data?: UnitListItem; message?: string }>(`/units/${id}`, data);
+      return await api.put<{ success: boolean; data?: UnitListItem; message?: string }>(`/uom/${id}`, data);
     } catch (error) {
       logger.error('[UnitService] update error:', error);
       return { success: false, message: 'เกิดข้อผิดพลาดในการแก้ใขข้อมูล' };
@@ -62,7 +78,7 @@ export const UnitService = {
   delete: async (id: string): Promise<boolean> => {
     if (USE_MOCK) return true;
     try {
-      await api.delete<boolean>(`/units/${id}`);
+      await api.delete<boolean>(`/uom/${id}`);
       return true;
     } catch (error) {
       logger.error('[UnitService] delete error:', error);

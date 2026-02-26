@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { Save } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import type { TaxGroup } from '@/modules/master-data/tax/types/tax-types';
-import { TaxService } from '@/modules/master-data/tax/services/tax.service';
+import { TaxGroupService } from '@/modules/master-data/tax/services/tax-group.service';
 import { DialogFormLayout } from '@ui';
 
 interface TaxGroupFormModalProps {
@@ -23,7 +23,7 @@ export function TaxGroupFormModal({ isOpen, onClose, groupId, onSuccess }: TaxGr
         if (isOpen) {
              if (groupId) {
                 setIsLoading(true);
-                TaxService.getTaxGroupById(groupId).then(data => {
+                TaxGroupService.getTaxGroupById(groupId).then(data => {
                     if (data) {
                         setValue('tax_group_code', data.tax_group_code);
                         setValue('tax_type', data.tax_type);
@@ -47,9 +47,9 @@ export function TaxGroupFormModal({ isOpen, onClose, groupId, onSuccess }: TaxGr
         setIsLoading(true);
         try {
              if (isEdit && groupId) {
-                await TaxService.updateTaxGroup(groupId, data);
+                await TaxGroupService.updateTaxGroup(groupId, data);
             } else {
-                await TaxService.createTaxGroup(data);
+                await TaxGroupService.createTaxGroup(data);
             }
             onSuccess();
             onClose();

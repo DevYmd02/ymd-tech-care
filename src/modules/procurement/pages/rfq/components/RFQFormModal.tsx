@@ -5,7 +5,7 @@ import { RFQFormLines } from './RFQFormLines';
 import { RFQVendorSelection } from './RFQVendorSelection';
 import { VendorDispatchTable } from './VendorDispatchTable';
 import { VendorSearchModal } from '@/modules/master-data/vendor/components/selector/VendorSearchModal';
-import { PRSelectionModal } from '@/modules/procurement/components/selector/PRSelectionModal';
+import { PRSelectionModal } from '@/modules/procurement/pr/components/PRSelectionModal';
 import { WindowFormLayout, TabPanel } from '@ui';
 import type { PRHeader } from '@/modules/procurement/types';
 import { logger } from '@/shared/utils/logger';

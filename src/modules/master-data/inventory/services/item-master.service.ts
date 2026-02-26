@@ -33,11 +33,25 @@ export const ItemMasterService = {
        };
     }
     try {
-      const response = await api.get<ListResponse<ItemListItem>>('/items', { params });
-      if (Array.isArray(response)) {
-          return { items: response as ItemListItem[], total: response.length, page: 1, limit: 10 };
-      }
-      return response;
+      const response = await api.get<ItemListItem[] | {
+          items?: ItemListItem[];
+          data?: ItemListItem[];
+          total?: number;
+          count?: number;
+          page?: number;
+          pageSize?: number;
+          limit?: number;
+      }>('/item-master', { params });
+      
+      // Handle direct array from Axios (api.ts usually returns response.data directly)
+      const itemsArray = Array.isArray(response) ? response : (response.data || response.items || []);
+      
+      return { 
+          items: itemsArray, 
+          total: itemsArray.length, 
+          page: 1, 
+          limit: itemsArray.length || 10 
+      };
     } catch (error) {
       logger.error('[ItemMasterService] getAll error:', error);
       return { items: [], total: 0 };

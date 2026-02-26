@@ -150,13 +150,13 @@ export const usePRLoader = ({
 
           if (pr) {
             logger.info(`[usePRLoader] Fetched PR Payload:`, pr);
-            const mappedLines: ExtendedLineLocal[] = (pr.lines || []).map((line: PRLine) => {
+            const mappedLines: ExtendedLineLocal[] = (pr.lines || []).map((line: PRLine & { product_code?: string; product_name?: string; item?: { item_code?: string; item_name?: string } }) => {
               const gross = (line.qty || 0) * (line.est_unit_price || 0);
               return {
-                item_id: line.item_id,
-                item_code: line.item_code,
-                item_name: line.item_name,
-                description: line.description || line.item_name,
+                item_id: line.item_id || '',
+                item_code: line.item_code || line.product_code || line.item?.item_code || '',
+                item_name: line.item_name || line.product_name || line.description || line.item?.item_name || '',
+                description: line.description || line.product_name || line.item_name || '',
                 qty: line.qty,
                 uom: line.uom,
                 uom_id: line.uom_id,

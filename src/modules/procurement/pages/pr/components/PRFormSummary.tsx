@@ -7,9 +7,10 @@ import type { MappedOption } from '@/modules/procurement/hooks/pr';
 
 interface PRFormSummaryProps {
     purchaseTaxOptions?: MappedOption<TaxCode>[];
+    isViewMode?: boolean;
 }
 
-export const PRFormSummary: React.FC<PRFormSummaryProps> = ({ purchaseTaxOptions = [] }) => {
+export const PRFormSummary: React.FC<PRFormSummaryProps> = ({ purchaseTaxOptions = [], isViewMode = false }) => {
     const { watch, setValue, control } = useFormContext<PRFormData>();
     
     // Watch values needed for calculations
@@ -19,7 +20,7 @@ export const PRFormSummary: React.FC<PRFormSummaryProps> = ({ purchaseTaxOptions
 
     // Derive VAT rate from selected tax code (instead of hardcoded 7)
     const selectedTax = purchaseTaxOptions.find(t => String(t.value) === String(taxCodeId));
-    const vatRate = selectedTax?.original?.tax_rate ?? 0;
+    const vatRate = Number(selectedTax?.original?.tax_rate ?? 0);
 
     // Use self-sufficient calculation hook
     const {
@@ -65,7 +66,8 @@ export const PRFormSummary: React.FC<PRFormSummaryProps> = ({ purchaseTaxOptions
                       value={discountInput} 
                       onChange={(e) => setValue('pr_discount_raw', e.target.value)} 
                       placeholder="0 or 5%"
-                      className={`w-24 ${inputEditableClass}`} 
+                      disabled={isViewMode}
+                      className={`w-24 ${inputEditableClass} ${isViewMode ? 'bg-gray-50 dark:bg-gray-800/50 cursor-not-allowed' : ''}`} 
                     />
                     <span className="text-gray-400 dark:text-gray-500">-</span>
                     {/* Field 2: Read-only — calculated discount amount from this input */}
@@ -100,7 +102,8 @@ export const PRFormSummary: React.FC<PRFormSummaryProps> = ({ purchaseTaxOptions
                       render={({ field }) => (
                         <select
                           {...field}
-                          value={field.value || ''}
+                          value={field.value ? String(field.value) : ''}
+                          disabled={isViewMode}
                           onChange={(e) => {
                             const val = e.target.value;
                             const selected = purchaseTaxOptions.find(t => String(t.value) === val);
@@ -108,10 +111,10 @@ export const PRFormSummary: React.FC<PRFormSummaryProps> = ({ purchaseTaxOptions
                             
                             // Snapshot Tax Rate
                             if (selected?.original) {
-                              setValue('pr_tax_rate', selected.original.tax_rate);
+                              setValue('pr_tax_rate', Number(selected.original.tax_rate));
                             }
                           }}
-                          className="h-7 px-1 text-xs bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 cursor-pointer min-w-[140px]"
+                          className={`h-7 px-1 text-xs bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 cursor-pointer min-w-[140px] ${isViewMode ? 'bg-gray-50 dark:bg-gray-800/50 cursor-not-allowed' : ''}`}
                         >
                           <option value="">เลือกภาษี</option>
                           {purchaseTaxOptions.map(tax => (

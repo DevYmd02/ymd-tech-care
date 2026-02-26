@@ -119,7 +119,7 @@ export default function MasterDataDashboard() {
     const { data: response, refetch: refetchItems } = useQuery({
         queryKey: ['items'],
         queryFn: () => ItemMasterService.getAll(),
-        staleTime: 1000 * 60 * 5,
+        refetchOnMount: true,
     });
     
     const items = response?.items || [];

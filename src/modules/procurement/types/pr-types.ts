@@ -88,6 +88,10 @@ export interface PRLine {
   preferred_vendor_id?: string; // FK → vendor (Optional)
   remark?: string;                  // TEXT - หมายเหตุ
   line_discount_raw?: string;       // Postman: line_discount_raw
+  line_net_amount?: string | number; // Added: Backend returns this as the line total
+  line_amount?: string | number;
+  tax_amount?: string | number;
+  tax_rate?: string | number;
 }
 
 // ====================================================================================

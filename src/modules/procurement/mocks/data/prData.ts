@@ -6,7 +6,7 @@ const IS_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
 // =============================================================================
 // MOCK CONSTANTS (Sanitized to Strings)
 // =============================================================================
-import { DEPARTMENT_NAME_MAP } from '@/modules/procurement/constants/procurement.constants';
+import { DEPARTMENT_NAME_MAP } from '@/modules/procurement/shared/constants/procurement.constants';
 
 export const DEPARTMENT_MOCK_MAP = DEPARTMENT_NAME_MAP;
 

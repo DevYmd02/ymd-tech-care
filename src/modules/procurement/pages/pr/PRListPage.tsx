@@ -14,7 +14,7 @@ import RFQFormModal from '@/modules/procurement/pages/rfq/components/RFQFormModa
 import { PRFormModal } from './components/PRFormModal';
 import { PRActionsCell } from './components/PRActionsCell';
 import { usePRActions } from '@/modules/procurement/hooks/pr';
-import { RejectReasonModal } from '@/modules/procurement/components/RejectReasonModal';
+import { RejectReasonModal } from '@/modules/procurement/shared/components/RejectReasonModal';
 
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { createColumnHelper } from '@tanstack/react-table';
@@ -23,7 +23,7 @@ import { createColumnHelper } from '@tanstack/react-table';
 import { PRService, type PRListParams } from '@/modules/procurement/services/pr.service';
 import { logger } from '@/shared/utils/logger';
 import type { PRHeader, PRStatus } from '@/modules/procurement/types';
-import { DEPARTMENT_NAME_MAP } from '@/modules/procurement/constants/procurement.constants';
+import { DEPARTMENT_NAME_MAP } from '@/modules/procurement/shared/constants/procurement.constants';
 
 // ====================================================================================
 // STATUS OPTIONS
@@ -375,7 +375,7 @@ export default function PRListPage() {
         <>
             <PageListLayout
                 title="รายการใบขอซื้อ"
-                subtitle="Purchase Requisition Master"
+                subtitle="Purchase Requisition (PR)"
                 icon={FileText}
                 accentColor="blue"
                 totalCount={data?.total}

@@ -8,9 +8,9 @@ import { ProductSearchModal } from './ProductSearchModal';
 import { WindowFormLayout } from '@ui';
 import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWrapper';
 import { usePRForm } from '@/modules/procurement/hooks/pr';
-import { RejectReasonModal } from '@/modules/procurement/components/RejectReasonModal';
-import { WarehouseSearchModal } from '@/modules/procurement/components/shared/WarehouseSearchModal';
-import { LocationSearchModal } from '@/modules/procurement/components/shared/LocationSearchModal';
+import { RejectReasonModal } from '@/modules/procurement/shared/components/RejectReasonModal';
+import { WarehouseSearchModal } from '@/modules/procurement/shared/components/WarehouseSearchModal';
+import { LocationSearchModal } from '@/modules/procurement/shared/components/LocationSearchModal';
 import type { PRFormData } from '@/modules/procurement/types';
 
 interface Props {
@@ -249,7 +249,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
                 readOnly={readOnly}
             />
 
-            <PRFormSummary purchaseTaxOptions={purchaseTaxOptions} />
+            <PRFormSummary purchaseTaxOptions={purchaseTaxOptions} isViewMode={readOnly} />
 
             <div className={cardClass}>
             <div className="flex border-b border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">

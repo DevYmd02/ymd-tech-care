@@ -125,6 +125,11 @@ export interface UnitListItem {
     unit_name_en?: string;
     is_active: boolean;
     created_at: string;
+    // Backend API mapping
+    uom_id?: string | number;
+    uom_code?: string;
+    uom_name?: string;
+    uom_nameeng?: string;
 }
 
 export const initialUnitFormData: UnitFormData = {

@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { Save } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
-import { TaxService } from '@/modules/master-data/tax/services/tax.service';
+import { TaxCodeService } from '@/modules/master-data/tax/services/tax-code.service';
 import { DialogFormLayout } from '@ui';
 
 interface TaxCodeFormModalProps {
@@ -23,7 +23,7 @@ export function TaxCodeFormModal({ isOpen, onClose, taxId, onSuccess }: TaxCodeF
         if (isOpen) {
             if (taxId) {
                 setIsLoading(true);
-                TaxService.getTaxCodeById(taxId).then(data => {
+                TaxCodeService.getTaxCodeById(taxId).then(data => {
                     if (data) {
                         setValue('tax_code', data.tax_code);
                         setValue('tax_name', data.tax_name);
@@ -49,9 +49,9 @@ export function TaxCodeFormModal({ isOpen, onClose, taxId, onSuccess }: TaxCodeF
         setIsLoading(true);
         try {
             if (isEdit && taxId) {
-                await TaxService.updateTaxCode(taxId, data);
+                await TaxCodeService.updateTaxCode(taxId, data);
             } else {
-                await TaxService.createTaxCode(data);
+                await TaxCodeService.createTaxCode(data);
             }
             onSuccess();
             onClose();
