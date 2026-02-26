@@ -232,6 +232,7 @@ export interface ItemListItem {
     purchasing_unit_id?: string;
     purchasing_unit_name?: string;
     purchasing_conversion_factor?: number;  // conversion_factor for purchasing unit
+    stock_qty?: number; // Mock field for PR Product Search Modal
 }
 
 export const initialItemMasterFormData: ItemMasterFormData = {

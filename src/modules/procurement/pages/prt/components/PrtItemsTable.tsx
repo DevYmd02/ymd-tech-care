@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import type { Control, UseFormRegister, UseFormSetValue, UseFormWatch } from 'react-hook-form';
 import { useFieldArray } from 'react-hook-form';
 import { Plus, Trash2 } from 'lucide-react';
-import type { PrtFormValues, PrtItem } from '@/modules/procurement/types/prt/prt-types';
+import type { PrtFormValues, PrtItem } from '@/modules/procurement/types';
 
 interface PrtItemsTableProps {
     control: Control<PrtFormValues>;

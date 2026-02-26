@@ -7,7 +7,8 @@ import { VendorDispatchTable } from './VendorDispatchTable';
 import { VendorSearchModal } from '@/modules/master-data/vendor/components/selector/VendorSearchModal';
 import { PRSelectionModal } from '@/modules/procurement/components/selector/PRSelectionModal';
 import { WindowFormLayout, TabPanel } from '@ui';
-import type { PRHeader } from '@/modules/procurement/types/pr-types';
+import type { PRHeader } from '@/modules/procurement/types';
+import { logger } from '@/shared/utils/logger';
 
 interface Props {
     isOpen: boolean;
@@ -62,7 +63,7 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
                             <button
                                 type="button"
                                 className="flex items-center gap-1.5 px-3 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md text-sm font-medium transition-colors border border-transparent hover:border-red-200 dark:hover:border-red-800"
-                                onClick={() => console.log('Delete RFQ', editId)}
+                                onClick={() => logger.warn('[RFQFormModal] Delete RFQ — not yet implemented:', editId)}
                                 title="ลบเอกสาร"
                             >
                                 <Trash2 size={16} />
@@ -73,7 +74,7 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
                             <button
                                 type="button"
                                 className="flex items-center gap-1.5 px-3 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md text-sm font-medium transition-colors border border-transparent hover:border-red-200 dark:hover:border-red-800"
-                                onClick={() => console.log('Cancel RFQ', editId)}
+                                onClick={() => logger.warn('[RFQFormModal] Cancel RFQ — not yet implemented:', editId)}
                                 title="ยกเลิก RFQ"
                             >
                                 <XCircle size={16} />

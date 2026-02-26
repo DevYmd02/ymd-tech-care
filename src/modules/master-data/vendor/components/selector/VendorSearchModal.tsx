@@ -207,9 +207,7 @@ export const VendorSearchModalBase: React.FC<VendorSearchModalBaseProps> = ({
                                     <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase w-36">
                                         เลขผู้เสียภาษี
                                     </th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">
-                                        ที่อยู่
-                                    </th>
+
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -257,15 +255,13 @@ export const VendorSearchModalBase: React.FC<VendorSearchModalBaseProps> = ({
                                                 <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 font-mono">
                                                     {vendor.taxId || '-'}
                                                 </td>
-                                                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-500 truncate max-w-[200px]">
-                                                    {vendor.address || '-'}
-                                                </td>
+
                                             </tr>
                                         );
                                     })
                                 ) : (
                                     <tr>
-                                        <td colSpan={6} className="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
+                                        <td colSpan={5} className="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
                                             <Building2 size={48} className="mx-auto mb-3 opacity-30" />
                                             <p className="text-lg font-medium">ไม่พบผู้ขายที่ค้นหา</p>
                                             <p className="text-sm">ลองเปลี่ยนคำค้นหาหรือเพิ่มผู้ขายใหม่ใน Master Data</p>

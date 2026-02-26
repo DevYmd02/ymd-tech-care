@@ -1,4 +1,4 @@
-import type { PRHeader, PRLine } from '@/modules/procurement/types/pr-types';
+import type { PRHeader, PRLine } from '@/modules/procurement/types';
 import { sanitizeId } from '@/core/api/mockUtils';
 
 const IS_MOCK = import.meta.env.VITE_USE_MOCK === 'true';

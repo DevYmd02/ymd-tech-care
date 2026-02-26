@@ -1,5 +1,5 @@
 import { Send } from 'lucide-react';
-import type { RFQVendor } from '@/modules/procurement/types/rfq-types';
+import type { RFQVendor } from '@/modules/procurement/types';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 
 interface VendorDispatchTableProps {

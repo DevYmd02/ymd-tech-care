@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { QuotationHeaderSchema, type QuotationFormData, type QuotationLineFormData } from '@/modules/procurement/types/qt-schemas';
+import { QuotationHeaderSchema, type QuotationFormData, type QuotationLineFormData } from '@/modules/procurement/schemas/qt-schemas';
 import { QTService } from '@/modules/procurement/services/qt.service';
 import { logger } from '@/shared/utils/logger';
 import type { RFQHeader, RFQDetailResponse } from '@/modules/procurement/types/rfq-types';

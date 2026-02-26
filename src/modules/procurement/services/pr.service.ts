@@ -6,7 +6,7 @@ import type {
   PRHeader, 
   CreatePRPayload,
   PRStatus,
-} from '@/modules/procurement/types/pr-types';
+} from '@/modules/procurement/types';
 
 export type PRUpdatePayload = Partial<CreatePRPayload> & { status?: PRStatus };
 

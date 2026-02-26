@@ -1,4 +1,4 @@
-import type { POListItem } from '@/modules/procurement/types/po-types';
+import type { POListItem } from '@/modules/procurement/types';
 import { sanitizeId } from '@/core/api/mockUtils';
 
 const _mockPOs: POListItem[] = [

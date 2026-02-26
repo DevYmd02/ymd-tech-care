@@ -1,6 +1,6 @@
 import React from 'react';
 import { FileText } from 'lucide-react';
-import type { RFQFormData } from '@/modules/procurement/types/rfq-types';
+import type { RFQFormData } from '@/modules/procurement/types';
 import type { BranchListItem } from '@/modules/master-data/types/master-data-types';
 import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWrapper';
 
@@ -38,7 +38,7 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                 <div>
                     <label className={labelStyle}>เลขที่ RFQ <span className="text-red-500">*</span></label>
                     <input type="text" value={formData.rfq_no} readOnly className={inputStyle} disabled={isLocked} />
-                    <p className={hintStyle}>เลขที่เอกสาร RFQ (Running จาก sequence_running)</p>
+                    <p className={hintStyle}>ระบบจะสร้างรหัสอัตโนมัติเมื่อบันทึกเอกสารใหม่</p>
                 </div>
                 <div>
                     <label className={labelStyle}>วันที่สร้าง RFQ <span className="text-red-500">*</span></label>

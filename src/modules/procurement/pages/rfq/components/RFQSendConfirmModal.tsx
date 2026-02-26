@@ -7,9 +7,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Send, AlertTriangle, Users, Loader2, Mail } from 'lucide-react';
-import type { RFQHeader } from '@/modules/procurement/types/rfq-types';
+import { Send, AlertTriangle, Users, Loader2, Mail, Printer } from 'lucide-react';
+import type { RFQHeader } from '@/modules/procurement/types';
 import { RFQService } from '@/modules/procurement/services/rfq.service';
+import { logger } from '@/shared/utils/logger';
 
 // ====================================================================================
 // TYPES
@@ -93,7 +94,7 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
             } catch (err) {
                 if (!cancelled) {
                     setFetchError('ไม่สามารถโหลดข้อมูลผู้ขายได้');
-                    console.error('[RFQSendConfirmModal] Fetch error:', err);
+                    logger.error('[RFQSendConfirmModal] Fetch error:', err);
                 }
             } finally {
                 if (!cancelled) setIsFetching(false);
@@ -144,9 +145,14 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
         );
     };
 
+    const handlePrintPreview = (e: React.MouseEvent, vendor: VendorDetailDisplay) => {
+        e.stopPropagation();
+        logger.info('Opening print preview for vendor:', vendor.vendor_code);
+        // TODO: Implement actual PDF generation/preview logic here
+    };
+
     const hasVendors = vendors.length > 0;
     const isEmailMethodSelected = selectedMethods.includes('EMAIL');
-    const isPdfMethodSelected = selectedMethods.includes('PDF');
 
     const isAllSentMode = vendors.length > 0 && vendors.every(v => v.status !== 'PENDING');
 
@@ -291,18 +297,28 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
                                                 </div>
                                             </div>
 
-                                            {/* Vendor code badge */}
-                                            {vendor.vendor_code && (
-                                                <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full shrink-0 shadow-sm border ${
-                                                    isLocked
-                                                        ? 'bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-600 border-gray-200 dark:border-gray-800'
-                                                        : isSelected && !missingEmail
-                                                            ? 'bg-emerald-100 dark:bg-emerald-800/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-700'
-                                                            : 'text-gray-600 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 border-gray-300/50 dark:border-gray-600'
-                                                }`}>
-                                                    {vendor.vendor_code}
-                                                </span>
-                                            )}
+                                            {/* Vendor code badge & Print Action */}
+                                            <div className="flex items-center gap-2">
+                                                {vendor.vendor_code && (
+                                                    <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full shrink-0 shadow-sm border ${
+                                                        isLocked
+                                                            ? 'bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-600 border-gray-200 dark:border-gray-800'
+                                                            : isSelected && !missingEmail
+                                                                ? 'bg-emerald-100 dark:bg-emerald-800/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-700'
+                                                                : 'text-gray-600 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 border-gray-300/50 dark:border-gray-600'
+                                                    }`}>
+                                                        {vendor.vendor_code}
+                                                    </span>
+                                                )}
+                                                <button 
+                                                    type="button"
+                                                    onClick={(e) => handlePrintPreview(e, vendor)}
+                                                    className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                                                    title="ดูตัวอย่างเอกสาร (Print Preview)"
+                                                >
+                                                    <Printer className="w-4 h-4" />
+                                                </button>
+                                            </div>
                                         </label>
                                     );
                                 })}
@@ -314,8 +330,8 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
                                     <Send size={16} className="text-gray-500" />
                                     <span>ช่องทางการส่ง (Dispatch Methods)</span>
                                 </div>
-                                <div className="flex flex-col sm:flex-row gap-3">
-                                    <label className={`flex-1 flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                                <div className="flex flex-col gap-3">
+                                    <label className={`w-full flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                                         isEmailMethodSelected 
                                             ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-300 dark:border-emerald-800' 
                                             : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
@@ -331,23 +347,6 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
                                             <span className="text-xs text-gray-500">ส่งลิงก์เพื่อให้ผู้ขายเสนอราคาออนไลน์</span>
                                         </div>
                                     </label>
-                                    
-                                    <label className={`flex-1 flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                                        isPdfMethodSelected 
-                                            ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-300 dark:border-emerald-800' 
-                                            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
-                                    }`}>
-                                        <input 
-                                            type="checkbox" 
-                                            className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer"
-                                            checked={isPdfMethodSelected}
-                                            onChange={() => handleToggleMethod('PDF')}
-                                        />
-                                        <div className="flex flex-col">
-                                            <span className={`font-medium text-sm ${isPdfMethodSelected ? 'text-emerald-900 dark:text-emerald-100' : 'text-gray-700 dark:text-gray-300'}`}>พิมพ์เอกสาร (PDF)</span>
-                                            <span className="text-xs text-gray-500">สร้างเอกสาร PDF สำหรับพิมพ์/ดาวน์โหลด</span>
-                                        </div>
-                                    </label>
                                 </div>
                                 
                                 {selectedMethods.length === 0 && (
@@ -360,17 +359,7 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
 
                 {/* ===== FOOTER ===== */}
                 <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex flex-col sm:flex-row items-center justify-between gap-3">
-                    <div className="w-full sm:w-auto">
-                        {isPdfMethodSelected && selectedVendorIds.length > 0 && (
-                            <button
-                                type="button"
-                                disabled={isLoading}
-                                className="w-full sm:w-auto px-4 py-2 rounded-lg border-2 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 font-medium transition-colors whitespace-nowrap"
-                            >
-                                Print Preview
-                            </button>
-                        )}
-                    </div>
+                    <div className="w-full sm:w-auto"></div>
                     <div className="flex items-center gap-3 w-full sm:w-auto">
                         <button
                             type="button"

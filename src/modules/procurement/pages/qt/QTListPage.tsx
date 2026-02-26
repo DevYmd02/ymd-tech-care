@@ -22,11 +22,12 @@ import { createColumnHelper } from '@tanstack/react-table';
 // Services & Types
 import { QTService, type QTListParams } from '@/modules/procurement/services/qt.service';
 import { RFQService } from '@/modules/procurement/services/rfq.service';
-import type { QTListItem, QTStatus } from '@/modules/procurement/types/qt-types';
-import type { RFQHeader } from '@/modules/procurement/types/rfq-types';
+import type { QTListItem, QTStatus } from '@/modules/procurement/types';
+import type { RFQHeader } from '@/modules/procurement/types';
 import { QTFormModal, QTVendorTrackingModal } from './components';
 import { QCFormModal } from '@/modules/procurement/pages/qc/components';
 import { Users } from 'lucide-react';
+import { logger } from '@/shared/utils/logger';
 
 // ====================================================================================
 // STATUS OPTIONS
@@ -112,7 +113,7 @@ export default function QTListPage() {
                     setInitialRFQForCreate(header as RFQHeader);
                     setIsCreateModalOpen(true);
                 }).catch((err: Error) => {
-                    console.error('Failed to fetch RFQ for auto-creation:', err);
+                    logger.error('[QTListPage] Failed to fetch RFQ for auto-creation:', err);
                     setIsCreateModalOpen(true); // Open anyway, just empty
                 });
             } else {
@@ -193,7 +194,7 @@ export default function QTListPage() {
             cancelCloseQuotation();
         } catch (error) {
             toast('เกิดข้อผิดพลาดในการปิดรับราคา', 'error');
-            console.error(error);
+            logger.error('[QTListPage] executeCloseQuotation error:', error);
         } finally {
             setIsClosing(false);
         }

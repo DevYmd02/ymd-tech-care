@@ -2,7 +2,7 @@ import type MockAdapter from 'axios-mock-adapter';
 import type { AxiosRequestConfig } from 'axios';
 import { MOCK_PRS, DEPARTMENT_MOCK_MAP } from '../data/prData';
 import { applyMockFilters, sanitizeId } from '@/core/api/mockUtils';
-import type { PRHeader, CreatePRPayload, CreatePRLineItem } from '@/modules/procurement/types/pr-types';
+import type { PRHeader, CreatePRPayload, CreatePRLineItem } from '@/modules/procurement/types';
 
 /**
  * Interface for Mock List Processing

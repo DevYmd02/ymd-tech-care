@@ -2,7 +2,7 @@ import React from 'react';
 import { useFormContext } from 'react-hook-form';
 import { FileBox, Eraser, Plus, Trash2, Search, AlertTriangle } from 'lucide-react';
 import type { FieldArrayWithId } from 'react-hook-form';
-import type { PRFormData } from '@/modules/procurement/types/pr-types';
+import type { PRFormData } from '@/modules/procurement/types';
 import type { ExtendedLine } from '@/modules/procurement/hooks/pr';
 
 interface PRFormLinesProps {
@@ -13,6 +13,8 @@ interface PRFormLinesProps {
     addLine: () => void;
     handleClearLines: () => void;
     openProductSearch: (index: number) => void;
+    openWarehouseSearch: (index: number) => void;
+    openLocationSearch: (index: number) => void;
     readOnly?: boolean;
 }
 
@@ -24,6 +26,8 @@ export const PRFormLines: React.FC<PRFormLinesProps> = React.memo(({
     addLine,
     handleClearLines,
     openProductSearch,
+    openWarehouseSearch,
+    openLocationSearch,
     readOnly = false
 }) => {
     const { register, watch: watchForm } = useFormContext<PRFormData>();
@@ -115,20 +119,29 @@ export const PRFormLines: React.FC<PRFormLinesProps> = React.memo(({
                                     </td>
                                     
                                     <td className={tdBaseClass}>
-                                        <input 
-                                            {...register(`lines.${index}.warehouse_id`)} 
-                                            className={`${tableInputClass} text-center`} 
-                                            readOnly // Keep as ID for now or map name
-                                        />
+                                        <button 
+                                            type="button"
+                                            onClick={() => !readOnly && openWarehouseSearch(index)}
+                                            className={`${tableInputClass} w-full text-center flex items-center justify-center cursor-pointer hover:bg-white dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed`}
+                                            disabled={readOnly}
+                                            title="คลิกเพื่อเลือกคลัง"
+                                        >
+                                            <span className="truncate">{line.warehouse_id || '-'}</span>
+                                        </button>
+                                        <input type="hidden" {...register(`lines.${index}.warehouse_id`)} />
                                     </td>
                                     
                                     <td className={tdBaseClass}>
-                                        <input 
-                                            {...register(`lines.${index}.location`)} 
-                                            readOnly={!!line.item_id || readOnly}
-                                            className={`${line.item_id ? lockedInputClass : tableInputClass} text-center`} 
-                                            title={line.item_id ? masterDataTooltip : ''}
-                                        />
+                                        <button 
+                                            type="button"
+                                            onClick={() => !readOnly && !line.item_id && openLocationSearch(index)}
+                                            className={`${line.item_id ? lockedInputClass : tableInputClass} w-full text-center flex items-center justify-center ${!readOnly && !line.item_id ? 'cursor-pointer hover:bg-white dark:hover:bg-gray-700' : ''}`}
+                                            disabled={readOnly || !!line.item_id}
+                                            title={line.item_id ? masterDataTooltip : 'คลิกเพื่อเลือกที่เก็บ'}
+                                        >
+                                            <span className="truncate">{line.location || '-'}</span>
+                                        </button>
+                                        <input type="hidden" {...register(`lines.${index}.location`)} />
                                     </td>
                                     
                                     <td className={tdBaseClass}>

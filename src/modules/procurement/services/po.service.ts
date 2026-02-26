@@ -1,5 +1,5 @@
 import api from '@/core/api/api';
-import type { POListParams, POListResponse, CreatePOPayload, POListItem } from '@/modules/procurement/types/po-types';
+import type { POListParams, POListResponse, CreatePOPayload, POListItem } from '@/modules/procurement/types';
 import { logger } from '@/shared/utils/logger';
 import type { SuccessResponse } from '@/shared/types/api-response.types';
 

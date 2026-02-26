@@ -3,9 +3,9 @@ import { z } from 'zod';
 import { MasterDataService } from '@/modules/master-data';
 import type { BranchListItem, ItemListItem, UnitListItem } from '@/modules/master-data/types/master-data-types';
 import type { VendorSearchItem } from '@/modules/master-data/vendor/types/vendor-types';
-import type { RFQFormData, RFQLineFormData, RFQCreateData, RFQVendor, RFQVendorFormData } from '@/modules/procurement/types/rfq-types';
+import type { RFQFormData, RFQLineFormData, RFQCreateData, RFQVendor, RFQVendorFormData, RFQLine } from '@/modules/procurement/types';
 import { initialRFQFormData, initialRFQLineFormData } from '@/modules/procurement/types/rfq-types';
-import type { PRHeader } from '@/modules/procurement/types/pr-types';
+import type { PRHeader } from '@/modules/procurement/types';
 
 import { PRService } from '@/modules/procurement/services/pr.service';
 import { RFQService } from '@/modules/procurement/services/rfq.service';
@@ -17,7 +17,7 @@ import { useToast } from '@/shared/components/ui/feedback/Toast';
 export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRHeader | null, onSuccess?: () => void, editId?: string | null) => {
     const [formData, setFormData] = useState<RFQFormData>({
         ...initialRFQFormData,
-        rfq_no: `RFQ2024-007`,
+        rfq_no: 'DRAFT',
         rfq_date: new Date().toLocaleDateString('en-CA'),
         created_by_name: 'ระบบจะกรอกอัตโนมัติ',
         lines: [],
@@ -76,7 +76,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                 setTrackingVendors(rfq.vendors || []);
 
                 // Map vendors from API response → RFQVendorFormData[]
-                const mappedVendors: RFQVendorFormData[] = (rfq.vendors || []).map(v => ({
+                const mappedVendors: RFQVendorFormData[] = (rfq.vendors || []).map((v: RFQVendor & { vendor_code?: string; vendor_name?: string }) => ({
                     vendor_id: v.vendor_id,
                     vendor_code: v.vendor_code || '',
                     vendor_name: v.vendor_name || '',
@@ -85,7 +85,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                 }));
 
                 // Map lines
-                const rfqLines: RFQLineFormData[] = (rfq.lines || []).map((line, i: number) => ({
+                const rfqLines: RFQLineFormData[] = (rfq.lines || []).map((line: RFQLine, i: number) => ({
                     ...initialRFQLineFormData,
                     line_no: i + 1,
                     item_code: line.item_code,
@@ -205,7 +205,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
 
                     setFormData({
                         ...initialRFQFormData,
-                        rfq_no: `RFQ-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
+                        rfq_no: 'DRAFT',
                         rfq_date: new Date().toLocaleDateString('en-CA'),
                         pr_id: fullPR.pr_id,
                         pr_no: fullPR.pr_no,
@@ -250,7 +250,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
              // Reset to empty if no PR (Create New standalone)
              setFormData({
                 ...initialRFQFormData,
-                 rfq_no: `RFQ-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
+                 rfq_no: 'DRAFT',
                  lines: Array.from({ length: 5 }, (_, i) => ({
                     ...initialRFQLineFormData,
                     line_no: i + 1,

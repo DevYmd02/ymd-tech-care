@@ -7,7 +7,7 @@ import { MasterDataService } from '@/modules/master-data';
 import type { UnitListItem } from '@/modules/master-data/types/master-data-types';
 import { ProductSearchModal } from '@/modules/inventory/components/selector/ProductSearchModal';
 import type { ProductLookup } from '@/modules/master-data/inventory/mocks/products';
-import type { RFQHeader } from '@/modules/procurement/types/rfq-types';
+import type { RFQHeader } from '@/modules/procurement/types';
 import { useQTForm } from '@/modules/procurement/pages/qt/hooks/useQTForm';
 
 interface Props {

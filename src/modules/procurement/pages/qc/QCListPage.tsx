@@ -19,8 +19,8 @@ import type { ColumnDef } from '@tanstack/react-table';
 // Services & Types
 import { QCService } from '@/modules/procurement/services';
 import type { QCListParams } from '@/modules/procurement/services/qc.service';
-import type { QCStatus, QCListItem } from '@/modules/procurement/types/qc-types';
-import type { POFormData } from '@/modules/procurement/types/po-types';
+import type { QCStatus, QCListItem } from '@/modules/procurement/types';
+import type { POFormData } from '@/modules/procurement/types';
 import { POFormModal } from '@/modules/procurement/pages/po/components';
 
 // ====================================================================================

@@ -14,8 +14,22 @@ export const CostCenterService = {
        return mockCostCenters;
     }
     try {
-      const response = await api.get<CostCenter[]>('/cost-centers');
-      return response;
+      type ExpectedResponse = CostCenter[] | { items?: CostCenter[]; data?: CostCenter[] };
+      const response = await api.get<ExpectedResponse>('/cost-centers');
+      
+      if (response && typeof response === 'object' && !Array.isArray(response)) {
+        if ('items' in response && Array.isArray(response.items)) {
+          return response.items;
+        }
+        if ('data' in response && Array.isArray(response.data)) {
+           return response.data;
+        }
+      }
+      
+      if (Array.isArray(response)) {
+        return response;
+      }
+      return [];
     } catch (error) {
       logger.error('[CostCenterService] getList error:', error);
       return [];

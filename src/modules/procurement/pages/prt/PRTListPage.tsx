@@ -8,7 +8,7 @@ import { PageListLayout, SmartTable } from '@ui';
 import type { FilterFieldConfig } from '@ui';
 import { useTableFilters, type TableFilters } from '@/shared/hooks';
 import { PrtService } from '@/modules/procurement/services/prt.service'; // Fixed import path
-import type { PRTListParams, PRTStatus, PurchaseReturn } from '@/modules/procurement/types/prt/prt-types';
+import type { PRTListParams, PRTStatus, PurchaseReturn } from '@/modules/procurement/types';
 import { createColumnHelper } from '@tanstack/react-table';
 import type { ColumnDef } from '@tanstack/react-table';
 import PRTFormModal from './components/PRTFormModal';

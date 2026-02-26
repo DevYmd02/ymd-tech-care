@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Search, X, Check, FileText } from 'lucide-react';
-import type { PRHeader } from '@/modules/procurement/types/pr-types';
+import type { PRHeader } from '@/modules/procurement/types';
 import { MOCK_PRS } from '@/modules/procurement/mocks/data/prData';
 
 interface PRSelectionModalProps {

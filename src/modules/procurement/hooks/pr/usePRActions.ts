@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { PRService } from '@/modules/procurement/services/pr.service';
-import type { CreatePRPayload } from '@/modules/procurement/types/pr-types';
+import type { CreatePRPayload } from '@/modules/procurement/types';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import { CheckCircle } from 'lucide-react';
 import { logger } from '@/shared/utils/logger';

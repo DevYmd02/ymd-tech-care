@@ -3,8 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import { X, AlertCircle, Calendar, DollarSign, Wallet, FileText, CheckCircle, Clock } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { POService } from '@/modules/procurement/services';
-import type { POListItem } from '@/modules/procurement/types/po-types';
+import type { POListItem } from '@/modules/procurement/types';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
+import { logger } from '@/shared/utils/logger';
 
 interface POApprovalModalProps {
     isOpen: boolean;
@@ -41,7 +42,7 @@ export const POApprovalModal: React.FC<POApprovalModalProps> = ({ isOpen, onClos
             onSuccess();
             onClose();
         } catch (error) {
-            console.error(error);
+            logger.error('[POApprovalModal] handleApprove error:', error);
             alert('เกิดข้อผิดพลาดในการอนุมัติ');
         } finally {
             setActionLoading(false);
@@ -61,7 +62,7 @@ export const POApprovalModal: React.FC<POApprovalModalProps> = ({ isOpen, onClos
             onSuccess();
             onClose();
         } catch (error) {
-            console.error(error);
+            logger.error('[POApprovalModal] handleReject error:', error);
             alert('เกิดข้อผิดพลาดในการปฏิเสธ');
         } finally {
             setActionLoading(false);

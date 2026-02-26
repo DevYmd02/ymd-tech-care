@@ -14,8 +14,22 @@ export const ProjectService = {
        return mockProjects;
     }
     try {
-      const response = await api.get<Project[]>('/projects');
-      return response;
+      type ExpectedResponse = Project[] | { items?: Project[]; data?: Project[] };
+      const response = await api.get<ExpectedResponse>('/project');
+      
+      if (response && typeof response === 'object' && !Array.isArray(response)) {
+        if ('items' in response && Array.isArray(response.items)) {
+          return response.items;
+        }
+        if ('data' in response && Array.isArray(response.data)) {
+           return response.data;
+        }
+      }
+      
+      if (Array.isArray(response)) {
+        return response;
+      }
+      return [];
     } catch (error) {
       logger.error('[ProjectService] getList error:', error);
       return [];
@@ -24,7 +38,7 @@ export const ProjectService = {
 
   getById: async (id: string): Promise<Project | null> => {
     try {
-      const response = await api.get<Project>(`/projects/${id}`);
+      const response = await api.get<Project>(`/project/${id}`);
       return response;
     } catch (error) {
       logger.error('[ProjectService] getById error:', error);

@@ -2,7 +2,7 @@ import type MockAdapter from 'axios-mock-adapter';
 import type { AxiosRequestConfig } from 'axios';
 import { MOCK_POS } from '../data/poData';
 import { applyMockFilters, sanitizeId } from '@/core/api/mockUtils';
-import type { POListItem, POLine } from '@/modules/procurement/types/po-types';
+import type { POListItem, POLine } from '@/modules/procurement/types';
 
 export const setupPOHandlers = (mock: MockAdapter) => {
   // 1. GET PO List

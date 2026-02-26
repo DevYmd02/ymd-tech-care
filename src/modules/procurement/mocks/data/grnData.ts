@@ -1,4 +1,4 @@
-import type { GRNListItem } from '@/modules/procurement/types/grn-types';
+import type { GRNListItem } from '@/modules/procurement/types';
 import { sanitizeId } from '@/core/api/mockUtils';
 
 const _mockGRNs: GRNListItem[] = [

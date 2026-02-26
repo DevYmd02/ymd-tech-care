@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useFormContext } from 'react-hook-form';
 import type { ExtendedLine } from './usePRForm';
-import type { PRFormData } from '@/modules/procurement/types/pr-types';
+import type { PRFormData } from '@/modules/procurement/types';
 
 interface UsePRCalculationsProps {
   lines?: ExtendedLine[];

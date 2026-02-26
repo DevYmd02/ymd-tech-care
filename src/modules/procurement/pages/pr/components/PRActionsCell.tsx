@@ -1,5 +1,5 @@
 import { Eye, Edit, Send, CheckCircle, XCircle, FileText } from 'lucide-react';
-import type { PRHeader } from '@/modules/procurement/types/pr-types';
+import type { PRHeader } from '@/modules/procurement/types';
 
 interface PRActionsCellProps {
     row: PRHeader;

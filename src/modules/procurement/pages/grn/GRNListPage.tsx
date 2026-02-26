@@ -8,7 +8,7 @@ import { PageListLayout } from '@ui';
 import type { FilterFieldConfig } from '@ui';
 import { useTableFilters } from '@/shared/hooks';
 import { GRNService } from '@/modules/procurement/services/grn.service';
-import type { GRNListParams, GRNStatus, GRNListItem } from '@/modules/procurement/types/grn-types';
+import type { GRNListParams, GRNStatus, GRNListItem } from '@/modules/procurement/types';
 import { createColumnHelper } from '@tanstack/react-table';
 import type { ColumnDef } from '@tanstack/react-table';
 import { GRNFormModal } from './components';

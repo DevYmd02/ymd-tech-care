@@ -94,7 +94,7 @@ export const ProductSearchModal: React.FC<ProductSearchModalProps> = ({
                       <th className="px-3 py-3 text-center font-medium whitespace-nowrap">คลัง</th>
                       <th className="px-3 py-3 text-center font-medium whitespace-nowrap">ที่เก็บ</th>
                       <th className="px-3 py-3 text-center font-medium whitespace-nowrap">หน่วยนับ</th>
-                      <th className="px-3 py-3 text-right font-medium whitespace-nowrap">ราคา/หน่วย</th>
+                      <th className="px-3 py-3 text-right font-medium whitespace-nowrap">จำนวน</th>
                   </tr>
                   </thead>
                   <tbody className="bg-white dark:bg-gray-900">
@@ -116,7 +116,9 @@ export const ProductSearchModal: React.FC<ProductSearchModalProps> = ({
                           <td className="px-3 py-3 text-center text-gray-600 dark:text-gray-400">{p.warehouse}</td>
                           <td className="px-3 py-3 text-center text-gray-600 dark:text-gray-400">{p.location}</td>
                           <td className="px-3 py-3 text-center text-gray-600 dark:text-gray-400">{p.unit_name}</td>
-                          <td className="px-3 py-3 text-right text-emerald-600 dark:text-emerald-400 font-medium">{p.standard_cost?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                          <td className="px-3 py-3 text-right text-emerald-600 dark:text-emerald-400 font-medium">
+                              {p.stock_qty?.toLocaleString(undefined) ?? '-'}
+                          </td>
                           </tr>
                       ))
                   ) : (
