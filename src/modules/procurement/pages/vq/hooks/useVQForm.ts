@@ -6,9 +6,10 @@ import { VQService } from '@/modules/procurement/services/vq.service';
 import { RFQService } from '@/modules/procurement/services/rfq.service';
 import type { RFQHeader, RFQDetailResponse, RFQLine } from '@/modules/procurement/types';
 import { logger } from '@/shared/utils/logger';
-import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import type { VQListItem, QuotationLine } from '@/modules/procurement/types/vq-types';
+import { useVQMasterData } from './useVQMasterData';
+
 
 /** Type for RFQ with incidental vendor info often passed in VQ creation flow */
 export interface ExtendedRFQHeader extends RFQHeader {
@@ -39,7 +40,7 @@ export const useVQForm = (
   isViewMode?: boolean
 ) => {
   const { confirm } = useConfirmation();
-  const { toast } = useToast();
+  const { purchaseTaxOptions, isLoading: isMasterLoading } = useVQMasterData();
 
   const methods = useForm<QuotationFormData>({
     resolver: zodResolver(QuotationHeaderSchema) as Resolver<QuotationFormData>,
@@ -56,6 +57,8 @@ export const useVQForm = (
       payment_term_days: 30,
       lead_time_days: 7,
       remark: '',
+      discount_raw: '',
+      tax_code_id: '',
     }
   });
 
@@ -111,6 +114,8 @@ export const useVQForm = (
                 valid_until: data.valid_until?.split('T')[0],
                 qc_id: data.qc_id,
                 remark: data.remarks,
+                discount_raw: data.discount_raw || '',
+                tax_code_id: data.tax_code_id ? String(data.tax_code_id) : '',
                 lines: data.lines?.map((l: QuotationLine) => ({
                     item_code: l.item_code || '',
                     item_name: l.item_name || '',
@@ -183,16 +188,44 @@ export const useVQForm = (
     }
   }, [isOpen, initialRFQ, vqId, reset, getValues]);
 
+
   // Calculations
   const lines = useWatch({ control, name: 'lines' });
-  const vatRate = 7;
+  const discountInput = useWatch({ control, name: 'discount_raw' }) || '';
+  const taxCodeId = useWatch({ control, name: 'tax_code_id' });
+
+  // Derive VAT rate from selected tax code
+  const selectedTax = purchaseTaxOptions.find(t => String(t.value) === String(taxCodeId));
+  const vatRate = Number(selectedTax?.original?.tax_rate ?? 0);
 
   const totals = useMemo(() => {
     const subtotal = lines.reduce((sum, line) => sum + (line.net_amount || 0), 0);
-    const vatAmount = subtotal * (vatRate / 100);
-    const grandTotal = subtotal + vatAmount;
-    return { subtotal, vatAmount, grandTotal };
-  }, [lines, vatRate]);
+    
+    // Parse Discount
+    let discountAmount = 0;
+    const rawDisc = discountInput.trim();
+    if (rawDisc.endsWith('%')) {
+        const pct = parseFloat(rawDisc.replace('%', ''));
+        if (!isNaN(pct)) discountAmount = subtotal * (pct / 100);
+    } else {
+        discountAmount = parseFloat(rawDisc) || 0;
+    }
+    
+    // Total Line Discount (for summary display if needed, but VQ usually shows net on line)
+    const lineDiscountTotal = lines.reduce((sum, line) => sum + (line.discount_amount || 0), 0);
+
+    const taxableAmount = subtotal - discountAmount;
+    const vatAmount = taxableAmount * (vatRate / 100);
+    const grandTotal = taxableAmount + vatAmount;
+
+    return { 
+        subtotal, 
+        discountAmount, 
+        vatAmount, 
+        grandTotal,
+        totalLineDiscount: lineDiscountTotal 
+    };
+  }, [lines, vatRate, discountInput]);
 
   // Handlers
   const handleSave = handleSubmit(async (data: QuotationFormData) => {
@@ -303,10 +336,11 @@ export const useVQForm = (
         lines: mappedLines.length > 0 ? mappedLines : [createEmptyLine(), createEmptyLine(), createEmptyLine(), createEmptyLine(), createEmptyLine()]
       });
 
-      // Recalculate totals (lines are reset, so use watch will pick it up)
-      toast(`ดึงข้อมูลจาก RFQ ${fullRFQ.rfq_no} เรียบร้อยแล้ว`, 'success');
+      // Return RFQ No so the component can control the Toast after closing the modal
+      return fullRFQ.rfq_no;
     } catch (error) {
        logger.error('[useVQForm] Failed to fill from RFQ:', error);
+       throw error;
     }
   };
 
@@ -337,6 +371,8 @@ export const useVQForm = (
     handleSelectRFQ,
     handleClearRFQ,
     vatRate,
-    createEmptyLine
+    createEmptyLine,
+    purchaseTaxOptions,
+    isMasterLoading
   };
 };

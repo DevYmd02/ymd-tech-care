@@ -10,14 +10,12 @@
 
 /** Quotation Status - สถานะใบเสนอราคาจากผู้ขาย */
 export type QuotationStatus = 
-    | 'DRAFT' 
-    | 'SUBMITTED' // legacy eq for received
-    | 'RECEIVED'  // target
-    | 'IN_PROGRESS' 
-    | 'CLOSED' 
-    | 'SELECTED'  // legacy eq for compared
-    | 'COMPARED'  // target
-    | 'REJECTED';
+    | 'PENDING'   // รอผู้ขายตอบกลับ (No VQ ID)
+    | 'DRAFT'     // แบบร่าง (No VQ ID — internal draft)
+    | 'RECEIVED'  // ได้รับแล้ว (Vendor replied, not keyed yet — No VQ ID)
+    | 'RECORDED'  // บันทึกแล้ว (Procurement keyed in data — VQ ID Generated)
+    | 'DECLINED'  // ผู้ขายปฏิเสธ
+    | 'EXPIRED';  // หมดอายุ
 
 // ====================================================================================
 // QUOTATION HEADER - ตาราง quotation_header
@@ -44,10 +42,13 @@ export interface QuotationHeader {
     contact_person?: string;
     contact_email?: string;
     contact_phone?: string;
+    discount_raw?: string;
+    tax_code_id?: string;
     
     // UI Extended Fields
     vendor_name?: string;               // Display
     vendor_code?: string;               // Display
+    rfq_id?: string;                    // UUID - FK -> rfq_header
     rfq_no?: string;                    // Display
     pr_no?: string;                     // Display - Reference PR
     lines?: QuotationLine[];            // Detail items

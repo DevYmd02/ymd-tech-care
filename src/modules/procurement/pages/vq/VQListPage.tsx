@@ -22,7 +22,7 @@ import { VQService, type VQListParams } from '@/modules/procurement/services/vq.
 import { RFQService } from '@/modules/procurement/services/rfq.service';
 import type { VQListItem, VQStatus } from '@/modules/procurement/types';
 import type { RFQHeader } from '@/modules/procurement/types';
-import { VQFormModal } from './components';
+import { VQFormModal, VQVendorTrackingModal } from './components';
 import { logger } from '@/shared/utils/logger';
 
 // ====================================================================================
@@ -31,11 +31,11 @@ import { logger } from '@/shared/utils/logger';
 
 const VQ_STATUS_OPTIONS = [
     { value: 'ALL', label: 'ทั้งหมด' },
-    { value: 'DRAFT', label: 'แบบร่าง' },
+    { value: 'PENDING', label: 'รอผู้ขายตอบกลับ' },
     { value: 'RECEIVED', label: 'ได้รับแล้ว' },
-    { value: 'IN_PROGRESS', label: 'กำลังดำเนินการ' },
-    { value: 'CLOSED', label: 'ปิดแล้ว' },
-    { value: 'COMPARED', label: 'เทียบราคาแล้ว' },
+    { value: 'RECORDED', label: 'บันทึกแล้ว' },
+    { value: 'DECLINED', label: 'ผู้ขายปฏิเสธ' },
+    { value: 'EXPIRED', label: 'หมดอายุ' },
 ];
 
 // ====================================================================================
@@ -76,6 +76,10 @@ export default function VQListPage() {
         isViewMode: false,
         vqId: null
     });
+
+    const [isTrackingOpen, setIsTrackingOpen] = useState(false);
+    const [selectedRfqId, setSelectedRfqId] = useState<string | null>(null);
+    const [selectedRfqNo, setSelectedRfqNo] = useState<string>('');
 
     // Auto-inject rfq_no from URL into search3 filter (runs once on mount or when param changes)
     const hasInjected = useRef(false);
@@ -171,6 +175,16 @@ export default function VQListPage() {
         setModalConfig({ isOpen: true, isViewMode: false, vqId: null });
     };
 
+    const handleOpenTracking = (rfqId: string | null | undefined, rfqNo: string | null | undefined) => {
+        if (!rfqId) {
+            logger.warn('[VQListPage] Cannot open tracking: rfq_id is missing');
+            return;
+        }
+        setSelectedRfqId(rfqId);
+        setSelectedRfqNo(rfqNo || '');
+        setIsTrackingOpen(true);
+    };
+
     const handleCloseModal = () => {
         setModalConfig({ isOpen: false, isViewMode: false, vqId: null });
         setInitialRFQForCreate(null);
@@ -190,11 +204,18 @@ export default function VQListPage() {
         }),
         columnHelper.accessor('quotation_no', {
             header: 'เลขที่ VQ',
-            cell: (info) => (
-                <span className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline cursor-pointer block" title={info.getValue()}>
-                    {info.getValue()}
-                </span>
-            ),
+            cell: (info) => {
+                const item = info.row.original;
+                // Only RECORDED status gets a real VQ number
+                const hasVqNo = item.status === 'RECORDED' && !!info.getValue();
+                return hasVqNo ? (
+                    <span className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline cursor-pointer block" title={info.getValue()}>
+                        {info.getValue()}
+                    </span>
+                ) : (
+                    <span className="text-gray-400 dark:text-gray-600 font-medium">-</span>
+                );
+            },
             size: 140,
             enableSorting: true,
         }),
@@ -232,9 +253,13 @@ export default function VQListPage() {
                 const item = info.row.original;
                 return (
                     <div className="flex flex-col py-1 min-w-0">
-                        <span className="text-purple-600 dark:text-purple-400 font-semibold hover:underline cursor-pointer leading-tight truncate" title={item.rfq_no || ''}>
+                        <button 
+                            onClick={() => handleOpenTracking(item.rfq_id, item.rfq_no)}
+                            className="text-purple-600 dark:text-purple-400 font-semibold hover:underline cursor-pointer leading-tight truncate text-left w-fit" 
+                            title={`คลิกเพื่อดูภาพรวมการตอบกลับของกลุ่ม RFQ: ${item.rfq_no}`}
+                        >
                             {item.rfq_no || '-'}
-                        </span>
+                        </button>
                         {item.pr_no && (
                             <span className="text-[10px] text-gray-400 dark:text-gray-500 truncate leading-tight mt-1" title={`Ref: ${item.pr_no}`}>
                                 Ref: {item.pr_no}
@@ -281,23 +306,51 @@ export default function VQListPage() {
             header: () => <div className="text-center w-full">จัดการ</div>,
             cell: ({ row }) => {
                 const item = row.original;
+                // Strict Rule: Record Price is ONLY for RECEIVED vendors without a VQ number yet.
+                const canRecord = item.status === 'RECEIVED' && !item.quotation_no;
+                // Edit and View are available for RECORDED / DRAFT, or as a failsafe if quotation_no somehow exists while RECEIVED
+                const canEdit   = item.status === 'RECORDED' || item.status === 'DRAFT' || !!item.quotation_no;
+                // View icon is only applicable if the document actually exists in the system
+                const canView   = canEdit;
+                
+                // If nothing can be done, render a dash
+                if (!canRecord && !canEdit && !canView) {
+                    return <div className="flex justify-center text-gray-400 font-bold">-</div>;
+                }
+
                 return (
                     <div className="flex flex-row items-center justify-center gap-3 whitespace-nowrap">
-                        <button 
-                            onClick={() => handleOpenView(item.quotation_id)}
-                            className="p-1 text-gray-500 hover:text-blue-600 transition-colors" 
-                            title="ดูรายละเอียด"
-                        >
-                            <Eye size={18} />
-                        </button>
-                        
-                        {(item.status === 'RECEIVED' || item.status === 'DRAFT') && (
+                        {/* View button — only visible if document exists */}
+                        {canView && (
+                            <button 
+                                onClick={() => handleOpenView(item.quotation_id)}
+                                className="p-1 text-gray-400 hover:text-blue-600 transition-colors" 
+                                title="ดูรายละเอียด"
+                            >
+                                <Eye size={18} />
+                            </button>
+                        )}
+
+                        {/* Edit button — for RECORDED/DRAFT only */}
+                        {canEdit && (
                             <button 
                                 onClick={() => handleOpenEdit(item.quotation_id)}
                                 className="p-1 text-blue-500 hover:text-blue-700 transition-colors" 
                                 title="แก้ไข"
                             >
                                 <Edit size={18} />
+                            </button>
+                        )}
+
+                        {/* Record Price button — for RECEIVED without VQ No only */}
+                        {canRecord && (
+                            <button 
+                                onClick={() => handleOpenEdit(item.quotation_id)}
+                                className="flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-md bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-800/40 border border-indigo-200 dark:border-indigo-700/50 transition-colors"
+                                title="บันทึกราคา"
+                            >
+                                <Edit size={13} />
+                                บันทึกราคา
                             </button>
                         )}
                     </div>
@@ -400,6 +453,13 @@ export default function VQListPage() {
                     isViewMode={modalConfig.isViewMode}
                 />
             )}
+
+            <VQVendorTrackingModal
+                isOpen={isTrackingOpen}
+                onClose={() => setIsTrackingOpen(false)}
+                rfqId={selectedRfqId}
+                rfqNo={selectedRfqNo}
+            />
         </>
     );
 }

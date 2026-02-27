@@ -1,19 +1,18 @@
-import { useState, useEffect } from 'react';
-import { FileText, Plus, Trash2, Search } from 'lucide-react';
-import { useWatch } from 'react-hook-form';
-
+import React, { useState, useEffect } from 'react';
+import { FileText, Plus, Trash2, Search, X as XIcon } from 'lucide-react';
+import { FormProvider, Controller, useWatch } from 'react-hook-form';
 import { WindowFormLayout } from '@ui';
 import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWrapper';
 import { MasterDataService } from '@/modules/master-data';
 import type { UnitListItem } from '@/modules/master-data/types/master-data-types';
 import { VendorSearchModal } from '@/modules/master-data/vendor/components/selector/VendorSearchModal';
 import { ProductSearchModal } from '@/modules/inventory/components/selector/ProductSearchModal';
-import type { ProductLookup } from '@/modules/master-data/inventory/mocks/products';
-import type { RFQHeader } from '@/modules/procurement/types';
-import { useVQForm } from '@/modules/procurement/pages/vq/hooks/useVQForm';
-import { SharedRemarksTab } from '@/shared/components/forms/SharedRemarksTab';
+import { useVQForm } from '../hooks/useVQForm';
 import { RFQSelectorModal } from './RFQSelectorModal';
-import { X as XIcon } from 'lucide-react';
+import { SharedRemarksTab } from '@/shared/components/forms/SharedRemarksTab';
+import type { ProductLookup } from '@/modules/master-data/inventory/mocks/products';
+import { useToast } from '@/shared/components/ui/feedback/Toast';
+import type { RFQHeader } from '@/modules/procurement/types';
 
 interface Props {
   isOpen: boolean;
@@ -25,20 +24,37 @@ interface Props {
 }
 
 const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, vqId, isViewMode = false }) => {
+  const { toast } = useToast();
   // -- Custom Hook --
   const { 
     methods, fields, append, remove, insert, 
     totals, handleSave, updateLineCalculation, 
     handleSelectRFQ, handleClearRFQ,
-    vatRate, createEmptyLine 
+    createEmptyLine,
+    purchaseTaxOptions
   } = useVQForm(isOpen, onClose, initialRFQ, onSuccess, vqId, isViewMode);
 
   const {
     control,
     register,
     setValue,
-    formState: { errors },
+    watch,
+    formState: { errors }
   } = methods;
+
+  const discountRaw = watch('discount_raw') ?? '';
+
+  const inputReadonlyClass = 'h-7 px-2 text-right bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded text-gray-900 dark:text-white';
+  const inputEditableClass = 'h-7 px-2 text-center bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500';
+  const labelClass = 'text-gray-600 dark:text-gray-400 min-w-16';
+
+  const {
+      subtotal,
+      discountAmount,
+      vatAmount,
+      grandTotal,
+      totalLineDiscount
+  } = totals;
 
   const watchVendorName = useWatch({ control, name: 'vendor_name' });
   const watchCurrency = useWatch({ control, name: 'currency' });
@@ -83,52 +99,72 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
   // -- Rendering Helpers --
   const watchedLines = useWatch({ control, name: 'lines' });
 
-  return (
-    <WindowFormLayout
-      isOpen={isOpen}
-      onClose={onClose}
-      title={isViewMode ? "รายละเอียดใบเสนอราคาจากผู้ขาย (View Vendor Quotation - VQ)" : "ใบเสนอราคาจากผู้ขาย (Vendor Quotation - VQ)"}
-      titleIcon={<div className="bg-white/20 p-1 rounded-md shadow-sm"><FileText size={14} strokeWidth={3} className="text-white" /></div>}
-      headerColor="bg-indigo-600"
-      footer={
-        <div className="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-end items-center bg-slate-100 dark:bg-gray-900 sticky bottom-0 z-10 gap-x-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md text-sm font-medium transition-colors">
-                {isViewMode ? 'ปิด' : 'ยกเลิก'}
-            </button>
-            {!isViewMode && (
-                <button type="button" onClick={handleSave} className="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md text-sm font-medium shadow-sm transition-colors">
-                    บันทึก
-                </button>
-            )}
-        </div>
+  const onSelectRFQ = async (rfq: RFQHeader) => {
+    try {
+      // Step 1: Populate form data
+      const rfqNo = await handleSelectRFQ(rfq);
+      
+      // Step 2: Close modal instantly
+      setIsRFQModalOpen(false);
+      
+      // Step 3: Trigger success toast after closure
+      if (rfqNo) {
+        toast(`ดึงข้อมูลจาก RFQ ${rfqNo} เรียบร้อยแล้ว`, 'success');
       }
-    >
-      {/* Alert removed - now using toast */}
+    } catch {
+      // Handle potential crash or error
+      setIsRFQModalOpen(false);
+    }
+  };
 
-      <ProductSearchModal 
-        isOpen={isProductModalOpen}
-        onClose={() => setIsProductModalOpen(false)}
-        onSelect={selectProduct}
-      />
+  return (
+    <FormProvider {...methods}>
+      <WindowFormLayout
+        isOpen={isOpen}
+        onClose={onClose}
+        title={isViewMode ? "รายละเอียดใบเสนอราคาจากผู้ขาย (View Vendor Quotation - VQ)" : "ใบเสนอราคาจากผู้ขาย (Vendor Quotation - VQ)"}
+        titleIcon={<div className="bg-white/20 p-1 rounded-md shadow-sm"><FileText size={14} strokeWidth={3} className="text-white" /></div>}
+        headerColor="bg-indigo-600"
+        footer={
+          <div className="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-end items-center bg-slate-100 dark:bg-gray-900 sticky bottom-0 z-10 gap-x-2">
+              <button type="button" onClick={onClose} className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md text-sm font-medium transition-colors">
+                  {isViewMode ? 'ปิด' : 'ยกเลิก'}
+              </button>
+              {!isViewMode && (
+                  <button type="button" onClick={handleSave} className="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md text-sm font-medium shadow-sm transition-colors">
+                      บันทึก
+                  </button>
+              )}
+          </div>
+        }
+      >
+        {/* Alert removed - now using toast */}
 
-      <VendorSearchModal 
-          isOpen={isVendorModalOpen}
-          onClose={() => setIsVendorModalOpen(false)}
-          onSelect={(vendor) => {
-              setValue('vendor_id', vendor.vendor_id);
-              setValue('vendor_name', vendor.name);
-              // contact_person omitted as it's not in VendorSearchItem
-              setValue('contact_phone', vendor.phone || '');
-              setValue('contact_email', vendor.email || '');
-              setValue('payment_terms', vendor.payment_term_days ? `${vendor.payment_term_days} วัน` : '');
-          }}
-      />
+        <ProductSearchModal 
+          isOpen={isProductModalOpen}
+          onClose={() => setIsProductModalOpen(false)}
+          onSelect={selectProduct}
+        />
 
-      <RFQSelectorModal 
-          isOpen={isRFQModalOpen}
-          onClose={() => setIsRFQModalOpen(false)}
-          onSelect={handleSelectRFQ}
-      />
+        <VendorSearchModal 
+            isOpen={isVendorModalOpen}
+            onClose={() => setIsVendorModalOpen(false)}
+            onSelect={(vendor) => {
+                setValue('vendor_id', vendor.vendor_id);
+                setValue('vendor_name', vendor.name);
+                // contact_person omitted as it's not in VendorSearchItem
+                setValue('contact_phone', vendor.phone || '');
+                setValue('contact_email', vendor.email || '');
+                setValue('payment_terms', vendor.payment_term_days ? `${vendor.payment_term_days} วัน` : '');
+                setIsVendorModalOpen(false);
+            }}
+        />
+
+        <RFQSelectorModal 
+            isOpen={isRFQModalOpen}
+            onClose={() => setIsRFQModalOpen(false)}
+            onSelect={onSelectRFQ}
+        />
 
       <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6">
           
@@ -334,7 +370,7 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
                           </tr>
                       </thead>
                       <tbody>
-                          {fields.map((field, idx) => {
+                          {fields.map((field, idx: number) => {
                               const isNoQuote = watchedLines[idx]?.no_quote;
                                  return (
                                  <tr key={field.id} className={`border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors group ${isNoQuote ? 'bg-amber-50 dark:bg-amber-950/10' : ''}`}>
@@ -370,7 +406,7 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
                                             type="number" step="any"
                                             {...register(`lines.${idx}.qty`, { 
                                                 valueAsNumber: true, 
-                                                onChange: (e) => updateLineCalculation(idx, 'qty', parseFloat(e.target.value))
+                                                onChange: (e: React.ChangeEvent<HTMLInputElement>) => updateLineCalculation(idx, 'qty', parseFloat(e.target.value))
                                             })} 
                                             className={`w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white text-center transition-all disabled:opacity-70 disabled:cursor-not-allowed ${(initialRFQ || isViewMode) ? 'bg-gray-100/70 dark:bg-gray-800/70 cursor-not-allowed font-medium' : ''}`} 
                                             readOnly={!!initialRFQ || isViewMode}
@@ -389,7 +425,7 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
                                         ) : (
                                             <select {...register(`lines.${idx}.uom_name`)} className="w-full h-8 px-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white text-center cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed disabled:bg-gray-50">
                                                 <option value="" hidden>หน่วย</option>
-                                                {units.map(u => (
+                                                {units.map((u: UnitListItem) => (
                                                     <option key={u.unit_id} value={u.unit_name}>{u.unit_name}</option>
                                                 ))}
                                             </select>
@@ -402,7 +438,7 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
                                             type="number" step="any" disabled={isNoQuote || isViewMode}
                                             {...register(`lines.${idx}.unit_price`, { 
                                                 valueAsNumber: true,
-                                                onChange: (e) => updateLineCalculation(idx, 'unit_price', parseFloat(e.target.value))
+                                                onChange: (e: React.ChangeEvent<HTMLInputElement>) => updateLineCalculation(idx, 'unit_price', parseFloat(e.target.value))
                                             })} 
                                             className={`w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white text-right transition-all ${(isNoQuote || isViewMode) ? 'opacity-70 cursor-not-allowed disabled:bg-gray-50' : ''}`} 
                                             placeholder="0.00"
@@ -415,7 +451,7 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
                                             type="number" step="any" disabled={isNoQuote || isViewMode}
                                             {...register(`lines.${idx}.discount_amount`, { 
                                                 valueAsNumber: true,
-                                                onChange: (e) => updateLineCalculation(idx, 'discount_amount', parseFloat(e.target.value))
+                                                onChange: (e: React.ChangeEvent<HTMLInputElement>) => updateLineCalculation(idx, 'discount_amount', parseFloat(e.target.value))
                                             })} 
                                             className={`w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-slate-700 rounded bg-white dark:bg-slate-800/80 text-gray-900 dark:text-white text-right focus:ring-2 focus:ring-indigo-500 transition-all ${(isNoQuote || isViewMode) ? 'opacity-70 cursor-not-allowed bg-gray-100/70 text-gray-600 dark:bg-slate-800/20' : ''}`} 
                                             placeholder="0.00"
@@ -434,8 +470,8 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
                                           <input
                                               type="checkbox"
                                               {...register(`lines.${idx}.no_quote`, {
-                                                  onChange: (e) => updateLineCalculation(idx, 'no_quote', e.target.checked)
-                                              })}
+                                                  onChange: (e: React.ChangeEvent<HTMLInputElement>) => updateLineCalculation(idx, 'no_quote', e.target.checked)
+                                              })} 
                                               className={`w-4 h-4 text-amber-500 border-gray-300 rounded focus:ring-amber-500 dark:border-slate-600 dark:bg-slate-700 ${isViewMode ? 'opacity-70 cursor-not-allowed' : ''}`}
                                               disabled={isViewMode}
                                           />
@@ -489,20 +525,107 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
               </div>
           </div>
 
-          {/* Summaries Panel */}
-          <div className="border-t border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/80 p-4 rounded-b-lg flex justify-end">
-              <div className="w-full max-w-sm space-y-2">
-                  <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-500 dark:text-gray-400">มูลค่าสินค้า (Sub Total)</span>
-                      <span className="font-medium text-gray-900 dark:text-white">{totals.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-500 dark:text-gray-400">ภาษีมูลค่าเพิ่ม (VAT {vatRate}%)</span>
-                      <span className="font-medium text-gray-900 dark:text-white">{totals.vatAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                  </div>
-                  <div className="mt-3 flex justify-between items-center bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-lg border border-indigo-100 dark:border-indigo-800/50">
-                      <span className="font-bold text-sm text-indigo-800 dark:text-indigo-300">ยอดรวมสุทธิ (Grand Total)</span>
-                      <span className="font-bold text-base text-indigo-700 dark:text-indigo-400">{totals.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          {/* --- TOTAL SUMMARY & CALCULATIONS --- */}
+          <div className="mt-4">
+              <div className="bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-sm overflow-hidden">
+                  <div className="p-3 bg-white dark:bg-gray-900">
+                      <div className="flex justify-end">
+                          <div className="w-full md:w-[400px] space-y-2 text-sm">
+
+                              {/* รวม (Subtotal) */}
+                              <div className="flex justify-between items-center">
+                                  <span className={labelClass}>รวม</span>
+                                  <input 
+                                      value={subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })} 
+                                      readOnly 
+                                      className={`w-32 ${inputReadonlyClass} bg-yellow-50 dark:bg-yellow-900/10 border-yellow-300 dark:border-yellow-600 text-slate-800 dark:text-yellow-200 font-medium`} 
+                                  />
+                              </div>
+                              
+                              {/* ส่วนลดท้ายบิล (Discount) — 3 fields */}
+                              <div className="flex justify-between items-center">
+                                  <span className={labelClass}>ส่วนลด</span>
+                                  <div className="flex items-center gap-1">
+                                      {/* Field 1: Editable — user types number or % */}
+                                      <input 
+                                          type="text"
+                                          value={discountRaw} 
+                                          onChange={(e) => setValue('discount_raw', e.target.value)} 
+                                          placeholder="0 or 5%"
+                                          disabled={isViewMode}
+                                          className={`w-24 ${inputEditableClass} ${isViewMode ? 'bg-gray-50 dark:bg-gray-800/50 cursor-not-allowed text-gray-500' : 'text-slate-900 dark:text-white font-medium'}`} 
+                                      />
+                                      <span className="text-gray-400 dark:text-gray-500">-</span>
+                                      {/* Field 2: Read-only — calculated discount amount from this input */}
+                                      <input 
+                                          value={discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} 
+                                          readOnly 
+                                          className={`w-24 ${inputReadonlyClass}`} 
+                                      />
+                                      <span className="text-gray-400 dark:text-gray-500">-</span>
+                                      {/* Field 3: Read-only — total discount (line discounts + global discount) */}
+                                      <input 
+                                          value={(totalLineDiscount + discountAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })} 
+                                          readOnly 
+                                          className={`w-28 ${inputReadonlyClass} text-red-600 dark:text-red-400 font-bold`} 
+                                      />
+                                  </div>
+                              </div>
+
+                              {/* ภาษี VAT */}
+                              <div className="flex justify-between items-center">
+                                  <span className={labelClass}>ภาษี VAT</span>
+                                  <div className="flex items-center gap-1">
+                                      <input 
+                                          value={vatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} 
+                                          readOnly 
+                                          className={`w-20 ${inputReadonlyClass}`} 
+                                      />
+                                      {/* Tax Code Select */}
+                                      <Controller
+                                          name="tax_code_id"
+                                          control={control}
+                                          render={({ field }) => (
+                                              <select
+                                                  {...field}
+                                                  value={field.value ? String(field.value) : ''}
+                                                  disabled={isViewMode}
+                                                  onChange={(e) => {
+                                                      const val = e.target.value;
+                                                      const selected = purchaseTaxOptions.find(t => String(t.value) === val);
+                                                      field.onChange(selected ? selected.value : val);
+                                                  }}
+                                                  className={`h-7 px-1 text-xs bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 cursor-pointer min-w-[140px] ${isViewMode ? 'bg-gray-50 dark:bg-gray-800/50 cursor-not-allowed opacity-70' : ''}`}
+                                              >
+                                                  <option value="">เลือกภาษี</option>
+                                                  {purchaseTaxOptions.map(tax => (
+                                                      <option key={tax.value} value={tax.value}>
+                                                          {tax.label}
+                                                      </option>
+                                                  ))}
+                                              </select>
+                                          )}
+                                      />
+                                      <span className="text-gray-400 dark:text-gray-500">-</span>
+                                      <input 
+                                          value={vatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} 
+                                          readOnly 
+                                          className={`w-24 ${inputReadonlyClass} bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-900/50 text-blue-700 dark:text-blue-300 font-medium`} 
+                                      />
+                                  </div>
+                              </div>
+
+                              {/* รวมทั้งสิ้น (Grand Total) */}
+                              <div className="flex justify-between items-center pt-2 border-t border-gray-300 dark:border-gray-600">
+                                  <span className="font-bold text-gray-700 dark:text-gray-300">รวมทั้งสิ้น</span>
+                                  <input 
+                                      value={grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })} 
+                                      readOnly 
+                                      className="w-32 h-8 px-2 text-right font-bold bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-400 dark:border-yellow-600 rounded text-blue-600 dark:text-yellow-200" 
+                                  />
+                              </div>
+                          </div>
+                      </div>
                   </div>
               </div>
           </div>
@@ -518,7 +641,8 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
           />
 
       </div>
-    </WindowFormLayout>
+      </WindowFormLayout>
+    </FormProvider>
   );
 };
 

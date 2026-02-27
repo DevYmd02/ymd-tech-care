@@ -13,7 +13,7 @@ export const RFQ_STATUS_OPTIONS = ['DRAFT', 'SENT', 'IN_PROGRESS', 'CLOSED', 'CA
 export type RFQStatus = typeof RFQ_STATUS_OPTIONS[number];
 
 /** RFQ Vendor Status - สถานะการส่ง RFQ ไปยังเจ้าหนี้ */
-export const RFQ_VENDOR_STATUS_OPTIONS = ['PENDING', 'SENT', 'RESPONDED', 'NO_RESPONSE', 'DECLINED'] as const;
+export const RFQ_VENDOR_STATUS_OPTIONS = ['PENDING', 'SENT', 'RESPONDED', 'NO_RESPONSE', 'DECLINED', 'RECEIVED', 'RECORDED'] as const;
 export type RFQVendorStatus = typeof RFQ_VENDOR_STATUS_OPTIONS[number];
 
 
