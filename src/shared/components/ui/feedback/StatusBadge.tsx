@@ -108,37 +108,29 @@ const statusConfig: Record<ModuleType, ModuleStatusConfig> = {
     },
   },
   VQ: {
+    PENDING: {
+      label: 'รอผู้ขายตอบกลับ',
+      colorClass: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+    },
     DRAFT: {
       label: 'แบบร่าง',
-      colorClass: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
-    },
-    SUBMITTED: {
-      label: 'ได้รับแล้ว',
-      colorClass: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
+      colorClass: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
     },
     RECEIVED: {
       label: 'ได้รับแล้ว',
-      colorClass: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
+      colorClass: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
     },
-    IN_PROGRESS: {
-      label: 'กำลังดำเนินการ',
-      colorClass: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300',
+    RECORDED: {
+      label: 'บันทึกแล้ว',
+      colorClass: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
     },
-    CLOSED: {
-      label: 'ปิดแล้ว',
-      colorClass: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300',
+    DECLINED: {
+      label: 'ผู้ขายปฏิเสธ',
+      colorClass: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400',
     },
-    SELECTED: {
-      label: 'เทียบราคาแล้ว',
-      colorClass: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
-    },
-    COMPARED: {
-      label: 'เทียบราคาแล้ว',
-      colorClass: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
-    },
-    REJECTED: {
-      label: 'ไม่เลือก',
-      colorClass: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
+    EXPIRED: {
+      label: 'หมดอายุ',
+      colorClass: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
     },
   },
   QC: {
@@ -186,10 +178,14 @@ const BaseBadge: React.FC<{
   className?: string; 
   children: React.ReactNode;
   size?: 'sm' | 'md';
-}> = ({ className = '', children, size = 'sm' }) => {
+  title?: string;
+}> = ({ className = '', children, size = 'sm', title }) => {
   const sizeClasses = size === 'sm' ? 'px-2.5 py-0.5 text-xs' : 'px-3 py-1 text-sm';
   return (
-    <span className={`inline-flex items-center rounded-full font-semibold whitespace-nowrap ${sizeClasses} ${className}`}>
+    <span 
+      className={`inline-flex items-center rounded-full font-semibold whitespace-nowrap ${sizeClasses} ${className}`}
+      title={title}
+    >
       {children}
     </span>
   );
@@ -209,11 +205,11 @@ export const ModuleStatusBadge: React.FC<ModuleStatusBadgeProps> = ({
 }) => {
   const config = statusConfig[type]?.[status];
   
-  // Fallback if status not found in config
+  // Fallback if status not found in config (LOUD FAIL for developers)
   if (!config) {
     return (
-      <BaseBadge className={`bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 ${className}`}>
-        {status}
+      <BaseBadge className={`bg-red-500 text-white animate-pulse ${className}`} title={`Invalid Status: ${status}`}>
+        INVALID: {status}
       </BaseBadge>
     );
   }

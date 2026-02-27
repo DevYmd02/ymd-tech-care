@@ -61,7 +61,7 @@ export const VQVendorTrackingModal: React.FC<VQVendorTrackingModalProps> = ({
         <WindowFormLayout
             isOpen={isOpen}
             onClose={onClose}
-            title={`สถานะการตอบกลับใบเสนอราคา (จาก RFQ: ${rfqNo || '-'})`}
+            title={`ภาพรวมการตอบกลับของกลุ่ม RFQ (เลขที่: ${rfqNo || '-'})`}
             titleIcon={<div className="bg-white/20 p-1 rounded-md shadow-sm"><Users size={14} strokeWidth={3} /></div>}
             headerColor="bg-teal-600"
             footer={
@@ -116,34 +116,47 @@ export const VQVendorTrackingModal: React.FC<VQVendorTrackingModalProps> = ({
                         ) : (
                             <VendorTrackingTable
                                 vendors={vendors}
-                                actionComponent={(vendor) => (
-                                    <div className="flex justify-end">
-                                        {vendor.vq_no ? (
-                                            <button
-                                                onClick={() => handleViewQT(vendor.vendor_name || '')}
-                                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors
-                                                           text-blue-600 bg-blue-50 border border-blue-200 hover:bg-blue-100
-                                                           dark:text-blue-400 dark:bg-blue-900/20 dark:border-blue-700/40 dark:hover:bg-blue-900/40"
-                                            >
-                                                <Eye size={12} />
-                                                ดู VQ
-                                            </button>
-                                        ) : (
-                                            <button
-                                                onClick={() => handleCreateQT(vendor.vendor_id)}
-                                                disabled={vendor.status === 'DECLINED'}
-                                                className={`flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                                                    vendor.status === 'DECLINED'
-                                                    ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed border border-gray-200 dark:border-gray-700'
-                                                    : 'bg-teal-600 hover:bg-teal-700 text-white shadow-sm'
-                                                }`}
-                                            >
-                                                <Plus size={12} />
-                                                บันทึกราคา
-                                            </button>
-                                        )}
-                                    </div>
-                                )}
+                                actionComponent={(vendor) => {
+                                    const isPending = vendor.status === 'PENDING' || vendor.status === 'SENT';
+                                    const isDeclined = vendor.status === 'DECLINED';
+                                    const isRecorded = vendor.status === 'RECORDED' || !!vendor.vq_no;
+                                    const isReceived = vendor.status === 'RECEIVED' || vendor.status === 'RESPONDED';
+
+                                    // Rule 1 & Rule 4: Block Pending & Declined
+                                    if (isPending || isDeclined) {
+                                        return (
+                                            <div className="flex justify-end text-gray-400 font-bold pr-4">
+                                                -
+                                            </div>
+                                        );
+                                    }
+
+                                    return (
+                                        <div className="flex justify-end">
+                                            {/* Rule 3: Block Already Recorded -> Show "View VQ" instead */}
+                                            {isRecorded ? (
+                                                <button
+                                                    onClick={() => handleViewQT(vendor.vendor_name || '')}
+                                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors text-blue-600 bg-blue-50 border border-blue-200 hover:bg-blue-100 dark:text-blue-400 dark:bg-blue-900/20 dark:border-blue-700/40 dark:hover:bg-blue-900/40"
+                                                >
+                                                    <Eye size={12} />
+                                                    ดู VQ
+                                                </button>
+                                            ) : isReceived ? (
+                                                /* Rule 2: Allow Received but Unrecorded -> Show "Record Price" */
+                                                <button
+                                                    onClick={() => handleCreateQT(vendor.vendor_id)}
+                                                    className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium rounded-md transition-colors bg-teal-600 hover:bg-teal-700 text-white shadow-sm"
+                                                >
+                                                    <Plus size={12} />
+                                                    บันทึกราคา
+                                                </button>
+                                            ) : (
+                                                <div className="flex justify-end text-gray-400 font-bold pr-4">-</div>
+                                            )}
+                                        </div>
+                                    );
+                                }}
                             />
                         )}
                     </div>

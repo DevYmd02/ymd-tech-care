@@ -34,6 +34,8 @@ export const QuotationHeaderSchema = z.object({
   lead_time_days: z.number().min(0).optional(),
   valid_until: z.string().min(1, 'Valid until date is required'),
   remark: z.string().optional(),
+  discount_raw: z.string().optional(),
+  tax_code_id: z.string().optional(),
   sub_total: z.number().optional(),
   pre_tax_amount: z.number().optional(),
   tax_amount: z.number().optional(),
