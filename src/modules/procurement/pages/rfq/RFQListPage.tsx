@@ -20,6 +20,7 @@ import { logger } from '@/shared/utils/logger';
 import { RFQService } from '@/modules/procurement/services';
 import type { RFQFilterCriteria, RFQHeader, RFQStatus } from '@/modules/procurement/types';
 import { RFQFormModal, RFQSendConfirmModal } from './components';
+import type { VendorEmailConfig } from './components/RFQSendConfirmModal';
 
 
 
@@ -139,14 +140,28 @@ export default function RFQListPage() {
         setSendingRFQ(rfq);
     }, []);
 
-    const executeSendRFQ = async (selectedVendorIds: string[], methods: string[]) => {
+    const executeSendRFQ = async (
+        selectedVendorIds: string[],
+        methods: string[],
+        emailConfig: Record<string, VendorEmailConfig>
+    ) => {
         if (!sendingRFQ) return;
-        
+
+        // Build structured payload — ready for backend
+        const emailPayload = selectedVendorIds.map(vendorId => ({
+            vendor_id: vendorId,
+            dispatch_method: 'EMAIL' as const,
+            to_emails: emailConfig[vendorId]?.to ?? [],
+            cc_emails: emailConfig[vendorId]?.cc ?? [],
+        }));
+
+        logger.info('[RFQListPage] executeSendRFQ payload:', { vendorIds: selectedVendorIds, methods, emailPayload });
+
         setIsSending(true);
         try {
             // Use sendToVendors API with filtered vendor IDs and methods (Clean Payload)
             await RFQService.sendToVendors(sendingRFQ.rfq_id, selectedVendorIds, methods);
-            
+
             toast(`ส่ง RFQ ${sendingRFQ.rfq_no} ไปยังผู้ขาย ${selectedVendorIds.length} ราย เรียบร้อยแล้ว`, 'success');
             refetch();
             setSendingRFQ(null);
