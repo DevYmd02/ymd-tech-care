@@ -188,11 +188,11 @@ const VendorSmartCard: React.FC<VendorSmartCardProps> = ({
                 <div className="overflow-hidden">
                     <div className="p-3.5 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/20 space-y-3">
                         
-                        {/* 1. The Per-Vendor Email Toggle Row */}
-                        <div className="flex items-center justify-between bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2.5 shadow-sm">
+                        {/* 1. The Per-Vendor Email Toggle Row (Full Row Clickable) */}
+                        <label className="flex items-center justify-between bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2.5 shadow-sm cursor-pointer transition-colors duration-200 hover:bg-indigo-50/50 dark:hover:bg-gray-700/80">
                             <div className="flex items-center gap-3 text-gray-700 dark:text-gray-200">
                                 <Mail size={16} className={emailConfig.sendEmail ? 'text-indigo-500' : 'text-gray-400'} />
-                                <span className="text-sm font-medium">ส่งเอกสารผ่านอีเมล</span>
+                                <span className="text-sm font-medium select-none">ส่งเอกสารผ่านอีเมล</span>
                             </div>
                             <input
                                 type="checkbox"
@@ -200,7 +200,7 @@ const VendorSmartCard: React.FC<VendorSmartCardProps> = ({
                                 checked={emailConfig.sendEmail}
                                 onChange={(e) => onEmailToggle(e.target.checked)}
                             />
-                        </div>
+                        </label>
 
                         {/* 2. Inner Accordion: Email Inputs (Visible if Toggle is ON) */}
                         <div className={`grid transition-all duration-300 ease-in-out ${
@@ -227,7 +227,7 @@ const VendorSmartCard: React.FC<VendorSmartCardProps> = ({
                                         <MultiEmailInput
                                             value={emailConfig.cc}
                                             onChange={handleCcChange}
-                                            placeholder="ระบุอีเมล Cc (ถ้ามี)"
+                                            placeholder="ระบุอีเมล CC (ถ้ามี)"
                                         />
                                     </div>
                                 </div>

@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { FormProvider } from 'react-hook-form';
-import { FileText, Printer, Copy, CheckCircle, FileBox, MoreHorizontal, Coins, FileBarChart, History as HistoryIcon, XCircle, Loader2 } from 'lucide-react';
+import { FileText, Printer, Copy, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { PRHeader } from './PRHeader';
 import { PRFormLines } from './PRFormLines';
 import { PRFormSummary } from './PRFormSummary';
 import { ProductSearchModal } from './ProductSearchModal';
 import { WindowFormLayout } from '@ui';
 import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWrapper';
-import { usePRForm } from '@/modules/procurement/hooks/pr';
+import { SharedRemarksTab } from '@/shared/components/forms/SharedRemarksTab';
+import { usePRForm } from '@/modules/procurement/pages/pr/hooks';
 import { RejectReasonModal } from '@/modules/procurement/shared/components/RejectReasonModal';
 import { WarehouseSearchModal } from '@/modules/procurement/shared/components/WarehouseSearchModal';
 import { LocationSearchModal } from '@/modules/procurement/shared/components/LocationSearchModal';
@@ -49,7 +50,6 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
   const [activeTab, setActiveTab] = useState('detail');
 
   const cardClass = 'bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-sm overflow-hidden';
-  const tabClass = (tab: string) => `px-6 py-2 text-sm font-medium flex items-center gap-2 cursor-pointer border-b-2 transition-colors ${activeTab === tab ? 'border-blue-600 text-blue-600 bg-blue-50 dark:bg-blue-900/30' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`;
 
   const handleSubmitWrapper = async (data: PRFormData) => {
     return onSubmit(data);
@@ -251,29 +251,13 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
 
             <PRFormSummary purchaseTaxOptions={purchaseTaxOptions} isViewMode={readOnly} />
 
-            <div className={cardClass}>
-            <div className="flex border-b border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-                <div className={tabClass('detail')} onClick={() => setActiveTab('detail')}><FileBox size={14} /> Detail</div>
-                <div className={tabClass('more')} onClick={() => setActiveTab('more')}><MoreHorizontal size={14} /> More</div>
-                <div className={tabClass('rate')} onClick={() => setActiveTab('rate')}><Coins size={14} /> Rate</div>
-                <div className={tabClass('description')} onClick={() => setActiveTab('description')}><FileBarChart size={14} /> Description</div>
-                <div className={tabClass('history')} onClick={() => setActiveTab('history')}><HistoryIcon size={14} /> History</div>
-            </div>
-            <div className="p-3 min-h-[80px] dark:bg-gray-900">
-                {activeTab === 'detail' && (
-                <textarea 
-                    {...register('remark')}
-                    disabled={readOnly}
-                    placeholder="กรอกหมายเหตุเพิ่มเติม..." 
-                    className="w-full h-20 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 resize-none" 
-                />
-                )}
-                {activeTab === 'more' && <div className="text-gray-500 dark:text-gray-400 text-sm">ข้อมูลเพิ่มเติม...</div>}
-                {activeTab === 'rate' && <div className="text-gray-500 dark:text-gray-400 text-sm">อัตราแลกเปลี่ยน / ราคา...</div>}
-                {activeTab === 'description' && <div className="text-gray-500 dark:text-gray-400 text-sm">รายละเอียดเอกสาร...</div>}
-                {activeTab === 'history' && <div className="text-gray-500 dark:text-gray-400 text-sm">ประวัติการแก้ไข...</div>}
-            </div>
-            </div>
+            <SharedRemarksTab
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+                register={register('remark')}
+                readOnly={readOnly}
+                className="rounded-sm" // Match PR style
+            />
         </div>
       </FormProvider>
 

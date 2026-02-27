@@ -42,6 +42,7 @@ export interface RFQHeader {
     branch_name?: string | null;        // From joined org_branch
     created_by_name?: string | null;    // ชื่อผู้สร้าง
     creator_name?: string | null;       // Alias สำหรับ created_by_name
+    vendor_name?: string | null;        // ชื่อผู้ขาย ( joined or representative)
     vendor_count?: number;              // From COUNT(rfq_vendor)
     vendor_responded?: number;          // From COUNT where responded
     

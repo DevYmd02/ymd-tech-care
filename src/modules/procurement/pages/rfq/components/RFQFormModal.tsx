@@ -1,12 +1,13 @@
-import { FileText, Info, MoreHorizontal, Star, AlignLeft, History, Trash2, XCircle } from 'lucide-react';
-import { useRFQForm } from '@/modules/procurement/hooks/rfq';
+import { FileText, Trash2, XCircle } from 'lucide-react';
+import { useRFQForm } from '@/modules/procurement/pages/rfq/hooks';
 import { RFQFormHeader } from './RFQFormHeader';
 import { RFQFormLines } from './RFQFormLines';
 import { RFQVendorSelection } from './RFQVendorSelection';
 import { VendorDispatchTable } from './VendorDispatchTable';
 import { VendorSearchModal } from '@/modules/master-data/vendor/components/selector/VendorSearchModal';
-import { PRSelectionModal } from '@/modules/procurement/pr/components/PRSelectionModal';
-import { WindowFormLayout, TabPanel } from '@ui';
+import { PRSourceSelectionModal } from './PRSourceSelectionModal';
+import { WindowFormLayout } from '@ui';
+import { SharedRemarksTab } from '@/shared/components/forms/SharedRemarksTab';
 import type { PRHeader } from '@/modules/procurement/types';
 import { logger } from '@/shared/utils/logger';
 
@@ -37,14 +38,6 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
         handleAddVendor, handleRemoveVendor,
         handleOpenVendorModal, handleVendorSelect
     } = useRFQForm(isOpen, onClose, initialPR, onSuccess, editId);
-
-    const tabs = [
-        { id: 'detail', label: 'Detail', icon: <Info size={16} /> },
-        { id: 'more', label: 'More', icon: <MoreHorizontal size={16} /> },
-        { id: 'rate', label: 'Rate', icon: <Star size={16} /> },
-        { id: 'description', label: 'Description', icon: <AlignLeft size={16} /> },
-        { id: 'history', label: 'History', icon: <History size={16} /> },
-    ];
 
     const cardClass = 'bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden shadow-sm';
 
@@ -147,28 +140,13 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
                     )}
                 </div>
 
-                <div className={cardClass}>
-                    <div className="p-4">
-                        <TabPanel tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} variant="underline">
-                            {activeTab === 'detail' && (
-                                <div className="space-y-3">
-                                    <textarea
-                                        placeholder="กรอกหมายเหตุเพิ่มเติม..."
-                                        rows={3}
-                                        className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 dark:text-white resize-none"
-                                        value={formData.remarks}
-                                        onChange={(e) => handleChange('remarks', e.target.value)}
-                                    />
-                                </div>
-                            )}
-                            {['more', 'rate', 'description', 'history'].includes(activeTab) && (
-                                <div className="text-gray-500 dark:text-gray-400 text-sm py-4 text-center">
-                                    {tabs.find(t => t.id === activeTab)?.label} (พร้อมใช้งานเร็วๆ นี้)
-                                </div>
-                            )}
-                        </TabPanel>
-                    </div>
-                </div>
+                <SharedRemarksTab
+                    activeTab={activeTab}
+                    onTabChange={setActiveTab}
+                    remarks={formData.remarks}
+                    onRemarksChange={(val: string) => handleChange('remarks', val)}
+                    readOnly={readOnly}
+                />
             </div>
 
 
@@ -180,7 +158,7 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
             />
 
             {/* PR Selection Modal */}
-            <PRSelectionModal
+            <PRSourceSelectionModal
                 isOpen={isPRSelectionModalOpen}
                 onClose={() => setIsPRSelectionModalOpen(false)}
                 onSelect={handlePRSelect}

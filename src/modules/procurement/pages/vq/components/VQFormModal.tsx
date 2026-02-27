@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileText, Plus, Trash2, Search, FileBox } from 'lucide-react';
+import { FileText, Plus, Trash2, Search } from 'lucide-react';
 import { useWatch } from 'react-hook-form';
 
 import { WindowFormLayout } from '@ui';
@@ -11,6 +11,9 @@ import { ProductSearchModal } from '@/modules/inventory/components/selector/Prod
 import type { ProductLookup } from '@/modules/master-data/inventory/mocks/products';
 import type { RFQHeader } from '@/modules/procurement/types';
 import { useVQForm } from '@/modules/procurement/pages/vq/hooks/useVQForm';
+import { SharedRemarksTab } from '@/shared/components/forms/SharedRemarksTab';
+import { RFQSelectorModal } from './RFQSelectorModal';
+import { X as XIcon } from 'lucide-react';
 
 interface Props {
   isOpen: boolean;
@@ -25,25 +28,29 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
   // -- Custom Hook --
   const { 
     methods, fields, append, remove, insert, 
-    totals, handleSave, updateLineCalculation, vatRate, createEmptyLine 
+    totals, handleSave, updateLineCalculation, 
+    handleSelectRFQ, handleClearRFQ,
+    vatRate, createEmptyLine 
   } = useVQForm(isOpen, onClose, initialRFQ, onSuccess, vqId, isViewMode);
 
   const {
     control,
     register,
     setValue,
-    watch,
     formState: { errors },
   } = methods;
 
-  const formData = watch();
-  const watchTargetCurrency = watch('target_currency_code') || 'THB';
+  const watchVendorName = useWatch({ control, name: 'vendor_name' });
+  const watchCurrency = useWatch({ control, name: 'currency' });
+  const watchExchangeRate = useWatch({ control, name: 'exchange_rate' });
 
   // -- UI State --
   const [units, setUnits] = useState<UnitListItem[]>([]);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
+  const [isRFQModalOpen, setIsRFQModalOpen] = useState(false);
   const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState('detail');
 
   // -- Effects --
   useEffect(() => {
@@ -117,6 +124,12 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
           }}
       />
 
+      <RFQSelectorModal 
+          isOpen={isRFQModalOpen}
+          onClose={() => setIsRFQModalOpen(false)}
+          onSelect={handleSelectRFQ}
+      />
+
       <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6">
           
           {/* 1. Header Card */}
@@ -160,7 +173,7 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
                               />
                               <input 
                                   type="text" 
-                                  value={formData?.vendor_name || ''} 
+                                  value={watchVendorName || ''} 
                                   readOnly 
                                   className="flex-1 h-8 px-3 text-sm bg-gray-100/70 dark:bg-gray-800/70 text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg cursor-not-allowed font-medium disabled:opacity-70 disabled:cursor-not-allowed" 
                                   placeholder="ชื่อบริษัท/ผู้ขาย" 
@@ -207,11 +220,22 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
                               <input {...register('qc_id')} className="flex-1 h-8 px-3 text-sm bg-gray-100/70 dark:bg-gray-800/70 text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg cursor-not-allowed font-medium disabled:opacity-70 disabled:cursor-not-allowed" readOnly disabled={isViewMode} />
                               <button 
                                   type="button"
+                                  onClick={() => !isViewMode && setIsRFQModalOpen(true)}
                                   disabled={isViewMode}
-                                  className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors shrink-0 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                  className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors shrink-0 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
                               >
-                                  เลือก
+                                  <Search size={14} /> เลือก
                               </button>
+                              {useWatch({ control, name: 'qc_id' }) && !isViewMode && (
+                                <button 
+                                    type="button"
+                                    onClick={handleClearRFQ}
+                                    className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors border border-red-200 dark:border-red-800/50"
+                                    title="ล้างข้อมูล RFQ อ้างอิง"
+                                >
+                                    <XIcon size={14} />
+                                </button>
+                              )}
                           </div>
                       </div>
                   </div>
@@ -220,43 +244,62 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
                   <div className="pt-6 border-t border-gray-100 dark:border-slate-800/50">
                       <MulticurrencyWrapper 
                           control={control}
-                          name="is_multicurrency"
+                          name="isMulticurrency"
                           disabled={isViewMode}
                       >
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                              <div className="col-span-1 lg:col-span-2">
-                                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">สกุลเงิน (Currency)</label>
-                                  <select 
-                                      {...register('target_currency_code')} 
-                                      className="w-full h-8 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-70 disabled:bg-gray-50 focus:border-transparent dark:text-white transition-all cursor-pointer"
-                                      disabled={isViewMode}
-                                  >
-                                      <option value="THB">THB - Thai Baht</option>
-                                      <option value="USD">USD - US Dollar</option>
-                                      <option value="EUR">EUR - Euro</option>
-                                      <option value="JPY">JPY - Japanese Yen</option>
-                                      <option value="SGD">SGD - Singapore Dollar</option>
-                                  </select>
-                              </div>
-                              <div className="col-span-1">
-                                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">วันที่อ้างอิงอัตราแลกเปลี่ยน</label>
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+                              <div>
+                                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">วันที่อัตราแลกเปลี่ยน</label>
                                   <input 
                                       type="date" 
                                       {...register('exchange_rate_date')} 
-                                      className="w-full h-8 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-70 disabled:bg-gray-50 focus:border-transparent dark:text-white transition-all"
+                                      className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
                                       disabled={isViewMode}
                                   />
                               </div>
-                              <div className="col-span-1">
-                                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">อัตราแลกเปลี่ยน ({watchTargetCurrency}/THB)</label>
+                              <div>
+                                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">รหัสสกุลเงิน</label>
+                                  <select 
+                                      {...register('currency')} 
+                                      className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                                      disabled={isViewMode}
+                                  >
+                                      <option value="THB">THB - บาท</option>
+                                      <option value="USD">USD - ดอลลาร์สหรัฐ</option>
+                                      <option value="EUR">EUR - ยูโร</option>
+                                      <option value="JPY">JPY - เยน</option>
+                                      <option value="SGD">SGD - ดอลลาร์สิงคโปร์</option>
+                                      <option value="CNY">CNY - หยวน</option>
+                                  </select>
+                                  {errors.currency && <p className="text-red-500 text-[10px] mt-0.5 font-medium">{errors.currency.message}</p>}
+                              </div>
+                              <div>
+                                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">ไปยังสกุลเงิน (Target)</label>
+                                  <select 
+                                      {...register('target_currency')} 
+                                      className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                                      disabled={isViewMode}
+                                  >
+                                      <option value="THB">THB - บาท</option>
+                                      <option value="USD">USD - ดอลลาร์สหรัฐ</option>
+                                  </select>
+                              </div>
+                              <div>
+                                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">อัตราแลกเปลี่ยน</label>
                                   <input 
                                       type="number" 
                                       step="0.0001"
                                       {...register('exchange_rate', { valueAsNumber: true })} 
-                                      className="w-full h-8 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-70 disabled:bg-gray-50 focus:border-transparent dark:text-white transition-all text-right"
-                                      disabled={isViewMode}
+                                      className={`w-full h-9 px-3 text-sm text-right border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition-colors ${watchCurrency === 'THB' || isViewMode ? 'bg-gray-50 dark:bg-gray-800/50 italic text-gray-500' : 'bg-white dark:bg-gray-800 font-semibold'}`}
+                                      disabled={isViewMode || watchCurrency === 'THB'}
                                       placeholder="1.0000"
                                   />
+                                  {watchCurrency && watchCurrency !== 'THB' && (
+                                    <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 text-right font-medium">
+                                        1 {watchCurrency} ≈ {Number(watchExchangeRate || 0).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })} THB
+                                    </div>
+                                  )}
+                                  {errors.exchange_rate && <p className="text-red-500 text-[10px] mt-0.5 font-medium">{errors.exchange_rate.message}</p>}
                               </div>
                           </div>
                       </MulticurrencyWrapper>
@@ -275,20 +318,18 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
                   </div>
                   
                   <div className="overflow-x-auto bg-gray-50 dark:bg-gray-800/50 p-2 rounded-lg">
-                  <table className="w-full min-w-[1200px] border-collapse bg-white dark:bg-gray-900 text-sm border border-gray-200 dark:border-gray-700 shadow-sm">
+                  <table className="w-full min-w-[1000px] border-collapse bg-white dark:bg-gray-900 text-sm border border-gray-200 dark:border-gray-700 shadow-sm">
                       <thead className="bg-indigo-700 text-white text-xs dark:bg-indigo-900">
                           <tr>
                               <th className="px-3 py-2 text-center font-medium border-r border-indigo-600 dark:border-indigo-800 w-14">ลำดับ</th>
-                              <th className="px-3 py-2 text-center font-medium border-r border-indigo-600 dark:border-indigo-800 w-36">รหัสสินค้า</th>
+                              <th className="px-3 py-2 text-center font-medium border-r border-indigo-600 dark:border-indigo-800 w-44">รหัสสินค้า</th>
                               <th className="px-3 py-2 text-left font-medium border-r border-indigo-600 dark:border-indigo-800">รายละเอียด</th>
-                              <th className="px-3 py-2 text-center font-medium border-r border-indigo-600 dark:border-indigo-800 w-24">คลัง</th>
-                              <th className="px-3 py-2 text-center font-medium border-r border-indigo-600 dark:border-indigo-800 w-24">ตำแหน่ง</th>
                               <th className="px-3 py-2 text-center font-medium border-r border-indigo-600 dark:border-indigo-800 w-24">จำนวน</th>
                               <th className="px-3 py-2 text-center font-medium border-r border-indigo-600 dark:border-indigo-800 w-24">หน่วย</th>
-                              <th className="px-3 py-2 text-right font-medium border-r border-indigo-600 dark:border-indigo-800 w-32">ราคา/หน่วย</th>
-                              <th className="px-3 py-2 text-right font-medium border-r border-indigo-600 dark:border-indigo-800 w-28">ส่วนลด</th>
-                              <th className="px-3 py-2 text-right font-medium border-r border-indigo-600 dark:border-indigo-800 w-32">ยอดรวม</th>
-                              <th className="px-3 py-2 text-center font-medium border-r border-indigo-600 dark:border-indigo-800 w-20">ไม่เสนอราคา</th>
+                              <th className="px-3 py-2 text-center font-medium border-r border-indigo-600 dark:border-indigo-800 w-32">ราคา/หน่วย</th>
+                              <th className="px-3 py-2 text-center font-medium border-r border-indigo-600 dark:border-indigo-800 w-28">ส่วนลด</th>
+                              <th className="px-3 py-2 text-center font-medium border-r border-indigo-600 dark:border-indigo-800 w-32">ยอดรวม</th>
+                              <th className="px-3 py-2 text-center font-medium border-r border-indigo-600 dark:border-indigo-800 w-20 whitespace-nowrap">ไม่เสนอราคา</th>
                               {!isViewMode && <th className="px-3 py-2 text-center font-medium border-r border-indigo-600 dark:border-indigo-800 w-16">จัดการ</th>}
                           </tr>
                       </thead>
@@ -322,28 +363,6 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
                                      <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">
                                          <input {...register(`lines.${idx}.item_name`)} className={`w-full h-8 px-3 text-sm bg-gray-100/70 dark:bg-gray-800/70 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded text-left cursor-not-allowed font-medium disabled:opacity-70 disabled:cursor-not-allowed transition-colors`} readOnly={!!initialRFQ || isViewMode} />
                                      </td>
-                                     
-                                     {/* Warehouse */}
-                                      <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">
-                                          <input 
-                                              type="text" 
-                                              {...register(`lines.${idx}.warehouse`)} 
-                                              readOnly={isViewMode} 
-                                              className="w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white text-center transition-all disabled:opacity-70 disabled:cursor-not-allowed" 
-                                              placeholder="MAIN" 
-                                          />
-                                      </td>
-                                      
-                                      {/* Location */}
-                                      <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">
-                                          <input 
-                                              type="text" 
-                                              {...register(`lines.${idx}.location`)} 
-                                              readOnly={isViewMode} 
-                                              className="w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white text-center transition-all disabled:opacity-70 disabled:cursor-not-allowed" 
-                                              placeholder="A-1" 
-                                          />
-                                      </td>
                                      
                                      {/* Qty */}
                                      <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">
@@ -488,27 +507,15 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
               </div>
           </div>
           
-          {/* 3. Remarks Card */}
-          <div className="bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden shadow-sm mt-4">
-              <div className="p-4">
-                  <div className="flex items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-3 text-indigo-600 dark:text-indigo-400">
-                      <FileBox size={18} />
-                      <span className="font-semibold text-sm">หมายเหตุ (Remarks VQ)</span>
-                  </div>
-                  <div className="grid grid-cols-1 gap-4">
-                      <div>
-                          <label className="text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-1 block">หมายเหตุถึงผู้ขาย (Remark to Vendor)</label>
-                          <textarea 
-                              {...register('remark')} 
-                              rows={2}
-                              className={`w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white transition-all resize-none ${isViewMode ? 'opacity-70 cursor-not-allowed bg-gray-100/70' : ''}`} 
-                              disabled={isViewMode}
-                              placeholder="ระบุข้อความ..."
-                          />
-                      </div>
-                  </div>
-              </div>
-          </div>
+          {/* 3. Remarks Section */}
+          <SharedRemarksTab
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+              register={register('remark')}
+              readOnly={isViewMode}
+              className="mt-4"
+              placeholder="ระบุข้อความ..."
+          />
 
       </div>
     </WindowFormLayout>

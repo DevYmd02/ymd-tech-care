@@ -84,7 +84,8 @@ const createMockRFQ = (
         exchange_rate: 1,
         delivery_location: 'คลังสินค้าหลัก (Main Warehouse)',
         payment_terms: 'Credit 30 Days',
-        remarks: isLinked ? 'Generated from PR' : 'Urgent Purchase (Direct RFQ)'
+        remarks: isLinked ? 'Generated from PR' : 'Urgent Purchase (Direct RFQ)',
+        vendor_name: vendorCount > 0 ? ['บริษัท เอ.เจ. เทค', 'บจก. บางกอก ซัพพลาย', 'ร้านวิศวกรรมการไฟฟ้า', 'บจก. เอ็ม แอนด์ เอส'][index % 4] : null
     };
 };
 
