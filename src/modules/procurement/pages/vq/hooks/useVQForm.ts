@@ -3,15 +3,17 @@ import { useForm, useFieldArray, useWatch, type Resolver } from 'react-hook-form
 import { zodResolver } from '@hookform/resolvers/zod';
 import { QuotationHeaderSchema, type QuotationFormData, type QuotationLineFormData } from '@/modules/procurement/schemas/vq-schemas';
 import { VQService } from '@/modules/procurement/services/vq.service';
+import { RFQService } from '@/modules/procurement/services/rfq.service';
+import type { RFQHeader, RFQDetailResponse, RFQLine } from '@/modules/procurement/types';
 import { logger } from '@/shared/utils/logger';
-import type { VQListItem, QuotationLine } from '@/modules/procurement/types/vq-types';
-import type { RFQHeader, RFQDetailResponse } from '@/modules/procurement/types/rfq-types';
+import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
+import type { VQListItem, QuotationLine } from '@/modules/procurement/types/vq-types';
 
 /** Type for RFQ with incidental vendor info often passed in VQ creation flow */
 export interface ExtendedRFQHeader extends RFQHeader {
     vendor_id?: string;
-    vendor_name?: string;
+    vendor_name?: string | null;
     isMulticurrency?: boolean;
     exchange_rate_date?: string;
     target_currency?: string;
@@ -25,8 +27,6 @@ const createEmptyLine = (): QuotationLineFormData => ({
   discount_amount: 0,
   net_amount: 0,
   uom_name: '',
-  warehouse: '',
-  location: '',
   no_quote: false,
 });
 
@@ -39,6 +39,7 @@ export const useVQForm = (
   isViewMode?: boolean
 ) => {
   const { confirm } = useConfirmation();
+  const { toast } = useToast();
 
   const methods = useForm<QuotationFormData>({
     resolver: zodResolver(QuotationHeaderSchema) as Resolver<QuotationFormData>,
@@ -46,10 +47,10 @@ export const useVQForm = (
       quotation_no: '',
       quotation_date: new Date().toISOString().split('T')[0],
       vendor_id: '',
-      currency_code: 'THB',
-      is_multicurrency: false,
+      currency: 'THB',
+      isMulticurrency: false,
       exchange_rate_date: '',
-      target_currency_code: '',
+      target_currency: '',
       exchange_rate: 1,
       lines: [createEmptyLine(), createEmptyLine(), createEmptyLine(), createEmptyLine(), createEmptyLine()],
       payment_term_days: 30,
@@ -63,6 +64,28 @@ export const useVQForm = (
     control,
     name: "lines"
   });
+
+  // Watch for isMulticurrency changes to auto-reset
+  const isMulticurrency = useWatch({ control, name: 'isMulticurrency' });
+  const watchCurrency = useWatch({ control, name: 'currency' });
+
+  useEffect(() => {
+    if (!isMulticurrency) {
+      if (getValues('currency') !== 'THB' || getValues('exchange_rate') !== 1) {
+        setValue('currency', 'THB');
+        setValue('exchange_rate', 1);
+        setValue('target_currency', '');
+        setValue('exchange_rate_date', '');
+      }
+    }
+  }, [isMulticurrency, setValue, getValues]);
+
+  // If currency is THB, exchange rate MUST be 1
+  useEffect(() => {
+    if (watchCurrency === 'THB' && getValues('exchange_rate') !== 1) {
+      setValue('exchange_rate', 1);
+    }
+  }, [watchCurrency, setValue, getValues]);
 
   // Reset form when modal opens
   useEffect(() => {
@@ -78,10 +101,10 @@ export const useVQForm = (
                 contact_person: data.contact_person,
                 contact_email: data.contact_email,
                 contact_phone: data.contact_phone,
-                currency_code: data.currency_code,
-                is_multicurrency: data.is_multicurrency || false,
+                currency: data.currency,
+                isMulticurrency: data.isMulticurrency || false,
                 exchange_rate_date: data.exchange_rate_date,
-                target_currency_code: data.target_currency_code,
+                target_currency: data.target_currency,
                 exchange_rate: data.exchange_rate,
                 payment_term_days: data.payment_term_days || 0,
                 lead_time_days: data.lead_time_days || 0,
@@ -96,8 +119,6 @@ export const useVQForm = (
                     discount_amount: l.discount_amount || 0,
                     net_amount: l.net_amount || 0,
                     uom_name: l.uom_name || '',
-                    warehouse: l.warehouse || '',
-                    location: l.location || '',
                     no_quote: Boolean(l.no_quote)
                 })) || []
             });
@@ -120,8 +141,6 @@ export const useVQForm = (
                 discount_amount: 0,
                 net_amount: 0,
                 no_quote: false,
-                warehouse: '',
-                location: '',
             }));
         } else {
             mappedLines = Array(5).fill(null).map(() => createEmptyLine());
@@ -131,10 +150,10 @@ export const useVQForm = (
           quotation_no: `VQ-${new Date().getFullYear()}-xxx (Auto)`,
           quotation_date: new Date().toISOString().split('T')[0],
           vendor_id: initialRFQ.vendor_id || '', 
-          currency_code: initialRFQ.currency || 'THB',
-          is_multicurrency: initialRFQ.isMulticurrency || false,
+          currency: initialRFQ.currency || 'THB',
+          isMulticurrency: initialRFQ.isMulticurrency || false,
           exchange_rate_date: initialRFQ.exchange_rate_date || '',
-          target_currency_code: initialRFQ.target_currency || '',
+          target_currency: initialRFQ.target_currency || '',
           exchange_rate: initialRFQ.exchange_rate || 1,
           lines: mappedLines,
           payment_term_days: 30,
@@ -149,10 +168,10 @@ export const useVQForm = (
           quotation_no: '',
           quotation_date: new Date().toISOString().split('T')[0],
           vendor_id: '',
-          currency_code: 'THB',
-          is_multicurrency: false,
+          currency: 'THB',
+          isMulticurrency: false,
           exchange_rate_date: '',
-          target_currency_code: '',
+          target_currency: '',
           exchange_rate: 1,
           lines: [createEmptyLine(), createEmptyLine(), createEmptyLine(), createEmptyLine(), createEmptyLine()],
           payment_term_days: 30,
@@ -162,7 +181,7 @@ export const useVQForm = (
         });
       }
     }
-  }, [isOpen, initialRFQ, vqId, reset]);
+  }, [isOpen, initialRFQ, vqId, reset, getValues]);
 
   // Calculations
   const lines = useWatch({ control, name: 'lines' });
@@ -252,6 +271,60 @@ export const useVQForm = (
       setValue(`lines.${index}.net_amount`, net);
   };
 
+  const handleSelectRFQ = async (rfq: RFQHeader) => {
+    try {
+      const fullRFQ = await RFQService.getById(rfq.rfq_id);
+      
+      // Magic Auto-Fill Logic
+      const mappedLines: QuotationLineFormData[] = (fullRFQ.lines || []).map((line: RFQLine) => ({
+          item_code: line.item_code || '',
+          item_name: line.item_name || '',
+          qty: line.required_qty || 0,
+          uom_name: line.uom || '',
+          unit_price: 0,
+          discount_amount: 0,
+          net_amount: 0,
+          no_quote: false,
+      }));
+
+      // Find primary vendor if available
+      const primaryVendor = fullRFQ.vendors?.[0];
+
+      reset({
+        ...getValues(),
+        qc_id: fullRFQ.rfq_no,
+        vendor_id: primaryVendor?.vendor_id || '',
+        vendor_name: primaryVendor?.vendor_name || '',
+        currency: fullRFQ.currency || 'THB',
+        isMulticurrency: Boolean(fullRFQ.currency && fullRFQ.currency !== 'THB'),
+        exchange_rate: fullRFQ.exchange_rate || 1,
+        payment_terms: fullRFQ.payment_terms || '',
+        remark: fullRFQ.remarks || '',
+        lines: mappedLines.length > 0 ? mappedLines : [createEmptyLine(), createEmptyLine(), createEmptyLine(), createEmptyLine(), createEmptyLine()]
+      });
+
+      // Recalculate totals (lines are reset, so use watch will pick it up)
+      toast(`ดึงข้อมูลจาก RFQ ${fullRFQ.rfq_no} เรียบร้อยแล้ว`, 'success');
+    } catch (error) {
+       logger.error('[useVQForm] Failed to fill from RFQ:', error);
+    }
+  };
+
+  const handleClearRFQ = async () => {
+    const isConfirmed = await confirm({
+        title: 'ยืนยันการล้างค่า',
+        description: 'ต้องการล้างการเชื่อมโยงกับ RFQ และรายการสินค้าใช่หรือไม่?',
+        confirmText: 'ล้างค่า',
+        cancelText: 'ยกเลิก',
+        variant: 'danger'
+    });
+
+    if (isConfirmed) {
+        setValue('qc_id', '');
+        setValue('lines', [createEmptyLine(), createEmptyLine(), createEmptyLine(), createEmptyLine(), createEmptyLine()]);
+    }
+  };
+
   return {
     methods,
     fields,
@@ -261,6 +334,8 @@ export const useVQForm = (
     totals,
     handleSave,
     updateLineCalculation,
+    handleSelectRFQ,
+    handleClearRFQ,
     vatRate,
     createEmptyLine
   };

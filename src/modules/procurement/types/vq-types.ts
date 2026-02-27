@@ -33,10 +33,10 @@ export interface QuotationHeader {
     valid_until: string | null;         // DATE - ราคามีผลถึงวันที่
     payment_term_days: number | null;   // INTEGER
     lead_time_days: number | null;      // INTEGER - ระยะส่งของ (days)
-    currency_code: string;              // VARCHAR(3) - e.g. THB, USD
-    is_multicurrency?: boolean;
+    currency: string;                   // VARCHAR(3) - e.g. THB, USD
+    isMulticurrency?: boolean;
     exchange_rate_date?: string;
-    target_currency_code?: string;
+    target_currency?: string;
     exchange_rate?: number;              // NUMERIC(18,6)
     total_amount: number;               // DECIMAL(18,2)
     status: QuotationStatus;            // VARCHAR(50)

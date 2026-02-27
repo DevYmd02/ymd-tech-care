@@ -3,13 +3,13 @@ import { Search, X, Check, FileText } from 'lucide-react';
 import type { PRHeader } from '@/modules/procurement/types';
 import { MOCK_PRS } from '@/modules/procurement/mocks/data/prData';
 
-interface PRSelectionModalProps {
+interface PRSourceSelectionModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSelect: (pr: PRHeader) => void;
 }
 
-export const PRSelectionModal: React.FC<PRSelectionModalProps> = ({ isOpen, onClose, onSelect }) => {
+export const PRSourceSelectionModal: React.FC<PRSourceSelectionModalProps> = ({ isOpen, onClose, onSelect }) => {
     const [searchTerm, setSearchTerm] = useState('');
 
     const filteredPRs = useMemo(() => {
@@ -29,7 +29,7 @@ export const PRSelectionModal: React.FC<PRSelectionModalProps> = ({ isOpen, onCl
                 <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-800 bg-teal-600 text-white">
                     <h2 className="text-lg font-semibold flex items-center gap-2">
                         <FileText className="w-5 h-5 opacity-90" />
-                        เลือกข้อมูล PR สำเร็จรูป (Approved)
+                        เลือกข้อมูล PR (Approved)
                     </h2>
                     <button 
                         onClick={onClose} 

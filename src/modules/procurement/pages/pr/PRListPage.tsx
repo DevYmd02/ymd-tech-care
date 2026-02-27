@@ -13,7 +13,7 @@ import { useTableFilters, useDebounce, type TableFilters, useConfirmation } from
 import RFQFormModal from '@/modules/procurement/pages/rfq/components/RFQFormModal';
 import { PRFormModal } from './components/PRFormModal';
 import { PRActionsCell } from './components/PRActionsCell';
-import { usePRActions } from '@/modules/procurement/hooks/pr';
+import { usePRActions } from '@/modules/procurement/pages/pr/hooks';
 import { RejectReasonModal } from '@/modules/procurement/shared/components/RejectReasonModal';
 
 import { formatThaiDate } from '@/shared/utils/dateUtils';

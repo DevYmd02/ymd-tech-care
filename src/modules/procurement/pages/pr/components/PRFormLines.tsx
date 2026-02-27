@@ -3,7 +3,7 @@ import { useFormContext } from 'react-hook-form';
 import { FileBox, Eraser, Plus, Trash2, Search, AlertTriangle } from 'lucide-react';
 import type { FieldArrayWithId } from 'react-hook-form';
 import type { PRFormData } from '@/modules/procurement/types';
-import type { ExtendedLine } from '@/modules/procurement/hooks/pr';
+import type { ExtendedLine } from '@/modules/procurement/pages/pr/hooks';
 
 interface PRFormLinesProps {
     lines: FieldArrayWithId<PRFormData, "lines", "id">[];

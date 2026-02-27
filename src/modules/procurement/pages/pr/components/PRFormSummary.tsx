@@ -1,9 +1,9 @@
 import React from 'react';
 import { useFormContext, Controller } from 'react-hook-form';
-import { usePRCalculations } from '@/modules/procurement/hooks/pr';
+import { usePRCalculations } from '@/modules/procurement/pages/pr/hooks';
 import type { PRFormData } from '@/modules/procurement/types';
 import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
-import type { MappedOption } from '@/modules/procurement/hooks/pr';
+import type { MappedOption } from '@/modules/procurement/pages/pr/hooks';
 
 interface PRFormSummaryProps {
     purchaseTaxOptions?: MappedOption<TaxCode>[];

@@ -12,8 +12,6 @@ export const QuotationLineSchema = z.object({
   discount_amount: z.number().min(0),
   net_amount: z.number(),
   no_quote: z.boolean(),
-  warehouse: z.string().optional(),
-  location: z.string().optional(),
 });
 
 export const QuotationHeaderSchema = z.object({
@@ -25,10 +23,10 @@ export const QuotationHeaderSchema = z.object({
   contact_email: z.string().email().optional().or(z.literal('')),
   contact_phone: z.string().optional(),
   qc_id: z.string().optional(), // Ref RFQ
-  currency_code: z.string().min(1, 'Currency is required'),
-  is_multicurrency: z.boolean().optional(),
+  currency: z.string().min(1, 'Currency is required'),
+  isMulticurrency: z.boolean().optional(),
   exchange_rate_date: z.string().optional(),
-  target_currency_code: z.string().optional(),
+  target_currency: z.string().optional(),
   exchange_rate: z.number().min(0.0001, 'Exchange rate must be positive').optional(),
   payment_term_days: z.number().min(0).optional(),
   payment_terms: z.string().optional(),
@@ -43,6 +41,23 @@ export const QuotationHeaderSchema = z.object({
   net_amount: z.number().optional(),
   total_amount: z.number().optional(),
   lines: z.array(QuotationLineSchema).min(1, 'At least one item is required'),
+}).superRefine((data, ctx) => {
+  if (data.isMulticurrency) {
+    if (!data.currency || data.currency === 'THB') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "กรุณาระบุสกุลเงินต่างประเทศ",
+        path: ["currency"]
+      });
+    }
+    if (!data.exchange_rate || data.exchange_rate <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "กรุณาระบุอัตราแลกเปลี่ยน",
+        path: ["exchange_rate"]
+      });
+    }
+  }
 });
 
 export type QuotationFormData = z.infer<typeof QuotationHeaderSchema>;
