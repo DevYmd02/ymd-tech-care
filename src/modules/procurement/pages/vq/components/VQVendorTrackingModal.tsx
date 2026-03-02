@@ -117,13 +117,15 @@ export const VQVendorTrackingModal: React.FC<VQVendorTrackingModalProps> = ({
                             <VendorTrackingTable
                                 vendors={vendors}
                                 actionComponent={(vendor) => {
-                                    const isPending = vendor.status === 'PENDING' || vendor.status === 'SENT';
+                                    const isPending = vendor.status === 'PENDING' || vendor.status === 'SENT' || vendor.status === 'RESPONDED';
                                     const isDeclined = vendor.status === 'DECLINED';
                                     const isRecorded = vendor.status === 'RECORDED' || !!vendor.vq_no;
-                                    const isReceived = vendor.status === 'RECEIVED' || vendor.status === 'RESPONDED';
+                                    const isRespondedButNotRecorded = vendor.status === 'RESPONDED' && !vendor.vq_no;
 
-                                    // Rule 1 & Rule 4: Block Pending & Declined
-                                    if (isPending || isDeclined) {
+                                    // Rule 1: Allow Record Price for PENDING/SENT/RESPONDED if no document exists
+                                    const canRecordManual = (isPending || isRespondedButNotRecorded) && !isRecorded;
+
+                                    if (isDeclined) {
                                         return (
                                             <div className="flex justify-end text-gray-400 font-bold pr-4">
                                                 -
@@ -133,7 +135,7 @@ export const VQVendorTrackingModal: React.FC<VQVendorTrackingModalProps> = ({
 
                                     return (
                                         <div className="flex justify-end">
-                                            {/* Rule 3: Block Already Recorded -> Show "View VQ" instead */}
+                                            {/* Show View if Recorded */}
                                             {isRecorded ? (
                                                 <button
                                                     onClick={() => handleViewQT(vendor.vendor_name || '')}
@@ -142,8 +144,8 @@ export const VQVendorTrackingModal: React.FC<VQVendorTrackingModalProps> = ({
                                                     <Eye size={12} />
                                                     ดู VQ
                                                 </button>
-                                            ) : isReceived ? (
-                                                /* Rule 2: Allow Received but Unrecorded -> Show "Record Price" */
+                                            ) : canRecordManual ? (
+                                                /* Show Record Price if Pending/Responded but unrecorded */
                                                 <button
                                                     onClick={() => handleCreateQT(vendor.vendor_id)}
                                                     className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium rounded-md transition-colors bg-teal-600 hover:bg-teal-700 text-white shadow-sm"

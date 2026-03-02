@@ -32,10 +32,10 @@ import { logger } from '@/shared/utils/logger';
 const VQ_STATUS_OPTIONS = [
     { value: 'ALL', label: 'ทั้งหมด' },
     { value: 'PENDING', label: 'รอผู้ขายตอบกลับ' },
-    { value: 'RECEIVED', label: 'ได้รับแล้ว' },
     { value: 'RECORDED', label: 'บันทึกแล้ว' },
     { value: 'DECLINED', label: 'ผู้ขายปฏิเสธ' },
     { value: 'EXPIRED', label: 'หมดอายุ' },
+    { value: 'CANCELLED', label: 'ยกเลิก' },
 ];
 
 // ====================================================================================
@@ -273,11 +273,18 @@ export default function VQListPage() {
         }),
         columnHelper.accessor('total_amount', {
             header: () => <div className="text-right w-full">ยอดสุทธิ</div>,
-            cell: (info) => (
-                <div className="text-right font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-                    {info.getValue().toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </div>
-            ),
+            cell: (info) => {
+                const item = info.row.original;
+                const isRecorded = item.status === 'RECORDED';
+                return (
+                    <div className={`text-right font-bold whitespace-nowrap ${isRecorded ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-600'}`}>
+                        {isRecorded 
+                            ? info.getValue().toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) 
+                            : '-'
+                        }
+                    </div>
+                );
+            },
             size: 120,
             enableSorting: true,
         }),
@@ -306,12 +313,15 @@ export default function VQListPage() {
             header: () => <div className="text-center w-full">จัดการ</div>,
             cell: ({ row }) => {
                 const item = row.original;
-                // Strict Rule: Record Price is ONLY for RECEIVED vendors without a VQ number yet.
-                const canRecord = item.status === 'RECEIVED' && !item.quotation_no;
-                // Edit and View are available for RECORDED / DRAFT, or as a failsafe if quotation_no somehow exists while RECEIVED
-                const canEdit   = item.status === 'RECORDED' || item.status === 'DRAFT' || !!item.quotation_no;
-                // View icon is only applicable if the document actually exists in the system
-                const canView   = canEdit;
+                // Simplified Action Logic Rules (PENDING -> RECORDED):
+                // 1. Record Price is ONLY for PENDING records without a VQ number yet.
+                const canRecord = item.status === 'PENDING' && !item.quotation_no;
+                
+                // 2. Edit and View are for RECORDED / DRAFT, or any record that already has a VQ number.
+                const hasVqDocument = !!item.quotation_no || item.status === 'RECORDED' || item.status === 'DRAFT';
+                const isCancelled = item.status === 'CANCELLED';
+                const canEdit = hasVqDocument && !isCancelled;
+                const canView = hasVqDocument || isCancelled;
                 
                 // If nothing can be done, render a dash
                 if (!canRecord && !canEdit && !canView) {
@@ -331,7 +341,7 @@ export default function VQListPage() {
                             </button>
                         )}
 
-                        {/* Edit button — for RECORDED/DRAFT only */}
+                        {/* Edit button — for records with documents */}
                         {canEdit && (
                             <button 
                                 onClick={() => handleOpenEdit(item.quotation_id)}
@@ -342,7 +352,7 @@ export default function VQListPage() {
                             </button>
                         )}
 
-                        {/* Record Price button — for RECEIVED without VQ No only */}
+                        {/* Record Price button — for PENDING without VQ No */}
                         {canRecord && (
                             <button 
                                 onClick={() => handleOpenEdit(item.quotation_id)}
@@ -357,7 +367,10 @@ export default function VQListPage() {
                 );
             },
             footer: () => {
-                 const total = (data?.data || []).reduce((sum, item) => sum + item.total_amount, 0) || 0;
+                 // Only sum RECORDED amounts for the grand total
+                 const total = (data?.data || []).reduce((sum, item) => {
+                    return item.status === 'RECORDED' ? sum + item.total_amount : sum;
+                 }, 0) || 0;
                  return (
                      <div className="text-right font-bold text-base text-emerald-600 dark:text-emerald-400 whitespace-nowrap pr-2">
                          {total.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท

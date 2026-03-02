@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Plus, Trash2, Search, X as XIcon } from 'lucide-react';
-import { FormProvider, Controller, useWatch } from 'react-hook-form';
+import { FileText, Plus, Pencil, Trash2, Search, X as XIcon } from 'lucide-react';
+import { FormProvider, Controller, useWatch, type FieldArrayWithId } from 'react-hook-form';
 import { WindowFormLayout } from '@ui';
 import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWrapper';
 import { MasterDataService } from '@/modules/master-data';
@@ -13,6 +13,7 @@ import { SharedRemarksTab } from '@/shared/components/forms/SharedRemarksTab';
 import type { ProductLookup } from '@/modules/master-data/inventory/mocks/products';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import type { RFQHeader } from '@/modules/procurement/types';
+import type { QuotationFormData } from '@/modules/procurement/schemas/vq-schemas';
 
 interface Props {
   isOpen: boolean;
@@ -27,11 +28,13 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
   const { toast } = useToast();
   // -- Custom Hook --
   const { 
-    methods, fields, append, remove, insert, 
+    formMethods, fields, append, remove, insert, 
     totals, handleSave, updateLineCalculation, 
     handleSelectRFQ, handleClearRFQ,
     createEmptyLine,
-    purchaseTaxOptions
+    purchaseTaxOptions,
+    vqStatus,
+    isDataLoading
   } = useVQForm(isOpen, onClose, initialRFQ, onSuccess, vqId, isViewMode);
 
   const {
@@ -40,7 +43,7 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
     setValue,
     watch,
     formState: { errors }
-  } = methods;
+  } = formMethods;
 
   const discountRaw = watch('discount_raw') ?? '';
 
@@ -57,6 +60,7 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
   } = totals;
 
   const watchVendorName = useWatch({ control, name: 'vendor_name' });
+  const watchRfqNo = useWatch({ control, name: 'rfq_no' });
   const watchCurrency = useWatch({ control, name: 'currency' });
   const watchExchangeRate = useWatch({ control, name: 'exchange_rate' });
 
@@ -117,20 +121,35 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
     }
   };
 
+  // Dynamic Title & Icon Logic (Standardized Pattern)
+  const isPending = vqStatus === 'PENDING';
+  const isRecorded = vqStatus === 'RECORDED';
+  const isTerminalStatus = vqStatus === 'EXPIRED' || vqStatus === 'DECLINED' || vqStatus === 'CANCELLED';
+  const forceViewMode = isViewMode || isTerminalStatus;
+
+  const modalTitle = forceViewMode 
+    ? "รายละเอียดใบเสนอราคาจากผู้ขาย (VIEW VENDOR QUOTATION)" 
+    : (isPending 
+        ? "บันทึกราคาใบเสนอราคา (RECORD VENDOR QUOTATION)" 
+        : (isRecorded ? "แก้ไขใบเสนอราคาจากผู้ขาย (EDIT VENDOR QUOTATION)" : "สร้างใบเสนอราคาจากผู้ขาย (CREATE VENDOR QUOTATION)")
+      );
+
+  const HeaderIcon = (isPending || !vqId) ? Plus : (isRecorded ? Pencil : FileText);
+
   return (
-    <FormProvider {...methods}>
+    <FormProvider {...formMethods}>
       <WindowFormLayout
         isOpen={isOpen}
         onClose={onClose}
-        title={isViewMode ? "รายละเอียดใบเสนอราคาจากผู้ขาย (View Vendor Quotation - VQ)" : "ใบเสนอราคาจากผู้ขาย (Vendor Quotation - VQ)"}
-        titleIcon={<div className="bg-white/20 p-1 rounded-md shadow-sm"><FileText size={14} strokeWidth={3} className="text-white" /></div>}
+        title={modalTitle}
+        titleIcon={<div className="bg-white/20 p-1 rounded-md shadow-sm"><HeaderIcon size={14} strokeWidth={3} className="text-white" /></div>}
         headerColor="bg-indigo-600"
         footer={
           <div className="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-end items-center bg-slate-100 dark:bg-gray-900 sticky bottom-0 z-10 gap-x-2">
               <button type="button" onClick={onClose} className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md text-sm font-medium transition-colors">
-                  {isViewMode ? 'ปิด' : 'ยกเลิก'}
+                  {forceViewMode ? 'ปิด' : 'ยกเลิก'}
               </button>
-              {!isViewMode && (
+              {!forceViewMode && (
                   <button type="button" onClick={handleSave} className="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md text-sm font-medium shadow-sm transition-colors">
                       บันทึก
                   </button>
@@ -138,7 +157,13 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
           </div>
         }
       >
-        {/* Alert removed - now using toast */}
+        {isDataLoading ? (
+            <div className="flex flex-col items-center justify-center p-20 gap-3">
+                <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">กำลังโหลดข้อมูล...</p>
+            </div>
+        ) : (
+            <>
 
         <ProductSearchModal 
           isOpen={isProductModalOpen}
@@ -253,7 +278,7 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
                       <div className="md:col-span-2">
                           <label className="text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-1 block">เลขที่ RFQ อ้างอิง</label>
                           <div className="flex gap-2">
-                              <input {...register('qc_id')} className="flex-1 h-8 px-3 text-sm bg-gray-100/70 dark:bg-gray-800/70 text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg cursor-not-allowed font-medium disabled:opacity-70 disabled:cursor-not-allowed" readOnly disabled={isViewMode} />
+                              <input {...register('rfq_no')} className="flex-1 h-8 px-3 text-sm bg-gray-100/70 dark:bg-gray-800/70 text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg cursor-not-allowed font-medium disabled:opacity-70 disabled:cursor-not-allowed" readOnly disabled={isViewMode} />
                               <button 
                                   type="button"
                                   onClick={() => !isViewMode && setIsRFQModalOpen(true)}
@@ -262,7 +287,7 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
                               >
                                   <Search size={14} /> เลือก
                               </button>
-                              {useWatch({ control, name: 'qc_id' }) && !isViewMode && (
+                                  {watchRfqNo && !forceViewMode && !isPending && (
                                 <button 
                                     type="button"
                                     onClick={handleClearRFQ}
@@ -370,7 +395,7 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
                           </tr>
                       </thead>
                       <tbody>
-                          {fields.map((field, idx: number) => {
+                          {fields.map((field: FieldArrayWithId<QuotationFormData, "lines", "id">, idx: number) => {
                               const isNoQuote = watchedLines[idx]?.no_quote;
                                  return (
                                  <tr key={field.id} className={`border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors group ${isNoQuote ? 'bg-amber-50 dark:bg-amber-950/10' : ''}`}>
@@ -394,7 +419,7 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
                                          </div>
                                         )}
                                       </td>
- 
+
                                       {/* Item Description */}
                                      <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">
                                          <input {...register(`lines.${idx}.item_name`)} className={`w-full h-8 px-3 text-sm bg-gray-100/70 dark:bg-gray-800/70 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded text-left cursor-not-allowed font-medium disabled:opacity-70 disabled:cursor-not-allowed transition-colors`} readOnly={!!initialRFQ || isViewMode} />
@@ -443,8 +468,14 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
                                             className={`w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white text-right transition-all ${(isNoQuote || isViewMode) ? 'opacity-70 cursor-not-allowed disabled:bg-gray-50' : ''}`} 
                                             placeholder="0.00"
                                          />
-                                     </td>
- 
+                                         {watchedLines[idx]?.reference_price ? (watchedLines[idx]?.reference_price ?? 0) > 0 && (
+                                             <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 text-right flex flex-col leading-tight">
+                                                 <span className="font-medium">Ref: {(watchedLines[idx]?.reference_price ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                 <span className="opacity-70">(Budget)</span>
+                                             </div>
+                                         ) : null}
+                                      </td>
+
                                      {/* Discount Amount */}
                                      <td className="px-4 py-3 text-right border-r border-gray-200 dark:border-gray-700">
                                          <input 
@@ -641,6 +672,8 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
           />
 
       </div>
+            </>
+        )}
       </WindowFormLayout>
     </FormProvider>
   );

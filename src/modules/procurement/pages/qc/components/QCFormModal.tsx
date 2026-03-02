@@ -4,14 +4,17 @@
  * @usage เรียกจาก VQListPage เมื่อกดปุ่ม "ส่งเปรียบเทียบราคา"
  */
 
-import React, { useState, useEffect } from 'react';
-import { FileText, Search, Trash2, Scale } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { FileText, Scale, CheckSquare, Square, AlertCircle, Search } from 'lucide-react';
 import { WindowFormLayout } from '@ui';
 
-import { VendorSearchModal } from '@/modules/master-data/vendor/components/selector/VendorSearchModal';
 import { QCService, type QCCreateData } from '@/modules/procurement/services/qc.service';
-import type { VendorSearchItem } from '@/modules/master-data/vendor/types/vendor-types';
+import { RFQService } from '@/modules/procurement/services/rfq.service';
+import { VQService } from '@/modules/procurement/services/vq.service';
 import { logger } from '@/shared/utils/logger';
+import { QCMatrixTable } from './QCMatrixTable';
+import { useQCMatrix } from '../hooks/useQCMatrix';
 
 interface QCFormModalProps {
   isOpen: boolean;
@@ -21,27 +24,7 @@ interface QCFormModalProps {
   onSuccess?: () => void;
 }
 
-interface QCVendorLine {
-  line_no: number;
-  vendor_code: string;
-  vendor_name: string;
-  vq_no: string;
-  total_amount: number;
-  payment_term_days: number;
-  lead_time_days: number;
-  valid_until: string;
-}
 
-const createEmptyLine = (lineNo: number): QCVendorLine => ({
-  line_no: lineNo,
-  vendor_code: '',
-  vendor_name: '',
-  vq_no: '',
-  total_amount: 0,
-  payment_term_days: 30,
-  lead_time_days: 7,
-  valid_until: '',
-});
 
 const generateQCNumber = (): string => {
   const now = new Date();
@@ -68,16 +51,53 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
   const [createdBy] = useState('ระบบอัตโนมัติ');
   const [department] = useState('จัดซื้อ');
   
-  // Vendor Lines
-  const [vendorLines, setVendorLines] = useState<QCVendorLine[]>([
-    createEmptyLine(1),
-    createEmptyLine(2),
-    createEmptyLine(3),
-  ]);
+  // Fetch RFQs to resolve ID from No
+  const { data: rfqList } = useQuery({
+      queryKey: ['rfq-list-for-qc', rfqNo],
+      queryFn: () => RFQService.getList({ rfq_no: rfqNo }),
+      enabled: !!rfqNo && isOpen,
+  });
+  
+  const rfqId = useMemo(() => {
+     return rfqList?.data.find(r => r.rfq_no === rfqNo)?.rfq_id;
+  }, [rfqList, rfqNo]);
 
-  // Vendor Search Modal
-  const [isVendorSearchOpen, setIsVendorSearchOpen] = useState(false);
-  const [activeLineIndex, setActiveLineIndex] = useState<number | null>(null);
+  // Fetch RFQ Details for Lines
+  const { data: rfqDetail, isLoading: isRFQDetailLoading } = useQuery({
+      queryKey: ['rfq-detail-for-qc', rfqId],
+      queryFn: () => RFQService.getById(rfqId!),
+      enabled: !!rfqId && isOpen,
+  });
+
+  // Fetch VQs related to this RFQ
+  const { data: vqList, isLoading: isVQListLoading } = useQuery({
+      queryKey: ['vq-list-for-qc', rfqNo],
+      queryFn: () => VQService.getList({ rfq_no: rfqNo }),
+      enabled: !!rfqNo && isOpen,
+  });
+
+  const availableVQs = useMemo(() => {
+     return vqList?.data.filter(vq => vq.status === 'RECORDED') || [];
+  }, [vqList]);
+
+  // VQ Selection State
+  const [selectedVQIds, setSelectedVQIds] = useState<string[]>([]);
+
+  const selectedVQs = useMemo(() => {
+     return availableVQs.filter(vq => selectedVQIds.includes(vq.quotation_id));
+  }, [availableVQs, selectedVQIds]);
+
+  const toggleVQSelection = (vqId: string) => {
+      setSelectedVQIds(prev => 
+          prev.includes(vqId) ? prev.filter(id => id !== vqId) : [...prev, vqId]
+      );
+  };
+
+  // QC Matrix Hook
+  const { matrixData, vendorTotals, selectWinner, selectAllForVendor } = useQCMatrix(
+      rfqDetail?.lines || [],
+      selectedVQs
+  );
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -88,51 +108,9 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
       setPRNo(initialPRNo || 'PR2024-xxx');
       setRFQNo(initialRFQNo || 'RFQ2024-xxx');
       setQCDate(getTodayFormatted());
-      setVendorLines([
-        createEmptyLine(1),
-        createEmptyLine(2),
-        createEmptyLine(3),
-      ]);
+      setSelectedVQIds([]);
     }
   }, [isOpen, initialPRNo, initialRFQNo]);
-
-  // Handlers
-  const openVendorSearch = (index: number) => {
-    setActiveLineIndex(index);
-    setIsVendorSearchOpen(true);
-  };
-
-  const handleSelectVendor = (vendor: VendorSearchItem) => {
-    if (activeLineIndex !== null) {
-      setVendorLines(prev => {
-        const newLines = [...prev];
-        newLines[activeLineIndex] = {
-          ...newLines[activeLineIndex],
-          vendor_code: vendor.code,
-          vendor_name: vendor.name,
-        };
-        return newLines;
-      });
-    }
-    setIsVendorSearchOpen(false);
-  };
-
-  const updateLine = (index: number, field: keyof QCVendorLine, value: string | number) => {
-    setVendorLines(prev => {
-      const newLines = [...prev];
-      newLines[index] = { ...newLines[index], [field]: value };
-      return newLines;
-    });
-  };
-
-  const removeLine = (index: number) => {
-    if (vendorLines.length <= 1) return;
-    setVendorLines(prev => prev.filter((_, i) => i !== index).map((line, i) => ({ ...line, line_no: i + 1 })));
-  };
-
-  const addLine = () => {
-    setVendorLines(prev => [...prev, createEmptyLine(prev.length + 1)]);
-  };
 
   const handleSave = async () => {
     setIsLoading(true);
@@ -141,15 +119,18 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
         pr_no: prNo,
         rfq_no: rfqNo,
         qc_date: qcDate,
-        vendor_lines: vendorLines.map(line => ({
-          vendor_code: line.vendor_code,
-          vendor_name: line.vendor_name,
-          vq_no: line.vq_no,
-          total_amount: line.total_amount,
-          payment_term_days: line.payment_term_days,
-          lead_time_days: line.lead_time_days,
-          valid_until: line.valid_until,
-        })),
+        vendor_lines: vendorTotals.map(vt => {
+          const vq = selectedVQs.find(v => v.quotation_id === vt.vq_id);
+          return {
+            vendor_code: vq?.vendor_code || '',
+            vendor_name: vq?.vendor_name || '',
+            vq_no: vq?.quotation_no || '',
+            total_amount: vt.grand_total,
+            payment_term_days: vq?.payment_term_days || 30,
+            lead_time_days: vq?.lead_time_days || 7,
+            valid_until: vq?.valid_until || '',
+          };
+        }),
       };
 
       const result = await QCService.create(qcData);
@@ -172,7 +153,6 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
   // Styles
   const inputClass = "w-full h-9 px-3 text-sm bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white";
   const labelClass = "block text-sm font-medium text-blue-700 dark:text-blue-400 mb-1";
-  const tableInputClass = "w-full h-8 px-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-900 dark:text-white text-center";
 
   return (
     <>
@@ -283,142 +263,79 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
             </div>
           </div>
 
-          {/* Section: Vendor Comparison Table */}
+          {/* Section: Vendor Selection */}
+          <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+            <div className="flex items-center justify-between mb-4">
+               <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                 <Search size={18} />
+                 <h3 className="font-bold">เลือกใบเสนอราคาเพื่อเปรียบเทียบ - Select VQs</h3>
+               </div>
+            </div>
+
+            {isVQListLoading ? (
+               <div className="text-gray-500 text-sm">กำลังโหลดข้อมูล VQ...</div>
+            ) : availableVQs.length === 0 ? (
+               <div className="flex items-center gap-2 text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-200">
+                  <AlertCircle size={16} />
+                  <span className="text-sm">ไม่พบใบเสนอราคา (VQ) ที่บันทึกราคาแล้วสำหรับ RFQ นีั้</span>
+               </div>
+            ) : (
+               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {availableVQs.map(vq => {
+                     const isSelected = selectedVQIds.includes(vq.quotation_id);
+                     return (
+                        <div 
+                           key={vq.quotation_id}
+                           onClick={() => toggleVQSelection(vq.quotation_id)}
+                           className={`p-3 rounded-lg border cursor-pointer transition-all flex items-start gap-3 ${
+                              isSelected 
+                                 ? 'bg-blue-50 border-blue-500 dark:bg-blue-900/20 dark:border-blue-500' 
+                                 : 'bg-white border-gray-300 hover:border-blue-400 dark:bg-gray-800 dark:border-gray-600'
+                           }`}
+                        >
+                           <div className={`mt-0.5 ${isSelected ? 'text-blue-600' : 'text-gray-400'}`}>
+                              {isSelected ? <CheckSquare size={18} /> : <Square size={18} />}
+                           </div>
+                           <div className="flex-1 min-w-0">
+                              <div className="font-semibold text-gray-900 dark:text-gray-100 truncate" title={vq.vendor_name}>
+                                 {vq.vendor_name}
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1 flex justify-between">
+                                 <span>{vq.quotation_no || 'ยังไม่มีเลขที่'}</span>
+                                 <span className="font-medium text-gray-700 dark:text-gray-300">
+                                     {vq.total_amount?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                 </span>
+                              </div>
+                           </div>
+                        </div>
+                     );
+                  })}
+               </div>
+            )}
+          </div>
+
+          {/* Section: Vendor Comparison Matrix Table */}
           <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
             <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-4">
               <Scale size={18} />
-              <h3 className="font-bold">ตารางเปรียบเทียบราคา - Vendor Comparison Table</h3>
+              <h3 className="font-bold">ตารางเปรียบเทียบราคา - Comparison Matrix</h3>
             </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[900px] border-collapse text-sm">
-                <thead className="bg-blue-600 text-white">
-                  <tr>
-                    <th className="px-2 py-2.5 text-center font-medium w-12">ลำดับ</th>
-                    <th className="px-2 py-2.5 text-center font-medium w-32">รหัสเจ้าหนี้</th>
-                    <th className="px-2 py-2.5 text-left font-medium min-w-[150px]">ชื่อเจ้าหนี้</th>
-                    <th className="px-2 py-2.5 text-center font-medium w-28">เลขที่ใบเสนอราคา</th>
-                    <th className="px-2 py-2.5 text-center font-medium w-28">ยอดรวม (บาท)</th>
-                    <th className="px-2 py-2.5 text-center font-medium w-28">เงื่อนไขชำระเงิน</th>
-                    <th className="px-2 py-2.5 text-center font-medium w-24">LEAD TIME</th>
-                    <th className="px-2 py-2.5 text-center font-medium w-32">ใช้ได้ถึง</th>
-                    <th className="px-2 py-2.5 text-center font-medium w-16">จัดการ</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-gray-900">
-                  {vendorLines.map((line, index) => (
-                    <tr key={index} className="border-b border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-800">
-                      <td className="px-2 py-2 text-center text-gray-600 dark:text-gray-400 font-medium">
-                        {line.line_no}
-                      </td>
-                      <td className="px-2 py-2">
-                        <div className="flex items-center gap-1">
-                          <input
-                            type="text"
-                            value={line.vendor_code}
-                            onChange={(e) => updateLine(index, 'vendor_code', e.target.value)}
-                            placeholder="เลือกรหัสเจ้า"
-                            className={`${tableInputClass} flex-1 text-left`}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => openVendorSearch(index)}
-                            className="p-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors"
-                          >
-                            <Search size={14} />
-                          </button>
-                        </div>
-                      </td>
-                      <td className="px-2 py-2">
-                        <input
-                          type="text"
-                          value={line.vendor_name}
-                          onChange={(e) => updateLine(index, 'vendor_name', e.target.value)}
-                          placeholder="ชื่อเจ้าหนี้"
-                          className={`${tableInputClass} text-left`}
-                        />
-                      </td>
-                      <td className="px-2 py-2">
-                        <input
-                          type="text"
-                          value={line.vq_no}
-                          onChange={(e) => updateLine(index, 'vq_no', e.target.value)}
-                          placeholder="VQ-xxx"
-                          className={tableInputClass}
-                        />
-                      </td>
-                      <td className="px-2 py-2">
-                        <input
-                          type="number"
-                          value={line.total_amount || ''}
-                          onChange={(e) => updateLine(index, 'total_amount', parseFloat(e.target.value) || 0)}
-                          placeholder="0"
-                          className={tableInputClass}
-                        />
-                      </td>
-                      <td className="px-2 py-2">
-                        <div className="flex items-center justify-center gap-1">
-                          <input
-                            type="number"
-                            value={line.payment_term_days}
-                            onChange={(e) => updateLine(index, 'payment_term_days', parseInt(e.target.value) || 0)}
-                            className={`${tableInputClass} w-16`}
-                          />
-                          <span className="text-sm text-gray-500">วัน</span>
-                        </div>
-                      </td>
-                      <td className="px-2 py-2">
-                        <div className="flex items-center justify-center gap-1">
-                          <input
-                            type="number"
-                            value={line.lead_time_days}
-                            onChange={(e) => updateLine(index, 'lead_time_days', parseInt(e.target.value) || 0)}
-                            className={`${tableInputClass} w-16`}
-                          />
-                          <span className="text-sm text-gray-500">วัน</span>
-                        </div>
-                      </td>
-                      <td className="px-2 py-2">
-                        <input
-                          type="date"
-                          value={line.valid_until}
-                          onChange={(e) => updateLine(index, 'valid_until', e.target.value)}
-                          className={tableInputClass}
-                        />
-                      </td>
-                      <td className="px-2 py-2 text-center">
-                        <button
-                          type="button"
-                          onClick={() => removeLine(index)}
-                          className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
-                          title="ลบแถว"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <button
-              type="button"
-              onClick={addLine}
-              className="mt-3 px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 border border-blue-300 dark:border-blue-600 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
-            >
-              + เพิ่มแถว
-            </button>
+            
+            {isRFQDetailLoading ? (
+                <div className="text-center py-8 text-gray-500">กำลังโหลดโครงสร้างตาราง...</div>
+            ) : (
+                <QCMatrixTable 
+                  matrixData={matrixData}
+                  vendorTotals={vendorTotals}
+                  onSelectWinner={selectWinner}
+                  onSelectAllForVendor={selectAllForVendor}
+                />
+            )}
           </div>
         </div>
       </WindowFormLayout>
 
-      {/* Vendor Search Modal */}
-      <VendorSearchModal
-        isOpen={isVendorSearchOpen}
-        onClose={() => setIsVendorSearchOpen(false)}
-        onSelect={handleSelectVendor}
-      />
+
     </>
   );
 };

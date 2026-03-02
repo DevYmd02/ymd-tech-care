@@ -33,6 +33,7 @@ const RFQ_STATUS_OPTIONS = [
     { value: 'ALL', label: 'ทั้งหมด' },
     { value: 'DRAFT', label: 'แบบร่าง' },
     { value: 'SENT', label: 'ส่งแล้ว' },
+    { value: 'CLOSED', label: 'ปิดแล้ว' },
     { value: 'CANCELLED', label: 'ยกเลิก' },
 ];
 

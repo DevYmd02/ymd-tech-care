@@ -9,7 +9,13 @@
 // ====================================================================================
 
 /** QC Status - สถานะใบเปรียบเทียบราคา */
-export type QCStatus = 'DRAFT' | 'WAITING_FOR_PO' | 'PO_CREATED';
+export type QCStatus = 'DRAFT' | 'COMPLETED' | 'CANCELLED';
+
+export const QC_STATUS_OPTIONS = [
+  { value: 'DRAFT', label: 'แบบร่าง' },
+  { value: 'COMPLETED', label: 'ยืนยันผลแล้ว' },
+  { value: 'CANCELLED', label: 'ยกเลิก' },
+] as const;
 
 /** Quotation Comparison Header - ใบเปรียบเทียบราคา */
 export interface QCHeader {

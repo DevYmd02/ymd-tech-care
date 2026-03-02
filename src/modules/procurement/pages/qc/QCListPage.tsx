@@ -7,7 +7,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery, keepPreviousData, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Scale, FileText, Eye, RefreshCw } from 'lucide-react';
+import { Scale, Eye, RefreshCw, Pencil, Printer } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { PageListLayout, SmartTable, QCStatusBadge, FilterFormBuilder } from '@ui';
 import type { FilterFieldConfig } from '@ui';
@@ -15,24 +15,20 @@ import { useTableFilters, type TableFilters } from '@/shared/hooks';
 import { QCFormModal } from './components';
 import { createColumnHelper } from '@tanstack/react-table';
 import type { ColumnDef } from '@tanstack/react-table';
-import { useNavigate } from 'react-router-dom';
 
 // Services & Types
 import { QCService } from '@/modules/procurement/services';
 import type { QCListParams } from '@/modules/procurement/services/qc.service';
 import type { QCStatus, QCListItem } from '@/modules/procurement/types';
-import type { POFormData } from '@/modules/procurement/types';
-import { POFormModal } from '@/modules/procurement/pages/po/components';
+import { QC_STATUS_OPTIONS } from '@/modules/procurement/types';
 
 // ====================================================================================
 // STATUS OPTIONS
 // ====================================================================================
 
-const QC_STATUS_OPTIONS = [
+const FILTER_STATUS_OPTIONS = [
     { value: 'ALL', label: 'ทั้งหมด' },
-    { value: 'DRAFT', label: 'แบบร่าง' },
-    { value: 'WAITING_FOR_PO', label: 'รอเปิดใบสั่งซื้อ' },
-    { value: 'PO_CREATED', label: 'เปิดใบสั่งซื้อแล้ว' },
+    ...QC_STATUS_OPTIONS,
 ];
 
 // ====================================================================================
@@ -44,7 +40,7 @@ type QCFilterKeys = Extract<keyof TableFilters<QCStatus>, string>;
 const QC_FILTER_CONFIG: FilterFieldConfig<QCFilterKeys>[] = [
     { name: 'search', label: 'เลขที่ใบ QC', type: 'text', placeholder: 'QC2024-xxx' },
     { name: 'search2', label: 'เลขที่ PR อ้างอิง', type: 'text', placeholder: 'PR2024-xxx' },
-    { name: 'status', label: 'สถานะ', type: 'select', options: QC_STATUS_OPTIONS },
+    { name: 'status', label: 'สถานะ', type: 'select', options: FILTER_STATUS_OPTIONS },
     { name: 'dateFrom', label: 'วันที่สร้าง จาก', type: 'date' },
     { name: 'dateTo', label: 'ถึงวันที่', type: 'date' },
 ];
@@ -54,8 +50,6 @@ const QC_FILTER_CONFIG: FilterFieldConfig<QCFilterKeys>[] = [
 // ====================================================================================
 
 export default function QCListPage() {
-    const navigate = useNavigate();
-
     // URL-based Filter State
     const { filters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<QCStatus>({
         defaultStatus: 'ALL',
@@ -82,10 +76,6 @@ export default function QCListPage() {
 
     // Modal State (for future create functionality)
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    
-    // PO Modal State
-    const [isPOModalOpen, setIsPOModalOpen] = useState(false);
-    const [poInitialValues, setPoInitialValues] = useState<Partial<POFormData> | undefined>(undefined);
 
     const queryClient = useQueryClient();
 
@@ -212,33 +202,34 @@ export default function QCListPage() {
                             <Eye size={18} />
                         </button>
 
-                        {/* Send for Comparison Button (Migrated from VQ) */}
+                        {/* Editor/Compare Action for DRAFT */}
                         {item.status === 'DRAFT' && (
                             <button 
                                 onClick={() => handleCompare(item.qc_id)}
                                 disabled={compareMutation.isPending}
                                 className="flex items-center gap-1.5 px-3 py-1.5 bg-[#a855f7] hover:bg-[#9333ea] text-white text-[10px] font-bold rounded shadow transition-all whitespace-nowrap h-8 disabled:opacity-50"
-                                title="ส่งเปรียบเทียบราคา"
+                                title="เปรียบเทียบราคา"
                             >
-                                <RefreshCw size={12} className={compareMutation.isPending && compareMutation.variables === item.qc_id ? "animate-spin" : ""} />
-                                <span>{compareMutation.isPending && compareMutation.variables === item.qc_id ? "กำลังส่ง..." : "ส่งเปรียบเทียบราคา"}</span>
+                                {compareMutation.isPending && compareMutation.variables === item.qc_id ? (
+                                    <RefreshCw size={12} className="animate-spin" />
+                                ) : (
+                                    <Pencil size={12} />
+                                )}
+                                <span>{compareMutation.isPending && compareMutation.variables === item.qc_id ? "กำลังส่ง..." : "แก้ไขเปรียบเทียบ"}</span>
                             </button>
                         )}
 
-                        {item.status === 'WAITING_FOR_PO' && (
+                        {/* Print Action for COMPLETED (No PO Create here) */}
+                        {item.status === 'COMPLETED' && (
                             <button 
                                 onClick={() => {
-                                    setPoInitialValues({
-                                        vendor_id: item.lowest_bidder_vendor_id || '',
-                                        remarks: `Refer from QC: ${item.qc_no}`
-                                    });
-                                    setIsPOModalOpen(true);
+                                    window.alert(`Print QC: ${item.qc_no}`);
                                 }}
-                                className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors text-xs font-medium whitespace-nowrap h-8 shadow-sm"
-                                title="เปิดใบสั่งซื้อ"
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-600 hover:bg-gray-700 text-white text-[10px] font-bold rounded shadow transition-all whitespace-nowrap h-8"
+                                title="พิมพ์ใบเปรียบเทียบราคา"
                             >
-                                <FileText size={14} />
-                                <span>เปิดใบสั่งซื้อ</span>
+                                <Printer size={12} />
+                                <span>พิมพ์ใบเปรียบเทียบ</span>
                             </button>
                         )}
                     </div>
@@ -373,23 +364,23 @@ export default function QCListPage() {
                                                     disabled={compareMutation.isPending}
                                                     className="flex-[2] bg-[#a855f7] hover:bg-[#9333ea] text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm disabled:opacity-50"
                                                 >
-                                                    <RefreshCw size={14} className={compareMutation.isPending && compareMutation.variables === item.qc_id ? "animate-spin" : ""} />
-                                                    ส่งเปรียบเทียบราคา
+                                                    {compareMutation.isPending && compareMutation.variables === item.qc_id ? (
+                                                        <RefreshCw size={14} className="animate-spin" />
+                                                    ) : (
+                                                        <Pencil size={14} />
+                                                    )}
+                                                    แก้ไขเปรียบเทียบ
                                                 </button>
                                             )}
 
-                                            {item.status === 'WAITING_FOR_PO' && (
+                                            {item.status === 'COMPLETED' && (
                                                 <button 
                                                     onClick={() => {
-                                                        setPoInitialValues({
-                                                            vendor_id: item.lowest_bidder_vendor_id || '',
-                                                            remarks: `Refer from QC: ${item.qc_no}`
-                                                        });
-                                                        setIsPOModalOpen(true);
+                                                        window.alert(`Print QC: ${item.qc_no}`);
                                                     }}
-                                                    className="flex-[2] bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
+                                                    className="flex-[2] bg-gray-600 hover:bg-gray-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
                                                 >
-                                                    <FileText size={14} /> เปิดใบสั่งซื้อ
+                                                    <Printer size={14} /> พิมพ์ใบเปรียบเทียบ
                                                 </button>
                                             )}
                                         </div>
@@ -435,17 +426,6 @@ export default function QCListPage() {
                     }}
                 />
             )}
-            
-            <POFormModal
-                isOpen={isPOModalOpen}
-                onClose={() => setIsPOModalOpen(false)}
-                initialValues={poInitialValues}
-                onSuccess={() => {
-                     navigate('/procurement/po');
-                }}
-            />
         </>
     );
 }
-
-

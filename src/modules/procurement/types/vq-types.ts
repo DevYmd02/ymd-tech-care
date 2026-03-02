@@ -12,10 +12,10 @@
 export type QuotationStatus = 
     | 'PENDING'   // รอผู้ขายตอบกลับ (No VQ ID)
     | 'DRAFT'     // แบบร่าง (No VQ ID — internal draft)
-    | 'RECEIVED'  // ได้รับแล้ว (Vendor replied, not keyed yet — No VQ ID)
     | 'RECORDED'  // บันทึกแล้ว (Procurement keyed in data — VQ ID Generated)
     | 'DECLINED'  // ผู้ขายปฏิเสธ
-    | 'EXPIRED';  // หมดอายุ
+    | 'EXPIRED'   // หมดอายุ
+    | 'CANCELLED'; // ยกเลิก
 
 // ====================================================================================
 // QUOTATION HEADER - ตาราง quotation_header
@@ -74,6 +74,7 @@ export interface QuotationLine {
     tax_code?: string;                  // VARCHAR(20)
     net_amount: number;                 // Required
     no_quote?: boolean;
+    reference_price?: number;           // Reference budget from RFQ/PR
     remark?: string;
     warehouse?: string;
     location?: string;

@@ -1,14 +1,17 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm, useFieldArray, useWatch, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { QuotationHeaderSchema, type QuotationFormData, type QuotationLineFormData } from '@/modules/procurement/schemas/vq-schemas';
-import { VQService } from '@/modules/procurement/services/vq.service';
+import { VQService, type VQCreateData } from '@/modules/procurement/services/vq.service';
 import { RFQService } from '@/modules/procurement/services/rfq.service';
 import type { RFQHeader, RFQDetailResponse, RFQLine } from '@/modules/procurement/types';
 import { logger } from '@/shared/utils/logger';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
-import type { VQListItem, QuotationLine } from '@/modules/procurement/types/vq-types';
+import { useToast } from '@/shared/components/ui/feedback/Toast';
+import type { VQListItem, VQStatus, QuotationLine } from '@/modules/procurement/types/vq-types';
 import { useVQMasterData } from './useVQMasterData';
+import { useCallback } from 'react';
+import type { FieldErrors } from 'react-hook-form';
 
 
 /** Type for RFQ with incidental vendor info often passed in VQ creation flow */
@@ -29,6 +32,7 @@ const createEmptyLine = (): QuotationLineFormData => ({
   net_amount: 0,
   uom_name: '',
   no_quote: false,
+  reference_price: 0,
 });
 
 export const useVQForm = (
@@ -39,10 +43,12 @@ export const useVQForm = (
   vqId?: string | null,
   isViewMode?: boolean
 ) => {
+  const { toast } = useToast();
+  const showAlert = useCallback((message: string) => toast(message, 'error'), [toast]);
   const { confirm } = useConfirmation();
   const { purchaseTaxOptions, isLoading: isMasterLoading } = useVQMasterData();
 
-  const methods = useForm<QuotationFormData>({
+  const formMethods = useForm<QuotationFormData>({
     resolver: zodResolver(QuotationHeaderSchema) as Resolver<QuotationFormData>,
     defaultValues: {
       quotation_no: '',
@@ -59,10 +65,12 @@ export const useVQForm = (
       remark: '',
       discount_raw: '',
       tax_code_id: '',
+      rfq_no: '',
+      qc_id: '',
     }
   });
 
-  const { control, reset, handleSubmit, setValue, getValues } = methods;
+  const { control, reset, handleSubmit, setValue, getValues } = formMethods;
   const { fields, append, remove, insert } = useFieldArray({
     control,
     name: "lines"
@@ -90,12 +98,41 @@ export const useVQForm = (
     }
   }, [watchCurrency, setValue, getValues]);
 
+  const [vqStatus, setVqStatus] = useState<VQStatus | null>(null);
+  const [isDataLoading, setIsDataLoading] = useState(false);
+
   // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
       if (vqId) {
+        setIsDataLoading(true);
         // --- VIEW / EDIT MODE: Fetch Existing VQ ---
-        VQService.getById(vqId).then((data: VQListItem) => {
+        VQService.getById(vqId).then(async (data: VQListItem) => {
+            setVqStatus(data.status);
+
+            // SPECIAL CASE: If PENDING, we must pull LATEST lines from the referenced RFQ
+            let linesToMap: QuotationLine[] = data.lines || [];
+            if (data.status === 'PENDING' && data.rfq_id) {
+               try {
+                  const rfqDetail = await RFQService.getById(data.rfq_id);
+                  if (rfqDetail.lines && rfqDetail.lines.length > 0) {
+                      linesToMap = rfqDetail.lines.map(line => ({
+                          item_code: line.item_code || '',
+                          item_name: line.item_name || '',
+                          qty: line.required_qty || 0,
+                          uom_name: line.uom || '',
+                          unit_price: 0,
+                          discount_amount: 0,
+                          net_amount: 0,
+                          no_quote: false,
+                          reference_price: line.est_unit_price || 0
+                      } as QuotationLine));
+                  }
+               } catch (err) {
+                  logger.error('[useVQForm] Failed to fetch RFQ lines for PENDING VQ:', err);
+               }
+            }
+
             reset({
                 quotation_no: data.quotation_no,
                 quotation_date: data.quotation_date?.split('T')[0],
@@ -113,10 +150,11 @@ export const useVQForm = (
                 lead_time_days: data.lead_time_days || 0,
                 valid_until: data.valid_until?.split('T')[0],
                 qc_id: data.qc_id,
+                rfq_no: data.rfq_no,
                 remark: data.remarks,
                 discount_raw: data.discount_raw || '',
                 tax_code_id: data.tax_code_id ? String(data.tax_code_id) : '',
-                lines: data.lines?.map((l: QuotationLine) => ({
+                lines: linesToMap.map((l: QuotationLine) => ({
                     item_code: l.item_code || '',
                     item_name: l.item_name || '',
                     qty: l.qty || 0,
@@ -124,11 +162,14 @@ export const useVQForm = (
                     discount_amount: l.discount_amount || 0,
                     net_amount: l.net_amount || 0,
                     uom_name: l.uom_name || '',
-                    no_quote: Boolean(l.no_quote)
-                })) || []
+                    no_quote: Boolean(l.no_quote),
+                    reference_price: l.reference_price || 0
+                }))
             });
+            setIsDataLoading(false);
         }).catch(err => {
             logger.error('[useVQForm] Failed to fetch VQ detail:', err);
+            setIsDataLoading(false);
         });
       } else if (initialRFQ) {
         // --- CREATE MODE: Auto-fill from RFQ ---
@@ -146,6 +187,7 @@ export const useVQForm = (
                 discount_amount: 0,
                 net_amount: 0,
                 no_quote: false,
+                reference_price: line.est_unit_price || 0,
             }));
         } else {
             mappedLines = Array(5).fill(null).map(() => createEmptyLine());
@@ -163,7 +205,8 @@ export const useVQForm = (
           lines: mappedLines,
           payment_term_days: 30,
           lead_time_days: 7,
-          qc_id: initialRFQ.rfq_no || '',
+          qc_id: '', 
+          rfq_no: initialRFQ.rfq_no || '',
           remark: '',
           valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // Default +30 days
         });
@@ -226,45 +269,51 @@ export const useVQForm = (
         totalLineDiscount: lineDiscountTotal 
     };
   }, [lines, vatRate, discountInput]);
+  
+  // Error handler (The PR DNA: Recursive first error message extractor)
+  const handleFormError = useCallback((fieldErrors: FieldErrors<QuotationFormData>) => {
+    const firstKey = Object.keys(fieldErrors)[0];
+    if (firstKey) {
+      showAlert('กรุณากรอกข้อมูลให้ครบถ้วนก่อนบันทึกเอกสาร)');
+    }
+  }, [showAlert]);
 
   // Handlers
   const handleSave = handleSubmit(async (data: QuotationFormData) => {
     if (isViewMode) return;
     try {
-      if (!data.vendor_id) {
-         // Should be caught by validation, but double check
-         return;
-      }
+      if (!data.vendor_id) return;
       
-      const payload = {
+      // Map form data to VQ format, forcing RECORDED status
+      const payload: VQCreateData = {
           ...data,
           total_amount: totals.grandTotal,
-          lines: data.lines.filter(l => l.item_code) // Filter empty lines
+          status: 'RECORDED',
+          lines: data.lines
+            .filter(l => l.item_code)
+            .map(l => ({
+                ...l,
+                net_amount: l.net_amount || 0
+            }))
       };
 
-      await VQService.create(payload);
-      
-      await confirm({
-          title: 'บันทึกสำเร็จ',
-          description: 'บันทึกใบเสนอราคาเรียบร้อยแล้ว',
-          confirmText: 'ตกลง',
-          hideCancel: true,
-          variant: 'success'
-      });
+      if (vqId) {
+        const response = await VQService.update(vqId, payload as Partial<VQListItem>);
+        const vqNo = data.quotation_no || (response.id ? String(response.id) : vqId);
+        toast(`แก้ไขใบเสนอราคา ${vqNo} สำเร็จ`, 'success', 'บันทึกสำเร็จ');
+      } else {
+        const response = await VQService.create(payload);
+        const vqNo = data.quotation_no || (response.id ? String(response.id) : '');
+        toast(`บันทึกใบเสนอราคา ${vqNo} สำเร็จ`, 'success', 'บันทึกสำเร็จ');
+      }
       
       onSuccess?.();
       onClose();
     } catch (error) {
       logger.error('Save VQ failed:', error);
-      await confirm({
-          title: 'เกิดข้อผิดพลาด',
-          description: 'ไม่สามารถบันทึกข้อมูลได้',
-          confirmText: 'ตกลง',
-          hideCancel: true,
-          variant: 'danger'
-      });
+      toast('เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'error');
     }
-  });
+  }, handleFormError);
 
   const updateLineCalculation = (index: number, field: keyof QuotationLineFormData, value: number | boolean) => {
       const currentLine = lines[index];
@@ -318,6 +367,7 @@ export const useVQForm = (
           discount_amount: 0,
           net_amount: 0,
           no_quote: false,
+          reference_price: line.est_unit_price || 0,
       }));
 
       // Find primary vendor if available
@@ -325,7 +375,8 @@ export const useVQForm = (
 
       reset({
         ...getValues(),
-        qc_id: fullRFQ.rfq_no,
+        qc_id: '', // Reset comparison ID as we are linking to a new RFQ source
+        rfq_no: fullRFQ.rfq_no,
         vendor_id: primaryVendor?.vendor_id || '',
         vendor_name: primaryVendor?.vendor_name || '',
         currency: fullRFQ.currency || 'THB',
@@ -355,12 +406,13 @@ export const useVQForm = (
 
     if (isConfirmed) {
         setValue('qc_id', '');
+        setValue('rfq_no', '');
         setValue('lines', [createEmptyLine(), createEmptyLine(), createEmptyLine(), createEmptyLine(), createEmptyLine()]);
     }
   };
 
   return {
-    methods,
+    formMethods,
     fields,
     append,
     remove,
@@ -373,6 +425,8 @@ export const useVQForm = (
     vatRate,
     createEmptyLine,
     purchaseTaxOptions,
-    isMasterLoading
+    isMasterLoading,
+    vqStatus,
+    isDataLoading
   };
 };

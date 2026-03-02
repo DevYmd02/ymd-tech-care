@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { FileText, Trash2, XCircle } from 'lucide-react';
 import { useRFQForm } from '@/modules/procurement/pages/rfq/hooks';
 import { RFQFormHeader } from './RFQFormHeader';
@@ -41,6 +42,27 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
 
     const cardClass = 'bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden shadow-sm';
 
+    // Auto-scroll to first error (Blueprint Standard)
+    useEffect(() => {
+        const errorKeys = Object.keys(errors);
+        if (errorKeys.length > 0 && !isSaving) {
+            // Priority 1: Direct ID match
+            let firstErrorField = document.getElementById(errorKeys[0]);
+            
+            // Priority 2: Any element with error class
+            if (!firstErrorField) {
+                firstErrorField = document.querySelector('.border-red-500');
+            }
+
+            if (firstErrorField) {
+                firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                if (firstErrorField instanceof HTMLInputElement || firstErrorField instanceof HTMLSelectElement || firstErrorField instanceof HTMLTextAreaElement) {
+                    firstErrorField.focus();
+                }
+            }
+        }
+    }, [errors, isSaving]);
+
     return (
         <WindowFormLayout
             isOpen={isOpen}
@@ -63,7 +85,7 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
                                 <span className="hidden sm:inline">ลบเอกสาร</span>
                             </button>
                         )}
-                        {!readOnly && !isInviteMode && (formData.status === 'SENT' || formData.status === 'IN_PROGRESS') && editId && (
+                        {!readOnly && !isInviteMode && (formData.status === 'SENT') && editId && (
                             <button
                                 type="button"
                                 className="flex items-center gap-1.5 px-3 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md text-sm font-medium transition-colors border border-transparent hover:border-red-200 dark:hover:border-red-800"

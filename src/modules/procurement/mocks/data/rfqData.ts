@@ -1,4 +1,4 @@
-﻿import type { RFQHeader, RFQVendor } from '@/modules/procurement/types';
+﻿import type { RFQHeader, RFQVendor, RFQLine } from '@/modules/procurement/types';
 
 /**
  * MOCK RFQ DATA — (RELATIONALLY SYNCED EDITION)
@@ -139,7 +139,7 @@ const EXPLICIT_RFQS: RFQHeader[] = [
   },
 
   // ── rfq-007: Laptop Computer  ───────────────────────────────────────────────────
-  // VQ List shows: IT Supply Co./V-001 (RECORDED), Smart Tech/V-005 (RECEIVED — no VQ yet)
+  // VQ List shows: IT Supply Co./V-001 (RECORDED), Smart Tech/V-005 (PENDING — no VQ yet)
   {
     rfq_id: 'rfq-007', rfq_no: 'RFQ-202602-0007',
     pr_id: 'pr-007', pr_no: 'PR-202602-0012', ref_pr_no: 'PR-202602-0012',
@@ -275,7 +275,40 @@ const EXPLICIT_RFQS: RFQHeader[] = [
 ];
 
 export const MOCK_RFQS: RFQHeader[] = EXPLICIT_RFQS;
-export const MOCK_RFQ_LINES = [];
+export const MOCK_RFQ_LINES: RFQLine[] = [
+  {
+    rfq_line_id: 'rl-007-1',
+    rfq_id: 'rfq-007',
+    line_no: 1,
+    pr_line_id: 'prl-007-1',
+    item_id: 'item-001',
+    item_code: 'COMP-001',
+    item_name: 'Laptop Business Pro 14"',
+    item_description: 'Core i7, 16GB RAM, 512GB SSD',
+    required_qty: 10,
+    uom: 'เครื่อง',
+    required_date: '2026-03-31',
+    technical_spec: 'Military standard, Win 11 Pro',
+    est_unit_price: 25000,
+    remark: null
+  },
+  {
+    rfq_line_id: 'rl-007-2',
+    rfq_id: 'rfq-007',
+     line_no: 2,
+    pr_line_id: 'prl-007-2',
+    item_id: 'item-002',
+    item_code: 'COMP-002',
+    item_name: 'Wireless Mouse',
+    item_description: 'Ergonomic, Silent click',
+    required_qty: 10,
+    uom: 'ตัว',
+    required_date: '2026-03-31',
+    technical_spec: 'Bluetooth & 2.4GHz',
+    est_unit_price: 1200,
+    remark: null
+  }
+];
 
 // ====================================================================================
 // EXPLICIT RFQ VENDOR RECORDS (Synchronized with vqData.ts)

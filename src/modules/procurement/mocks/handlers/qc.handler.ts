@@ -40,13 +40,13 @@ export const setupQCHandlers = (mock: MockAdapter) => {
     return [404, { message: 'QC Not Found' }];
   });
 
-  // 3. POST QC Comparison (Status Transition: DRAFT -> WAITING_FOR_PO)
+  // 3. POST QC Comparison (Status Transition: DRAFT -> COMPLETED)
   mock.onPost(/\/qc\/compare\/.+/).reply((config: AxiosRequestConfig) => {
     const id = sanitizeId(config.url?.split('/').pop());
     const found = MOCK_QCS.find(q => sanitizeId(q.qc_id) === id);
     
     if (found) {
-        found.status = 'WAITING_FOR_PO';
+        found.status = 'COMPLETED';
         return [200, { success: true }];
     }
     return [404, { message: 'QC Not Found' }];
