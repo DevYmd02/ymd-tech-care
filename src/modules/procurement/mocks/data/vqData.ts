@@ -29,7 +29,8 @@ const _vqs: VQListItem[] = [
     vendor_id: 'v006', vendor_code: 'V006', vendor_name: 'Industrial Part Ltd.', quotation_date: '2026-02-06', valid_until: '2026-03-06', 
     payment_term_days: 60, lead_time_days: 3, total_amount: 85000, currency: 'THB', isMulticurrency: false, exchange_rate: 1, status: 'RECORDED',
     lines: [
-      { item_code: 'OIL-IND-046', item_name: 'Industrial Oil 46 (200L)', qty: 10, uom_name: 'ถัง', unit_price: 8500, net_amount: 85000 }
+      { item_code: 'OIL-IND-046', item_name: 'Industrial Oil 46 (200L)', qty: 10, uom_name: 'ถัง', unit_price: 8500, net_amount: 85000, no_quote: false },
+      { item_code: 'OIL-GRS-001', item_name: 'Machine Grease (15kg)', qty: 5, uom_name: 'ถัง', unit_price: 3400, net_amount: 17000, no_quote: false }
     ]
   },
   { 
@@ -37,7 +38,18 @@ const _vqs: VQListItem[] = [
     vendor_id: 'v007', vendor_code: 'V007', vendor_name: 'Global Oil Co.', quotation_date: '2026-02-07', valid_until: '2026-03-07', 
     payment_term_days: 45, lead_time_days: 7, total_amount: 82000, currency: 'THB', isMulticurrency: false, exchange_rate: 1, status: 'RECORDED',
     lines: [
-      { item_code: 'OIL-IND-046', item_name: 'Industrial Oil 46 (200L)', qty: 10, uom_name: 'ถัง', unit_price: 8200, net_amount: 82000 }
+      { item_code: 'OIL-IND-046', item_name: 'Industrial Oil 46 (200L)', qty: 10, uom_name: 'ถัง', unit_price: 8200, net_amount: 82000, no_quote: false },
+      { item_code: 'OIL-GRS-001', item_name: 'Machine Grease (15kg)', qty: 5, uom_name: 'ถัง', unit_price: 3600, net_amount: 18000, no_quote: false }
+    ]
+  },
+  // Vendor C for RFQ-006 (Incomplete/No Quote)
+  { 
+    quotation_id: 'vq-014', quotation_no: 'VQ-V005-014', qc_id: '', rfq_no: 'RFQ-202602-0006', rfq_id: 'rfq-006', pr_no: 'PR-202602-0010', 
+    vendor_id: 'v005', vendor_code: 'V005', vendor_name: 'Smart Tech (Vendor C)', quotation_date: '2026-02-08', valid_until: '2026-03-08', 
+    payment_term_days: 30, lead_time_days: 5, total_amount: 80000, currency: 'THB', isMulticurrency: false, exchange_rate: 1, status: 'RECORDED',
+    lines: [
+      { item_code: 'OIL-IND-046', item_name: 'Industrial Oil 46 (200L)', qty: 10, uom_name: 'ถัง', unit_price: 8000, net_amount: 80000, no_quote: false },
+      { item_code: 'OIL-GRS-001', item_name: 'Machine Grease (15kg)', qty: 5, uom_name: 'ถัง', unit_price: 0, net_amount: 0, no_quote: true }
     ]
   },
 

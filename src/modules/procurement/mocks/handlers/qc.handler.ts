@@ -12,7 +12,6 @@ export const setupQCHandlers = (mock: MockAdapter) => {
         ...qc,
         qc_id: sanitizeId(qc.qc_id),
         pr_id: sanitizeId(qc.pr_id),
-        lowest_bidder_vendor_id: sanitizeId(qc.lowest_bidder_vendor_id),
     }));
 
     const result = applyMockFilters(sanitizedData, params, {
@@ -33,7 +32,6 @@ export const setupQCHandlers = (mock: MockAdapter) => {
             ...found,
             qc_id: sanitizeId(found.qc_id),
             pr_id: sanitizeId(found.pr_id),
-            lowest_bidder_vendor_id: sanitizeId(found.lowest_bidder_vendor_id),
         };
         return [200, sanitized];
     }

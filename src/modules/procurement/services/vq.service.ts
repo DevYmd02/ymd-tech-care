@@ -15,6 +15,11 @@ export const VQService = {
     return await api.get<VQListResponse>(ENDPOINTS.list, { params });
   },
 
+  getVQsByRfqId: async (rfqId: string): Promise<VQListResponse> => {
+    logger.info(`[VQService] Fetching VQs for RFQ ID: ${rfqId}`);
+    return await api.get<VQListResponse>(ENDPOINTS.list, { params: { rfq_id: rfqId } });
+  },
+
   getById: async (id: string): Promise<VQListItem> => {
     logger.info(`[VQService] Fetching VQ Detail ${id}`);
     return await api.get<VQListItem>(`${ENDPOINTS.list}/${id}`);

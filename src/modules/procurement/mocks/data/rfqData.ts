@@ -126,10 +126,10 @@ const EXPLICIT_RFQS: RFQHeader[] = [
     created_by_user_id: 'user-2', created_by_name: 'นางสาวจัดซื้อ สอง',
     created_at: '2026-02-05T09:00:00Z', updated_at: '2026-02-07T09:00:00Z',
     purpose: 'จัดซื้อน้ำมันหล่อลื่นสำหรับเครื่องจักรโรงงาน',
-    vendor_count: 2,
-    responded_vendors_count: 2,
-    sent_vendors_count: 2,
-    vendor_responded: 2,
+    vendor_count: 3,
+    responded_vendors_count: 3,
+    sent_vendors_count: 3,
+    vendor_responded: 3,
     has_quotation: true,
     currency: 'THB', exchange_rate: 1,
     delivery_location: 'โรงงานฝ่ายผลิต',
@@ -307,6 +307,38 @@ export const MOCK_RFQ_LINES: RFQLine[] = [
     technical_spec: 'Bluetooth & 2.4GHz',
     est_unit_price: 1200,
     remark: null
+  },
+  {
+    rfq_line_id: 'rl-006-1',
+    rfq_id: 'rfq-006',
+    line_no: 1,
+    pr_line_id: 'prl-006-1',
+    item_id: 'item-oil-1',
+    item_code: 'OIL-IND-046',
+    item_name: 'Industrial Oil 46 (200L)',
+    item_description: 'High-performance hydraulic oil',
+    required_qty: 10,
+    uom: 'ถัง',
+    required_date: '2026-02-28',
+    technical_spec: 'ISO VG 46, Anti-wear',
+    est_unit_price: 8000,
+    remark: null
+  },
+  {
+    rfq_line_id: 'rl-006-2',
+    rfq_id: 'rfq-006',
+    line_no: 2,
+    pr_line_id: 'prl-006-2',
+    item_id: 'item-oil-2',
+    item_code: 'OIL-GRS-001',
+    item_name: 'Machine Grease (15kg)',
+    item_description: 'Heavy duty lithium grease',
+    required_qty: 5,
+    uom: 'ถัง',
+    required_date: '2026-02-28',
+    technical_spec: 'NLGI 2, High temp',
+    est_unit_price: 3500,
+    remark: null
   }
 ];
 
@@ -329,6 +361,7 @@ export const MOCK_RFQ_VENDORS: (RFQVendor & { vendor_name: string; vendor_code: 
   // -- rfq-006 vendors: factory oil (2 vendors, all responded) -------------------
   makeVendor('rfq-006', 1, 'V-006', '2026-02-05', 'RESPONDED', '2026-02-06'), // Industrial -> vq-008
   makeVendor('rfq-006', 2, 'V-007', '2026-02-05', 'RESPONDED', '2026-02-07'), // Global Oil -> vq-007
+  makeVendor('rfq-006', 3, 'V-005', '2026-02-05', 'RESPONDED', '2026-02-08'), // Smart Tech  -> vq-014
 
   // -- rfq-007 vendors: laptop (sent to 2, awaiting reply) ----------------------
   makeVendor('rfq-007', 1, 'V-001', '2026-02-10', 'SENT',      null),         // IT Supply  -> vq-010

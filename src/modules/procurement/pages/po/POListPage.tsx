@@ -300,7 +300,7 @@ export default function POListPage() {
         <>
             <PageListLayout
                 title="รายการใบสั่งซื้อ"
-                subtitle="Purchase Order (PO) Master"
+                subtitle="Purchase Order (PO)"
                 icon={FileText}
                 accentColor="blue"
                 totalCount={data?.total}

@@ -186,4 +186,3 @@ export const ProductSearchModal: React.FC<ProductSearchModalProps> = ({ isOpen, 
         />
     );
 };
-

@@ -23,6 +23,7 @@ export interface QCHeader {
     qc_no: string;                      // QC-2024-xxxx
     pr_id: string;                      // FK -> pr_header
     pr_no?: string;                     // Display
+    rfq_no?: string;                    // Added for traceability
     created_at: string;                 // Date
     status: QCStatus;
     
@@ -46,6 +47,8 @@ export type QCListItem = QCHeader;
 export interface QCListParams {
   qc_no?: string;
   pr_no?: string;
+  rfq_no?: string;
+  vendor_name?: string;
   status?: string;
   date_from?: string;
   date_to?: string;

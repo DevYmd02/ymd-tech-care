@@ -6,7 +6,7 @@ import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWra
 import { MasterDataService } from '@/modules/master-data';
 import type { UnitListItem } from '@/modules/master-data/types/master-data-types';
 import { VendorSearchModal } from '@/modules/master-data/vendor/components/selector/VendorSearchModal';
-import { ProductSearchModal } from '@/modules/inventory/components/selector/ProductSearchModal';
+import { ProductSearchModal } from '@/modules/master-data/inventory/components/ProductSearchModal';
 import { useVQForm } from '../hooks/useVQForm';
 import { RFQSelectorModal } from './RFQSelectorModal';
 import { SharedRemarksTab } from '@/shared/components/forms/SharedRemarksTab';
