@@ -43,6 +43,7 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                 <div>
                     <label className={labelStyle}>วันที่สร้าง RFQ <span className="text-red-500">*</span></label>
                     <input
+                        id="rfq_date"
                         type="date"
                         value={formData.rfq_date}
                         onChange={(e) => handleChange('rfq_date', e.target.value)}
@@ -55,6 +56,7 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                     <label className={labelStyle}>PR ต้นทาง <span className="text-red-500">*</span></label>
                     <div className="flex gap-2">
                         <input
+                            id="pr_no"
                             type="text"
                             placeholder="PR2024-xxx"
                             value={formData.pr_no || ''}
@@ -82,6 +84,7 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                 <div>
                     <label className={labelStyle}>สถานะ <span className="text-red-500">*</span></label>
                     <select
+                        id="status"
                         value={formData.status}
                         onChange={(e) => handleChange('status', e.target.value)}
                         className={`${selectStyle} ${errors.status ? errorInputClass : ''}`}
@@ -130,6 +133,7 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                 <div>
                     <label className={labelStyle}>กำหนดส่งใบเสนอราคา <span className="text-red-500">*</span></label>
                     <input
+                        id="quote_due_date"
                         type="date"
                         value={formData.quote_due_date}
                         onChange={(e) => handleChange('quote_due_date', e.target.value)}

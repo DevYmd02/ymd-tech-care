@@ -10,7 +10,7 @@ import { AlertCircle, X, CheckCircle, Info } from 'lucide-react';
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
 interface ToastContextType {
-  toast: (message: string, type?: ToastType) => void;
+  toast: (message: string, type?: ToastType, title?: string) => void;
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -25,9 +25,10 @@ interface ToastProps {
   onClose: () => void;
   type?: ToastType;
   isVisible?: boolean;
+  title?: string;
 }
 
-export const Toast: React.FC<ToastProps> = ({ message, onClose, type = 'error', isVisible = true }) => {
+export const Toast: React.FC<ToastProps> = ({ message, onClose, type = 'error', isVisible = true, title }) => {
   const borderColors = {
     success: 'border-green-500',
     error: 'border-red-500',
@@ -51,12 +52,14 @@ export const Toast: React.FC<ToastProps> = ({ message, onClose, type = 'error', 
 
   const Icon = Icons[type];
 
-  const titles = {
+  const defaultTitles = {
     success: 'สำเร็จ',
     error: 'ข้อผิดพลาด',
     warning: 'คำเตือน',
     info: 'ข้อมูล'
   };
+
+  const displayTitle = title || defaultTitles[type];
 
   if (!isVisible) return null;
 
@@ -66,7 +69,7 @@ export const Toast: React.FC<ToastProps> = ({ message, onClose, type = 'error', 
          <Icon className={iconColors[type]} size={20} />
        </div>
        <div className="flex-1 pt-1">
-          <h4 className="font-bold text-gray-900 dark:text-gray-100 text-sm leading-tight">{titles[type]}</h4>
+          <h4 className="font-bold text-gray-900 dark:text-gray-100 text-sm leading-tight">{displayTitle}</h4>
           <p className="text-gray-600 dark:text-gray-400 text-xs mt-1">{message}</p>
        </div>
        <button 
@@ -87,11 +90,13 @@ export const Toast: React.FC<ToastProps> = ({ message, onClose, type = 'error', 
 export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [message, setMessage] = useState('');
   const [type, setType] = useState<ToastType>('error');
+  const [title, setTitle] = useState<string | undefined>(undefined);
   const [isVisible, setIsVisible] = useState(false);
 
-  const toast = useCallback((msg: string, t: ToastType = 'error') => {
+  const toast = useCallback((msg: string, t: ToastType = 'error', customTitle?: string) => {
     setMessage(msg);
     setType(t);
+    setTitle(customTitle);
     setIsVisible(true);
     
     // Auto close after 3 seconds
@@ -111,7 +116,8 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         message={message} 
         type={type} 
         isVisible={isVisible} 
-        onClose={closeToast} 
+        onClose={closeToast}
+        title={title}
       />
     </ToastContext.Provider>
   );

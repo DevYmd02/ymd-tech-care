@@ -7,32 +7,26 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery, keepPreviousData, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Scale, FileText, Eye, RefreshCw } from 'lucide-react';
+import { Scale, Eye, RefreshCw, Pencil } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { PageListLayout, SmartTable, QCStatusBadge, FilterFormBuilder } from '@ui';
 import type { FilterFieldConfig } from '@ui';
 import { useTableFilters, type TableFilters } from '@/shared/hooks';
 import { QCFormModal } from './components';
 import { createColumnHelper } from '@tanstack/react-table';
-import type { ColumnDef } from '@tanstack/react-table';
-import { useNavigate } from 'react-router-dom';
 
 // Services & Types
 import { QCService } from '@/modules/procurement/services';
-import type { QCListParams } from '@/modules/procurement/services/qc.service';
-import type { QCStatus, QCListItem } from '@/modules/procurement/types';
-import type { POFormData } from '@/modules/procurement/types';
-import { POFormModal } from '@/modules/procurement/pages/po/components';
+import type { QCListParams, QCListItem, QCStatus } from '@/modules/procurement/schemas/qc-schemas';
+import { QC_STATUS_OPTIONS } from '@/modules/procurement/types';
 
 // ====================================================================================
 // STATUS OPTIONS
 // ====================================================================================
 
-const QC_STATUS_OPTIONS = [
+const FILTER_STATUS_OPTIONS = [
     { value: 'ALL', label: 'ทั้งหมด' },
-    { value: 'DRAFT', label: 'แบบร่าง' },
-    { value: 'WAITING_FOR_PO', label: 'รอเปิดใบสั่งซื้อ' },
-    { value: 'PO_CREATED', label: 'เปิดใบสั่งซื้อแล้ว' },
+    ...QC_STATUS_OPTIONS,
 ];
 
 // ====================================================================================
@@ -44,9 +38,10 @@ type QCFilterKeys = Extract<keyof TableFilters<QCStatus>, string>;
 const QC_FILTER_CONFIG: FilterFieldConfig<QCFilterKeys>[] = [
     { name: 'search', label: 'เลขที่ใบ QC', type: 'text', placeholder: 'QC2024-xxx' },
     { name: 'search2', label: 'เลขที่ PR อ้างอิง', type: 'text', placeholder: 'PR2024-xxx' },
-    { name: 'status', label: 'สถานะ', type: 'select', options: QC_STATUS_OPTIONS },
-    { name: 'dateFrom', label: 'วันที่สร้าง จาก', type: 'date' },
-    { name: 'dateTo', label: 'ถึงวันที่', type: 'date' },
+    { name: 'search3', label: 'เลขที่ RFQ อ้างอิง', type: 'text', placeholder: 'RFQ2024-xxx' },
+    { name: 'status', label: 'สถานะ', type: 'select', options: FILTER_STATUS_OPTIONS },
+    { name: 'dateFrom', label: 'วันที่สร้างเริ่มต้น', type: 'date' },
+    { name: 'dateTo', label: 'วันที่สร้างสิ้นสุด', type: 'date' },
 ];
 
 // ====================================================================================
@@ -54,8 +49,6 @@ const QC_FILTER_CONFIG: FilterFieldConfig<QCFilterKeys>[] = [
 // ====================================================================================
 
 export default function QCListPage() {
-    const navigate = useNavigate();
-
     // URL-based Filter State
     const { filters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<QCStatus>({
         defaultStatus: 'ALL',
@@ -65,6 +58,7 @@ export default function QCListPage() {
     const apiFilters: QCListParams = {
         qc_no: filters.search || undefined,
         pr_no: filters.search2 || undefined,
+        rfq_no: filters.search3 || undefined,
         status: filters.status === 'ALL' ? undefined : filters.status,
         date_from: filters.dateFrom || undefined,
         date_to: filters.dateTo || undefined,
@@ -82,10 +76,6 @@ export default function QCListPage() {
 
     // Modal State (for future create functionality)
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    
-    // PO Modal State
-    const [isPOModalOpen, setIsPOModalOpen] = useState(false);
-    const [poInitialValues, setPoInitialValues] = useState<Partial<POFormData> | undefined>(undefined);
 
     const queryClient = useQueryClient();
 
@@ -113,7 +103,7 @@ export default function QCListPage() {
         setFilters({ [name]: value });
     };
 
-    // Columns
+    // Columns Definition
     const columnHelper = createColumnHelper<QCListItem>();
 
     const columns = useMemo(() => [
@@ -122,37 +112,62 @@ export default function QCListPage() {
             header: () => <div className="text-center w-full">ลำดับ</div>,
             cell: (info) => <div className="text-center">{info.row.index + 1 + (filters.page - 1) * filters.limit}</div>,
             footer: () => <div className="absolute left-4 top-1/2 -translate-y-1/2 whitespace-nowrap font-bold text-sm text-gray-700 dark:text-gray-200">ยอดรวมราคาต่ำสุดทั้งหมด :</div>,
-            size: 40,
+            size: 50,
             enableSorting: false,
         }),
         columnHelper.accessor('qc_no', {
             header: 'เลขที่ใบ QC',
             cell: (info) => (
-                <span className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline cursor-pointer block" title={info.getValue()}>
+                <span 
+                    className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline cursor-pointer block whitespace-nowrap" 
+                    title={info.getValue()}
+                    onClick={() => {
+                        window.alert(`Open QC Detail: ${info.getValue()}`);
+                    }}
+                >
                     {info.getValue()}
                 </span>
             ),
-            size: 120, // Reduced from 140
+            size: 140,
             enableSorting: true,
         }),
         columnHelper.accessor('created_at', {
             header: () => <div className="text-left">วันที่สร้าง</div>,
             cell: (info) => (
                 <div className="text-gray-600 dark:text-gray-300 text-left whitespace-nowrap">
-                    {formatThaiDate(info.getValue())}
+                    {info.getValue() ? formatThaiDate(info.getValue()!) : '-'}
                 </div>
             ),
-            size: 110, // Reduced from 130
+            size: 100,
             enableSorting: true,
         }),
-        columnHelper.accessor('pr_no', {
-            header: 'PR อ้างอิง',
-            cell: (info) => (
-                <span className="font-medium text-purple-500 dark:text-purple-300 truncate block" title={info.getValue()}>
-                    {info.getValue()}
-                </span>
-            ),
-            size: 120, // Reduced from 140
+        columnHelper.accessor('rfq_no', {
+            header: 'เอกสารอ้างอิง',
+            cell: (info) => {
+                const item = info.row.original;
+                return (
+                    <div className="flex flex-col truncate">
+                        <span 
+                            className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline cursor-pointer leading-tight" 
+                            title={`RFQ: ${item.rfq_no || '-'}`}
+                            onClick={() => {
+                                if (item.rfq_no) window.alert(`Open RFQ Detail: ${item.rfq_no}`);
+                            }}
+                        >
+                            {item.rfq_no || '-'}
+                        </span>
+                        {item.pr_no && (
+                            <span 
+                                className="text-xs text-slate-500 mt-0.5 truncate" 
+                                title={`PR: ${item.pr_no}`}
+                            >
+                                Ref: {item.pr_no}
+                            </span>
+                        )}
+                    </div>
+                );
+            },
+            size: 130,
             enableSorting: false,
         }),
         columnHelper.accessor(row => row.status, {
@@ -163,7 +178,7 @@ export default function QCListPage() {
                     <QCStatusBadge status={info.getValue()} />
                 </div>
             ),
-            size: 120,
+            size: 100,
             enableSorting: false,
         }),
         columnHelper.accessor('vendor_count', {
@@ -173,29 +188,36 @@ export default function QCListPage() {
                     {info.getValue()}
                 </div>
             ),
-            size: 70, // Reduced from 80
+            size: 70,
             enableSorting: false,
         }),
         columnHelper.accessor('lowest_bidder_name', {
             header: 'ผู้เสนอราคาต่ำสุด',
             cell: (info) => (
-                <div className="max-w-[150px] truncate" title={info.getValue() || ''}>
+                <div className="truncate" title={info.getValue() || ''}>
                     <span className="hover:underline cursor-pointer text-gray-600 dark:text-gray-300">
                         {info.getValue()}
                     </span>
                 </div>
             ),
-            size: 160, // Reduced from 200
+            size: 180,
             enableSorting: false,
         }),
-        columnHelper.accessor('lowest_bid_amount', {
+        columnHelper.accessor('lowest_price', {
             header: () => <div className="text-right w-full">ราคาต่ำสุด (บาท)</div>,
-            cell: (info) => (
-                <div className="font-semibold text-gray-800 dark:text-gray-200 text-right whitespace-nowrap">
-                    {info.getValue()?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                </div>
-            ),
-            size: 120, // Reduced from 140
+            cell: (info) => {
+                const item = info.row.original;
+                const isCompleted = item.status === 'COMPLETED';
+                return (
+                    <div className={`text-right font-bold whitespace-nowrap ${isCompleted ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-600'}`}>
+                        {isCompleted
+                            ? (info.getValue() || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                            : '-'
+                        }
+                    </div>
+                );
+            },
+            size: 130,
             enableSorting: true,
         }),
         columnHelper.display({
@@ -205,47 +227,39 @@ export default function QCListPage() {
                 const item = row.original;
                 return (
                     <div className="flex items-center justify-center gap-2">
-                        <button 
+                        {/* Eye (View) — visible for all statuses */}
+                        <button
                             className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors flex items-center justify-center"
                             title="ดูรายละเอียด"
                         >
                             <Eye size={18} />
                         </button>
 
-                        {/* Send for Comparison Button (Migrated from VQ) */}
+                        {/* DRAFT: Purple "เปรียบเทียบราคา" button */}
                         {item.status === 'DRAFT' && (
-                            <button 
-                                onClick={() => handleCompare(item.qc_id)}
+                            <button
+                                onClick={() => handleCompare(item.qc_id || '')}
                                 disabled={compareMutation.isPending}
                                 className="flex items-center gap-1.5 px-3 py-1.5 bg-[#a855f7] hover:bg-[#9333ea] text-white text-[10px] font-bold rounded shadow transition-all whitespace-nowrap h-8 disabled:opacity-50"
-                                title="ส่งเปรียบเทียบราคา"
+                                title="เปรียบเทียบราคา"
                             >
-                                <RefreshCw size={12} className={compareMutation.isPending && compareMutation.variables === item.qc_id ? "animate-spin" : ""} />
-                                <span>{compareMutation.isPending && compareMutation.variables === item.qc_id ? "กำลังส่ง..." : "ส่งเปรียบเทียบราคา"}</span>
+                                {compareMutation.isPending && compareMutation.variables === item.qc_id ? (
+                                    <RefreshCw size={12} className="animate-spin" />
+                                ) : (
+                                    <Pencil size={12} />
+                                )}
+                                <span>{compareMutation.isPending && compareMutation.variables === item.qc_id ? 'กำลังส่ง...' : 'เปรียบเทียบราคา'}</span>
                             </button>
                         )}
-
-                        {item.status === 'WAITING_FOR_PO' && (
-                            <button 
-                                onClick={() => {
-                                    setPoInitialValues({
-                                        vendor_id: item.lowest_bidder_vendor_id || '',
-                                        remarks: `Refer from QC: ${item.qc_no}`
-                                    });
-                                    setIsPOModalOpen(true);
-                                }}
-                                className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors text-xs font-medium whitespace-nowrap h-8 shadow-sm"
-                                title="เปิดใบสั่งซื้อ"
-                            >
-                                <FileText size={14} />
-                                <span>เปิดใบสั่งซื้อ</span>
-                            </button>
-                        )}
+                        {/* COMPLETED: Eye only — no print button */}
+                        {/* CANCELLED: Eye only — no duplicate eye */}
                     </div>
                 );
             },
             footer: () => {
-                 const total = data?.data.reduce((sum, item) => sum + (item.lowest_bid_amount || 0), 0) || 0;
+                 const total = data?.data
+                    .filter(item => item.status === 'COMPLETED')
+                    .reduce((sum, item) => sum + (item.lowest_price || 0), 0) || 0;
                  return (
                      <div className="text-right font-bold text-base text-emerald-600 dark:text-emerald-400 whitespace-nowrap pr-2">
                          {total.toLocaleString('en-US', { minimumFractionDigits: 2 })} บาท
@@ -279,11 +293,10 @@ export default function QCListPage() {
                         onSearch={() => {}} // React Query auto-fetches on filter change
                         onReset={resetFilters}
                         accentColor="indigo"
-                        columns={{ sm: 1, md: 2, lg: 4, xl: 4 }}
-                        actionColSpan={{ md: 2, lg: 4, xl: 4 }}
-                        actionAlign="end"
                         onCreate={() => setIsCreateModalOpen(true)}
                         createLabel="สร้างใบเปรียบเทียบราคา"
+                        columns={{ sm: 1, md: 2, lg: 3, xl: 4 }}
+                        actionColSpan={{ md: 2, lg: 3, xl: 4 }}
                     />
                 }
             >
@@ -292,7 +305,7 @@ export default function QCListPage() {
                     <div className="hidden md:block flex-1 overflow-hidden">
                         <SmartTable
                             data={data?.data ?? []}
-                            columns={columns as ColumnDef<QCListItem>[]}
+                            columns={columns}
                             isLoading={isLoading}
                             pagination={{
                                 pageIndex: filters.page,
@@ -327,7 +340,7 @@ export default function QCListPage() {
                                                 {item.qc_no}
                                             </span>
                                             <span className="text-xs text-gray-500">
-                                                {formatThaiDate(item.created_at)}
+                                                {item.created_at ? formatThaiDate(item.created_at) : '-'}
                                             </span>
                                         </div>
                                         <QCStatusBadge status={item.status} />
@@ -337,7 +350,19 @@ export default function QCListPage() {
                                     <div className="text-sm text-gray-700 dark:text-gray-300 space-y-1.5 border-t border-b border-gray-50 py-2">
                                         <div className="flex justify-between">
                                             <span className="text-gray-500">PR อ้างอิง:</span>
-                                            <span className="font-medium text-purple-600">{item.pr_no}</span>
+                                            <span className="font-medium text-blue-600 dark:text-blue-400">{item.pr_no}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-500">RFQ อ้างอิง:</span>
+                                            <span 
+                                                className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline cursor-pointer truncate leading-tight" 
+                                                title={`RFQ: ${item.rfq_no || '-'}`}
+                                                onClick={() => {
+                                                    if (item.rfq_no) window.alert(`Open RFQ Detail: ${item.rfq_no}`);
+                                                }}
+                                            >
+                                                {item.rfq_no || '-'}
+                                            </span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="text-gray-500">Vendors:</span>
@@ -356,7 +381,7 @@ export default function QCListPage() {
                                         <div className="flex justify-between items-center">
                                             <span className="font-semibold text-gray-900 dark:text-white">ราคาต่ำสุด</span>
                                             <span className="font-bold text-lg text-emerald-600">
-                                                {item.lowest_bid_amount?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                                {item.lowest_price?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                             </span>
                                         </div>
 
@@ -369,29 +394,21 @@ export default function QCListPage() {
 
                                             {item.status === 'DRAFT' && (
                                                 <button 
-                                                    onClick={() => handleCompare(item.qc_id)}
+                                                    onClick={() => item.qc_id && handleCompare(item.qc_id)}
                                                     disabled={compareMutation.isPending}
                                                     className="flex-[2] bg-[#a855f7] hover:bg-[#9333ea] text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm disabled:opacity-50"
                                                 >
-                                                    <RefreshCw size={14} className={compareMutation.isPending && compareMutation.variables === item.qc_id ? "animate-spin" : ""} />
-                                                    ส่งเปรียบเทียบราคา
+                                                    {compareMutation.isPending && compareMutation.variables === item.qc_id ? (
+                                                        <RefreshCw size={14} className="animate-spin" />
+                                                    ) : (
+                                                        <Pencil size={14} />
+                                                    )}
+                                                    เปรียบเทียบราคา
                                                 </button>
                                             )}
 
-                                            {item.status === 'WAITING_FOR_PO' && (
-                                                <button 
-                                                    onClick={() => {
-                                                        setPoInitialValues({
-                                                            vendor_id: item.lowest_bidder_vendor_id || '',
-                                                            remarks: `Refer from QC: ${item.qc_no}`
-                                                        });
-                                                        setIsPOModalOpen(true);
-                                                    }}
-                                                    className="flex-[2] bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
-                                                >
-                                                    <FileText size={14} /> เปิดใบสั่งซื้อ
-                                                </button>
-                                            )}
+                                            {/* COMPLETED: Eye only — no print button */}
+
                                         </div>
                                     </div>
                                 </div>
@@ -435,17 +452,6 @@ export default function QCListPage() {
                     }}
                 />
             )}
-            
-            <POFormModal
-                isOpen={isPOModalOpen}
-                onClose={() => setIsPOModalOpen(false)}
-                initialValues={poInitialValues}
-                onSuccess={() => {
-                     navigate('/procurement/po');
-                }}
-            />
         </>
     );
 }
-
-

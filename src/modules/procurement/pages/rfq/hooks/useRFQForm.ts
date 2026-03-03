@@ -462,7 +462,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
 
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
-            toast(Object.values(newErrors)[0], 'error');
+            toast('กรุณากรอกข้อมูลให้ครบถ้วนก่อนบันทึกเอกสาร', 'error');
             return;
         }
 

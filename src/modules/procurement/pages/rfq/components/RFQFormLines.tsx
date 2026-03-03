@@ -28,7 +28,7 @@ export const RFQFormLines: React.FC<RFQFormLinesProps> = ({
     const lockedInputLeft = "w-full h-8 px-3 text-sm bg-gray-100/70 dark:bg-gray-800/70 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded text-left cursor-not-allowed font-medium disabled:opacity-70 disabled:cursor-not-allowed";
 
     return (
-        <div className="p-4">
+        <div className="p-4" id="lines">
             <div className="flex items-center justify-between gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-3">
                 <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400">
                     <FileText size={18} />

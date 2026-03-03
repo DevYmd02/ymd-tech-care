@@ -1,4 +1,4 @@
-﻿import type { RFQHeader, RFQVendor } from '@/modules/procurement/types';
+﻿import type { RFQHeader, RFQVendor, RFQLine } from '@/modules/procurement/types';
 
 /**
  * MOCK RFQ DATA — (RELATIONALLY SYNCED EDITION)
@@ -126,10 +126,10 @@ const EXPLICIT_RFQS: RFQHeader[] = [
     created_by_user_id: 'user-2', created_by_name: 'นางสาวจัดซื้อ สอง',
     created_at: '2026-02-05T09:00:00Z', updated_at: '2026-02-07T09:00:00Z',
     purpose: 'จัดซื้อน้ำมันหล่อลื่นสำหรับเครื่องจักรโรงงาน',
-    vendor_count: 2,
-    responded_vendors_count: 2,
-    sent_vendors_count: 2,
-    vendor_responded: 2,
+    vendor_count: 3,
+    responded_vendors_count: 3,
+    sent_vendors_count: 3,
+    vendor_responded: 3,
     has_quotation: true,
     currency: 'THB', exchange_rate: 1,
     delivery_location: 'โรงงานฝ่ายผลิต',
@@ -139,7 +139,7 @@ const EXPLICIT_RFQS: RFQHeader[] = [
   },
 
   // ── rfq-007: Laptop Computer  ───────────────────────────────────────────────────
-  // VQ List shows: IT Supply Co./V-001 (RECORDED), Smart Tech/V-005 (RECEIVED — no VQ yet)
+  // VQ List shows: IT Supply Co./V-001 (RECORDED), Smart Tech/V-005 (PENDING — no VQ yet)
   {
     rfq_id: 'rfq-007', rfq_no: 'RFQ-202602-0007',
     pr_id: 'pr-007', pr_no: 'PR-202602-0012', ref_pr_no: 'PR-202602-0012',
@@ -275,7 +275,72 @@ const EXPLICIT_RFQS: RFQHeader[] = [
 ];
 
 export const MOCK_RFQS: RFQHeader[] = EXPLICIT_RFQS;
-export const MOCK_RFQ_LINES = [];
+export const MOCK_RFQ_LINES: RFQLine[] = [
+  {
+    rfq_line_id: 'rl-007-1',
+    rfq_id: 'rfq-007',
+    line_no: 1,
+    pr_line_id: 'prl-007-1',
+    item_id: 'item-001',
+    item_code: 'COMP-001',
+    item_name: 'Laptop Business Pro 14"',
+    item_description: 'Core i7, 16GB RAM, 512GB SSD',
+    required_qty: 10,
+    uom: 'เครื่อง',
+    required_date: '2026-03-31',
+    technical_spec: 'Military standard, Win 11 Pro',
+    est_unit_price: 25000,
+    remark: null
+  },
+  {
+    rfq_line_id: 'rl-007-2',
+    rfq_id: 'rfq-007',
+     line_no: 2,
+    pr_line_id: 'prl-007-2',
+    item_id: 'item-002',
+    item_code: 'COMP-002',
+    item_name: 'Wireless Mouse',
+    item_description: 'Ergonomic, Silent click',
+    required_qty: 10,
+    uom: 'ตัว',
+    required_date: '2026-03-31',
+    technical_spec: 'Bluetooth & 2.4GHz',
+    est_unit_price: 1200,
+    remark: null
+  },
+  {
+    rfq_line_id: 'rl-006-1',
+    rfq_id: 'rfq-006',
+    line_no: 1,
+    pr_line_id: 'prl-006-1',
+    item_id: 'item-oil-1',
+    item_code: 'OIL-IND-046',
+    item_name: 'Industrial Oil 46 (200L)',
+    item_description: 'High-performance hydraulic oil',
+    required_qty: 10,
+    uom: 'ถัง',
+    required_date: '2026-02-28',
+    technical_spec: 'ISO VG 46, Anti-wear',
+    est_unit_price: 8000,
+    remark: null
+  },
+  {
+    rfq_line_id: 'rl-006-2',
+    rfq_id: 'rfq-006',
+    line_no: 2,
+    pr_line_id: 'prl-006-2',
+    item_id: 'item-oil-2',
+    item_code: 'OIL-GRS-001',
+    item_name: 'Machine Grease (15kg)',
+    item_description: 'Heavy duty lithium grease',
+    required_qty: 5,
+    uom: 'ถัง',
+    required_date: '2026-02-28',
+    technical_spec: 'NLGI 2, High temp',
+    est_unit_price: 3500,
+    remark: null
+  }
+];
 
 // ====================================================================================
 // EXPLICIT RFQ VENDOR RECORDS (Synchronized with vqData.ts)
@@ -296,6 +361,7 @@ export const MOCK_RFQ_VENDORS: (RFQVendor & { vendor_name: string; vendor_code: 
   // -- rfq-006 vendors: factory oil (2 vendors, all responded) -------------------
   makeVendor('rfq-006', 1, 'V-006', '2026-02-05', 'RESPONDED', '2026-02-06'), // Industrial -> vq-008
   makeVendor('rfq-006', 2, 'V-007', '2026-02-05', 'RESPONDED', '2026-02-07'), // Global Oil -> vq-007
+  makeVendor('rfq-006', 3, 'V-005', '2026-02-05', 'RESPONDED', '2026-02-08'), // Smart Tech  -> vq-014
 
   // -- rfq-007 vendors: laptop (sent to 2, awaiting reply) ----------------------
   makeVendor('rfq-007', 1, 'V-001', '2026-02-10', 'SENT',      null),         // IT Supply  -> vq-010

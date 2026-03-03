@@ -1,6 +1,7 @@
 import type MockAdapter from 'axios-mock-adapter';
 import type { AxiosRequestConfig } from 'axios';
-import { MOCK_RFQS, MOCK_RFQ_VENDORS, VENDOR_POOL } from '../data/rfqData';
+import { MOCK_RFQS, MOCK_RFQ_VENDORS, VENDOR_POOL, MOCK_RFQ_LINES } from '../data/rfqData';
+import { MOCK_VQS } from '../data/vqData';
 import { applyMockFilters, sanitizeId } from '@/core/api/mockUtils';
 import type { RFQHeader, RFQLine } from '@/modules/procurement/types';
 
@@ -35,14 +36,7 @@ export const setupRFQHandlers = (mock: MockAdapter) => {
   mock.onGet(/\/rfq\/(?!.*\/send).+/).reply((config: AxiosRequestConfig) => {
     const id = sanitizeId(config.url?.split('/').pop());
     const found = MOCK_RFQS.find(r => sanitizeId(r.rfq_id) === id);
-    
-    // Local interface to handle potential lines property
-    interface RFQWithLines extends RFQHeader {
-        lines?: RFQLine[];
-    }
-
     if (found) {
-        const rfqWithLines = found as RFQWithLines;
         
         // Embed vendors from mock junction table
         const vendors = MOCK_RFQ_VENDORS.filter(v => v.rfq_id === found.rfq_id);
@@ -53,7 +47,7 @@ export const setupRFQHandlers = (mock: MockAdapter) => {
             pr_id: sanitizeId(found.pr_id ?? ''),
             branch_id: sanitizeId(found.branch_id ?? ''),
             vendors, // Embedded vendor data for Pre-flight modal
-            lines: (rfqWithLines.lines || []).map((line: RFQLine) => ({
+            lines: MOCK_RFQ_LINES.filter(l => sanitizeId(l.rfq_id) === id).map((line: RFQLine) => ({
                 ...line,
                 rfq_line_id: sanitizeId(line.rfq_line_id),
                 rfq_id: sanitizeId(line.rfq_id),
@@ -88,8 +82,48 @@ export const setupRFQHandlers = (mock: MockAdapter) => {
       vendorIds.forEach(vId => {
           const vIndex = MOCK_RFQ_VENDORS.findIndex(v => v.rfq_id === id && v.vendor_id === vId);
           if (vIndex !== -1) {
-              MOCK_RFQ_VENDORS[vIndex].status = 'SENT';
-              MOCK_RFQ_VENDORS[vIndex].sent_date = new Date().toISOString();
+              const vendor = MOCK_RFQ_VENDORS[vIndex];
+              vendor.status = 'SENT';
+              vendor.sent_date = new Date().toISOString();
+
+              // PIPELINE: Ensure VQ record exists for this vendor
+              const vqId = sanitizeId(vendor.vendor_id);
+              const existingVQ = MOCK_VQS.find(vq => sanitizeId(vq.rfq_id) === id && sanitizeId(vq.vendor_id) === vqId);
+              
+                if (!existingVQ) {
+                  const rfqLines = MOCK_RFQ_LINES.filter(l => sanitizeId(l.rfq_id) === id);
+                  MOCK_VQS.push({
+                    quotation_id: `vq-gen-${id}-${vqId}`,
+                    quotation_no: '', // Pending records have no VQ ID
+                    qc_id: '',
+                    rfq_no: MOCK_RFQS[foundIndex].rfq_no,
+                    rfq_id: id,
+                    pr_no: MOCK_RFQS[foundIndex].pr_no || '',
+                    vendor_id: vqId,
+                    vendor_code: vendor.vendor_code,
+                    vendor_name: vendor.vendor_name,
+                    quotation_date: new Date().toISOString().split('T')[0],
+                    valid_until: '',
+                    payment_term_days: 0,
+                    lead_time_days: 0,
+                    total_amount: 0,
+                    currency: 'THB',
+                    isMulticurrency: false,
+                    exchange_rate: 1,
+                    status: 'PENDING',
+                    lines: rfqLines.map(rl => ({
+                        item_code: rl.item_code,
+                        item_name: rl.item_name,
+                        qty: rl.required_qty,
+                        uom_name: rl.uom,
+                        unit_price: 0,
+                        discount_amount: 0,
+                        net_amount: 0,
+                        no_quote: false,
+                        reference_price: rl.est_unit_price || 0
+                    }))
+                  });
+                }
           }
       });
 
@@ -215,7 +249,7 @@ export const setupRFQHandlers = (mock: MockAdapter) => {
 
     // 3. State Machine Trigger: SENT -> IN_PROGRESS
     if (MOCK_RFQS[rfqIndex].status === 'SENT' && respondedCount > 0) {
-        MOCK_RFQS[rfqIndex].status = 'IN_PROGRESS';
+        // MOCK_RFQS[rfqIndex].status = 'IN_PROGRESS'; // REMOVED FOR 4-STATE COMPLIANCE
     }
     
     MOCK_RFQS[rfqIndex].updated_at = new Date().toISOString();
@@ -249,7 +283,7 @@ export const setupRFQHandlers = (mock: MockAdapter) => {
 
     // 3. State Machine Trigger: SENT -> IN_PROGRESS
     if (MOCK_RFQS[rfqIndex].status === 'SENT' && respondedCount > 0) {
-        MOCK_RFQS[rfqIndex].status = 'IN_PROGRESS';
+        // MOCK_RFQS[rfqIndex].status = 'IN_PROGRESS'; // REMOVED FOR 4-STATE COMPLIANCE
     }
     
     MOCK_RFQS[rfqIndex].updated_at = new Date().toISOString();

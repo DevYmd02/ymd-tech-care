@@ -9,7 +9,13 @@
 // ====================================================================================
 
 /** QC Status - สถานะใบเปรียบเทียบราคา */
-export type QCStatus = 'DRAFT' | 'WAITING_FOR_PO' | 'PO_CREATED';
+export type QCStatus = 'DRAFT' | 'COMPLETED' | 'CANCELLED';
+
+export const QC_STATUS_OPTIONS = [
+  { value: 'DRAFT', label: 'แบบร่าง' },
+  { value: 'COMPLETED', label: 'ยืนยันผลแล้ว' },
+  { value: 'CANCELLED', label: 'ยกเลิก' },
+] as const;
 
 /** Quotation Comparison Header - ใบเปรียบเทียบราคา */
 export interface QCHeader {
@@ -17,6 +23,7 @@ export interface QCHeader {
     qc_no: string;                      // QC-2024-xxxx
     pr_id: string;                      // FK -> pr_header
     pr_no?: string;                     // Display
+    rfq_no?: string;                    // Added for traceability
     created_at: string;                 // Date
     status: QCStatus;
     
@@ -40,6 +47,8 @@ export type QCListItem = QCHeader;
 export interface QCListParams {
   qc_no?: string;
   pr_no?: string;
+  rfq_no?: string;
+  vendor_name?: string;
   status?: string;
   date_from?: string;
   date_to?: string;

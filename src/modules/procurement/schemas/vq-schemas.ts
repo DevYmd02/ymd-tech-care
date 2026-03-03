@@ -12,6 +12,16 @@ export const QuotationLineSchema = z.object({
   discount_amount: z.number().min(0),
   net_amount: z.number(),
   no_quote: z.boolean(),
+  reference_price: z.number().optional(),
+}).refine(data => {
+  // If no_quote is false (offered), unit_price must be > 0
+  if (!data.no_quote) {
+    return data.unit_price > 0;
+  }
+  return true;
+}, {
+  message: "กรุณาระบุราคาต่อหน่วย (หรือเลือก 'ไม่เสนอราคา')",
+  path: ["unit_price"]
 });
 
 export const QuotationHeaderSchema = z.object({
@@ -22,7 +32,8 @@ export const QuotationHeaderSchema = z.object({
   contact_person: z.string().optional(),
   contact_email: z.string().email().optional().or(z.literal('')),
   contact_phone: z.string().optional(),
-  qc_id: z.string().optional(), // Ref RFQ
+  qc_id: z.string().optional(), // FK to Comparison
+  rfq_no: z.string().optional(), // Human-readable Ref RFQ
   currency: z.string().min(1, 'Currency is required'),
   isMulticurrency: z.boolean().optional(),
   exchange_rate_date: z.string().optional(),

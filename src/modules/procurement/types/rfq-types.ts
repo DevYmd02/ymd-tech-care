@@ -9,11 +9,11 @@
 // ====================================================================================
 
 /** RFQ Status - สถานะใบขอเสนอราคา */
-export const RFQ_STATUS_OPTIONS = ['DRAFT', 'SENT', 'IN_PROGRESS', 'CLOSED', 'CANCELLED'] as const;
+export const RFQ_STATUS_OPTIONS = ['DRAFT', 'SENT', 'CLOSED', 'CANCELLED'] as const;
 export type RFQStatus = typeof RFQ_STATUS_OPTIONS[number];
 
 /** RFQ Vendor Status - สถานะการส่ง RFQ ไปยังเจ้าหนี้ */
-export const RFQ_VENDOR_STATUS_OPTIONS = ['PENDING', 'SENT', 'RESPONDED', 'NO_RESPONSE', 'DECLINED', 'RECEIVED', 'RECORDED'] as const;
+export const RFQ_VENDOR_STATUS_OPTIONS = ['PENDING', 'SENT', 'RESPONDED', 'NO_RESPONSE', 'DECLINED', 'RECORDED'] as const;
 export type RFQVendorStatus = typeof RFQ_VENDOR_STATUS_OPTIONS[number];
 
 
@@ -79,6 +79,7 @@ export interface RFQLine {
     uom: string;                        // VARCHAR(50) - หน่วยนับ
     required_date: string | null;       // DATE - วันที่ต้องการสินค้า
     technical_spec: string | null;      // TEXT - ข้อกำหนดทางเทคนิค
+    est_unit_price?: number;            // Added for VQ reference
     remark: string | null;              // TEXT - หมายเหตุ
 }
 

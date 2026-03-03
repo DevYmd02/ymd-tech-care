@@ -83,10 +83,7 @@ export const setupVQHandlers = (mock: MockAdapter) => {
             const respondedCount = relatedVendors.filter(v => v.status === 'RESPONDED' || v.status === 'DECLINED').length;
             MOCK_RFQS[rfqIndex].responded_vendors_count = respondedCount;
 
-            // Trigger State Transition
-            if (MOCK_RFQS[rfqIndex].status === 'SENT' && respondedCount > 0) {
-                MOCK_RFQS[rfqIndex].status = 'IN_PROGRESS';
-            }
+            // Trigger State Transition: Removed SENT -> IN_PROGRESS
             MOCK_RFQS[rfqIndex].updated_at = new Date().toISOString();
         }
     }
