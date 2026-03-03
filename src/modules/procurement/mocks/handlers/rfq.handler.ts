@@ -159,7 +159,7 @@ export const setupRFQHandlers = (mock: MockAdapter) => {
       updated_at: new Date().toISOString(),
     } satisfies RFQHeader;
     MOCK_RFQS.unshift(newRFQ);
-    return [201, { success: true, data: newRFQ }];
+    return [201, newRFQ];
   });
 
   // 5. PUT RFQ Update (Edit DRAFT: sync vendor_count + status)

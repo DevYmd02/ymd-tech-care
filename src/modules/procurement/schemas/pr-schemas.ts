@@ -1,5 +1,13 @@
 import { z } from 'zod';
 
+// ====================================================================================
+// STATUS ENUM (Canonical — Single Source of Truth)
+// ====================================================================================
+
+/** PR Status Enum — exported for use in mock data, badges, and filter dropdowns */
+export const PRStatusEnum = z.enum(['DRAFT', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED', 'COMPLETED']);
+export type PRStatus = z.infer<typeof PRStatusEnum>;
+
 export const PRLineSchema = z.object({
   item_id: z.string(),
   item_code: z.string(),
@@ -50,7 +58,7 @@ export const PRFormSchema = z.object({
   lines: z.array(PRLineSchema),
   is_on_hold: z.union([z.boolean(), z.string()]).transform(v => typeof v === 'boolean' ? (v ? 'Y' : 'N') : v),
   cancelflag: z.enum(['Y', 'N']).optional(),
-  status: z.enum(['DRAFT', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED', 'COMPLETED']).optional(),
+  status: PRStatusEnum.optional(),
   total_amount: z.number(),
   pr_discount_raw: z.string().optional(),
   pr_tax_code_id: z.string().optional(),

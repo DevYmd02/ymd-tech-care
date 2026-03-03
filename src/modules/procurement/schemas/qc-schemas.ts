@@ -73,6 +73,7 @@ export const QCHeaderSchema = z.object({
   qc_id: z.string().uuid().optional(),
   qc_no: z.string().optional(),
   pr_id: z.string().uuid('กรุณาเลือกใบขอซื้อ (PR)').optional(),
+  rfq_id: z.string().uuid().optional(), // Added for precise RFQ tracking
   status: QCStatusEnum.default('DRAFT'),
   comparison_date: z.union([z.string(), z.date()]).optional(),
   dept_division: z.string().optional(),

@@ -296,53 +296,52 @@ export default function RFQListPage() {
                 const item = row.original;
 
                 return (
-                    // 1. Container: flex row, centered vertically.
-                    <div className="flex flex-row items-center justify-center gap-3 w-full h-full py-1 whitespace-nowrap">
+                    <div className="flex flex-row items-center justify-center gap-2 w-full h-full py-1 whitespace-nowrap">
                         
-                        {/* 2. Left Element: Eye icon, horizontally un-cluttered */}
+                        {/* Eye — always visible */}
                         <button 
-                            className="flex-shrink-0 p-1.5 text-slate-400 hover:text-blue-600 transition-colors" 
+                            className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-all"
                             title="ดูรายละเอียด"
                             onClick={() => handleView(item.rfq_id)}
                         >
-                            <Eye className="w-4 h-4" />
+                            <Eye size={16} />
                         </button>
                         
-                        {/* 3. Right Element: Horizontal Buttons */}
                         {item.status !== 'CLOSED' && item.status !== 'CANCELLED' && (
                             <>
-                                {/* ===== DRAFT: [แก้ไข] + [ส่ง RFQ] ===== */}
+                                {/* DRAFT: [แก้ไข] + [ส่ง RFQ] */}
                                 {item.status === 'DRAFT' && (
                                     <>
                                         <button 
-                                            className="flex items-center justify-center gap-1.5 px-3 py-1 text-[11px] font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800 transition-all whitespace-nowrap"
+                                            className="flex items-center gap-1 pl-1.5 pr-2 py-1 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded shadow-sm border border-transparent hover:border-amber-200 dark:hover:border-amber-800 transition-all whitespace-nowrap"
                                             title="แก้ไข"
                                             onClick={() => handleEdit(item)}
                                         >
-                                            <Edit className="w-3.5 h-3.5" /> แก้ไข
+                                            <Edit size={14} />
+                                            <span className="text-[10px] font-bold">แก้ไข</span>
                                         </button>
                                         <button 
-                                            className="flex items-center justify-center gap-1.5 px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-medium rounded shadow-sm transition-all whitespace-nowrap"
+                                            className="flex items-center gap-1 pl-1.5 pr-2 py-1 ml-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap"
                                             title="ส่ง RFQ"
                                             onClick={() => handleSendRFQ(item)}
                                         >
-                                            <Send className="w-3.5 h-3.5" /> ส่ง RFQ
+                                            <Send size={12} /> ส่ง RFQ
                                         </button>
                                     </>
                                 )}
                                 
-                                {/* ===== SENT: [ส่งเพิ่ม] ===== */}
+                                {/* SENT: [ส่งเพิ่ม] */}
                                 {item.status === 'SENT' && (
                                     <button 
-                                        className="flex items-center justify-center gap-1.5 px-3 py-1 text-[11px] font-medium text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded border border-blue-500 transition-all whitespace-nowrap"
+                                        className="flex items-center gap-1 pl-1.5 pr-2 py-1 ml-1 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap"
                                         title="ส่งเพิ่ม"
                                         onClick={() => handleAddMoreVendors(item)}
                                     >
-                                        <Send className="w-3.5 h-3.5" /> ส่งเพิ่ม
+                                        <Send size={12} /> ส่งเพิ่ม
                                     </button>
                                 )}
 
-                                {/* ===== IN_PROGRESS: (ไม่มี action พิเศษเพราะย้ายไป QT) ===== */}
+                                {/* IN_PROGRESS: (ไม่มี action พิเศษเพราะย้ายไป QT) */}
                             </>
                         )}
                     </div>

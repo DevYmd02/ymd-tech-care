@@ -1,8 +1,14 @@
 import { z } from 'zod';
-import { 
-    RFQ_STATUS_OPTIONS,
-    RFQ_VENDOR_STATUS_OPTIONS
-} from '@/modules/procurement/types/rfq-types';
+
+// ====================================================================================
+// STATUS ENUM (Canonical — Self-Contained)
+// ====================================================================================
+
+export const RFQStatusEnum = z.enum(['DRAFT', 'SENT', 'CLOSED', 'CANCELLED']);
+export type RFQStatusType = z.infer<typeof RFQStatusEnum>;
+
+export const RFQVendorStatusEnum = z.enum(['PENDING', 'SENT', 'RESPONDED', 'NO_RESPONSE', 'DECLINED', 'RECORDED']);
+export type RFQVendorStatusType = z.infer<typeof RFQVendorStatusEnum>;
 
 // ====================================================================================
 // SHARED MESSAGE CONSTANTS (Mirrors qt-schemas.ts style)
@@ -24,7 +30,7 @@ export const RFQVendorSchema = z.object({
     vendor_code: z.string().min(1, MESSAGES.REQUIRED),
     vendor_name: z.string().min(1, MESSAGES.REQUIRED),
     vendor_name_display: z.string().min(1, MESSAGES.REQUIRED),
-    status: z.enum(RFQ_VENDOR_STATUS_OPTIONS).optional(),
+    status: RFQVendorStatusEnum.optional(),
 });
 
 // ====================================================================================
@@ -61,7 +67,7 @@ export const RFQFormSchema = z.object({
     created_by_name: z.string().min(1, MESSAGES.REQUIRED),
     
     // Using string validation for enums from form, optionally casting/refining.
-    status: z.enum(RFQ_STATUS_OPTIONS),
+    status: RFQStatusEnum,
     
     quote_due_date: z.string().min(1, MESSAGES.REQUIRED),
     currency: z.string().min(1, MESSAGES.REQUIRED),

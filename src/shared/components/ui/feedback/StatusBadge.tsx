@@ -140,13 +140,21 @@ const statusConfig: Record<ModuleType, ModuleStatusConfig> = {
       label: 'แบบร่าง',
       colorClass: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
     },
+    PENDING_APPROVAL: {
+      label: 'รออนุมัติ',
+      colorClass: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+    },
     APPROVED: {
       label: 'อนุมัติแล้ว',
       colorClass: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
     },
     ISSUED: {
-      label: 'ออกแล้ว',
-      colorClass: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+      label: 'ออก PO แล้ว',
+      colorClass: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+    },
+    COMPLETED: {
+      label: 'ปิดรายการ',
+      colorClass: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
     },
     CANCELLED: {
       label: 'ยกเลิก',

@@ -8,13 +8,9 @@
 // ENUMS
 // ====================================================================================
 
-/** สถานะใบสั่งซื้อ (ตามรูป Dropdown + Schema) */
-export type POStatus = 
-    | 'DRAFT'       // แบบร่าง
-    | 'APPROVED'    // อนุมัติแล้ว
-    | 'ISSUED'      // ออกแล้ว (ส่งให้ Vendor / ออก PO)
-    | 'CANCELLED'   // ยกเลิก
-    | 'CLOSED';     // ปิดงาน (Optional: for internal use if needed, though dropdown showed only 4)
+// Re-export POStatus from Zod schema (single source of truth)
+export type { POStatus } from '@/modules/procurement/schemas/po-schemas';
+import type { POStatus } from '@/modules/procurement/schemas/po-schemas';
 
 // ====================================================================================
 // DATABASE MODELS (Prisma Schema Reference)
@@ -52,6 +48,10 @@ export interface POHeader {
     created_at?: string;            // timestamp (Implying from base fields if needed)
     updated_at?: string;            // timestamp
     
+    // QC Traceability (Source document)
+    qc_id?: string;                 // uuid — FK -> qc_header
+    qc_no?: string;                 // Display Only
+
     // Aggregates for List View
     item_count?: number;
 }
@@ -129,29 +129,37 @@ export interface POLineItemInput {
 // ====================================================================================
 
 export interface CreatePOLineItem {
-    item_id: string; // or item_code
+    item_id?: string; // Optional — new lines may not have a DB UUID yet
+    item_code: string;
+    item_name: string;
     qty: number;
     unit_price: number;
-    discount?: number;
+    discount_amount?: number;
+    uom_name?: string;
+    line_total?: number;
+    description?: string;
 }
 
 export interface CreatePOPayload {
-    vendor_id: string;
-    ref_pr_id?: string; // Link back to PR
-    ref_qc_id?: string; // Link back to QC
-    order_date: string; // or Date
-    delivery_date?: string;
-    payment_term?: string;
-    items: CreatePOLineItem[]; // The Batch Array
-    
-    // Additional fields for UI compatibility if needed
-    remarks?: string;
-    subtotal?: number;
-    tax_amount?: number;
-    // Multicurrency
-    currency?: string;
+    // Source document linkage
+    qc_id?:  string;
+    qc_no?:  string;
+    pr_id?:  string;
+    pr_no?:  string;
+
+    vendor_id:    string;
+    vendor_name?: string;
+
+    order_date:         string;
+    payment_term_days?: number;
+
+    currency_code?: string;
     exchange_rate?: number;
-    total_amount?: number;
+    total_amount?:  number;
+
+    items: CreatePOLineItem[];
+
+    remarks?: string;
 }
 
 export interface POFormData {

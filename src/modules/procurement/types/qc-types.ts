@@ -8,8 +8,9 @@
 // QUOTATION COMPARISON (QC) - ตาราง qc_header
 // ====================================================================================
 
-/** QC Status - สถานะใบเปรียบเทียบราคา */
-export type QCStatus = 'DRAFT' | 'COMPLETED' | 'CANCELLED';
+// Re-export canonical types from Zod schema (single source of truth)
+export type { QCStatus, QCListItem } from '@/modules/procurement/schemas/qc-schemas';
+import type { QCStatus, QCListItem } from '@/modules/procurement/schemas/qc-schemas';
 
 export const QC_STATUS_OPTIONS = [
   { value: 'DRAFT', label: 'แบบร่าง' },
@@ -29,15 +30,11 @@ export interface QCHeader {
     
     // Aggregated Data (For List View)
     vendor_count: number;
-    lowest_bidder_vendor_id?: string; // Add this field
     lowest_bidder_name?: string;
-    lowest_bid_amount?: number;
+    lowest_price?: number;              // Canonical field — matches qc-schemas.ts
     
     remark?: string;
 }
-
-/** QC List Item - Display in Table */
-export type QCListItem = QCHeader;
 
 
 // ====================================================================================
@@ -49,7 +46,7 @@ export interface QCListParams {
   pr_no?: string;
   rfq_no?: string;
   vendor_name?: string;
-  status?: string;
+  status?: QCStatus | 'ALL';
   date_from?: string;
   date_to?: string;
   page?: number;

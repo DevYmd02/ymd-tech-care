@@ -23,6 +23,8 @@ interface QCFormModalProps {
   onClose: () => void;
   initialRFQNo?: string;
   initialPRNo?: string;
+  qcId?: string | null;
+  mode?: 'view' | 'edit' | 'create';
   onSuccess?: () => void;
 }
 
@@ -41,6 +43,8 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
   onClose,
   initialRFQNo = '',
   initialPRNo = '',
+  qcId = null,
+  mode = 'create',
   onSuccess,
 }) => {
   // Form State
@@ -53,6 +57,22 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
 
   const [isRFQSelectorOpen, setIsRFQSelectorOpen] = useState(false);
   const [isPRSelectorOpen, setIsPRSelectorOpen] = useState(false);
+
+  // Fetch Existing QC Data if mode is edit/view
+  const { data: qcData } = useQuery({
+    queryKey: ['qc-detail', qcId],
+    queryFn: () => QCService.getById(qcId!),
+    enabled: !!qcId && (mode === 'edit' || mode === 'view'),
+  });
+
+  useEffect(() => {
+    if (qcData) {
+      setQCNo(qcData.qc_no || '');
+      setPRNo(qcData.pr_no || '');
+      setRFQNo(qcData.rfq_no || '');
+      // Can also sync dates etc here later
+    }
+  }, [qcData]);
 
   // Fetch RFQs to resolve ID from No
   const { data: rfqList } = useQuery({

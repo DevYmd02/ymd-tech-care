@@ -1,5 +1,21 @@
 import { z } from 'zod';
 
+// ====================================================================================
+// STATUS ENUM (Canonical — Single Source of Truth)
+// ====================================================================================
+
+/**
+ * VQ Status Enum
+ * PENDING  = รอผู้ขายตอบกลับ (No VQ ID)
+ * DRAFT    = แบบร่าง (Internal draft)
+ * RECORDED = บันทึกแล้ว (Procurement keyed in data — VQ ID generated)
+ * DECLINED = ผู้ขายปฏิเสธ
+ * EXPIRED  = หมดอายุ
+ * CANCELLED = ยกเลิก
+ */
+export const VQStatusEnum = z.enum(['PENDING', 'DRAFT', 'RECORDED', 'DECLINED', 'EXPIRED', 'CANCELLED', 'AWARDED', 'LOST']);
+export type VQStatus = z.infer<typeof VQStatusEnum>;
+
 export const QuotationLineSchema = z.object({
   quotation_line_id: z.string().optional(),
   item_id: z.string().optional(),
@@ -33,6 +49,7 @@ export const QuotationHeaderSchema = z.object({
   contact_email: z.string().email().optional().or(z.literal('')),
   contact_phone: z.string().optional(),
   qc_id: z.string().optional(), // FK to Comparison
+  rfq_id: z.string().uuid().optional(), // FK to Request For Quotation
   rfq_no: z.string().optional(), // Human-readable Ref RFQ
   currency: z.string().min(1, 'Currency is required'),
   isMulticurrency: z.boolean().optional(),
@@ -53,6 +70,7 @@ export const QuotationHeaderSchema = z.object({
   tax_rate: z.number().optional(),
   net_amount: z.number().optional(),
   total_amount: z.number().optional(),
+  status: VQStatusEnum,
   lines: z.array(QuotationLineSchema).min(1, 'At least one item is required'),
 }).superRefine((data, ctx) => {
   if (data.isMulticurrency) {

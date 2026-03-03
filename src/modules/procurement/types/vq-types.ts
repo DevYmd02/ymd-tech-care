@@ -48,7 +48,7 @@ export interface QuotationHeader {
     // UI Extended Fields
     vendor_name?: string;               // Display
     vendor_code?: string;               // Display
-    rfq_id?: string;                    // UUID - FK -> rfq_header
+    rfq_id: string;                    // UUID - FK -> rfq_header (always required)
     rfq_no?: string;                    // Display
     pr_no?: string;                     // Display - Reference PR
     lines?: QuotationLine[];            // Detail items
@@ -100,7 +100,7 @@ export interface VQListParams {
   vendor_name?: string;
   rfq_no?: string;
   pr_no?: string;
-  status?: string;
+  status?: QuotationStatus | 'ALL';
   date_from?: string;
   date_to?: string;
   page?: number;

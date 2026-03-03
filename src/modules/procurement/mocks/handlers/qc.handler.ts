@@ -1,6 +1,7 @@
 import type MockAdapter from 'axios-mock-adapter';
 import type { AxiosRequestConfig } from 'axios';
 import { MOCK_QCS } from '../data/qcData';
+import { MOCK_VQS } from '../data/vqData';
 import { applyMockFilters, sanitizeId } from '@/core/api/mockUtils';
 
 export const setupQCHandlers = (mock: MockAdapter) => {
@@ -45,8 +46,74 @@ export const setupQCHandlers = (mock: MockAdapter) => {
     
     if (found) {
         found.status = 'COMPLETED';
+
+        // [Cross-Module State Sync]: Update related VQs to AWARDED or LOST based on winner_id
+        const body = config.data ? JSON.parse(config.data as string) : {};
+        if (body.winner_id) {
+            // Found a specific winner, update VQs associated to this QC's scope
+            const relatedVQs = MOCK_VQS.filter(vq => 
+               sanitizeId(vq.rfq_no || '') === sanitizeId(found.rfq_no || '') || 
+               sanitizeId(vq.qc_id || '') === sanitizeId(found.qc_id)
+            );
+
+            relatedVQs.forEach(vq => {
+                if (sanitizeId(vq.vendor_id) === sanitizeId(body.winner_id)) {
+                    vq.status = 'AWARDED';
+                } else if (vq.status !== 'CANCELLED') {
+                    vq.status = 'LOST';
+                }
+            });
+        }
+
         return [200, { success: true }];
     }
     return [404, { message: 'QC Not Found' }];
+  });
+
+  // 4. POST Create QC
+  mock.onPost('/qc').reply((config: AxiosRequestConfig) => {
+    const body = config.data ? JSON.parse(config.data) : {};
+
+    if (!body.rfq_no && !body.pr_no) {
+      return [400, { message: 'rfq_no or pr_no is required to create a QC', success: false }];
+    }
+
+    const now = new Date();
+    const prefix = `QC-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const maxSeq = MOCK_QCS
+      .filter(q => q.qc_no?.startsWith(prefix))
+      .reduce((max, q) => {
+        const seq = parseInt(q.qc_no?.split('-').pop() || '0', 10);
+        return seq > max ? seq : max;
+      }, 0);
+
+    const newQC = {
+      qc_id:              `qc-${Date.now()}`,
+      qc_no:              `${prefix}-${String(maxSeq + 1).padStart(4, '0')}`,
+      pr_id:              sanitizeId(body.pr_id || ''),
+      pr_no:              body.pr_no || '',
+      rfq_no:             body.rfq_no || '',
+      created_at:         now.toISOString().split('T')[0],
+      status:             'DRAFT' as const,
+      vendor_count:       (body.vendor_lines ?? []).length,
+      lowest_bidder_name: '',
+      lowest_price:       0,
+      remark:             body.remark || '',
+    };
+
+    MOCK_QCS.unshift(newQC);
+    return [201, { qc_id: newQC.qc_id }];
+  });
+
+  // 5. POST Cancel QC (DRAFT → CANCELLED)
+  mock.onPost(/\/qc\/.+\/cancel/).reply((config: AxiosRequestConfig) => {
+    const id = sanitizeId(config.url?.split('/')[2]);
+    const found = MOCK_QCS.find(q => sanitizeId(q.qc_id) === id);
+    if (!found) return [404, { message: 'QC Not Found' }];
+    if (found.status === 'COMPLETED') {
+      return [422, { message: 'Cannot cancel a COMPLETED QC' }];
+    }
+    found.status = 'CANCELLED';
+    return [200, { success: true, message: `QC ${found.qc_no} ยกเลิกเรียบร้อย` }];
   });
 };

@@ -329,38 +329,39 @@ export default function VQListPage() {
                 }
 
                 return (
-                    <div className="flex flex-row items-center justify-center gap-3 whitespace-nowrap">
-                        {/* View button — only visible if document exists */}
+                    <div className="flex flex-row items-center justify-center gap-2 whitespace-nowrap">
+                        {/* View — PR pattern eye */}
                         {canView && (
                             <button 
                                 onClick={() => handleOpenView(item.quotation_id)}
-                                className="p-1 text-gray-400 hover:text-blue-600 transition-colors" 
+                                className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-all"
                                 title="ดูรายละเอียด"
                             >
-                                <Eye size={18} />
+                                <Eye size={16} />
                             </button>
                         )}
 
-                        {/* Edit button — for records with documents */}
+                        {/* Edit — amber transparent-border compact (PR pattern) */}
                         {canEdit && (
                             <button 
                                 onClick={() => handleOpenEdit(item.quotation_id)}
-                                className="p-1 text-blue-500 hover:text-blue-700 transition-colors" 
+                                className="flex items-center gap-1 pl-1.5 pr-2 py-1 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded shadow-sm border border-transparent hover:border-amber-200 dark:hover:border-amber-800 transition-all whitespace-nowrap"
                                 title="แก้ไข"
                             >
-                                <Edit size={18} />
+                                <Edit size={14} />
+                                <span className="text-[10px] font-bold">แก้ไข</span>
                             </button>
                         )}
 
-                        {/* Record Price button — for PENDING without VQ No */}
+                        {/* บันทึกราคา — blue solid (create-next-doc style, matching สร้าง RFQ) */}
                         {canRecord && (
                             <button 
                                 onClick={() => handleOpenEdit(item.quotation_id)}
-                                className="flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-md bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-800/40 border border-indigo-200 dark:border-indigo-700/50 transition-colors"
+                                className="flex items-center gap-1 pl-1.5 pr-2 py-1 ml-1 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap"
                                 title="บันทึกราคา"
                             >
-                                <Edit size={13} />
-                                บันทึกราคา
+                                <Edit size={12} />
+                                <span>บันทึกราคา</span>
                             </button>
                         )}
                     </div>
