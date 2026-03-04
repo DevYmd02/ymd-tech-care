@@ -14,6 +14,7 @@ export const PO_STATUS_OPTIONS = [
     { value: 'DRAFT',            label: 'แบบร่าง' },
     { value: 'PENDING_APPROVAL', label: 'รออนุมัติ' },
     { value: 'APPROVED',         label: 'อนุมัติแล้ว' },
+    { value: 'REJECTED',         label: 'ไม่อนุมัติ' },
     { value: 'ISSUED',           label: 'ออก PO แล้ว' },
     { value: 'COMPLETED',        label: 'ปิดรายการ' },
     { value: 'CANCELLED',        label: 'ยกเลิก' },

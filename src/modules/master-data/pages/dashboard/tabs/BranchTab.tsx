@@ -7,7 +7,7 @@ interface BranchTabProps {
     expandedId: string | null;
     toggleExpand: (id: string) => void;
     handleEdit: (id: string) => void;
-    handleDelete: (id: string) => void;
+    handleStatusToggle: (data: BranchListItem) => void;
     dbRelation: { dbTable: string; relations: string[]; fk: string };
 }
 
@@ -16,7 +16,7 @@ export const BranchTab: React.FC<BranchTabProps> = ({
     expandedId,
     toggleExpand,
     handleEdit,
-    handleDelete,
+    handleStatusToggle,
     dbRelation
 }) => {
     if (data.length === 0) {
@@ -64,15 +64,19 @@ export const BranchTab: React.FC<BranchTabProps> = ({
                                 <div className="flex gap-2 mb-4">
                                     <button 
                                         onClick={(e) => { e.stopPropagation(); handleEdit(branch.branch_id); }}
-                                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-blue-600 dark:text-blue-400 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-200 dark:hover:border-blue-800 transition-all font-medium text-sm"
                                     >
-                                        <Edit2 size={16} /> Edit
+                                        <Edit2 size={16} /> แก้ไข (Edit)
                                     </button>
                                     <button 
-                                        onClick={(e) => { e.stopPropagation(); handleDelete(branch.branch_id); }}
-                                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                                        onClick={(e) => { e.stopPropagation(); handleStatusToggle(branch); }}
+                                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl transition-all font-medium text-sm border ${
+                                            branch.is_active 
+                                                ? 'bg-white dark:bg-gray-700 border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20' 
+                                                : 'bg-white dark:bg-gray-700 border-green-200 dark:border-green-900/50 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20'
+                                        }`}
                                     >
-                                        <Trash2 size={16} /> Delete
+                                        <Trash2 size={16} /> {branch.is_active ? 'ระงับการใช้งาน (Disable)' : 'เปิดใช้งาน (Enable)'}
                                     </button>
                                 </div>
                                 <div className="border-t border-gray-200 dark:border-gray-700 pt-4">

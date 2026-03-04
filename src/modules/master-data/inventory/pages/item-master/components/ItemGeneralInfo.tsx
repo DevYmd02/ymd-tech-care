@@ -1,5 +1,6 @@
 import React from 'react';
 import { Search } from 'lucide-react';
+import { type FieldErrors } from 'react-hook-form';
 import type { ItemFormData, ItemFormChangeHandler } from '../hooks/useItemForm';
 
 /**
@@ -9,9 +10,9 @@ import type { ItemFormData, ItemFormChangeHandler } from '../hooks/useItemForm';
 interface ItemGeneralInfoProps {
     formData: ItemFormData;
     onChange: ItemFormChangeHandler;
-    onFind: () => void;
+    onFind?: () => void;
     editMode: boolean;
-    errors: Partial<Record<keyof ItemFormData, string>>;
+    errors: FieldErrors<ItemFormData>;
 }
 
 export const ItemGeneralInfo: React.FC<ItemGeneralInfoProps> = ({
@@ -53,6 +54,9 @@ export const ItemGeneralInfo: React.FC<ItemGeneralInfoProps> = ({
                             </button>
                         )}
                     </div>
+                    {errors.item_code && (
+                        <p className="mt-1 text-red-500 text-xs">{errors.item_code.message}</p>
+                    )}
                 </div>
 
                 {/* Item Name TH */}
@@ -69,6 +73,9 @@ export const ItemGeneralInfo: React.FC<ItemGeneralInfoProps> = ({
                         } rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all`}
                         placeholder="ระบุชื่อสินค้าภาษาไทย"
                     />
+                    {errors.item_name && (
+                        <p className="mt-1 text-red-500 text-xs">{errors.item_name.message}</p>
+                    )}
                 </div>
 
                 {/* Item Name EN */}

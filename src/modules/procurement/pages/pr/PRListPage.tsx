@@ -15,6 +15,7 @@ import { PRFormModal } from './components/PRFormModal';
 import { PRActionsCell } from './components/PRActionsCell';
 import { usePRActions } from '@/modules/procurement/pages/pr/hooks';
 import { RejectReasonModal } from '@/modules/procurement/shared/components/RejectReasonModal';
+import { ErrorBoundary } from '@/shared/components/system/ErrorBoundary';
 
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { createColumnHelper } from '@tanstack/react-table';
@@ -551,25 +552,29 @@ export default function PRListPage() {
             </PageListLayout>
 
             {isRFQModalOpen && (
-                <RFQFormModal
-                    isOpen={isRFQModalOpen}
-                    onClose={() => {
-                        setIsRFQModalOpen(false);
-                        setSelectedPR(null);
-                    }}
-                    initialPR={selectedPR}
-                    onSuccess={handleRFQSuccess}
-                />
+                <ErrorBoundary>
+                    <RFQFormModal
+                        isOpen={isRFQModalOpen}
+                        onClose={() => {
+                            setIsRFQModalOpen(false);
+                            setSelectedPR(null);
+                        }}
+                        initialPR={selectedPR}
+                        onSuccess={handleRFQSuccess}
+                    />
+                </ErrorBoundary>
             )}
 
             {isPRModalOpen && (
-                <PRFormModal
-                    isOpen={isPRModalOpen}
-                    onClose={handleClosePRModal}
-                    id={selectedPRId}
-                    onSuccess={() => refetch()}
-                    readOnly={isReadOnly}
-                />
+                <ErrorBoundary>
+                    <PRFormModal
+                        isOpen={isPRModalOpen}
+                        onClose={handleClosePRModal}
+                        id={selectedPRId}
+                        onSuccess={() => refetch()}
+                        readOnly={isReadOnly}
+                    />
+                </ErrorBoundary>
             )}
 
             <RejectReasonModal

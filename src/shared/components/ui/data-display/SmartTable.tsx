@@ -131,8 +131,7 @@ export function SmartTable<TData>({
             {/* Table Container */}
             <div className="flex-1 overflow-auto relative">
                 <table 
-                    className="w-full table-fixed text-left text-sm"
-                    style={{ minWidth: table.getTotalSize() }}
+                    className="w-full text-left border-collapse table-fixed min-w-[900px] text-sm"
                 >
                     <thead className={`${styles.bg.header} ${styles.text.secondary} uppercase text-xs sticky top-0 z-10`}>
                         {table.getHeaderGroups().map(headerGroup => (
@@ -140,11 +139,15 @@ export function SmartTable<TData>({
                                 {headerGroup.headers.map(header => {
                                     const canSort = header.column.getCanSort();
 
+                                    const meta = header.column.columnDef.meta as { thClassName?: string, tdClassName?: string, align?: string } | undefined;
+                                    const alignClass = meta?.thClassName?.includes('text-center') ? 'justify-center' :
+                                                       meta?.thClassName?.includes('text-right') ? 'justify-end' : '';
+
                                     return (
                                         <th
                                             key={header.id}
-                                            style={{ width: header.getSize() }}
-                                            className={`px-4 py-3 font-semibold select-none group transition-all ${
+                                            style={meta?.thClassName?.includes('w-') ? undefined : { width: header.getSize() === 150 ? undefined : header.getSize() }}
+                                            className={`${meta?.thClassName || 'px-2 py-3 font-semibold'} select-none group transition-all ${
                                                 canSort ? `cursor-pointer ${styles.state.hover}` : ''
                                             } ${sortConfig?.key === header.column.id ? styles.state.active : ''}`}
                                             onClick={() => {
@@ -155,7 +158,7 @@ export function SmartTable<TData>({
                                                 }
                                             }}
                                         >
-                                            <div className={`flex items-center gap-1 w-full whitespace-nowrap ${(header.column.columnDef.meta as { align?: string })?.align === 'right' ? 'justify-end pr-10' : ''}`}>
+                                            <div className={`flex items-center gap-1 w-full whitespace-nowrap ${alignClass || (meta?.align === 'right' ? 'justify-end pr-10' : '')}`}>
                                                 {flexRender(
                                                     header.column.columnDef.header,
                                                     header.getContext()
@@ -184,7 +187,7 @@ export function SmartTable<TData>({
                             Array.from({ length: pagination.pageSize }).map((_, index) => (
                                 <tr key={`skeleton-${index}`} className="animate-pulse">
                                     {columns.map((_, colIndex) => (
-                                        <td key={`skeleton-cell-${colIndex}`} className="px-4 py-4">
+                                        <td key={`skeleton-cell-${colIndex}`} className="px-2 py-3">
                                             <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
                                         </td>
                                     ))}
@@ -202,20 +205,22 @@ export function SmartTable<TData>({
                                         ${hoverable ? styles.state.hover : ''}
                                     `}
                                 >
-                                    {row.getVisibleCells().map(cell => (
-                                        <td key={cell.id} className="px-4 py-3 text-gray-700 dark:text-gray-300">
+                                    {row.getVisibleCells().map(cell => {
+                                        const meta = cell.column.columnDef.meta as { thClassName?: string, tdClassName?: string } | undefined;
+                                        return (
+                                        <td key={cell.id} className={`${meta?.tdClassName || 'px-2 py-3 text-sm'} text-gray-700 dark:text-gray-300`}>
                                             {flexRender(
                                                 cell.column.columnDef.cell,
                                                 cell.getContext()
                                             )}
                                         </td>
-                                    ))}
+                                    )})}
                                 </tr>
                             ))
                         ) : (
                             // Empty State
                             <tr>
-                                <td colSpan={columns.length} className={`px-4 py-16 text-center ${styles.text.tertiary}`}>
+                                <td colSpan={columns.length} className={`px-2 py-16 text-center ${styles.text.tertiary}`}>
                                     <div className="flex flex-col items-center justify-center gap-3">
                                         <div className={`w-12 h-12 rounded-full ${styles.bg.subtle} flex items-center justify-center text-gray-400`}>
                                             <Search size={24} />
@@ -232,7 +237,7 @@ export function SmartTable<TData>({
                             {table.getFooterGroups().map(footerGroup => (
                                 <tr key={footerGroup.id}>
                                     {footerGroup.headers.map(header => (
-                                        <td key={header.id} className="px-4 py-2 relative">
+                                        <td key={header.id} className="px-2 py-2 relative">
                                             {header.isPlaceholder
                                                 ? null
                                                 : flexRender(

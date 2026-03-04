@@ -1,7 +1,7 @@
 import type MockAdapter from 'axios-mock-adapter';
 import type { AxiosRequestConfig } from 'axios';
-import { MOCK_QCS } from '../data/qcData';
-import { MOCK_VQS } from '../data/vqData';
+import { MOCK_QCS } from '@/modules/procurement/mocks/data/qcData';
+import { MOCK_VQS } from '@/modules/procurement/mocks/data/vqData';
 import { applyMockFilters, sanitizeId } from '@/core/api/mockUtils';
 
 export const setupQCHandlers = (mock: MockAdapter) => {

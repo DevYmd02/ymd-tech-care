@@ -7,6 +7,7 @@ import type {
 } from '@/modules/master-data/types/master-data-types';
 import type { PaginatedListResponse } from '@/shared/types/api-response.types';
 import type { TableFilters } from '@/shared/hooks/useTableFilters';
+import { logger } from '@/shared/utils/logger';
 
 const ENDPOINT = '/org-branches';
 
@@ -59,6 +60,16 @@ export const BranchService = {
       return true;
     } catch {
       return false;
+    }
+  },
+
+  toggleStatus: async (id: string, isActive: boolean): Promise<{ success: boolean; message?: string }> => {
+    try {
+      await api.patch(`${ENDPOINT}/${id}/status`, { is_active: isActive });
+      return { success: true };
+    } catch (error) {
+      logger.error('[BranchService] toggleStatus failed:', error);
+      return { success: false, message: 'เกิดข้อผิดพลาดในการเปลี่ยนสถานะสาขา' };
     }
   }
 };

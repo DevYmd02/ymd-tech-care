@@ -4,7 +4,7 @@ import type {
   CustomerType, 
   CustomerGroup, 
   CustomerBillingGroup 
-} from "../../types/customer-types";
+} from "@/modules/master-data/customer/types/customer-types";
 
 /** Business Types Data */
 export const MOCK_BUSINESS_TYPES: CustomerBusinessType[] = [

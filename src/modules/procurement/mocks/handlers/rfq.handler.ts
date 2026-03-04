@@ -1,7 +1,7 @@
 import type MockAdapter from 'axios-mock-adapter';
 import type { AxiosRequestConfig } from 'axios';
-import { MOCK_RFQS, MOCK_RFQ_VENDORS, VENDOR_POOL, MOCK_RFQ_LINES } from '../data/rfqData';
-import { MOCK_VQS } from '../data/vqData';
+import { MOCK_RFQS, MOCK_RFQ_VENDORS, VENDOR_POOL, MOCK_RFQ_LINES } from '@/modules/procurement/mocks/data/rfqData';
+import { MOCK_VQS } from '@/modules/procurement/mocks/data/vqData';
 import { applyMockFilters, sanitizeId } from '@/core/api/mockUtils';
 import type { RFQHeader, RFQLine } from '@/modules/procurement/types';
 

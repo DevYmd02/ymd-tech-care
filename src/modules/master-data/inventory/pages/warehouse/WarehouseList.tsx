@@ -13,7 +13,7 @@ import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';
 import { useTableFilters } from '@/shared/hooks';
 import type { ColumnDef } from '@tanstack/react-table';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 const STATUS_OPTIONS = [
     { value: 'ALL', label: 'ทั้งหมด' },
@@ -61,7 +61,9 @@ export default function WarehouseList() {
     ], []);
 
     // ==================== DATA FETCHING ====================
-    const { data: response, isLoading, refetch } = useQuery({
+    const queryClient = useQueryClient();
+
+    const { data: response, isLoading } = useQuery({
         queryKey: ['warehouses', filters],
         queryFn: async () => {
             const result = await WarehouseService.getAll();
@@ -104,6 +106,13 @@ export default function WarehouseList() {
     });
 
     // ==================== HANDLERS ====================
+    const deleteMutation = useMutation({
+        mutationFn: (id: string) => WarehouseService.delete(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['warehouses'] });
+        }
+    });
+
     const handleCreateNew = () => {
         setEditingId(null);
         setIsModalOpen(true);
@@ -114,12 +123,11 @@ export default function WarehouseList() {
         setIsModalOpen(true);
     };
 
-    const handleDelete = useCallback(async (id: string) => {
+    const handleDelete = useCallback((id: string) => {
         if (confirm('คุณต้องการลบข้อมูลคลังสินค้านี้หรือไม่?')) {
-            await WarehouseService.delete(id);
-            refetch();
+            deleteMutation.mutate(id);
         }
-    }, [refetch]);
+    }, [deleteMutation]);
 
     const handleModalClose = () => {
         setIsModalOpen(false);
@@ -255,7 +263,6 @@ export default function WarehouseList() {
                 isOpen={isModalOpen} 
                 onClose={handleModalClose}
                 editId={editingId}
-                onSuccess={refetch}
             />
         </div>
     );

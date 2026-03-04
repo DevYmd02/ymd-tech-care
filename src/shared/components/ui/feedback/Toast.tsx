@@ -109,8 +109,10 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setIsVisible(false);
   }, []);
 
+  const contextValue = React.useMemo(() => ({ toast }), [toast]);
+
   return (
-    <ToastContext.Provider value={{ toast }}>
+    <ToastContext.Provider value={contextValue}>
       {children}
       <Toast 
         message={message} 

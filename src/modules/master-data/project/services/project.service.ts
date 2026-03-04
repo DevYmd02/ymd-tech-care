@@ -37,12 +37,58 @@ export const ProjectService = {
   },
 
   getById: async (id: string): Promise<Project | null> => {
+    if (USE_MOCK) {
+      return mockProjects.find(p => p.project_id === id) || null;
+    }
     try {
       const response = await api.get<Project>(`/project/${id}`);
       return response;
     } catch (error) {
       logger.error('[ProjectService] getById error:', error);
       return null;
+    }
+  },
+
+  create: async (data: Partial<Project>): Promise<{ success: boolean; message?: string }> => {
+    if (USE_MOCK) {
+       logger.info('[ProjectService] Mock Create:', data);
+       return { success: true };
+    }
+    try {
+      await api.post('/project', data);
+      return { success: true };
+    } catch (error) {
+      logger.error('[ProjectService] create error:', error);
+      return { success: false, message: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  },
+
+  update: async (id: string, data: Partial<Project>): Promise<{ success: boolean; message?: string }> => {
+    if (USE_MOCK) {
+       logger.info('[ProjectService] Mock Update:', id, data);
+       return { success: true };
+    }
+    try {
+      await api.patch(`/project/${id}`, data);
+      return { success: true };
+    } catch (error) {
+      logger.error('[ProjectService] update error:', error);
+      return { success: false, message: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  },
+
+  toggleStatus: async (id: string, currentStatus: boolean): Promise<{ success: boolean; message?: string }> => {
+    if (USE_MOCK) {
+       const p = mockProjects.find(proj => proj.project_id === id);
+       if (p) p.is_active = !currentStatus;
+       return { success: true };
+    }
+    try {
+      await api.patch(`/project/${id}/status`, { is_active: !currentStatus });
+      return { success: true };
+    } catch (error) {
+      logger.error('[ProjectService] toggleStatus error:', error);
+      return { success: false, message: error instanceof Error ? error.message : 'Unknown error' };
     }
   }
 };

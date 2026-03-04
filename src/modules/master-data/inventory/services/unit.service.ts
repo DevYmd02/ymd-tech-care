@@ -84,5 +84,19 @@ export const UnitService = {
       logger.error('[UnitService] delete error:', error);
       return false;
     }
+  },
+
+  toggleStatus: async (id: string, isActive: boolean): Promise<{ success: boolean; message?: string }> => {
+    if (USE_MOCK) {
+      const unit = mockUnits.find(u => u.unit_id === id);
+      if (unit) unit.is_active = isActive;
+      return { success: true, message: 'Mock Status Toggle Success' };
+    }
+    try {
+      return await api.patch<{ success: boolean; message?: string }>(`/uom/${id}/status`, { is_active: isActive });
+    } catch (error) {
+      logger.error('[UnitService] toggleStatus error:', error);
+      return { success: false, message: 'ไม่สามารถเปลี่ยนสถานะได้' };
+    }
   }
 };

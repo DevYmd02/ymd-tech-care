@@ -1,5 +1,5 @@
 import type MockAdapter from 'axios-mock-adapter';
-import { MOCK_PRT_DATA, MOCK_PRT_ITEMS } from '../data/prtData';
+import { MOCK_PRT_DATA, MOCK_PRT_ITEMS } from '@/modules/procurement/mocks/data/prtData';
 import type { PurchaseReturn, PrtLineItem } from '@/modules/procurement/types';
 import { applyMockFilters, sanitizeId } from '@/core/api/mockUtils';
 

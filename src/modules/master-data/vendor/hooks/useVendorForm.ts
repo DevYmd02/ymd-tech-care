@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useForm, type Path, type SubmitHandler, type FieldErrors, type FieldError } from 'react-hook-form';
+import { useForm, useWatch, type Path, type SubmitHandler, type FieldErrors, type FieldError } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { VendorService } from '../services/vendor.service';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
@@ -44,7 +44,7 @@ export function useVendorForm({
     
     // RHF Setup
     const { 
-        watch, 
+        control,
         setValue, 
         handleSubmit: rhfHandleSubmit, 
         reset, 
@@ -56,7 +56,10 @@ export function useVendorForm({
         mode: 'onChange' 
     });
 
-    const formData = watch();
+    const formData = useWatch({ 
+        control,
+        defaultValue: initialVendorFormData
+    }) as VendorFormData;
 
     const prevIsOpenRef = useRef(isOpen);
     
@@ -70,10 +73,7 @@ export function useVendorForm({
             if (initialData) {
                 setHeaderTitle('แก้ไขข้อมูลเจ้าหนี้');
                 const converted = mapToFormData(initialData);
-                reset({
-                    ...converted,
-                    vendorCodeSearch: '',
-                });
+                reset(converted); // Strict reset with mapped data
             } else if (vendorId) {
                 setHeaderTitle('แก้ไขข้อมูลเจ้าหนี้');
                 const fetchData = async () => {
@@ -82,10 +82,7 @@ export function useVendorForm({
                         const vendor = await VendorService.getById(vendorId);
                         if (vendor) {
                             const apiData = mapToFormData(vendor);
-                            reset({
-                                ...apiData,
-                                vendorCodeSearch: '',
-                            });
+                            reset(apiData);
                         }
                     } catch (error) {
                         logger.error('Error fetching vendor:', error);
@@ -104,6 +101,10 @@ export function useVendorForm({
         }
         prevIsOpenRef.current = isOpen;
     }, [isOpen, vendorId, initialData, predictedVendorId, reset]);
+
+    const clearForm = () => {
+        reset(initialVendorFormData);
+    };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value, type } = e.target;
@@ -135,7 +136,7 @@ export function useVendorForm({
             bankName: '',
             branchName: '',
             accountNumber: '',
-            accountName: formData.vendorNameTh,
+            accountName: formData.vendorNameTh || '',
             accountType: 'SAVING',
             swiftCode: '',
             isMain: current.length === 0
@@ -340,7 +341,7 @@ export function useVendorForm({
     };
     
     // Wrapper for form submission to handle validation errors
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
         await rhfHandleSubmit(onSubmit, (invalidErrors) => {
@@ -451,6 +452,7 @@ export function useVendorForm({
         updateAddress,
         handleSameAsRegisteredChange,
         handleCreditLimitChange,
-        handleSubmit
+        handleSubmit: handleFormSubmit,
+        clearForm
     };
 }

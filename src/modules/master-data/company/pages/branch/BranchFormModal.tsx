@@ -10,133 +10,49 @@
  * @module company
  */
 
-import { useEffect } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Building2, Save, X } from 'lucide-react';
+import { Building2, Save, X, RotateCcw } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
-import { BranchService } from '@/modules/master-data';
 import { DialogFormLayout } from '@ui';
-import { logger } from '@/shared/utils/logger';
-
-// ====================================================================================
-// SCHEMA
-// ====================================================================================
-
-const branchSchema = z.object({
-    branchCode: z.string()
-        .min(1, 'กรุณากรอกรหัสสาขา')
-        .max(20, 'รหัสสาขาต้องไม่เกิน 20 ตัวอักษร'),
-    branchName: z.string()
-        .min(1, 'กรุณากรอกชื่อสาขา')
-        .max(200, 'ชื่อสาขาต้องไม่เกิน 200 ตัวอักษร'),
-    isActive: z.boolean(),
-});
-
-type BranchFormValues = z.infer<typeof branchSchema>;
-
-// ====================================================================================
-// PROPS
-// ====================================================================================
+import { useBranchForm } from '../../hooks/useBranchForm';
+import type { BranchListItem } from '@/modules/master-data/types/master-data-types';
 
 interface Props {
     isOpen: boolean;
     onClose: () => void;
     editId?: string | null;
+    initialData?: BranchListItem | null;
     onSuccess?: () => void;
 }
 
-
-
-// ====================================================================================
-// COMPONENT
-// ====================================================================================
-
-export function BranchFormModal({ isOpen, onClose, editId, onSuccess }: Props) {
+export function BranchFormModal({ isOpen, onClose, editId, initialData, onSuccess }: Props) {
     const {
         register,
-        handleSubmit,
-        reset,
-        formState: { errors, isSubmitting },
-        control,
-        setValue
-    } = useForm<BranchFormValues>({
-        resolver: zodResolver(branchSchema),
-        defaultValues: {
-            branchCode: '',
-            branchName: '',
-            isActive: true
-        }
-    });
+        errors,
+        isSaving,
+        handleSave,
+        clearForm
+    } = useBranchForm(editId || null, initialData, onSuccess);
 
-    const isActive = useWatch({ control, name: 'isActive' });
-
-    // Reset/Load Data
-    useEffect(() => {
-        if (isOpen) {
-            if (editId) {
-                BranchService.getById(editId).then(existing => {
-                    if (existing) {
-                        reset({
-                            branchCode: existing.branch_code,
-                            branchName: existing.branch_name,
-                            isActive: existing.is_active
-                        });
-                    }
-                });
-            } else {
-                reset({
-                    branchCode: '',
-                    branchName: '',
-                    isActive: true
-                });
-            }
-        }
-    }, [isOpen, editId, reset]);
-
-    const onSubmit = async (data: BranchFormValues) => {
-        try {
-            let res;
-            if (editId) {
-                res = await BranchService.update({
-                    branch_id: editId,
-                    branch_code: data.branchCode,
-                    branch_name: data.branchName,
-                    is_active: data.isActive
-                });
-            } else {
-                res = await BranchService.create({
-                    branch_code: data.branchCode,
-                    branch_name: data.branchName,
-                    is_active: data.isActive
-                });
-            }
-
-            if (res.success) {
-                logger.log('Saved Branch:', data);
-                if (onSuccess) onSuccess();
-                onClose();
-            } else {
-                alert(res.message || 'เกิดข้อผิดพลาดในการบันทึก');
-            }
-        } catch (error) {
-            logger.error('Error saving branch:', error);
-            alert('เกิดข้อผิดพลาดในการบันทึก');
-        }
+    const handleClose = () => {
+        clearForm();
+        onClose();
     };
 
-    // ==================== RENDERING ====================
-    
-    // Header Icon
     const TitleIcon = <Building2 size={24} className="text-white" />;
 
-    // Footer Actions
     const FormFooter = (
         <div className="flex justify-end gap-3 p-4">
             <button
                 type="button"
-                onClick={onClose}
+                onClick={clearForm}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg flex items-center gap-2 transition-colors border border-gray-300"
+            >
+                <RotateCcw size={18} />
+                ล้างฟอร์ม (Clear)
+            </button>
+            <button
+                type="button"
+                onClick={handleClose}
                 className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg flex items-center gap-2 transition-colors border border-gray-300"
             >
                 <X size={18} />
@@ -144,12 +60,12 @@ export function BranchFormModal({ isOpen, onClose, editId, onSuccess }: Props) {
             </button>
             <button
                 type="button"
-                onClick={handleSubmit(onSubmit)}
-                disabled={isSubmitting}
+                onClick={handleSave}
+                disabled={isSaving}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50"
             >
                 <Save size={18} />
-                {isSubmitting ? 'กำลังบันทึก...' : 'บันทึก'}
+                {isSaving ? 'กำลังบันทึก...' : 'บันทึก'}
             </button>
         </div>
     );
@@ -157,7 +73,7 @@ export function BranchFormModal({ isOpen, onClose, editId, onSuccess }: Props) {
     return (
         <DialogFormLayout
             isOpen={isOpen}
-            onClose={onClose}
+            onClose={handleClose}
             title={editId ? 'แก้ไขข้อมูลสาขา' : 'เพิ่มสาขาใหม่'}
             titleIcon={TitleIcon}
             footer={FormFooter}
@@ -170,15 +86,13 @@ export function BranchFormModal({ isOpen, onClose, editId, onSuccess }: Props) {
                         รหัสสาขา <span className="text-red-500">*</span>
                     </label>
                     <input
-                        {...register('branchCode')}
+                        {...register('branch_code')}
                         type="text"
                         placeholder="กรอกรหัสสาขา (เช่น BKK001)"
-                        className={`${styles.input} ${errors.branchCode ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        className={`${styles.input} ${errors.branch_code ? 'border-red-500 focus:ring-red-200' : ''}`}
                     />
-                    {errors.branchCode ? (
-                        <p className="text-red-500 text-xs mt-1">{errors.branchCode.message}</p>
-                    ) : (
-                        <p className="text-gray-400 text-xs mt-1">varchar(20), UNIQUE - ต้องไม่ซ้ำ</p>
+                    {errors.branch_code && (
+                        <p className="text-red-500 text-xs mt-1">{errors.branch_code.message}</p>
                     )}
                 </div>
 
@@ -188,31 +102,27 @@ export function BranchFormModal({ isOpen, onClose, editId, onSuccess }: Props) {
                         ชื่อสาขา <span className="text-red-500">*</span>
                     </label>
                     <input
-                        {...register('branchName')}
+                        {...register('branch_name')}
                         type="text"
                         placeholder="กรอกชื่อสาขา"
-                        className={`${styles.input} ${errors.branchName ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        className={`${styles.input} ${errors.branch_name ? 'border-red-500 focus:ring-red-200' : ''}`}
                     />
-                    {errors.branchName ? (
-                        <p className="text-red-500 text-xs mt-1">{errors.branchName.message}</p>
-                    ) : (
-                        <p className="text-gray-400 text-xs mt-1">varchar(200)</p>
+                    {errors.branch_name && (
+                        <p className="text-red-500 text-xs mt-1">{errors.branch_name.message}</p>
                     )}
                 </div>
 
-                {/* Status - Dropdown Select */}
-                <div>
-                    <label className={styles.label}>
-                        สถานะ <span className="text-red-500">*</span>
+                {/* Status - Checkbox style matching dashboard toggle */}
+                <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700">
+                    <input
+                        {...register('is_active')}
+                        type="checkbox"
+                        id="branch_is_active"
+                        className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                    />
+                    <label htmlFor="branch_is_active" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                        สถานะใช้งาน (Active)
                     </label>
-                    <select
-                        className={`${styles.input} cursor-pointer`}
-                        value={isActive ? 'true' : 'false'}
-                        onChange={(e) => setValue('isActive', e.target.value === 'true')}
-                    >
-                        <option value="true">ใช้งาน (Active)</option>
-                        <option value="false">ไม่ใช้งาน (Inactive)</option>
-                    </select>
                 </div>
             </div>
         </DialogFormLayout>

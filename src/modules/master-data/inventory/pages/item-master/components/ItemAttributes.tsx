@@ -2,7 +2,6 @@ import React from 'react';
 import type { ItemFormData, ItemFormChangeHandler } from '../hooks/useItemForm';
 import { 
     ITEM_TYPES, 
-    ITEM_CATEGORIES, 
     ITEM_GROUPS, 
     ITEM_BRANDS, 
     ITEM_PATTERNS, 
@@ -14,6 +13,8 @@ import {
     getItemName 
 } from '@/modules/master-data/inventory/constants/itemConstants';
 
+import type { ProductCategoryListItem } from '@/modules/master-data/types/master-data-types';
+
 /**
  * @interface ItemAttributesProps
  * @description Strictly typed props for ItemAttributes
@@ -21,11 +22,13 @@ import {
 interface ItemAttributesProps {
     formData: ItemFormData;
     onChange: ItemFormChangeHandler;
+    categories?: ProductCategoryListItem[];
 }
 
 export const ItemAttributes: React.FC<ItemAttributesProps> = ({
     formData,
-    onChange
+    onChange,
+    categories = []
 }) => {
     return (
         <div className="lg:col-span-4 space-y-2">
@@ -65,14 +68,14 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                             className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
                         >
                             <option value="">-- เลือก --</option>
-                            {ITEM_CATEGORIES.map(c => (
-                                <option key={c.id} value={c.id}>{c.code}</option>
+                            {categories.map(c => (
+                                <option key={c.category_id} value={c.category_id}>{c.category_code}</option>
                             ))}
                         </select>
                         <input 
                             type="text" 
                             readOnly 
-                            value={getItemName(formData.category_id, ITEM_CATEGORIES)}
+                            value={categories.find(c => c.category_id === formData.category_id)?.category_name || ''}
                             className="w-[65%] h-8 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 text-xs text-gray-500 dark:text-gray-400 cursor-not-allowed outline-none"
                         />
                     </div>

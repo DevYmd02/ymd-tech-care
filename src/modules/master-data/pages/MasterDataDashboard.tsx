@@ -11,6 +11,7 @@ import { logger } from '@/shared/utils/logger';
 import { 
     Users, Package, Building2, Warehouse as WarehouseIcon, 
     DollarSign, FolderKanban,
+    Ruler, Tag,
     ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight
 } from 'lucide-react';
 
@@ -24,6 +25,10 @@ import { VendorFormModal } from '@/modules/master-data/vendor/pages';
 import { BranchFormModal } from '@/modules/master-data/company/pages/branch';
 import { WarehouseFormModal } from '@/modules/master-data/inventory/pages/warehouse';
 import { ItemMasterFormModal } from '@/modules/master-data/inventory/pages/item-master/ItemMasterFormModal';
+import { CostCenterFormModal } from '@/modules/master-data/accounting/pages/cost-center/CostCenterFormModal';
+import { ProjectFormModal } from '@/modules/master-data/project/pages/ProjectFormModal';
+import { UnitFormModal } from '@/modules/master-data/inventory/pages/unit/UnitFormModal';
+import { CategoryFormModal } from '@/modules/master-data/inventory/pages/category/CategoryFormModal';
 
 // Import sub-components
 import { MasterDataHeader } from './components/MasterDataHeader';
@@ -37,6 +42,8 @@ import { WarehouseTab } from './dashboard/tabs/WarehouseTab';
 import { CostCenterTab } from './dashboard/tabs/CostCenterTab';
 import { ProjectTab } from './dashboard/tabs/ProjectTab';
 import { ItemTab } from './dashboard/tabs/ItemTab';
+import { UnitTab } from './dashboard/tabs/UnitTab';
+import { CategoryTab } from './dashboard/tabs/CategoryTab';
 
 // Import types
 import type { VendorListItem, VendorMaster } from '@/modules/master-data/vendor/types/vendor-types';
@@ -45,7 +52,9 @@ import type {
     WarehouseListItem, 
     CostCenter,
     Project,
-    ItemListItem
+    ItemListItem,
+    UnitListItem,
+    ProductCategoryListItem
 } from '@/modules/master-data/types/master-data-types';
 import type { TabType, TabConfig, TabLabel } from '../types';
 
@@ -83,6 +92,16 @@ const DB_RELATIONS: Record<TabType, { dbTable: string; relations: string[]; fk: 
         dbTable: 'project',
         relations: ['pr_header', 'po_header', 'budget_project'],
         fk: 'project_id'
+    },
+    'unit': {
+        dbTable: 'uom',
+        relations: ['item_master', 'po_detail', 'pr_detail'],
+        fk: 'unit_id'
+    },
+    'category': {
+        dbTable: 'product_category',
+        relations: ['item_master'],
+        fk: 'category_id'
     }
 };
 
@@ -114,6 +133,8 @@ export default function MasterDataDashboard() {
     // Items handled by useQuery below
     const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
+    const [units, setUnits] = useState<UnitListItem[]>([]);
+    const [categories, setCategories] = useState<ProductCategoryListItem[]>([]);
 
     // REFACTORED: Use useQuery for items (Cache Shared with ItemMasterList)
     const { data: response, refetch: refetchItems } = useQuery({
@@ -132,6 +153,8 @@ export default function MasterDataDashboard() {
         { id: 'warehouse', label: 'Warehouse', labelEn: 'คลัง', icon: WarehouseIcon, dbRelation: DB_RELATIONS['warehouse'] },
         { id: 'cost-center', label: 'Cost Center', labelEn: 'ศูนย์ต้นทุน', icon: DollarSign, dbRelation: DB_RELATIONS['cost-center'] },
         { id: 'project', label: 'Project', labelEn: 'โครงการ', icon: FolderKanban, dbRelation: DB_RELATIONS['project'] },
+        { id: 'unit', label: 'Unit', labelEn: 'หน่วยนับ', icon: Ruler, dbRelation: DB_RELATIONS['unit'] },
+        { id: 'category', label: 'Category', labelEn: 'หมวดหมู่', icon: Tag, dbRelation: DB_RELATIONS['category'] },
     ] as const;
 
     // Tab configs with record counts
@@ -148,6 +171,8 @@ export default function MasterDataDashboard() {
                 case 'item': return items?.length || 0;
                 case 'cost-center': return costCenters?.length || 0;
                 case 'project': return projects?.length || 0;
+                case 'unit': return units?.length || 0;
+                case 'category': return categories?.length || 0;
                 default: return 0;
             }
         })(),
@@ -186,6 +211,16 @@ export default function MasterDataDashboard() {
                     setProjects(data || []);
                     break;
                 }
+                case 'unit': {
+                    const data = await MasterDataService.getUnits();
+                    setUnits(data || []);
+                    break;
+                }
+                case 'category': {
+                    const data = await MasterDataService.getProductCategories();
+                    setCategories(data || []);
+                    break;
+                }
             }
         } catch (error) {
             logger.error('[MasterDataDashboard] fetchData error:', error);
@@ -196,6 +231,8 @@ export default function MasterDataDashboard() {
                 case 'warehouse': setWarehouses([]); break;
                 case 'cost-center': setCostCenters([]); break;
                 case 'project': setProjects([]); break;
+                case 'unit': setUnits([]); break;
+                case 'category': setCategories([]); break;
             }
         } finally {
             setIsLoading(false);
@@ -259,6 +296,26 @@ export default function MasterDataDashboard() {
                     setProjects([]);
                 }
             }
+
+            if (skipTab !== 'unit') {
+                try {
+                    const data = await MasterDataService.getUnits();
+                    setUnits(data || []);
+                } catch (error) {
+                    logger.error('Failed to fetch units for counts', error);
+                    setUnits([]);
+                }
+            }
+
+            if (skipTab !== 'category') {
+                try {
+                    const data = await MasterDataService.getProductCategories();
+                    setCategories(data || []);
+                } catch (error) {
+                    logger.error('Failed to fetch categories for counts', error);
+                    setCategories([]);
+                }
+            }
         };
         
         fetchAllCounts();
@@ -304,6 +361,40 @@ export default function MasterDataDashboard() {
         setIsModalOpen(true);
     };
 
+    type MasterDataEntity = CostCenter | Project | BranchListItem | WarehouseListItem | UnitListItem | ProductCategoryListItem;
+
+    const handleStatusToggle = async (data: MasterDataEntity) => {
+        try {
+            if (activeTab === 'cost-center') {
+                const center = data as CostCenter;
+                const res = await MasterDataService.toggleCostCenterStatus(center.cost_center_id, !center.is_active);
+                if (res.success) fetchData();
+            } else if (activeTab === 'project') {
+                const project = data as Project;
+                const res = await MasterDataService.toggleProjectStatus(project.project_id, !project.is_active);
+                if (res.success) fetchData();
+            } else if (activeTab === 'branch') {
+                const branch = data as BranchListItem;
+                const res = await MasterDataService.toggleBranchStatus(branch.branch_id, !branch.is_active);
+                if (res.success) fetchData();
+            } else if (activeTab === 'warehouse') {
+                const warehouse = data as WarehouseListItem;
+                const res = await MasterDataService.toggleWarehouseStatus(warehouse.warehouse_id, !warehouse.is_active);
+                if (res.success) fetchData();
+            } else if (activeTab === 'unit') {
+                const unit = data as UnitListItem;
+                const res = await MasterDataService.toggleUnitStatus(unit.unit_id, !unit.is_active);
+                if (res.success) fetchData();
+            } else if (activeTab === 'category') {
+                const category = data as ProductCategoryListItem;
+                const res = await MasterDataService.toggleCategoryStatus(category.category_id, !category.is_active);
+                if (res.success) fetchData();
+            }
+        } catch (error) {
+            logger.error('Toggle status error:', error);
+        }
+    };
+
     const handleDelete = async (id: string) => {
         if (confirm('ต้องการลบข้อมูลนี้หรือไม่?')) {
             if (activeTab === 'vendor') {
@@ -321,7 +412,6 @@ export default function MasterDataDashboard() {
                     alert('เกิดข้อผิดพลาดในการลบข้อมูล');
                 }
             } else {
-                // Simplified mock deletes for other tabs (implementation details might vary)
                 fetchData();
             }
         }
@@ -395,6 +485,16 @@ export default function MasterDataDashboard() {
                     p.project_code?.toLowerCase().includes(term) ||
                     p.project_name?.toLowerCase().includes(term)
                 );
+            case 'unit':
+                return (units || []).filter(u =>
+                    u.unit_code?.toLowerCase().includes(term) ||
+                    u.unit_name?.toLowerCase().includes(term)
+                );
+            case 'category':
+                return (categories || []).filter(c =>
+                    c.category_code?.toLowerCase().includes(term) ||
+                    c.category_name?.toLowerCase().includes(term)
+                );
             default:
                 return [];
         }
@@ -467,7 +567,7 @@ export default function MasterDataDashboard() {
                         expandedId={expandedId}
                         toggleExpand={toggleExpand}
                         handleEdit={handleEdit}
-                        handleDelete={handleDelete}
+                        handleStatusToggle={handleStatusToggle}
                         dbRelation={currentTab}
                     />
                 ) : activeTab === 'warehouse' ? (
@@ -476,7 +576,7 @@ export default function MasterDataDashboard() {
                         expandedId={expandedId}
                         toggleExpand={toggleExpand}
                         handleEdit={handleEdit}
-                        handleDelete={handleDelete}
+                        handleStatusToggle={handleStatusToggle}
                         dbRelation={currentTab}
                     />
                 ) : activeTab === 'item' ? (
@@ -493,6 +593,8 @@ export default function MasterDataDashboard() {
                         data={paginatedData as CostCenter[]}
                         expandedId={expandedId}
                         toggleExpand={toggleExpand}
+                        handleEdit={handleEdit}
+                        handleStatusToggle={handleStatusToggle}
                         dbRelation={currentTab}
                     />
                 ) : activeTab === 'project' ? (
@@ -500,6 +602,26 @@ export default function MasterDataDashboard() {
                         data={paginatedData as Project[]}
                         expandedId={expandedId}
                         toggleExpand={toggleExpand}
+                        handleEdit={handleEdit}
+                        handleStatusToggle={handleStatusToggle}
+                        dbRelation={currentTab}
+                    />
+                ) : activeTab === 'unit' ? (
+                    <UnitTab 
+                        data={paginatedData as UnitListItem[]}
+                        expandedId={expandedId}
+                        toggleExpand={toggleExpand}
+                        handleEdit={handleEdit}
+                        handleStatusToggle={handleStatusToggle}
+                        dbRelation={currentTab}
+                    />
+                ) : activeTab === 'category' ? (
+                    <CategoryTab 
+                        data={paginatedData as ProductCategoryListItem[]}
+                        expandedId={expandedId}
+                        toggleExpand={toggleExpand}
+                        handleEdit={handleEdit}
+                        handleStatusToggle={handleStatusToggle}
                         dbRelation={currentTab}
                     />
                 ) : (
@@ -587,6 +709,37 @@ export default function MasterDataDashboard() {
                     refetchItems();
                     handleModalClose();
                 }}
+            />
+
+            <CostCenterFormModal 
+                isOpen={isModalOpen && activeTab === 'cost-center'} 
+                onClose={handleModalClose} 
+                editId={editingId}
+                initialData={editingId ? costCenters.find(c => c.cost_center_id === editingId) : null}
+            />
+
+            <ProjectFormModal 
+                isOpen={isModalOpen && activeTab === 'project'} 
+                onClose={handleModalClose} 
+                editId={editingId}
+                initialData={editingId ? projects.find(p => p.project_id === editingId) : null}
+                onSuccess={fetchData}
+            />
+
+            <UnitFormModal 
+                isOpen={isModalOpen && activeTab === 'unit'} 
+                onClose={handleModalClose} 
+                editId={editingId}
+                initialData={editingId ? units.find(u => u.unit_id === editingId) : null}
+                onSuccess={fetchData}
+            />
+
+            <CategoryFormModal 
+                isOpen={isModalOpen && activeTab === 'category'} 
+                onClose={handleModalClose} 
+                editId={editingId}
+                initialData={editingId ? categories.find(c => c.category_id === editingId) : null}
+                onSuccess={fetchData}
             />
         </div>
     );

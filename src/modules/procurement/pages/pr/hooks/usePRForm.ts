@@ -680,24 +680,6 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
   };
 
   const onSubmit = async (data: PRFormData) => {
-    if (!data.need_by_date) { showAlert('กรุณาระบุวันที่ต้องการใช้'); return; }
-    if (!data.requester_name) { showAlert('กรุณาระบุชื่อผู้ขอซื้อ'); return; }
-    if (!data.cost_center_id) { showAlert('กรุณาเลือกศูนย์ต้นทุน'); return; }
-    if (!data.purpose) { showAlert('กรุณาระบุวัตถุประสงค์'); return; }
-    
-    // Smart Clean-up: Identical logic to handleSaveData to ensure consistency
-    const activeLines = (data.lines || []).filter(line => {
-      const isItemIdEmpty = !line.item_id || line.item_id === '';
-      const isItemCodeEmpty = !line.item_code || line.item_code === '';
-      const isQtyZero = !line.qty || Number(line.qty) === 0;
-      const isPriceZero = !line.est_unit_price || Number(line.est_unit_price) === 0;
-      const isDescriptionEmpty = !line.description || line.description?.trim() === '';
-      
-      const isCompletelyEmpty = isItemIdEmpty && isItemCodeEmpty && isQtyZero && isPriceZero && isDescriptionEmpty;
-      return !isCompletelyEmpty;
-    });
-
-    if (activeLines.length === 0) { showAlert('กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ'); return; }
     const isConfirmed = await confirm({
         title: isEditMode ? 'ยืนยันการแก้ไข' : 'ยืนยันการบันทึก',
         description: isEditMode ? 'คุณต้องการบันทึกการแก้ไขเอกสารใบขอซื้อใช่หรือไม่?' : 'คุณต้องการบันทึกเอกสารใบขอซื้อใช่หรือไม่?',

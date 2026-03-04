@@ -10,12 +10,19 @@ interface MasterDataTabsProps {
 export const MasterDataTabs: React.FC<MasterDataTabsProps> = ({ tabs, activeTab, onTabChange }) => {
     return (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+            <div
+                className={`
+                    flex flex-row flex-nowrap overflow-x-auto overflow-y-hidden gap-3 pb-3 snap-x snap-mandatory
+                    [&::-webkit-scrollbar]:h-1.5
+                    [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-slate-100 dark:[&::-webkit-scrollbar-track]:bg-slate-800
+                    [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300 dark:[&::-webkit-scrollbar-thumb]:bg-slate-600
+                `}
+            >
                 {tabs.map((tab) => (
                     <button
                         key={tab.id}
                         onClick={() => onTabChange(tab.id)}
-                        className={`p-3 sm:p-4 rounded-xl flex flex-col items-center gap-2 transition-all h-full ${
+                        className={`flex-shrink-0 snap-start w-[148px] sm:w-[168px] lg:w-[180px] p-3 sm:p-4 rounded-xl flex flex-col items-center gap-2 transition-all ${
                             activeTab === tab.id
                                 ? 'bg-blue-50 dark:bg-blue-900/30 border-2 border-blue-500'
                                 : 'bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 border border-transparent'
@@ -28,7 +35,7 @@ export const MasterDataTabs: React.FC<MasterDataTabsProps> = ({ tabs, activeTab,
                         }`}>
                             <tab.icon size={20} className="sm:w-6 sm:h-6" />
                         </div>
-                        <div className="text-center w-full min-w-0 flex-1 flex flex-col justify-center">
+                        <div className="text-center w-full min-w-0 flex flex-col justify-center">
                             <p className={`text-xs sm:text-sm font-medium truncate w-full ${
                                 activeTab === tab.id
                                     ? 'text-blue-600 dark:text-blue-400'

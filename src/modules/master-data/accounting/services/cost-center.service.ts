@@ -37,12 +37,58 @@ export const CostCenterService = {
   },
 
   getById: async (id: string): Promise<CostCenter | null> => {
+    if (USE_MOCK) {
+      return mockCostCenters.find(cc => cc.cost_center_id === id) || null;
+    }
     try {
       const response = await api.get<CostCenter>(`/cost-centers/${id}`);
       return response;
     } catch (error) {
       logger.error('[CostCenterService] getById error:', error);
       return null;
+    }
+  },
+
+  create: async (data: Partial<CostCenter>): Promise<{ success: boolean; message?: string }> => {
+    if (USE_MOCK) {
+       logger.info('[CostCenterService] Mock Create:', data);
+       return { success: true };
+    }
+    try {
+      await api.post('/cost-centers', data);
+      return { success: true };
+    } catch (error) {
+      logger.error('[CostCenterService] create error:', error);
+      return { success: false, message: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  },
+
+  update: async (id: string, data: Partial<CostCenter>): Promise<{ success: boolean; message?: string }> => {
+    if (USE_MOCK) {
+       logger.info('[CostCenterService] Mock Update:', id, data);
+       return { success: true };
+    }
+    try {
+      await api.patch(`/cost-centers/${id}`, data);
+      return { success: true };
+    } catch (error) {
+      logger.error('[CostCenterService] update error:', error);
+      return { success: false, message: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  },
+
+  toggleStatus: async (id: string, currentStatus: boolean): Promise<{ success: boolean; message?: string }> => {
+    if (USE_MOCK) {
+       const cc = mockCostCenters.find(c => c.cost_center_id === id);
+       if (cc) cc.is_active = !currentStatus;
+       return { success: true };
+    }
+    try {
+      await api.patch(`/cost-centers/${id}/status`, { is_active: !currentStatus });
+      return { success: true };
+    } catch (error) {
+      logger.error('[CostCenterService] toggleStatus error:', error);
+      return { success: false, message: error instanceof Error ? error.message : 'Unknown error' };
     }
   }
 };

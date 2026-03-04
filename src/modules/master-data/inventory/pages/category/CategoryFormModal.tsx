@@ -1,32 +1,32 @@
-import { Ruler, Save, X, RotateCcw } from 'lucide-react';
+import { Tag, Save, X, RotateCcw } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
-import { useUnitForm } from '../../hooks/useUnitForm';
-import type { UnitListItem } from '@/modules/master-data/types/master-data-types';
+import { useCategoryForm } from '../../hooks/useCategoryForm';
+import type { ProductCategoryListItem } from '@/modules/master-data/types/master-data-types';
 
 interface Props {
     isOpen: boolean;
     onClose: () => void;
     editId?: string | null;
-    initialData?: UnitListItem | null;
+    initialData?: ProductCategoryListItem | null;
     onSuccess?: () => void;
 }
 
-export function UnitFormModal({ isOpen, onClose, editId, initialData, onSuccess }: Props) {
+export function CategoryFormModal({ isOpen, onClose, editId, initialData, onSuccess }: Props) {
     const {
         register,
         errors,
         isSaving,
         handleSave,
         clearForm
-    } = useUnitForm(editId || null, initialData, onSuccess);
+    } = useCategoryForm(editId || null, initialData, onSuccess);
 
     const handleClose = () => {
         clearForm();
         onClose();
     };
 
-    const TitleIcon = <Ruler size={24} className="text-white" />;
+    const TitleIcon = <Tag size={24} className="text-white" />;
 
     const FormFooter = (
         <div className="flex justify-end gap-3 p-4">
@@ -62,26 +62,26 @@ export function UnitFormModal({ isOpen, onClose, editId, initialData, onSuccess 
         <DialogFormLayout
             isOpen={isOpen}
             onClose={handleClose}
-            title={editId ? 'แก้ไขข้อมูลหน่วยนับ' : 'เพิ่มหน่วยนับใหม่'}
+            title={editId ? 'แก้ไขข้อมูลหมวดสินค้า' : 'เพิ่มหมวดสินค้าใหม่'}
             titleIcon={TitleIcon}
             footer={FormFooter}
         >
             <div className="p-6 space-y-6">
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Unit Code */}
+                    {/* Category Code */}
                     <div>
                         <label className={styles.label}>
-                            รหัสหน่วยนับ <span className="text-red-500">*</span>
+                            รหัสหมวดสินค้า <span className="text-red-500">*</span>
                         </label>
                         <input
-                            {...register('unit_code')}
+                            {...register('category_code')}
                             type="text"
-                            placeholder="กรอกรหัสหน่วยนับ"
-                            className={`${styles.input} ${errors.unit_code ? 'border-red-500 focus:ring-red-200' : ''}`}
+                            placeholder="กรอกรหัสหมวดสินค้า"
+                            className={`${styles.input} ${errors.category_code ? 'border-red-500 focus:ring-red-200' : ''}`}
                         />
-                        {errors.unit_code && (
-                            <p className="text-red-500 text-xs mt-1">{errors.unit_code.message}</p>
+                        {errors.category_code && (
+                            <p className="text-red-500 text-xs mt-1">{errors.category_code.message}</p>
                         )}
                     </div>
 
@@ -91,45 +91,45 @@ export function UnitFormModal({ isOpen, onClose, editId, initialData, onSuccess 
                             <input
                                 {...register('is_active')}
                                 type="checkbox"
-                                id="unit_is_active"
+                                id="category_is_active"
                                 className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
                             />
-                            <label htmlFor="unit_is_active" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                            <label htmlFor="category_is_active" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
                                 สถานะใช้งาน (Active)
                             </label>
                         </div>
                     </div>
                 </div>
 
-                {/* Unit Name (Thai) */}
+                {/* Category Name (Thai) */}
                 <div>
                     <label className={styles.label}>
-                        ชื่อหน่วยนับ (ภาษาไทย) <span className="text-red-500">*</span>
+                        ชื่อหมวดสินค้า (ภาษาไทย) <span className="text-red-500">*</span>
                     </label>
                     <input
-                        {...register('unit_name')}
+                        {...register('category_name')}
                         type="text"
-                        placeholder="กรอกชื่อหน่วยนับ"
-                        className={`${styles.input} ${errors.unit_name ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        placeholder="กรอกชื่อหมวดสินค้า"
+                        className={`${styles.input} ${errors.category_name ? 'border-red-500 focus:ring-red-200' : ''}`}
                     />
-                    {errors.unit_name && (
-                        <p className="text-red-500 text-xs mt-1">{errors.unit_name.message}</p>
+                    {errors.category_name && (
+                        <p className="text-red-500 text-xs mt-1">{errors.category_name.message}</p>
                     )}
                 </div>
 
-                {/* Unit Name (English) */}
+                {/* Category Name (English) */}
                 <div>
                     <label className={styles.label}>
-                        ชื่อหน่วยนับ (ภาษาอังกฤษ)
+                        ชื่อหมวดสินค้า (ภาษาอังกฤษ)
                     </label>
                     <input
-                        {...register('unit_name_en')}
+                        {...register('category_name_en')}
                         type="text"
-                        placeholder="Unit Name (English)"
+                        placeholder="Category Name (English)"
                         className={styles.input}
                     />
-                    {errors.unit_name_en && (
-                        <p className="text-red-500 text-xs mt-1">{errors.unit_name_en.message}</p>
+                    {errors.category_name_en && (
+                        <p className="text-red-500 text-xs mt-1">{errors.category_name_en.message}</p>
                     )}
                 </div>
 

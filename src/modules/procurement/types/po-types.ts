@@ -43,10 +43,12 @@ export interface POHeader {
     total_amount: number;           // numeric(18,2)
     
     remarks?: string;               // text
+    reject_reason?: string;         // text
     created_by: string;             // uuid
     created_by_name?: string;       // Display Only
     created_at?: string;            // timestamp (Implying from base fields if needed)
     updated_at?: string;            // timestamp
+    transactions?: import('@/modules/procurement/schemas/po-schemas').POTransaction[]; // History log
     
     // QC Traceability (Source document)
     qc_id?: string;                 // uuid — FK -> qc_header

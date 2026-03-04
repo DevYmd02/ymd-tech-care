@@ -590,6 +590,7 @@ const _mockProjects: Project[] = [
         start_date: '2024-01-01',
         end_date: '2024-06-30',
         status: 'ACTIVE',
+        is_active: true,
     },
     {
         project_id: 'PRJ002',
@@ -601,6 +602,7 @@ const _mockProjects: Project[] = [
         start_date: '2024-02-15',
         end_date: '2024-12-31',
         status: 'ON_HOLD',
+        is_active: true,
     },
     {
         project_id: 'PRJ003',
@@ -612,6 +614,7 @@ const _mockProjects: Project[] = [
         start_date: '2024-01-01',
         end_date: '2024-12-31',
         status: 'ACTIVE',
+        is_active: true,
     },
 ];
 

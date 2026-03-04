@@ -1,13 +1,17 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useCallback } from 'react';
 import { z } from 'zod';
+import { useForm as useRHF, useWatch, type Path, type PathValue, type Resolver } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { logger } from '@/shared/utils/logger';
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
-import { ITEM_CATEGORIES, ITEM_UOMS, ITEM_TAX_CODES } from '@/modules/master-data/inventory/constants/itemConstants';
+import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
+import { ProductCategoryService } from '@/modules/master-data/inventory/services/product-category.service';
+import { ITEM_TAX_CODES } from '@/modules/master-data/inventory/constants/itemConstants';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
+import type { ItemListItem } from '@/modules/master-data/types/master-data-types';
 
-// Zod Schema for Item Master
 export const itemMasterSchema = z.object({
     item_code: z.string().min(1, 'กรุณากรอกรหัสสินค้า'),
     item_name: z.string().min(1, 'กรุณากรอกชื่อสินค้า'),
@@ -24,25 +28,23 @@ export const itemMasterSchema = z.object({
     good_grade_id: z.string().optional().default(''),
     good_color_id: z.string().optional().default(''),
     base_uom_id: z.string().min(1, 'กรุณากรอกหน่วยนับหลัก'),
-    item_type_code: z.string().optional().default(''),
-    costing_method: z.string().optional().default(''),
+    item_type_code: z.string().optional().default('FG'),
+    costing_method: z.string().optional().default('FIFO'),
     default_tax_code: z.string().optional().default('VAT7'),
-    tax_rate: z.preprocess((val) => (val === "" ? 7 : Number(val)), z.number().optional().default(7)),
-    has_barcode: z.preprocess((val) => (val === "" ? false : val), z.boolean().optional().default(false)),
-    is_active: z.preprocess((val) => (val === "" ? true : val), z.boolean().default(true)),
-    is_on_hold: z.preprocess((val) => (val === "" ? false : val), z.boolean().optional().default(false)),
-    nature_id: z.string().optional().default(''),
-    product_subtype_id: z.string().optional().default(''),
-    commission_type: z.string().optional().default(''),
-    std_amount: z.preprocess((val) => (val === "" ? 0 : Number(val)), z.number().optional().default(0)),
+    tax_rate: z.coerce.number().default(7),
+    has_barcode: z.boolean().default(false),
+    is_active: z.boolean().default(true),
+    is_on_hold: z.boolean().default(false),
+    nature_id: z.string().optional().default('LOT'),
+    product_subtype_id: z.string().optional().default('NORMAL'),
+    commission_type: z.string().optional().default('NONE'),
+    std_amount: z.coerce.number().default(0),
     discount_amount: z.string().optional().default(''),
-    is_buddy: z.preprocess((val) => (val === "" ? false : val), z.boolean().optional().default(false)),
+    is_buddy: z.boolean().default(false),
 });
 
-// Derived Type using z.infer
 export type ItemFormData = z.infer<typeof itemMasterSchema>;
 
-// Strict Change Handler Type
 export type ItemFormChangeHandler = (field: keyof ItemFormData, value: string | number | boolean) => void;
 
 const initialFormData: ItemFormData = {
@@ -61,212 +63,173 @@ const initialFormData: ItemFormData = {
     good_grade_id: '',
     good_color_id: '',
     base_uom_id: '',
-    item_type_code: '',
-    costing_method: '',
+    item_type_code: 'FG',
+    costing_method: 'FIFO',
     default_tax_code: 'VAT7',
     tax_rate: 7,
     has_barcode: false,
     is_active: true,
     is_on_hold: false,
-    nature_id: '',
-    product_subtype_id: '',
-    commission_type: '',
+    nature_id: 'LOT',
+    product_subtype_id: 'NORMAL',
+    commission_type: 'NONE',
     std_amount: 0,
     discount_amount: '',
     is_buddy: false,
 };
 
-/**
- * Custom Hook for Item Master Form Logic
- */
-/**
- * Custom Hook for Item Master Form Logic
- */
 export function useItemForm(editId: string | null, onSuccess?: () => void) {
-    const navigate = useNavigate();
     const { confirm } = useConfirmation();
-    const [formData, setFormData] = useState<ItemFormData>(initialFormData);
-    const [isSaving, setIsSaving] = useState(false);
-    const [saveError, setSaveError] = useState<string | null>(null);
-    const [errors, setErrors] = useState<Partial<Record<keyof ItemFormData, string>>>({});
+    const queryClient = useQueryClient();
 
-    // Load data if editing
+    const {
+        register,
+        handleSubmit: rhfHandleSubmit,
+        reset,
+        control,
+        setValue,
+        formState: { errors }
+    } = useRHF<ItemFormData>({
+        resolver: zodResolver(itemMasterSchema) as Resolver<ItemFormData>,
+        defaultValues: initialFormData
+    });
+
+    const formData = useWatch({ 
+        control,
+        defaultValue: initialFormData
+    }) as ItemFormData;
+
+    // Real Data Fetching
+    const { data: units = [] } = useQuery({
+        queryKey: ['units'],
+        queryFn: async () => {
+            const res = await UnitService.getAll();
+            return res.items || [];
+        }
+    });
+
+    const { data: categories = [] } = useQuery({
+        queryKey: ['product-categories'],
+        queryFn: async () => {
+            const res = await ProductCategoryService.getAll();
+            return res.items || [];
+        }
+    });
+
+    // Fetch data if editing
+    const { data: existingItem, isLoading } = useQuery<ItemListItem | null>({
+        queryKey: ['item-detail', editId],
+        queryFn: () => ItemMasterService.getById(editId!),
+        enabled: !!editId,
+    });
+
+    // Hydrate form
     useEffect(() => {
-        if (editId) {
-            const loadData = async () => {
-                try {
-                    const existing = await ItemMasterService.getById(editId);
-                    if (existing) {
-                        // Reverse Lookup for Dropdowns (Name -> ID) to match legacy logic
-                        const categoryId = ITEM_CATEGORIES.find(c => (existing.category_name || '').includes(c.name))?.id || '';
-                        const unitName = (existing.unit_name || '').split(' (')[0];
-                        const unitId = ITEM_UOMS.find(u => u.name === unitName)?.id || '';
-
-                        setFormData({
-                            item_code: existing.item_code,
-                            item_name: existing.item_name,
-                            item_name_en: existing.item_name_en || '',
-                            marketing_name: existing.marketing_name || '',
-                            billing_name: existing.billing_name || '',
-                            category_id: categoryId,
-                            base_uom_id: unitId,
-                            item_type_code: existing.item_type_code || 'FG',
-                            product_subtype_id: 'NORMAL',
-                            costing_method: '',
-                            commission_type: 'NONE',
-                            nature_id: 'LOT',
-                            is_active: existing.is_active,
-                            std_amount: existing.standard_cost || 0,
-                            good_brand_id: '',
-                            good_class_id: '',
-                            good_pattern_id: '',
-                            good_design_id: '',
-                            good_grade_id: '',
-                            good_model_id: '',
-                            good_size_id: '',
-                            good_color_id: '',
-                            default_tax_code: 'VAT7',
-                            tax_rate: 7,
-                            has_barcode: (existing as { has_barcode?: boolean }).has_barcode ?? false,
-                            discount_amount: '',
-                            is_buddy: false,
-                            is_on_hold: false
-                        });
-                    }
-                } catch (error) {
-                    logger.error('Failed to load item data:', error);
-                }
-            };
-            loadData();
-        } else {
-            setFormData(initialFormData);
-        }
-    }, [editId]);
-
-    const handleInputChange: ItemFormChangeHandler = useCallback((field, value) => {
-        setFormData(prev => {
-            const updates: Partial<ItemFormData> = { [field]: value };
-
-            // Auto-sync Tax Rate when Tax Type changes
-            if (field === 'default_tax_code' && typeof value === 'string') {
-                const selectedTax = ITEM_TAX_CODES.find(t => t.code === value);
-                if (selectedTax) {
-                    updates.tax_rate = selectedTax.rate;
-                }
-            }
-
-            return { ...prev, ...updates };
-        });
-        
-        // Clear error when user starts typing
-        if (errors[field]) {
-            setErrors(prev => {
-                const newErrors = { ...prev };
-                delete newErrors[field];
-                return newErrors;
+        if (existingItem) {
+            reset({
+                item_code: existingItem.item_code,
+                item_name: existingItem.item_name,
+                item_name_en: existingItem.item_name_en || '',
+                marketing_name: existingItem.marketing_name || '',
+                billing_name: existingItem.billing_name || '',
+                category_id: existingItem.category_name, // Backend currently maps name to ID or name
+                base_uom_id: existingItem.unit_id || '',
+                item_type_code: existingItem.item_type_code || 'FG',
+                product_subtype_id: 'NORMAL',
+                costing_method: 'FIFO',
+                commission_type: 'NONE',
+                nature_id: 'LOT',
+                is_active: existingItem.is_active,
+                std_amount: existingItem.standard_cost || 0,
+                good_brand_id: '',
+                good_class_id: '',
+                good_pattern_id: '',
+                good_design_id: '',
+                good_grade_id: '',
+                good_model_id: '',
+                good_size_id: '',
+                good_color_id: '',
+                default_tax_code: 'VAT7',
+                tax_rate: 7,
+                has_barcode: false, 
+                discount_amount: '',
+                is_buddy: false,
+                is_on_hold: false
             });
         }
-    }, [errors]);
+    }, [existingItem, reset]);
 
-    const validate = (): boolean => {
-        try {
-            itemMasterSchema.parse(formData);
-            setErrors({});
-            return true;
-        } catch (error) {
-            if (error instanceof z.ZodError) {
-                const newErrors: Partial<Record<keyof ItemFormData, string>> = {};
-                error.issues.forEach(issue => {
-                    const path = issue.path[0] as keyof ItemFormData;
-                    newErrors[path] = issue.message;
+    const saveMutation = useMutation({
+        mutationFn: (data: ItemFormData) => {
+            return editId 
+                ? ItemMasterService.update(editId, data)
+                : ItemMasterService.create(data);
+        },
+        onSuccess: async (success) => {
+            if (success) {
+                await confirm({
+                    title: 'บันทึกสำเร็จ!',
+                    description: 'ระบบได้ทำการบันทึกข้อมูลเรียบร้อยแล้ว',
+                    confirmText: 'ตกลง',
+                    variant: 'success',
+                    hideCancel: true
                 });
-                setErrors(newErrors);
                 
-                // Show first error message in saveError for visibility
-                const firstError = error.issues[0]?.message;
-                if (firstError) {
-                    setSaveError(firstError);
-                    setTimeout(() => setSaveError(null), 3000);
-                }
-            }
-            return false;
-        }
-    };
-
-    const handleSave = async () => {
-        if (!validate()) return;
-
-        const isConfirmed = await confirm({
-            title: editId ? 'ยืนยันการแก้ไข?' : 'ยืนยันการบันทึก?',
-            description: editId ? 'ข้อมูลสินค้าจะถูกแก้ไขในระบบ' : 'ข้อมูลสินค้าจะถูกบันทึกในระบบ',
-            confirmText: editId ? 'บันทึกการแก้ไข' : 'บันทึก',
-            cancelText: 'ยกเลิก',
-            variant: 'info'
-        });
-
-        if (!isConfirmed) return;
-
-        setIsSaving(true);
-        setSaveError(null);
-
-        try {
-            if (editId) {
-                await ItemMasterService.update(editId, formData);
+                queryClient.invalidateQueries({ queryKey: ['items'] });
+                if (onSuccess) onSuccess();
             } else {
-                await ItemMasterService.create(formData);
+                throw new Error('บันทึกไม่สำเร็จ');
             }
-            
-            await confirm({
-                title: 'บันทึกสำเร็จ!',
-                description: 'ระบบได้ทำการบันทึกข้อมูลเรียบร้อยแล้ว',
-                confirmText: 'ตกลง',
-                variant: 'success',
-                hideCancel: true
-            });
-            
-            if (onSuccess) {
-                onSuccess();
-            } else {
-                navigate('/master-data?tab=item');
-            }
-        } catch (error: unknown) {
+        },
+        onError: async (error: Error) => {
             logger.error('Save item error:', error);
-            setSaveError('เกิดข้อผิดพลาดในการบันทึก');
-            
             await confirm({
                 title: 'เกิดข้อผิดพลาด',
-                description: 'ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง',
+                description: error.message || 'เกิดข้อผิดพลาดในการบันทึก',
                 confirmText: 'ตกลง',
                 variant: 'danger',
                 hideCancel: true
             });
-        } finally {
-            setIsSaving(false);
         }
-    };
+    });
 
-    const handleFind = () => {
-        const newId = prompt("Enter Item Code/ID to switch to:");
-        if (newId) {
-            // Check if we are in modal mode (onSuccess present) or page mode
-            if (onSuccess) {
-                 // In modal mode, we might need a way to tell parent to switch ID
-                 // For now, prompt is crude but acceptable for legacy support
-                 // A better way would be expose setEditId but hook doesn't control it
-                 alert("Quick find not supported in modal yet");
-            } else {
-                navigate(`/master-data/item-form?id=${newId}`);
+    const handleInputChange: ItemFormChangeHandler = useCallback((field, value) => {
+        const path = field as Path<ItemFormData>;
+        
+        if (field === 'tax_rate' || field === 'std_amount') {
+            const numVal = typeof value === 'number' ? value : Number(value);
+            setValue(path, numVal as PathValue<ItemFormData, typeof path>, { shouldDirty: true, shouldValidate: true });
+        } else if (typeof value === 'boolean') {
+            setValue(path, value as PathValue<ItemFormData, typeof path>, { shouldDirty: true, shouldValidate: true });
+        } else {
+            setValue(path, String(value) as PathValue<ItemFormData, typeof path>, { shouldDirty: true, shouldValidate: true });
+        }
+
+        if (field === 'default_tax_code' && typeof value === 'string') {
+            const selectedTax = ITEM_TAX_CODES.find(t => t.code === value);
+            if (selectedTax) {
+                setValue('tax_rate', selectedTax.rate);
             }
         }
-    };
+    }, [setValue]);
+
+    const handleSave = rhfHandleSubmit((data) => {
+        saveMutation.mutate(data);
+    });
+
+    const clearForm = useCallback(() => {
+        reset(initialFormData);
+    }, [reset]);
 
     return {
         formData,
-        isSaving,
-        saveError,
+        isSaving: saveMutation.isPending || isLoading,
         errors,
         handleInputChange,
         handleSave,
-        handleFind
+        clearForm,
+        register,
+        units,
+        categories
     };
 }
