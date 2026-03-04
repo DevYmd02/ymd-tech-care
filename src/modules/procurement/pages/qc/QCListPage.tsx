@@ -7,11 +7,11 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery, keepPreviousData, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Scale, Eye, RefreshCw, Pencil } from 'lucide-react';
+import { Scale, Eye, RefreshCw, Pencil, Search, Plus, Trophy, Clock } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
-import { PageListLayout, SmartTable, QCStatusBadge, FilterFormBuilder } from '@ui';
-import type { FilterFieldConfig } from '@ui';
-import { useTableFilters, type TableFilters } from '@/shared/hooks';
+import { PageListLayout, SmartTable, QCStatusBadge, FilterField, MobileListCard, MobileListContainer } from '@ui';
+import { useTableFilters, useConfirmation } from '@/shared/hooks';
+import toast from 'react-hot-toast';
 import { QCFormModal } from './components';
 import { createColumnHelper } from '@tanstack/react-table';
 
@@ -29,20 +29,7 @@ const FILTER_STATUS_OPTIONS = [
     ...QC_STATUS_OPTIONS,
 ];
 
-// ====================================================================================
-// FILTER CONFIG
-// ====================================================================================
 
-type QCFilterKeys = Extract<keyof TableFilters<QCStatus>, string>;
-
-const QC_FILTER_CONFIG: FilterFieldConfig<QCFilterKeys>[] = [
-    { name: 'search', label: 'เลขที่ใบ QC', type: 'text', placeholder: 'QC2024-xxx' },
-    { name: 'search2', label: 'เลขที่ PR อ้างอิง', type: 'text', placeholder: 'PR2024-xxx' },
-    { name: 'search3', label: 'เลขที่ RFQ อ้างอิง', type: 'text', placeholder: 'RFQ2024-xxx' },
-    { name: 'status', label: 'สถานะ', type: 'select', options: FILTER_STATUS_OPTIONS },
-    { name: 'dateFrom', label: 'วันที่สร้างเริ่มต้น', type: 'date' },
-    { name: 'dateTo', label: 'วันที่สร้างสิ้นสุด', type: 'date' },
-];
 
 // ====================================================================================
 // MAIN COMPONENT
@@ -50,7 +37,7 @@ const QC_FILTER_CONFIG: FilterFieldConfig<QCFilterKeys>[] = [
 
 export default function QCListPage() {
     // URL-based Filter State
-    const { filters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<QCStatus>({
+    const { filters, localFilters, handleFilterChange, handleApplyFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<QCStatus>({
         defaultStatus: 'ALL',
     });
 
@@ -74,34 +61,58 @@ export default function QCListPage() {
         placeholderData: keepPreviousData,
     });
 
-    // Modal State (for future create functionality)
-    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
     const queryClient = useQueryClient();
+    const { confirm } = useConfirmation();
+
+    // Modal State
+    const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+    const [selectedQcId, setSelectedQcId] = useState<string | null>(null);
+    const [modalMode, setModalMode] = useState<'view' | 'edit' | 'create'>('create');
+
+    const handleCreate = useCallback(() => {
+        setSelectedQcId(null);
+        setModalMode('create');
+        setIsFormModalOpen(true);
+    }, []);
+
+    const handleView = useCallback((row: QCListItem) => {
+        setSelectedQcId(row.qc_id || null);
+        setModalMode('view');
+        setIsFormModalOpen(true);
+    }, []);
+
+    const handleEdit = useCallback((row: QCListItem) => {
+        setSelectedQcId(row.qc_id || null);
+        setModalMode('edit');
+        setIsFormModalOpen(true);
+    }, []);
 
     // Price Comparison Mutation
     const compareMutation = useMutation({
         mutationFn: (id: string) => QCService.compare(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['quote-comparisons'] });
-            window.alert('ส่งเปรียบเทียบราคาสำเร็จ!');
+            toast.success('ส่งเปรียบเทียบราคาสำเร็จ!');
         },
         onError: (error) => {
             console.error('Comparison failed:', error);
-            window.alert('เกิดข้อผิดพลาดในการส่งเปรียบเทียบราคา');
+            toast.error('เกิดข้อผิดพลาดในการส่งเปรียบเทียบราคา');
         }
     });
 
-    const handleCompare = useCallback((id: string) => {
-        if (window.confirm('คุณต้องการส่งเปรียบเทียบราคารายการนี้ใช่หรือไม่?')) {
-            compareMutation.mutate(id);
-        }
-    }, [compareMutation]);
+    const handleCompare = useCallback(async (id: string) => {
+        const isConfirmed = await confirm({
+            title: 'ยืนยันการเปรียบเทียบ',
+            description: 'คุณต้องการส่งเปรียบเทียบราคารายการนี้ใช่หรือไม่?',
+            confirmText: 'ยืนยัน',
+            cancelText: 'ยกเลิก',
+            variant: 'info',
+        });
+        if (isConfirmed) compareMutation.mutate(id);
+    }, [compareMutation, confirm]);
 
-    // Handlers
-    const handleFilterChange = (name: QCFilterKeys, value: string) => {
-        setFilters({ [name]: value });
-    };
+    // handleFilterChange is provided by useTableFilters directly
 
     // Columns Definition
     const columnHelper = createColumnHelper<QCListItem>();
@@ -112,7 +123,7 @@ export default function QCListPage() {
             header: () => <div className="text-center w-full">ลำดับ</div>,
             cell: (info) => <div className="text-center">{info.row.index + 1 + (filters.page - 1) * filters.limit}</div>,
             footer: () => <div className="absolute left-4 top-1/2 -translate-y-1/2 whitespace-nowrap font-bold text-sm text-gray-700 dark:text-gray-200">ยอดรวมราคาต่ำสุดทั้งหมด :</div>,
-            size: 50,
+            size: 60,
             enableSorting: false,
         }),
         columnHelper.accessor('qc_no', {
@@ -121,9 +132,9 @@ export default function QCListPage() {
                 <span 
                     className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline cursor-pointer block whitespace-nowrap" 
                     title={info.getValue()}
-                    onClick={() => {
-                        window.alert(`Open QC Detail: ${info.getValue()}`);
-                    }}
+                    // onClick={() => {
+                    //     window.alert(`Open QC Detail: ${info.getValue()}`);
+                    // }}
                 >
                     {info.getValue()}
                 </span>
@@ -132,13 +143,13 @@ export default function QCListPage() {
             enableSorting: true,
         }),
         columnHelper.accessor('created_at', {
-            header: () => <div className="text-left">วันที่สร้าง</div>,
+            header: () => <div className="text-center w-full">วันที่สร้าง</div>,
             cell: (info) => (
-                <div className="text-gray-600 dark:text-gray-300 text-left whitespace-nowrap">
+                <div className="text-gray-600 dark:text-gray-300 text-center whitespace-nowrap">
                     {info.getValue() ? formatThaiDate(info.getValue()!) : '-'}
                 </div>
             ),
-            size: 100,
+            size: 110,
             enableSorting: true,
         }),
         columnHelper.accessor('rfq_no', {
@@ -150,9 +161,9 @@ export default function QCListPage() {
                         <span 
                             className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline cursor-pointer leading-tight" 
                             title={`RFQ: ${item.rfq_no || '-'}`}
-                            onClick={() => {
-                                if (item.rfq_no) window.alert(`Open RFQ Detail: ${item.rfq_no}`);
-                            }}
+                            // onClick={() => {
+                            //     if (item.rfq_no) window.alert(`Open RFQ Detail: ${item.rfq_no}`);
+                            // }}
                         >
                             {item.rfq_no || '-'}
                         </span>
@@ -167,7 +178,7 @@ export default function QCListPage() {
                     </div>
                 );
             },
-            size: 130,
+            size: 140,
             enableSorting: false,
         }),
         columnHelper.accessor(row => row.status, {
@@ -188,19 +199,42 @@ export default function QCListPage() {
                     {info.getValue()}
                 </div>
             ),
-            size: 70,
+            size: 60,
             enableSorting: false,
         }),
         columnHelper.accessor('lowest_bidder_name', {
-            header: 'ผู้เสนอราคาต่ำสุด',
-            cell: (info) => (
-                <div className="truncate" title={info.getValue() || ''}>
-                    <span className="hover:underline cursor-pointer text-gray-600 dark:text-gray-300">
-                        {info.getValue()}
-                    </span>
-                </div>
-            ),
-            size: 180,
+            header: 'ผู้ชนะการเสนอราคา',
+            cell: (info) => {
+                const item = info.row.original;
+                const vendorName = info.getValue();
+
+                // Condition 1: Finalized — show winner badge
+                if (item.status === 'COMPLETED') {
+                    return (
+                        <div
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-medium text-sm max-w-full"
+                            title={vendorName || '-'}
+                        >
+                            <Trophy className="w-4 h-4 text-amber-500 shrink-0" />
+                            <span className="truncate">{vendorName || '-'}</span>
+                        </div>
+                    );
+                }
+
+                // Condition 2: Cancelled — muted dash
+                if (item.status === 'CANCELLED') {
+                    return <span className="text-slate-400 dark:text-slate-600">-</span>;
+                }
+
+                // Condition 3: Pending/Draft — awaiting result
+                return (
+                    <div className="flex items-center gap-1.5 text-slate-400 dark:text-slate-500 italic text-sm">
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>รอเปรียบเทียบราคา</span>
+                    </div>
+                );
+            },
+            size: 160,
             enableSorting: false,
         }),
         columnHelper.accessor('lowest_price', {
@@ -217,7 +251,7 @@ export default function QCListPage() {
                     </div>
                 );
             },
-            size: 130,
+            size: 150,
             enableSorting: true,
         }),
         columnHelper.display({
@@ -227,32 +261,26 @@ export default function QCListPage() {
                 const item = row.original;
                 return (
                     <div className="flex items-center justify-center gap-2">
-                        {/* Eye (View) — visible for all statuses */}
+                        {/* Eye — PR pattern */}
                         <button
-                            className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors flex items-center justify-center"
+                            onClick={() => handleView(item)}
+                            className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-all"
                             title="ดูรายละเอียด"
                         >
-                            <Eye size={18} />
+                            <Eye size={16} />
                         </button>
 
-                        {/* DRAFT: Purple "เปรียบเทียบราคา" button */}
+                        {/* DRAFT: เปรียบเทียบราคา — violet special process, PR compact size */}
                         {item.status === 'DRAFT' && (
                             <button
-                                onClick={() => handleCompare(item.qc_id || '')}
-                                disabled={compareMutation.isPending}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#a855f7] hover:bg-[#9333ea] text-white text-[10px] font-bold rounded shadow transition-all whitespace-nowrap h-8 disabled:opacity-50"
+                                onClick={() => handleEdit(item)}
+                                className="flex items-center gap-1 pl-1.5 pr-2 py-1 ml-1 bg-violet-600 hover:bg-violet-700 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap"
                                 title="เปรียบเทียบราคา"
                             >
-                                {compareMutation.isPending && compareMutation.variables === item.qc_id ? (
-                                    <RefreshCw size={12} className="animate-spin" />
-                                ) : (
-                                    <Pencil size={12} />
-                                )}
-                                <span>{compareMutation.isPending && compareMutation.variables === item.qc_id ? 'กำลังส่ง...' : 'เปรียบเทียบราคา'}</span>
+                                <Pencil size={12} />
+                                <span>เปรียบเทียบราคา</span>
                             </button>
                         )}
-                        {/* COMPLETED: Eye only — no print button */}
-                        {/* CANCELLED: Eye only — no duplicate eye */}
                     </div>
                 );
             },
@@ -266,10 +294,10 @@ export default function QCListPage() {
                      </div>
                  );
             },
-            size: 130, // Optimized for text button
+             size: 140,
             enableSorting: false,
         }),
-    ], [columnHelper, filters.page, filters.limit, data?.data, handleCompare, compareMutation.isPending, compareMutation.variables]);
+    ], [columnHelper, filters.page, filters.limit, data?.data, handleView, handleEdit]);
 
     // ====================================================================================
     // RENDER
@@ -286,18 +314,81 @@ export default function QCListPage() {
                 totalCountLoading={isLoading}
                 isLoading={isLoading}
                 searchForm={
-                    <FilterFormBuilder
-                        config={QC_FILTER_CONFIG}
-                        filters={filters}
-                        onFilterChange={handleFilterChange}
-                        onSearch={() => {}} // React Query auto-fetches on filter change
-                        onReset={resetFilters}
-                        accentColor="indigo"
-                        onCreate={() => setIsCreateModalOpen(true)}
-                        createLabel="สร้างใบเปรียบเทียบราคา"
-                        columns={{ sm: 1, md: 2, lg: 3, xl: 4 }}
-                        actionColSpan={{ md: 2, lg: 3, xl: 4 }}
-                    />
+                    <form onSubmit={(e) => { e.preventDefault(); handleApplyFilters(); }} className="w-full">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                        <FilterField
+                            label="เลขที่ใบ QC"
+                            value={localFilters.search}
+                            onChange={(val: string) => handleFilterChange('search', val)}
+                            placeholder="QC2024-xxx"
+                            accentColor="indigo"
+                        />
+                        <FilterField
+                            label="เลขที่ PR อ้างอิง"
+                            value={localFilters.search2}
+                            onChange={(val: string) => handleFilterChange('search2', val)}
+                            placeholder="PR2024-xxx"
+                            accentColor="indigo"
+                        />
+                        <FilterField
+                            label="เลขที่ RFQ อ้างอิง"
+                            value={localFilters.search3}
+                            onChange={(val: string) => handleFilterChange('search3', val)}
+                            placeholder="RFQ2024-xxx"
+                            accentColor="indigo"
+                        />
+                        <FilterField
+                            label="สถานะ"
+                            type="select"
+                            value={localFilters.status}
+                            onChange={(val: string) => handleFilterChange('status', val)}
+                            options={FILTER_STATUS_OPTIONS}
+                            accentColor="indigo"
+                        />
+                        <FilterField
+                            label="วันที่สร้างเริ่มต้น"
+                            type="date"
+                            value={localFilters.dateFrom || ''}
+                            onChange={(val: string) => handleFilterChange('dateFrom', val)}
+                            accentColor="indigo"
+                        />
+                        <FilterField
+                            label="วันที่สร้างสิ้นสุด"
+                            type="date"
+                            value={localFilters.dateTo || ''}
+                            onChange={(val: string) => handleFilterChange('dateTo', val)}
+                            accentColor="indigo"
+                        />
+                        
+                        {/* Action Buttons Group */}
+                        <div className="md:col-span-2 lg:col-span-2 flex flex-col sm:flex-row flex-wrap justify-end gap-2 items-center">
+                            <div className="flex gap-2 w-full sm:w-auto">
+                                <button
+                                    type="button"
+                                    onClick={resetFilters}
+                                    className="flex-1 sm:flex-none h-10 px-4 bg-white hover:bg-gray-50 text-gray-700 rounded-lg font-medium transition-colors border border-gray-300 shadow-sm whitespace-nowrap"
+                                >
+                                    ล้างค่า
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 sm:flex-none h-10 px-6 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+                                >
+                                    <Search size={18} />
+                                    ค้นหา
+                                </button>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={handleCreate}
+                                className="w-full sm:w-auto h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+                            >
+                                <Plus size={16} strokeWidth={2.5} />
+                                สร้างใบเปรียบเทียบราคา
+                            </button>
+                        </div>
+                    </div>
+                    </form>
                 }
             >
                 <div className="h-full flex flex-col">
@@ -312,7 +403,7 @@ export default function QCListPage() {
                                 pageSize: filters.limit,
                                 totalCount: data?.total ?? 0,
                                 onPageChange: handlePageChange,
-                                onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 })
+                                onPageSizeChange: () => handleApplyFilters()
                             }}
                             sortConfig={sortConfig}
                             onSortChange={handleSortChange}
@@ -322,133 +413,82 @@ export default function QCListPage() {
                         />
                     </div>
 
-                    {/* Mobile View: Cards */}
-                    <div className="md:hidden flex-1 overflow-y-auto p-2 space-y-3 pb-20">
-                        {isLoading ? (
-                            <div className="text-center py-4 text-gray-500">กำลังโหลด...</div>
-                        ) : data?.data.length === 0 ? (
-                            <div className="text-center py-8 text-gray-500 bg-white rounded-lg border border-dashed border-gray-300">
-                                ไม่พบข้อมูล
-                            </div>
-                        ) : (
-                            data?.data.map((item) => (
-                                <div key={item.qc_id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 space-y-3">
-                                    {/* Header: QC No + Status */}
-                                    <div className="flex justify-between items-start">
-                                        <div className="flex flex-col">
-                                            <span className="font-bold text-lg text-blue-600 dark:text-blue-400">
-                                                {item.qc_no}
-                                            </span>
-                                            <span className="text-xs text-gray-500">
-                                                {item.created_at ? formatThaiDate(item.created_at) : '-'}
-                                            </span>
-                                        </div>
-                                        <QCStatusBadge status={item.status} />
-                                    </div>
-
-                                    {/* Content Info */}
-                                    <div className="text-sm text-gray-700 dark:text-gray-300 space-y-1.5 border-t border-b border-gray-50 py-2">
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-500">PR อ้างอิง:</span>
-                                            <span className="font-medium text-blue-600 dark:text-blue-400">{item.pr_no}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-500">RFQ อ้างอิง:</span>
-                                            <span 
-                                                className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline cursor-pointer truncate leading-tight" 
-                                                title={`RFQ: ${item.rfq_no || '-'}`}
-                                                onClick={() => {
-                                                    if (item.rfq_no) window.alert(`Open RFQ Detail: ${item.rfq_no}`);
-                                                }}
+                    {/* Mobile View: Cards (shared MobileListContainer + MobileListCard) */}
+                    <MobileListContainer
+                        isLoading={isLoading}
+                        isEmpty={!data?.data.length}
+                        pagination={data?.total ? { page: filters.page, total: data.total, limit: filters.limit, onPageChange: handlePageChange } : undefined}
+                    >
+                        {data?.data.map((item) => (
+                            <MobileListCard
+                                key={item.qc_id}
+                                title={item.qc_no}
+                                subtitle={item.created_at ? formatThaiDate(item.created_at) : '-'}
+                                statusBadge={<QCStatusBadge status={item.status} />}
+                                details={[
+                                    { label: 'PR อ้างอิง:', value: <span className="font-medium text-blue-600 dark:text-blue-400">{item.pr_no}</span> },
+                                    { label: 'RFQ อ้างอิง:', value: <span className="font-semibold text-blue-600 dark:text-blue-400">{item.rfq_no || '-'}</span> },
+                                    { label: 'Vendors:', value: `${item.vendor_count} ราย` },
+                                    {
+                                        label: 'ผู้ชนะ:',
+                                        value: item.status === 'COMPLETED' ? (
+                                            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-700 font-medium text-sm">
+                                                <Trophy className="w-3.5 h-3.5 text-amber-500" />
+                                                <span className="truncate max-w-[130px]">{item.lowest_bidder_name || '-'}</span>
+                                            </div>
+                                        ) : item.status === 'CANCELLED' ? (
+                                            <span className="text-slate-400">-</span>
+                                        ) : (
+                                            <div className="flex items-center gap-1 text-slate-400 italic text-sm">
+                                                <Clock className="w-3 h-3" />
+                                                <span>รอสรุปผล</span>
+                                            </div>
+                                        ),
+                                    },
+                                ]}
+                                amountLabel="ราคาต่ำสุด"
+                                amountValue={
+                                    <span className="font-bold text-lg text-emerald-600 dark:text-emerald-400">
+                                        {item.lowest_price?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                    </span>
+                                }
+                                actions={
+                                    <>
+                                        <button
+                                            onClick={() => handleView(item)}
+                                            className="flex-1 bg-gray-50 dark:bg-slate-700 hover:bg-gray-100 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1 border border-gray-200 dark:border-slate-600"
+                                        >
+                                            <Eye size={14} /> ดู
+                                        </button>
+                                        {item.status === 'DRAFT' && (
+                                            <button
+                                                onClick={() => item.qc_id && handleCompare(item.qc_id)}
+                                                disabled={compareMutation.isPending}
+                                                className="flex-[2] bg-[#a855f7] hover:bg-[#9333ea] text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm disabled:opacity-50"
                                             >
-                                                {item.rfq_no || '-'}
-                                            </span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-500">Vendors:</span>
-                                            <span className="font-medium">{item.vendor_count} ราย</span>
-                                        </div>
-                                        <div className="flex justify-between items-baseline">
-                                            <span className="text-gray-500 whitespace-nowrap mr-2">ต่ำสุดโดย:</span>
-                                            <span className="font-medium text-right truncate max-w-[150px]">
-                                                {item.lowest_bidder_name || '-'}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    {/* Footer: Amount + Actions */}
-                                    <div className="space-y-3">
-                                        <div className="flex justify-between items-center">
-                                            <span className="font-semibold text-gray-900 dark:text-white">ราคาต่ำสุด</span>
-                                            <span className="font-bold text-lg text-emerald-600">
-                                                {item.lowest_price?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                                            </span>
-                                        </div>
-
-                                        <div className="flex flex-wrap gap-2">
-                                            <button 
-                                                className="flex-1 bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1 border border-gray-200"
-                                            >
-                                                <Eye size={14} /> ดู
+                                                {compareMutation.isPending && compareMutation.variables === item.qc_id
+                                                    ? <RefreshCw size={14} className="animate-spin" />
+                                                    : <Pencil size={14} />}
+                                                เปรียบเทียบราคา
                                             </button>
-
-                                            {item.status === 'DRAFT' && (
-                                                <button 
-                                                    onClick={() => item.qc_id && handleCompare(item.qc_id)}
-                                                    disabled={compareMutation.isPending}
-                                                    className="flex-[2] bg-[#a855f7] hover:bg-[#9333ea] text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm disabled:opacity-50"
-                                                >
-                                                    {compareMutation.isPending && compareMutation.variables === item.qc_id ? (
-                                                        <RefreshCw size={14} className="animate-spin" />
-                                                    ) : (
-                                                        <Pencil size={14} />
-                                                    )}
-                                                    เปรียบเทียบราคา
-                                                </button>
-                                            )}
-
-                                            {/* COMPLETED: Eye only — no print button */}
-
-                                        </div>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-
-                        {/* Pagination for Mobile */}
-                        {data?.total ? (
-                            <div className="flex justify-between items-center pt-2 text-sm text-gray-600">
-                                 <div>ทั้งหมด {data.total} รายการ</div>
-                                 <div className="flex gap-2">
-                                     <button
-                                        disabled={filters.page === 1}
-                                        onClick={() => handlePageChange(filters.page - 1)}
-                                        className="px-3 py-1 bg-white border rounded hover:bg-gray-50 disabled:opacity-50"
-                                     >
-                                        &lt;
-                                     </button>
-                                     <span>{filters.page} / {Math.ceil(data.total / filters.limit)}</span>
-                                     <button
-                                        disabled={filters.page >= Math.ceil(data.total / filters.limit)}
-                                        onClick={() => handlePageChange(filters.page + 1)}
-                                        className="px-3 py-1 bg-white border rounded hover:bg-gray-50 disabled:opacity-50"
-                                     >
-                                        &gt;
-                                     </button>
-                                 </div>
-                            </div>
-                         ) : null}
-                    </div>
+                                        )}
+                                    </>
+                                }
+                            />
+                        ))}
+                    </MobileListContainer>
                 </div>
             </PageListLayout>
 
-            {isCreateModalOpen && (
+            {isFormModalOpen && (
                 <QCFormModal
-                    isOpen={isCreateModalOpen}
-                    onClose={() => setIsCreateModalOpen(false)}
+                    isOpen={isFormModalOpen}
+                    onClose={() => setIsFormModalOpen(false)}
+                    qcId={selectedQcId}
+                    mode={modalMode}
                     onSuccess={() => {
-                        // Refetch data is handled by React Query invalidation in the modal or parent
-                        // But here we can just close
+                        setIsFormModalOpen(false);
+                        queryClient.invalidateQueries({ queryKey: ['quote-comparisons'] });
                     }}
                 />
             )}

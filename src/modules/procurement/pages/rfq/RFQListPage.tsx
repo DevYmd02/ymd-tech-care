@@ -10,7 +10,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { FileText, Eye, Send, Edit, Search, Plus } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
-import { PageListLayout, SmartTable, RFQStatusBadge, FilterField } from '@ui';
+import { PageListLayout, SmartTable, RFQStatusBadge, FilterField, MobileListCard, MobileListContainer } from '@ui';
 import { useTableFilters } from '@/shared/hooks';
 import { createColumnHelper } from '@tanstack/react-table';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
@@ -58,7 +58,7 @@ const RFQ_STATUS_OPTIONS = [
 
 export default function RFQListPage() {
     // URL-based Filter State
-    const { filters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<RFQStatus>({
+    const { filters, localFilters, handleFilterChange, handleApplyFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<RFQStatus>({
         defaultStatus: 'ALL',
         customParamKeys: {
             search: 'rfq_no',
@@ -67,7 +67,7 @@ export default function RFQListPage() {
         }
     });
 
-    // Convert to API filter format
+    // Convert to API filter format using APPLIED filters (from URL)
     const apiFilters: RFQFilterCriteria = {
         rfq_no: filters.search || undefined,
         ref_pr_no: filters.search2 || undefined,
@@ -80,8 +80,8 @@ export default function RFQListPage() {
         sort: filters.sort || undefined
     };
 
-    // Data Fetching with React Query
-    const { data, isLoading, refetch } = useQuery({
+    // Data Fetching — driven by applied filters (URL params only)
+    const { data, isLoading } = useQuery({
         queryKey: ['rfqs', apiFilters],
         queryFn: () => RFQService.getList(apiFilters),
         placeholderData: keepPreviousData,
@@ -100,9 +100,6 @@ export default function RFQListPage() {
     const [isSending, setIsSending] = useState(false);
 
     // Handlers
-    const handleFilterChange = (name: string, value: string) => {
-        setFilters({ [name]: value });
-    };
 
     const handleCreate = () => {
         setSelectedRFQId(null);
@@ -164,7 +161,7 @@ export default function RFQListPage() {
             await RFQService.sendToVendors(sendingRFQ.rfq_id, selectedVendorIds, methods);
 
             toast(`ส่ง RFQ ${sendingRFQ.rfq_no} ไปยังผู้ขาย ${selectedVendorIds.length} ราย เรียบร้อยแล้ว`, 'success');
-            refetch();
+            handleApplyFilters();
             setSendingRFQ(null);
         } catch (error) {
             toast('เกิดข้อผิดพลาดในการส่ง RFQ', 'error');
@@ -296,53 +293,52 @@ export default function RFQListPage() {
                 const item = row.original;
 
                 return (
-                    // 1. Container: flex row, centered vertically.
-                    <div className="flex flex-row items-center justify-center gap-3 w-full h-full py-1 whitespace-nowrap">
+                    <div className="flex flex-row items-center justify-center gap-2 w-full h-full py-1 whitespace-nowrap">
                         
-                        {/* 2. Left Element: Eye icon, horizontally un-cluttered */}
+                        {/* Eye — always visible */}
                         <button 
-                            className="flex-shrink-0 p-1.5 text-slate-400 hover:text-blue-600 transition-colors" 
+                            className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-all"
                             title="ดูรายละเอียด"
                             onClick={() => handleView(item.rfq_id)}
                         >
-                            <Eye className="w-4 h-4" />
+                            <Eye size={16} />
                         </button>
                         
-                        {/* 3. Right Element: Horizontal Buttons */}
                         {item.status !== 'CLOSED' && item.status !== 'CANCELLED' && (
                             <>
-                                {/* ===== DRAFT: [แก้ไข] + [ส่ง RFQ] ===== */}
+                                {/* DRAFT: [แก้ไข] + [ส่ง RFQ] */}
                                 {item.status === 'DRAFT' && (
                                     <>
                                         <button 
-                                            className="flex items-center justify-center gap-1.5 px-3 py-1 text-[11px] font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800 transition-all whitespace-nowrap"
+                                            className="flex items-center gap-1 pl-1.5 pr-2 py-1 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded shadow-sm border border-transparent hover:border-amber-200 dark:hover:border-amber-800 transition-all whitespace-nowrap"
                                             title="แก้ไข"
                                             onClick={() => handleEdit(item)}
                                         >
-                                            <Edit className="w-3.5 h-3.5" /> แก้ไข
+                                            <Edit size={14} />
+                                            <span className="text-[10px] font-bold">แก้ไข</span>
                                         </button>
                                         <button 
-                                            className="flex items-center justify-center gap-1.5 px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-medium rounded shadow-sm transition-all whitespace-nowrap"
+                                            className="flex items-center gap-1 pl-1.5 pr-2 py-1 ml-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap"
                                             title="ส่ง RFQ"
                                             onClick={() => handleSendRFQ(item)}
                                         >
-                                            <Send className="w-3.5 h-3.5" /> ส่ง RFQ
+                                            <Send size={12} /> ส่ง RFQ
                                         </button>
                                     </>
                                 )}
                                 
-                                {/* ===== SENT: [ส่งเพิ่ม] ===== */}
+                                {/* SENT: [ส่งเพิ่ม] */}
                                 {item.status === 'SENT' && (
                                     <button 
-                                        className="flex items-center justify-center gap-1.5 px-3 py-1 text-[11px] font-medium text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded border border-blue-500 transition-all whitespace-nowrap"
+                                        className="flex items-center gap-1 pl-1.5 pr-2 py-1 ml-1 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap"
                                         title="ส่งเพิ่ม"
                                         onClick={() => handleAddMoreVendors(item)}
                                     >
-                                        <Send className="w-3.5 h-3.5" /> ส่งเพิ่ม
+                                        <Send size={12} /> ส่งเพิ่ม
                                     </button>
                                 )}
 
-                                {/* ===== IN_PROGRESS: (ไม่มี action พิเศษเพราะย้ายไป QT) ===== */}
+                                {/* IN_PROGRESS: (ไม่มี action พิเศษเพราะย้ายไป QT) */}
                             </>
                         )}
                     </div>
@@ -370,24 +366,25 @@ export default function RFQListPage() {
                 totalCount={data?.total}
                 totalCountLoading={isLoading}
                 searchForm={
+                    <form onSubmit={(e) => { e.preventDefault(); handleApplyFilters(); }} className="w-full">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                         <FilterField
                             label="เลขที่ RFQ"
-                            value={filters.search}
+                            value={localFilters.search}
                             onChange={(val: string) => handleFilterChange('search', val)}
                             placeholder="RFQ-xxx"
                             accentColor="blue"
                         />
                         <FilterField
                             label="PR อ้างอิง"
-                            value={filters.search2}
+                            value={localFilters.search2}
                             onChange={(val: string) => handleFilterChange('search2', val)}
                             placeholder="PR-xxx"
                             accentColor="blue"
                         />
                         <FilterField
                             label="ผู้สร้าง RFQ"
-                            value={filters.search3}
+                            value={localFilters.search3}
                             onChange={(val: string) => handleFilterChange('search3', val)}
                             placeholder="ชื่อผู้สร้าง"
                             accentColor="blue"
@@ -395,7 +392,7 @@ export default function RFQListPage() {
                         <FilterField
                             label="สถานะ"
                             type="select"
-                            value={filters.status}
+                            value={localFilters.status}
                             onChange={(val: string) => handleFilterChange('status', val)}
                             options={RFQ_STATUS_OPTIONS}
                             accentColor="blue"
@@ -403,14 +400,14 @@ export default function RFQListPage() {
                         <FilterField
                             label="วันที่เริ่มต้น"
                             type="date"
-                            value={filters.dateFrom || ''}
+                            value={localFilters.dateFrom || ''}
                             onChange={(val: string) => handleFilterChange('dateFrom', val)}
                             accentColor="blue"
                         />
                         <FilterField
                             label="วันที่สิ้นสุด"
                             type="date"
-                            value={filters.dateTo || ''}
+                            value={localFilters.dateTo || ''}
                             onChange={(val: string) => handleFilterChange('dateTo', val)}
                             accentColor="blue"
                         />
@@ -419,13 +416,14 @@ export default function RFQListPage() {
                         <div className="md:col-span-2 lg:col-span-2 flex flex-col sm:flex-row flex-wrap justify-end gap-2 items-center">
                             <div className="flex gap-2 w-full sm:w-auto">
                                 <button
+                                    type="button"
                                     onClick={resetFilters}
                                     className="flex-1 sm:flex-none h-10 px-4 bg-white hover:bg-gray-50 text-gray-700 rounded-lg font-medium transition-colors border border-gray-300 shadow-sm whitespace-nowrap"
                                 >
                                     ล้างค่า
                                 </button>
                                 <button
-                                    onClick={() => refetch()}
+                                    type="submit"
                                     className="flex-1 sm:flex-none h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
                                 >
                                     <Search size={18} />
@@ -433,6 +431,7 @@ export default function RFQListPage() {
                                 </button>
                             </div>
                             <button
+                                type="button"
                                 onClick={handleCreate}
                                 className="w-full sm:w-auto h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
                             >
@@ -441,26 +440,87 @@ export default function RFQListPage() {
                             </button>
                         </div>
                     </div>
+                    </form>
                 }
             >
                 <div className="h-full flex flex-col">
-                    <SmartTable
-                        data={data?.data ?? []}
-                        columns={columns}
+                    {/* Desktop View: Table */}
+                    <div className="hidden md:block flex-1 overflow-hidden">
+                        <SmartTable
+                            data={data?.data ?? []}
+                            columns={columns}
+                            isLoading={isLoading}
+                            pagination={{
+                                pageIndex: filters.page,
+                                pageSize: filters.limit,
+                                totalCount: data?.total ?? 0,
+                                onPageChange: handlePageChange,
+                                onPageSizeChange: () => handleApplyFilters()
+                            }}
+                            sortConfig={sortConfig}
+                            onSortChange={handleSortChange}
+                            rowIdField="rfq_id"
+                            className="flex-1"
+                        />
+                    </div>
+
+                    {/* Mobile View: Cards (shared MobileListContainer + MobileListCard) */}
+                    <MobileListContainer
                         isLoading={isLoading}
-                        pagination={{
-                            pageIndex: filters.page,
-                            pageSize: filters.limit,
-                            totalCount: data?.total ?? 0,
-                            onPageChange: handlePageChange,
-                            onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 })
-                        }}
-                        sortConfig={sortConfig}
-                        onSortChange={handleSortChange}
-                        rowIdField="rfq_id"
-                        className="flex-1"
-                    />
+                        isEmpty={!data?.data.length}
+                        pagination={data?.total ? { page: filters.page, total: data.total, limit: filters.limit, onPageChange: handlePageChange } : undefined}
+                    >
+                        {data?.data.map((item) => (
+                            <MobileListCard
+                                key={item.rfq_id}
+                                title={item.rfq_no}
+                                subtitle={formatThaiDate(item.rfq_date)}
+                                statusBadge={<RFQStatusBadge status={item.status} />}
+                                details={[
+                                    ...(item.ref_pr_no ? [{ label: 'PR อ้างอิง:', value: <span className="font-medium text-blue-600 dark:text-blue-400">{item.ref_pr_no}</span> }] : []),
+                                    { label: 'ผู้สร้าง:', value: item.created_by_name || '-' },
+                                    { label: 'Vendors:', value: `${item.sent_vendors_count || 0}/${item.vendor_count || 0} ราย` },
+                                    ...(item.quote_due_date ? [{ label: 'ครบกำหนด:', value: formatThaiDate(item.quote_due_date) }] : []),
+                                ]}
+                                actions={
+                                    <>
+                                        <button
+                                            onClick={() => handleView(item.rfq_id)}
+                                            className="flex-1 bg-gray-50 dark:bg-slate-700 hover:bg-gray-100 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1 border border-gray-200 dark:border-slate-600"
+                                        >
+                                            <Eye size={14} /> ดู
+                                        </button>
+                                        {item.status === 'DRAFT' && (
+                                            <>
+                                                <button
+                                                    onClick={() => handleEdit(item)}
+                                                    className="flex-1 bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1"
+                                                >
+                                                    <Edit size={14} /> แก้ไข
+                                                </button>
+                                                <button
+                                                    onClick={() => handleSendRFQ(item)}
+                                                    className="flex-[2] bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
+                                                >
+                                                    <Send size={14} /> ส่ง RFQ
+                                                </button>
+                                            </>
+                                        )}
+                                        {item.status === 'SENT' && (
+                                            <button
+                                                onClick={() => handleAddMoreVendors(item)}
+                                                className="flex-[2] bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
+                                            >
+                                                <Send size={14} /> ส่งเพิ่ม
+                                            </button>
+                                        )}
+                                    </>
+                                }
+                            />
+                        ))}
+                    </MobileListContainer>
                 </div>
+
             </PageListLayout>
 
             {isModalOpen && (
@@ -471,7 +531,7 @@ export default function RFQListPage() {
                     readOnly={isReadOnly}
                     isInviteMode={isInviteMode}
                     onSuccess={() => {
-                        refetch();
+                        handleApplyFilters();
                         handleCloseModal();
                     }}
                 />

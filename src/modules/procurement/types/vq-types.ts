@@ -8,7 +8,7 @@
 // ENUMS
 // ====================================================================================
 
-/** Quotation Status - สถานะใบเสนอราคาจากผู้ขาย */
+/** Quotation Status - สถานะใบเสนอราคาจากผู้ขาย (Linear Flow: lifecycle ends at RECORDED) */
 export type QuotationStatus = 
     | 'PENDING'   // รอผู้ขายตอบกลับ (No VQ ID)
     | 'DRAFT'     // แบบร่าง (No VQ ID — internal draft)
@@ -24,7 +24,7 @@ export type QuotationStatus =
 /** Quotation Header - ใบเสนอราคาจากผู้ขาย */
 export interface QuotationHeader {
     quotation_id: string;               // UUID - Primary Key (vq_id)
-    qc_id: string;                      // UUID - FK -> qc_header
+    qc_id?: string;                     // UUID - FK -> qc_header
     vendor_id: string;                  // UUID - FK -> vendor.vendor_id
     quotation_no: string;               // VARCHAR(50) - เลขที่ใบเสนอราคา
     quotation_date: string;             // DATE - วันที่เสนอราคา (quote_date)
@@ -48,8 +48,9 @@ export interface QuotationHeader {
     // UI Extended Fields
     vendor_name?: string;               // Display
     vendor_code?: string;               // Display
-    rfq_id?: string;                    // UUID - FK -> rfq_header
+    rfq_id: string;                    // UUID - FK -> rfq_header (always required)
     rfq_no?: string;                    // Display
+    pr_id?: string;                     // UUID - FK -> pr_header
     pr_no?: string;                     // Display - Reference PR
     lines?: QuotationLine[];            // Detail items
 }
@@ -100,7 +101,7 @@ export interface VQListParams {
   vendor_name?: string;
   rfq_no?: string;
   pr_no?: string;
-  status?: string;
+  status?: QuotationStatus | 'ALL';
   date_from?: string;
   date_to?: string;
   page?: number;

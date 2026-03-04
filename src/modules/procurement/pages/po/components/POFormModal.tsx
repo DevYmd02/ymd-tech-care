@@ -1,107 +1,108 @@
-import { useEffect, useMemo } from 'react';
-import { useForm, useFieldArray, useWatch } from 'react-hook-form';
-import type { Control, SubmitHandler, Resolver } from 'react-hook-form';
-import { z } from 'zod'; // Assumed z is available or will be installed
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Save, FileText, Plus, Trash2 } from 'lucide-react';
-import { WindowFormLayout } from '@ui';
-import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWrapper';
-import { POService } from '@/modules/procurement/services';
-import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
-import type { VendorDropdownItem } from '@/modules/master-data/vendor/types/vendor-types';
-import type { POFormData, CreatePOPayload } from '@/modules/procurement/types';
-import { useQuery } from '@tanstack/react-query'; // React Query for vendors
-import { calculatePricingSummary } from '@/modules/procurement/utils/pricing.utils';
-import { logger } from '@/shared/utils/logger';
-
-// ====================================================================================
-// ZOD SCHEMA
-// ====================================================================================
-
-const poLineSchema = z.object({
-    item_id: z.string(),
-    item_code: z.string().min(1, 'ระบุรหัสสินค้า'),
-    item_name: z.string().min(1, 'ระบุชื่อสินค้า'),
-    qty: z.number().min(0.001, 'จำนวนต้องมากกว่า 0'),
-    unit_price: z.number().min(0, 'ราคาห้ามติดลบ'),
-    discount: z.number().min(0, 'ส่วนลดห้ามติดลบ'),
-    unit: z.string().optional()
-});
-
-const poSchema = z.object({
-    po_date: z.string().refine(val => !isNaN(Date.parse(val)), 'วันที่ไม่ถูกต้อง'),
-    vendor_id: z.string().min(1, 'กรุณาเลือกผู้ขาย'),
-    delivery_date: z.string().optional(),
-    payment_term_days: z.number().min(0).default(30),
-    remarks: z.string().optional(),
-    items: z.array(poLineSchema).min(1, 'ต้องมีรายการสินค้าอย่างน้อย 1 รายการ'),
-    tax_rate: z.number().default(7),
-    is_vat_included: z.boolean().default(false),
-    
-    // Multicurrency
-    isMulticurrency: z.boolean().default(false),
-    currency: z.string().optional(),
-    exchange_rate: z.number().default(1),
-}).superRefine((data, ctx) => {
-    if (data.isMulticurrency) {
-        if (!data.currency || data.currency === 'THB') {
-            ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                message: "กรุณาระบุสกุลเงินต่างประเทศ",
-                path: ["currency"]
-            });
-        }
-        if (!data.exchange_rate || data.exchange_rate <= 0) {
-            ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                message: "กรุณาระบุอัตราแลกเปลี่ยน",
-                path: ["exchange_rate"]
-            });
-        }
-    }
-});
-
-type POFormValues = z.infer<typeof poSchema>;
-
-// ====================================================================================
-// COMPONENTS
-// ====================================================================================
-
 /**
- * Summary Component using useWatch for performance
+ * @file POFormModal.tsx
+ * @description High-fidelity PO Form Modal — VQ-Style 3-column layout
+ *  Line Items Table (preserved from original)
+ *  Summary + Remarks
+ *
+ *  Business logic extracted to usePOForm hook.
  */
-const POSummary = ({ control }: { control: Control<POFormValues> }) => {
-    const items = useWatch({ control, name: 'items' });
-    const taxRate = useWatch({ control, name: 'tax_rate' });
-    const isVatIncluded = useWatch({ control, name: 'is_vat_included' });
-    const summary = useMemo(() => {
-        // Map form items to pricing items
-        const pricingItems = (items || []).map(item => ({
-            qty: Number(item.qty) || 0,
-            unit_price: Number(item.unit_price) || 0,
-            discount: Number(item.discount) || 0
+
+import { useMemo } from 'react';
+import { useWatch, FormProvider } from 'react-hook-form';
+import type { Control } from 'react-hook-form';
+import { FileText, Plus, Trash2, Search, Save, X as XIcon } from 'lucide-react';
+import { WindowFormLayout } from '@ui';
+import { VendorSearchModal } from '@/modules/master-data/vendor/components/selector/VendorSearchModal';
+import { ProductSearchModal } from '@/modules/procurement/pages/pr/components/ProductSearchModal';
+import type { POFormData } from '@/modules/procurement/schemas/po-schemas';
+import { calculatePricingSummary } from '@/modules/procurement/utils/pricing.utils';
+import { usePOForm } from '../hooks';
+
+// ====================================================================================
+// STATIC OPTIONS  (branch & warehouse until master-data APIs are wired)
+// ====================================================================================
+
+const BRANCH_OPTIONS = [
+    { value: '1', label: 'สำนักงานใหญ่ (HQ)' },
+    { value: '2', label: 'สาขา สีลม' },
+    { value: '3', label: 'สาขา อโศก' },
+    { value: '4', label: 'สาขา ลาดพร้าว' },
+];
+
+const WAREHOUSE_OPTIONS = [
+    { value: 'wh-001', label: 'คลังสินค้าหลัก (Main Warehouse)' },
+    { value: 'wh-002', label: 'คลังสินค้าย่อย (Sub Warehouse)' },
+    { value: 'wh-003', label: 'คลังสินค้าชั่วคราว (Temp)' },
+];
+
+const CURRENCY_OPTIONS = [
+    { value: 'THB', label: 'THB - บาท' },
+    { value: 'USD', label: 'USD - ดอลลาร์สหรัฐ' },
+    { value: 'EUR', label: 'EUR - ยูโร' },
+    { value: 'JPY', label: 'JPY - เยน' },
+    { value: 'SGD', label: 'SGD - ดอลลาร์สิงคโปร์' },
+    { value: 'CNY', label: 'CNY - หยวน' },
+];
+
+// ====================================================================================
+// STYLE CONSTANTS  (Match VQ pattern, blue accent for PO module)
+// ====================================================================================
+
+const s = {
+    label:      'text-sm font-medium text-blue-700 dark:text-blue-300 mb-1 block',
+    input:      'w-full h-8 px-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:text-white transition-all disabled:opacity-70 disabled:cursor-not-allowed',
+    inputRO:    'w-full h-8 px-3 text-sm bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-800 rounded-lg cursor-not-allowed font-medium',
+    select:     'w-full h-8 px-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:text-white cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed',
+    searchBtn:  'px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors shrink-0 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1',
+    error:      'text-red-500 text-[10px] mt-0.5 font-medium',
+    hint:       'text-xs text-gray-400 dark:text-gray-500 mt-1',
+};
+
+// ====================================================================================
+// SUB-COMPONENT: Row Total (isolated watch for performance)
+// ====================================================================================
+
+const RowTotal = ({ control, index }: { control: Control<POFormData>; index: number }) => {
+    const qty   = useWatch({ control, name: `lines.${index}.qty_ordered` }) ?? 0;
+    const price = useWatch({ control, name: `lines.${index}.unit_price` }) ?? 0;
+    const disc  = useWatch({ control, name: `lines.${index}.discount_amount` }) ?? 0;
+    const total = qty * price - disc;
+    return <>{total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>;
+};
+
+// ====================================================================================
+// SUB-COMPONENT: Summary Panel
+// ====================================================================================
+
+const POSummaryPanel = ({ control }: { control: Control<POFormData> }) => {
+    const lines = useWatch({ control, name: 'lines' });
+    const { beforeTax, taxAmount, totalAmount } = useMemo(() => {
+        const items = (lines ?? []).map(l => ({
+            qty:        Number(l?.qty_ordered),
+            unit_price: Number(l?.unit_price),
+            discount:   Number(l?.discount_amount),
         }));
-
-        return calculatePricingSummary(pricingItems, taxRate, isVatIncluded);
-    }, [items, taxRate, isVatIncluded]);
-
+        return calculatePricingSummary(items, 7, false);
+    }, [lines]);
 
     return (
         <div className="w-80 space-y-3 bg-white dark:bg-slate-800 p-4 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm">
             <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-slate-400">รวมเป็นเงิน (Subtotal)</span>
-                <span className="font-medium text-gray-900 dark:text-white">{summary.beforeTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-            </div>
-            <div className="flex justify-between text-sm items-center">
-                <span className="text-gray-600 dark:text-slate-400 flex items-center gap-2">
-                    ภาษีมูลค่าเพิ่ม {taxRate}%
+                <span className="text-gray-600 dark:text-slate-400">รวมเป็นเงิน</span>
+                <span className="font-medium text-gray-900 dark:text-white">
+                    {beforeTax.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </span>
-                <span className="font-medium text-gray-900 dark:text-white">{summary.taxAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+                <span className="text-gray-600 dark:text-slate-400">ภาษีมูลค่าเพิ่ม 7%</span>
+                <span className="font-medium text-gray-900 dark:text-white">
+                    {taxAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </span>
             </div>
             <div className="border-t border-gray-200 dark:border-slate-700 pt-3 flex justify-between items-baseline">
-                <span className="text-base font-bold text-gray-800 dark:text-slate-200">รวมสุทธิ (Grand Total)</span>
+                <span className="text-base font-bold text-gray-800 dark:text-slate-200">รวมสุทธิ</span>
                 <span className="text-xl font-bold text-blue-600 dark:text-blue-400">
-                    {summary.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </span>
             </div>
         </div>
@@ -109,433 +110,480 @@ const POSummary = ({ control }: { control: Control<POFormValues> }) => {
 };
 
 // ====================================================================================
+// PROPS
+// ====================================================================================
+
+interface POFormModalProps {
+    isOpen:         boolean;
+    onClose:        () => void;
+    onSuccess?:     () => void;
+    /** Post ID for edit/view */
+    poId?:          string;
+    /** Pre-fill from QC winner selection */
+    initialValues?: Partial<POFormData>;
+    /** Read-only view */
+    isViewMode?:    boolean;
+}
+
+// ====================================================================================
 // MAIN MODAL
 // ====================================================================================
 
-interface Props {
-    isOpen: boolean;
-    onClose: () => void;
-    onSuccess?: () => void;
-    initialValues?: Partial<POFormData>;
-}
+export default function POFormModal({
+    isOpen,
+    onClose,
+    onSuccess,
+    poId,
+    initialValues,
+    isViewMode = false,
+}: POFormModalProps) {
 
-export default function POFormModal({ isOpen, onClose, onSuccess, initialValues }: Props) {
-    // -- Vendors --
-    const { data: vendorOptions = [] } = useQuery<VendorDropdownItem[]>({
-        queryKey: ['vendor-dropdown'],
-        queryFn: VendorService.getDropdown,
-        enabled: isOpen, // Only fetch when open
-        staleTime: 5 * 60 * 1000
-    });
-
-    // -- Form --
+    // ── Hook (All Business Logic) ─────────────────────────────────────────────
     const {
+        formMethods,
         control,
         register,
         handleSubmit,
-        reset,
+        errors,
+        fields,
+        remove,
         setValue,
-        formState: { errors }
-    } = useForm<POFormValues>({
-        resolver: zodResolver(poSchema) as Resolver<POFormValues>,
-        defaultValues: {
-            po_date: new Date().toISOString().split('T')[0],
-            vendor_id: '',
-            items: [],
-            payment_term_days: 30,
-            tax_rate: 7,
-            is_vat_included: false,
-            isMulticurrency: false,
-            currency: 'THB',
-            exchange_rate: 1
-            // We use reset() in useEffect to handle initialValues, so no spread here avoids type errors
-        }
-    });
-
-    // Reset currency when isMulticurrency is turned off
-    const isMulticurrency = useWatch({ control, name: 'isMulticurrency' });
-    const currentCurrency = useWatch({ control, name: 'currency' });
-    const currentRate = useWatch({ control, name: 'exchange_rate' });
-
-    useEffect(() => {
-        if (!isMulticurrency) {
-            if (currentCurrency !== 'THB' || currentRate !== 1) {
-                setValue('currency', 'THB');
-                setValue('exchange_rate', 1);
-            }
-        }
-    }, [isMulticurrency, currentCurrency, currentRate, setValue]);
-
-    const { fields, append, remove } = useFieldArray({
-        control,
-        name: "items"
-    });
-
-    // Reset when opening
-    // Reset when opening
-    useEffect(() => {
-        if (isOpen) {
-            reset({
-                po_date: initialValues?.po_date ?? new Date().toISOString().split('T')[0],
-                vendor_id: initialValues?.vendor_id ?? '',
-                items: initialValues?.items ? initialValues.items.map(item => ({
-                    ...item,
-                    discount: item.discount ?? 0,
-                    unit: item.uom_name ?? 'PCS', // Map uom_name to unit if needed, or default
-                })) : [],
-                payment_term_days: initialValues?.payment_term_days ?? 30,
-                tax_rate: initialValues?.tax_rate ?? 7,
-                is_vat_included: false,
-                delivery_date: initialValues?.delivery_date ?? '',
-                remarks: initialValues?.remarks ?? ''
-            });
-        }
-    }, [isOpen, initialValues, reset]);
-
-    const onSubmit: SubmitHandler<POFormValues> = async (data) => {
-        try {
-            // Recalculate finals for payload (double check)
-            // Or trust the backend to calc. Usually backend calcs, but payload might require it.
-            // Let's perform simple mapping.
-            
-            const payloadItems = data.items.map(item => ({
-                item_id: item.item_id,
-                qty: item.qty,
-                unit_price: item.unit_price, // Assuming simple unit price
-                discount: item.discount
-            }));
-
-            // Calculate totals for consistency in payload if needed by API
-            // (Reusing logic from Summary is ideal, but inline here for simplicity)
-            const subtotal = data.items.reduce((sum, item) => sum + (item.qty * item.unit_price) - (item.discount || 0), 0);
-            const vat = data.is_vat_included 
-                ? (subtotal * data.tax_rate) / (100 + data.tax_rate)
-                : subtotal * (data.tax_rate / 100);
-            const total = data.is_vat_included ? subtotal : subtotal + vat;
-
-            const payload: CreatePOPayload = {
-                vendor_id: data.vendor_id,
-                order_date: data.po_date,
-                delivery_date: data.delivery_date || '',
-                payment_term: String(data.payment_term_days),
-                remarks: data.remarks,
-                items: payloadItems,
-                // Optional UI fields if API supports
-                subtotal: subtotal,
-                tax_amount: vat,
-                total_amount: total
-            };
-
-            await POService.create(payload);
-            window.alert('บันทึกใบสั่งซื้อเรียบร้อยแล้ว');
-            if (onSuccess) onSuccess();
-            onClose();
-        } catch (error) {
-            logger.error('[POFormModal] Create PO error:', error);
-            window.alert('เกิดข้อผิดพลาดในการบันทึก');
-        }
-    };
-
-    const handleFormSubmit = handleSubmit(onSubmit);
-
-    const handleAddItem = () => {
-        append({
-            item_id: `new-${Date.now()}`,
-            item_code: '',
-            item_name: '',
-            qty: 1,
-            unit_price: 0,
-            discount: 0,
-            unit: 'PCS'
-        });
-    };
+        watchVendorName,
+        watchPrNo,
+        watchCurrencyCode,
+        watchIsMulticurrency,
+        handleVendorSelect,
+        handleAddLine,
+        onSubmit,
+        isVendorModalOpen,
+        setIsVendorModalOpen,
+        
+        isProductModalOpen,
+        setIsProductModalOpen,
+        searchTerm,
+        setSearchTerm,
+        showAllItems,
+        setShowAllItems,
+        products,
+        isSearchingProducts,
+        handleOpenProductSearch,
+        handleSelectProduct,
+    } = usePOForm({ isOpen, onClose, onSuccess, poId, initialValues, isViewMode });
 
     if (!isOpen) return null;
 
+    const isView = isViewMode;
+
     return (
-        <WindowFormLayout
-            isOpen={isOpen}
-            onClose={onClose}
-            title="สร้างใบสั่งซื้อ (Create Purchase Order)"
-            titleIcon={<FileText className="text-white" size={20} />}
-            headerColor="bg-blue-600"
-            footer={
-                <div className="p-4 flex justify-end gap-3 items-center">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="px-5 py-2.5 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-200 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 font-medium transition-colors"
-                    >
-                        ยกเลิก
-                    </button>
-                    <button
-                        type="button"
-                        onClick={handleFormSubmit}
-                        className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold shadow-lg shadow-blue-200 dark:shadow-none transition-all flex items-center gap-2"
-                    >
-                        <Save size={18} />
-                        บันทึกใบสั่งซื้อ
-                    </button>
-                </div>
-            }
-        >
-            <form onSubmit={handleFormSubmit} className="h-full flex flex-col bg-gray-50 dark:bg-slate-900">
-                <div className="p-6 space-y-6">
+        <FormProvider {...formMethods}>
+            {/* ── Vendor Search Modal ──────────────────────────────────────── */}
+            <VendorSearchModal
+                isOpen={isVendorModalOpen}
+                onClose={() => setIsVendorModalOpen(false)}
+                onSelect={handleVendorSelect}
+            />
 
-                        {/* Top Info Section */}
-                        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
-                            <div className="border-l-4 border-l-orange-500 bg-orange-50 dark:bg-slate-700/50 px-4 py-3 border-b border-b-gray-100 dark:border-b-slate-700">
-                                <h3 className="font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
-                                    ใบสั่งซื้อ (PO Header)
-                                </h3>
+            {/* ── Product Search Modal ─────────────────────────────────────── */}
+            <ProductSearchModal
+                isOpen={isProductModalOpen}
+                onClose={() => setIsProductModalOpen(false)}
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                isSearchingProducts={isSearchingProducts}
+                products={products}
+                selectProduct={handleSelectProduct}
+                showAllItems={showAllItems}
+                setShowAllItems={setShowAllItems}
+            />
+
+            <WindowFormLayout
+                isOpen={isOpen}
+                onClose={onClose}
+                title={isView ? 'รายละเอียดใบสั่งซื้อ (VIEW PO)' : 'สร้างใบสั่งซื้อ (CREATE PURCHASE ORDER)'}
+                titleIcon={
+                    <div className="bg-white/20 p-1 rounded-md shadow-sm">
+                        <FileText size={14} strokeWidth={3} className="text-white" />
+                    </div>
+                }
+                headerColor="bg-blue-600"
+                footer={
+                    <div className="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-end items-center bg-slate-100 dark:bg-gray-900 sticky bottom-0 z-10 gap-x-2">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md text-sm font-medium transition-colors"
+                        >
+                            {isView ? 'ปิด' : 'ยกเลิก'}
+                        </button>
+                        {!isView && (
+                            <button
+                                type="button"
+                                onClick={handleSubmit(onSubmit)}
+                                className="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md text-sm font-medium shadow-sm transition-colors flex items-center gap-2"
+                            >
+                                <Save size={14} /> บันทึก
+                            </button>
+                        )}
+                    </div>
+                }
+            >
+                <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6">
+
+                    {/* ════════════════════════════════════════════════════════
+                        CARD 1 — PO Header
+                    ════════════════════════════════════════════════════════ */}
+                    <div className="bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden shadow-sm">
+                        <div className="p-5 space-y-4">
+                            {/* Card Title */}
+                            <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 border-b border-gray-200 dark:border-gray-700 pb-3">
+                                <FileText size={18} />
+                                <span className="font-semibold">ส่วนหัวเอกสาร — Header PO (Purchase Order)</span>
                             </div>
-                            
-                            <div className="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-                                <div className="space-y-1">
-                                    <label className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">ผู้ขาย (Vendor) <span className="text-red-500">*</span></label>
-                                    <select 
-                                        {...register('vendor_id')}
-                                        className="w-full h-10 px-3 bg-white dark:bg-slate-700/50 border border-gray-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-gray-900 dark:text-white"
-                                    >
-                                        <option value="">-- เลือกผู้ขาย --</option>
-                                        {vendorOptions.map(v => (
-                                            <option key={v.vendor_code} value={v.vendor_code}>{v.vendor_name}</option>
-                                        ))}
+
+                            {/* ── Row 1: เลขที่ PO | วันที่ PO | อ้างอิง PR/QC ── */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label className={s.label}>เลขที่ PO <span className="text-gray-400 font-normal text-xs">(po_no)</span></label>
+                                    <input {...register('po_no')} className={s.inputRO} readOnly placeholder="ระบบจะสร้างอัตโนมัติ" />
+                                    <p className={s.hint}>ระบบจะแสดงเลขที่เมื่อบันทึก</p>
+                                </div>
+                                <div>
+                                    <label className={s.label}>วันที่ PO <span className="text-red-500">*</span> <span className="text-gray-400 font-normal text-xs">(po_date)</span></label>
+                                    <input type="date" {...register('po_date')} className={`${s.input} ${errors.po_date ? 'border-red-500 ring-1 ring-red-500' : ''}`} disabled={isView} />
+                                    {errors.po_date && <p className={s.error}>{errors.po_date.message}</p>}
+                                </div>
+                                <div>
+                                    <label className={s.label}>อ้างอิง PR <span className="text-gray-400 font-normal text-xs">(pr_id FK)</span></label>
+                                    <div className="flex gap-2">
+                                        <input {...register('pr_no')} className={s.inputRO} readOnly placeholder="PR2024-xxx" />
+                                        {!isView && (
+                                            <button type="button" title="ค้นหา PR" className={s.searchBtn} onClick={() => window.alert('PR Search — coming soon')}>
+                                                <Search size={14} />
+                                            </button>
+                                        )}
+                                        {watchPrNo && !isView && (
+                                            <button type="button" onClick={() => { setValue('pr_id', ''); setValue('pr_no', ''); }}
+                                                className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors border border-red-200 dark:border-red-800/50" title="ล้างข้อมูล PR">
+                                                <XIcon size={14} />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* ── Row 2: ผู้ขาย | สาขา | คลังสินค้าปลายทาง ── */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label className={s.label}>ผู้ขาย <span className="text-red-500">*</span> <span className="text-gray-400 font-normal text-xs">(vendor_id FK)</span></label>
+                                    <div className="flex gap-2">
+                                        <input value={watchVendorName ?? ''} readOnly className={`flex-1 ${s.inputRO}`} placeholder="-- เลือกผู้ขาย --" />
+                                        {!isView && (
+                                            <button type="button" onClick={() => setIsVendorModalOpen(true)} className={s.searchBtn}>
+                                                <Search size={14} /> เลือก
+                                            </button>
+                                        )}
+                                    </div>
+                                    {errors.vendor_id && <p className={s.error}>{errors.vendor_id.message}</p>}
+                                </div>
+                                <div>
+                                    <label className={s.label}>สาขา <span className="text-red-500">*</span> <span className="text-gray-400 font-normal text-xs">(branch_id FK)</span></label>
+                                    <select {...register('branch_id')} className={`${s.select} ${errors.branch_id ? 'border-red-500' : ''}`} disabled={isView}>
+                                        <option value="">— เลือกสาขา —</option>
+                                        {BRANCH_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                                     </select>
-                                    {errors.vendor_id && <p className="text-red-500 text-xs mt-1">{errors.vendor_id.message}</p>}
+                                    {errors.branch_id && <p className={s.error}>{errors.branch_id.message}</p>}
                                 </div>
-
-                                <div className="space-y-1">
-                                    <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">วันที่เอกสาร (Date) <span className="text-red-500">*</span></label>
-                                    <input 
-                                        type="date" 
-                                        {...register('po_date')}
-                                        className="w-full h-10 px-3 bg-white dark:bg-slate-700/50 border border-gray-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white"
-                                    />
-                                    {errors.po_date && <p className="text-red-500 text-xs mt-1">{errors.po_date.message}</p>}
-                                </div>
-
-                                <div className="space-y-1">
-                                    <label className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">วันที่ส่งมอบ (Delivery)</label>
-                                    <input 
-                                        type="date" 
-                                        {...register('delivery_date')}
-                                        className="w-full h-10 px-3 bg-white dark:bg-slate-700/50 border border-gray-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white"
-                                    />
-                                </div>
-
-                                <div className="space-y-1">
-                                    <label className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">เครดิต (วัน)</label>
-                                    <input 
-                                        type="number" 
-                                        {...register('payment_term_days', { valueAsNumber: true })}
-                                        className="w-full h-10 px-3 bg-white dark:bg-slate-700/50 border border-gray-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white"
-                                    />
-                                </div>
-
-                                <div className="col-span-full space-y-1">
-                                    <label className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">หมายเหตุ (Remarks)</label>
-                                    <textarea 
-                                        {...register('remarks')}
-                                        rows={2}
-                                        className="w-full p-3 bg-white dark:bg-slate-700/50 border border-gray-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-blue-500 outline-none resize-none text-gray-900 dark:text-white"
-                                        placeholder="ระบุหมายเหตุเพิ่มเติม..."
-                                    />
-                                </div>
-
-                                {/* Multicurrency Section */}
-                                <div className="col-span-full">
-                                    <MulticurrencyWrapper control={control} name="isMulticurrency">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-1 block">สกุลเงิน <span className="text-red-500">*</span></label>
-                                                <select
-                                                    {...register('currency')}
-                                                    className="w-full h-9 px-3 text-sm bg-white dark:bg-slate-700/50 border border-gray-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white disabled:opacity-50"
-                                                    disabled={!isMulticurrency}
-                                                >
-                                                    <option value="THB">THB - บาท</option>
-                                                    <option value="USD">USD - ดอลลาร์สหรัฐ</option>
-                                                    <option value="EUR">EUR - ยูโร</option>
-                                                    <option value="JPY">JPY - เยน</option>
-                                                    <option value="CNY">CNY - หยวน</option>
-                                                </select>
-                                                {errors.currency && <p className="text-red-500 text-xs mt-1">{errors.currency.message}</p>}
-                                            </div>
-                                            <div>
-                                                <label className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-1 block">อัตราแลกเปลี่ยน <span className="text-red-500">*</span></label>
-                                                <input
-                                                    type="number"
-                                                    step="0.0001"
-                                                    {...register('exchange_rate', { valueAsNumber: true })}
-                                                    className="w-full h-9 px-3 text-sm bg-white dark:bg-slate-700/50 border border-gray-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white disabled:opacity-50"
-                                                    disabled={!isMulticurrency}
-                                                    placeholder="0.0000"
-                                                />
-                                                {currentCurrency && currentCurrency !== 'THB' && (
-                                                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                                                        1 {currentCurrency} ≈ {currentRate} THB
-                                                    </p>
-                                                )}
-                                                {errors.exchange_rate && <p className="text-red-500 text-xs mt-1">{errors.exchange_rate.message}</p>}
-                                            </div>
-                                        </div>
-                                    </MulticurrencyWrapper>
+                                <div>
+                                    <label className={s.label}>คลังสินค้าปลายทาง <span className="text-red-500">*</span> <span className="text-gray-400 font-normal text-xs">(ship_to_warehouse_id)</span></label>
+                                    <select {...register('ship_to_warehouse_id')} className={`${s.select} ${errors.ship_to_warehouse_id ? 'border-red-500' : ''}`} disabled={isView}>
+                                        <option value="">— เลือกคลังสินค้า —</option>
+                                        {WAREHOUSE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                                    </select>
+                                    {errors.ship_to_warehouse_id && <p className={s.error}>{errors.ship_to_warehouse_id.message}</p>}
                                 </div>
                             </div>
+
+                            {/* ── Row 3: เครดิตเทอม | กำหนดส่งของ | -- ช่องว่าง -- ── */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label className={s.label}>เครดิตเทอม (วัน) <span className="text-red-500">*</span> <span className="text-gray-400 font-normal text-xs">(payment_term_days)</span></label>
+                                    <input type="number" {...register('payment_term_days', { valueAsNumber: true })}
+                                        className={`${s.input} text-right`} disabled={isView} placeholder="30" />
+                                    {errors.payment_term_days && <p className={s.error}>{errors.payment_term_days.message}</p>}
+                                </div>
+                                <div>
+                                    <label className={s.label}>กำหนดส่งของ <span className="text-gray-400 font-normal text-xs">(delivery_date)</span></label>
+                                    <input type="date" {...register('delivery_date')} className={s.input} disabled={isView} />
+                                </div>
+                                <div>
+                                    <label className={s.label}>หมายเหตุ <span className="text-gray-400 font-normal text-xs">(remarks)</span></label>
+                                    <input {...register('remarks')} className={s.input} disabled={isView} placeholder="ระบุหมายเหตุเพิ่มเติม..." />
+                                </div>
+                            </div>
+
+                            {/* ── Row 4: Multicurrency Toggle (full-width) ── */}
+                            <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-lg">
+                                <input
+                                    type="checkbox"
+                                    id="is_multicurrency"
+                                    {...register('is_multicurrency')}
+                                    disabled={isView}
+                                    className="w-4 h-4 text-blue-600 rounded cursor-pointer accent-blue-600"
+                                />
+                                <label htmlFor="is_multicurrency" className="text-sm font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none">
+                                    ระบุสกุลเงินต่างประเทศ (Multicurrency)
+                                </label>
+                                {!watchIsMulticurrency && (
+                                    <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">
+                                        สกุลเงินปัจจุบัน: <strong className="text-gray-600 dark:text-gray-300">THB - บาท</strong>
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* ── Row 5: Multicurrency Detail Fields (conditional) ── */}
+                            {watchIsMulticurrency && (
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-700/50 rounded-lg">
+                                    <div>
+                                        <label className={s.label}>วันที่อัตราแลกเปลี่ยน</label>
+                                        <input type="date" {...register('exchange_rate_date')} className={s.input} disabled={isView} />
+                                    </div>
+                                    <div>
+                                        <label className={s.label}>รหัสสกุลเงิน <span className="text-red-500">*</span></label>
+                                        <select {...register('currency_code')} className={s.select} disabled={isView}>
+                                            {CURRENCY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className={s.label}>ไปที่สกุลเงิน (Target)</label>
+                                        <select {...register('target_currency')} className={s.select} disabled={isView}>
+                                            <option value="">เลือกสกุลเงิน</option>
+                                            {CURRENCY_OPTIONS.filter(o => o.value !== watchCurrencyCode).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className={s.label}>อัตราแลกเปลี่ยน <span className="text-red-500">*</span></label>
+                                        <input type="number" step="0.0001" {...register('exchange_rate', { valueAsNumber: true })}
+                                            className={`${s.input} text-right`} disabled={isView} placeholder="1" />
+                                        {errors.exchange_rate && <p className={s.error}>{errors.exchange_rate.message}</p>}
+                                    </div>
+                                </div>
+                            )}
                         </div>
+                    </div>
 
-                        {/* Items Section */}
-                        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden flex flex-col min-h-[400px]">
-                            <div className="border-l-4 border-l-orange-500 bg-orange-50 dark:bg-slate-700/50 px-4 py-3 border-b border-b-gray-100 dark:border-b-slate-700 flex justify-between items-center">
-                                <h3 className="font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
-                                    รายการสินค้า (Line Items)
-                                </h3>
-                                <button
-                                    type="button"
-                                    onClick={handleAddItem}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors shadow-sm"
-                                >
-                                    <Plus size={16} />
-                                    เพิ่มรายการ
-                                </button>
+                    {/* ════════════════════════════════════════════════════════
+                        CARD 2 — Line Items
+                    ════════════════════════════════════════════════════════ */}
+                    <div className="bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden shadow-sm">
+                        <div className="p-4">
+                            {/* Card Title */}
+                            <div className="flex items-center justify-between mb-4 border-b border-gray-200 dark:border-gray-700 pb-3">
+                                <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                                    <FileText size={18} />
+                                    <span className="font-semibold">รายการสินค้า — Line Items</span>
+                                </div>
+                                {!isView && (
+                                    <button
+                                        type="button"
+                                        onClick={handleAddLine}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors shadow-sm"
+                                    >
+                                        <Plus size={16} /> เพิ่มรายการ
+                                    </button>
+                                )}
                             </div>
 
-                            <div className="flex-1 p-0 overflow-x-auto">
-                                <table className="w-full text-left border-collapse">
-                                    <thead>
-                                        <tr className="bg-gray-100 dark:bg-slate-700/50 text-gray-700 dark:text-slate-200 text-xs uppercase tracking-wider border-b border-gray-200 dark:border-slate-700">
-                                            <th className="px-4 py-3 font-semibold w-12 text-center">#</th>
-                                            <th className="px-4 py-3 font-semibold">รหัสสินค้า</th>
-                                            <th className="px-4 py-3 font-semibold">ชื่อสินค้า</th>
-                                            <th className="px-4 py-3 font-semibold w-24 text-right">จำนวน</th>
-                                            <th className="px-4 py-3 font-semibold w-24">หน่วย</th>
-                                            <th className="px-4 py-3 font-semibold w-32 text-right">ราคา/หน่วย</th>
-                                            <th className="px-4 py-3 font-semibold w-24 text-right">ส่วนลด</th>
-                                            <th className="px-4 py-3 font-semibold w-32 text-right">รวมเงิน</th>
-                                            <th className="px-4 py-3 font-semibold w-12"></th>
+                            {/* Table */}
+                            <div className="overflow-x-auto bg-gray-50 dark:bg-gray-800/50 p-2 rounded-lg">
+                                <table className="w-full min-w-[1200px] border-collapse bg-white dark:bg-gray-900 text-sm border border-gray-200 dark:border-gray-700 shadow-sm">
+                                    <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 text-[13px] dark:bg-slate-900/50 dark:text-slate-400 dark:border-slate-800">
+                                        <tr>
+                                            <th className="px-2 py-2 text-center w-12 border-r border-slate-200 dark:border-slate-800">ลำดับ</th>
+                                            <th className="px-3 py-2 text-left w-56 border-r border-slate-200 dark:border-slate-800 font-medium">
+                                                สินค้า/บริการ <span className="text-red-400">*</span><br />
+                                            </th>
+                                            <th className="px-3 py-2 text-left w-64 border-r border-slate-200 dark:border-slate-800 font-medium whitespace-nowrap">
+                                                รายละเอียด<br />
+                                            </th>
+                                            <th className="px-2 py-2 text-center w-24 border-r border-slate-200 dark:border-slate-800 font-medium">
+                                                จำนวนสั่ง <span className="text-red-400">*</span><br />
+                                            </th>
+                                            <th className="px-2 py-2 text-center w-20 border-r border-slate-200 dark:border-slate-800 font-medium">
+                                                หน่วย<br />
+                                            </th>
+                                            <th className="px-2 py-2 text-center w-28 border-r border-slate-200 dark:border-slate-800 font-medium">
+                                                ราคา/หน่วย <span className="text-red-400">*</span><br />
+                                            </th>
+                                            <th className="px-2 py-2 text-center w-24 border-r border-slate-200 dark:border-slate-800 font-medium">
+                                                ส่วนลด<br />
+                                            </th>
+                                            <th className="px-2 py-2 text-center w-24 border-r border-slate-200 dark:border-slate-800 font-medium whitespace-nowrap">
+                                                รหัสภาษี<br />
+                                            </th>
+                                            <th className="px-2 py-2 text-center w-32 border-r border-slate-200 dark:border-slate-800 font-medium">
+                                                ยอดสุทธิ<br />
+                                            </th>
+                                            <th className="px-2 py-2 text-center w-28 border-r border-slate-200 dark:border-slate-800 font-medium">
+                                                ประเภท<br />
+                                            </th>
+                                            {!isView && <th className="px-2 py-2 text-center w-12"></th>}
                                         </tr>
                                     </thead>
-
-                                    <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
+                                    <tbody>
                                         {fields.length === 0 && (
                                             <tr>
-                                                <td colSpan={9} className="px-4 py-12 text-center text-gray-400">
-                                                    <div className="flex flex-col items-center gap-2">
-                                                        <FileText size={40} className="text-gray-300" />
-                                                        <p>ยังไม่มีรายการสินค้า</p>
-                                                        <button type="button" onClick={handleAddItem} className="text-blue-500 hover:underline text-sm">คลิกเพื่อเพิ่มรายการ</button>
-                                                    </div>
+                                                <td colSpan={isView ? 10 : 11} className="px-4 py-12 text-center text-gray-400">
+                                                    <FileText size={40} className="mx-auto mb-2 text-gray-300" />
+                                                    <p>ยังไม่มีรายการสินค้า</p>
+                                                    {!isView && (
+                                                        <button type="button" onClick={handleAddLine} className="text-blue-500 hover:underline text-sm mt-1">
+                                                            คลิกเพื่อเพิ่มรายการ
+                                                        </button>
+                                                    )}
                                                 </td>
                                             </tr>
                                         )}
-                                        {fields.map((field, index) => (
-                                            <tr key={field.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/30 transition-colors group">
-                                                <td className="px-4 py-2 text-center text-gray-500 dark:text-slate-500 text-sm">{index + 1}</td>
-                                                <td className="px-4 py-2">
-                                                    <input 
-                                                        {...register(`items.${index}.item_code`)}
-                                                        className="w-full bg-transparent border-b border-transparent focus:border-blue-500 outline-none py-1 text-sm font-medium text-gray-900 dark:text-white"
-                                                        placeholder="Code"
+                                        {fields.map((field, idx) => (
+                                            <tr key={field.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                                <td className="px-3 py-2 text-center text-[13px] text-gray-600 font-medium border-r border-gray-200 dark:border-gray-700">{idx + 1}</td>
+                                                <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
+                                                    <div className="flex gap-1.5 items-stretch">
+                                                        <input
+                                                            {...register(`lines.${idx}.item_name`)}
+                                                            className={`${s.inputRO} flex-1 !h-9 text-[13px] shadow-sm`}
+                                                            placeholder="-- ค้นหาสินค้า --"
+                                                            readOnly
+                                                        />
+                                                        {/* Hidden fields needed for form submission */}
+                                                        <input type="hidden" {...register(`lines.${idx}.item_id`)} />
+                                                        <input type="hidden" {...register(`lines.${idx}.item_code`)} />
+                                                        {!isView && (
+                                                            <button
+                                                                type="button"
+                                                                className="px-2.5 bg-slate-50 border border-slate-300 rounded hover:bg-slate-100 shadow-sm shrink-0 transition-colors"
+                                                                title="ค้นหาสินค้า"
+                                                                onClick={() => {
+                                                                    handleOpenProductSearch(idx);
+                                                                }}
+                                                            >
+                                                                <Search size={15} className="text-slate-600" />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
+                                                    <input
+                                                        {...register(`lines.${idx}.description`)}
+                                                        className={`${s.input} !h-9 text-[13px] border-slate-300 shadow-sm`}
+                                                        placeholder="รายละเอียดเพิ่มเติม"
+                                                        readOnly={isView}
                                                     />
                                                 </td>
-                                                <td className="px-4 py-2">
-                                                    <input 
-                                                        {...register(`items.${index}.item_name`)}
-                                                        className="w-full bg-transparent border-b border-transparent focus:border-blue-500 outline-none py-1 text-sm text-gray-900 dark:text-white"
-                                                        placeholder="Description"
+                                                <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
+                                                    <input
+                                                        type="number" step="any"
+                                                        {...register(`lines.${idx}.qty_ordered`, { valueAsNumber: true })}
+                                                        className={`${s.input} !h-9 text-center text-[13px] border-slate-300 shadow-sm`}
+                                                        placeholder="0.000"
+                                                        readOnly={isView}
                                                     />
                                                 </td>
-                                                <td className="px-4 py-2">
-                                                    <input 
-                                                        type="number"
-                                                        step="any"
-                                                        {...register(`items.${index}.qty`, { valueAsNumber: true })}
-                                                        className="w-full text-right bg-white dark:bg-slate-700/50 border border-gray-200 dark:border-slate-600 rounded px-2 py-1 text-sm focus:ring-1 focus:ring-blue-500 outline-none text-gray-900 dark:text-white"
-                                                    />
-                                                </td>
-                                                <td className="px-4 py-2">
-                                                    <input 
-                                                        {...register(`items.${index}.unit`)}
-                                                        className="w-full bg-transparent border-b border-transparent focus:border-blue-500 outline-none py-1 text-sm text-center text-gray-900 dark:text-white"
-                                                        placeholder="Unit"
-                                                    />
-                                                </td>
-                                                <td className="px-4 py-2">
-                                                    <input 
-                                                        type="number"
-                                                        step="any"
-                                                        {...register(`items.${index}.unit_price`, { valueAsNumber: true })}
-                                                        className="w-full text-right bg-white dark:bg-slate-700/50 border border-gray-200 dark:border-slate-600 rounded px-2 py-1 text-sm focus:ring-1 focus:ring-blue-500 outline-none text-gray-900 dark:text-white"
-                                                    />
-                                                </td>
-                                                <td className="px-4 py-2">
-                                                    <input 
-                                                        type="number"
-                                                        step="any"
-                                                        {...register(`items.${index}.discount`, { valueAsNumber: true })}
-                                                        className="w-full text-right bg-transparent border-b border-gray-200 dark:border-slate-700 focus:border-blue-500 outline-none py-1 text-sm text-gray-500 dark:text-slate-400"
-                                                    />
-                                                </td>
-                                                <td className="px-4 py-2 text-right font-medium text-gray-900 dark:text-slate-200">
-                                                    {/* Row Total Calc */}
-                                                    <WatchRowTotal control={control} index={index} />
-                                                </td>
-                                                <td className="px-4 py-2 text-center">
-                                                    <button 
-                                                        type="button"
-                                                        onClick={() => remove(index)}
-                                                        className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                                                <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
+                                                    <select
+                                                        {...register(`lines.${idx}.uom_id`)}
+                                                        className={`${s.select} !h-9 text-center px-1 text-[13px] border-slate-300 shadow-sm`}
+                                                        disabled={isView}
                                                     >
-                                                        <Trash2 size={16} />
-                                                    </button>
+                                                        <option value="PC">PC</option>
+                                                        <option value="PCS">PCS</option>
+                                                        <option value="BOX">BOX</option>
+                                                        <option value="KG">KG</option>
+                                                    </select>
                                                 </td>
+                                                <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
+                                                    <input
+                                                        type="number" step="any"
+                                                        {...register(`lines.${idx}.unit_price`, { valueAsNumber: true })}
+                                                        className={`${s.input} !h-9 text-right text-[13px] border-slate-300 shadow-sm`}
+                                                        placeholder="0.0000"
+                                                        readOnly={isView}
+                                                    />
+                                                </td>
+                                                <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
+                                                    <input
+                                                        type="number" step="any"
+                                                        {...register(`lines.${idx}.discount_amount`, { valueAsNumber: true })}
+                                                        className={`${s.input} !h-9 text-right text-[13px] border-slate-300 shadow-sm`}
+                                                        placeholder="0.00"
+                                                        readOnly={isView}
+                                                    />
+                                                </td>
+                                                <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
+                                                    <select
+                                                        {...register(`lines.${idx}.tax_code`)}
+                                                        className={`${s.select} !h-9 text-center px-1 text-[13px] border-slate-300 shadow-sm`}
+                                                        disabled={isView}
+                                                    >
+                                                        <option value="VAT">VAT</option>
+                                                        <option value="NON">NON</option>
+                                                    </select>
+                                                </td>
+                                                <td className="px-3 py-2 text-right font-semibold text-slate-800 dark:text-slate-200 border-r border-gray-200 dark:border-gray-700 text-[13px] bg-slate-50/50 dark:bg-slate-900/50">
+                                                    <RowTotal control={control} index={idx} />
+                                                </td>
+                                                <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
+                                                    <select
+                                                        {...register(`lines.${idx}.receipt_type`)}
+                                                        className={`${s.select} !h-9 text-center px-1 text-[13px] border-slate-300 shadow-sm bg-white dark:bg-slate-800`}
+                                                        disabled={isView}
+                                                    >
+                                                        <option value="GOODS">GOODS</option>
+                                                        <option value="SERVICE">SERVICE</option>
+                                                    </select>
+                                                </td>
+                                                {!isView && (
+                                                    <td className="px-1 text-center">
+                                                        <div className="flex items-center justify-center gap-2">
+                                                            <button
+                                                                type="button"
+                                                                onClick={handleAddLine}
+                                                                className="text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 p-1.5 rounded-full transition-colors"
+                                                                title="เพิ่มรายการ"
+                                                            >
+                                                                <Plus size={16} strokeWidth={2.5} />
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => remove(idx)}
+                                                                className="text-red-500 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-full transition-colors"
+                                                                title="ลบรายการ"
+                                                            >
+                                                                <Trash2 size={16} />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                )}
                                             </tr>
                                         ))}
                                     </tbody>
                                 </table>
                             </div>
-                            
-                            {/* Errors for Items Array */}
-                            {errors.items && <p className="px-6 pb-2 text-red-500 text-sm">{errors.items.root?.message || errors.items.message}</p>}
 
-                            {/* Footer Summary Area */}
-                            <div className="border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 p-6 flex flex-col md:flex-row justify-between items-start gap-6">
-                                <div className="space-y-4">
-                                    <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-slate-400 cursor-pointer select-none">
-                                        <input 
-                                            type="checkbox"
-                                            {...register('is_vat_included')}
-                                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-gray-300 dark:border-slate-600 dark:bg-slate-700"
-                                        />
-                                        <span>ราคารวมภาษีแล้ว (VAT Included)</span>
-                                    </label>
-                                    
-                                    {/* Additional info or user ref could go here */}
-                                    <div className="text-xs text-gray-400">
-                                        Created by: Current User
-                                    </div>
-                                </div>
-                                
-                                <POSummary control={control} />
-                            </div>
+                            {/* Items error */}
+                            {errors.lines && (
+                                <p className="px-2 pt-2 text-red-500 text-sm">
+                                    {errors.lines.root?.message ?? errors.lines.message}
+                                </p>
+                            )}
                         </div>
 
+                        {/* Summary Footer */}
+                        <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-6 flex justify-end">
+                            <POSummaryPanel control={control} />
+                        </div>
                     </div>
-                </form>
-
-
-        </WindowFormLayout>
+                </div>
+            </WindowFormLayout>
+        </FormProvider>
     );
 }
-
-// Helper to watch individual row total
-const WatchRowTotal = ({ control, index }: { control: Control<POFormValues>, index: number }) => {
-    const qty = useWatch({ control, name: `items.${index}.qty` }) || 0;
-    const price = useWatch({ control, name: `items.${index}.unit_price` }) || 0;
-    const discount = useWatch({ control, name: `items.${index}.discount` }) || 0;
-    const total = (qty * price) - discount;
-    
-    return <>{total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>;
-};
-

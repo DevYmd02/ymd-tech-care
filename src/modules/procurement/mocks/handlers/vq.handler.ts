@@ -88,6 +88,6 @@ export const setupVQHandlers = (mock: MockAdapter) => {
         }
     }
 
-    return [201, { success: true, data: newVQ }];
+    return [201, { success: true, message: 'สร้างใบเสนอราคาเรียบร้อย', quotation_id: newVQ.quotation_id }];
   });
 };

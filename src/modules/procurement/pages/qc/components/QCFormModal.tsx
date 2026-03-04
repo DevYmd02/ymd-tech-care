@@ -11,18 +11,22 @@ import { AlertCircle, FileText, Search, Scale, CheckSquare, Square, Trophy, Chec
 import { WindowFormLayout } from '@ui';
 import { logger } from '@/shared/utils/logger';
 
-import { QCService, type QCCreateData } from '@/modules/procurement/services/qc.service';
+import { QCService } from '@/modules/procurement/services/qc.service';
 import { RFQService } from '@/modules/procurement/services/rfq.service';
 import { PRService } from '@/modules/procurement/services/pr.service';
 import { VQService } from '@/modules/procurement/services/vq.service';
 import type { RFQHeader, PRHeader } from '@/modules/procurement/types';
 import { SelectionModal } from './SelectionModal';
+import { useConfirmation } from '@/shared/hooks';
+import toast from 'react-hot-toast';
 
 interface QCFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialRFQNo?: string;
   initialPRNo?: string;
+  qcId?: string | null;
+  mode?: 'view' | 'edit' | 'create';
   onSuccess?: () => void;
 }
 
@@ -41,6 +45,8 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
   onClose,
   initialRFQNo = '',
   initialPRNo = '',
+  qcId = null,
+  mode = 'create',
   onSuccess,
 }) => {
   // Form State
@@ -53,6 +59,22 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
 
   const [isRFQSelectorOpen, setIsRFQSelectorOpen] = useState(false);
   const [isPRSelectorOpen, setIsPRSelectorOpen] = useState(false);
+
+  // Fetch Existing QC Data if mode is edit/view
+  const { data: qcData } = useQuery({
+    queryKey: ['qc-detail', qcId],
+    queryFn: () => QCService.getById(qcId!),
+    enabled: !!qcId && (mode === 'edit' || mode === 'view'),
+  });
+
+  useEffect(() => {
+    if (qcData) {
+      setQCNo(qcData.qc_no || '');
+      setPRNo(qcData.pr_no || '');
+      setRFQNo(qcData.rfq_no || '');
+      // Can also sync dates etc here later
+    }
+  }, [qcData]);
 
   // Fetch RFQs to resolve ID from No
   const { data: rfqList } = useQuery({
@@ -93,6 +115,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
 
   // Vendor-Level Winner State (the core of simplified comparison)
   const [winnerVQId, setWinnerVQId] = useState<string | null>(null);
+  const { confirm } = useConfirmation();
 
   const selectedVQs = useMemo(() => {
     return availableVQs.filter((vq) => selectedVQIds.includes(vq.quotation_id));
@@ -161,64 +184,53 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
   // with sensible defaults so Zod does not reject the payload.
   const handleSave = async () => {
     if (!winnerVQId) {
-      window.alert('กรุณาเลือกผู้เสนอราคาที่ชนะก่อนบันทึก');
+      toast.error('กรุณาเลือกผู้เสนอราคาที่ชนะก่อนบันทึก');
       return;
     }
 
     const winnerVQ = selectedVQs.find((vq) => vq.quotation_id === winnerVQId);
     if (!winnerVQ) {
-      window.alert('ไม่พบข้อมูลผู้เสนอราคาที่เลือก');
+      toast.error('ไม่พบข้อมูลผู้เสนอราคาที่เลือก');
       return;
     }
 
+    const isConfirmed = await confirm({
+      title: 'ยืนยันการบันทึกผล',
+      description: 'คุณต้องการยืนยันผลการเปรียบเทียบราคาและเลือกผู้ชนะใช่หรือไม่? ข้อมูลจะไม่สามารถแก้ไขได้หลังจากการยืนยัน',
+      confirmText: 'ยืนยัน',
+      cancelText: 'ยกเลิก',
+      variant: 'warning',
+    });
+
+    if (!isConfirmed) return;
+
     setIsLoading(true);
     try {
-      // Build minimal, Zod-safe QCMatrixRow items from the winning VQ's lines.
-      // All selected VQs appear in the vendors record; only winner has is_winner = true.
-      const winnerLines = winnerVQ.lines || [];
-
-      const items: QCCreateData['items'] = winnerLines.map((line) => ({
-        item_id: line.item_code || 'unknown',
-        code: line.item_code || 'unknown',
-        description: line.item_name || '-',
-        qty: line.qty || 1,
-        unit: line.uom_name || 'ชิ้น',
-        vendors: Object.fromEntries(
-          selectedVQs.map((vq) => {
-            const vqLine = vq.lines?.find((l) => l.item_code === line.item_code);
-            return [
-              vq.quotation_id,
-              {
-                unit_price: vqLine?.unit_price || 0,
-                total_price: vqLine?.net_amount || 0,
-                is_no_quote: !vqLine || !!vqLine.no_quote,
-                is_winner: vq.quotation_id === winnerVQId,
-              },
-            ];
-          })
-        ),
-      }));
-
-      const qcData: QCCreateData = {
-        qc_no: generateQCNumber(),
-        pr_id: undefined,
-        status: 'DRAFT',
-        comparison_date: qcDate,
-        items,
-      };
-
-      const result = await QCService.create(qcData);
+      const result = qcId
+        ? await QCService.submitWinner(qcId, { winning_vq_id: winnerVQId })
+        : await QCService.create({
+            qc_no: generateQCNumber(),
+            pr_id: prList?.data.find(pr => pr.pr_no === prNo)?.pr_id || undefined,
+            rfq_id: rfqId || undefined,
+            pr_no: prNo || undefined,
+            rfq_no: rfqNo || undefined,
+            status: 'DRAFT',
+            comparison_date: qcDate,
+            items: [], // Will be simplified in another pass or rely on winner VQ extraction backend side.
+            winning_vq_id: winnerVQId,
+        });
 
       if (result && result.qc_id) {
-        window.alert('บันทึกใบเปรียบเทียบราคาสำเร็จ!');
+        toast.success('บันทึกใบเปรียบเทียบราคาสำเร็จ!');
         onSuccess?.();
         onClose();
       } else {
-        window.alert('เกิดข้อผิดพลาดในการบันทึก');
+        toast.error('เกิดข้อผิดพลาดในการบันทึก');
       }
     } catch (error) {
-      logger.error('[QCFormModal] Save QC failed:', error);
-      window.alert('เกิดข้อผิดพลาดในการบันทึก');
+      const err = error as { response?: { data?: { message?: string } } };
+      logger.error('[QCFormModal] Save QC Winner failed:', error);
+      toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาดในการบันทึก / ไม่สามารถระบุผู้ชนะได้');
     } finally {
       setIsLoading(false);
     }
