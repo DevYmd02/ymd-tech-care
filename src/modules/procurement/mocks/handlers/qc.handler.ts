@@ -46,28 +46,32 @@ export const setupQCHandlers = (mock: MockAdapter) => {
     
     if (found) {
         found.status = 'COMPLETED';
-
-        // [Cross-Module State Sync]: Update related VQs to AWARDED or LOST based on winner_id
-        const body = config.data ? JSON.parse(config.data as string) : {};
-        if (body.winner_id) {
-            // Found a specific winner, update VQs associated to this QC's scope
-            const relatedVQs = MOCK_VQS.filter(vq => 
-               sanitizeId(vq.rfq_no || '') === sanitizeId(found.rfq_no || '') || 
-               sanitizeId(vq.qc_id || '') === sanitizeId(found.qc_id)
-            );
-
-            relatedVQs.forEach(vq => {
-                if (sanitizeId(vq.vendor_id) === sanitizeId(body.winner_id)) {
-                    vq.status = 'AWARDED';
-                } else if (vq.status !== 'CANCELLED') {
-                    vq.status = 'LOST';
-                }
-            });
-        }
-
         return [200, { success: true }];
     }
     return [404, { message: 'QC Not Found' }];
+  });
+
+  // 3.5 POST QC Submit Winner (QC-only mutation: assigns winner + caches display info)
+  mock.onPost(/\/qc\/submit-winner\/.+/).reply((config: AxiosRequestConfig) => {
+    const id = sanitizeId(config.url?.split('/').pop());
+    const found = MOCK_QCS.find(q => sanitizeId(q.qc_id) === id);
+    const body = config.data ? JSON.parse(config.data as string) : {};
+
+    if(!body.winning_vq_id) return [400, { message: 'Missing winning_vq_id in payload'}];
+    if(!found) return [404, { message: 'QC Not Found' }];
+
+    // --- QC-Only Mutations ---
+    found.status = 'COMPLETED';
+    found.winning_vq_id = sanitizeId(body.winning_vq_id);
+
+    // Read-only lookup: cache winner display info on the QC document for list-page speed
+    const targetVQ = MOCK_VQS.find(vq => sanitizeId(vq.quotation_id) === found.winning_vq_id);
+    if (targetVQ) {
+        found.lowest_price = targetVQ.total_amount || 0;
+        found.lowest_bidder_name = targetVQ.vendor_name || '';
+    }
+
+    return [200, { success: true, qc_id: found.qc_id }];
   });
 
   // 4. POST Create QC

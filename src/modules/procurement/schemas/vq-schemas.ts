@@ -13,7 +13,7 @@ import { z } from 'zod';
  * EXPIRED  = หมดอายุ
  * CANCELLED = ยกเลิก
  */
-export const VQStatusEnum = z.enum(['PENDING', 'DRAFT', 'RECORDED', 'DECLINED', 'EXPIRED', 'CANCELLED', 'AWARDED', 'LOST']);
+export const VQStatusEnum = z.enum(['PENDING', 'DRAFT', 'RECORDED', 'DECLINED', 'EXPIRED', 'CANCELLED']);
 export type VQStatus = z.infer<typeof VQStatusEnum>;
 
 export const QuotationLineSchema = z.object({

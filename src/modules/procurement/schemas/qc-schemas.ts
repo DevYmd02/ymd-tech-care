@@ -74,6 +74,7 @@ export const QCHeaderSchema = z.object({
   qc_no: z.string().optional(),
   pr_id: z.string().uuid('กรุณาเลือกใบขอซื้อ (PR)').optional(),
   rfq_id: z.string().uuid().optional(), // Added for precise RFQ tracking
+  winning_vq_id: z.string().uuid().optional(), // VQ ที่ชนะการเปรียบเทียบ
   status: QCStatusEnum.default('DRAFT'),
   comparison_date: z.union([z.string(), z.date()]).optional(),
   dept_division: z.string().optional(),
@@ -126,12 +127,30 @@ export const QCListItemSchema = QCHeaderSchema.extend({
  * Payload for creation/update including items.
  */
 export const CreateQCSchema = QCHeaderSchema.extend({
-  items: z.array(QCMatrixRowSchema).min(1, 'ต้องมีรายการเปรียบเทียบอย่างน้อย 1 รายการ'),
+  items: z.array(QCMatrixRowSchema).optional(),
   remark: z.string().optional(),
+  rfq_no: z.string().optional(),
+  pr_no: z.string().optional(),
 });
 
+export type CreateQCCreateData = z.infer<typeof CreateQCSchema>;
+
 // ====================================================================================
-// 5. Types Integration & Clean-Up
+// 5. Submit Winner Schema
+// ====================================================================================
+
+/**
+ * SubmitQCWinnerSchema
+ * Minimal relational payload indicating which VQ won.
+ */
+export const SubmitQCWinnerSchema = z.object({
+  winning_vq_id: z.string().uuid('กรุณาระบุ winning_vq_id'),
+});
+
+export type SubmitQCWinnerData = z.infer<typeof SubmitQCWinnerSchema>;
+
+// ====================================================================================
+// 6. Types Integration & Clean-Up
 // ====================================================================================
 
 export type QCStatus = z.infer<typeof QCStatusEnum>;

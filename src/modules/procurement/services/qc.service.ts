@@ -1,5 +1,5 @@
 import api from '@/core/api/api';
-import type { QCListParams, QCListResponse, QCCreateData } from '@/modules/procurement/schemas/qc-schemas';
+import type { QCListParams, QCListResponse, QCCreateData, SubmitQCWinnerData } from '@/modules/procurement/schemas/qc-schemas';
 import type { QCListItem } from '@/modules/procurement/schemas/qc-schemas';
 import { logger } from '@/shared/utils/logger';
 import type { SuccessResponse } from '@/shared/types/api-response.types';
@@ -31,6 +31,11 @@ export const QCService = {
   compare: async (id: string): Promise<{ success: boolean }> => {
     logger.info(`[QCService] Triggering Price Comparison for ${id}`);
     return await api.post<{ success: boolean }>(ENDPOINTS.compare(id));
+  },
+
+  submitWinner: async (id: string, data: SubmitQCWinnerData): Promise<{ qc_id: string }> => {
+    logger.info(`[QCService] Submitting Winner for QC: ${id}`, data);
+    return await api.post<{ qc_id: string }>(`/qc/submit-winner/${id}`, data);
   },
 
   cancel: async (id: string): Promise<SuccessResponse> => {

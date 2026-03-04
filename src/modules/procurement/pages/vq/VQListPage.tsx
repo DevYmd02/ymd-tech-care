@@ -9,11 +9,11 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { Eye, Edit, Filter, FileText, X } from 'lucide-react';
+import { Eye, Edit, Filter, FileText, X, Search, Plus } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
-import { PageListLayout, FilterFormBuilder, SmartTable, VQStatusBadge } from '@ui';
-import type { FilterFieldConfig } from '@/shared/components/ui/filters/FilterFormBuilder';
-import { useTableFilters, type TableFilters } from '@/shared/hooks';
+import { PageListLayout, SmartTable, VQStatusBadge, FilterField, MobileListCard, MobileListContainer } from '@ui';
+
+import { useTableFilters } from '@/shared/hooks';
 import type { ColumnDef } from '@tanstack/react-table';
 import { createColumnHelper } from '@tanstack/react-table';
 
@@ -56,7 +56,7 @@ export default function VQListPage() {
     const [searchParams, setSearchParams] = useSearchParams();
     const rfqNoFilter = searchParams.get('rfq_no');
 
-    const { filters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<VQStatus>({
+    const { filters, localFilters, handleFilterChange, handleApplyFilters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<VQStatus>({
         defaultStatus: 'ALL',
         customParamKeys: {
             search: 'quotation_no',
@@ -158,10 +158,7 @@ export default function VQListPage() {
         placeholderData: keepPreviousData,
     });
 
-    // Handlers
-    const handleFilterChange = (name: string, value: string) => {
-        setFilters({ [name]: value });
-    };
+    // handleFilterChange is provided by useTableFilters directly — no local wrapper needed
 
     const handleOpenView = (vqId: string) => {
         setModalConfig({ isOpen: true, isViewMode: true, vqId });
@@ -383,15 +380,7 @@ export default function VQListPage() {
         }),
     ], [columnHelper, filters.page, filters.limit, data?.data]);
 
-    const filterConfig: FilterFieldConfig<keyof TableFilters<VQStatus>>[] = useMemo(() => [
-        { name: 'search', label: 'เลขที่ใบเสนอราคา', type: 'text', placeholder: 'VQ-xxx' },
-        { name: 'search2', label: 'ชื่อผู้ขาย', type: 'text', placeholder: 'ชื่อผู้ขาย' },
-        { name: 'search3', label: 'เลขที่ RFQ อ้างอิง', type: 'text', placeholder: 'RFQ-xxx' },
-        { name: 'search4', label: 'เลขที่ PR อ้างอิง', type: 'text', placeholder: 'PR-xxx' },
-        { name: 'status', label: 'สถานะ', type: 'select' as const, options: VQ_STATUS_OPTIONS },
-        { name: 'dateFrom', label: 'วันที่เริ่มต้น', type: 'date' },
-        { name: 'dateTo', label: 'วันที่สิ้นสุด', type: 'date' },
-    ], []);
+
 
     return (
         <>
@@ -403,16 +392,91 @@ export default function VQListPage() {
                 totalCount={data?.total}
                 totalCountLoading={isLoading}
                 searchForm={
-                    <FilterFormBuilder<TableFilters<VQStatus>>
-                        config={filterConfig}
-                        filters={filters}
-                        onFilterChange={handleFilterChange}
-                        onSearch={refetch}
-                        onReset={resetFilters}
-                        accentColor="blue"
-                        onCreate={handleOpenCreate}
-                        createLabel="สร้างใบเสนอราคาใหม่"
-                    />
+                    <form onSubmit={(e) => { e.preventDefault(); handleApplyFilters(); }} className="w-full">
+                        <div className="flex flex-col gap-4 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg border border-gray-200 dark:border-slate-700">
+                            {/* The Input Grid (Responsive) */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                <FilterField
+                                    label="เลขที่ใบเสนอราคา"
+                                    type="text"
+                                    placeholder="VQ-xxx"
+                                    value={localFilters.search || ''}
+                                    onChange={(val) => handleFilterChange('search', val)}
+                                    accentColor="blue"
+                                />
+                                <FilterField
+                                    label="ชื่อผู้ขาย"
+                                    type="text"
+                                    placeholder="ชื่อผู้ขาย"
+                                    value={localFilters.search2 || ''}
+                                    onChange={(val) => handleFilterChange('search2', val)}
+                                    accentColor="blue"
+                                />
+                                <FilterField
+                                    label="เลขที่ RFQ อ้างอิง"
+                                    type="text"
+                                    placeholder="RFQ-xxx"
+                                    value={localFilters.search3 || ''}
+                                    onChange={(val) => handleFilterChange('search3', val)}
+                                    accentColor="blue"
+                                />
+                                <FilterField
+                                    label="เลขที่ PR อ้างอิง"
+                                    type="text"
+                                    placeholder="PR-xxx"
+                                    value={localFilters.search4 || ''}
+                                    onChange={(val) => handleFilterChange('search4', val)}
+                                    accentColor="blue"
+                                />
+                                <FilterField
+                                    label="สถานะ"
+                                    type="select"
+                                    options={VQ_STATUS_OPTIONS}
+                                    value={localFilters.status || ''}
+                                    onChange={(val) => handleFilterChange('status', val)}
+                                    accentColor="blue"
+                                />
+                                <FilterField
+                                    label="วันที่เริ่มต้น"
+                                    type="date"
+                                    value={localFilters.dateFrom || ''}
+                                    onChange={(val) => handleFilterChange('dateFrom', val)}
+                                    accentColor="blue"
+                                />
+                                <FilterField
+                                    label="วันที่สิ้นสุด"
+                                    type="date"
+                                    value={localFilters.dateTo || ''}
+                                    onChange={(val) => handleFilterChange('dateTo', val)}
+                                    accentColor="blue"
+                                />
+                            </div>
+
+                            {/* The Button Group (Isolated & Full Width) */}
+                            <div className="flex flex-col sm:flex-row flex-wrap justify-end items-center gap-2 pt-2 border-t border-gray-200 dark:border-slate-700/50 mt-2">
+                                <button
+                                    type="button"
+                                    onClick={resetFilters}
+                                    className="w-full sm:w-auto flex-1 sm:flex-none h-10 px-4 bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 font-medium rounded-lg border border-gray-300 dark:border-slate-600 transition-colors shadow-sm whitespace-nowrap"
+                                >
+                                    ล้างค่า
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="w-full sm:w-auto flex-1 sm:flex-none h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm whitespace-nowrap"
+                                >
+                                    <Search size={18} /> ค้นหา
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleOpenCreate}
+                                    className="w-full sm:w-auto flex-1 sm:flex-none h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm whitespace-nowrap"
+                                >
+                                    <Plus size={16} strokeWidth={2.5} /> สร้างใบเสนอราคาใหม่
+                                </button>
+                            </div>
+                        </div>
+                    </form>
                 }
             >
                 <div className="h-full flex flex-col">
@@ -436,24 +500,88 @@ export default function VQListPage() {
                         </div>
                     )}
 
-                    <SmartTable
-                        data={data?.data ?? []}
-                        columns={columns as ColumnDef<VQListItem>[]}
+                    {/* Desktop View: Table */}
+                    <div className="hidden md:block flex-1 overflow-hidden">
+                        <SmartTable
+                            data={data?.data ?? []}
+                            columns={columns as ColumnDef<VQListItem>[]}
+                            isLoading={isLoading}
+                            pagination={{
+                                pageIndex: filters.page,
+                                pageSize: filters.limit,
+                                totalCount: data?.total ?? 0,
+                                onPageChange: handlePageChange,
+                                onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 })
+                            }}
+                            sortConfig={sortConfig}
+                            onSortChange={handleSortChange}
+                            rowIdField="quotation_id"
+                            className="flex-1"
+                            showFooter={true}
+                        />
+                    </div>
+
+                    {/* Mobile View: Cards (shared MobileListContainer + MobileListCard) */}
+                    <MobileListContainer
                         isLoading={isLoading}
-                        pagination={{
-                            pageIndex: filters.page,
-                            pageSize: filters.limit,
-                            totalCount: data?.total ?? 0,
-                            onPageChange: handlePageChange,
-                            onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 })
-                        }}
-                        sortConfig={sortConfig}
-                        onSortChange={handleSortChange}
-                        rowIdField="quotation_id"
-                        className="flex-1"
-                        showFooter={true}
-                    />
+                        isEmpty={!data?.data.length}
+                        pagination={data?.total ? { page: filters.page, total: data.total, limit: filters.limit, onPageChange: handlePageChange } : undefined}
+                    >
+                        {data?.data.map((item) => (
+                            <MobileListCard
+                                key={item.quotation_id}
+                                title={item.quotation_no || <span className="text-gray-400 dark:text-slate-500 italic text-base">รอเลขใบเสนอราคา</span>}
+                                subtitle={formatThaiDate(item.quotation_date)}
+                                statusBadge={<VQStatusBadge status={item.status} />}
+                                details={[
+                                    { label: 'ผู้ขาย:', value: item.vendor_name || '-' },
+                                    { label: 'RFQ อ้างอิง:', value: <span className="font-semibold text-blue-600 dark:text-blue-400">{item.rfq_no || '-'}</span> },
+                                    ...(item.pr_no ? [{ label: 'PR อ้างอิง:', value: item.pr_no }] : []),
+                                    { label: 'เครดิต / Lead:', value: `${item.payment_term_days || '-'} วัน / ${item.lead_time_days || '-'} วัน` },
+                                ]}
+                                amountLabel="ยอดสุทธิ"
+                                amountValue={
+                                    <span className={`font-bold text-lg ${
+                                        item.status === 'RECORDED' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-slate-500'
+                                    }`}>
+                                        {item.status === 'RECORDED'
+                                            ? item.total_amount.toLocaleString('th-TH', { minimumFractionDigits: 2 })
+                                            : '-'}
+                                    </span>
+                                }
+                                actions={
+                                    <>
+                                        {(!!item.quotation_no || item.status === 'RECORDED' || item.status === 'CANCELLED') && (
+                                            <button
+                                                onClick={() => handleOpenView(item.quotation_id)}
+                                                className="flex-1 bg-gray-50 dark:bg-slate-700 hover:bg-gray-100 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1 border border-gray-200 dark:border-slate-600"
+                                            >
+                                                <Eye size={14} /> ดู
+                                            </button>
+                                        )}
+                                        {item.status === 'PENDING' && !item.quotation_no && (
+                                            <button
+                                                onClick={() => handleOpenEdit(item.quotation_id)}
+                                                className="flex-[2] bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
+                                            >
+                                                <Edit size={14} /> บันทึกราคา
+                                            </button>
+                                        )}
+                                        {!!item.quotation_no && item.status !== 'CANCELLED' && (
+                                            <button
+                                                onClick={() => handleOpenEdit(item.quotation_id)}
+                                                className="flex-1 bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1"
+                                            >
+                                                <Edit size={14} /> แก้ไข
+                                            </button>
+                                        )}
+                                    </>
+                                }
+                            />
+                        ))}
+                    </MobileListContainer>
                 </div>
+
             </PageListLayout>
 
              {/* Modals - Only mount when open */}

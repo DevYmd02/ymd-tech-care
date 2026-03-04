@@ -113,15 +113,16 @@ export interface POListResponse {
 }
 export interface POLineItemInput {
     item_id: string; // or item_code if searching
-    item_code: string;
-    item_name: string;
-    qty: number;
-    unit_price: number;
-    discount?: number;
-    uom_name?: string;
+    item_code?: string;
+    item_name?: string;
     description?: string;
-    // Auto-calculated fields for display/db
+    qty_ordered: number;
+    uom_id: string;
+    unit_price: number;
+    discount_amount?: number;
+    tax_code?: string;
     line_total?: number;
+    receipt_type: 'GOODS' | 'SERVICE';
 }
 
 // ====================================================================================
@@ -130,14 +131,16 @@ export interface POLineItemInput {
 
 export interface CreatePOLineItem {
     item_id?: string; // Optional — new lines may not have a DB UUID yet
-    item_code: string;
-    item_name: string;
-    qty: number;
+    item_code?: string;
+    item_name?: string;
+    description?: string;
+    qty_ordered: number;
+    uom_id: string;
     unit_price: number;
     discount_amount?: number;
-    uom_name?: string;
+    tax_code?: string;
     line_total?: number;
-    description?: string;
+    receipt_type: 'GOODS' | 'SERVICE';
 }
 
 export interface CreatePOPayload {
@@ -151,6 +154,7 @@ export interface CreatePOPayload {
     vendor_name?: string;
 
     order_date:         string;
+    delivery_date?:     string;
     payment_term_days?: number;
 
     currency_code?: string;

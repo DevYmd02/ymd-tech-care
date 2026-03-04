@@ -7,9 +7,9 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { FileText, Plus, Search, Send, AlertTriangle } from 'lucide-react';
-import { PageListLayout, SmartTable, PRStatusBadge, FilterField } from '@ui';
-import { useTableFilters, useDebounce, type TableFilters, useConfirmation } from '@/shared/hooks';
+import { FileText, Plus, Search, Send, AlertTriangle, Eye } from 'lucide-react';
+import { PageListLayout, SmartTable, PRStatusBadge, FilterField, MobileListCard, MobileListContainer } from '@ui';
+import { useTableFilters, useConfirmation } from '@/shared/hooks';
 import RFQFormModal from '@/modules/procurement/pages/rfq/components/RFQFormModal';
 import { PRFormModal } from './components/PRFormModal';
 import { PRActionsCell } from './components/PRActionsCell';
@@ -43,16 +43,14 @@ const PR_STATUS_OPTIONS = [
 // FILTER CONFIG
 // ====================================================================================
 
-type PRFilterKeys = Extract<keyof TableFilters<PRStatus>, string>;
-
 
 // ====================================================================================
 // MAIN COMPONENT
 // ====================================================================================
 
 export default function PRListPage() {
-    // URL-based Filter State
-    const { filters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<PRStatus>({
+    // URL-based Filter State (Explicit Search Pattern)
+    const { filters, localFilters, handleFilterChange, handleApplyFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<PRStatus>({
         defaultStatus: 'ALL',
         customParamKeys: {
             search: 'pr_no',
@@ -62,29 +60,26 @@ export default function PRListPage() {
     });
     const { confirm } = useConfirmation();
 
-    // Debounce filters to prevent API flooding
-    const debouncedFilters = useDebounce(filters, 500);
-
-    // Convert to API filter format using DEBOUNCED values
+    // Convert to API filter format using APPLIED filters (from URL)
     const apiFilters: PRListParams = {
-        pr_no: debouncedFilters.search || undefined,
-        requester_name: debouncedFilters.search2 || undefined,
-        department: debouncedFilters.search3 || undefined,
-        status: debouncedFilters.status === 'ALL' ? undefined : debouncedFilters.status,
-        date_from: debouncedFilters.dateFrom || undefined,
-        date_to: debouncedFilters.dateTo || undefined,
-        page: debouncedFilters.page,
-        limit: debouncedFilters.limit,
-        sort: debouncedFilters.sort || undefined
+        pr_no: filters.search || undefined,
+        requester_name: filters.search2 || undefined,
+        department: filters.search3 || undefined,
+        status: filters.status === 'ALL' ? undefined : filters.status,
+        date_from: filters.dateFrom || undefined,
+        date_to: filters.dateTo || undefined,
+        page: filters.page,
+        limit: filters.limit,
+        sort: filters.sort || undefined
     };
 
-    // Data Fetching with React Query
+    // Data Fetching with React Query (responds to applied filters in URL only)
     const { data, isLoading, refetch } = useQuery({
         queryKey: ['prs', apiFilters],
         queryFn: () => PRService.getList(apiFilters),
         placeholderData: keepPreviousData,
-        staleTime: 0, // Ensure data is considered stale immediately
-        refetchOnWindowFocus: true, // Refetch when window gains focus
+        staleTime: 0,
+        refetchOnWindowFocus: true,
     });
 
     // Modal States
@@ -107,10 +102,7 @@ export default function PRListPage() {
         isRejecting 
     } = usePRActions();
 
-    // Handlers
-    const handleFilterChange = (name: PRFilterKeys, value: string) => {
-        setFilters({ [name]: value });
-    };
+    // Handlers (handleFilterChange is from useTableFilters, directly available)
 
     const handleCreateRFQ = useCallback((pr: PRHeader) => {
         // V-05: Only allow RFQ creation for APPROVED PRs
@@ -381,10 +373,11 @@ export default function PRListPage() {
                 totalCount={data?.total}
                 totalCountLoading={isLoading}
                 searchForm={
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                    <form onSubmit={(e) => { e.preventDefault(); handleApplyFilters(); }} className="w-full">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                         <FilterField
                             label="เลขที่เอกสาร"
-                            value={filters.search}
+                            value={localFilters.search}
                             onChange={(val: string) => handleFilterChange('search', val)}
                             placeholder="PR2024-xxx"
                             accentColor="blue"
@@ -393,14 +386,14 @@ export default function PRListPage() {
                         />
                         <FilterField
                             label="ผู้ขอ"
-                            value={filters.search2}
+                            value={localFilters.search2}
                             onChange={(val: string) => handleFilterChange('search2', val)}
                             placeholder="ชื่อผู้ขอ"
                             accentColor="blue"
                         />
                         <FilterField
                             label="แผนก"
-                            value={filters.search3}
+                            value={localFilters.search3}
                             onChange={(val: string) => handleFilterChange('search3', val)}
                             placeholder="แผนก"
                             accentColor="blue"
@@ -408,7 +401,7 @@ export default function PRListPage() {
                         <FilterField
                             label="สถานะ"
                             type="select"
-                            value={filters.status}
+                            value={localFilters.status}
                             onChange={(val: string) => handleFilterChange('status', val)}
                             options={PR_STATUS_OPTIONS}
                             accentColor="blue"
@@ -416,14 +409,14 @@ export default function PRListPage() {
                         <FilterField
                             label="วันที่เริ่มต้น"
                             type="date"
-                            value={filters.dateFrom || ''}
+                            value={localFilters.dateFrom || ''}
                             onChange={(val: string) => handleFilterChange('dateFrom', val)}
                             accentColor="blue"
                         />
                         <FilterField
                             label="วันที่สิ้นสุด"
                             type="date"
-                            value={filters.dateTo || ''}
+                            value={localFilters.dateTo || ''}
                             onChange={(val: string) => handleFilterChange('dateTo', val)}
                             accentColor="blue"
                         />
@@ -432,13 +425,14 @@ export default function PRListPage() {
                         <div className="md:col-span-2 xl:col-span-2 flex flex-col sm:flex-row flex-wrap justify-end gap-2 items-center">
                             <div className="flex gap-2 w-full sm:w-auto">
                                 <button
+                                    type="button"
                                     onClick={resetFilters}
                                     className="flex-1 sm:flex-none h-10 px-4 bg-white hover:bg-gray-50 text-gray-700 rounded-lg font-medium transition-colors border border-gray-300 shadow-sm whitespace-nowrap"
                                 >
                                     ล้างค่า
                                 </button>
                                 <button
-                                    onClick={() => refetch()}
+                                    type="submit"
                                     className="flex-1 sm:flex-none h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
                                 >
                                     <Search size={18} />
@@ -446,6 +440,7 @@ export default function PRListPage() {
                                 </button>
                             </div>
                             <button
+                                type="button"
                                 onClick={handleCreate}
                                 className="w-full sm:w-auto h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
                             >
@@ -453,28 +448,106 @@ export default function PRListPage() {
                                 สร้างใบขอซื้อใหม่
                             </button>
                         </div>
-                    </div>
+                        </div>
+                    </form>
                 }
             >
                 <div className="h-full flex flex-col">
-                    <SmartTable
-                        data={data?.data ?? []}
-                        columns={columns}
+                    {/* Desktop View: Table */}
+                    <div className="hidden md:block flex-1 overflow-hidden">
+                        <SmartTable
+                            data={data?.data ?? []}
+                            columns={columns}
+                            isLoading={isLoading}
+                            pagination={{
+                                pageIndex: filters.page,
+                                pageSize: filters.limit,
+                                totalCount: data?.total ?? 0,
+                                onPageChange: handlePageChange,
+                                onPageSizeChange: () => handleApplyFilters()
+                            }}
+                            sortConfig={sortConfig}
+                            onSortChange={handleSortChange}
+                            rowIdField="pr_id"
+                            className="flex-1"
+                            showFooter={true}
+                        />
+                    </div>
+
+                    {/* Mobile View: Cards (shared MobileListContainer + MobileListCard) */}
+                    <MobileListContainer
                         isLoading={isLoading}
-                        pagination={{
-                            pageIndex: filters.page,
-                            pageSize: filters.limit,
-                            totalCount: data?.total ?? 0,
-                            onPageChange: handlePageChange,
-                            onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 })
-                        }}
-                        sortConfig={sortConfig}
-                        onSortChange={handleSortChange}
-                        rowIdField="pr_id"
-                        className="flex-1"
-                        showFooter={true}
-                    />
+                        isEmpty={!data?.data.length}
+                        pagination={data?.total ? { page: filters.page, total: data.total, limit: filters.limit, onPageChange: handlePageChange } : undefined}
+                    >
+                        {data?.data.map((item) => (
+                            <MobileListCard
+                                key={item.pr_id}
+                                title={item.pr_no}
+                                subtitle={formatThaiDate(item.pr_date)}
+                                statusBadge={<PRStatusBadge status={item.status} />}
+                                details={[
+                                    { label: 'ผู้ขอ:', value: item.requester_name || '-' },
+                                    {
+                                        label: 'แผนก:',
+                                        value: (DEPARTMENT_NAME_MAP as Record<string | number, string>)[item.cost_center_id] || item.cost_center_id || '-',
+                                    },
+                                    ...(item.need_by_date ? [{ label: 'ต้องการใช้:', value: formatThaiDate(item.need_by_date) }] : []),
+                                ]}
+                                amountLabel="ยอดรวม"
+                                amountValue={
+                                    <span className="font-bold text-lg text-emerald-600 dark:text-emerald-400">
+                                        {(item.total_amount ?? Number(item.pr_base_total_amount ?? 0)).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                                    </span>
+                                }
+                                actions={
+                                    <>
+                                        <button
+                                            onClick={() => handleView(item.pr_id)}
+                                            className="flex-1 bg-gray-50 dark:bg-slate-700 hover:bg-gray-100 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1 border border-gray-200 dark:border-slate-600"
+                                        >
+                                            <Eye size={14} /> ดู
+                                        </button>
+                                        {item.status === 'DRAFT' && (
+                                            <>
+                                                <button
+                                                    onClick={() => handleEdit(item.pr_id)}
+                                                    className="flex-1 bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1"
+                                                >
+                                                    <Send size={14} /> แก้ไข
+                                                </button>
+                                                <button
+                                                    onClick={() => handleSendApproval(item)}
+                                                    className="flex-[2] bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
+                                                >
+                                                    <Send size={14} /> ส่งอนุมัติ
+                                                </button>
+                                            </>
+                                        )}
+                                        {item.status === 'PENDING' && (
+                                            <button
+                                                onClick={() => onApproveClick(item.pr_id)}
+                                                disabled={approvingId === item.pr_id}
+                                                className="flex-[2] bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm disabled:opacity-50"
+                                            >
+                                                <Send size={14} /> อนุมัติ
+                                            </button>
+                                        )}
+                                        {item.status === 'APPROVED' && (
+                                            <button
+                                                onClick={() => handleCreateRFQ(item)}
+                                                className="flex-[2] bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
+                                            >
+                                                <Send size={14} /> สร้าง RFQ
+                                            </button>
+                                        )}
+                                    </>
+                                }
+                            />
+                        ))}
+                    </MobileListContainer>
                 </div>
+
             </PageListLayout>
 
             {isRFQModalOpen && (

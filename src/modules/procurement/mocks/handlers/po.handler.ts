@@ -2,7 +2,6 @@ import type MockAdapter from 'axios-mock-adapter';
 import type { AxiosRequestConfig } from 'axios';
 import { MOCK_POS } from '../data/poData';
 import { MOCK_QCS } from '../data/qcData';
-import { MOCK_VQS } from '../data/vqData';
 import { applyMockFilters, sanitizeId } from '@/core/api/mockUtils';
 import type { POListItem, POLine } from '@/modules/procurement/types';
 import type { POStatus } from '@/modules/procurement/schemas/po-schemas';
@@ -155,20 +154,11 @@ export const setupPOHandlers = (mock: MockAdapter) => {
         }
         po.status = 'CANCELLED';
 
-        // [Cross-Module State Sync]: The Cancellation Trap fallback
+        // Revert linked QC back to DRAFT so a new winner can be picked
         if (po.qc_id) {
             const linkedQC = MOCK_QCS.find(qc => sanitizeId(qc.qc_id) === sanitizeId(po.qc_id));
             if (linkedQC) {
-                // Return QC to DRAFT so a new winner can be picked
                 linkedQC.status = 'DRAFT';
-                
-                // Revert VQs from AWARDED/LOST back to RECORDED so they can be reconsidered
-                const relatedVQs = MOCK_VQS.filter(vq => sanitizeId(vq.qc_id || '') === sanitizeId(linkedQC.qc_id));
-                relatedVQs.forEach(vq => {
-                    if (vq.status === 'AWARDED' || vq.status === 'LOST') {
-                        vq.status = 'RECORDED'; 
-                    }
-                });
             }
         }
         return [200, { success: true, message: `PO ${po.po_no} ยกเลิกเรียบร้อย` }];

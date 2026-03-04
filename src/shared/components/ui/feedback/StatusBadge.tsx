@@ -120,6 +120,14 @@ const statusConfig: Record<ModuleType, ModuleStatusConfig> = {
       label: 'ยกเลิก',
       colorClass: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
     },
+    AWARDED: {
+      label: 'ชนะการเสนอราคา',
+      colorClass: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300',
+    },
+    LOST: {
+      label: 'ไม่ผ่านการพิจารณา',
+      colorClass: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
+    },
   },
   QC: {
     DRAFT: {

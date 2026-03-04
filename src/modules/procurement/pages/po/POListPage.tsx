@@ -1,77 +1,50 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
-import { FileText, Eye, Send, CheckCircle, Package, Edit } from 'lucide-react';
+import { FileText, Eye, Send, CheckCircle, Package, Edit, Search, Plus } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
-import { FilterFormBuilder } from '@ui';
-import { PageListLayout, SmartTable } from '@ui';
+import { PageListLayout, SmartTable, FilterField, MobileListCard, MobileListContainer } from '@ui';
 import { POStatusBadge } from '@ui';
-import type { FilterFieldConfig } from '@ui';
-import { useTableFilters, useConfirmation, type TableFilters } from '@/shared/hooks';
-import { POService } from '@/modules/procurement/services';
-import type { POListParams, POStatus, POListItem, POFormData } from '@/modules/procurement/types';
+import { usePOList, usePOActions, PO_STATUS_OPTIONS } from './hooks';
+import type { POListItem } from '@/modules/procurement/types';
+import type { POFormData } from '@/modules/procurement/schemas/po-schemas';
 import { createColumnHelper } from '@tanstack/react-table';
 import type { ColumnDef } from '@tanstack/react-table';
 import { POFormModal, POApprovalModal } from './components';
 import GRNFormModal from '@/modules/procurement/pages/grn/components/GRNFormModal';
-import { logger } from '@/shared/utils/logger';
-
-// ====================================================================================
-// STATUS OPTIONS
-// ====================================================================================
-
-const PO_STATUS_OPTIONS = [
-    { value: 'ALL',              label: 'ทั้งหมด' },
-    { value: 'DRAFT',            label: 'แบบร่าง' },
-    { value: 'PENDING_APPROVAL', label: 'รออนุมัติ' },
-    { value: 'APPROVED',         label: 'อนุมัติแล้ว' },
-    { value: 'ISSUED',           label: 'ออก PO แล้ว' },
-    { value: 'COMPLETED',        label: 'ปิดรายการ' },
-    { value: 'CANCELLED',        label: 'ยกเลิก' },
-];
-
-// ====================================================================================
-// FILTER CONFIG
-// ====================================================================================
-
-type POFilterKeys = Extract<keyof TableFilters<POStatus>, string>;
-
-const PO_FILTER_CONFIG: FilterFieldConfig<POFilterKeys>[] = [
-    { name: 'search', label: 'เลขที่ PO', type: 'text', placeholder: 'PO2024-xxx' },
-    { name: 'search2', label: 'เลขที่ PR อ้างอิง', type: 'text', placeholder: 'PR2024-xxx' },
-    { name: 'search3', label: 'ชื่อผู้ขาย', type: 'text', placeholder: 'ชื่อผู้ขาย' },
-    { name: 'status', label: 'สถานะ', type: 'select', options: PO_STATUS_OPTIONS },
-    { name: 'dateFrom', label: 'วันที่เอกสาร จาก', type: 'date' },
-    { name: 'dateTo', label: 'ถึงวันที่', type: 'date' },
-];
 
 export default function POListPage() {
     const [searchParams, setSearchParams] = useSearchParams();
 
-    // -- Modal State (URL Driven) --
-    // derived directly from URL search params
+    // ── Hooks (Business Logic) ────────────────────────────────────────────────
+    const {
+        data, isLoading,
+        filters, localFilters, handleFilterChange, handleApplyFilters,
+        setFilters, resetFilters,
+        handlePageChange, handleSortChange, sortConfig,
+    } = usePOList();
+
+    const { handleIssuePO } = usePOActions();
+
+    // ── Modal State (URL Driven) ──────────────────────────────────────────────
     const isCreateModalOpen = searchParams.get('mode') === 'create';
     const createFromQC = searchParams.get('createFromQC') === 'true';
     const vendorIdParam = searchParams.get('vendorId');
     const remarksParam = searchParams.get('remarks');
 
-    // Derive initial values from URL params
     const initialCreateValues = useMemo<Partial<POFormData> | undefined>(() => {
         if (createFromQC) {
             return {
                 vendor_id: vendorIdParam || undefined,
                 remarks: remarksParam || undefined,
-                lines: [], // Note: Lines should be loaded directly inside the PO Form asynchronously using the passed PO form mode
+                lines: [],
             };
         }
-        // Fallback or simple create mode
         if (vendorIdParam) {
             return { vendor_id: vendorIdParam };
         }
         return undefined;
     }, [createFromQC, vendorIdParam, remarksParam]);
 
-    // Handle closing the modal by updating URL params
     const handleCloseCreateModal = () => {
         setSearchParams(prev => {
             const newParams = new URLSearchParams(prev);
@@ -84,56 +57,20 @@ export default function POListPage() {
         });
     };
 
-    const { confirm } = useConfirmation();
-
-    // -- View / Edit Modal State --
+    // ── View / Edit Modal State ───────────────────────────────────────────────
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [selectedPOId, setSelectedPOId]       = useState<string | undefined>(undefined);
 
-    // -- GRN Modal State --
+    // ── GRN Modal State ───────────────────────────────────────────────────────
     const [isGRNModalOpen, setIsGRNModalOpen] = useState(false);
     const [selectedPOIdForGRN, setSelectedPOIdForGRN] = useState<string | undefined>(undefined);
 
-    // -- Approval Modal State --
+    // ── Approval Modal State ──────────────────────────────────────────────────
     const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
     const [selectedPOIdForApproval, setSelectedPOIdForApproval] = useState<string | undefined>(undefined);
 
-    const { filters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<POStatus>({
-        defaultStatus: 'ALL',
-        customParamKeys: {
-            search: 'po_no',
-            search2: 'pr_no',
-            search3: 'vendor_name'
-        }
-    });
-
-    // Convert to API filter format
-    const apiFilters: POListParams = {
-        po_no: filters.search || undefined,
-        pr_no: filters.search2 || undefined,
-        vendor_name: filters.search3 || undefined,
-        status: filters.status === 'ALL' ? undefined : filters.status,
-        date_from: filters.dateFrom || undefined,
-        date_to: filters.dateTo || undefined,
-        page: filters.page,
-        limit: filters.limit,
-        sort: filters.sort || undefined,
-    };
-
-    // Data Fetching with React Query
-    const { data, isLoading, refetch } = useQuery({
-        queryKey: ['purchase-orders', apiFilters],
-        queryFn: () => POService.getList(apiFilters),
-        placeholderData: keepPreviousData,
-    });
-
-    // Handlers
-    const handleFilterChange = (name: POFilterKeys, value: string) => {
-        setFilters({ [name]: value });
-    };
-
-    // Action Handlers
+    // ── Action Handlers (UI-only: open modals) ────────────────────────────────
     const handleView = useCallback((id: string) => {
         setSelectedPOId(id);
         setIsViewModalOpen(true);
@@ -144,45 +81,17 @@ export default function POListPage() {
         setIsEditModalOpen(true);
     }, []);
 
-    const handleIssuePO = useCallback((item: POListItem) => {
-        confirm({
-            title:       'ยืนยันการออกใบสั่งซื้อ',
-            description: `คุณต้องการออกใบสั่งซื้อเลขที่ ${item.po_no} ใช่หรือไม่?\nยอดรวม: ${item.total_amount?.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท`,
-            confirmText: 'ออก PO',
-            cancelText:  'ยกเลิก',
-            variant:     'info',
-            icon:        Send,
-            onConfirm:   async () => {
-                await POService.issue(item.po_id || '');
-            },
-        }).then((confirmed) => {
-            if (confirmed) {
-                confirm({
-                    title:       'ออก PO สำเร็จ!',
-                    description: `ใบสั่งซื้อ ${item.po_no} ถูกส่งให้ผู้ขายแล้ว`,
-                    confirmText: 'ตกลง',
-                    hideCancel:  true,
-                    variant:     'success',
-                });
-                refetch();
-            }
-        }).catch((error) => {
-            logger.error('[POListPage] handleIssuePO error:', error);
-        });
-    }, [confirm, refetch]);
-    
     const handleApprove = useCallback((id: string) => {
         setSelectedPOIdForApproval(id);
         setIsApprovalModalOpen(true);
     }, []);
-
-
 
     const handleGRN = useCallback((id: string) => {
         setSelectedPOIdForGRN(id);
         setIsGRNModalOpen(true);
     }, []);
 
+    // ── Columns ───────────────────────────────────────────────────────────────
     const columnHelper = createColumnHelper<POListItem>();
     
     const columns = useMemo(() => [
@@ -201,7 +110,7 @@ export default function POListPage() {
                     {info.getValue()}
                 </span>
             ),
-            size: 130, // Optimized for balance
+            size: 130,
             enableSorting: true,
         }),
         columnHelper.accessor('po_date', {
@@ -224,7 +133,7 @@ export default function POListPage() {
                         <span
                             className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline cursor-pointer leading-tight whitespace-nowrap"
                             title={`QC: ${item.qc_no || '-'}`}
-                            onClick={() => { if (item.qc_no) window.alert(`Open QC: ${item.qc_no}`); }}
+                            // onClick={() => { if (item.qc_no) window.alert(`Open QC: ${item.qc_no}`); }}
                         >
                             {item.qc_no || '-'}
                         </span>
@@ -249,7 +158,7 @@ export default function POListPage() {
                     {info.getValue() || '-'}
                 </div>
             ),
-            size: 250, // Reduced to balance with Actions column
+            size: 250,
             enableSorting: false,
         }),
         columnHelper.accessor(row => row.status, {
@@ -382,18 +291,84 @@ export default function POListPage() {
                 totalCountLoading={isLoading}
                 isLoading={isLoading}
                 searchForm={
-                    <FilterFormBuilder
-                        config={PO_FILTER_CONFIG}
-                        filters={filters}
-                        onFilterChange={handleFilterChange}
-                        onSearch={() => {}} // React Query auto-fetches
-                        onReset={resetFilters}
-                        accentColor="blue"
-                        columns={{ sm: 1, md: 2, xl: 4 }}
-                        actionColSpan={{ md: 2, xl: 2 }}
-                        onCreate={() => setSearchParams({ mode: 'create' })}
-                        createLabel="สร้างใบสั่งซื้อใหม่"
-                    />
+                    <form onSubmit={(e) => { e.preventDefault(); handleApplyFilters(); }} className="w-full">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                        {/* Row 1 */}
+                        <FilterField
+                            label="เลขที่ PO"
+                            value={localFilters.search}
+                            onChange={(val: string) => handleFilterChange('search', val)}
+                            placeholder="PO2024-xxx"
+                            accentColor="blue"
+                        />
+                        <FilterField
+                            label="เลขที่ PR อ้างอิง"
+                            value={localFilters.search2}
+                            onChange={(val: string) => handleFilterChange('search2', val)}
+                            placeholder="PR2024-xxx"
+                            accentColor="blue"
+                        />
+                        <FilterField
+                            label="ชื่อผู้ขาย"
+                            value={localFilters.search3}
+                            onChange={(val: string) => handleFilterChange('search3', val)}
+                            placeholder="ชื่อผู้ขาย"
+                            accentColor="blue"
+                        />
+                        <FilterField
+                            label="สถานะ"
+                            type="select"
+                            value={localFilters.status}
+                            onChange={(val: string) => handleFilterChange('status', val)}
+                            options={PO_STATUS_OPTIONS}
+                            accentColor="blue"
+                        />
+
+                        {/* Row 2 */}
+                        <FilterField
+                            label="วันที่เอกสาร จาก"
+                            type="date"
+                            value={localFilters.dateFrom || ''}
+                            onChange={(val: string) => handleFilterChange('dateFrom', val)}
+                            accentColor="blue"
+                        />
+                        <FilterField
+                            label="ถึงวันที่"
+                            type="date"
+                            value={localFilters.dateTo || ''}
+                            onChange={(val: string) => handleFilterChange('dateTo', val)}
+                            accentColor="blue"
+                        />
+                        
+                        {/* Action Buttons Group (Col 3 & 4 Right Aligned) */}
+                        <div className="md:col-span-2 lg:col-span-2 flex flex-col sm:flex-row flex-wrap justify-end gap-2 items-center">
+                            <div className="flex gap-2 w-full sm:w-auto">
+                                <button
+                                    type="button"
+                                    onClick={resetFilters}
+                                    className="flex-1 sm:flex-none h-10 px-4 bg-white hover:bg-gray-50 text-gray-700 rounded-lg font-medium transition-colors border border-gray-300 shadow-sm whitespace-nowrap"
+                                >
+                                    ล้างค่า
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 sm:flex-none h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+                                >
+                                    <Search size={18} />
+                                    ค้นหา
+                                </button>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setSearchParams({ mode: 'create' })}
+                                className="w-full sm:w-auto h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+                            >
+                                <Plus size={16} strokeWidth={2.5} />
+                                สร้างใบสั่งซื้อใหม่
+                            </button>
+                        </div>
+                    </div>
+                    </form>
                 }
             >
                 <div className="h-full flex flex-col">
@@ -418,140 +393,90 @@ export default function POListPage() {
                         />
                     </div>
 
-                    {/* Mobile View: Cards */}
-                    <div className="md:hidden flex-1 overflow-y-auto p-2 space-y-3 pb-20">
-                        {isLoading ? (
-                            <div className="text-center py-4 text-gray-500">กำลังโหลด...</div>
-                        ) : data?.data.length === 0 ? (
-                            <div className="text-center py-8 text-gray-500 bg-white rounded-lg border border-dashed border-gray-300">
-                                ไม่พบข้อมูล
-                            </div>
-                        ) : (
-                            data?.data.map((item) => (
-                                <div key={item.po_id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 space-y-3">
-                                    {/* Header: PO No + Status */}
-                                    <div className="flex justify-between items-start">
-                                        <div className="flex flex-col">
-                                            <span className="font-bold text-lg text-blue-600 dark:text-blue-400">
-                                                {item.po_no}
-                                            </span>
-                                            <span className="text-xs text-gray-500">
-                                                {formatThaiDate(item.po_date)}
-                                            </span>
-                                        </div>
-                                        <POStatusBadge status={item.status} />
-                                    </div>
-
-                                    {/* Content Info */}
-                                    <div className="text-sm text-gray-700 dark:text-gray-300 space-y-1.5 border-t border-b border-gray-50 py-2">
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-500">ผู้ขาย:</span>
-                                            <span className="font-medium text-right truncate max-w-[200px]">{item.vendor_name || '-'}</span>
-                                        </div>
-                                        <div className="flex justify-between items-start">
-                                            <span className="text-gray-500 mt-0.5">เอกสารอ้างอิง:</span>
+                    {/* Mobile View: Cards (shared MobileListContainer + MobileListCard) */}
+                    <MobileListContainer
+                        isLoading={isLoading}
+                        isEmpty={!data?.data.length}
+                        pagination={data?.total ? { page: filters.page, total: data.total, limit: filters.limit, onPageChange: handlePageChange } : undefined}
+                    >
+                        {data?.data.map((item) => (
+                            <MobileListCard
+                                key={item.po_id}
+                                title={item.po_no}
+                                subtitle={formatThaiDate(item.po_date)}
+                                statusBadge={<POStatusBadge status={item.status} />}
+                                details={[
+                                    { label: 'ผู้ขาย:', value: item.vendor_name || '-' },
+                                    {
+                                        label: 'เอกสารอ้างอิง:',
+                                        value: (
                                             <div className="flex flex-col items-end">
-                                                <span className="font-semibold text-blue-600">{item.qc_no || '-'}</span>
-                                                {item.pr_no && <span className="text-xs text-slate-500">Ref: {item.pr_no}</span>}
+                                                <span className="font-semibold text-blue-600 dark:text-blue-400">{item.qc_no || '-'}</span>
+                                                {item.pr_no && <span className="text-xs text-slate-500">{item.pr_no}</span>}
                                             </div>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-500">จำนวนรายการ:</span>
-                                            <span className="font-medium">{item.item_count} รายการ</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Footer: Amount + Actions */}
-                                    <div className="space-y-3">
-                                        <div className="flex justify-between items-center">
-                                            <span className="font-semibold text-gray-900 dark:text-white">ยอดรวมสุทธิ</span>
-                                            <span className="font-bold text-lg text-emerald-600">
-                                                {item.total_amount?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                                            </span>
-                                        </div>
-
-                                        <div className="flex flex-wrap gap-2">
-                                            <button 
-                                                onClick={() => handleView(item.po_id)}
-                                                className="flex-1 bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1 border border-gray-200"
+                                        ),
+                                    },
+                                    { label: 'จำนวนรายการ:', value: `${item.item_count} รายการ` },
+                                ]}
+                                amountLabel="ยอดรวมสุทธิ"
+                                amountValue={
+                                    <span className="font-bold text-lg text-emerald-600 dark:text-emerald-400">
+                                        {item.total_amount?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                    </span>
+                                }
+                                actions={
+                                    <>
+                                        <button
+                                            onClick={() => handleView(item.po_id)}
+                                            className="flex-1 bg-gray-50 dark:bg-slate-700 hover:bg-gray-100 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1 border border-gray-200 dark:border-slate-600"
+                                        >
+                                            <Eye size={14} /> ดู
+                                        </button>
+                                        {item.status === 'DRAFT' && (
+                                            <>
+                                                <button
+                                                    onClick={() => handleEdit(item.po_id)}
+                                                    className="flex-1 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1"
+                                                >
+                                                    <Edit size={14} /> แก้ไข
+                                                </button>
+                                                <button
+                                                    onClick={() => handleApprove(item.po_id)}
+                                                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm whitespace-nowrap"
+                                                >
+                                                    <Send size={14} /> ส่งอนุมัติ
+                                                </button>
+                                            </>
+                                        )}
+                                        {item.status === 'PENDING_APPROVAL' && (
+                                            <button
+                                                onClick={() => handleApprove(item.po_id || '')}
+                                                className="flex-[2] bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
                                             >
-                                                <Eye size={14} /> ดู
+                                                <CheckCircle size={14} /> อนุมัติ
                                             </button>
-
-                                            {item.status === 'DRAFT' && (
-                                                <>
-                                                    <button 
-                                                        onClick={() => handleEdit(item.po_id)}
-                                                        className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1"
-                                                    >
-                                                        <Edit size={14} /> แก้ไข
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => handleApprove(item.po_id)}
-                                                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm whitespace-nowrap"
-                                                    >
-                                                        <Send size={14} /> ส่งอนุมัติ
-                                                    </button>
-                                                </>
-                                            )}
-
-                                            {item.status === 'PENDING_APPROVAL' && (
-                                                <button
-                                                    onClick={() => handleApprove(item.po_id || '')}
-                                                    className="flex-[2] bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
-                                                >
-                                                    <CheckCircle size={14} /> อนุมัติ
-                                                </button>
-                                            )}
-                                            
-                                            {item.status === 'APPROVED' && (
-                                                <button
-                                                    onClick={() => handleIssuePO(item)}
-                                                    className="flex-[2] bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
-                                                >
-                                                    <Send size={14} /> ออก PO
-                                                </button>
-                                            )}
-
-                                            {item.status === 'ISSUED' && (
-                                                <button
-                                                    onClick={() => handleGRN(item.po_id || '')}
-                                                    className="flex-[2] bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
-                                                >
-                                                    <Package size={14} /> เปิด GRN
-                                                </button>
-                                            )}
-                                            {/* COMPLETED / CANCELLED: Eye only */}
-                                        </div>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-
-                        {/* Pagination for Mobile */}
-                        {data?.total ? (
-                            <div className="flex justify-between items-center pt-2 text-sm text-gray-600">
-                                 <div>ทั้งหมด {data.total} รายการ</div>
-                                 <div className="flex gap-2">
-                                     <button
-                                        disabled={filters.page === 1}
-                                        onClick={() => handlePageChange(filters.page - 1)}
-                                        className="px-3 py-1 bg-white border rounded hover:bg-gray-50 disabled:opacity-50"
-                                     >
-                                        &lt;
-                                     </button>
-                                     <span>{filters.page} / {Math.ceil(data.total / filters.limit)}</span>
-                                     <button
-                                        disabled={filters.page >= Math.ceil(data.total / filters.limit)}
-                                        onClick={() => handlePageChange(filters.page + 1)}
-                                        className="px-3 py-1 bg-white border rounded hover:bg-gray-50 disabled:opacity-50"
-                                     >
-                                        &gt;
-                                     </button>
-                                 </div>
-                            </div>
-                         ) : null}
-                    </div>
+                                        )}
+                                        {item.status === 'APPROVED' && (
+                                            <button
+                                                onClick={() => handleIssuePO(item)}
+                                                className="flex-[2] bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
+                                            >
+                                                <Send size={14} /> ออก PO
+                                            </button>
+                                        )}
+                                        {item.status === 'ISSUED' && (
+                                            <button
+                                                onClick={() => handleGRN(item.po_id || '')}
+                                                className="flex-[2] bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
+                                            >
+                                                <Package size={14} /> เปิด GRN
+                                            </button>
+                                        )}
+                                    </>
+                                }
+                            />
+                        ))}
+                    </MobileListContainer>
                 </div>
             </PageListLayout>
             
@@ -560,7 +485,7 @@ export default function POListPage() {
                 onClose={handleCloseCreateModal} 
                 onSuccess={() => { 
                     handleCloseCreateModal();
-                    refetch();
+                    handleApplyFilters();
                 }} 
                 initialValues={initialCreateValues}
             />
@@ -569,8 +494,9 @@ export default function POListPage() {
             {isViewModalOpen && selectedPOId && (
                 <POFormModal
                     isOpen={isViewModalOpen}
+                    poId={selectedPOId}
                     onClose={() => { setIsViewModalOpen(false); setSelectedPOId(undefined); }}
-                    onSuccess={() => { setIsViewModalOpen(false); refetch(); }}
+                    onSuccess={() => { setIsViewModalOpen(false); handleApplyFilters(); }}
                     isViewMode={true}
                 />
             )}
@@ -579,8 +505,9 @@ export default function POListPage() {
             {isEditModalOpen && selectedPOId && (
                 <POFormModal
                     isOpen={isEditModalOpen}
+                    poId={selectedPOId}
                     onClose={() => { setIsEditModalOpen(false); setSelectedPOId(undefined); }}
-                    onSuccess={() => { setIsEditModalOpen(false); refetch(); }}
+                    onSuccess={() => { setIsEditModalOpen(false); handleApplyFilters(); }}
                 />
             )}
 
@@ -592,7 +519,6 @@ export default function POListPage() {
                 }}
                 initialPOId={selectedPOIdForGRN}
                 onSuccess={() => {
-                   // Refresh list if needed, or navigate to GRN list
                    setIsGRNModalOpen(false);
                 }}
             />
@@ -607,7 +533,7 @@ export default function POListPage() {
                     poId={selectedPOIdForApproval}
                     onSuccess={() => {
                         setIsApprovalModalOpen(false);
-                        refetch();
+                        handleApplyFilters();
                     }}
                 />
             )}
