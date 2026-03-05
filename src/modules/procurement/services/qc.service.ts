@@ -23,6 +23,11 @@ export const QCService = {
     return await api.get<QCListItem>(ENDPOINTS.detail(id));
   },
 
+  getReadyForPO: async (): Promise<QCListResponse> => {
+    logger.info('[QCService] Fetching QCs ready for PO creation');
+    return await api.get<QCListResponse>('/qc/ready-for-po');
+  },
+
   create: async (data: QCCreateData): Promise<{ qc_id: string }> => {
     logger.info('[QCService] Creating QC');
     return await api.post<{ qc_id: string }>(ENDPOINTS.create, data);

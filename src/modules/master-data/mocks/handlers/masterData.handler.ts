@@ -66,17 +66,62 @@ export const setupMasterDataHandlers = (mock: MockAdapter) => {
   const mockCurrencies = [
     { currency_id: '1', currency_code: 'THB', name_th: 'บาทไทย', name_en: 'Thai Baht', symbol: '฿', is_active: true, created_at: '2026-01-01', updated_at: '2026-01-01' },
     { currency_id: '2', currency_code: 'USD', name_th: 'ดอลลาร์สหรัฐ', name_en: 'US Dollar', symbol: '$', is_active: true, created_at: '2026-01-01', updated_at: '2026-01-01' },
+    { currency_id: '3', currency_code: 'EUR', name_th: 'ยูโร', name_en: 'Euro', symbol: '€', is_active: true, created_at: '2026-01-01', updated_at: '2026-01-01' },
+    { currency_id: '4', currency_code: 'JPY', name_th: 'เยนญี่ปุ่น', name_en: 'Japanese Yen', symbol: '¥', is_active: true, created_at: '2026-01-01', updated_at: '2026-01-01' },
   ];
 
-  mock.onGet('/master-data/currencies').reply((config) => 
-    [200, applyMockFilters(mockCurrencies, (config.params || {}) as Record<string, FilterValue>)]
-  );
+  mock.onGet('/master-data/currency').reply((config) => {
+    const result = applyMockFilters(mockCurrencies, (config.params || {}) as Record<string, FilterValue>);
+    if (result && typeof result === 'object' && 'items' in result) {
+      return [200, result];
+    }
+    return [200, { items: result, total: (result as unknown[]).length, page: 1, limit: 100 }];
+  });
+
+  mock.onGet(/\/master-data\/currency\/.+/).reply((config) => {
+    const id = config.url?.split('/').pop();
+    const found = mockCurrencies.find(c => c.currency_id === id);
+    return found ? [200, found] : [404, { message: 'Currency Not Found' }];
+  });
+
+  mock.onPost('/master-data/currency').reply((config) => {
+    const data = JSON.parse(config.data);
+    const newCurrency = {
+      ...data,
+      currency_id: String(mockCurrencies.length + 1),
+      is_active: data.is_active ?? true,
+      created_at: new Date().toISOString()
+    };
+    mockCurrencies.push(newCurrency);
+    return [201, { success: true, item: newCurrency }];
+  });
+
+  mock.onPut(/\/master-data\/currency\/.+/).reply((config) => {
+    const id = config.url?.split('/').pop();
+    const data = JSON.parse(config.data);
+    const index = mockCurrencies.findIndex(c => c.currency_id === id);
+    if (index !== -1) {
+      Object.assign(mockCurrencies[index], { ...data, updated_at: new Date().toISOString() });
+      return [200, { success: true, item: mockCurrencies[index] }];
+    }
+    return [404, { message: 'Not Found' }];
+  });
+
+  mock.onDelete(/\/master-data\/currency\/.+/).reply((config) => {
+    const id = config.url?.split('/').pop();
+    const index = mockCurrencies.findIndex(c => c.currency_id === id);
+    if (index !== -1) {
+      mockCurrencies.splice(index, 1);
+      return [200, { success: true }];
+    }
+    return [404, { message: 'Not Found' }];
+  });
 
   const mockExchangeRateTypes = [
     { currency_type_id: '1', code: 'SPOT', name_th: 'อัตราแลกเปลี่ยนทันที', name_en: 'Spot Exchange Rate', is_active: true, created_at: '2026-01-01', updated_at: '2026-01-01' },
   ];
 
-  mock.onGet('/master-data/exchange-rate-types').reply((config) => 
+  mock.onGet('/master-data/exchange-rate-type').reply((config) => 
     [200, applyMockFilters(mockExchangeRateTypes, (config.params || {}) as Record<string, FilterValue>)]
   );
 
@@ -86,7 +131,7 @@ export const setupMasterDataHandlers = (mock: MockAdapter) => {
     { exchange_id: '2', currency_id: '2', currency_type_id: '1', buy_rate: 35.5, sale_rate: 35.8, rate_date: '2026-02-17', exchange_round: 2, allow_adjust: 1, is_active: true },
   ];
 
-  mock.onGet('/master-data/exchange-rates').reply((config) => {
+  mock.onGet('/master-data/exchange-rate').reply((config) => {
     try {
       const joinedRates = mockExchangeRates.map(rate => {
         const currency = mockCurrencies.find(c => c.currency_id === rate.currency_id);
@@ -104,7 +149,7 @@ export const setupMasterDataHandlers = (mock: MockAdapter) => {
     }
   });
 
-  mock.onGet(/\/master-data\/exchange-rates\/latest/).reply((config) => {
+  mock.onGet(/\/master-data\/exchange-rate\/latest/).reply((config) => {
       const params = config.params || {};
       const currencyId = params.currency_id;
       

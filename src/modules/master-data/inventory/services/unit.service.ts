@@ -5,6 +5,23 @@ import type { UnitListItem, UnitCreateRequest, UnitUpdateRequest } from '@/modul
 import { type PaginatedListResponse } from '@/shared/types/api-response.types';
 import { type TableFilters } from '@/shared/hooks/useTableFilters';
 
+/**
+ * Maps raw backend UOM fields (uom_*) to frontend UnitListItem fields (unit_*).
+ * Uses safe fallbacks so both backend and mock data work correctly.
+ */
+function mapUomToUnit(uom: Record<string, unknown>): UnitListItem {
+  return {
+    ...(uom as unknown as UnitListItem),
+    // Map backend → frontend field names with safe fallbacks
+    unit_id: (uom.unit_id as string) || String(uom.uom_id || ''),
+    unit_code: (uom.unit_code as string) || (uom.uom_code as string) || '',
+    unit_name: (uom.unit_name as string) || (uom.uom_name as string) || '',
+    unit_name_en: (uom.unit_name_en as string) || (uom.uom_nameeng as string) || '',
+    is_active: (uom.is_active as boolean) ?? true,
+    created_at: (uom.created_at as string) || new Date().toISOString(),
+  };
+}
+
 export const UnitService = {
   getAll: async (params?: Partial<TableFilters>): Promise<PaginatedListResponse<UnitListItem>> => {
     if (USE_MOCK) {
@@ -29,11 +46,14 @@ export const UnitService = {
          uomArray = response.items;
       }
 
+      // Map backend uom_* fields → frontend unit_* fields
+      const mappedArray = uomArray.map((item) => mapUomToUnit(item as unknown as Record<string, unknown>));
+
       return {
-        items: uomArray,
-        total: uomArray.length,
+        items: mappedArray,
+        total: mappedArray.length,
         page: 1,
-        limit: uomArray.length || 10
+        limit: mappedArray.length || 10
       };
     } catch (error) {
       logger.error('[UnitService] getAll error:', error);
@@ -44,7 +64,10 @@ export const UnitService = {
   get: async (id: string): Promise<UnitListItem | null> => {
     if (USE_MOCK) return mockUnits.find(u => u.unit_id === id) || null;
     try {
-      return await api.get<UnitListItem>(`/uom/${id}`);
+      const raw = await api.get<UnitListItem>(`/uom/${id}`);
+      if (!raw) return null;
+      // Map backend uom_* fields → frontend unit_* fields
+      return mapUomToUnit(raw as unknown as Record<string, unknown>);
     } catch (error) {
       logger.error('[UnitService] get error:', error);
       return null;

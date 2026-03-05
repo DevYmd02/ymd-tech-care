@@ -107,25 +107,31 @@ export const usePOForm = ({
             }
             return null;
         },
-        enabled: isOpen && !!initialValues?.qc_id && !!initialValues?.vendor_id && (!initialValues?.lines || initialValues.lines.length === 0)
+        enabled: isOpen && !!initialValues?.qc_id && !!initialValues?.vendor_id && !isViewMode
     });
 
-    // ── Form Reset Effect ─────────────────────────────────────────────────────
+    // ── Form Reset Effect (Hydration) ─────────────────────────────────────────
     useEffect(() => {
         if (isOpen) {
-            let initialLines = inheritedVQ?.lines?.map((l) => ({
-                item_id:         l.item_id || '',
-                item_code:       l.item_code || '',
-                item_name:       l.item_name || '',
-                description:     l.item_name || '',
-                qty_ordered:     l.qty || 1,
-                uom_id:          l.uom_id || 'PCS',
-                unit_price:      l.unit_price || 0,
-                discount_amount: l.discount_amount || 0,
-                tax_code:        l.tax_code || 'VAT',
-                receipt_type:    'GOODS' as const,
-                line_total:      l.net_amount || 0,
-            })) || initialValues?.lines || [];
+            let initialLines = initialValues?.lines || [];
+
+            // Phase 3 Hydration: Auto-populate lines ONLY if they don't exist yet and we just fetched from VQ
+            if (initialLines.length === 0 && inheritedVQ?.lines && inheritedVQ.lines.length > 0) {
+                initialLines = inheritedVQ.lines.map((l) => ({
+                    item_id:         l.item_id || '',
+                    item_code:       l.item_code || '',
+                    item_name:       l.item_name || '',
+                    description:     l.item_name || '',
+                    qty_ordered:     l.qty || 1,
+                    uom_id:          l.uom_id || 'PCS',
+                    // CRITICAL: Must use the winning price from VQ, NOT standard general cost
+                    unit_price:      l.unit_price || 0,
+                    discount_amount: l.discount_amount || 0,
+                    tax_code:        l.tax_code || 'VAT',
+                    receipt_type:    'GOODS' as const,
+                    line_total:      l.net_amount || 0,
+                }));
+            }
 
             // Phase 3: Default Empty Row for New PO
             if (initialLines.length === 0 && !initialValues?.qc_id) {

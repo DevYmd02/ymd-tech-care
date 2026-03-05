@@ -327,21 +327,21 @@ export default function QCListPage() {
                             label="เลขที่ใบ QC"
                             value={localFilters.search}
                             onChange={(val: string) => handleFilterChange('search', val)}
-                            placeholder="QC2024-xxx"
+                            placeholder="QC-xxx"
                             accentColor="indigo"
                         />
                         <FilterField
                             label="เลขที่ PR อ้างอิง"
                             value={localFilters.search2}
                             onChange={(val: string) => handleFilterChange('search2', val)}
-                            placeholder="PR2024-xxx"
+                            placeholder="PR-xxx"
                             accentColor="indigo"
                         />
                         <FilterField
                             label="เลขที่ RFQ อ้างอิง"
                             value={localFilters.search3}
                             onChange={(val: string) => handleFilterChange('search3', val)}
-                            placeholder="RFQ2024-xxx"
+                            placeholder="RFQ-xxx"
                             accentColor="indigo"
                         />
                         <FilterField

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { FormProvider } from 'react-hook-form';
-import { FileText, Printer, Copy, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { FormProvider, Controller } from 'react-hook-form';
+import type { SubmitHandler } from 'react-hook-form';
+import { FileText, Printer, Copy, CheckCircle, XCircle, Loader2, Calendar } from 'lucide-react';
 import { PRHeader } from './PRHeader';
 import { PRFormLines } from './PRFormLines';
 import { PRFormSummary } from './PRFormSummary';
@@ -12,7 +13,13 @@ import { usePRForm } from '@/modules/procurement/pages/pr/hooks';
 import { RejectReasonModal } from '@/modules/procurement/shared/components/RejectReasonModal';
 import { WarehouseSearchModal } from '@/modules/procurement/shared/components/WarehouseSearchModal';
 import { LocationSearchModal } from '@/modules/procurement/shared/components/LocationSearchModal';
-import type { PRFormData } from '@/modules/procurement/types';
+import type { PRFormData } from '@/modules/procurement/schemas/pr-schemas';
+import type { Currency } from '@/modules/master-data/types/master-data-types';
+
+const SHIPPING_OPTIONS = [
+  { label: 'รถยนต์', value: 'Car' },
+  { label: 'รถบรรทุก', value: 'Truck' },
+];
 
 interface Props {
   isOpen: boolean;
@@ -29,16 +36,17 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
     isLocationModalOpen, setIsLocationModalOpen, activeWarehouseId,
     showAllItems, setShowAllItems,
     isSubmitting, isActionLoading,
-    products, costCenters, projects, purchaseTaxOptions, isSearchingProducts,
+    products, costCenters, projects, purchaseTaxOptions, currencies, isSearchingProducts,
     addLine, removeLine, clearLine, updateLine, handleClearLines,
     openProductSearch, openWarehouseSearch, openLocationSearch, selectProduct, selectWarehouse, selectLocation, handleVendorSelect, onSubmit, handleApprove,
     handleVoid,
+    handleSubmit,
     handleFormError,
     formMethods,
     user,
     // Reject Logic
     handleReject, submitReject, closeRejectModal, isRejectReasonOpen, isRejecting
-  } = usePRForm(isOpen, onClose, id, onSuccess);
+  } = usePRForm({ isOpen, onClose, id, onSuccess });
 
   const { register, control, watch, formState: { errors } } = formMethods;
 
@@ -51,8 +59,18 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
 
   const cardClass = 'bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-sm overflow-hidden';
 
-  const handleSubmitWrapper = async (data: PRFormData) => {
+  const handleSubmitWrapper: SubmitHandler<PRFormData> = async (data) => {
     return onSubmit(data);
+  };
+
+  // Date Formatting Helpers
+  const formatDisplayDate = (val?: string) => {
+    if (!val) return '';
+    if (val.includes('-') && val.length >= 10) {
+      const [y, m, d] = val.split('-');
+      return `${d.substring(0, 2)}/${m}/${y}`;
+    }
+    return val;
   };
 
   return (
@@ -91,7 +109,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
                     )}
                     <button 
                       type="button" 
-                      onClick={() => formMethods.handleSubmit(handleSubmitWrapper, handleFormError)()} 
+                      onClick={handleSubmit(handleSubmitWrapper, handleFormError)} 
                       disabled={isSubmitting || isActionLoading} 
                       className="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md text-sm font-medium flex items-center justify-center gap-2"
                     >
@@ -155,7 +173,40 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
                     </thead>
                     <tbody>
                         <tr className="bg-white dark:bg-gray-800">
-                        <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700"><input type="date" {...register('delivery_date')} disabled={readOnly} className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded px-2 py-0.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" /></td>
+                        <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700">
+                          <Controller
+                            name="delivery_date"
+                            control={control}
+                            render={({ field: { value, onChange, onBlur, ref } }) => (
+                              <div className="relative w-full">
+                                {/* 1. Visible Text Input */}
+                                <input
+                                  type="text"
+                                  readOnly
+                                  placeholder="dd/mm/yyyy"
+                                  value={formatDisplayDate(value)}
+                                  disabled={readOnly}
+                                  onClick={(e) => { try { (e.currentTarget.nextElementSibling as HTMLInputElement)?.showPicker() } catch (err) { void err; } }}
+                                  className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded pl-2 pr-6 py-0.5 focus:ring-1 focus:ring-blue-500 focus:outline-none cursor-pointer"
+                                />
+                                
+                                {/* 2. Hidden Native Input overlay for click/picker */}
+                                <input
+                                  type="date"
+                                  value={value || ''}
+                                  onChange={(e) => onChange(e.target.value)}
+                                  onBlur={onBlur}
+                                  ref={ref}
+                                  disabled={readOnly}
+                                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                  style={{ colorScheme: 'dark' }}
+                                />
+                                
+                                <Calendar size={12} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 pointer-events-none" />
+                              </div>
+                            )}
+                          />
+                        </td>
                         <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700 text-center text-gray-900 dark:text-white">{watch('credit_days')}</td>
                         <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700"><input {...register('vendor_quote_no')} disabled={readOnly} placeholder="Quote No" className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded px-2 py-0.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" /></td>
                         <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700">
@@ -165,8 +216,11 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
                             className={`w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white border rounded px-2 py-0.5 focus:outline-none ${errors?.shipping_method ? 'border-red-500 ring-1 ring-red-500 focus:border-red-500' : 'border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500'}`}
                             >
                             <option value="">เลือก</option>
-                            <option value="รถยนต์">รถยนต์</option>
-                            <option value="รถบรรทุก">รถบรรทุก</option>
+                            {SHIPPING_OPTIONS.map((opt) => (
+                              <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </option>
+                            ))}
                             </select>
                         </td>
                         <td className="px-2 py-1 text-gray-900 dark:text-white">{user?.employee?.employee_fullname || user?.username || 'N/A'}</td>
@@ -181,12 +235,38 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
                     <div>
                         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">วันที่อัตราแลกเปลี่ยน</label>
-                        <input 
-                            type="date" 
-                            {...register('pr_exchange_rate_date')}
-                            disabled={readOnly}
-                            className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
-                        />
+                        <Controller
+                            name="pr_exchange_rate_date"
+                            control={control}
+                            render={({ field: { value, onChange, onBlur, ref } }) => (
+                              <div className="relative w-full">
+                                {/* 1. Visible Text Input */}
+                                <input
+                                  type="text"
+                                  readOnly
+                                  placeholder="dd/mm/yyyy"
+                                  value={formatDisplayDate(value)}
+                                  disabled={readOnly}
+                                  onClick={(e) => { try { (e.currentTarget.nextElementSibling as HTMLInputElement)?.showPicker() } catch (err) { void err; } }}
+                                  className="w-full h-9 pl-3 pr-8 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow cursor-pointer"
+                                />
+                                
+                                {/* 2. Hidden Native Input overlay for click/picker */}
+                                <input
+                                  type="date"
+                                  value={value || ''}
+                                  onChange={(e) => onChange(e.target.value)}
+                                  onBlur={onBlur}
+                                  ref={ref}
+                                  disabled={readOnly}
+                                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                  style={{ colorScheme: 'dark' }}
+                                />
+                                
+                                <Calendar size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 pointer-events-none" />
+                              </div>
+                            )}
+                          />
                     </div>
                     <div>
                         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">รหัสสกุลเงิน</label>
@@ -196,11 +276,9 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
                             className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                         >
                             <option value="">เลือกสกุลเงิน</option>
-                            <option value="THB">THB - บาท</option>
-                            <option value="USD">USD - ดอลลาร์สหรัฐ</option>
-                            <option value="EUR">EUR - ยูโร</option>
-                            <option value="JPY">JPY - เยน</option>
-                            <option value="CNY">CNY - หยวน</option>
+                            {currencies?.map((c: Currency) => (
+                              <option key={c.currency_id} value={c.currency_code}>{c.currency_code} - {c.name_th}</option>
+                            ))}
                         </select>
                     </div>
                     <div>
@@ -211,11 +289,9 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
                             className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                         >
                             <option value="">เลือกสกุลเงิน</option>
-                            <option value="THB">THB - บาท</option>
-                            <option value="USD">USD - ดอลลาร์สหรัฐ</option>
-                            <option value="EUR">EUR - ยูโร</option>
-                            <option value="JPY">JPY - เยน</option>
-                            <option value="CNY">CNY - หยวน</option>
+                            {currencies?.map((c: Currency) => (
+                              <option key={c.currency_id} value={c.currency_code}>{c.currency_code} - {c.name_th}</option>
+                            ))}
                         </select>
                     </div>
                     <div>

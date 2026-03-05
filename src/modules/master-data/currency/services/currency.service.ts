@@ -13,7 +13,10 @@ export const CurrencyService = {
     // Currency Codes
     getCurrencies: async (): Promise<BaseResponse<Currency>> => {
         try {
-            return await api.get<BaseResponse<Currency>>('/master-data/currencies');
+            const res = await api.get<{ data?: Currency[] } | Currency[]>('/currency');
+            const resData = res;
+            const items = Array.isArray(resData) ? resData : (resData?.data || []);
+            return { items, total: items.length, page: 1, limit: items.length || 20 };
         } catch (error) {
             logger.error('[CurrencyService] getCurrencies error:', error);
             return { items: [], total: 0, page: 1, limit: 20 };
@@ -22,7 +25,7 @@ export const CurrencyService = {
 
     getCurrencyById: async (id: string): Promise<Currency | null> => {
         try {
-            return await api.get<Currency>(`/master-data/currencies/${id}`);
+            return await api.get<Currency>(`/currency/${id}`);
         } catch (error) {
             logger.error('[CurrencyService] getCurrencyById error:', error);
             return null;
@@ -31,7 +34,7 @@ export const CurrencyService = {
 
     createCurrency: async (data: Partial<Currency>): Promise<{ success: boolean; message?: string }> => {
         try {
-            await api.post('/master-data/currencies', data);
+            await api.post('/currency', data);
             return { success: true };
         } catch (error) {
             logger.error('[CurrencyService] createCurrency error:', error);
@@ -41,7 +44,7 @@ export const CurrencyService = {
 
     updateCurrency: async (id: string, data: Partial<Currency>): Promise<{ success: boolean; message?: string }> => {
         try {
-            await api.put(`/master-data/currencies/${id}`, data);
+            await api.put(`/currency/${id}`, data);
             return { success: true };
         } catch (error) {
             logger.error('[CurrencyService] updateCurrency error:', error);
@@ -51,7 +54,7 @@ export const CurrencyService = {
 
     deleteCurrency: async (id: string): Promise<{ success: boolean; message?: string }> => {
         try {
-            await api.delete(`/master-data/currencies/${id}`);
+            await api.delete(`/currency/${id}`);
             return { success: true };
         } catch (error) {
             logger.error('[CurrencyService] deleteCurrency error:', error);
@@ -62,7 +65,10 @@ export const CurrencyService = {
     // Exchange Rate Types
     getExchangeRateTypes: async (): Promise<BaseResponse<ExchangeRateType>> => {
         try {
-            return await api.get<BaseResponse<ExchangeRateType>>('/master-data/exchange-rate-types');
+            const res = await api.get<{ data?: ExchangeRateType[] } | ExchangeRateType[]>('/exchange-rate-type');
+            const resData = res;
+            const items = Array.isArray(resData) ? resData : (resData?.data || []);
+            return { items, total: items.length, page: 1, limit: items.length || 20 };
         } catch (error) {
             logger.error('[CurrencyService] getExchangeRateTypes error:', error);
             return { items: [], total: 0, page: 1, limit: 20 };
@@ -71,7 +77,7 @@ export const CurrencyService = {
 
     getExchangeRateTypeById: async (id: string): Promise<ExchangeRateType | null> => {
         try {
-            return await api.get<ExchangeRateType>(`/master-data/exchange-rate-types/${id}`);
+            return await api.get<ExchangeRateType>(`/exchange-rate-type/${id}`);
         } catch (error) {
             logger.error('[CurrencyService] getExchangeRateTypeById error:', error);
             return null;
@@ -80,7 +86,7 @@ export const CurrencyService = {
 
     createExchangeRateType: async (data: Partial<ExchangeRateType>): Promise<{ success: boolean; message?: string }> => {
         try {
-            await api.post('/master-data/exchange-rate-types', data);
+            await api.post('/exchange-rate-type', data);
             return { success: true };
         } catch (error) {
             logger.error('[CurrencyService] createExchangeRateType error:', error);
@@ -90,7 +96,7 @@ export const CurrencyService = {
 
     updateExchangeRateType: async (id: string, data: Partial<ExchangeRateType>): Promise<{ success: boolean; message?: string }> => {
         try {
-            await api.put(`/master-data/exchange-rate-types/${id}`, data);
+            await api.put(`/exchange-rate-type/${id}`, data);
             return { success: true };
         } catch (error) {
             logger.error('[CurrencyService] updateExchangeRateType error:', error);
@@ -100,7 +106,7 @@ export const CurrencyService = {
 
     deleteExchangeRateType: async (id: string): Promise<{ success: boolean; message?: string }> => {
         try {
-            await api.delete(`/master-data/exchange-rate-types/${id}`);
+            await api.delete(`/exchange-rate-type/${id}`);
             return { success: true };
         } catch (error) {
             logger.error('[CurrencyService] deleteExchangeRateType error:', error);
@@ -111,7 +117,10 @@ export const CurrencyService = {
     // Exchange Rates
     getExchangeRates: async (): Promise<BaseResponse<ExchangeRate & { currency_code?: string; type_name?: string }>> => {
         try {
-            return await api.get<BaseResponse<ExchangeRate & { currency_code?: string; type_name?: string }>>('/master-data/exchange-rates');
+            const res = await api.get<{ data?: (ExchangeRate & { currency_code?: string; type_name?: string })[] } | (ExchangeRate & { currency_code?: string; type_name?: string })[]>('/exchange-rate');
+            const resData = res;
+            const items = Array.isArray(resData) ? resData : (resData?.data || []);
+            return { items, total: items.length, page: 1, limit: items.length || 20 };
         } catch (error) {
             logger.error('[CurrencyService] getExchangeRates error:', error);
             return { items: [], total: 0, page: 1, limit: 20 };
@@ -120,7 +129,7 @@ export const CurrencyService = {
 
     getExchangeRateById: async (id: string): Promise<ExchangeRate | null> => {
         try {
-            return await api.get<ExchangeRate>(`/master-data/exchange-rates/${id}`);
+            return await api.get<ExchangeRate>(`/exchange-rate/${id}`);
         } catch (error) {
             logger.error('[CurrencyService] getExchangeRateById error:', error);
             return null;
@@ -129,7 +138,7 @@ export const CurrencyService = {
 
     createExchangeRate: async (data: Partial<ExchangeRate>): Promise<{ success: boolean; message?: string }> => {
         try {
-            await api.post('/master-data/exchange-rates', data);
+            await api.post('/exchange-rate', data);
             return { success: true };
         } catch (error) {
             logger.error('[CurrencyService] createExchangeRate error:', error);
@@ -139,7 +148,7 @@ export const CurrencyService = {
 
     updateExchangeRate: async (id: string, data: Partial<ExchangeRate>): Promise<{ success: boolean; message?: string }> => {
         try {
-            await api.put(`/master-data/exchange-rates/${id}`, data);
+            await api.put(`/exchange-rate/${id}`, data);
             return { success: true };
         } catch (error) {
             logger.error('[CurrencyService] updateExchangeRate error:', error);
@@ -149,7 +158,7 @@ export const CurrencyService = {
 
     deleteExchangeRate: async (id: string): Promise<{ success: boolean; message?: string }> => {
         try {
-            await api.delete(`/master-data/exchange-rates/${id}`);
+            await api.delete(`/exchange-rate/${id}`);
             return { success: true };
         } catch (error) {
             logger.error('[CurrencyService] deleteExchangeRate error:', error);

@@ -9,7 +9,7 @@ import type { POListItem } from '@/modules/procurement/types';
 import type { POFormData } from '@/modules/procurement/schemas/po-schemas';
 import { createColumnHelper } from '@tanstack/react-table';
 import type { ColumnDef } from '@tanstack/react-table';
-import { POFormModal, POApprovalModal } from './components';
+import { POFormModal, POApprovalModal, DocumentSourceSelectorModal } from './components';
 import GRNFormModal from '@/modules/procurement/pages/grn/components/GRNFormModal';
 
 export default function POListPage() {
@@ -26,15 +26,18 @@ export default function POListPage() {
     const { handleIssuePO } = usePOActions();
 
     // ── Modal State (URL Driven) ──────────────────────────────────────────────
+    const isCreateInterceptorOpen = searchParams.get('mode') === 'select-source';
     const isCreateModalOpen = searchParams.get('mode') === 'create';
     const createFromQC = searchParams.get('createFromQC') === 'true';
     const vendorIdParam = searchParams.get('vendorId');
+    const qcIdParam = searchParams.get('sourceQcId');
     const remarksParam = searchParams.get('remarks');
 
     const initialCreateValues = useMemo<Partial<POFormData> | undefined>(() => {
         if (createFromQC) {
             return {
                 vendor_id: vendorIdParam || undefined,
+                qc_id: qcIdParam || undefined,
                 remarks: remarksParam || undefined,
                 lines: [],
             };
@@ -43,7 +46,7 @@ export default function POListPage() {
             return { vendor_id: vendorIdParam };
         }
         return undefined;
-    }, [createFromQC, vendorIdParam, remarksParam]);
+    }, [createFromQC, vendorIdParam, qcIdParam, remarksParam]);
 
     const handleCloseCreateModal = () => {
         setSearchParams(prev => {
@@ -52,6 +55,7 @@ export default function POListPage() {
             newParams.delete('createFromQC');
             newParams.delete('vendorId');
             newParams.delete('qcNo');
+            newParams.delete('sourceQcId');
             newParams.delete('remarks');
             return newParams;
         });
@@ -297,14 +301,14 @@ export default function POListPage() {
                             label="เลขที่ PO"
                             value={localFilters.search}
                             onChange={(val: string) => handleFilterChange('search', val)}
-                            placeholder="PO2024-xxx"
+                            placeholder="PO-xxx"
                             accentColor="blue"
                         />
                         <FilterField
                             label="เลขที่ PR อ้างอิง"
                             value={localFilters.search2}
                             onChange={(val: string) => handleFilterChange('search2', val)}
-                            placeholder="PR2024-xxx"
+                            placeholder="PR-xxx"
                             accentColor="blue"
                         />
                         <FilterField
@@ -359,7 +363,7 @@ export default function POListPage() {
                             </div>
                             <button
                                 type="button"
-                                onClick={() => setSearchParams({ mode: 'create' })}
+                                onClick={() => setSearchParams({ mode: 'select-source' })}
                                 className="w-full sm:w-auto h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
                             >
                                 <Plus size={16} strokeWidth={2.5} />
@@ -478,6 +482,24 @@ export default function POListPage() {
                     </MobileListContainer>
                 </div>
             </PageListLayout>
+
+            {/* Smart Intercept Modal */}
+            <DocumentSourceSelectorModal
+                isOpen={isCreateInterceptorOpen}
+                onClose={() => handleCloseCreateModal()}
+                onSelectSource={(sourceType: 'QC' | 'BLANK', qcId?: string, vendorId?: string) => {
+                    if (sourceType === 'QC' && qcId) {
+                        setSearchParams({ 
+                            mode: 'create', 
+                            createFromQC: 'true', 
+                            sourceQcId: qcId,
+                            ...(vendorId ? { vendorId } : {})
+                        });
+                    } else {
+                        setSearchParams({ mode: 'create' });
+                    }
+                }}
+            />
             
             <POFormModal 
                 isOpen={isCreateModalOpen} 

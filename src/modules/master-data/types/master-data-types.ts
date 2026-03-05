@@ -39,3 +39,8 @@ export * from '@/modules/master-data/inventory/types/product-types';
 // RE-EXPORTS FROM CORE
 // ====================================================================================
 export * from '@/modules/master-data/project/types/project-types';
+
+// ====================================================================================
+// RE-EXPORTS FROM CURRENCY MODULE
+// ====================================================================================
+export * from '@/modules/master-data/currency/types/currency-types';

@@ -393,9 +393,9 @@ export default function VQListPage() {
                 totalCountLoading={isLoading}
                 searchForm={
                     <form onSubmit={(e) => { e.preventDefault(); handleApplyFilters(); }} className="w-full">
-                        <div className="flex flex-col gap-4 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg border border-gray-200 dark:border-slate-700">
+                        <div className="flex flex-col gap-4">
                             {/* The Input Grid (Responsive) */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-4">
                                 <FilterField
                                     label="เลขที่ใบเสนอราคา"
                                     type="text"
@@ -453,26 +453,31 @@ export default function VQListPage() {
                             </div>
 
                             {/* The Button Group (Isolated & Full Width) */}
-                            <div className="flex flex-col sm:flex-row flex-wrap justify-end items-center gap-2 pt-2 border-t border-gray-200 dark:border-slate-700/50 mt-2">
+                            <div className="flex justify-end items-center gap-4 border-t border-slate-200 dark:border-slate-700/60 pt-5 mt-5">
+                                {/* 1. ล้างค่า (Clear) */}
                                 <button
                                     type="button"
                                     onClick={resetFilters}
-                                    className="w-full sm:w-auto flex-1 sm:flex-none h-10 px-4 bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 font-medium rounded-lg border border-gray-300 dark:border-slate-600 transition-colors shadow-sm whitespace-nowrap"
+                                    className="h-10 px-6 flex items-center justify-center text-base font-medium rounded-md transition-colors bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 dark:bg-white dark:text-slate-900 dark:border-transparent dark:hover:bg-slate-200"
                                 >
                                     ล้างค่า
                                 </button>
+                                
+                                {/* 2. ค้นหา (Search) */}
                                 <button
                                     type="submit"
-                                    className="w-full sm:w-auto flex-1 sm:flex-none h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm whitespace-nowrap"
+                                    className="h-10 px-6 flex items-center justify-center gap-2 text-base font-medium rounded-md transition-colors bg-blue-600 text-white hover:bg-blue-700"
                                 >
-                                    <Search size={18} /> ค้นหา
+                                    <Search className="w-4 h-4" /> ค้นหา
                                 </button>
+                                
+                                {/* 3. สร้างใบเสนอราคาใหม่ (Create) */}
                                 <button
                                     type="button"
                                     onClick={handleOpenCreate}
-                                    className="w-full sm:w-auto flex-1 sm:flex-none h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm whitespace-nowrap"
+                                    className="w-full sm:w-auto h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
                                 >
-                                    <Plus size={16} strokeWidth={2.5} /> สร้างใบเสนอราคาใหม่
+                                     <Plus size={16} strokeWidth={2.5} />สร้างใบเสนอราคาใหม่
                                 </button>
                             </div>
                         </div>

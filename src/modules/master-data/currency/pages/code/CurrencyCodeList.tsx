@@ -71,7 +71,7 @@ export default function CurrencyCodeList() {
         { accessorKey: 'currency_code', header: 'รหัสสกุลเงิน', cell: ({ getValue }) => <span className="font-medium text-blue-600">{getValue() as string}</span>, size: 120 },
         { accessorKey: 'name_th', header: 'ชื่อสกุลเงิน', size: 200 },
         { accessorKey: 'name_en', header: 'ชื่อสกุลเงิน (EN)', size: 200 },
-        { accessorKey: 'is_active', header: 'สถานะ', cell: ({ getValue }) => <ActiveStatusBadge isActive={getValue() as boolean} />, size: 100 },
+        { accessorKey: 'is_active', header: 'สถานะ', cell: ({ getValue }) => <ActiveStatusBadge isActive={(getValue() as boolean) ?? true} />, size: 100 },
         {
             id: 'actions',
             header: 'จัดการ',
@@ -125,19 +125,19 @@ export default function CurrencyCodeList() {
             <div className="flex flex-col gap-4">
                 <div className="flex justify-between items-center">
                     <h2 className="text-gray-700 dark:text-gray-300 font-medium">
-                        พบข้อมูล {data.length} รายการ
+                        พบข้อมูล {(data || []).length} รายการ
                     </h2>
                 </div>
 
                 <SmartTable
-                    data={data}
+                    data={data || []}
                     columns={columns}
                     isLoading={isLoading}
                     rowIdField="currency_id"
                     pagination={{
                         pageIndex: 1,
                         pageSize: 10,
-                        totalCount: data.length,
+                        totalCount: (data || []).length,
                         onPageChange: () => {},
                         onPageSizeChange: () => {},
                     }}

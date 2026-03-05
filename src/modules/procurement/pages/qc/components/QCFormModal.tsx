@@ -7,7 +7,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, FileText, Search, Scale, CheckSquare, Square, Trophy, CheckCircle2, Circle } from 'lucide-react';
+import { AlertCircle, FileText, Search, Scale, CheckSquare, Square, Trophy, CheckCircle2, Circle, X } from 'lucide-react';
 import { WindowFormLayout } from '@ui';
 import { logger } from '@/shared/utils/logger';
 
@@ -95,9 +95,38 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
     setWinnerVQId(null);
   }, [rfqNo]);
 
-  const rfqId = useMemo(() => {
+    const rfqId = useMemo(() => {
     return rfqList?.data.find((r) => r.rfq_no === rfqNo)?.rfq_id;
   }, [rfqList, rfqNo]);
+
+  // Data Integrity Bridge #2: If the PR changes, verify if the currently selected RFQ belongs to it.
+  // If it does not belong to the new PR, clear the RFQ.
+  useEffect(() => {
+    if (prNo && rfqNo && rfqList?.data) {
+      const currentRfqDetails = rfqList.data.find(r => r.rfq_no === rfqNo);
+      // Depending on the field available, compare against the parent PR
+      const rfqParentPrNo = currentRfqDetails?.ref_pr_no || currentRfqDetails?.pr_no || '';
+      
+      if (rfqParentPrNo && rfqParentPrNo !== prNo) {
+          logger.warn(`[QCFormModal] PR changed to ${prNo}, but RFQ ${rfqNo} belongs to ${rfqParentPrNo}. Clearing RFQ state...`);
+          setRFQNo('');
+          setSelectedVQIds([]);
+          setWinnerVQId(null);
+      }
+    }
+  }, [prNo, rfqNo, rfqList?.data]);
+
+  // Cascading Filter: Only show RFQs belonging to the currently selected PR (if a PR is selected)
+  const filteredRFQs = useMemo(() => {
+      const allRFQs = rfqList?.data || [];
+      if (!prNo) return allRFQs;
+      
+      // Filter out RFQs whose parent PR doesn't match the selected PR.
+      return allRFQs.filter(rfq => {
+          const rfqParentPrNo = rfq.ref_pr_no || rfq.pr_no || '';
+          return !rfqParentPrNo || rfqParentPrNo === prNo;
+      });
+  }, [rfqList?.data, prNo]);
 
   // Fetch VQs related to this RFQ by ID
   const { data: vqList, isLoading: isVQListLoading } = useQuery({
@@ -159,7 +188,13 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
 
   const handleSelectRFQ = (rfq: RFQHeader) => {
     setRFQNo(rfq.rfq_no);
-    setPRNo(rfq.ref_pr_no || rfq.pr_no || '');
+    // Strict Linking Rule (Always Overwrite):
+    // Because an RFQ belongs to one and ONLY one PR, the selected RFQ is the absolute source of truth.
+    // Unconditionally overwrite the PR field.
+    const parentPrNo = rfq.ref_pr_no || rfq.pr_no || '';
+    if (parentPrNo) {
+        setPRNo(parentPrNo);
+    }
     setIsRFQSelectorOpen(false);
     setSelectedVQIds([]);
     setWinnerVQId(null);
@@ -168,6 +203,20 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
   const handleSelectPR = (pr: PRHeader) => {
     setPRNo(pr.pr_no);
     setIsPRSelectorOpen(false);
+  };
+
+  const handleClearPR = () => {
+    setPRNo('');
+    // CASCADING CLEAR: Must also clear RFQ because it depends on PR
+    setRFQNo('');
+    setSelectedVQIds([]);
+    setWinnerVQId(null);
+  };
+
+  const handleClearRFQ = () => {
+    setRFQNo('');
+    setSelectedVQIds([]);
+    setWinnerVQId(null);
   };
 
   // Compute lowest Grand Total for highlighting
@@ -313,6 +362,17 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
                   >
                     <Search size={14} /> เลือก
                   </button>
+                  {/* Conditional Clear Button */}
+                  {prNo && (
+                    <button
+                      type="button"
+                      onClick={handleClearPR}
+                      className="flex items-center justify-center w-9 h-9 border border-rose-500 text-rose-500 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors focus:outline-none shrink-0"
+                      title="ล้างค่า PR"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -334,6 +394,17 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
                   >
                     <Search size={14} /> เลือก
                   </button>
+                  {/* Conditional Clear Button */}
+                  {rfqNo && (
+                    <button
+                      type="button"
+                      onClick={handleClearRFQ}
+                      className="flex items-center justify-center w-9 h-9 border border-rose-500 text-rose-500 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors focus:outline-none shrink-0"
+                      title="ล้างค่า RFQ"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -577,9 +648,9 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
       <SelectionModal<RFQHeader>
         isOpen={isRFQSelectorOpen}
         onClose={() => setIsRFQSelectorOpen(false)}
-        title="เลือกข้อมูลใบขอเสนอราคา (RFQ)"
+        title={prNo ? `ข้อมูล RFQ อ้างอิงจากรหัส PR: ${prNo}` : "เลือกข้อมูลใบขอเสนอราคา (RFQ)"}
         subtitle="ค้นหาและเลือกเอกสารที่ต้องการนำมาเปรียบเทียบ"
-        data={rfqList?.data || []}
+        data={filteredRFQs}
         searchPlaceholder="ค้นหาด้วยเลขที่ RFQ, หัวข้อ, หรือชื่อผู้ขาย..."
         searchKeys={['rfq_no', 'purpose', 'vendor_name']}
         onSelect={handleSelectRFQ}

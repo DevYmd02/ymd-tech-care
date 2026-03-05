@@ -10,6 +10,7 @@ import { ProductSearchModal } from '@/modules/master-data/inventory/components/P
 import { useVQForm } from '../hooks/useVQForm';
 import { RFQSelectorModal } from './RFQSelectorModal';
 import { SharedRemarksTab } from '@/shared/components/forms/SharedRemarksTab';
+import { CustomDateInput } from '@/shared/components/forms/CustomDateInput';
 import type { ProductLookup } from '@/modules/master-data/inventory/mocks/products';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import type { RFQHeader } from '@/modules/procurement/types';
@@ -59,6 +60,7 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
       totalLineDiscount
   } = totals;
 
+  const watchVendorId = useWatch({ control, name: 'vendor_id' });
   const watchVendorName = useWatch({ control, name: 'vendor_name' });
   const watchRfqNo = useWatch({ control, name: 'rfq_no' });
   const watchCurrency = useWatch({ control, name: 'currency' });
@@ -98,6 +100,16 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
       
       setIsProductModalOpen(false);
     }
+  };
+
+  const handleClearVendor = () => {
+    // Cascading wipe of vendor auto-filled data
+    setValue('vendor_id', '');
+    setValue('vendor_name', '');
+    setValue('contact_person', '');
+    setValue('contact_phone', '');
+    setValue('contact_email', '');
+    setValue('payment_terms', '');
   };
 
   // -- Rendering Helpers --
@@ -209,13 +221,39 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
                       </div>
                       <div>
                           <label className="text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-1 block">วันที่ใบเสนอราคา <span className="text-red-500">*</span></label>
-                          <input type="date" {...register('quotation_date')} className={`w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white transition-all disabled:opacity-70 disabled:cursor-not-allowed ${errors.quotation_date ? 'border-red-500 ring-1 ring-red-500 focus:ring-red-500' : ''}`} disabled={isViewMode} />
+                          <div className="h-8">
+                              <Controller
+                                  name="quotation_date"
+                                  control={control}
+                                  render={({ field }) => (
+                                      <CustomDateInput
+                                          value={field.value}
+                                          onChange={field.onChange}
+                                          disabled={isViewMode}
+                                          className={`w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white transition-all disabled:opacity-70 disabled:cursor-not-allowed ${errors.quotation_date ? 'border-red-500 ring-1 ring-red-500 focus:ring-red-500' : ''}`}
+                                      />
+                                  )}
+                              />
+                          </div>
                           {errors.quotation_date && <p className="text-red-500 text-[10px] mt-0.5 font-medium">{errors.quotation_date.message}</p>}
                           <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">วันที่ออกเอกสารใบเสนอราคา</p>
                       </div>
                       <div>
                           <label className="text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-1 block">วันที่ใช้ได้ถึง (Valid Until) <span className="text-red-500">*</span></label>
-                          <input type="date" {...register('valid_until')} className={`w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white transition-all disabled:opacity-70 disabled:cursor-not-allowed ${errors.valid_until ? 'border-red-500 ring-1 ring-red-500 focus:ring-red-500' : ''}`} disabled={isViewMode} />
+                          <div className="h-8">
+                              <Controller
+                                  name="valid_until"
+                                  control={control}
+                                  render={({ field }) => (
+                                      <CustomDateInput
+                                          value={field.value}
+                                          onChange={field.onChange}
+                                          disabled={isViewMode}
+                                          className={`w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white transition-all disabled:opacity-70 disabled:cursor-not-allowed ${errors.valid_until ? 'border-red-500 ring-1 ring-red-500 focus:ring-red-500' : ''}`}
+                                      />
+                                  )}
+                              />
+                          </div>
                           {errors.valid_until && <p className="text-red-500 text-[10px] mt-0.5 font-medium">{errors.valid_until.message}</p>}
                           <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">วันหมดอายุของใบเสนอราคา</p>
                       </div>
@@ -247,6 +285,17 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
                               >
                                   <Search size={14} /> เลือก
                               </button>
+                               {/* Conditional Clear Button - Only show if Vendor is selected */}
+                              {watchVendorId && !forceViewMode && (
+                                <button
+                                  type="button"
+                                  onClick={handleClearVendor}
+                                  className="flex items-center justify-center w-8 h-8 border border-rose-500 text-rose-500 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors focus:outline-none shrink-0"
+                                  title="ล้างค่าผู้ขาย"
+                                >
+                                  <XIcon className="w-4 h-4" />
+                                </button>
+                              )}
                           </div>
                       </div>
                       <div>

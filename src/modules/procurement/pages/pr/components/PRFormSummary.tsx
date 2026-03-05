@@ -1,7 +1,7 @@
 import React from 'react';
-import { useFormContext, Controller } from 'react-hook-form';
+import { useFormContext, Controller, useWatch } from 'react-hook-form';
 import { usePRCalculations } from '@/modules/procurement/pages/pr/hooks';
-import type { PRFormData } from '@/modules/procurement/types';
+import type { PRFormData, PRLineFormData } from '@/modules/procurement/schemas/pr-schemas';
 import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
 import type { MappedOption } from '@/modules/procurement/pages/pr/hooks';
 
@@ -11,26 +11,27 @@ interface PRFormSummaryProps {
 }
 
 export const PRFormSummary: React.FC<PRFormSummaryProps> = ({ purchaseTaxOptions = [], isViewMode = false }) => {
-    const { watch, setValue, control } = useFormContext<PRFormData>();
+    const { setValue, control, register } = useFormContext<PRFormData>();
     
-    // Watch values needed for calculations
-    const lines = watch('lines');
-    const taxCodeId = watch('pr_tax_code_id');
-    const discountInput = watch('pr_discount_raw') ?? '';
+    // Use useWatch for reliable summary reactivity
+    const lines = useWatch({ control, name: 'lines' }) as PRLineFormData[] | undefined;
+    const taxCodeId = useWatch({ control, name: 'pr_tax_code_id' });
+    const discountInput = useWatch({ control, name: 'pr_discount_raw' }) ?? '';
+    
+    const subTotalState = useWatch({ control, name: 'pr_sub_total' });
+    const discountAmountState = useWatch({ control, name: 'pr_discount_amount' });
+    const taxAmountState = useWatch({ control, name: 'pr_tax_amount' });
+    const grandTotalState = useWatch({ control, name: 'total_amount' });
 
     // Derive VAT rate from selected tax code (instead of hardcoded 7)
     const selectedTax = purchaseTaxOptions.find(t => String(t.value) === String(taxCodeId));
     const vatRate = Number(selectedTax?.original?.tax_rate ?? 0);
 
-    // Use self-sufficient calculation hook
+    // Use calculation hook for line-level discount sum
     const {
-        subtotal,
-        globalDiscountAmount,
-        vatAmount,
-        grandTotal,
         totalLineDiscount
     } = usePRCalculations({
-        lines,
+        lines: lines || [],
         vatRate,
         globalDiscountInput: discountInput
     });
@@ -50,7 +51,8 @@ export const PRFormSummary: React.FC<PRFormSummaryProps> = ({ purchaseTaxOptions
                 <div className="flex justify-between items-center">
                   <span className={labelClass}>รวม</span>
                   <input 
-                    value={subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })} 
+                    {...register('pr_sub_total')}
+                    value={subTotalState?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     readOnly 
                     className={`w-32 ${inputReadonlyClass} bg-yellow-50 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-600 text-gray-900 dark:text-yellow-200`} 
                   />
@@ -63,8 +65,7 @@ export const PRFormSummary: React.FC<PRFormSummaryProps> = ({ purchaseTaxOptions
                     {/* Field 1: Editable — user types number or % */}
                     <input 
                       type="text"
-                      value={discountInput} 
-                      onChange={(e) => setValue('pr_discount_raw', e.target.value)} 
+                      {...register('pr_discount_raw')}
                       placeholder="0 or 5%"
                       disabled={isViewMode}
                       className={`w-24 ${inputEditableClass} ${isViewMode ? 'bg-gray-50 dark:bg-gray-800/50 cursor-not-allowed' : ''}`} 
@@ -72,14 +73,15 @@ export const PRFormSummary: React.FC<PRFormSummaryProps> = ({ purchaseTaxOptions
                     <span className="text-gray-400 dark:text-gray-500">-</span>
                     {/* Field 2: Read-only — calculated discount amount from this input */}
                     <input 
-                      value={globalDiscountAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} 
+                      {...register('pr_discount_amount')}
+                      value={discountAmountState?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       readOnly 
                       className={`w-24 ${inputReadonlyClass}`} 
                     />
                     <span className="text-gray-400 dark:text-gray-500">-</span>
                     {/* Field 3: Read-only — total discount (line discounts + global discount) */}
                     <input 
-                      value={(totalLineDiscount + globalDiscountAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })} 
+                      value={((discountAmountState || 0) + totalLineDiscount).toLocaleString(undefined, { minimumFractionDigits: 2 })} 
                       readOnly 
                       className={`w-28 ${inputReadonlyClass} text-red-500 dark:text-red-400 font-medium`} 
                     />
@@ -91,7 +93,8 @@ export const PRFormSummary: React.FC<PRFormSummaryProps> = ({ purchaseTaxOptions
                   <span className="text-gray-600 dark:text-gray-400">ภาษี VAT</span>
                   <div className="flex items-center gap-1">
                     <input 
-                      value={vatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} 
+                      {...register('pr_tax_amount')}
+                      value={taxAmountState?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       readOnly 
                       className={`w-20 ${inputReadonlyClass}`} 
                     />
@@ -107,11 +110,14 @@ export const PRFormSummary: React.FC<PRFormSummaryProps> = ({ purchaseTaxOptions
                           onChange={(e) => {
                             const val = e.target.value;
                             const selected = purchaseTaxOptions.find(t => String(t.value) === val);
-                            field.onChange(selected ? selected.value : val);
+                            field.onChange(val);
                             
-                            // Snapshot Tax Rate
+                            // Snapshot Tax Rate with Explicit Trigger
                             if (selected?.original) {
                               setValue('pr_tax_rate', Number(selected.original.tax_rate));
+                            } else {
+                              // CRITICAL: User unselected the tax. Wipe the rate to 0.
+                              setValue('pr_tax_rate', 0);
                             }
                           }}
                           className={`h-7 px-1 text-xs bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 cursor-pointer min-w-[140px] ${isViewMode ? 'bg-gray-50 dark:bg-gray-800/50 cursor-not-allowed' : ''}`}
@@ -127,7 +133,7 @@ export const PRFormSummary: React.FC<PRFormSummaryProps> = ({ purchaseTaxOptions
                     />
                     <span className="text-gray-400 dark:text-gray-500">-</span>
                     <input 
-                      value={vatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} 
+                      value={taxAmountState?.toLocaleString(undefined, { minimumFractionDigits: 2 })} 
                       readOnly 
                       className={`w-24 ${inputReadonlyClass}`} 
                     />
@@ -138,7 +144,8 @@ export const PRFormSummary: React.FC<PRFormSummaryProps> = ({ purchaseTaxOptions
                 <div className="flex justify-between items-center pt-2 border-t border-gray-300 dark:border-gray-600">
                   <span className="font-bold text-gray-700 dark:text-gray-300">รวมทั้งสิ้น</span>
                   <input 
-                    value={grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })} 
+                    {...register('total_amount')}
+                    value={grandTotalState?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     readOnly 
                     className="w-32 h-8 px-2 text-right font-bold bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-400 dark:border-yellow-600 rounded text-blue-600 dark:text-yellow-200" 
                   />

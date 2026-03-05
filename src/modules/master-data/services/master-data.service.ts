@@ -8,6 +8,7 @@ import type {
   ItemTypeListItem,
   ItemListItem,
   DepartmentListItem,
+  Currency,
 } from '@/modules/master-data/types/master-data-types';
 import { logger } from '@/shared/utils/logger';
 
@@ -21,6 +22,7 @@ import { ProjectService } from '@/modules/master-data/project/services/project.s
 import { ProductCategoryService } from '@/modules/master-data/inventory/services/product-category.service';
 import { ItemTypeService } from '@/modules/master-data/inventory/services/item-type.service';
 import { DepartmentService } from '@/modules/master-data/company/services/company.service';
+import { CurrencyService } from '@/modules/master-data/currency/services/currency.service';
 
 export const MasterDataService = {
   getBranches: async (): Promise<BranchListItem[]> => {
@@ -161,6 +163,16 @@ export const MasterDataService = {
       return response.items || [];
     } catch (error) {
       logger.error('[MasterDataService] getItemTypes failed:', error);
+      return [];
+    }
+  },
+
+  getCurrencies: async (): Promise<Currency[]> => {
+    try {
+      const response = await CurrencyService.getCurrencies();
+      return response?.items || [];
+    } catch (error) {
+      logger.error('[MasterDataService] getCurrencies failed:', error);
       return [];
     }
   }

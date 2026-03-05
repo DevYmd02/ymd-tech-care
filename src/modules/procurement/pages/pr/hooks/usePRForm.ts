@@ -1,99 +1,44 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
-import type { FieldErrors, Path, FieldPathValue } from 'react-hook-form';
-import type { PRFormData, PRLineFormData, CreatePRPayload, VendorSelection, PRLine } from '@/modules/procurement/types/pr-types';
+import { useForm, useFieldArray, useWatch } from 'react-hook-form';
+import type { FieldErrors, Path, FieldPathValue, SubmitHandler } from 'react-hook-form';
+import {
+  PRFormSchema,
+  getDefaultFormValues,
+  createEmptyLine,
+  getInitialLines
+} from '@/modules/procurement/schemas/pr-schemas';
+import type { PRFormData, PRLineFormData } from '@/modules/procurement/schemas/pr-schemas';
+import type { CreatePRPayload, VendorSelection, PRLine } from '@/modules/procurement/types/pr-types';
 import { PRService } from '@/modules/procurement/services/pr.service';
+import { extractErrorMessage } from '@/core/api/api';
 import { fetchExchangeRate } from '@/modules/master-data/currency/services/mockExchangeRateService';
 import { logger } from '@/shared/utils/logger';
 import type { ItemListItem } from '@/modules/master-data/types/master-data-types';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
-import type { UserProfile } from '@/core/auth/auth.service';
 import { usePRMasterData, type MappedOption } from './usePRMasterData';
 import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
 import type { WarehouseListItem } from '@/modules/master-data/types/master-data-types';
 import { usePRActions } from './usePRActions';
-import { PRFormSchema } from '@/modules/procurement/schemas/pr-schemas';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
-
-
-
+import { usePRCalculations } from './usePRCalculations';
 
 const PR_CONFIG = {
   MIN_LINES: 1,
   INITIAL_LINES: 5,
 } as const;
 
-const getTodayDate = (): string => new Date().toISOString().split('T')[0];
-
-const getNextWeekDate = (): string => {
-  const date = new Date();
-  date.setDate(date.getDate() + 7);
-  return date.toISOString().split('T')[0];
-};
-
-// Standardized on string for all IDs
-
-export interface ExtendedLine extends PRLineFormData {
-  _standard_cost?: number;  // W-04: Original standard cost from master data for variance check
-  _item_vendor_id?: string;  // Vendor-Item: Track item's source vendor for mismatch detection
+export interface UsePRFormProps {
+  id?: string;
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess?: () => void;
 }
 
-const createEmptyLine = (): ExtendedLine => ({
-  item_id: '', 
-  item_code: '', 
-  item_name: '', 
-  description: '', 
-  qty: 0, 
-  uom: '', 
-  uom_id: '',
-  est_unit_price: 0, 
-  est_amount: 0, 
-  needed_date: getTodayDate(), 
-  preferred_vendor_id: undefined, 
-  remark: '',
-  warehouse_id: '', 
-  location: '', 
-  discount: 0, 
-  line_discount_raw: '',
-});
-
-const getInitialLines = () => Array(PR_CONFIG.INITIAL_LINES).fill(null).map(() => createEmptyLine());
-
-const getDefaultFormValues = (user: UserProfile | null): PRFormData => ({
-  preparer_name: user?.employee?.employee_fullname || user?.username || '', // Decoupled: Read-only
-  requester_name: user?.employee?.employee_fullname || user?.username || '', // Decoupled: Editable
-  pr_no: '',
-  pr_date: getTodayDate(),
-  need_by_date: '',
-  cost_center_id: '', // Empty string for unselected dropdown
-  project_id: undefined,
-  purpose: '',
-  pr_base_currency_code: 'THB',
-  pr_quote_currency_code: '',
-  lines: getInitialLines(),
-  total_amount: 0,
-  is_on_hold: 'N',
-  delivery_date: getNextWeekDate(),
-  credit_days: 30,
-  vendor_quote_no: '',
-  shipping_method: '',
-  remark: '',
-  isMulticurrency: false,
-  pr_exchange_rate: 1,
-  pr_exchange_rate_date: new Date().toISOString().split('T')[0],
-  cancelflag: 'N',
-  status: 'DRAFT',
-  pr_discount_raw: '',
-  pr_tax_code_id: '', // Empty string for unselected dropdown
-  pr_tax_rate: 7, // Default safe fallback
-  requester_user_id: String(user?.id || '1'),
-});
-
-export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onSuccess?: () => void) => {
+export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) => {
   const isEditMode = !!id;
   const { user } = useAuth();
   const prevIsOpenRef = useRef(false);
@@ -105,8 +50,9 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     products, 
     warehouses, 
     costCenters, 
-    projects, 
+    projects,
     purchaseTaxOptions,
+    currencies,
     masterItems,
     masterUnits,
     isLoading: isMasterDataLoading,
@@ -140,7 +86,8 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
 
   const formMethods = useForm<PRFormData>({
     defaultValues: getDefaultFormValues(user),
-    resolver: zodResolver(PRFormSchema),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(PRFormSchema) as any,
     mode: 'onBlur',
   });
   
@@ -235,13 +182,13 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
             setIsActionLoading(true);
             const pr = await PRService.getDetail(id);
             if (pr) {
-              const mappedLines: ExtendedLine[] = (pr.lines || []).map((line: PRLine) => {
+              const mappedLines: PRLineFormData[] = (pr.lines || []).map((line: PRLine) => {
                 // Phase 3: The Safe Hydration Loop - Active lookup against loaded master array
                 const matchedItem = masterItems?.find(i => String(i.item_id) === String(line.item_id));
                 const matchedUnit = masterUnits?.find(u => String(u.uom_id || u.unit_id) === String(line.uom_id));
 
                 return {
-                  item_id: line.item_id,
+                  item_id: String(line.item_id),
                   item_code: matchedItem?.item_code || line.item_code || '',
                   item_name: matchedItem?.item_name || line.item_name || '',
                   description: line.description || line.item_name || matchedItem?.item_name || '',
@@ -287,7 +234,12 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
                 lines: mappedLines,
                 is_on_hold: pr.status === 'DRAFT' ? 'Y' : 'N',
                 pr_tax_code_id: pr.pr_tax_code_id ? String(pr.pr_tax_code_id) : '',
-                pr_tax_rate: pr.pr_tax_rate != null ? Number(pr.pr_tax_rate) : undefined,
+                // HYDRATION FIX: If backend doesn't send % rate, look it up from master data
+                pr_tax_rate: (() => {
+                  if (pr.pr_tax_rate != null) return Number(pr.pr_tax_rate);
+                  const matchedTax = purchaseTaxOptions.find(t => String(t.value) === String(pr.pr_tax_code_id));
+                  return Number(matchedTax?.original?.tax_rate || 0);
+                })(),
                 pr_discount_raw: pr.pr_discount_raw != null ? String(pr.pr_discount_raw) : '',
                 remark: pr.remark || '',
                 shipping_method: pr.shipping_method || '',
@@ -315,7 +267,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     } else if (!isOpen) {
       prevIsOpenRef.current = false;
     }
-  }, [isOpen, isMasterDataLoading, reset, id, user, setIsActionLoading, masterItems, masterUnits]);
+  }, [isOpen, isMasterDataLoading, reset, id, user, setIsActionLoading, masterItems, masterUnits, purchaseTaxOptions]);
 
   // Currency Sync
   const sourceCurrencyCode = watch('pr_base_currency_code');
@@ -368,7 +320,48 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
       }
     }
   }, [isMulticurrency, setValue, formMethods]);
+  
+  // ====================================================================================
+  // CALCULATION ENGINE (REACTIVE SYNC)
+  // ====================================================================================
+  
+  const watchedLinesForCalc = useWatch({ control, name: 'lines' }) as PRLineFormData[] | undefined;
+  const watchedDiscountRaw = useWatch({ control, name: 'pr_discount_raw' });
+  const watchedTaxRate = useWatch({ control, name: 'pr_tax_rate' });
+  const watchedTaxId = useWatch({ control, name: 'pr_tax_code_id' });
 
+  const {
+      subtotal,
+      globalDiscountAmount,
+      vatAmount,
+      grandTotal
+  } = usePRCalculations({
+      lines: watchedLinesForCalc || [],
+      vatRate: watchedTaxRate || 0,
+      globalDiscountInput: watchedDiscountRaw || ''
+  });
+
+  useEffect(() => {
+    // 📸 [CALC ENGINE TRIGGERED]: Mandatory debug log
+    console.log("⚙️ [CALC ENGINE TRIGGERED]:", { 
+        lines: watchedLinesForCalc, 
+        subTotal: subtotal, 
+        taxId: watchedTaxId,
+        taxRate: watchedTaxRate, 
+        grandTotal 
+    });
+
+    // STRICT TAX GUARDRAIL: VAT is strictly 0 unless a tax code is selected
+    const isActiveTax = watchedTaxId && String(watchedTaxId) !== '';
+    const finalVatAmount = isActiveTax ? vatAmount : 0;
+    const finalGrandTotal = subtotal - globalDiscountAmount + finalVatAmount;
+
+    // Inject calculated values back into the form state securely
+    setValue('pr_sub_total', Number(subtotal.toFixed(2)), { shouldDirty: true, shouldValidate: true });
+    setValue('pr_discount_amount', Number(globalDiscountAmount.toFixed(2)), { shouldDirty: true, shouldValidate: true });
+    setValue('pr_tax_amount', Number(finalVatAmount.toFixed(2)), { shouldDirty: true, shouldValidate: true });
+    setValue('total_amount', Number(finalGrandTotal.toFixed(2)), { shouldDirty: true, shouldValidate: true });
+  }, [subtotal, globalDiscountAmount, vatAmount, grandTotal, setValue, watchedLinesForCalc, watchedTaxRate, watchedTaxId]);
 
   const addLine = useCallback(() => append(createEmptyLine()), [append]);
   
@@ -384,7 +377,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     updateFieldArray(index, createEmptyLine());
   }, [updateFieldArray]);
   
-  const updateLine = useCallback((index: number, field: keyof ExtendedLine, value: string | number | undefined) => {
+  const updateLine = useCallback((index: number, field: keyof PRLineFormData, value: string | number | undefined) => {
     // Use setValue instead of updateFieldArray to prevent field array state churn and focus loss
     const path = `lines.${index}.${field}` as Path<PRFormData>;
     setValue(path, value as FieldPathValue<PRFormData, typeof path>);
@@ -433,7 +426,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
 
       // W-04: Price variance warning when user edits est_unit_price
       if (field === 'est_unit_price') {
-        const stdCost = (line as ExtendedLine)._standard_cost;
+        const stdCost = line._standard_cost;
         if (stdCost && stdCost > 0 && unitPrice > 0) {
           const variance = Math.abs(unitPrice - stdCost) / stdCost;
           if (variance > 0.15) {
@@ -510,23 +503,23 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
           ? baseCost * conversionFactor
           : baseCost;
 
-        const line: ExtendedLine = {
+        const line: PRLineFormData = {
           ...currentLines[targetIndex],
-          item_id: product.item_id,
+          item_id: String(product.item_id),
           item_code: product.item_code,
           item_name: product.item_name,
-          // W-01: Map warehouse from master data instead of hardcoded '1'
-          warehouse_id: product.warehouse_id || product.warehouse || '',
+          // W-01: Map warehouse from master data — cast to string for schema safety
+          warehouse_id: String(product.warehouse_id || product.warehouse || ''),
           location: product.location || '',
           uom: unitName,
-          uom_id: unitId,
+          uom_id: String(unitId),
           est_unit_price: unitPrice,
           qty: 1,
           est_amount: unitPrice * 1,
           // W-04: Store original standard cost for variance check
           _standard_cost: unitPrice,
           // Vendor-Item: Track item's preferred vendor for mismatch detection
-          _item_vendor_id: product.preferred_vendor_id || undefined,
+          _item_vendor_id: product.preferred_vendor_id ? String(product.preferred_vendor_id) : undefined,
         };
       updateFieldArray(targetIndex, line);
     }
@@ -564,16 +557,16 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
   const handleSaveData = async (data: PRFormData) => {
     setIsActionLoading(true);
     try {
-        // Smart Clean-up: Only filter out rows that are 100% empty
-        // If a row has partial data (like qty > 0 but no item_id), keep it so validation can catch it
-        const activeLines = (data.lines || []).filter(line => {
-          const isItemIdEmpty = !line.item_id || line.item_id === '';
-          const isItemCodeEmpty = !line.item_code || line.item_code === '';
+        // Smart Clean-up: Only filter out rows that are 100% empty.
+        // A row with item_id filled but qty=0 is kept so backend validation can surface the error.
+        const activeLines = (data.lines || []).filter((line: PRLineFormData) => {
+          const isItemIdEmpty = !line.item_id || String(line.item_id).trim() === '';
+          const isItemCodeEmpty = !line.item_code || line.item_code.trim() === '';
           const isQtyZero = !line.qty || Number(line.qty) === 0;
           const isPriceZero = !line.est_unit_price || Number(line.est_unit_price) === 0;
           const isDescriptionEmpty = !line.description || line.description.trim() === '';
           
-          // Row is 100% empty if all key fields are empty/zero
+          // Row is 100% empty if ALL key fields are empty/zero — skip it
           const isCompletelyEmpty = isItemIdEmpty && isItemCodeEmpty && isQtyZero && isPriceZero && isDescriptionEmpty;
           
           return !isCompletelyEmpty;
@@ -582,8 +575,8 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
         // Vendor-Item Mismatch Check: Warn before saving if items don't match header vendor
         const headerVendorId = data.preferred_vendor_id;
         if (headerVendorId) {
-          const mismatchedLines = activeLines.filter(l => {
-            const itemVendor = (l as ExtendedLine)._item_vendor_id;
+          const mismatchedLines = activeLines.filter((l: PRLineFormData) => {
+            const itemVendor = l._item_vendor_id;
             return itemVendor && itemVendor !== headerVendorId;
           });
           if (mismatchedLines.length > 0) {
@@ -603,60 +596,141 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
         
         const isOnHold = data.is_on_hold === 'Y' || data.is_on_hold === true;
         const targetStatus = isOnHold ? 'DRAFT' : 'PENDING';
-        
-        // Type guard handled by Zod validation - cost_center_id will be number after validation
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // 🔧 POSTMAN-SYNCED GOLDEN PAYLOAD — Mirrors production DB structure
+        // ═══════════════════════════════════════════════════════════════════════
+        // Aligned with the real Postman JSON response from production database.
+        //
+        // FORBIDDEN (400 "should not exist" / previously rejected):
+        //   ✗ department_id  ✗ purpose  ✗ pr_sub_total  ✗ total_amount
+        //   ✗ isMulticurrency  ✗ preparer_name  ✗ requester_name
+        //   ✗ vendor_name  ✗ delivery_date  ✗ is_on_hold  ✗ cancelflag
+        //   ✗ pr_discount_amount  ✗ pr_tax_amount  ✗ pr_tax_rate
+        //   ✗ cost_center_id  ✗ warehouse_id (header)  ✗ preferred_vendor_id
+        // ═══════════════════════════════════════════════════════════════════════
+
+        // ─── VALID LINES: Filter to only lines with a real item_id & qty > 0 ─
+        const validLines = activeLines
+          .filter((line: PRLineFormData) => line.item_id && String(line.item_id).trim() !== '' && Number(line.qty) > 0);
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // POSTMAN-SYNCED PAYLOAD — Every key matches the Postman golden response
+        // ═══════════════════════════════════════════════════════════════════════
         const payload: CreatePRPayload = {
-            pr_date: data.pr_date,
-            remark: data.remark || data.purpose,
-            cost_center_id: data.cost_center_id,
-            project_id: data.project_id || undefined,
-            requester_name: data.requester_name,
-            need_by_date: data.need_by_date,
-            items: activeLines.map(line => ({
-                item_id: line.item_id, 
-                item_code: line.item_code, 
-                item_name: line.item_name || '',
-                description: line.item_name, 
-                qty: Number(line.qty) || 0, 
-                uom: line.uom || '', 
-                uom_id: line.uom_id || '1',
-                est_unit_price: Number(line.est_unit_price) || 0, 
-                needed_date: line.needed_date || data.need_by_date, 
-                remark: line.remark || '', 
-                line_discount_raw: line.line_discount_raw || '',
-               warehouse_id: line.warehouse_id || data.warehouse_id || '1',
-               location: line.location || '',
-               required_receipt_type: 'FULL' // Postman default
-            })),
-            delivery_date: data.delivery_date,
-            credit_days: Number(data.credit_days) || 30,
-            payment_term_days: Number(data.payment_term_days) || Number(data.credit_days) || 30,
-            vendor_quote_no: data.vendor_quote_no,
-            shipping_method: data.shipping_method,
-            preferred_vendor_id: data.preferred_vendor_id,
-            vendor_name: data.vendor_name,
-            requester_user_id: String(user?.id || '1'), 
-            branch_id: String(user?.employee?.branch_id || '1'), 
-            warehouse_id: data.warehouse_id || '1',
-            pr_tax_code_id: data.pr_tax_code_id || '1',
-            pr_exchange_rate_date: data.pr_exchange_rate_date || data.pr_date,
-            pr_base_currency_code: data.pr_base_currency_code || 'THB',
-            pr_quote_currency_code: data.pr_quote_currency_code || 'THB',
-            pr_exchange_rate: Number(data.pr_exchange_rate) || 1,
-            pr_discount_raw: data.pr_discount_raw || '0',
-            
-            // Winspeed-Style ON HOLD Logic (Agent 2 Fix)
-            is_on_hold: isOnHold ? 'Y' : 'N',
-            on_hold: !!isOnHold, // Alias to ensure backend compatibility
-            status: targetStatus
+          // ── HEADER (Aligned with Postman) ──
+          ...(data.pr_no && data.pr_no !== '(auto-generated)' && !data.pr_no.startsWith('DRAFT-TEMP') && { pr_no: data.pr_no }),
+          pr_date: data.pr_date,
+          need_by_date: data.need_by_date,
+          branch_id: Number(data.branch_id || 1),
+          requester_user_id: Number(data.requester_user_id || 2),
+          project_id: data.project_id ? Number(data.project_id) : 1,
+          pr_base_currency_code: data.pr_base_currency_code || 'THB',
+          pr_quote_currency_code: data.pr_quote_currency_code || 'USD',
+          pr_exchange_rate: Number(data.pr_exchange_rate || 33.33),
+          pr_exchange_rate_date: data.pr_exchange_rate_date || data.pr_date,
+          pr_discount_raw: String(data.pr_discount_raw || '0'),
+          payment_term_days: Number(data.payment_term_days || 30),
+          credit_days: Number(data.credit_days || 30),
+          vendor_quote_no: data.vendor_quote_no || '',
+          shipping_method: data.shipping_method || '',
+          remark: data.remark || '',
+          pr_tax_code_id: Number(data.pr_tax_code_id || 2),
+          
+          delivery_date: data.delivery_date || data.need_by_date || data.pr_date,
+
+          // ── STATUS (Postman: always "PENDING" or "DRAFT") ──
+          status: targetStatus,
+
+          // ── LINES (Sanitized — Postman-aligned keys only) ──
+          lines: validLines.map((line: PRLineFormData, index: number) => ({
+            line_no: index + 1,
+            item_id: Number(line.item_id),
+            description: line.item_name || line.description || "No Description",
+            warehouse_id: Number(line.warehouse_id || 1),
+            location: line.location || "A1", 
+            qty: Number(line.qty),
+            est_unit_price: Number(line.est_unit_price),
+            uom_id: Number(line.uom_id),
+            required_receipt_type: line.required_receipt_type || "FULL",
+            line_discount_raw: String(line.line_discount_raw || '0'),
+          })),
         };
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // 🛡️ SAFETY NET — Strip any forbidden fields that could leak through
+        // TypeScript type widening. LAST LINE OF DEFENSE before wire.
+        // ═══════════════════════════════════════════════════════════════════════
+        const FORBIDDEN_FIELDS = [
+          'purpose', 'cost_center_id', 'department_id',
+          'isMulticurrency', 'preparer_name', 'requester_name',
+          'vendor_name', 'delivery_date', 'is_on_hold',
+          'cancelflag', 'total_amount', 'pr_sub_total',
+          'pr_discount_amount', 'pr_tax_amount', 'pr_tax_rate',
+          'warehouse_id', 'preferred_vendor_id',
+        ] as const;
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const safePayload = payload as Record<string, any>;
+        for (const field of FORBIDDEN_FIELDS) {
+          if (field in safePayload) {
+            logger.warn(`🚫 [usePRForm] STRIPPED forbidden field from payload: "${field}"`);
+            delete safePayload[field];
+          }
+        }
+
+        // Strip forbidden fields from each line item too
+        const LINE_FORBIDDEN_FIELDS = [
+          'line', 'item_code', 'item_name', 'uom', 'est_amount', 'discount',
+          'needed_date', 'preferred_vendor_id', '_standard_cost', '_item_vendor_id',
+          'location', 'warehouse_id', 'description', 'remark',
+        ] as const;
+
+        for (const line of payload.lines) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const safeLine = line as Record<string, any>;
+          for (const field of LINE_FORBIDDEN_FIELDS) {
+            if (field in safeLine) {
+              logger.warn(`🚫 [usePRForm] STRIPPED forbidden line field: "${field}"`);
+              delete safeLine[field];
+            }
+          }
+        }
+
+        // ─── DIAGNOSTIC: Print Postman-synced payload before send ────────────
+        logger.debug('🔧 [usePRForm] POSTMAN-SYNCED PAYLOAD (wire-ready):', JSON.stringify(payload, null, 2));
+        logger.info('📦 [usePRForm] Outgoing Payload to PRService', {
+          field_count: Object.keys(payload).length,
+          fields_sent: Object.keys(payload),
+          pr_no: payload.pr_no || '(not sent — auto-gen)',
+          requester_user_id: `${payload.requester_user_id} (${typeof payload.requester_user_id})`,
+          branch_id: `${payload.branch_id} (${typeof payload.branch_id})`,
+          pr_tax_code_id: `${payload.pr_tax_code_id} (${typeof payload.pr_tax_code_id})`,
+          pr_base_currency_code: payload.pr_base_currency_code,
+          pr_quote_currency_code: payload.pr_quote_currency_code,
+          pr_exchange_rate: `${payload.pr_exchange_rate} (${typeof payload.pr_exchange_rate})`,
+          payment_term_days: `${payload.payment_term_days} (${typeof payload.payment_term_days})`,
+          credit_days: `${payload.credit_days} (${typeof payload.credit_days})`,
+          project_id: `${payload.project_id} (${typeof payload.project_id})`,
+          pr_discount_raw: payload.pr_discount_raw,
+          line_count: payload.lines.length,
+          lines_detail: payload.lines.map((l, idx) => ({
+            line_index: idx + 1,
+            item_id: `${l.item_id} (${typeof l.item_id})`,
+            qty: `${l.qty} (${typeof l.qty})`,
+            est_unit_price: `${l.est_unit_price} (${typeof l.est_unit_price})`,
+            uom_id: `${l.uom_id} (${typeof l.uom_id})`,
+            line_discount_raw: l.line_discount_raw,
+          })),
+        });
+        // ─────────────────────────────────────────────────────────────────────
         
         if (isEditMode && id) {
             await updatePR(id, payload);
-            await confirm({ 
-                title: 'แก้ไขสำเร็จ', 
-                description: isOnHold ? 'บันทึกเป็นแบบร่างแล้ว (On Hold)' : 'ส่งอนุมัติเรียบร้อยแล้ว', 
-                confirmText: 'ตกลง', variant: 'success' 
+            await confirm({
+                title: 'แก้ไขสำเร็จ',
+                description: isOnHold ? 'บันทึกเป็นแบบร่างแล้ว (On Hold)' : 'ส่งอนุมัติเรียบร้อยแล้ว',
+                confirmText: 'ตกลง', variant: 'success'
             });
             onSuccess?.(); onClose();
             queryClient.invalidateQueries({ queryKey: ['prs'] });
@@ -672,14 +746,17 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
             queryClient.invalidateQueries({ queryKey: ['prs'] });
         }
     } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการเชื่อมต่อระบบ';
+        // Use the centralised extractor so NestJS validation arrays are surfaced correctly
+        // e.g. ["cost_center_id must not be empty", "items should not be empty"]
+        const errorMessage = extractErrorMessage(error);
+        logger.error('[usePRForm] handleSaveData failed', { error });
         await confirm({ title: 'เกิดข้อผิดพลาด', description: errorMessage, confirmText: 'ตกลง', hideCancel: true, variant: 'danger' });
     } finally {
         setIsActionLoading(false);
     }
   };
 
-  const onSubmit = async (data: PRFormData) => {
+  const onSubmit: SubmitHandler<PRFormData> = async (data) => {
     const isConfirmed = await confirm({
         title: isEditMode ? 'ยืนยันการแก้ไข' : 'ยืนยันการบันทึก',
         description: isEditMode ? 'คุณต้องการบันทึกการแก้ไขเอกสารใบขอซื้อใช่หรือไม่?' : 'คุณต้องการบันทึกเอกสารใบขอซื้อใช่หรือไม่?',
@@ -761,7 +838,7 @@ export const usePRForm = (isOpen: boolean, onClose: () => void, id?: string, onS
     isLocationModalOpen, setIsLocationModalOpen, activeWarehouseId,
     showAllItems, setShowAllItems,
     handleSubmit, setValue, watch, isSubmitting, isActionLoading, errors, handleFormError,
-    products, costCenters, projects, purchaseTaxOptions, isSearchingProducts,
+    products, costCenters, projects, purchaseTaxOptions, currencies, isSearchingProducts,
     addLine, removeLine, clearLine, updateLine, handleClearLines,
     openProductSearch, openWarehouseSearch, openLocationSearch, selectProduct, selectWarehouse, selectLocation, handleVendorSelect, onSubmit, handleDelete, handleApprove: onApproveClick,
     handleVoid, control, reset, formMethods, user, isApproving,

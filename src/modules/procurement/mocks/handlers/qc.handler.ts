@@ -23,6 +23,26 @@ export const setupQCHandlers = (mock: MockAdapter) => {
     return [200, result];
   });
 
+  // 1.5 GET QCs Ready for PO
+  mock.onGet('/qc/ready-for-po').reply(() => {
+    // We only want QCs that are COMPLETED (Winner chosen)
+    let readyQCs = MOCK_QCS.filter(qc => qc.status === 'COMPLETED');
+    
+    // In our mock, if MOCK_POS contains a PO with this qc_id, it is already converted
+    import('@/modules/procurement/mocks/data/poData').then(({ MOCK_POS }) => {
+      const activePoQcIds = new Set(MOCK_POS.map(po => po.qc_id).filter(id => id));
+      readyQCs = readyQCs.filter(qc => !activePoQcIds.has(qc.qc_id));
+    });
+
+    const sanitizedData = readyQCs.map(qc => ({
+        ...qc,
+        qc_id: sanitizeId(qc.qc_id),
+        pr_id: sanitizeId(qc.pr_id),
+    }));
+
+    return [200, { data: sanitizedData, total: sanitizedData.length }];
+  });
+
   // 2. GET QC Detail
   mock.onGet(/\/qc\/.+/).reply((config: AxiosRequestConfig) => {
     const id = sanitizeId(config.url?.split('/').pop());
@@ -69,6 +89,7 @@ export const setupQCHandlers = (mock: MockAdapter) => {
     if (targetVQ) {
         found.lowest_price = targetVQ.total_amount || 0;
         found.lowest_bidder_name = targetVQ.vendor_name || '';
+        found.winning_vendor_id = targetVQ.vendor_id; // Added for the Smart Intercept Hydration
     }
 
     return [200, { success: true, qc_id: found.qc_id }];

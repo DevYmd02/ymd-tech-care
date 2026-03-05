@@ -380,7 +380,7 @@ export default function PRListPage() {
                             label="เลขที่เอกสาร"
                             value={localFilters.search}
                             onChange={(val: string) => handleFilterChange('search', val)}
-                            placeholder="PR2024-xxx"
+                            placeholder="PR-xxx"
                             accentColor="blue"
                             disabled={true}
                             className="bg-gray-100 cursor-not-allowed text-gray-400"
