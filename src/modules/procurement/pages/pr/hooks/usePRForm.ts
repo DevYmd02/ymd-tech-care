@@ -109,48 +109,58 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
      }
    }, [purchaseTaxOptions, setValue, formMethods]);
 
+  // 🎯 FIX: Sync requester_name from Auth User if it's currently empty (New PR)
+  useEffect(() => {
+    const currentRequester = watch('requester_name');
+    if (user && !currentRequester && !id) {
+      const name = user?.employee?.employee_fullname || user?.username || '';
+      if (name) {
+        setValue('requester_name', name, { shouldValidate: true });
+        setValue('requester_user_id', String(user.id));
+      }
+    }
+  }, [user, setValue, watch, id]);
+
   // Field Array for Lines
   const { fields: lines, append, remove, update: updateFieldArray } = useFieldArray({
     control,
     name: 'lines'
   });
 
-  // Error handler
+  // Omniscient Error Handler: Aggregates all validation errors into one Toast
   const handleFormError = useCallback((fieldErrors: FieldErrors<PRFormData>) => {
-    // Helper to find the first error message recursively
-    interface FormErrorNode {
-      message?: string;
-      [key: string]: FormErrorNode | string | undefined | object | object[];
-    }
+    const errorMessages: string[] = [];
 
-    const getFirstErrorMessage = (error: FormErrorNode | undefined): string | undefined => {
-      if (!error) return undefined;
-      
-      if (typeof error.message === 'string' && error.message) return error.message;
-      
-      for (const key in error) {
-        if (key === 'ref' || key === 'type' || key === 'message') continue;
-        const child = error[key];
-        if (child && typeof child === 'object') {
-            const msg = getFirstErrorMessage(child as FormErrorNode);
-            if (msg) return msg;
+    // Recursive helper to extract all messages
+    const extractMessages = (errs: object) => {
+      Object.values(errs).forEach((val) => {
+        if (!val) return;
+        if (typeof val.message === 'string') {
+          errorMessages.push(val.message);
+        } else if (typeof val === 'object') {
+          extractMessages(val);
         }
-      }
-      return undefined;
+      });
     };
 
-    const firstKey = Object.keys(fieldErrors)[0];
-    if (firstKey) {
-      // Use type assertion to our safe interface for recursion
-      const msg = getFirstErrorMessage(fieldErrors[firstKey as keyof PRFormData] as FormErrorNode);
-      if (msg) {
-        showAlert(msg);
+    extractMessages(fieldErrors);
+
+    // Deduplicate and format
+    const uniqueErrors = Array.from(new Set(errorMessages));
+    
+    if (uniqueErrors.length > 0) {
+      const formattedMessage = uniqueErrors.map(msg => `• ${msg}`).join('\n');
+      toast(formattedMessage, 'error', 'ตรวจสอบข้อมูลไม่ผ่าน');
+      
+      // Focus first error field for UX
+      const firstKey = Object.keys(fieldErrors)[0] as Path<PRFormData>;
+      if (firstKey) {
+        try {
+          setFocus(firstKey);
+        } catch { /* ignore */ }
       }
-      try {
-        setFocus(firstKey as Path<PRFormData>);
-      } catch { /* ignore */ }
     }
-  }, [setFocus, showAlert]);
+  }, [setFocus, toast]);
 
   // Fetch Default Tax Rate on Mount (Standardized on VAT 7% for Purchase)
   useEffect(() => {
@@ -188,15 +198,15 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
                 const matchedUnit = masterUnits?.find(u => String(u.uom_id || u.unit_id) === String(line.uom_id));
 
                 return {
-                  item_id: String(line.item_id),
+                  item_id: line.item_id ? Number(line.item_id) : '',
                   item_code: matchedItem?.item_code || line.item_code || '',
                   item_name: matchedItem?.item_name || line.item_name || '',
                   description: line.description || line.item_name || matchedItem?.item_name || '',
                   qty: Number(line.qty) || 0,
                   uom: matchedUnit?.uom_name || matchedUnit?.unit_name || line.uom || '',
-                  uom_id: line.uom_id,
+                  uom_id: line.uom_id ? Number(line.uom_id) : '',
                   est_unit_price: Number(line.est_unit_price) || 0,
-                  est_amount: Number(line.line_net_amount ?? line.est_amount) || 0,
+                  est_amount: (Number(line.qty) || 0) * (Number(line.est_unit_price) || 0),
                   needed_date: line.needed_date,
                   preferred_vendor_id: line.preferred_vendor_id,
                   remark: line.remark,
@@ -223,18 +233,23 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
 
               const formData: PRFormData = {
                 ...pr,
-                pr_no: pr.pr_no || 'DRAFT-TEMP', // Ensure string
-                ...(pr.project_id !== undefined && { project_id: pr.project_id || undefined }),
-                preparer_name: pr.requester_name, // If we don't have preparer_name from API yet
+                pr_no: pr.pr_no || 'DRAFT-TEMP',
+                
+                // HEADER HYDRATION FIX: Use Numbers for IDs as requested for "Perfect Hydration"
+                cost_center_id: pr.cost_center_id ? Number(pr.cost_center_id) : '',
+                project_id: pr.project_id ? Number(pr.project_id) : '',
+                purpose: pr.purpose || '',
+                requester_user_id: pr.requester_user_id ? Number(pr.requester_user_id) : 1,
+                
+                preparer_name: pr.requester_name, 
                 requester_name: pr.requester_name,
                 pr_base_currency_code: pr.pr_base_currency_code || 'THB',
-                pr_quote_currency_code: pr.pr_quote_currency_code || '',
+                pr_quote_currency_code: pr.pr_quote_currency_code || 'THB',
                 isMulticurrency: (pr.pr_base_currency_code || 'THB') !== 'THB',
                 pr_exchange_rate: pr.pr_exchange_rate || 1,
                 lines: mappedLines,
                 is_on_hold: pr.status === 'DRAFT' ? 'Y' : 'N',
                 pr_tax_code_id: pr.pr_tax_code_id ? String(pr.pr_tax_code_id) : '',
-                // HYDRATION FIX: If backend doesn't send % rate, look it up from master data
                 pr_tax_rate: (() => {
                   if (pr.pr_tax_rate != null) return Number(pr.pr_tax_rate);
                   const matchedTax = purchaseTaxOptions.find(t => String(t.value) === String(pr.pr_tax_code_id));
@@ -243,6 +258,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
                 pr_discount_raw: pr.pr_discount_raw != null ? String(pr.pr_discount_raw) : '',
                 remark: pr.remark || '',
                 shipping_method: pr.shipping_method || '',
+                vendor_quote_no: pr.vendor_quote_no || '',
               };
 
               reset(formData);
@@ -487,32 +503,24 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
       const currentLines = watch('lines');
       const targetIndex = activeRowIndex;
 
-        // W-01: Determine correct UoM — prioritize purchasing unit over base unit
-        const usePurchasingUnit = !!product.purchasing_unit_name;
-        const unitName = usePurchasingUnit
-          ? product.purchasing_unit_name!
-          : (product.unit_name || '');
-        const unitId = usePurchasingUnit
-          ? (product.purchasing_unit_id || product.unit_id || '')
-          : (product.unit_id || '');
-
         // W-01: Apply conversion factor to standard cost when using purchasing unit
         const baseCost = product.standard_cost || 0;
         const conversionFactor = product.purchasing_conversion_factor || 1;
-        const unitPrice = usePurchasingUnit && conversionFactor > 1
+        const unitPrice = !!product.purchasing_unit_name && conversionFactor > 1
           ? baseCost * conversionFactor
           : baseCost;
 
         const line: PRLineFormData = {
           ...currentLines[targetIndex],
-          item_id: String(product.item_id),
+          item_id: Number(product.item_id),
           item_code: product.item_code,
           item_name: product.item_name,
-          // W-01: Map warehouse from master data — cast to string for schema safety
-          warehouse_id: String(product.warehouse_id || product.warehouse || ''),
-          location: product.location || '',
-          uom: unitName,
-          uom_id: String(unitId),
+          // W-01: Map warehouse from master data
+          warehouse_id: product.warehouse_id || product.warehouse || '1',
+          location: product.location || 'A1',
+          // 🎯 THE CRITICAL FIX: Bind the UOM Data using backend-provided keys
+          uom: product.uom_name || product.unit_name || 'ชิ้น',
+          uom_id: Number(product.uom_id || product.unit_id || 1),
           est_unit_price: unitPrice,
           qty: 1,
           est_amount: unitPrice * 1,
@@ -520,6 +528,8 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
           _standard_cost: unitPrice,
           // Vendor-Item: Track item's preferred vendor for mismatch detection
           _item_vendor_id: product.preferred_vendor_id ? String(product.preferred_vendor_id) : undefined,
+          required_receipt_type: "FULL",
+          line_discount_raw: "0",
         };
       updateFieldArray(targetIndex, line);
     }
@@ -626,15 +636,18 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
           requester_user_id: Number(data.requester_user_id || 2),
           project_id: data.project_id ? Number(data.project_id) : 1,
           pr_base_currency_code: data.pr_base_currency_code || 'THB',
-          pr_quote_currency_code: data.pr_quote_currency_code || 'USD',
-          pr_exchange_rate: Number(data.pr_exchange_rate || 33.33),
+          pr_quote_currency_code: data.pr_quote_currency_code || 'THB', // MUST BE THB, NOT USD
+          pr_exchange_rate: Number(data.pr_exchange_rate || 1), // Exchange rate must be 1 for THB-to-THB
           pr_exchange_rate_date: data.pr_exchange_rate_date || data.pr_date,
           pr_discount_raw: String(data.pr_discount_raw || '0'),
           payment_term_days: Number(data.payment_term_days || 30),
           credit_days: Number(data.credit_days || 30),
           vendor_quote_no: data.vendor_quote_no || '',
           shipping_method: data.shipping_method || '',
-          remark: data.remark || '',
+          // 🎯 FIX 1: Map purpose to remark (Fallback to data.remark if purpose is empty)
+          remark: data.purpose || data.remark || '',
+          // 🎯 FIX 2: Explicitly inject the requester_name for backend processing
+          requester_name: data.requester_name || "",
           pr_tax_code_id: Number(data.pr_tax_code_id || 2),
           
           delivery_date: data.delivery_date || data.need_by_date || data.pr_date,
@@ -661,10 +674,16 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
         // 🛡️ SAFETY NET — Strip any forbidden fields that could leak through
         // TypeScript type widening. LAST LINE OF DEFENSE before wire.
         // ═══════════════════════════════════════════════════════════════════════
+        // ═══════════════════════════════════════════════════════════════════
+        // 🛡️ FORBIDDEN FIELDS — Fields the backend DTO rejects (400).
+        // NOTE: 'requester_name' was REMOVED from this list intentionally.
+        //       The backend accepts it and stores it in pr_header.requester_name.
+        //       Without it, the List Page shows "ไม่ระบุ" for all new PRs.
+        // ═══════════════════════════════════════════════════════════════════
         const FORBIDDEN_FIELDS = [
           'purpose', 'cost_center_id', 'department_id',
-          'isMulticurrency', 'preparer_name', 'requester_name',
-          'vendor_name', 'delivery_date', 'is_on_hold',
+          'isMulticurrency', 'preparer_name',
+          'vendor_name', 'is_on_hold',
           'cancelflag', 'total_amount', 'pr_sub_total',
           'pr_discount_amount', 'pr_tax_amount', 'pr_tax_rate',
           'warehouse_id', 'preferred_vendor_id',

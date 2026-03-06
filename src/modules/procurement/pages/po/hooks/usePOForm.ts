@@ -47,8 +47,8 @@ export const usePOForm = ({
     // Dummy products for the modal until MasterData is fully wired here
     const isSearchingProducts = false;
     const products: ItemListItem[] = [
-        { item_id: '1', item_code: 'ITEM-001', item_name: 'กระดาษ A4', description: 'กระดาษ A4 80 แกรม', unit_name: 'REAM', unit_id: '1', standard_cost: 100, category_name: 'Office Supplies', is_active: true, created_at: new Date().toISOString() },
-        { item_id: '2', item_code: 'ITEM-002', item_name: 'ปากกาน้ำเงิน', description: 'ปากกาลูกลื่น 0.5mm', unit_name: 'PCS', unit_id: '2', standard_cost: 3, category_name: 'Office Supplies', is_active: true, created_at: new Date().toISOString() },
+        { item_id: '1', item_code: 'ITEM-001', item_name: 'กระดาษ A4', description: 'กระดาษ A4 80 แกรม', unit_name: 'REAM', unit_id: '1', uom_id: 1, standard_cost: 100, category_name: 'Office Supplies', is_active: true, created_at: new Date().toISOString() },
+        { item_id: '2', item_code: 'ITEM-002', item_name: 'ปากกาน้ำเงิน', description: 'ปากกาลูกลื่น 0.5mm', unit_name: 'PCS', unit_id: '2', uom_id: 2, standard_cost: 3, category_name: 'Office Supplies', is_active: true, created_at: new Date().toISOString() },
     ];
 
     // ── Form ──────────────────────────────────────────────────────────────────

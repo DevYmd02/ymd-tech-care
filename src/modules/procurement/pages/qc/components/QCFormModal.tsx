@@ -430,9 +430,9 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
                 />
               </div>
 
-              {/* แผนก/ฝ่าย */}
+              {/* แผนก */}
               <div>
-                <label className={labelClass}>แผนก/ฝ่าย</label>
+                <label className={labelClass}>แผนก</label>
                 <input
                   type="text"
                   value={department}

@@ -114,7 +114,7 @@ export const setupRFQHandlers = (mock: MockAdapter) => {
                     lines: rfqLines.map(rl => ({
                         item_code: rl.item_code,
                         item_name: rl.item_name,
-                        qty: rl.required_qty,
+                        qty: rl.qty,
                         uom_name: rl.uom,
                         unit_price: 0,
                         discount_amount: 0,
@@ -153,7 +153,7 @@ export const setupRFQHandlers = (mock: MockAdapter) => {
       responded_vendors_count: 0,
       sent_vendors_count: 0,
       purpose: body.purpose || '',
-      quote_due_date: body.quote_due_date || null,
+      quotation_due_date: body.quotation_due_date || null,
       created_by_name: body.created_by_name || 'Admin',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),

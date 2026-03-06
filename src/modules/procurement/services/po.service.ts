@@ -1,9 +1,11 @@
 import api from '@/core/api/api';
+import { USE_MOCK } from '@/core/api/api';
 import type { POListParams, POListResponse, POListItem } from '@/modules/procurement/types';
 import { CreatePOSchema } from '@/modules/procurement/schemas/po-schemas';
 import type { CreatePOPayload } from '@/modules/procurement/types';
 import { logger } from '@/shared/utils/logger';
 import type { SuccessResponse } from '@/shared/types/api-response.types';
+import { applyClientFilters, applyClientPagination, extractArrayFromResponse } from '@/shared/utils/clientFilterUtils';
 
 // ---------------------------------------------------------------------------
 // NOTE on Zod Boundary Design (per Architect's guidance):
@@ -28,7 +30,32 @@ export const POService = {
     getList: async (params?: POListParams): Promise<POListResponse> => {
         logger.info('[POService] Fetching PO List', params);
         const response = await api.get<POListResponse>(ENDPOINTS.list, { params });
-        return response;
+
+        // 🎯 HYBRID FALLBACK: Apply Client-Side Filtering when using Real API
+        if (!USE_MOCK && params) {
+            const allItems = extractArrayFromResponse<POListItem>(response);
+            const filterParams: Record<string, string | number | boolean | undefined | null> = {};
+            if (params.po_no) filterParams.po_no = params.po_no;
+            if (params.pr_no) filterParams.pr_no = params.pr_no;
+            if (params.vendor_name) filterParams.vendor_name = params.vendor_name;
+            if (params.status && params.status !== 'ALL') filterParams.status = params.status;
+            if (params.date_from) filterParams.date_from = params.date_from;
+            if (params.date_to) filterParams.date_to = params.date_to;
+            if (params.page) filterParams.page = params.page;
+            if (params.limit) filterParams.limit = params.limit;
+            if (params.sort) filterParams.sort = params.sort;
+
+            return applyClientFilters<POListItem>(allItems, filterParams, {
+                searchableFields: ['po_no', 'vendor_name', 'qc_no', 'pr_no'],
+                dateField: 'po_date',
+            });
+        }
+
+        // 🎯 HYBRID PAGINATION: Always apply client-side slicing even for mock responses
+        const allItems = extractArrayFromResponse<POListItem>(response);
+        const page = params?.page || 1;
+        const limit = params?.limit || 20;
+        return applyClientPagination<POListItem>(allItems, page, limit);
     },
 
     getById: async (id: string): Promise<POListItem> => {

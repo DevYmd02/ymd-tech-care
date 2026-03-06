@@ -56,9 +56,19 @@ export interface PRHeader {
   remark?: string;                  // TEXT (Singular per Postman)
   preferred_vendor_id?: string; // FK → vendor
   vendor_name?: string;             // VARCHAR(200)
+  department_name?: string;         // Added for List Page display
+  created_by_name?: string;         // Added for List Page display
   pr_tax_code_id?: string;          // INTEGER (Postman: pr_tax_code_id)
   pr_tax_rate?: number;             // Added for Snapshotting Tax Rate
   warehouse_id?: string;            // Added for fetching
+
+  // ── Data Hydration Fields (Fallback keys the backend may return) ──
+  employee_name?: string;           // Possible JOIN from employee table
+  department_id?: string | number;  // FK → department (for fallback display)
+  dept_name?: string;               // Alternative key for department name
+  user_id?: string | number;        // Alternative key for user FK
+  suggested_vendor?: string;        // Alternative key for vendor name
+  vendor_id?: string | number;      // FK → vendor (for fallback display)
 
   // Relations (populated by API)
   lines?: PRLine[];
@@ -92,6 +102,7 @@ export interface PRLine {
   line_amount?: string | number;
   tax_amount?: string | number;
   tax_rate?: string | number;
+  required_receipt_type?: string;
 }
 
 // ====================================================================================
@@ -243,6 +254,7 @@ export interface CreatePRPayload {
     vendor_quote_no: string;        // VARCHAR
     shipping_method: string;        // VARCHAR
     delivery_date?: string;         // YYYY-MM-DD (Postman: delivery_date)
+    requester_name?: string;        // VARCHAR(200) (Explicitly packaged for backend)
 
     lines: CreatePRLineItem[];      // Line items array
 }
@@ -271,6 +283,7 @@ export interface PRListResponse {
   total: number;
   page: number;
   limit: number;
+  totalPages: number;
 }
 
 export interface SubmitPRRequest {

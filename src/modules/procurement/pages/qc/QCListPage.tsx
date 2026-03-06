@@ -38,7 +38,7 @@ const FILTER_STATUS_OPTIONS = [
 
 export default function QCListPage() {
     // URL-based Filter State
-    const { filters, localFilters, handleFilterChange, handleApplyFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<QCStatus>({
+    const { filters, localFilters, handleFilterChange, handleApplyFilters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<QCStatus>({
         defaultStatus: 'ALL',
     });
 
@@ -410,7 +410,7 @@ export default function QCListPage() {
                                 pageSize: filters.limit,
                                 totalCount: data?.total ?? 0,
                                 onPageChange: handlePageChange,
-                                onPageSizeChange: () => handleApplyFilters()
+                                onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 })
                             }}
                             sortConfig={sortConfig}
                             onSortChange={handleSortChange}

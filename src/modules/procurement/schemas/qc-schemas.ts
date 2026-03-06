@@ -103,6 +103,7 @@ export interface QCListResponse {
   total: number;
   page: number;
   limit: number;
+  totalPages: number;
 }
 
 // ====================================================================================

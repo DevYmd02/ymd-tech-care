@@ -70,7 +70,7 @@ export const Toast: React.FC<ToastProps> = ({ message, onClose, type = 'error', 
        </div>
        <div className="flex-1 pt-1">
           <h4 className="font-bold text-gray-900 dark:text-gray-100 text-sm leading-tight">{displayTitle}</h4>
-          <p className="text-gray-600 dark:text-gray-400 text-xs mt-1">{message}</p>
+          <p className="text-gray-600 dark:text-gray-400 text-xs mt-1 whitespace-pre-line">{message}</p>
        </div>
        <button 
          onClick={onClose} 

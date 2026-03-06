@@ -58,7 +58,7 @@ const RFQ_STATUS_OPTIONS = [
 
 export default function RFQListPage() {
     // URL-based Filter State
-    const { filters, localFilters, handleFilterChange, handleApplyFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<RFQStatus>({
+    const { filters, localFilters, handleFilterChange, handleApplyFilters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<RFQStatus>({
         defaultStatus: 'ALL',
         customParamKeys: {
             search: 'rfq_no',
@@ -224,7 +224,7 @@ export default function RFQListPage() {
             size: 160,
             enableSorting: false,
         }),
-        columnHelper.accessor('quote_due_date', {
+        columnHelper.accessor('quotation_due_date', {
             header: 'ครบกำหนด',
             cell: (info) => {
                 const dateStr = info.getValue();
@@ -455,7 +455,7 @@ export default function RFQListPage() {
                                 pageSize: filters.limit,
                                 totalCount: data?.total ?? 0,
                                 onPageChange: handlePageChange,
-                                onPageSizeChange: () => handleApplyFilters()
+                                onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 })
                             }}
                             sortConfig={sortConfig}
                             onSortChange={handleSortChange}
@@ -480,7 +480,7 @@ export default function RFQListPage() {
                                     ...(item.ref_pr_no ? [{ label: 'PR อ้างอิง:', value: <span className="font-medium text-blue-600 dark:text-blue-400">{item.ref_pr_no}</span> }] : []),
                                     { label: 'ผู้สร้าง:', value: item.created_by_name || '-' },
                                     { label: 'Vendors:', value: `${item.sent_vendors_count || 0}/${item.vendor_count || 0} ราย` },
-                                    ...(item.quote_due_date ? [{ label: 'ครบกำหนด:', value: formatThaiDate(item.quote_due_date) }] : []),
+                                    ...(item.quotation_due_date ? [{ label: 'ครบกำหนด:', value: formatThaiDate(item.quotation_due_date) }] : []),
                                 ]}
                                 actions={
                                     <>

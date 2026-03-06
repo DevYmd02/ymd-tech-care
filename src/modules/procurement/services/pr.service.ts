@@ -1,18 +1,21 @@
 import api from '@/core/api/api';
+import { USE_MOCK } from '@/core/api/api';
 import type {
   PRListParams,
   PRListResponse,
   ConvertPRRequest,
-  PRHeader, 
+  PRHeader,
   CreatePRPayload,
   PRStatus,
 } from '@/modules/procurement/types';
+import { applyClientFilters, applyClientPagination, extractArrayFromResponse } from '@/shared/utils/clientFilterUtils';
 
 export type PRUpdatePayload = Partial<CreatePRPayload> & { status?: PRStatus };
 
 export type { PRListParams, PRListResponse, ConvertPRRequest };
 import { logger } from '@/shared/utils/logger';
 import type { SuccessResponse } from '@/shared/types/api-response.types';
+import { extractErrorMessage } from '@/core/api/api';
 
 const ENDPOINTS = {
   list: '/pr',
@@ -37,8 +40,10 @@ const KNOWN_DTO_FIELDS = new Set([
   'pr_exchange_rate', 'pr_exchange_rate_date',
   'pr_discount_raw', 'payment_term_days', 'credit_days',
   'vendor_quote_no', 'shipping_method', 'lines',
+  'requester_name', 'delivery_date',  // Data Hydration: explicitly sent for List Page visibility
 ]);
 
+// NOTE: 'remark' is NOT allowed on lines per backend DTO (whitelist: true + forbidNonWhitelisted: true)
 const KNOWN_LINE_DTO_FIELDS = new Set([
   'line', 'item_id', 'qty', 'est_unit_price', 'uom_id',
   'line_discount_raw',
@@ -48,13 +53,50 @@ export const PRService = {
   getList: async (params?: PRListParams): Promise<PRListResponse> => {
     logger.info('[PRService] Fetching PR List', params);
     const response = await api.get<PRListResponse>(ENDPOINTS.list, { params });
-    return response;
+
+    // 🎯 HYBRID FALLBACK: Apply Client-Side Filtering when using Real API
+    // The backend currently ignores filter params — we replicate Mock logic here.
+    if (!USE_MOCK && params) {
+      const allItems = extractArrayFromResponse<PRHeader>(response as PRListResponse | PRHeader[]);
+      const filterParams: Record<string, string | number | boolean | undefined | null> = {};
+      if (params.pr_no) filterParams.pr_no = params.pr_no;
+      if (params.requester_name) filterParams.requester_name = params.requester_name;
+      if (params.status && params.status !== 'ALL') filterParams.status = params.status;
+      if (params.department) filterParams.department = params.department;
+      if (params.cost_center_id) filterParams.cost_center_id = params.cost_center_id;
+      if (params.date_from) filterParams.date_from = params.date_from;
+      if (params.date_to) filterParams.date_to = params.date_to;
+      if (params.page) filterParams.page = params.page;
+      if (params.limit) filterParams.limit = params.limit;
+      if (params.sort) filterParams.sort = params.sort;
+      if (params.q) filterParams.q = params.q;
+
+      return applyClientFilters<PRHeader>(allItems, filterParams, {
+        searchableFields: ['pr_no', 'requester_name', 'purpose'],
+        dateField: 'pr_date',
+      });
+    }
+
+    // 🎯 HYBRID PAGINATION: Always apply client-side slicing even for mock responses
+    // This ensures the table only shows items for the current page
+    const allItems = extractArrayFromResponse<PRHeader>(response as PRListResponse | PRHeader[]);
+    const page = params?.page || 1;
+    const limit = params?.limit || 20;
+    return applyClientPagination<PRHeader>(allItems, page, limit);
   },
 
   getDetail: async (id: string): Promise<PRHeader> => {
     logger.info(`[PRService] Fetching PR Detail: ${id}`);
-    const response = await api.get<PRHeader>(ENDPOINTS.detail(id));
-    return response;
+    const response = await api.get<PRHeader | { data: PRHeader }>(ENDPOINTS.detail(id));
+    // Defensive unwrap: NestJS backend may return { data: { pr_id, pr_no, ... } }
+    // The interceptor only unwraps { success: true, data: ... } pattern.
+    // If the response has a nested 'data' property containing pr_id, unwrap it.
+    const raw = response as PRHeader | { data: PRHeader };
+    if ('data' in raw && raw.data && typeof raw.data === 'object' && 'pr_id' in raw.data) {
+      logger.info('[PRService] Unwrapped nested data envelope for PR detail');
+      return raw.data;
+    }
+    return raw as PRHeader;
   },
 
   create: async (payload: CreatePRPayload): Promise<PRHeader> => {
@@ -200,14 +242,19 @@ export const PRService = {
   },
 
   submit: async (id: string): Promise<SuccessResponse & { pr_no?: string }> => {
-    logger.info(`[PRService] Submitting PR: ${id}`);
-    const response = await api.patch<SuccessResponse & { pr_no?: string }>(ENDPOINTS.submit(id));
-    return response;
+    try {
+      logger.info(`[PRService] Submitting PR: ${id}`);
+      const response = await api.patch<SuccessResponse & { pr_no?: string }>(ENDPOINTS.submit(id), {});
+      return response;
+    } catch (error) {
+      const errorMessage = extractErrorMessage(error);
+      throw new Error(errorMessage);
+    }
   },
 
   approve: async (id: string): Promise<SuccessResponse> => {
     logger.info(`[PRService] Approving PR: ${id}`);
-    const response = await api.patch<SuccessResponse>(ENDPOINTS.approve(id));
+    const response = await api.patch<SuccessResponse>(ENDPOINTS.approve(id), {});
     return response;
   },
 
@@ -219,7 +266,7 @@ export const PRService = {
 
   cancel: async (id: string): Promise<SuccessResponse> => {
     logger.info(`[PRService] Cancelling PR: ${id}`);
-    const response = await api.patch<SuccessResponse>(ENDPOINTS.cancel(id));
+    const response = await api.patch<SuccessResponse>(ENDPOINTS.cancel(id), {});
     return response;
   },
 
@@ -249,5 +296,35 @@ export const PRService = {
     logger.info('[PRService] Generating next document number');
     const response = await api.get<{ document_no: string }>(ENDPOINTS.generateNo);
     return response;
+  },
+
+  /**
+   * processDirectApproval — Send for Approval Flow (DRAFT → PENDING)
+   *
+   * เรียก PATCH /pr/{id} พร้อม body { status: 'PENDING' }
+   * เพื่อเปลี่ยนสถานะจาก DRAFT → PENDING (รออนุมัติ)
+   *
+   * Backend endpoint: PATCH /pr/{id} with { status: 'PENDING' }
+   */
+  processDirectApproval: async (id: string): Promise<SuccessResponse> => {
+    logger.info(`🚀 [PRService] processDirectApproval: Starting for PR ${id} (DRAFT → PENDING)`);
+
+    try {
+      const result = await api.patch<SuccessResponse>(ENDPOINTS.detail(id), { status: 'PENDING' });
+      logger.info('✅ [PRService] processDirectApproval: PR status updated to PENDING successfully');
+      return result;
+    } catch (error: unknown) {
+      const axiosErr = error as { response?: { data?: unknown; status?: number } };
+      const backendResponse = axiosErr.response?.data;
+      logger.error('💥 [PRService] processDirectApproval: Failed to update status to PENDING', {
+        statusCode: axiosErr.response?.status,
+        backendResponse,
+      });
+      const rawMsg =
+        (backendResponse as { message?: string | string[] } | undefined)?.message ||
+        (backendResponse as { error?: string } | undefined)?.error ||
+        (error as Error).message;
+      throw new Error(Array.isArray(rawMsg) ? rawMsg.join(', ') : String(rawMsg));
+    }
   },
 };

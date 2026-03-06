@@ -136,7 +136,7 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
 
                 <div className={cardClass}>
                     <RFQFormLines 
-                        lines={formData.lines} 
+                        lines={formData.rfqLines} 
                         handleLineChange={handleLineChange}
                         handleRemoveLine={handleRemoveLine}
                         handleResetLines={handleResetLines}

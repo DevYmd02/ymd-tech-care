@@ -112,6 +112,7 @@ export interface POListResponse {
     total: number;
     page: number;
     limit: number;
+  totalPages: number;
 }
 export interface POLineItemInput {
     item_id: string; // or item_code if searching

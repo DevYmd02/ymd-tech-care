@@ -275,8 +275,8 @@ export default function VQListPage() {
                 const isRecorded = item.status === 'RECORDED';
                 return (
                     <div className={`text-right font-bold whitespace-nowrap ${isRecorded ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-600'}`}>
-                        {isRecorded 
-                            ? info.getValue().toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) 
+                        {isRecorded
+                            ? (info.getValue() ?? 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                             : '-'
                         }
                     </div>
@@ -366,9 +366,9 @@ export default function VQListPage() {
             },
             footer: () => {
                  // Only sum RECORDED amounts for the grand total
-                 const total = (data?.data || []).reduce((sum, item) => {
-                    return item.status === 'RECORDED' ? sum + item.total_amount : sum;
-                 }, 0) || 0;
+                 const total = (data?.data ?? []).reduce((sum, item) => {
+                    return item.status === 'RECORDED' ? sum + (item.total_amount ?? 0) : sum;
+                 }, 0);
                  return (
                      <div className="text-right font-bold text-base text-emerald-600 dark:text-emerald-400 whitespace-nowrap pr-2">
                          {total.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท
@@ -529,10 +529,10 @@ export default function VQListPage() {
                     {/* Mobile View: Cards (shared MobileListContainer + MobileListCard) */}
                     <MobileListContainer
                         isLoading={isLoading}
-                        isEmpty={!data?.data.length}
+                        isEmpty={!data?.data?.length}
                         pagination={data?.total ? { page: filters.page, total: data.total, limit: filters.limit, onPageChange: handlePageChange } : undefined}
                     >
-                        {data?.data.map((item) => (
+                        {(data?.data ?? []).map((item) => (
                             <MobileListCard
                                 key={item.quotation_id}
                                 title={item.quotation_no || <span className="text-gray-400 dark:text-slate-500 italic text-base">รอเลขใบเสนอราคา</span>}
@@ -550,7 +550,7 @@ export default function VQListPage() {
                                         item.status === 'RECORDED' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-slate-500'
                                     }`}>
                                         {item.status === 'RECORDED'
-                                            ? item.total_amount.toLocaleString('th-TH', { minimumFractionDigits: 2 })
+                                            ? (item.total_amount ?? 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })
                                             : '-'}
                                     </span>
                                 }

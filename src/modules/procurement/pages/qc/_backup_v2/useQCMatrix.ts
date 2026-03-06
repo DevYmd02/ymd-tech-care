@@ -42,7 +42,7 @@ export function useQCMatrix(
         item_id: mappedProduct?.item_code || rfqLine.item_code, // Using code as linking ID
         code: mappedProduct?.item_code || rfqLine.item_code,
         description: mappedProduct?.item_name || rfqLine.item_name,
-        qty: rfqLine.required_qty,
+        qty: rfqLine.qty,
         unit: mappedProduct?.unit || rfqLine.uom,
         vendors: {}
       };

@@ -9,7 +9,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { FileText, Plus, Search, Send, AlertTriangle, Eye } from 'lucide-react';
 import { PageListLayout, SmartTable, PRStatusBadge, FilterField, MobileListCard, MobileListContainer } from '@ui';
-import { useTableFilters, useConfirmation } from '@/shared/hooks';
+import { useTableFilters } from '@/shared/hooks';
 import RFQFormModal from '@/modules/procurement/pages/rfq/components/RFQFormModal';
 import { PRFormModal } from './components/PRFormModal';
 import { PRActionsCell } from './components/PRActionsCell';
@@ -51,7 +51,7 @@ const PR_STATUS_OPTIONS = [
 
 export default function PRListPage() {
     // URL-based Filter State (Explicit Search Pattern)
-    const { filters, localFilters, handleFilterChange, handleApplyFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<PRStatus>({
+    const { filters, localFilters, handleFilterChange, handleApplyFilters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<PRStatus>({
         defaultStatus: 'ALL',
         customParamKeys: {
             search: 'pr_no',
@@ -59,7 +59,6 @@ export default function PRListPage() {
             search3: 'department'
         }
     });
-    const { confirm } = useConfirmation();
 
     // Convert to API filter format using APPLIED filters (from URL)
     const apiFilters: PRListParams = {
@@ -93,14 +92,15 @@ export default function PRListPage() {
     const [isReadOnly, setIsReadOnly] = useState(false);
 
     // Hook Actions
-    const { 
-        handleApprove, 
-        approvingId, 
-        handleReject, 
-        submitReject, 
-        closeRejectModal, 
-        isRejectReasonOpen, 
-        isRejecting 
+    const {
+        handleApprove,
+        handleDirectApproval,
+        approvingId,
+        handleReject,
+        submitReject,
+        closeRejectModal,
+        isRejectReasonOpen,
+        isRejecting
     } = usePRActions();
 
     // Handlers (handleFilterChange is from useTableFilters, directly available)
@@ -152,44 +152,8 @@ export default function PRListPage() {
     };
 
     const handleSendApproval = useCallback((pr: PRHeader) => {
-        confirm({
-            title: 'ยืนยันการส่งอนุมัติ',
-            description: `คุณต้องการส่งเอกสาร ${pr.pr_no} เพื่อขออนุมัติใช่หรือไม่?\nยอดรวม: ${pr.total_amount?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท`,
-            confirmText: 'ส่งอนุมัติ',
-            cancelText: 'ยกเลิก',
-            variant: 'info',
-            icon: Send,
-            onConfirm: async () => {
-                 const result = await PRService.submit(pr.pr_id);
-                 if (!result.success) {
-                     throw new Error(result.message || 'ส่งอนุมัติไม่สำเร็จ');
-                 }
-            }
-        }).then((confirmed) => {
-            if (confirmed) {
-                confirm({
-                    title: 'ส่งอนุมัติสำเร็จ!',
-                    description: `เอกสารสถานะ: รออนุมัติ (Pending)`,
-                    confirmText: 'ตกลง',
-                    hideCancel: true,
-                    variant: 'success'
-                });
-                refetch();
-            }
-        }).catch((error) => {
-            // Error handling (Modal stays open on error, but if we throw, we might want to close and show error? 
-            // Current Async Pattern: onConfirm error -> Modal Stays Open (ideally shows error).
-            // But our Context catches error? 
-            // Actually, looking at usePRActions, we don't catch there. 
-            // If onConfirm throws, the button stops loading. 
-            // We should probably show an alert if it fails?
-            // Context implementation:
-            // try { await onConfirm() ... close } catch { ... }
-            // So if it throws, modal stays open. 
-            // We can add a toast here? Or just let it be.
-            logger.error('Send approval failed', error);
-        });
-    }, [confirm, refetch]);
+        handleDirectApproval(pr, { onSuccess: () => refetch() });
+    }, [handleDirectApproval, refetch]);
 
     const onApproveClick = useCallback((id: string) => {
         handleApprove(id, { onSuccess: refetch });
@@ -268,14 +232,14 @@ export default function PRListPage() {
             size: 160,
             enableSorting: true,
         }),
-        columnHelper.accessor(row => row.purpose || row.remark, {
+        columnHelper.accessor(row => row.purpose || row.remark || '', {
             id: 'purpose',
             header: 'รายละเอียด',
             cell: (info) => {
                 const val = info.getValue() || '-';
                 return (
                     <div 
-                        className="max-w-[200px] truncate py-2 text-sm text-gray-600 dark:text-gray-400" 
+                        className="max-w-[300px] truncate py-2 text-sm text-gray-600 dark:text-gray-400" 
                         title={val}
                     >
                         {val}
@@ -289,22 +253,48 @@ export default function PRListPage() {
             header: 'ผู้ขอ / แผนก',
             cell: (info) => {
                 const row = info.row.original;
-                const requesterName = info.getValue() || '-';
-                const deptId = row.cost_center_id;
-                const deptName = (DEPARTMENT_NAME_MAP as Record<string | number, string>)[deptId] || (row.cost_center_id ? row.cost_center_id : 'ไม่ระบุ');
-                
+
+                // ── Aggressive Requester Name Hydration ──
+                const reqName = row.requester_name || row.created_by_name || row.employee_name;
+                const reqId = row.requester_user_id || row.user_id;
+                const displayReq = reqName
+                    ? String(reqName)
+                    : (reqId ? `User ID: ${reqId}` : 'ไม่ระบุผู้ขอ');
+
+                // ── Aggressive Department Name Hydration ──
+                const deptName = row.department_name || row.dept_name;
+                const deptFromMap = DEPARTMENT_NAME_MAP[row.cost_center_id];
+                const deptId = row.department_id || row.cost_center_id;
+                const displayDept = deptName
+                    ? String(deptName)
+                    : deptFromMap
+                        ? String(deptFromMap)
+                        : (deptId ? `Dept ID: ${deptId}` : 'ไม่ระบุแผนก');
+
+                // ── Vendor Name Hydration (shown as subtle tag) ──
+                const vendorName = row.vendor_name || row.suggested_vendor;
+                const vendorFallback = row.preferred_vendor_id || row.vendor_id;
+                const displayVendor = vendorName
+                    ? String(vendorName)
+                    : (vendorFallback ? `Vendor ID: ${vendorFallback}` : null);
+
                 return (
-                    <div className="flex flex-col py-2">
-                        <span className="text-gray-900 dark:text-gray-100 font-medium truncate max-w-[160px]" title={requesterName}>
-                            {requesterName}
+                    <div className="flex flex-col py-2 gap-0.5">
+                        <span className="text-gray-900 dark:text-gray-100 font-medium truncate max-w-[180px]" title={displayReq}>
+                            {displayReq}
                         </span>
-                        <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                            {deptName}
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {displayDept}
                         </span>
+                        {displayVendor && (
+                            <span className="text-[10px] text-violet-600 dark:text-violet-400 truncate max-w-[180px]" title={displayVendor}>
+                                🏢 {displayVendor}
+                            </span>
+                        )}
                     </div>
                 );
             },
-            size: 140,
+            size: 180,
             enableSorting: false,
         }),
         columnHelper.accessor(row => row.total_amount ?? Number(row.pr_base_total_amount ?? 0), {
@@ -465,7 +455,7 @@ export default function PRListPage() {
                                 pageSize: filters.limit,
                                 totalCount: data?.total ?? 0,
                                 onPageChange: handlePageChange,
-                                onPageSizeChange: () => handleApplyFilters()
+                                onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 })
                             }}
                             sortConfig={sortConfig}
                             onSortChange={handleSortChange}
@@ -488,11 +478,24 @@ export default function PRListPage() {
                                 subtitle={formatThaiDate(item.pr_date)}
                                 statusBadge={<PRStatusBadge status={item.status} />}
                                 details={[
-                                    { label: 'ผู้ขอ:', value: item.requester_name || '-' },
+                                    {
+                                        label: 'ผู้ขอ:',
+                                        value: item.requester_name || item.created_by_name || item.employee_name
+                                            || (item.requester_user_id ? `User ID: ${item.requester_user_id}` : 'ไม่ระบุผู้ขอ'),
+                                    },
                                     {
                                         label: 'แผนก:',
-                                        value: (DEPARTMENT_NAME_MAP as Record<string | number, string>)[item.cost_center_id] || item.cost_center_id || '-',
+                                        value: item.department_name || item.dept_name
+                                            || (DEPARTMENT_NAME_MAP as Record<string | number, string>)[item.cost_center_id]
+                                            || (item.department_id ? `Dept ID: ${item.department_id}` : (item.cost_center_id || 'ไม่ระบุแผนก')),
                                     },
+                                    ...((item.vendor_name || item.suggested_vendor || item.preferred_vendor_id)
+                                        ? [{
+                                            label: 'ผู้ขาย:',
+                                            value: item.vendor_name || item.suggested_vendor
+                                                || (item.preferred_vendor_id ? `Vendor ID: ${item.preferred_vendor_id}` : '-'),
+                                        }]
+                                        : []),
                                     ...(item.need_by_date ? [{ label: 'ต้องการใช้:', value: formatThaiDate(item.need_by_date) }] : []),
                                 ]}
                                 amountLabel="ยอดรวม"

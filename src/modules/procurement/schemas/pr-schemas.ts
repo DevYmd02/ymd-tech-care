@@ -129,6 +129,24 @@ export const PRFormSchema = baseFormSchema.superRefine((data, ctx) => {
       code: z.ZodIssueCode.custom,
     });
   }
+
+  // Field validation for Cost Center and Purpose (skip if Draft)
+  if (!isDraft) {
+    if (!data.cost_center_id || String(data.cost_center_id).trim() === '') {
+      ctx.addIssue({
+        path: ['cost_center_id'],
+        message: 'กรุณาเลือกศูนย์ต้นทุน',
+        code: z.ZodIssueCode.custom,
+      });
+    }
+    if (!data.purpose || data.purpose.trim() === '') {
+      ctx.addIssue({
+        path: ['purpose'],
+        message: 'กรุณาระบุวัตถุประสงค์ในการขอซื้อ',
+        code: z.ZodIssueCode.custom,
+      });
+    }
+  }
 });
 
 /** Canonical type for the entire PR form — inferred from refined schema for 100% sync */
@@ -174,7 +192,7 @@ export const getDefaultFormValues = (user?: { id?: string | number; username?: s
     project_id: '',
     purpose: '',
     pr_base_currency_code: 'THB',
-    pr_quote_currency_code: '',
+    pr_quote_currency_code: 'THB',
     isMulticurrency: false,
     pr_exchange_rate: 1,
     pr_exchange_rate_date: today,

@@ -114,6 +114,7 @@ export interface VQListResponse {
   total: number;
   page: number;
   limit: number;
+  totalPages: number;
 }
 
 export type VQCreateData = Partial<VQListItem> & { lines?: Partial<QuotationLine>[] };
