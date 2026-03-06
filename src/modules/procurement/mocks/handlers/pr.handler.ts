@@ -1,6 +1,6 @@
 import type MockAdapter from 'axios-mock-adapter';
 import type { AxiosRequestConfig } from 'axios';
-import { MOCK_PRS, DEPARTMENT_MOCK_MAP } from '../data/prData';
+import { MOCK_PRS, DEPARTMENT_MOCK_MAP } from '@/modules/procurement/mocks/data/prData';
 import { applyMockFilters, sanitizeId } from '@/core/api/mockUtils';
 import type { PRHeader, CreatePRPayload, CreatePRLineItem } from '@/modules/procurement/types';
 
@@ -97,12 +97,14 @@ export const setupPRHandlers = (mock: MockAdapter) => {
             ? generateNextPRNumber(MOCK_PRS) 
             : `DRAFT-TEMP-${Date.now()}`;
 
+        // Mock handler enriches the lean payload into a full PRHeader for the response
         const newPR: PRHeader = {
-            ...data,
             pr_id: newPrId,
             pr_no: newPrNo,
             status: isPending ? 'PENDING' : 'DRAFT',
-            total_amount: 0, 
+            pr_date: data.pr_date,
+            need_by_date: data.need_by_date,
+            total_amount: 0,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
             created_by_user_id: '1',
@@ -110,23 +112,24 @@ export const setupPRHandlers = (mock: MockAdapter) => {
             attachment_count: 0,
             requester_name: 'Mock Requester',
             purpose: data.remark || '',
-            cost_center_id: sanitizeId(data.cost_center_id),
-            branch_id: sanitizeId(data.branch_id),
-            requester_user_id: sanitizeId(data.requester_user_id),
-            lines: (data.items || []).map((item: CreatePRLineItem, index: number) => ({
+            cost_center_id: '',
+            pr_base_currency_code: 'THB',
+            branch_id: String(data.branch_id),
+            requester_user_id: String(data.requester_user_id),
+            remark: data.remark,
+            lines: (data.lines || []).map((item: CreatePRLineItem, index: number) => ({
                 pr_line_id: `l-${Date.now()}-${index}`,
                 pr_id: newPrId,
                 line_no: index + 1,
-                item_id: sanitizeId(item.item_id),
-                item_code: 'MOCK-CODE',
-                item_name: 'Mock Item Name',
-                uom: 'PCS',
-                uom_id: sanitizeId(item.uom_id),
+                item_id: String(item.item_id),
+                item_code: 'MOCK-CODE',          // Mock enriches — not from payload
+                item_name: 'Mock Item Name',      // Mock enriches — not from payload
+                uom: 'PCS',                       // Mock enriches — not from payload
+                uom_id: String(item.uom_id),
                 qty: item.qty,
-                quantity: item.qty,
                 est_unit_price: item.est_unit_price,
-                est_amount: 0, 
-                needed_date: item.needed_date || new Date().toISOString().split('T')[0]
+                est_amount: item.qty * item.est_unit_price,
+                needed_date: new Date().toISOString().split('T')[0]  // Mock enriches — not from payload
             }))
         };
         

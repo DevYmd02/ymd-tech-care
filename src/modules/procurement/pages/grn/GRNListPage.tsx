@@ -1,11 +1,15 @@
+/**
+ * @file GRNListPage.tsx
+ * @description หน้ารายการใบรับสินค้า (Goods Receipt Note List)
+ * @route /procurement/grn
+ * @refactored Uses PageListLayout, FilterField, useTableFilters (Manual Search Pattern), React Query, SmartTable
+ */
+
 import { useState, useMemo } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { Eye, Package } from 'lucide-react';
+import { Eye, Package, Search, Plus } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
-import { FilterFormBuilder } from '@ui';
-import { SmartTable } from '@ui';
-import { PageListLayout } from '@ui';
-import type { FilterFieldConfig } from '@ui';
+import { SmartTable, PageListLayout, FilterField, MobileListCard, MobileListContainer } from '@ui';
 import { useTableFilters } from '@/shared/hooks';
 import { GRNService } from '@/modules/procurement/services/grn.service';
 import type { GRNListParams, GRNStatus, GRNListItem } from '@/modules/procurement/types';
@@ -46,15 +50,26 @@ const STATUS_LABELS: Record<GRNStatus, string> = {
 export default function GRNListPage() {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-    // 1. Filter State
-    const { filters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<GRNStatus>({
+    // 1. URL-based Filter State (Explicit Search Pattern)
+    const {
+        filters,
+        localFilters,
+        handleFilterChange,
+        handleApplyFilters,
+        setFilters,
+        resetFilters,
+        handlePageChange,
+        handleSortChange,
+        sortConfig,
+    } = useTableFilters<GRNStatus>({
         defaultStatus: 'ALL',
         customParamKeys: {
             search: 'grn_no',
-            search2: 'po_no'
-        }
+            search2: 'po_no',
+        },
     });
 
+    // Convert to API filter format using APPLIED filters (from URL)
     const apiFilters: GRNListParams = {
         grn_no: filters.search || undefined,
         po_no: filters.search2 || undefined,
@@ -66,14 +81,12 @@ export default function GRNListPage() {
         sort: filters.sort || undefined,
     };
 
-    // 2. Data Fetching
+    // 2. Data Fetching — driven by applied filters (URL params only)
     const { data, isLoading, refetch } = useQuery({
         queryKey: ['grn-list', apiFilters],
         queryFn: () => GRNService.getList(apiFilters),
         placeholderData: keepPreviousData,
     });
-
-
 
     // 3. Actions
     const handleView = (id: string) => alert(`View GRN: ${id}`);
@@ -86,43 +99,52 @@ export default function GRNListPage() {
             header: () => <div className="text-center w-full">ลำดับ</div>,
             cell: (info) => <div className="text-center">{info.row.index + 1 + (filters.page - 1) * filters.limit}</div>,
             size: 50,
+            enableSorting: false,
         }),
         columnHelper.accessor('grn_no', {
             header: 'เลขที่เอกสาร',
-            cell: (info) => <span className="font-medium text-blue-600 cursor-pointer hover:underline">{info.getValue()}</span>,
+            cell: (info) => <span className="font-medium text-blue-600 dark:text-blue-400 cursor-pointer hover:underline">{info.getValue()}</span>,
+            enableSorting: true,
         }),
         columnHelper.accessor('po_no', {
             header: 'อ้างอิง PO',
-            cell: (info) => <span className="text-gray-600">{info.getValue()}</span>,
+            cell: (info) => <span className="text-gray-600 dark:text-gray-300">{info.getValue()}</span>,
+            enableSorting: false,
         }),
         columnHelper.accessor('received_date', {
             header: 'วันที่รับ',
-            cell: (info) => formatThaiDate(info.getValue()),
+            cell: (info) => <span className="text-gray-600 dark:text-gray-300">{formatThaiDate(info.getValue())}</span>,
+            enableSorting: true,
         }),
         columnHelper.accessor('warehouse_name', {
             header: 'คลังสินค้า',
-            cell: (info) => info.getValue(),
+            cell: (info) => <span className="text-gray-700 dark:text-gray-200">{info.getValue()}</span>,
+            enableSorting: false,
         }),
         columnHelper.accessor('received_by_name', {
             header: 'ผู้รับสินค้า',
-            cell: (info) => info.getValue(),
+            cell: (info) => <span className="text-gray-700 dark:text-gray-200">{info.getValue()}</span>,
+            enableSorting: false,
         }),
         columnHelper.accessor('status', {
             header: () => <div className="text-center w-full">สถานะ</div>,
             cell: (info) => (
-                <div className={`mx-auto px-2 py-1 rounded text-xs font-semibold w-max ${STATUS_COLORS[info.getValue()]}`}>
-                    {STATUS_LABELS[info.getValue()]}
+                <div className="flex justify-center">
+                    <div className={`mx-auto px-2 py-1 rounded text-xs font-semibold w-max ${STATUS_COLORS[info.getValue()]}`}>
+                        {STATUS_LABELS[info.getValue()]}
+                    </div>
                 </div>
             ),
+            enableSorting: false,
         }),
         columnHelper.display({
             id: 'actions',
             header: () => <div className="text-center w-full">จัดการ</div>,
             cell: ({ row }) => (
                 <div className="flex justify-center">
-                    <button 
+                    <button
                         onClick={() => handleView(row.original.grn_id)}
-                        className="text-gray-500 hover:text-blue-600 p-1 rounded hover:bg-gray-100"
+                        className="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 p-1 rounded hover:bg-gray-100 dark:hover:bg-blue-900/20 transition-all"
                         title="ดูรายละเอียด"
                     >
                         <Eye size={18} />
@@ -130,18 +152,9 @@ export default function GRNListPage() {
                 </div>
             ),
             size: 80,
+            enableSorting: false,
         }),
     ], [columnHelper, filters.page, filters.limit]);
-
-    // 5. Config - matching the reference image layout
-    const filterConfig: FilterFieldConfig<string>[] = [
-        { name: 'search', label: 'เลขที่ GRN', type: 'text', placeholder: 'GRN2024-xxx' },
-        { name: 'search2', label: 'เลขที่ PO อ้างอิง', type: 'text', placeholder: 'PO2024-xxx' },
-        { name: 'warehouse', label: 'คลังสินค้า', type: 'text', placeholder: 'ชื่อคลัง' },
-        { name: 'status', label: 'สถานะ', type: 'select', options: GRN_STATUS_OPTIONS },
-        { name: 'dateFrom', label: 'วันที่เริ่มต้น', type: 'date' },
-        { name: 'dateTo', label: 'วันที่สิ้นสุด', type: 'date' },
-    ];
 
     return (
         <>
@@ -154,18 +167,74 @@ export default function GRNListPage() {
                 totalCountLoading={isLoading}
                 isLoading={isLoading}
                 searchForm={
-                    <FilterFormBuilder
-                        config={filterConfig}
-                        filters={filters}
-                        onFilterChange={(name: string, value: string) => setFilters({ [name]: value })}
-                        onSearch={() => refetch()} 
-                        onReset={resetFilters}
-                        accentColor="blue"
-                        columns={{ sm: 1, md: 2, xl: 4 }}
-                        actionColSpan={{ md: 2, xl: 2 }}
-                        onCreate={() => setIsCreateModalOpen(true)}
-                        createLabel="สร้างใบรับสินค้าใหม่"
-                    />
+                    <form onSubmit={(e) => { e.preventDefault(); handleApplyFilters(); }} className="w-full">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                            <FilterField
+                                label="เลขที่ GRN"
+                                value={localFilters.search}
+                                onChange={(val: string) => handleFilterChange('search', val)}
+                                placeholder="GRN2024-xxx"
+                                accentColor="blue"
+                            />
+                            <FilterField
+                                label="เลขที่ PO อ้างอิง"
+                                value={localFilters.search2}
+                                onChange={(val: string) => handleFilterChange('search2', val)}
+                                placeholder="PO2024-xxx"
+                                accentColor="blue"
+                            />
+                            <FilterField
+                                label="สถานะ"
+                                type="select"
+                                value={localFilters.status}
+                                onChange={(val: string) => handleFilterChange('status', val)}
+                                options={GRN_STATUS_OPTIONS}
+                                accentColor="blue"
+                            />
+                            <FilterField
+                                label="วันที่เริ่มต้น"
+                                type="date"
+                                value={localFilters.dateFrom || ''}
+                                onChange={(val: string) => handleFilterChange('dateFrom', val)}
+                                accentColor="blue"
+                            />
+                            <FilterField
+                                label="วันที่สิ้นสุด"
+                                type="date"
+                                value={localFilters.dateTo || ''}
+                                onChange={(val: string) => handleFilterChange('dateTo', val)}
+                                accentColor="blue"
+                            />
+
+                            {/* Action Buttons Group */}
+                            <div className="md:col-span-2 lg:col-span-3 flex flex-col sm:flex-row flex-wrap justify-end gap-2 items-center">
+                                <div className="flex gap-2 w-full sm:w-auto">
+                                    <button
+                                        type="button"
+                                        onClick={resetFilters}
+                                        className="flex-1 sm:flex-none h-10 px-4 bg-white hover:bg-gray-50 text-gray-700 rounded-lg font-medium transition-colors border border-gray-300 shadow-sm whitespace-nowrap"
+                                    >
+                                        ล้างค่า
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="flex-1 sm:flex-none h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+                                    >
+                                        <Search size={18} />
+                                        ค้นหา
+                                    </button>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsCreateModalOpen(true)}
+                                    className="w-full sm:w-auto h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+                                >
+                                    <Plus size={16} strokeWidth={2.5} />
+                                    สร้างใบรับสินค้าใหม่
+                                </button>
+                            </div>
+                        </div>
+                    </form>
                 }
             >
                 <div className="h-full flex flex-col">
@@ -180,7 +249,7 @@ export default function GRNListPage() {
                                 pageSize: filters.limit,
                                 totalCount: data?.total ?? 0,
                                 onPageChange: handlePageChange,
-                                onPageSizeChange: (size) => setFilters({ limit: size, page: 1 })
+                                onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 }),
                             }}
                             sortConfig={sortConfig}
                             onSortChange={handleSortChange}
@@ -190,89 +259,42 @@ export default function GRNListPage() {
                         />
                     </div>
 
-                    {/* Mobile View: Cards */}
-                    <div className="md:hidden flex-1 overflow-y-auto p-2 space-y-3 pb-20">
-                        {isLoading ? (
-                            <div className="text-center py-4 text-gray-500">กำลังโหลด...</div>
-                        ) : data?.data.length === 0 ? (
-                            <div className="text-center py-8 text-gray-500 bg-white rounded-lg border border-dashed border-gray-300">
-                                ไม่พบข้อมูล
-                            </div>
-                        ) : (
-                            data?.data.map((item) => (
-                                <div key={item.grn_id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 space-y-3">
-                                    {/* Header: GRN No + Status */}
-                                    <div className="flex justify-between items-start">
-                                        <div className="flex flex-col">
-                                            <span className="font-bold text-lg text-blue-600 dark:text-blue-400">
-                                                {item.grn_no}
-                                            </span>
-                                            <span className="text-xs text-gray-500">
-                                                {formatThaiDate(item.received_date)}
-                                            </span>
-                                        </div>
-                                        <div className={`px-2 py-1 rounded text-xs font-semibold ${STATUS_COLORS[item.status]}`}>
-                                            {STATUS_LABELS[item.status]}
-                                        </div>
-                                    </div>
-
-                                    {/* Content Info */}
-                                    <div className="text-sm text-gray-700 dark:text-gray-300 space-y-1.5 border-t border-b border-gray-50 py-2">
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-500">PO อ้างอิง:</span>
-                                            <span className="font-medium text-purple-600">{item.po_no || '-'}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-500">คลังสินค้า:</span>
-                                            <span className="font-medium">{item.warehouse_name || '-'}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-500">ผู้รับ:</span>
-                                            <span className="font-medium">{item.received_by_name || '-'}</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Footer: Actions */}
-                                    <div className="flex justify-end gap-2 pt-1">
-                                            <button 
-                                                onClick={() => handleView(item.grn_id)}
-                                                className="flex-1 bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1 border border-gray-200"
-                                            >
-                                                <Eye size={14} /> ดูรายละเอียด
-                                            </button>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-
-                        {/* Pagination for Mobile */}
-                        {data?.total ? (
-                            <div className="flex justify-between items-center pt-2 text-sm text-gray-600">
-                                 <div>ทั้งหมด {data.total} รายการ</div>
-                                 <div className="flex gap-2">
-                                     <button
-                                        disabled={filters.page === 1}
-                                        onClick={() => handlePageChange(filters.page - 1)}
-                                        className="px-3 py-1 bg-white border rounded hover:bg-gray-50 disabled:opacity-50"
-                                     >
-                                        &lt;
-                                     </button>
-                                     <span>{filters.page} / {Math.ceil(data.total / filters.limit)}</span>
-                                     <button
-                                        disabled={filters.page >= Math.ceil(data.total / filters.limit)}
-                                        onClick={() => handlePageChange(filters.page + 1)}
-                                        className="px-3 py-1 bg-white border rounded hover:bg-gray-50 disabled:opacity-50"
-                                     >
-                                        &gt;
-                                     </button>
-                                 </div>
-                            </div>
-                         ) : null}
-                    </div>
+                    {/* Mobile View: Cards (shared MobileListContainer + MobileListCard) */}
+                    <MobileListContainer
+                        isLoading={isLoading}
+                        isEmpty={!data?.data?.length}
+                        pagination={data?.total ? { page: filters.page, total: data.total, limit: filters.limit, onPageChange: handlePageChange } : undefined}
+                    >
+                        {(data?.data ?? []).map((item) => (
+                            <MobileListCard
+                                key={item.grn_id}
+                                title={item.grn_no}
+                                subtitle={formatThaiDate(item.received_date)}
+                                statusBadge={
+                                    <span className={`px-2 py-1 rounded text-xs font-semibold ${STATUS_COLORS[item.status]}`}>
+                                        {STATUS_LABELS[item.status]}
+                                    </span>
+                                }
+                                details={[
+                                    { label: 'PO อ้างอิง:', value: item.po_no || '-' },
+                                    { label: 'คลังสินค้า:', value: item.warehouse_name || '-' },
+                                    { label: 'ผู้รับ:', value: item.received_by_name || '-' },
+                                ]}
+                                actions={
+                                    <button
+                                        onClick={() => handleView(item.grn_id)}
+                                        className="flex-1 bg-gray-50 dark:bg-slate-700 hover:bg-gray-100 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1 border border-gray-200 dark:border-slate-600"
+                                    >
+                                        <Eye size={14} /> ดูรายละเอียด
+                                    </button>
+                                }
+                            />
+                        ))}
+                    </MobileListContainer>
                 </div>
             </PageListLayout>
 
-            <GRNFormModal 
+            <GRNFormModal
                 isOpen={isCreateModalOpen}
                 onClose={() => setIsCreateModalOpen(false)}
                 onSuccess={() => refetch()}
@@ -280,6 +302,3 @@ export default function GRNListPage() {
         </>
     );
 }
-
-
-

@@ -2,12 +2,11 @@ import React from 'react';
 import { useFormContext } from 'react-hook-form';
 import { FileBox, Eraser, Plus, Trash2, Search, AlertTriangle } from 'lucide-react';
 import type { FieldArrayWithId } from 'react-hook-form';
-import type { PRFormData } from '@/modules/procurement/types';
-import type { ExtendedLine } from '@/modules/procurement/pages/pr/hooks';
+import type { PRFormData, PRLineFormData } from '@/modules/procurement/schemas/pr-schemas';
 
 interface PRFormLinesProps {
     lines: FieldArrayWithId<PRFormData, "lines", "id">[];
-    updateLine: (index: number, field: keyof ExtendedLine, value: string | number | undefined) => void;
+    updateLine: (index: number, field: keyof PRLineFormData, value: string | number | undefined) => void;
     removeLine: (index: number) => void;
     clearLine: (index: number) => void;
     addLine: () => void;
@@ -92,7 +91,7 @@ export const PRFormLines: React.FC<PRFormLinesProps> = React.memo(({
                                     <td className={tdBaseClass}>
                                         <div className="flex items-center gap-1">
                                             {/* Vendor-Item Mismatch Warning */}
-                                            {line.item_id && headerVendorId && (line as unknown as ExtendedLine)._item_vendor_id && (line as unknown as ExtendedLine)._item_vendor_id !== headerVendorId && (
+                                            {line.item_id && headerVendorId && line._item_vendor_id && line._item_vendor_id !== headerVendorId && (
                                                 <span 
                                                     className="flex-shrink-0 text-amber-500" 
                                                     title="สินค้านี้ปกติจัดซื้อจากผู้ขายรายอื่น"

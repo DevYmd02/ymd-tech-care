@@ -1,6 +1,7 @@
 import { RefreshCcw, AlertTriangle } from 'lucide-react';
 import { ErrorBoundary as ReactErrorBoundary, type FallbackProps } from 'react-error-boundary';
-import type { ReactNode } from 'react';
+import type { ReactNode, ErrorInfo } from 'react';
+import { logger } from '@/shared/utils/logger';
 
 /**
  * ErrorFallback - UI component to display when an error occurs
@@ -44,16 +45,21 @@ interface ErrorBoundaryProps {
 export const ErrorBoundary = ({ children, fallback, onReset }: ErrorBoundaryProps) => {
   const onResetHandler = onReset || (() => window.location.reload());
 
+  // NEW: Standardized error logging for component crashes
+  const handleError = (error: unknown, info: ErrorInfo) => {
+    logger.error('CRITICAL: React Render Crash', { error, stack: info.componentStack });
+  };
+
   if (fallback) {
     return (
-      <ReactErrorBoundary fallback={fallback} onReset={onResetHandler}>
+      <ReactErrorBoundary fallback={fallback} onReset={onResetHandler} onError={handleError}>
         {children}
       </ReactErrorBoundary>
     );
   }
 
   return (
-    <ReactErrorBoundary FallbackComponent={ErrorFallback} onReset={onResetHandler}>
+    <ReactErrorBoundary FallbackComponent={ErrorFallback} onReset={onResetHandler} onError={handleError}>
       {children}
     </ReactErrorBoundary>
   );

@@ -1,6 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 
-export type TabType = 'vendor' | 'item' | 'branch' | 'warehouse' | 'cost-center' | 'project';
+export type TabType = 'vendor' | 'item' | 'branch' | 'warehouse' | 'cost-center' | 'project' | 'unit' | 'category';
 
 export interface TabConfig {
     id: TabType;

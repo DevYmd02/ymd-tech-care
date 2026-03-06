@@ -6,8 +6,8 @@
 import React from 'react';
 import { useFormContext, Controller } from 'react-hook-form';
 
-import { Building2, FolderKanban, User, XCircle } from 'lucide-react';
-import type { PRFormData, VendorSelection } from '@/modules/procurement/types';
+import { Building2, FolderKanban, User, XCircle, Calendar } from 'lucide-react';
+import type { PRFormData, VendorSelection } from '@/modules/procurement/types/pr-types';
 import type { CostCenter, Project } from '@/modules/master-data/types/master-data-types';
 import { VendorSearch } from '@/modules/master-data/vendor/components/selector/VendorSearch';
 import { StatusCheckbox } from '@ui';
@@ -34,6 +34,16 @@ export const PRHeader: React.FC<Props> = ({ costCenters, projects, onVendorSelec
   const labelClass = "block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1";
   const errorInputClass = "border-red-500 ring-1 ring-red-500";
   const errorMsgClass = "text-red-500 text-[10px] mt-0.5 font-medium";
+
+  // Date Formatting Helpers
+  const formatDisplayDate = (val?: string) => {
+    if (!val) return '';
+    if (val.includes('-') && val.length >= 10) {
+      const [y, m, d] = val.split('-');
+      return `${d.substring(0, 2)}/${m}/${y}`;
+    }
+    return val;
+  };
 
   return (
     <div className="p-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm font-sans">
@@ -81,13 +91,77 @@ export const PRHeader: React.FC<Props> = ({ costCenters, projects, onVendorSelec
 
         <div className="col-span-12 md:col-span-3">
           <label className={labelClass}>วันที่ขอซื้อ <span className="text-red-500">*</span></label>
-          <input {...register("pr_date")} type="date" disabled={readOnly} className={`${inputClass} ${errors?.pr_date ? errorInputClass : ''}`} />
+          <Controller
+            name="pr_date"
+            control={control}
+            render={({ field: { value, onChange, onBlur, ref } }) => (
+              <div className="relative w-full">
+                {/* 1. Visible Text Input */}
+                <input
+                  type="text"
+                  readOnly
+                  placeholder="dd/mm/yyyy"
+                  value={formatDisplayDate(value)}
+                  disabled={readOnly}
+                  onClick={(e) => { try { (e.currentTarget.nextElementSibling as HTMLInputElement)?.showPicker() } catch (err) { void err; } }}
+                  className={`${inputClass} pl-2 pr-8 ${errors?.pr_date ? errorInputClass : ''} cursor-pointer`}
+                />
+                
+                {/* 2. Hidden Native Input overlay for click/picker */}
+                <input
+                  type="date"
+                  value={value || ''}
+                  onChange={(e) => onChange(e.target.value)}
+                  onBlur={onBlur}
+                  ref={ref}
+                  disabled={readOnly}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  style={{ colorScheme: 'dark' }}
+                />
+                
+                {/* 3. Icon */}
+                <Calendar size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 pointer-events-none" />
+              </div>
+            )}
+          />
           {errors?.pr_date && <p className={errorMsgClass}>{errors.pr_date.message}</p>}
         </div>
 
         <div className="col-span-12 md:col-span-3">
           <label className={labelClass}>วันที่ต้องการใช้ <span className="text-red-500">*</span></label>
-          <input {...register("need_by_date")} type="date" disabled={readOnly} className={`${inputClass} ${errors?.need_by_date ? errorInputClass : ''}`} />
+          <Controller
+            name="need_by_date"
+            control={control}
+            render={({ field: { value, onChange, onBlur, ref } }) => (
+              <div className="relative w-full">
+                 {/* 1. Visible Text Input */}
+                <input
+                  type="text"
+                  readOnly
+                  placeholder="dd/mm/yyyy"
+                  value={formatDisplayDate(value)}
+                  disabled={readOnly}
+                  onClick={(e) => { try { (e.currentTarget.nextElementSibling as HTMLInputElement)?.showPicker() } catch (err) { void err; } }}
+                  className={`${inputClass} pl-2 pr-8 ${errors?.need_by_date ? errorInputClass : ''} cursor-pointer`}
+                />
+                
+                {/* 2. Hidden Native Input overlay for click/picker */}
+                <input
+                  type="date"
+                  value={value || ''}
+                  onChange={(e) => onChange(e.target.value)}
+                  onBlur={onBlur}
+                  ref={ref}
+                  disabled={readOnly}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  style={{ colorScheme: 'dark' }}
+                />
+                
+                {/* 3. Icon */}
+                <Calendar size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 pointer-events-none" />
+              </div>
+            )}
+          />
           {errors?.need_by_date && <p className={errorMsgClass}>{errors.need_by_date.message}</p>}
         </div>
 

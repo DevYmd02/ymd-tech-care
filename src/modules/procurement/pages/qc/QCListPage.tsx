@@ -19,6 +19,7 @@ import { createColumnHelper } from '@tanstack/react-table';
 import { QCService } from '@/modules/procurement/services';
 import type { QCListParams, QCListItem, QCStatus } from '@/modules/procurement/schemas/qc-schemas';
 import { QC_STATUS_OPTIONS } from '@/modules/procurement/types';
+import { logger } from '@/shared/utils/logger';
 
 // ====================================================================================
 // STATUS OPTIONS
@@ -37,7 +38,7 @@ const FILTER_STATUS_OPTIONS = [
 
 export default function QCListPage() {
     // URL-based Filter State
-    const { filters, localFilters, handleFilterChange, handleApplyFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<QCStatus>({
+    const { filters, localFilters, handleFilterChange, handleApplyFilters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<QCStatus>({
         defaultStatus: 'ALL',
     });
 
@@ -96,7 +97,7 @@ export default function QCListPage() {
             toast.success('ส่งเปรียบเทียบราคาสำเร็จ!');
         },
         onError: (error) => {
-            console.error('Comparison failed:', error);
+            logger.error('[QCListPage] Price comparison generation failed:', { error });
             toast.error('เกิดข้อผิดพลาดในการส่งเปรียบเทียบราคา');
         }
     });
@@ -120,10 +121,10 @@ export default function QCListPage() {
     const columns = useMemo(() => [
         columnHelper.display({
             id: 'index',
-            header: () => <div className="text-center w-full">ลำดับ</div>,
+            header: 'ลำดับ',
             cell: (info) => <div className="text-center">{info.row.index + 1 + (filters.page - 1) * filters.limit}</div>,
             footer: () => <div className="absolute left-4 top-1/2 -translate-y-1/2 whitespace-nowrap font-bold text-sm text-gray-700 dark:text-gray-200">ยอดรวมราคาต่ำสุดทั้งหมด :</div>,
-            size: 60,
+            meta: { thClassName: 'px-3 py-3 w-[5%] text-center' },
             enableSorting: false,
         }),
         columnHelper.accessor('qc_no', {
@@ -139,17 +140,17 @@ export default function QCListPage() {
                     {info.getValue()}
                 </span>
             ),
-            size: 140,
+            meta: { thClassName: 'px-3 py-3 w-[13%] text-left whitespace-nowrap' },
             enableSorting: true,
         }),
         columnHelper.accessor('created_at', {
-            header: () => <div className="text-center w-full">วันที่สร้าง</div>,
+            header: 'วันที่สร้าง',
             cell: (info) => (
                 <div className="text-gray-600 dark:text-gray-300 text-center whitespace-nowrap">
                     {info.getValue() ? formatThaiDate(info.getValue()!) : '-'}
                 </div>
             ),
-            size: 110,
+            meta: { thClassName: 'px-3 py-3 w-[10%] text-left whitespace-nowrap' },
             enableSorting: true,
         }),
         columnHelper.accessor('rfq_no', {
@@ -178,28 +179,17 @@ export default function QCListPage() {
                     </div>
                 );
             },
-            size: 140,
-            enableSorting: false,
-        }),
-        columnHelper.accessor(row => row.status, {
-            id: 'status',
-            header: () => <div className="text-center w-full">สถานะ</div>,
-            cell: (info) => (
-                <div className="flex justify-center">
-                    <QCStatusBadge status={info.getValue()} />
-                </div>
-            ),
-            size: 100,
+            meta: { thClassName: 'px-3 py-3 w-[13%] text-left whitespace-nowrap' },
             enableSorting: false,
         }),
         columnHelper.accessor('vendor_count', {
-            header: () => <div className="text-center">Vendors</div>,
+            header: 'VENDORS',
             cell: (info) => (
                 <div className="text-gray-600 dark:text-gray-300 text-center">
                     {info.getValue()}
                 </div>
             ),
-            size: 60,
+            meta: { thClassName: 'px-3 py-3 w-[8%] text-center' },
             enableSorting: false,
         }),
         columnHelper.accessor('lowest_bidder_name', {
@@ -234,11 +224,11 @@ export default function QCListPage() {
                     </div>
                 );
             },
-            size: 160,
+            meta: { thClassName: 'px-3 py-3 w-auto text-left' },
             enableSorting: false,
         }),
         columnHelper.accessor('lowest_price', {
-            header: () => <div className="text-right w-full">ราคาต่ำสุด (บาท)</div>,
+            header: 'ราคาต่ำสุด (บาท)',
             cell: (info) => {
                 const item = info.row.original;
                 const isCompleted = item.status === 'COMPLETED';
@@ -251,8 +241,25 @@ export default function QCListPage() {
                     </div>
                 );
             },
-            size: 150,
+            meta: { 
+                thClassName: 'px-3 py-3 w-[12%] text-right whitespace-nowrap',
+                tdClassName: 'px-3 py-3 text-right font-medium whitespace-nowrap'
+            },
             enableSorting: true,
+        }),
+        columnHelper.accessor(row => row.status, {
+            id: 'status',
+            header: 'สถานะ',
+            cell: (info) => (
+                <div className="flex justify-center flex-wrap">
+                    <QCStatusBadge status={info.getValue()} />
+                </div>
+            ),
+            meta: { 
+                thClassName: 'px-3 py-3 w-[12%] text-center whitespace-nowrap',
+                tdClassName: 'px-3 py-3 text-center whitespace-nowrap'
+            },
+            enableSorting: false,
         }),
         columnHelper.display({
             id: 'actions',
@@ -294,7 +301,7 @@ export default function QCListPage() {
                      </div>
                  );
             },
-             size: 140,
+             size: 160,
             enableSorting: false,
         }),
     ], [columnHelper, filters.page, filters.limit, data?.data, handleView, handleEdit]);
@@ -320,21 +327,21 @@ export default function QCListPage() {
                             label="เลขที่ใบ QC"
                             value={localFilters.search}
                             onChange={(val: string) => handleFilterChange('search', val)}
-                            placeholder="QC2024-xxx"
+                            placeholder="QC-xxx"
                             accentColor="indigo"
                         />
                         <FilterField
                             label="เลขที่ PR อ้างอิง"
                             value={localFilters.search2}
                             onChange={(val: string) => handleFilterChange('search2', val)}
-                            placeholder="PR2024-xxx"
+                            placeholder="PR-xxx"
                             accentColor="indigo"
                         />
                         <FilterField
                             label="เลขที่ RFQ อ้างอิง"
                             value={localFilters.search3}
                             onChange={(val: string) => handleFilterChange('search3', val)}
-                            placeholder="RFQ2024-xxx"
+                            placeholder="RFQ-xxx"
                             accentColor="indigo"
                         />
                         <FilterField
@@ -403,7 +410,7 @@ export default function QCListPage() {
                                 pageSize: filters.limit,
                                 totalCount: data?.total ?? 0,
                                 onPageChange: handlePageChange,
-                                onPageSizeChange: () => handleApplyFilters()
+                                onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 })
                             }}
                             sortConfig={sortConfig}
                             onSortChange={handleSortChange}

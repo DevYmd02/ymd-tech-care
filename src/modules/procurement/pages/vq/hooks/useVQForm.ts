@@ -19,8 +19,6 @@ export interface ExtendedRFQHeader extends RFQHeader {
     vendor_id?: string;
     vendor_name?: string | null;
     isMulticurrency?: boolean;
-    exchange_rate_date?: string;
-    target_currency?: string;
 }
 
 const createEmptyLine = (): QuotationLineFormData => ({
@@ -119,7 +117,7 @@ export const useVQForm = (
                       linesToMap = rfqDetail.lines.map(line => ({
                           item_code: line.item_code || '',
                           item_name: line.item_name || '',
-                          qty: line.required_qty || 0,
+                          qty: line.qty || 0,
                           uom_name: line.uom || '',
                           unit_price: 0,
                           discount_amount: 0,
@@ -181,7 +179,7 @@ export const useVQForm = (
             mappedLines = rfqDetail.lines.map((line) => ({
                 item_code: line.item_code || '',
                 item_name: line.item_name || '',
-                qty: line.required_qty || 0,
+                qty: line.qty || 0,
                 uom_name: line.uom || '',
                 unit_price: 0,
                 discount_amount: 0,
@@ -197,11 +195,11 @@ export const useVQForm = (
           quotation_no: `VQ-${new Date().getFullYear()}-xxx (Auto)`,
           quotation_date: new Date().toISOString().split('T')[0],
           vendor_id: initialRFQ.vendor_id || '', 
-          currency: initialRFQ.currency || 'THB',
+          currency: initialRFQ.rfq_base_currency_code || 'THB',
           isMulticurrency: initialRFQ.isMulticurrency || false,
-          exchange_rate_date: initialRFQ.exchange_rate_date || '',
-          target_currency: initialRFQ.target_currency || '',
-          exchange_rate: initialRFQ.exchange_rate || 1,
+          exchange_rate_date: initialRFQ.rfq_exchange_rate_date || '',
+          target_currency: initialRFQ.rfq_quote_currency_code || '',
+          exchange_rate: initialRFQ.rfq_exchange_rate || 1,
           lines: mappedLines,
           payment_term_days: 30,
           lead_time_days: 7,
@@ -361,7 +359,7 @@ export const useVQForm = (
       const mappedLines: QuotationLineFormData[] = (fullRFQ.lines || []).map((line: RFQLine) => ({
           item_code: line.item_code || '',
           item_name: line.item_name || '',
-          qty: line.required_qty || 0,
+          qty: line.qty || 0,
           uom_name: line.uom || '',
           unit_price: 0,
           discount_amount: 0,
@@ -379,10 +377,12 @@ export const useVQForm = (
         rfq_no: fullRFQ.rfq_no,
         vendor_id: primaryVendor?.vendor_id || '',
         vendor_name: primaryVendor?.vendor_name || '',
-        currency: fullRFQ.currency || 'THB',
-        isMulticurrency: Boolean(fullRFQ.currency && fullRFQ.currency !== 'THB'),
-        exchange_rate: fullRFQ.exchange_rate || 1,
-        payment_terms: fullRFQ.payment_terms || '',
+        currency: fullRFQ.rfq_base_currency_code || 'THB',
+        isMulticurrency: Boolean(fullRFQ.rfq_base_currency_code && fullRFQ.rfq_base_currency_code !== 'THB'),
+        exchange_rate: fullRFQ.rfq_exchange_rate || 1,
+        exchange_rate_date: fullRFQ.rfq_exchange_rate_date || '',
+        target_currency: fullRFQ.rfq_quote_currency_code || '',
+        payment_terms: fullRFQ.payment_term_hint || '',
         remark: fullRFQ.remarks || '',
         lines: mappedLines.length > 0 ? mappedLines : [createEmptyLine(), createEmptyLine(), createEmptyLine(), createEmptyLine(), createEmptyLine()]
       });

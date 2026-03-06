@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Package } from 'lucide-react';
 import { DialogFormLayout } from '@ui';
 import { useItemForm } from './hooks/useItemForm';
@@ -20,51 +21,55 @@ interface ItemMasterFormModalProps {
  * Uses DialogFormLayout with max-w-7xl for the complex 3-column layout
  */
 export function ItemMasterFormModal({ isOpen, onClose, editId, onSuccess }: ItemMasterFormModalProps) {
-    // Wrapper to handle success callback from hook
-    const handleSuccessCallback = () => {
-        if (onSuccess) onSuccess();
-        onClose();
-    };
-
     const {
         formData,
         isSaving,
-        saveError,
         errors,
         handleInputChange,
         handleSave,
-        handleFind
-    } = useItemForm(editId ?? null, handleSuccessCallback);
+        clearForm,
+        units,
+        categories
+    } = useItemForm(editId ?? null, () => {
+        if (onSuccess) onSuccess();
+        onClose();
+    });
 
-    // No need for separate onSave wrapper anymore since hook handles it
+    // Handle strict form reset on close to prevent data bleed
+    // This implements the "Vendor Rule" for API-Readiness
+    useEffect(() => {
+        if (!isOpen) {
+            clearForm();
+        }
+    }, [isOpen, clearForm]);
 
+    const title = editId 
+        ? `แก้ไขสินค้า: ${formData.item_code || '...'}` 
+        : 'กำหนดรหัสสินค้าและบริการ (Item Master)';
 
     return (
         <DialogFormLayout
             isOpen={isOpen}
             onClose={onClose}
-            title={editId ? `แก้ไขสินค้า: ${formData.item_code}` : 'กำหนดรหัสสินค้าและบริการ (Item Master)'}
+            title={title}
             titleIcon={<Package className="w-5 h-5" />}
             width="max-w-7xl"
             isLoading={isSaving}
-
             footer={
-                <div className="flex items-center justify-between w-full">
-                    <div className="flex-1 mr-4">
-                        {saveError && (
-                            <div className="text-red-500 text-sm font-medium animate-pulse">
-                                Error: {saveError}
-                            </div>
-                        )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <button onClick={onClose} className="px-4 py-2 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg transition-colors text-sm font-medium">
-                            ยกเลิก
-                        </button>
-                        <button onClick={handleSave} disabled={isSaving} className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm">
-                            {isSaving ? 'กำลังบันทึก...' : (editId ? 'บันทึกการแก้ไข' : 'บันทึก')}
-                        </button>
-                    </div>
+                <div className="flex items-center justify-end gap-2 w-full">
+                    <button 
+                        onClick={onClose} 
+                        className="px-4 py-2 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg transition-colors text-sm font-medium"
+                    >
+                        ยกเลิก
+                    </button>
+                    <button 
+                        onClick={handleSave} 
+                        disabled={isSaving} 
+                        className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    >
+                        {isSaving ? 'กำลังบันทึก...' : (editId ? 'บันทึกการแก้ไข' : 'บันทึก')}
+                    </button>
                 </div>
             }
         >
@@ -73,7 +78,6 @@ export function ItemMasterFormModal({ isOpen, onClose, editId, onSuccess }: Item
                 <ItemGeneralInfo 
                     formData={formData} 
                     onChange={handleInputChange} 
-                    onFind={handleFind} 
                     editMode={!!editId}
                     errors={errors}
                 />
@@ -81,17 +85,23 @@ export function ItemMasterFormModal({ isOpen, onClose, editId, onSuccess }: Item
                 {/* 2. Details Section - 3 Column Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                     {/* Column 1: Attributes */}
-                    <ItemAttributes 
-                        formData={formData} 
-                        onChange={handleInputChange} 
-                    />
+                    <div className="lg:col-span-4">
+                        <ItemAttributes 
+                            formData={formData} 
+                            onChange={handleInputChange} 
+                            categories={categories}
+                        />
+                    </div>
 
                     {/* Column 2: Stock & Cost */}
-                    <ItemStockDetails 
-                        formData={formData} 
-                        onChange={handleInputChange}
-                        errors={errors}
-                    />
+                    <div className="lg:col-span-4">
+                        <ItemStockDetails 
+                            formData={formData} 
+                            onChange={handleInputChange}
+                            errors={errors}
+                            units={units}
+                        />
+                    </div>
 
                     {/* Column 3: Financial & Status */}
                     <div className="lg:col-span-4 space-y-4">

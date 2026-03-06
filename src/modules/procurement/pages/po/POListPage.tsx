@@ -9,7 +9,7 @@ import type { POListItem } from '@/modules/procurement/types';
 import type { POFormData } from '@/modules/procurement/schemas/po-schemas';
 import { createColumnHelper } from '@tanstack/react-table';
 import type { ColumnDef } from '@tanstack/react-table';
-import { POFormModal, POApprovalModal } from './components';
+import { POFormModal, POApprovalModal, DocumentSourceSelectorModal } from './components';
 import GRNFormModal from '@/modules/procurement/pages/grn/components/GRNFormModal';
 
 export default function POListPage() {
@@ -26,15 +26,18 @@ export default function POListPage() {
     const { handleIssuePO } = usePOActions();
 
     // ── Modal State (URL Driven) ──────────────────────────────────────────────
+    const isCreateInterceptorOpen = searchParams.get('mode') === 'select-source';
     const isCreateModalOpen = searchParams.get('mode') === 'create';
     const createFromQC = searchParams.get('createFromQC') === 'true';
     const vendorIdParam = searchParams.get('vendorId');
+    const qcIdParam = searchParams.get('sourceQcId');
     const remarksParam = searchParams.get('remarks');
 
     const initialCreateValues = useMemo<Partial<POFormData> | undefined>(() => {
         if (createFromQC) {
             return {
                 vendor_id: vendorIdParam || undefined,
+                qc_id: qcIdParam || undefined,
                 remarks: remarksParam || undefined,
                 lines: [],
             };
@@ -43,7 +46,7 @@ export default function POListPage() {
             return { vendor_id: vendorIdParam };
         }
         return undefined;
-    }, [createFromQC, vendorIdParam, remarksParam]);
+    }, [createFromQC, vendorIdParam, qcIdParam, remarksParam]);
 
     const handleCloseCreateModal = () => {
         setSearchParams(prev => {
@@ -52,6 +55,7 @@ export default function POListPage() {
             newParams.delete('createFromQC');
             newParams.delete('vendorId');
             newParams.delete('qcNo');
+            newParams.delete('sourceQcId');
             newParams.delete('remarks');
             return newParams;
         });
@@ -98,29 +102,29 @@ export default function POListPage() {
         columnHelper.display({
             id: 'index',
             header: () => <div className="text-center w-full">ลำดับ</div>,
-            cell: (info) => <div className="text-center">{info.row.index + 1 + (filters.page - 1) * filters.limit}</div>,
-            footer: () => <div className="absolute left-4 top-1/2 -translate-y-1/2 whitespace-nowrap font-bold text-sm text-gray-700 dark:text-gray-200">ยอดรวมทั้งหมด :</div>,
-            size: 40,
+            cell: (info) => <div className="text-center w-full">{info.row.index + 1 + (filters.page - 1) * filters.limit}</div>,
+            footer: () => <div className="absolute left-2 top-1/2 -translate-y-1/2 whitespace-nowrap font-bold text-sm text-gray-700 dark:text-gray-200">ยอดรวมทั้งหมด :</div>,
+            size: 50,
             enableSorting: false,
         }),
         columnHelper.accessor('po_no', {
-            header: 'เลขที่ PO',
+            header: () => <div className="text-left whitespace-nowrap">เลขที่ PO</div>,
             cell: (info) => (
-                <span className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline cursor-pointer block" title={info.getValue()}>
+                <span className="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline cursor-pointer whitespace-nowrap" title={info.getValue()}>
                     {info.getValue()}
                 </span>
             ),
-            size: 130,
+            size: 120,
             enableSorting: true,
         }),
         columnHelper.accessor('po_date', {
             header: 'วันที่',
             cell: (info) => (
-                <span className="text-gray-600 dark:text-gray-300 whitespace-nowrap">
+                <span className="text-gray-600 dark:text-gray-300 whitespace-nowrap text-xs">
                     {formatThaiDate(info.getValue())}
                 </span>
             ),
-            size: 110,
+            size: 90,
             enableSorting: true,
         }),
         columnHelper.accessor('qc_no', {
@@ -129,17 +133,16 @@ export default function POListPage() {
             cell: (info) => {
                 const item = info.row.original;
                 return (
-                    <div className="flex flex-col truncate">
+                    <div className="flex flex-col whitespace-nowrap">
                         <span
-                            className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline cursor-pointer leading-tight whitespace-nowrap"
+                            className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline cursor-pointer leading-tight"
                             title={`QC: ${item.qc_no || '-'}`}
-                            // onClick={() => { if (item.qc_no) window.alert(`Open QC: ${item.qc_no}`); }}
                         >
                             {item.qc_no || '-'}
                         </span>
                         {item.pr_no && (
                             <span
-                                className="text-xs text-slate-500 mt-0.5 truncate"
+                                className="text-[10px] text-slate-500 mt-0.5"
                                 title={`PR: ${item.pr_no}`}
                             >
                                 Ref: {item.pr_no}
@@ -148,44 +151,44 @@ export default function POListPage() {
                     </div>
                 );
             },
-            size: 140,
+            size: 130,
             enableSorting: false,
         }),
         columnHelper.accessor('vendor_name', {
             header: 'ชื่อผู้ขาย',
             cell: (info) => (
-                <div className="font-semibold text-gray-800 dark:text-gray-200 text-left truncate max-w-[220px]" title={info.getValue() || '-'}>
+                <div className="truncate font-medium text-slate-700 dark:text-gray-200 text-left max-w-[120px] lg:max-w-[180px]" title={info.getValue() || '-'}>
                     {info.getValue() || '-'}
                 </div>
             ),
-            size: 250,
+            size: 200,
             enableSorting: false,
         }),
         columnHelper.accessor(row => row.status, {
             id: 'status',
             header: () => <div className="text-center w-full">สถานะ</div>,
             cell: (info) => (
-                <div className="flex justify-center">
-                    <POStatusBadge status={info.getValue()} className="whitespace-nowrap" />
+                <div className="flex justify-center" title={info.row.original.reject_reason || undefined}>
+                    <POStatusBadge status={info.getValue()} className="whitespace-nowrap scale-[0.9]" />
                 </div>
             ),
-            size: 90,
+            size: 100,
             enableSorting: false,
         }),
         columnHelper.accessor('item_count', {
-            header: () => <div className="text-center w-full whitespace-nowrap">จำนวนรายการ</div>,
+            header: () => <div className="text-center w-full whitespace-nowrap">รายการ</div>,
             cell: (info) => (
-                <div className="text-center text-gray-600 dark:text-gray-300">
+                <div className="text-center text-gray-600 dark:text-gray-300 w-full text-xs">
                     {info.getValue()}
                 </div>
             ),
-            size: 80,
+            size: 70,
             enableSorting: false,
         }),
         columnHelper.accessor('total_amount', {
             header: () => <div className="text-right w-full whitespace-nowrap">ยอดรวม (บาท)</div>,
             cell: (info) => (
-                <div className="text-right font-bold text-gray-800 dark:text-white whitespace-nowrap">
+                <div className="text-right font-bold text-gray-800 dark:text-white whitespace-nowrap w-full text-xs">
                     {info.getValue()?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </div>
             ),
@@ -202,28 +205,28 @@ export default function POListPage() {
                         {/* Eye — PR pattern */}
                         <button
                             onClick={() => handleView(item.po_id || '')}
-                            className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-all"
+                            className="p-1 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-all"
                             title="ดูรายละเอียด"
                         >
-                            <Eye size={16} />
+                            <Eye size={14} />
                         </button>
 
-                        {/* DRAFT: Edit (amber) + ส่งอนุมัติ (emerald) */}
-                        {item.status === 'DRAFT' && (
+                        {/* DRAFT or REJECTED: Edit (amber) + ส่งอนุมัติ (emerald) */}
+                        {(item.status === 'DRAFT' || item.status === 'REJECTED') && (
                             <>
                                 <button
                                     onClick={() => handleEdit(item.po_id || '')}
-                                    className="flex items-center gap-1 pl-1.5 pr-2 py-1 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded shadow-sm border border-transparent hover:border-amber-200 dark:hover:border-amber-800 transition-all whitespace-nowrap"
+                                    className="flex items-center gap-1 px-1.5 py-1 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded shadow-sm border border-transparent hover:border-amber-200 transition-all"
                                     title="แก้ไข"
                                 >
-                                    <Edit size={14} />
+                                    <Edit size={12} />
                                     <span className="text-[10px] font-bold">แก้ไข</span>
                                 </button>
                                 <button
                                     onClick={() => handleApprove(item.po_id || '')}
-                                    className="flex items-center gap-1 pl-1.5 pr-2 py-1 ml-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap"
+                                    className="flex items-center gap-1 px-1.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded shadow-sm transition-all"
                                 >
-                                    <Send size={12} />
+                                    <Send size={10} />
                                     ส่งอนุมัติ
                                 </button>
                             </>
@@ -233,10 +236,10 @@ export default function POListPage() {
                         {item.status === 'PENDING_APPROVAL' && (
                             <button
                                 onClick={() => handleApprove(item.po_id || '')}
-                                className="flex items-center gap-1 pl-1.5 pr-2 py-1 ml-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap"
+                                className="flex items-center gap-1 px-1.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded shadow-sm transition-all"
                                 title="อนุมัติ PO"
                             >
-                                <CheckCircle size={12} />
+                                <CheckCircle size={10} />
                                 อนุมัติ
                             </button>
                         )}
@@ -245,10 +248,10 @@ export default function POListPage() {
                         {item.status === 'APPROVED' && (
                             <button
                                 onClick={() => handleIssuePO(item)}
-                                className="flex items-center gap-1 pl-1.5 pr-2 py-1 ml-1 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap"
+                                className="flex items-center gap-1 px-1.5 py-1 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded shadow-sm transition-all"
                                 title="ออก PO"
                             >
-                                <Send size={12} />
+                                <Send size={10} />
                                 ออก PO
                             </button>
                         )}
@@ -257,10 +260,10 @@ export default function POListPage() {
                         {item.status === 'ISSUED' && (
                             <button
                                 onClick={() => handleGRN(item.po_id || '')}
-                                className="flex items-center gap-1 pl-1.5 pr-2 py-1 ml-1 bg-violet-600 hover:bg-violet-700 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap"
+                                className="flex items-center gap-1 px-1.5 py-1 bg-violet-600 hover:bg-violet-700 text-white text-[10px] font-bold rounded shadow-sm transition-all"
                                 title="เปิดใบรับสินค้า"
                             >
-                                <Package size={12} />
+                                <Package size={10} />
                                 เปิด GRN
                             </button>
                         )}
@@ -270,12 +273,12 @@ export default function POListPage() {
             footer: () => {
                  const total = (data?.data || []).reduce((sum, item) => sum + item.total_amount, 0) || 0;
                  return (
-                     <div className="text-right font-bold text-base text-emerald-600 dark:text-emerald-400 whitespace-nowrap pr-2">
+                     <div className="text-right font-bold text-sm text-emerald-600 dark:text-emerald-400 whitespace-nowrap pr-2">
                          {total.toLocaleString('en-US', { minimumFractionDigits: 2 })} บาท
                      </div>
                  );
             },
-            size: 160,
+            size: 140,
             enableSorting: false,
         }),
     ], [columnHelper, filters.page, filters.limit, data?.data, handleGRN, handleApprove, handleIssuePO, handleView, handleEdit]);
@@ -298,14 +301,14 @@ export default function POListPage() {
                             label="เลขที่ PO"
                             value={localFilters.search}
                             onChange={(val: string) => handleFilterChange('search', val)}
-                            placeholder="PO2024-xxx"
+                            placeholder="PO-xxx"
                             accentColor="blue"
                         />
                         <FilterField
                             label="เลขที่ PR อ้างอิง"
                             value={localFilters.search2}
                             onChange={(val: string) => handleFilterChange('search2', val)}
-                            placeholder="PR2024-xxx"
+                            placeholder="PR-xxx"
                             accentColor="blue"
                         />
                         <FilterField
@@ -360,7 +363,7 @@ export default function POListPage() {
                             </div>
                             <button
                                 type="button"
-                                onClick={() => setSearchParams({ mode: 'create' })}
+                                onClick={() => setSearchParams({ mode: 'select-source' })}
                                 className="w-full sm:w-auto h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
                             >
                                 <Plus size={16} strokeWidth={2.5} />
@@ -432,7 +435,7 @@ export default function POListPage() {
                                         >
                                             <Eye size={14} /> ดู
                                         </button>
-                                        {item.status === 'DRAFT' && (
+                                        {(item.status === 'DRAFT' || item.status === 'REJECTED') && (
                                             <>
                                                 <button
                                                     onClick={() => handleEdit(item.po_id)}
@@ -479,6 +482,24 @@ export default function POListPage() {
                     </MobileListContainer>
                 </div>
             </PageListLayout>
+
+            {/* Smart Intercept Modal */}
+            <DocumentSourceSelectorModal
+                isOpen={isCreateInterceptorOpen}
+                onClose={() => handleCloseCreateModal()}
+                onSelectSource={(sourceType: 'QC' | 'BLANK', qcId?: string, vendorId?: string) => {
+                    if (sourceType === 'QC' && qcId) {
+                        setSearchParams({ 
+                            mode: 'create', 
+                            createFromQC: 'true', 
+                            sourceQcId: qcId,
+                            ...(vendorId ? { vendorId } : {})
+                        });
+                    } else {
+                        setSearchParams({ mode: 'create' });
+                    }
+                }}
+            />
             
             <POFormModal 
                 isOpen={isCreateModalOpen} 

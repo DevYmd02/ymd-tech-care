@@ -80,6 +80,7 @@ export interface GRNListResponse {
     total: number;
     page: number;
     limit: number;
+  totalPages: number;
 }
 
 export interface GRNSummaryCounts {

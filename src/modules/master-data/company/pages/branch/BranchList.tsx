@@ -4,7 +4,7 @@
  * @module company
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { 
     Edit2, 
     Trash2, 
@@ -18,6 +18,7 @@ import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 // ====================================================================================
 // CONFIG
@@ -47,9 +48,7 @@ export default function BranchList() {
         }
     });
 
-    const [allBranches, setAllBranches] = useState<BranchListItem[]>([]);
-    const [totalCount, setTotalCount] = useState(0);
-    const [isLoading, setIsLoading] = useState(true);
+    const queryClient = useQueryClient();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -76,30 +75,28 @@ export default function BranchList() {
     ], []);
 
     // ==================== DATA FETCHING ====================
-    const fetchData = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const response = await BranchService.getList(filters);
-            
+    const { data: response, isLoading } = useQuery({
+        queryKey: ['branches', filters],
+        queryFn: async () => {
+            const res = await BranchService.getList(filters);
             // Normalize: Handle both Paginated object and raw Array formats
-            const allItems = Array.isArray(response) ? response : (response?.items ?? []);
-            const total = Array.isArray(response) ? response.length : (response?.total ?? 0);
-            
-            setAllBranches(allItems);
-            setTotalCount(total);
-        } catch (error) {
-            console.error('Failed to fetch branches:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [filters]);
-
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+            const items = Array.isArray(res) ? res : (res?.items ?? []);
+            const total = Array.isArray(res) ? res.length : (res?.total ?? 0);
+            return { items, total };
+        },
+        refetchOnWindowFocus: false,
+    });
 
     // ==================== DATA MAPPING ====================
-    const tableData = useMemo(() => allBranches, [allBranches]);
+    const tableData = response?.items || [];
+    const totalCount = response?.total || 0;
+
+    const deleteMutation = useMutation({
+        mutationFn: (id: string) => BranchService.delete(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['branches'] });
+        }
+    });
 
     // ==================== HANDLERS ====================
     const handleCreateNew = () => {
@@ -114,9 +111,9 @@ export default function BranchList() {
 
     const handleDelete = useCallback((id: string) => {
         if (confirm('คุณต้องการลบข้อมูลสาขานี้หรือไม่?')) {
-            BranchService.delete(id).then(() => fetchData());
+            deleteMutation.mutate(id);
         }
-    }, [fetchData]);
+    }, [deleteMutation]);
 
     const handleModalClose = () => {
         setIsModalOpen(false);
@@ -247,7 +244,6 @@ export default function BranchList() {
                 isOpen={isModalOpen} 
                 onClose={handleModalClose}
                 editId={editingId}
-                onSuccess={fetchData}
             />
         </div>
     );

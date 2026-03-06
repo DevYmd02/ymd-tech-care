@@ -1,6 +1,6 @@
 import type MockAdapter from 'axios-mock-adapter';
 import type { AxiosRequestConfig } from 'axios';
-import { MOCK_GRNS } from '../data/grnData';
+import { MOCK_GRNS } from '@/modules/procurement/mocks/data/grnData';
 import { applyMockFilters, sanitizeId } from '@/core/api/mockUtils';
 
 export const setupGRNHandlers = (mock: MockAdapter) => {

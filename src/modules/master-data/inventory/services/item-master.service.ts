@@ -5,6 +5,19 @@ import type { ItemListItem, ItemMasterFormData } from '@/modules/master-data/typ
 import type { ListResponse } from '@/shared/types/common-api.types';
 import type { SuccessResponse } from '@/shared/types/api-response.types';
 
+/**
+ * Maps raw backend item fields to frontend ItemListItem fields.
+ * Backend may return uom_id/uom_name/base_uom_id instead of unit_id/unit_name.
+ */
+function mapItemFields(raw: Record<string, unknown>): ItemListItem {
+  return {
+    ...(raw as unknown as ItemListItem),
+    // Ensure unit_id is populated from backend uom_id or base_uom_id
+    unit_id: (raw.unit_id as string) || String(raw.uom_id || raw.base_uom_id || ''),
+    unit_name: (raw.unit_name as string) || (raw.uom_name as string) || '',
+  };
+}
+
 export const ItemMasterService = {
   getAll: async (params?: { q?: string; vendor_id?: string; limit?: number }): Promise<ListResponse<ItemListItem>> => {
     if (USE_MOCK) {
@@ -44,13 +57,16 @@ export const ItemMasterService = {
       }>('/item-master', { params });
       
       // Handle direct array from Axios (api.ts usually returns response.data directly)
-      const itemsArray = Array.isArray(response) ? response : (response.data || response.items || []);
+      const rawArray = Array.isArray(response) ? response : (response.data || response.items || []);
       
-      return { 
-          items: itemsArray, 
-          total: itemsArray.length, 
-          page: 1, 
-          limit: itemsArray.length || 10 
+      // Map backend uom_id/uom_name → frontend unit_id/unit_name
+      const itemsArray = rawArray.map((item) => mapItemFields(item as unknown as Record<string, unknown>));
+      
+      return {
+          items: itemsArray,
+          total: itemsArray.length,
+          page: 1,
+          limit: itemsArray.length || 10
       };
     } catch (error) {
       logger.error('[ItemMasterService] getAll error:', error);
@@ -63,7 +79,10 @@ export const ItemMasterService = {
           return mockItems.find(i => i.item_id === id) || null;
       }
       try {
-          return await api.get<ItemListItem>(`/items/${id}`);
+          const raw = await api.get<ItemListItem>(`/items/${id}`);
+          if (!raw) return null;
+          // Map backend uom_id/uom_name → frontend unit_id/unit_name
+          return mapItemFields(raw as unknown as Record<string, unknown>);
       } catch (error) {
           logger.error('[ItemMasterService] getById error:', error);
           return null;

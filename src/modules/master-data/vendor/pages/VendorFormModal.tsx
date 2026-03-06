@@ -61,7 +61,13 @@ export function VendorFormModal(props: VendorFormModalProps) {
         handleSameAsRegisteredChange,
         handleCreditLimitChange,
         handleSubmit,
+        clearForm
     } = useVendorForm({ ...props, toast });
+
+    const handleClose = () => {
+        clearForm();
+        onClose();
+    };
 
     // Footer Content
     const FormFooter = (
@@ -84,7 +90,7 @@ export function VendorFormModal(props: VendorFormModalProps) {
 
             <button 
                 type="button"
-                onClick={onClose}
+                onClick={handleClose}
                 className={styles.btnSecondary}
             >
                 ยกเลิก
@@ -105,7 +111,7 @@ export function VendorFormModal(props: VendorFormModalProps) {
     return (
         <DialogFormLayout
             isOpen={isOpen}
-            onClose={onClose}
+            onClose={handleClose}
             title={headerTitle}
             subtitle="กรอกข้อมูลเจ้าหนี้/ซัพพลายเออร์"
             footer={FormFooter}

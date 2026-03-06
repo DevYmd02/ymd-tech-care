@@ -7,6 +7,7 @@
 import React from 'react';
 import { ChevronDown } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
+import { CustomDateInput } from '@/shared/components/forms/CustomDateInput';
 
 // ====================================================================================
 // TYPES
@@ -61,7 +62,9 @@ export const FilterField: React.FC<FilterFieldProps> = ({
     disabled = false,
     className = '',
 }) => {
-    const baseInputClass = styles.input.replace('ring-blue-500', styles.focusRing[accentColor] || styles.focusRing.blue);
+    const baseInputClass = styles.input
+        .replace('ring-blue-500', styles.focusRing[accentColor] || styles.focusRing.blue)
+        .replace('h-10', 'h-9');
     // Merge base class with custom class
     const inputClass = `${baseInputClass} ${className} ${disabled ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''}`;
     const labelClass = styles.label;
@@ -89,11 +92,10 @@ export const FilterField: React.FC<FilterFieldProps> = ({
                     />
                 </div>
             ) : type === 'date' ? (
-                <div className="relative">
-                    <input
-                        type="date"
+                <div className="h-9 relative">
+                    <CustomDateInput
                         value={value}
-                        onChange={(e) => onChange(e.target.value)}
+                        onChange={(val) => onChange(val)}
                         disabled={disabled}
                         className={inputClass}
                     />

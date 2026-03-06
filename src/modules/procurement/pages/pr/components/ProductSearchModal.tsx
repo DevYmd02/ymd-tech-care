@@ -115,7 +115,7 @@ export const ProductSearchModal: React.FC<ProductSearchModalProps> = ({
                           <td className="px-3 py-3 text-gray-500 dark:text-gray-400 text-xs">{p.description}</td>
                           <td className="px-3 py-3 text-center text-gray-600 dark:text-gray-400">{p.warehouse}</td>
                           <td className="px-3 py-3 text-center text-gray-600 dark:text-gray-400">{p.location}</td>
-                          <td className="px-3 py-3 text-center text-gray-600 dark:text-gray-400">{p.unit_name}</td>
+                          <td className="px-3 py-3 text-center text-gray-600 dark:text-gray-400">{p.uom_name || p.unit_name || '-'}</td>
                           <td className="px-3 py-3 text-right text-emerald-600 dark:text-emerald-400 font-medium">
                               {p.stock_qty?.toLocaleString(undefined) ?? '-'}
                           </td>

@@ -103,6 +103,7 @@ export interface QCListResponse {
   total: number;
   page: number;
   limit: number;
+  totalPages: number;
 }
 
 // ====================================================================================
@@ -119,6 +120,7 @@ export const QCListItemSchema = QCHeaderSchema.extend({
   vendor_count: z.number().nonnegative().optional().default(0),
   lowest_price: z.number().nonnegative().optional().default(0),
   lowest_bidder_name: z.string().optional().default('-'),
+  winning_vendor_id: z.string().uuid().optional(),
   subject: z.string().optional(),
 });
 

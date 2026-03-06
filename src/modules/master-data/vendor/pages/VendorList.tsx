@@ -6,9 +6,9 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { Database, Edit2, Power, MoreHorizontal, PauseCircle, Ban } from 'lucide-react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
-import type { VendorStatus, VendorListItem, VendorListResponse } from '@/modules/master-data/vendor/types/vendor-types';
+import type { VendorStatus, VendorListItem } from '@/modules/master-data/vendor/types/vendor-types';
 import { VendorFormModal } from './VendorFormModal';
 import { VendorStatusBadge } from '../components/VendorStatusBadge';
 import { 
@@ -36,6 +36,33 @@ const STATUS_OPTIONS = [
     { value: 'SUSPENDED', label: 'ระงับชั่วคราว' },
     { value: 'BLACKLISTED', label: 'บัญชีดำ' },
 ];
+
+const STATUS_CONFIG: Record<string, { label: string, title: string, description: string, variant: 'warning' | 'danger' | 'info' | 'success' }> = {
+    'INACTIVE': { 
+        label: 'เลิกใช้งาน', 
+        title: 'ยืนยันการเลิกใช้งาน', 
+        description: 'ต้องการเลิกใช้งานผู้ขาย {code} ใช่หรือไม่? (ข้อมูลจะยังอยู่ในระบบ)',
+        variant: 'warning'
+    },
+    'SUSPENDED': { 
+        label: 'ระงับชั่วคราว', 
+        title: 'ยืนยันการระงับชั่วคราว', 
+        description: 'ต้องการระงับการทำรายการกับผู้ขาย {code} ชั่วคราวใช่หรือไม่?',
+        variant: 'warning'
+    },
+    'BLACKLISTED': { 
+        label: 'บัญชีดำ', 
+        title: 'ยืนยันการขึ้นบัญชีดำ', 
+        description: 'ต้องการขึ้นบัญชีดำผู้ขาย {code} ใช่หรือไม่? การดำเนินการนี้จะส่งผลต่อการทำรายการในอนาคต',
+        variant: 'danger'
+    },
+    'ACTIVE': { 
+        label: 'กลับมาใช้งาน', 
+        title: 'ยืนยันการกลับมาใช้งาน', 
+        description: 'ต้องการเปลี่ยนสถานะผู้ขาย {code} เป็น \'ใช้งาน\' ใช่หรือไม่?',
+        variant: 'success'
+    }
+};
 
 export default function VendorList() {
     // ==================== STATE & FILTERS ====================
@@ -150,101 +177,79 @@ export default function VendorList() {
         setEditId(null);
     }, [queryClient]);
 
-    const handleStatusChange = useCallback(async (id: string, code: string, newStatus: VendorStatus) => {
-        const statusConfig: Record<string, { label: string, title: string, description: string, variant: 'warning' | 'danger' | 'info' | 'success' }> = {
-            'INACTIVE': { 
-                label: 'เลิกใช้งาน', 
-                title: 'ยืนยันการเลิกใช้งาน', 
-                description: `ต้องการเลิกใช้งานผู้ขาย ${code} ใช่หรือไม่? (ข้อมูลจะยังอยู่ในระบบ)`,
-                variant: 'warning'
-            },
-            'SUSPENDED': { 
-                label: 'ระงับชั่วคราว', 
-                title: 'ยืนยันการระงับชั่วคราว', 
-                description: `ต้องการระงับการทำรายการกับผู้ขาย ${code} ชั่วคราวใช่หรือไม่?`,
-                variant: 'warning'
-            },
-            'BLACKLISTED': { 
-                label: 'บัญชีดำ', 
-                title: 'ยืนยันการขึ้นบัญชีดำ', 
-                description: `ต้องการขึ้นบัญชีดำผู้ขาย ${code} ใช่หรือไม่? การดำเนินการนี้จะส่งผลต่อการทำรายการในอนาคต`,
-                variant: 'danger'
-            },
-            'ACTIVE': { 
-                label: 'กลับมาใช้งาน', 
-                title: 'ยืนยันการกลับมาใช้งาน', 
-                description: `ต้องการเปลี่ยนสถานะผู้ขาย ${code} เป็น 'ใช้งาน' ใช่หรือไม่?`,
-                variant: 'success'
+    const statusMutation = useMutation({
+        mutationFn: ({ id, newStatus }: { id: string, code: string, newStatus: VendorStatus }) => 
+            VendorService.updateStatus(id, newStatus),
+        onMutate: async ({ id, newStatus }) => {
+            // Cancel any outgoing refetches
+            await queryClient.cancelQueries({ queryKey: ['vendors'] });
+
+            // Snapshot the previous value
+            const previousVendors = queryClient.getQueryData<{ items: VendorListItem[], total: number }>(['vendors', filters]);
+
+            // Optimistically update
+            queryClient.setQueryData<{ items: VendorListItem[], total: number }>(['vendors', filters], (old) => {
+                if (!old || !old.items) return old;
+                return {
+                    ...old,
+                    items: old.items.map((item: VendorListItem) => 
+                        item.vendor_id === id ? { ...item, status: newStatus } : item
+                    )
+                };
+            });
+
+            return { previousVendors };
+        },
+        onError: (err, _variables, context) => {
+            // Rollback on error
+            if (context?.previousVendors) {
+                queryClient.setQueryData(['vendors', filters], context.previousVendors);
             }
-        };
-        
-        const config = statusConfig[newStatus];
+            
+            confirm({
+                title: 'เกิดข้อผิดพลาด',
+                description: err instanceof Error ? err.message : 'ไม่สามารถเปลี่ยนสถานะได้',
+                confirmText: 'ตกลง',
+                variant: 'danger',
+                hideCancel: true
+            });
+        },
+        onSuccess: async (result, { newStatus }) => {
+            if (result.success) {
+                const config = STATUS_CONFIG[newStatus as keyof typeof STATUS_CONFIG];
+                await confirm({
+                    title: 'ดำเนินการสำเร็จ',
+                    description: `เปลี่ยนสถานะเป็น '${config.label}' เรียบร้อยแล้ว`,
+                    confirmText: 'ตกลง',
+                    variant: 'success',
+                    hideCancel: true
+                });
+            } else {
+                throw new Error(result.message || 'ไม่สามารถเปลี่ยนสถานะได้');
+            }
+        },
+        onSettled: () => {
+            // Always refetch after error or success to ensure server state alignment
+            queryClient.invalidateQueries({ queryKey: ['vendors'] });
+        },
+    });
+
+    const handleStatusChange = useCallback(async (id: string, code: string, newStatus: VendorStatus) => {
+        const config = STATUS_CONFIG[newStatus];
         if (!config) return;
 
         const isConfirmed = await confirm({
             title: config.title,
-            description: config.description,
+            description: config.description.replace('{code}', code),
             confirmText: 'ตกลง',
             cancelText: 'ยกเลิก',
             variant: config.variant
         });
 
         if (isConfirmed) {
-            // 1. Optimistic Update (Immediate UI Change)
-            // We search for all queries that start with ['vendors'] to update them all
-            const queryKeys = queryClient.getQueryCache().findAll({ queryKey: ['vendors'] }).map(q => q.queryKey);
-            
-            const snapshots = queryKeys.map(key => {
-                const previousData = queryClient.getQueryData(key);
-                queryClient.setQueryData(key, (old: VendorListResponse | undefined) => {
-                    if (!old || !old.items) return old;
-                    return {
-                        ...old,
-                        items: old.items.map((item: VendorListItem) => 
-                            item.vendor_id === id ? { ...item, status: newStatus } : item
-                        )
-                    };
-                });
-                return { key, previousData };
-            });
-
-            try {
-                // 2. Call API
-                const result = await VendorService.updateStatus(id, newStatus);
-                
-                if (result.success) {
-                    // 3. Show Success Modal instead of Toast
-                    await confirm({
-                        title: 'ดำเนินการสำเร็จ',
-                        description: `เปลี่ยนสถานะเป็น '${config.label}' เรียบร้อยแล้ว`,
-                        confirmText: 'ตกลง',
-                        variant: 'success',
-                        hideCancel: true
-                    });
-                    
-                    // Background refetch to ensure consistency
-                    queryClient.invalidateQueries({ queryKey: ['vendors'] });
-                } else {
-                    throw new Error(result.message || 'ไม่สามารถเปลี่ยนสถานะได้');
-                }
-            } catch (err) {
-                console.error('Update status failed', err);
-                
-                // 4. Rollback on Error
-                snapshots.forEach(({ key, previousData }) => {
-                    queryClient.setQueryData(key, previousData);
-                });
-
-                await confirm({
-                    title: 'เกิดข้อผิดพลาด',
-                    description: err instanceof Error ? err.message : 'ไม่สามารถเปลี่ยนสถานะได้',
-                    confirmText: 'ตกลง',
-                    variant: 'danger',
-                    hideCancel: true
-                });
-            }
+            statusMutation.mutate({ id, code, newStatus });
         }
-    }, [queryClient, confirm]);
+    }, [confirm, statusMutation]);
 
     // ==================== TABLE COLUMNS ====================
     const columns = useMemo<ColumnDef<VendorListItem>[]>(() => [

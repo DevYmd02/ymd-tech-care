@@ -40,11 +40,13 @@ export const RFQLineSchema = z.object({
     line_no: z.number().int().min(1, MESSAGES.POSITIVE_NUMBER),
     item_code: z.string().min(1, MESSAGES.REQUIRED),
     item_name: z.string().min(1, MESSAGES.REQUIRED),
-    item_description: z.string().optional().or(z.literal('')),
-    required_qty: z.number().min(0.0001, 'Quantity must be greater than zero'),
+    description: z.string().optional().or(z.literal('')),
+    qty: z.number().min(0.0001, 'Quantity must be greater than zero'),
     uom: z.string().min(1, MESSAGES.REQUIRED),
-    required_date: z.string().min(1, MESSAGES.REQUIRED),
-    remarks: z.string().optional().or(z.literal('')),
+    uom_id: z.number().int(),
+    required_receipt_type: z.string().min(1, MESSAGES.REQUIRED),
+    target_delivery_date: z.string().min(1, MESSAGES.REQUIRED),
+    note_to_vendor: z.string().optional().or(z.literal('')),
     
     // Traceability fields from PR
     item_id: z.string().optional(),
@@ -64,18 +66,19 @@ export const RFQFormSchema = z.object({
     pr_no: z.string().nullable().optional(),
     branch_id: z.string().nullable().optional(),
     project_id: z.string().nullable().optional(),
-    created_by_name: z.string().min(1, MESSAGES.REQUIRED),
+    requested_by_user_id: z.number().int(),
+    requested_by: z.string().min(1, MESSAGES.REQUIRED),
     
     // Using string validation for enums from form, optionally casting/refining.
     status: RFQStatusEnum,
     
-    quote_due_date: z.string().min(1, MESSAGES.REQUIRED),
-    currency: z.string().min(1, MESSAGES.REQUIRED),
-    target_currency: z.string().optional(),
-    exchange_rate_date: z.string().optional(),
-    exchange_rate: z.number().min(0.0001, MESSAGES.POSITIVE_NUMBER),
-    delivery_location: z.string().min(1, MESSAGES.REQUIRED),
-    payment_terms: z.string().min(1, MESSAGES.REQUIRED),
+    quotation_due_date: z.string().min(1, MESSAGES.REQUIRED),
+    rfq_base_currency_code: z.string().min(1, MESSAGES.REQUIRED),
+    rfq_quote_currency_code: z.string().min(1, MESSAGES.REQUIRED),
+    rfq_exchange_rate_date: z.string().optional(),
+    rfq_exchange_rate: z.number().min(0.0001, MESSAGES.POSITIVE_NUMBER),
+    receive_location: z.string().min(1, MESSAGES.REQUIRED),
+    payment_term_hint: z.string().min(1, MESSAGES.REQUIRED),
     incoterm: z.string().optional().or(z.literal('')),
     remarks: z.string().optional().or(z.literal('')),
     isMulticurrency: z.boolean().default(false),
@@ -87,7 +90,7 @@ export const RFQFormSchema = z.object({
     pr_tax_rate: z.number().min(0, MESSAGES.NON_NEGATIVE).optional(),
     
     // Arrays
-    lines: z.array(RFQLineSchema).min(1, MESSAGES.AT_LEAST_ONE_ITEM),
+    rfqLines: z.array(RFQLineSchema).min(1, MESSAGES.AT_LEAST_ONE_ITEM),
     vendors: z.array(RFQVendorSchema).min(1, MESSAGES.AT_LEAST_ONE_VENDOR),
 });
 

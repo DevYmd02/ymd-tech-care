@@ -1,7 +1,7 @@
 import type MockAdapter from 'axios-mock-adapter';
 import type { AxiosRequestConfig } from 'axios';
-import { MOCK_POS } from '../data/poData';
-import { MOCK_QCS } from '../data/qcData';
+import { MOCK_POS } from '@/modules/procurement/mocks/data/poData';
+
 import { applyMockFilters, sanitizeId } from '@/core/api/mockUtils';
 import type { POListItem, POLine } from '@/modules/procurement/types';
 import type { POStatus } from '@/modules/procurement/schemas/po-schemas';
@@ -111,6 +111,14 @@ export const setupPOHandlers = (mock: MockAdapter) => {
             remarks:          body.remarks || '',
             created_by:       'mock-user',
             item_count:       (body.lines ?? []).length,
+            transactions:     [{
+                id: `tx-${Date.now()}`,
+                po_id: `po-${Date.now()}`,
+                from_status: undefined,
+                to_status: 'DRAFT',
+                action_by: 'mock-user',
+                action_date: new Date().toISOString()
+            }]
         };
 
         MOCK_POS.unshift(newPO);
@@ -125,7 +133,14 @@ export const setupPOHandlers = (mock: MockAdapter) => {
         if (po.status !== 'APPROVED') {
             return [422, { message: `Cannot issue PO in status: ${po.status}` }];
         }
+        const prevStatus = po.status;
         po.status = 'ISSUED';
+        if (!po.transactions) po.transactions = [];
+        po.transactions.push({
+            id: `tx-${Date.now()}`, po_id: po.po_id,
+            from_status: prevStatus as POStatus, to_status: 'ISSUED',
+            action_by: 'mock-user', action_date: new Date().toISOString()
+        });
         return [200, { success: true, message: `PO ${po.po_no} ออก PO เรียบร้อย` }];
     });
 
@@ -139,29 +154,39 @@ export const setupPOHandlers = (mock: MockAdapter) => {
         if (!nextStatus || (po.status !== 'DRAFT' && po.status !== 'PENDING_APPROVAL')) {
             return [422, { message: `Cannot approve PO in status: ${po.status}` }];
         }
+        const prevStatus = po.status;
         po.status = nextStatus;
+        if (!po.transactions) po.transactions = [];
+        po.transactions.push({
+            id: `tx-${Date.now()}`, po_id: po.po_id,
+            from_status: prevStatus as POStatus, to_status: nextStatus,
+            action_by: 'mock-user', action_date: new Date().toISOString()
+        });
         const msg = po.status === 'PENDING_APPROVAL' ? 'ส่งอนุมัติเรียบร้อย' : 'อนุมัติเรียบร้อย';
         return [200, { success: true, message: `PO ${po.po_no} ${msg}` }];
     });
 
-    // ── 6. POST Reject/Cancel PO (ANY → CANCELLED) ─────────────────────────
+    // ── 6. POST Reject PO (PENDING_APPROVAL → REJECTED) ─────────────────────────
     mock.onPost(/\/purchase-orders\/.+\/reject/).reply((config: AxiosRequestConfig) => {
         const id = sanitizeId(config.url?.split('/')[2]);
+        const body = config.data ? JSON.parse(config.data) : {};
         const po = MOCK_POS.find(p => sanitizeId(p.po_id) === id);
         if (!po) return [404, { message: 'PO Not Found' }];
         if (po.status === 'COMPLETED') {
-            return [422, { message: 'Cannot cancel a COMPLETED PO' }];
+            return [422, { message: 'Cannot reject a COMPLETED PO' }];
         }
-        po.status = 'CANCELLED';
+        const prevStatus = po.status;
+        po.status = 'REJECTED';
+        po.reject_reason = body.remark || '';
+        if (!po.transactions) po.transactions = [];
+        po.transactions.push({
+            id: `tx-${Date.now()}`, po_id: po.po_id,
+            from_status: prevStatus as POStatus, to_status: 'REJECTED',
+            action_by: 'mock-user', action_date: new Date().toISOString(),
+            remark: body.remark || ''
+        });
 
-        // Revert linked QC back to DRAFT so a new winner can be picked
-        if (po.qc_id) {
-            const linkedQC = MOCK_QCS.find(qc => sanitizeId(qc.qc_id) === sanitizeId(po.qc_id));
-            if (linkedQC) {
-                linkedQC.status = 'DRAFT';
-            }
-        }
-        return [200, { success: true, message: `PO ${po.po_no} ยกเลิกเรียบร้อย` }];
+        return [200, { success: true, message: `PO ${po.po_no} ไม่อนุมัติเรียบร้อย` }];
     });
 
     // ── 7. POST GRN Trigger (ISSUED → COMPLETED) ───────────────────────────

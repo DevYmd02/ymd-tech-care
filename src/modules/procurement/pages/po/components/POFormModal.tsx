@@ -8,10 +8,11 @@
  */
 
 import { useMemo } from 'react';
-import { useWatch, FormProvider } from 'react-hook-form';
+import { useWatch, FormProvider, Controller } from 'react-hook-form';
 import type { Control } from 'react-hook-form';
 import { FileText, Plus, Trash2, Search, Save, X as XIcon } from 'lucide-react';
 import { WindowFormLayout } from '@ui';
+import { CustomDateInput } from '@/shared/components/forms/CustomDateInput';
 import { VendorSearchModal } from '@/modules/master-data/vendor/components/selector/VendorSearchModal';
 import { ProductSearchModal } from '@/modules/procurement/pages/pr/components/ProductSearchModal';
 import type { POFormData } from '@/modules/procurement/schemas/po-schemas';
@@ -243,17 +244,30 @@ export default function POFormModal({
                             {/* ── Row 1: เลขที่ PO | วันที่ PO | อ้างอิง PR/QC ── */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
-                                    <label className={s.label}>เลขที่ PO <span className="text-gray-400 font-normal text-xs">(po_no)</span></label>
+                                    <label className={s.label}>เลขที่ PO </label>
                                     <input {...register('po_no')} className={s.inputRO} readOnly placeholder="ระบบจะสร้างอัตโนมัติ" />
                                     <p className={s.hint}>ระบบจะแสดงเลขที่เมื่อบันทึก</p>
                                 </div>
                                 <div>
-                                    <label className={s.label}>วันที่ PO <span className="text-red-500">*</span> <span className="text-gray-400 font-normal text-xs">(po_date)</span></label>
-                                    <input type="date" {...register('po_date')} className={`${s.input} ${errors.po_date ? 'border-red-500 ring-1 ring-red-500' : ''}`} disabled={isView} />
+                                    <label className={s.label}>วันที่ PO <span className="text-red-500">*</span></label>
+                                    <div className="h-8">
+                                        <Controller
+                                            name="po_date"
+                                            control={control}
+                                            render={({ field }) => (
+                                                <CustomDateInput
+                                                    value={field.value || ''}
+                                                    onChange={field.onChange}
+                                                    disabled={isView}
+                                                    className={`${s.input} ${errors.po_date ? 'border-red-500 ring-1 ring-red-500' : ''}`}
+                                                />
+                                            )}
+                                        />
+                                    </div>
                                     {errors.po_date && <p className={s.error}>{errors.po_date.message}</p>}
                                 </div>
                                 <div>
-                                    <label className={s.label}>อ้างอิง PR <span className="text-gray-400 font-normal text-xs">(pr_id FK)</span></label>
+                                    <label className={s.label}>อ้างอิง PR </label>
                                     <div className="flex gap-2">
                                         <input {...register('pr_no')} className={s.inputRO} readOnly placeholder="PR2024-xxx" />
                                         {!isView && (
@@ -274,7 +288,7 @@ export default function POFormModal({
                             {/* ── Row 2: ผู้ขาย | สาขา | คลังสินค้าปลายทาง ── */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
-                                    <label className={s.label}>ผู้ขาย <span className="text-red-500">*</span> <span className="text-gray-400 font-normal text-xs">(vendor_id FK)</span></label>
+                                    <label className={s.label}>ผู้ขาย <span className="text-red-500">*</span></label>
                                     <div className="flex gap-2">
                                         <input value={watchVendorName ?? ''} readOnly className={`flex-1 ${s.inputRO}`} placeholder="-- เลือกผู้ขาย --" />
                                         {!isView && (
@@ -286,7 +300,7 @@ export default function POFormModal({
                                     {errors.vendor_id && <p className={s.error}>{errors.vendor_id.message}</p>}
                                 </div>
                                 <div>
-                                    <label className={s.label}>สาขา <span className="text-red-500">*</span> <span className="text-gray-400 font-normal text-xs">(branch_id FK)</span></label>
+                                    <label className={s.label}>สาขา <span className="text-red-500">*</span></label>
                                     <select {...register('branch_id')} className={`${s.select} ${errors.branch_id ? 'border-red-500' : ''}`} disabled={isView}>
                                         <option value="">— เลือกสาขา —</option>
                                         {BRANCH_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -294,7 +308,7 @@ export default function POFormModal({
                                     {errors.branch_id && <p className={s.error}>{errors.branch_id.message}</p>}
                                 </div>
                                 <div>
-                                    <label className={s.label}>คลังสินค้าปลายทาง <span className="text-red-500">*</span> <span className="text-gray-400 font-normal text-xs">(ship_to_warehouse_id)</span></label>
+                                    <label className={s.label}>คลังสินค้าปลายทาง <span className="text-red-500">*</span></label>
                                     <select {...register('ship_to_warehouse_id')} className={`${s.select} ${errors.ship_to_warehouse_id ? 'border-red-500' : ''}`} disabled={isView}>
                                         <option value="">— เลือกคลังสินค้า —</option>
                                         {WAREHOUSE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -306,17 +320,25 @@ export default function POFormModal({
                             {/* ── Row 3: เครดิตเทอม | กำหนดส่งของ | -- ช่องว่าง -- ── */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
-                                    <label className={s.label}>เครดิตเทอม (วัน) <span className="text-red-500">*</span> <span className="text-gray-400 font-normal text-xs">(payment_term_days)</span></label>
+                                    <label className={s.label}>เครดิตเทอม (วัน)</label>
                                     <input type="number" {...register('payment_term_days', { valueAsNumber: true })}
                                         className={`${s.input} text-right`} disabled={isView} placeholder="30" />
                                     {errors.payment_term_days && <p className={s.error}>{errors.payment_term_days.message}</p>}
                                 </div>
                                 <div>
-                                    <label className={s.label}>กำหนดส่งของ <span className="text-gray-400 font-normal text-xs">(delivery_date)</span></label>
-                                    <input type="date" {...register('delivery_date')} className={s.input} disabled={isView} />
+                                    <label className={s.label}>กำหนดส่งของ</label>
+                                    <div className="h-8">
+                                        <Controller
+                                            name="delivery_date"
+                                            control={control}
+                                            render={({ field }) => (
+                                                <CustomDateInput value={field.value || ''} onChange={field.onChange} disabled={isView} className={s.input} />
+                                            )}
+                                        />
+                                    </div>
                                 </div>
                                 <div>
-                                    <label className={s.label}>หมายเหตุ <span className="text-gray-400 font-normal text-xs">(remarks)</span></label>
+                                    <label className={s.label}>หมายเหตุ</label>
                                     <input {...register('remarks')} className={s.input} disabled={isView} placeholder="ระบุหมายเหตุเพิ่มเติม..." />
                                 </div>
                             </div>
@@ -345,7 +367,15 @@ export default function POFormModal({
                                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-700/50 rounded-lg">
                                     <div>
                                         <label className={s.label}>วันที่อัตราแลกเปลี่ยน</label>
-                                        <input type="date" {...register('exchange_rate_date')} className={s.input} disabled={isView} />
+                                        <div className="h-8">
+                                            <Controller
+                                                name="exchange_rate_date"
+                                                control={control}
+                                                render={({ field }) => (
+                                                    <CustomDateInput value={field.value || ''} onChange={field.onChange} disabled={isView} className={s.input} />
+                                                )}
+                                            />
+                                        </div>
                                     </div>
                                     <div>
                                         <label className={s.label}>รหัสสกุลเงิน <span className="text-red-500">*</span></label>
@@ -400,19 +430,19 @@ export default function POFormModal({
                                         <tr>
                                             <th className="px-2 py-2 text-center w-12 border-r border-slate-200 dark:border-slate-800">ลำดับ</th>
                                             <th className="px-3 py-2 text-left w-56 border-r border-slate-200 dark:border-slate-800 font-medium">
-                                                สินค้า/บริการ <span className="text-red-400">*</span><br />
+                                                สินค้า/บริการ <br />
                                             </th>
                                             <th className="px-3 py-2 text-left w-64 border-r border-slate-200 dark:border-slate-800 font-medium whitespace-nowrap">
                                                 รายละเอียด<br />
                                             </th>
                                             <th className="px-2 py-2 text-center w-24 border-r border-slate-200 dark:border-slate-800 font-medium">
-                                                จำนวนสั่ง <span className="text-red-400">*</span><br />
+                                                จำนวนสั่ง<br />
                                             </th>
                                             <th className="px-2 py-2 text-center w-20 border-r border-slate-200 dark:border-slate-800 font-medium">
                                                 หน่วย<br />
                                             </th>
                                             <th className="px-2 py-2 text-center w-28 border-r border-slate-200 dark:border-slate-800 font-medium">
-                                                ราคา/หน่วย <span className="text-red-400">*</span><br />
+                                                ราคา/หน่วย<br />
                                             </th>
                                             <th className="px-2 py-2 text-center w-24 border-r border-slate-200 dark:border-slate-800 font-medium">
                                                 ส่วนลด<br />

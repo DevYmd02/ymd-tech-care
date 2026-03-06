@@ -1,10 +1,11 @@
 import { useState, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { PRService } from '@/modules/procurement/services/pr.service';
-import type { CreatePRPayload } from '@/modules/procurement/types';
+import type { CreatePRPayload, PRHeader } from '@/modules/procurement/types';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, Send } from 'lucide-react';
 import { logger } from '@/shared/utils/logger';
+import { extractErrorMessage } from '@/core/api/api';
 
 export const usePRActions = () => {
     const queryClient = useQueryClient();
@@ -72,10 +73,16 @@ export const usePRActions = () => {
             variant: 'success',
             icon: CheckCircle,
             onConfirm: async () => {
-                setApprovingId(id); // Disable buttons in list
-                const result = await PRService.approve(id);
-                if (!result || !result.success) {
-                    throw new Error(result?.message || 'ไม่สามารถอนุมัติเอกสารได้');
+                try {
+                    setApprovingId(id); // Disable buttons in list
+                    const result = await PRService.approve(id);
+                    if (!result || !result.success) {
+                        throw new Error(result?.message || 'ไม่สามารถอนุมัติเอกสารได้');
+                    }
+                } catch (error) {
+                    // Extract exact backend error for the toast
+                    const errorMessage = extractErrorMessage(error);
+                    throw new Error(errorMessage);
                 }
             }
         }).then((confirmed) => {
@@ -93,8 +100,18 @@ export const usePRActions = () => {
                 queryClient.invalidateQueries({ queryKey: ['pr', id] });
                 callbacks?.onSuccess?.();
             }
-        }).catch(() => {
-             // Error handled by context or ignored here
+        }).catch((error) => {
+            setApprovingId(null);
+            // Red Toast showing the specific backend message
+            if (error instanceof Error && error.message !== 'cancel') {
+                confirm({
+                    title: 'อนุมัติไม่สำเร็จ',
+                    description: error.message,
+                    confirmText: 'ตกลง',
+                    hideCancel: true,
+                    variant: 'danger'
+                });
+            }
         });
     }, [confirm, queryClient]);
 
@@ -171,12 +188,68 @@ export const usePRActions = () => {
         }
     }, [queryClient]);
 
+    /**
+     * handleDirectApproval — Send for Approval Flow (DRAFT → PENDING)
+     * Shows confirmation dialog, then calls processDirectApproval which:
+     * 1. Calls PATCH /pr/{id}/submit to change status DRAFT → PENDING (รออนุมัติ)
+     *
+     * Root cause fix: ไม่ต้อง PATCH header ก่อน เพราะ FK IDs จาก PRHeader เป็น string
+     * แต่ backend DTO ต้องการ number → ทำให้เกิด 400 Bad Request
+     */
+    const handleDirectApproval = useCallback((pr: PRHeader, callbacks?: { onSuccess?: () => void }) => {
+        const totalAmount = Number(pr.pr_base_total_amount ?? pr.total_amount ?? 0);
+        const formattedAmount = totalAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        confirm({
+            title: 'ยืนยันการส่งอนุมัติ',
+            description: `คุณต้องการส่งเอกสาร ${pr.pr_no} เพื่อขออนุมัติใช่หรือไม่?\nยอดรวม: ${formattedAmount} บาท`,
+            confirmText: 'ส่งอนุมัติ',
+            cancelText: 'ยกเลิก',
+            variant: 'info',
+            icon: Send,
+            onConfirm: async () => {
+                const result = await PRService.processDirectApproval(pr.pr_id);
+                if (!result || !result.success) {
+                    throw new Error(result?.message || 'ส่งอนุมัติไม่สำเร็จ');
+                }
+            }
+        }).then((confirmed) => {
+            if (confirmed) {
+                // Success Modal — สถานะเปลี่ยนเป็น PENDING (รออนุมัติ) ไม่ใช่ APPROVED
+                confirm({
+                    title: 'ส่งอนุมัติสำเร็จ',
+                    description: `เอกสาร ${pr.pr_no} ถูกส่งเพื่อขออนุมัติเรียบร้อยแล้ว\nสถานะ: รออนุมัติ (Pending)`,
+                    confirmText: 'ตกลง',
+                    hideCancel: true,
+                    variant: 'success',
+                    icon: CheckCircle,
+                });
+                queryClient.invalidateQueries({ queryKey: ['prs'] });
+                queryClient.invalidateQueries({ queryKey: ['pr', pr.pr_id] });
+                callbacks?.onSuccess?.();
+            }
+        }).catch((error) => {
+            if (error instanceof Error && error.message !== 'cancel') {
+                const errorMessage = extractErrorMessage(error);
+                confirm({
+                    title: 'ส่งอนุมัติไม่สำเร็จ',
+                    description: errorMessage,
+                    confirmText: 'ตกลง',
+                    hideCancel: true,
+                    variant: 'danger'
+                });
+            }
+            logger.error('Send for approval failed', error);
+        });
+    }, [confirm, queryClient]);
+
     return {
         createPRMutation,
         updatePR,
         deletePR,
         approvePR,
         handleApprove,
+        handleDirectApproval,
         cancelPR,
         isActionLoading,
         approvingId,

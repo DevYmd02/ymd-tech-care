@@ -40,6 +40,7 @@ export interface PRTListResponse {
     total: number;
     page: number;
     limit: number;
+  totalPages: number;
 }
 
 export interface PrtItem {

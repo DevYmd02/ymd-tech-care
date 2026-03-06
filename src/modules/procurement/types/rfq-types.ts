@@ -29,7 +29,7 @@ export interface RFQHeader {
     pr_id: string | null;               // UUID - FK -> pr_header.pr_id (PR ที่ Approved แล้ว)
     branch_id: string | null;           // UUID - FK -> org_branch.branch_id
     rfq_date: string;                   // DATE - วันที่ออก RFQ
-    quote_due_date: string | null;      // DATE - วันครบกำหนดส่งใบเสนอราคา
+    quotation_due_date: string | null;  // DATE - วันครบกำหนดส่งใบเสนอราคา (จาก Golden Payload)
     terms_and_conditions?: string | null; // TEXT - เงื่อนไขและข้อกำหนด
     status: RFQStatus;                  // VARCHAR(50) - DRAFT, SENT, IN_PROGRESS, CLOSED, CANCELLED
     created_by_user_id?: string | null;  // UUID - FK -> users.user_id
@@ -53,10 +53,12 @@ export interface RFQHeader {
     has_quotation?: boolean;            // มีการสร้างใบเสนอราคา (VQ) ในระบบแล้วหรือไม่
     
     // Form-related fields
-    currency?: string;                  // สกุลเงิน
-    exchange_rate?: number;             // อัตราแลกเปลี่ยน
-    delivery_location?: string;         // สถานที่จัดส่ง/ส่งมอบ
-    payment_terms?: string;             // เงื่อนไขการชำระ
+    rfq_base_currency_code?: string;      // สกุลเงินฐาน (THB)
+    rfq_quote_currency_code?: string;     // สกุลเงินที่ขอราคา (USD, etc.)
+    rfq_exchange_rate?: number;           // อัตราแลกเปลี่ยน
+    rfq_exchange_rate_date?: string;      // วันที่อัตราแลกเปลี่ยน
+    receive_location?: string;           // สถานที่รับของ
+    payment_term_hint?: string;          // เงื่อนไขการชำระ (hint)
     incoterm?: string;                  // เงื่อนไขส่งมอบ (FOB, CIF, EXW, etc.)
     remarks?: string;                   // หมายเหตุเพิ่มเติม
 }
@@ -74,13 +76,13 @@ export interface RFQLine {
     item_id: string | null;             // UUID - FK -> item.item_id
     item_code: string;                  // VARCHAR(50)
     item_name: string;                  // VARCHAR(500)
-    item_description: string | null;    // TEXT
-    required_qty: number;               // DECIMAL(18,4) - จำนวนที่ต้องการ
+    description: string | null;         // TEXT (จาก Golden Payload)
+    qty: number;                        // DECIMAL(18,4) - จำนวนที่ต้องการ (จาก Golden Payload)
     uom: string;                        // VARCHAR(50) - หน่วยนับ
-    required_date: string | null;       // DATE - วันที่ต้องการสินค้า
+    target_delivery_date: string | null; // DATE - วันที่ต้องการสินค้า (จาก Golden Payload)
     technical_spec: string | null;      // TEXT - ข้อกำหนดทางเทคนิค
     est_unit_price?: number;            // Added for VQ reference
-    remark: string | null;              // TEXT - หมายเหตุ
+    note_to_vendor: string | null;      // TEXT - หมายเหตุ (จาก Golden Payload)
 }
 
 // ====================================================================================
@@ -115,7 +117,7 @@ export interface RFQListItem {
     pr_id: string | null;
     creator_name: string;            // จาก created_by_name เดิม
     status: RFQStatus;
-    quote_due_date: string | null;
+    quotation_due_date: string | null;
     vendor_count?: number;              // จำนวนเจ้าหนี้ที่ส่ง
 }
 
@@ -132,15 +134,16 @@ export interface RFQFormData {
     pr_no: string | null;
     branch_id: string | null;
     project_id?: string | null; // โครงการ (Optional)
-    created_by_name: string;
+    requested_by_user_id: number;
+    requested_by: string;
     status: RFQStatus;
-    quote_due_date: string;
-    currency: string;
-    target_currency?: string; // ไปยังสกุลเงิน (Optional)
-    exchange_rate_date?: string; // วันที่อัตราแลกเปลี่ยน (Optional)
-    exchange_rate: number;
-    delivery_location: string;
-    payment_terms: string;
+    quotation_due_date: string;
+    rfq_base_currency_code: string;
+    rfq_quote_currency_code: string;
+    rfq_exchange_rate_date?: string;
+    rfq_exchange_rate: number;
+    receive_location: string;
+    payment_term_hint: string;
     incoterm: string;
     remarks: string;
     isMulticurrency: boolean;
@@ -152,7 +155,7 @@ export interface RFQFormData {
     pr_tax_rate?: number;          // อัตราภาษี (จาก PR)
     
     // Lines
-    lines: RFQLineFormData[];
+    rfqLines: RFQLineFormData[];
     
     // Vendors
     vendors: RFQVendorFormData[];
@@ -172,12 +175,13 @@ export interface RFQLineFormData {
     line_no: number;
     item_code: string;
     item_name: string;
-    item_description: string;
-    required_qty: number;
+    description: string;
+    qty: number;
     uom: string;
-    required_date: string;
-    remarks: string;
-    // V-07: Traceability & pricing fields from PR
+    uom_id: number;
+    required_receipt_type: string;
+    target_delivery_date: string;
+    note_to_vendor: string;
     item_id?: string;              // FK → item (for traceability)
     pr_line_id?: string;           // FK → pr_line (for traceability)
     est_unit_price?: number;       // ราคาต่อหน่วยโดยประมาณ from PR
@@ -192,11 +196,13 @@ export const initialRFQLineFormData: RFQLineFormData = {
     line_no: 1,
     item_code: '',
     item_name: '',
-    item_description: '',
-    required_qty: 0,
+    description: '',
+    qty: 0,
     uom: '',
-    required_date: '',
-    remarks: '',
+    uom_id: 0,
+    required_receipt_type: 'FULL',
+    target_delivery_date: '',
+    note_to_vendor: '',
     est_unit_price: 0,
     est_amount: 0,
 };
@@ -207,18 +213,20 @@ export const initialRFQFormData: RFQFormData = {
     pr_id: null,
     pr_no: null,
     branch_id: null,
-    created_by_name: '',
+    requested_by_user_id: 2,
+    requested_by: '',
     status: 'DRAFT',
-    quote_due_date: '',
-    currency: 'THB',
-    exchange_rate: 1,
-    delivery_location: '',
-    payment_terms: '',
+    quotation_due_date: '',
+    rfq_base_currency_code: 'THB',
+    rfq_quote_currency_code: 'THB',
+    rfq_exchange_rate: 1,
+    receive_location: '',
+    payment_term_hint: '',
     incoterm: '',
     remarks: '',
     isMulticurrency: false,
     purpose: '', // Initial value
-    lines: [{ ...initialRFQLineFormData }],
+    rfqLines: [{ ...initialRFQLineFormData }],
     vendors: [{ vendor_code: '', vendor_name: '', vendor_name_display: '' }]
 };
 
@@ -249,11 +257,12 @@ export interface RFQListResponse {
     total: number;
     page: number;
     limit: number;
+  totalPages: number;
 }
 
 /** RFQ Create/Update Data - สำหรับ API request */
-export interface RFQCreateData extends Omit<RFQFormData, 'lines'> {
-    lines: RFQLineFormData[];
+export interface RFQCreateData extends Omit<RFQFormData, 'rfqLines'> {
+    rfqLines: RFQLineFormData[];
     vendor_ids?: string[];
     terms_and_conditions?: string;
 }

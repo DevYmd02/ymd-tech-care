@@ -1,7 +1,7 @@
 import type MockAdapter from 'axios-mock-adapter';
 import type { AxiosRequestConfig } from 'axios';
-import { MOCK_RFQS, MOCK_RFQ_VENDORS, VENDOR_POOL, MOCK_RFQ_LINES } from '../data/rfqData';
-import { MOCK_VQS } from '../data/vqData';
+import { MOCK_RFQS, MOCK_RFQ_VENDORS, VENDOR_POOL, MOCK_RFQ_LINES } from '@/modules/procurement/mocks/data/rfqData';
+import { MOCK_VQS } from '@/modules/procurement/mocks/data/vqData';
 import { applyMockFilters, sanitizeId } from '@/core/api/mockUtils';
 import type { RFQHeader, RFQLine } from '@/modules/procurement/types';
 
@@ -114,7 +114,7 @@ export const setupRFQHandlers = (mock: MockAdapter) => {
                     lines: rfqLines.map(rl => ({
                         item_code: rl.item_code,
                         item_name: rl.item_name,
-                        qty: rl.required_qty,
+                        qty: rl.qty,
                         uom_name: rl.uom,
                         unit_price: 0,
                         discount_amount: 0,
@@ -153,7 +153,7 @@ export const setupRFQHandlers = (mock: MockAdapter) => {
       responded_vendors_count: 0,
       sent_vendors_count: 0,
       purpose: body.purpose || '',
-      quote_due_date: body.quote_due_date || null,
+      quotation_due_date: body.quotation_due_date || null,
       created_by_name: body.created_by_name || 'Admin',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),

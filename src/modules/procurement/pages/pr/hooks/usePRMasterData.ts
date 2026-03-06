@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { MasterDataService } from '@/modules/master-data';
-import type { ItemListItem, CostCenter, Project, WarehouseListItem, UnitListItem } from '@/modules/master-data/types/master-data-types';
+import type { ItemListItem, CostCenter, Project, WarehouseListItem, UnitListItem, Currency } from '@/modules/master-data/types/master-data-types';
 import { TaxCodeService } from '@/modules/master-data/tax/services/tax-code.service';
 import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
 import { logger } from '@/shared/utils/logger';
@@ -17,6 +17,7 @@ export const usePRMasterData = () => {
      const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
      const [projects, setProjects] = useState<Project[]>([]);
      const [purchaseTaxOptions, setPurchaseTaxOptions] = useState<MappedOption<TaxCode>[]>([]);
+     const [currencies, setCurrencies] = useState<Currency[]>([]);
     
     const [isLoading, setIsLoading] = useState(true);
     const [isSearchingProducts, setIsSearchingProducts] = useState(false);
@@ -40,7 +41,8 @@ export const usePRMasterData = () => {
               MasterDataService.getProjects(),
               TaxCodeService.getTaxCodes(),
               MasterDataService.getItems(),
-              MasterDataService.getUnits()
+              MasterDataService.getUnits(),
+              MasterDataService.getCurrencies()
             ]);
 
             const wh = results[0].status === 'fulfilled' ? results[0].value : [];
@@ -49,6 +51,7 @@ export const usePRMasterData = () => {
             const taxCodes = results[3].status === 'fulfilled' ? results[3].value : [];
             const itemsResult = results[4].status === 'fulfilled' ? results[4].value : [];
             const unitsResult = results[5].status === 'fulfilled' ? results[5].value : [];
+            const currencyResult = results[6].status === 'fulfilled' ? results[6].value : [];
 
             if (results[3].status === 'rejected') {
               logger.error('[usePRMasterData] Tax fetch error:', results[3].reason);
@@ -77,6 +80,7 @@ export const usePRMasterData = () => {
              setProjects(extractArray(prj));
              setMasterItems(extractArray(itemsResult));
              setMasterUnits(extractArray(unitsResult));
+             setCurrencies(extractArray(currencyResult));
              
              // Tax Filter: Default to active when is_active is not provided by API
              const taxArray = extractArray(taxCodes);
@@ -122,6 +126,7 @@ export const usePRMasterData = () => {
         costCenters,
         projects,
         purchaseTaxOptions,
+        currencies,
         masterItems,
         masterUnits,
         isLoading,

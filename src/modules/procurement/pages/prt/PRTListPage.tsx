@@ -1,13 +1,17 @@
+/**
+ * @file PRTListPage.tsx
+ * @description หน้ารายการใบคืนสินค้า (Purchase Return List)
+ * @route /procurement/prt
+ * @refactored Uses PageListLayout, FilterField, useTableFilters (Manual Search Pattern), React Query, SmartTable
+ */
 
 import { useMemo, useState } from 'react';
 import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/react-query';
-import { FileText, Eye, Package, Database } from 'lucide-react'; // Added Database as placeholder icon
+import { FileText, Eye, Package, Database, Search, Plus } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
-import { FilterFormBuilder } from '@ui';
-import { PageListLayout, SmartTable } from '@ui';
-import type { FilterFieldConfig } from '@ui';
-import { useTableFilters, type TableFilters } from '@/shared/hooks';
-import { PrtService } from '@/modules/procurement/services/prt.service'; // Fixed import path
+import { PageListLayout, SmartTable, FilterField, MobileListCard, MobileListContainer } from '@ui';
+import { useTableFilters } from '@/shared/hooks';
+import { PrtService } from '@/modules/procurement/services/prt.service';
 import type { PRTListParams, PRTStatus, PurchaseReturn } from '@/modules/procurement/types';
 import { createColumnHelper } from '@tanstack/react-table';
 import type { ColumnDef } from '@tanstack/react-table';
@@ -43,7 +47,7 @@ const PRTStatusBadge: React.FC<{ status: PRTStatus; className?: string }> = ({ s
 };
 
 // ====================================================================================
-// OPTIONS & FILTER CONFIG
+// OPTIONS
 // ====================================================================================
 
 const PRT_STATUS_OPTIONS = [
@@ -53,31 +57,35 @@ const PRT_STATUS_OPTIONS = [
     { value: 'CANCELLED', label: 'ยกเลิก' },
 ];
 
-type PRTFilterKeys = Extract<keyof TableFilters<PRTStatus>, string>;
-
-const PRT_FILTER_CONFIG: FilterFieldConfig<PRTFilterKeys>[] = [
-    { name: 'search', label: 'เลขที่ PRT', type: 'text', placeholder: 'PRT2024-xxx' },
-    { name: 'search2', label: 'ผู้ขาย', type: 'text', placeholder: 'ชื่อผู้ขาย' },
-    { name: 'search3', label: 'เลขที่ GRN อ้างอิง', type: 'text', placeholder: 'GRN2024-xxx' },
-    { name: 'status', label: 'สถานะ', type: 'select', options: PRT_STATUS_OPTIONS },
-    { name: 'dateFrom', label: 'วันที่เริ่มต้น', type: 'date' },
-    { name: 'dateTo', label: 'วันที่สิ้นสุด', type: 'date' },
-];
+// ====================================================================================
+// MAIN COMPONENT
+// ====================================================================================
 
 export default function PRTListPage() {
     const queryClient = useQueryClient();
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    const { filters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<PRTStatus>({
+    // URL-based Filter State (Explicit Search Pattern)
+    const {
+        filters,
+        localFilters,
+        handleFilterChange,
+        handleApplyFilters,
+        setFilters,
+        resetFilters,
+        handlePageChange,
+        handleSortChange,
+        sortConfig,
+    } = useTableFilters<PRTStatus>({
         defaultStatus: 'ALL',
         customParamKeys: {
             search: 'prt_no',
             search2: 'vendor_name',
             search3: 'ref_grn_no',
-        }
+        },
     });
 
-    // API Params
+    // Convert to API filter format using APPLIED filters (from URL)
     const apiFilters: PRTListParams = {
         page: filters.page,
         limit: filters.limit,
@@ -90,7 +98,7 @@ export default function PRTListPage() {
         sort: filters.sort || undefined,
     };
 
-    // Data Fetching
+    // Data Fetching — driven by applied filters (URL params only)
     const { data, isLoading } = useQuery({
         queryKey: ['purchase-returns', apiFilters],
         queryFn: () => PrtService.getList(apiFilters),
@@ -101,9 +109,6 @@ export default function PRTListPage() {
     const handleView = (id: string) => alert(`ดูรายละเอียด PRT: ${id}`);
     const handleCN = (id: string) => alert(`ออก CN สำหรับ PRT: ${id}`);
     const handlePost = (id: string) => alert(`Post PRT: ${id}`);
-    const handleFilterChange = (name: PRTFilterKeys, value: string) => {
-        setFilters({ [name]: value });
-    };
 
     const handleCreate = () => {
         setIsModalOpen(true);
@@ -116,8 +121,15 @@ export default function PRTListPage() {
 
     // Columns
     const columnHelper = createColumnHelper<PurchaseReturn>();
-    
+
     const columns = useMemo(() => [
+        columnHelper.display({
+            id: 'index',
+            header: () => <div className="text-center w-full">ลำดับ</div>,
+            cell: (info) => <div className="text-center">{info.row.index + 1 + (filters.page - 1) * filters.limit}</div>,
+            size: 50,
+            enableSorting: false,
+        }),
         columnHelper.accessor('prt_no', {
             header: 'เลขที่ PRT',
             cell: (info) => (
@@ -129,6 +141,7 @@ export default function PRTListPage() {
                 </div>
             ),
             size: 140,
+            enableSorting: true,
         }),
         columnHelper.accessor('prt_date', {
             header: 'วันที่คืน',
@@ -138,6 +151,7 @@ export default function PRTListPage() {
                 </span>
             ),
             size: 110,
+            enableSorting: true,
         }),
         columnHelper.accessor('vendor_name', {
             header: 'ผู้ขาย',
@@ -150,6 +164,7 @@ export default function PRTListPage() {
                 </div>
             ),
             size: 200,
+            enableSorting: false,
         }),
         columnHelper.accessor('ref_grn_no', {
             header: 'อ้างอิง GRN',
@@ -159,6 +174,7 @@ export default function PRTListPage() {
                 </span>
             ),
             size: 130,
+            enableSorting: false,
         }),
         columnHelper.accessor('total_qty', {
             header: () => <div className="text-right w-full">จำนวนคืน (QTY)</div>,
@@ -168,6 +184,7 @@ export default function PRTListPage() {
                 </div>
             ),
             size: 100,
+            enableSorting: true,
         }),
         columnHelper.accessor('total_amount', {
             header: () => <div className="text-right w-full">มูลค่ารวม (TOTAL)</div>,
@@ -177,6 +194,7 @@ export default function PRTListPage() {
                 </div>
             ),
             size: 130,
+            enableSorting: true,
         }),
         columnHelper.accessor('status', {
             header: () => <div className="text-center w-full">สถานะ</div>,
@@ -186,6 +204,7 @@ export default function PRTListPage() {
                 </div>
             ),
             size: 100,
+            enableSorting: false,
         }),
         columnHelper.display({
             id: 'actions',
@@ -194,16 +213,16 @@ export default function PRTListPage() {
                 const item = row.original;
                 return (
                     <div className="flex items-center justify-center gap-2">
-                         <button 
+                        <button
                             onClick={() => handleView(item.prt_id)}
-                            className="p-1.5 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors"
+                            className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-all"
                             title="ดูรายละเอียด"
                         >
                             <Eye size={16} />
                         </button>
-                        
+
                         {item.status === 'POSTED' && (
-                             <button 
+                            <button
                                 onClick={() => handleCN(item.prt_id)}
                                 className="px-2 py-1 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold rounded transition-colors flex items-center gap-1"
                                 title="Credit Note"
@@ -213,7 +232,7 @@ export default function PRTListPage() {
                         )}
 
                         {item.status === 'DRAFT' && (
-                            <button 
+                            <button
                                 onClick={() => handlePost(item.prt_id)}
                                 className="px-2 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded transition-colors flex items-center gap-1"
                                 title="Post PRT"
@@ -225,81 +244,179 @@ export default function PRTListPage() {
                 );
             },
             size: 120,
+            enableSorting: false,
         }),
-    ], [columnHelper]);
+    ], [columnHelper, filters.page, filters.limit]);
 
     return (
-        <PageListLayout
-            title="รายการใบคืนสินค้า (Purchase Return - PRT)"
-            subtitle="จัดการและติดตามใบคืนสินค้าทั้งหมด"
-            icon={Database} // Using Database icon as generic placeholder or use another if FileText is too common
-            accentColor="blue"
-            totalCount={data?.total}
-            totalCountLoading={isLoading}
-            isLoading={isLoading}
-            searchForm={
-                <FilterFormBuilder
-                    config={PRT_FILTER_CONFIG}
-                    filters={filters}
-                    onFilterChange={handleFilterChange}
-                    onSearch={() => {}} 
-                    onReset={resetFilters}
-                    accentColor="blue"
-                    columns={{ sm: 1, md: 2, xl: 5 }} // Adjusted for 5 filters + actions
-                    actionColSpan={{ md: 2, xl: 1 }}
-                    actionAlign="end"
-                    onCreate={handleCreate}
-                    createLabel="สร้าง PRT ใหม่"
-                />
-            }
-        >
-             <div className="h-full flex flex-col">
-                 <div className="hidden md:block flex-1 overflow-hidden">
-                    <SmartTable
-                        data={data?.data ?? []}
-                        columns={columns as ColumnDef<PurchaseReturn>[]}
+        <>
+            <PageListLayout
+                title="รายการใบคืนสินค้า (Purchase Return - PRT)"
+                subtitle="จัดการและติดตามใบคืนสินค้าทั้งหมด"
+                icon={Database}
+                accentColor="blue"
+                totalCount={data?.total}
+                totalCountLoading={isLoading}
+                isLoading={isLoading}
+                searchForm={
+                    <form onSubmit={(e) => { e.preventDefault(); handleApplyFilters(); }} className="w-full">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                            <FilterField
+                                label="เลขที่ PRT"
+                                value={localFilters.search}
+                                onChange={(val: string) => handleFilterChange('search', val)}
+                                placeholder="PRT2024-xxx"
+                                accentColor="blue"
+                            />
+                            <FilterField
+                                label="ผู้ขาย"
+                                value={localFilters.search2}
+                                onChange={(val: string) => handleFilterChange('search2', val)}
+                                placeholder="ชื่อผู้ขาย"
+                                accentColor="blue"
+                            />
+                            <FilterField
+                                label="เลขที่ GRN อ้างอิง"
+                                value={localFilters.search3}
+                                onChange={(val: string) => handleFilterChange('search3', val)}
+                                placeholder="GRN2024-xxx"
+                                accentColor="blue"
+                            />
+                            <FilterField
+                                label="สถานะ"
+                                type="select"
+                                value={localFilters.status}
+                                onChange={(val: string) => handleFilterChange('status', val)}
+                                options={PRT_STATUS_OPTIONS}
+                                accentColor="blue"
+                            />
+                            <FilterField
+                                label="วันที่เริ่มต้น"
+                                type="date"
+                                value={localFilters.dateFrom || ''}
+                                onChange={(val: string) => handleFilterChange('dateFrom', val)}
+                                accentColor="blue"
+                            />
+                            <FilterField
+                                label="วันที่สิ้นสุด"
+                                type="date"
+                                value={localFilters.dateTo || ''}
+                                onChange={(val: string) => handleFilterChange('dateTo', val)}
+                                accentColor="blue"
+                            />
+
+                            {/* Action Buttons Group */}
+                            <div className="md:col-span-2 lg:col-span-2 flex flex-col sm:flex-row flex-wrap justify-end gap-2 items-center">
+                                <div className="flex gap-2 w-full sm:w-auto">
+                                    <button
+                                        type="button"
+                                        onClick={resetFilters}
+                                        className="flex-1 sm:flex-none h-10 px-4 bg-white hover:bg-gray-50 text-gray-700 rounded-lg font-medium transition-colors border border-gray-300 shadow-sm whitespace-nowrap"
+                                    >
+                                        ล้างค่า
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="flex-1 sm:flex-none h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+                                    >
+                                        <Search size={18} />
+                                        ค้นหา
+                                    </button>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={handleCreate}
+                                    className="w-full sm:w-auto h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+                                >
+                                    <Plus size={16} strokeWidth={2.5} />
+                                    สร้าง PRT ใหม่
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                }
+            >
+                <div className="h-full flex flex-col">
+                    {/* Desktop View: Table */}
+                    <div className="hidden md:block flex-1 overflow-hidden">
+                        <SmartTable
+                            data={data?.data ?? []}
+                            columns={columns as ColumnDef<PurchaseReturn>[]}
+                            isLoading={isLoading}
+                            pagination={{
+                                pageIndex: filters.page,
+                                pageSize: filters.limit,
+                                totalCount: data?.total ?? 0,
+                                onPageChange: handlePageChange,
+                                onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 }),
+                            }}
+                            sortConfig={sortConfig}
+                            onSortChange={handleSortChange}
+                            rowIdField="prt_id"
+                            className="h-full"
+                        />
+                    </div>
+
+                    {/* Mobile View: Cards (shared MobileListContainer + MobileListCard) */}
+                    <MobileListContainer
                         isLoading={isLoading}
-                        pagination={{
-                            pageIndex: filters.page,
-                            pageSize: filters.limit,
-                            totalCount: data?.total ?? 0,
-                            onPageChange: handlePageChange,
-                            onPageSizeChange: (size) => setFilters({ limit: size, page: 1 })
-                        }}
-                        sortConfig={sortConfig}
-                        onSortChange={handleSortChange}
-                        rowIdField="prt_id"
-                        className="h-full"
-                    />
-                 </div>
+                        isEmpty={!data?.data?.length}
+                        pagination={data?.total ? { page: filters.page, total: data.total, limit: filters.limit, onPageChange: handlePageChange } : undefined}
+                    >
+                        {(data?.data ?? []).map((item) => (
+                            <MobileListCard
+                                key={item.prt_id}
+                                title={item.prt_no}
+                                subtitle={formatThaiDate(item.prt_date)}
+                                statusBadge={<PRTStatusBadge status={item.status} />}
+                                details={[
+                                    { label: 'ผู้ขาย:', value: item.vendor_name || '-' },
+                                    { label: 'GRN อ้างอิง:', value: item.ref_grn_no || '-' },
+                                    { label: 'จำนวนคืน:', value: `${item.total_qty?.toLocaleString() || 0}` },
+                                ]}
+                                amountLabel="มูลค่ารวม"
+                                amountValue={
+                                    <span className="font-bold text-lg text-emerald-600 dark:text-emerald-400">
+                                        {item.total_amount?.toLocaleString('en-US', { minimumFractionDigits: 2 })} บาท
+                                    </span>
+                                }
+                                actions={
+                                    <>
+                                        <button
+                                            onClick={() => handleView(item.prt_id)}
+                                            className="flex-1 bg-gray-50 dark:bg-slate-700 hover:bg-gray-100 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1 border border-gray-200 dark:border-slate-600"
+                                        >
+                                            <Eye size={14} /> ดูรายละเอียด
+                                        </button>
+                                        {item.status === 'DRAFT' && (
+                                            <button
+                                                onClick={() => handlePost(item.prt_id)}
+                                                className="flex-[2] bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
+                                            >
+                                                <Package size={14} /> Post
+                                            </button>
+                                        )}
+                                        {item.status === 'POSTED' && (
+                                            <button
+                                                onClick={() => handleCN(item.prt_id)}
+                                                className="flex-[2] bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
+                                            >
+                                                <FileText size={14} /> CN
+                                            </button>
+                                        )}
+                                    </>
+                                }
+                            />
+                        ))}
+                    </MobileListContainer>
+                </div>
+            </PageListLayout>
 
-                 {/* Mobile View (Optional - Simplified) */}
-                 <div className="md:hidden flex-1 overflow-y-auto p-4">
-                     {data?.data.map(item => (
-                         <div key={item.prt_id} className="bg-white p-4 rounded-lg shadow mb-4 border">
-                             <div className="flex justify-between mb-2">
-                                 <span className="font-bold text-blue-600">{item.prt_no}</span>
-                                 <PRTStatusBadge status={item.status} />
-                             </div>
-                             <div className="text-sm text-gray-600 mb-2">
-                                 <div>{item.vendor_name}</div>
-                                 <div className="text-xs text-gray-500">{formatThaiDate(item.prt_date)}</div>
-                             </div>
-                             <div className="flex justify-between items-center border-t pt-2">
-                                 <span className="font-bold">{item.total_amount.toLocaleString()} บาท</span>
-                                 <button onClick={() => handleView(item.prt_id)} className="text-blue-500 text-sm">ดูรายละเอียด</button>
-                             </div>
-                         </div>
-                     ))}
-                 </div>
-             </div>
-
-             <PRTFormModal 
+            <PRTFormModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 onSuccess={handleModalSuccess}
-             />
-        </PageListLayout>
+            />
+        </>
     );
 }
-

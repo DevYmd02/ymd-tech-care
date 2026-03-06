@@ -3,12 +3,12 @@ import { z } from 'zod';
 import { MasterDataService } from '@/modules/master-data';
 import type { BranchListItem, ItemListItem, UnitListItem } from '@/modules/master-data/types/master-data-types';
 import type { VendorSearchItem } from '@/modules/master-data/vendor/types/vendor-types';
-import type { RFQFormData, RFQLineFormData, RFQCreateData, RFQVendor, RFQVendorFormData, RFQLine } from '@/modules/procurement/types';
+import type { RFQFormData, RFQLineFormData, RFQVendor, RFQVendorFormData, RFQLine } from '@/modules/procurement/types';
 import { initialRFQFormData, initialRFQLineFormData } from '@/modules/procurement/types/rfq-types';
 import type { PRHeader } from '@/modules/procurement/types';
 
 import { PRService } from '@/modules/procurement/services/pr.service';
-import { RFQService } from '@/modules/procurement/services/rfq.service';
+import { RFQService, type RFQCreateDTO, type RFQLineDTO } from '@/modules/procurement/services/rfq.service';
 import { logger } from '@/shared/utils/logger';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 
@@ -19,8 +19,8 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         ...initialRFQFormData,
         rfq_no: 'DRAFT',
         rfq_date: new Date().toLocaleDateString('en-CA'),
-        created_by_name: 'ระบบจะกรอกอัตโนมัติ',
-        lines: [],
+        requested_by: 'ระบบจะกรอกอัตโนมัติ',
+        rfqLines: [],
     });
     const [originalPRLines, setOriginalPRLines] = useState<RFQLineFormData[]>([]);
 
@@ -90,11 +90,13 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                     line_no: i + 1,
                     item_code: line.item_code,
                     item_name: line.item_name,
-                    item_description: line.item_description || '',
-                    required_qty: line.required_qty,
+                    description: line.description || '',
+                    qty: line.qty,
                     uom: line.uom,
-                    required_date: line.required_date || '',
-                    remarks: line.remark || '',
+                    uom_id: 0, // Fallback, will be filled if available or on save
+                    required_receipt_type: 'FULL',
+                    target_delivery_date: line.target_delivery_date || '',
+                    note_to_vendor: line.note_to_vendor || '',
                     item_id: line.item_id || undefined,
                     pr_line_id: line.pr_line_id || undefined,
                 }));
@@ -105,18 +107,21 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                     pr_id: rfq.pr_id || null,
                     pr_no: rfq.pr_no || null,
                     branch_id: rfq.branch_id || null,
-                    created_by_name: rfq.created_by_name || '',
-                    status: rfq.status || 'DRAFT',
-                    quote_due_date: rfq.quote_due_date?.split('T')[0] || '',
-                    currency: rfq.currency || 'THB',
-                    exchange_rate: rfq.exchange_rate || 1,
-                    payment_terms: rfq.payment_terms || '',
+                    requested_by: rfq.created_by_name || '',
+                    status: (rfq.status === 'SENT' || rfq.status === 'CLOSED' || rfq.status === 'CANCELLED') ? rfq.status : 'DRAFT',
+                    quotation_due_date: rfq.quotation_due_date?.split('T')[0] || '',
+                    rfq_base_currency_code: rfq.rfq_base_currency_code || 'THB',
+                    rfq_quote_currency_code: rfq.rfq_quote_currency_code || 'THB',
+                    rfq_exchange_rate: rfq.rfq_exchange_rate || 1,
+                    rfq_exchange_rate_date: rfq.rfq_exchange_rate_date || '',
+                    payment_term_hint: rfq.payment_term_hint || '',
                     incoterm: rfq.incoterm || '',
                     remarks: rfq.remarks || '',
                     purpose: rfq.purpose || '',
-                    delivery_location: rfq.delivery_location || '',
-                    lines: rfqLines,
+                    receive_location: rfq.receive_location || '',
+                    rfqLines: rfqLines,
                     vendors: mappedVendors,
+                    isMulticurrency: (rfq.rfq_base_currency_code || 'THB') !== 'THB'
                 });
                 setErrors({});
                 
@@ -130,18 +135,20 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                                 line_no: index + 1,
                                 item_code: line.item_code,
                                 item_name: line.item_name,
-                                item_description: line.description || line.item_name,
-                                required_qty: line.qty,
+                                description: line.description || line.item_name,
+                                qty: line.qty,
                                 uom: line.uom,
-                                required_date: line.needed_date ? line.needed_date.split('T')[0] : '',
-                                remarks: line.remark || '',
+                                uom_id: Number(line.uom_id || 0),
+                                required_receipt_type: line.required_receipt_type || 'FULL',
+                                target_delivery_date: line.needed_date ? line.needed_date.split('T')[0] : '',
+                                note_to_vendor: line.remark || '',
                                 item_id: line.item_id || undefined,
                                 pr_line_id: line.pr_line_id || undefined,
                                 est_unit_price: line.est_unit_price || 0,
                                 est_amount: line.est_amount || 0,
                             }));
                             // Overwrite empty lines with safely mapped PR lines
-                            setFormData(prev => ({ ...prev, lines: mappedPrLines }));
+                            setFormData(prev => ({ ...prev, rfqLines: mappedPrLines }));
                             // Save original PR lines state for reset functionality
                             setOriginalPRLines(mappedPrLines);
                          }
@@ -177,11 +184,13 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                         line_no: index + 1,
                         item_code: line.item_code,
                         item_name: line.item_name,
-                        item_description: line.description || line.item_name,
-                        required_qty: line.qty,
+                        description: line.description || line.item_name,
+                        qty: line.qty,
                         uom: line.uom,
-                        required_date: line.needed_date ? line.needed_date.split('T')[0] : '',
-                        remarks: line.remark || '',
+                        uom_id: Number(line.uom_id || 0),
+                        required_receipt_type: line.required_receipt_type || 'FULL',
+                        target_delivery_date: line.needed_date ? line.needed_date.split('T')[0] : '',
+                        note_to_vendor: line.remark || '',
                         // V-07: Traceability & pricing fields
                         item_id: line.item_id || undefined,
                         pr_line_id: line.pr_line_id || undefined,
@@ -211,18 +220,18 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                         pr_no: fullPR.pr_no,
                         branch_id: fullPR.branch_id,
                         project_id: fullPR.project_id || null,
-                        created_by_name: 'ระบบจะกรอกอัตโนมัติ',
+                        requested_by: 'ระบบจะกรอกอัตโนมัติ',
                         status: 'DRAFT',
-                        quote_due_date: '',
+                        quotation_due_date: '',
                         
                         // Multicurrency Mapping
                         isMulticurrency: isMulti,
-                        currency: fullPR.pr_base_currency_code,
-                        target_currency: fullPR.pr_quote_currency_code || 'THB',
-                        exchange_rate: fullPR.pr_exchange_rate || 1,
-                        exchange_rate_date: fullPR.pr_exchange_rate_date ? fullPR.pr_exchange_rate_date.split('T')[0] : '',
+                        rfq_base_currency_code: fullPR.pr_base_currency_code,
+                        rfq_quote_currency_code: fullPR.pr_quote_currency_code || 'THB',
+                        rfq_exchange_rate: fullPR.pr_exchange_rate || 1,
+                        rfq_exchange_rate_date: fullPR.pr_exchange_rate_date ? fullPR.pr_exchange_rate_date.split('T')[0] : '',
 
-                        payment_terms: '',
+                        payment_term_hint: '',
                         incoterm: '',
                         // V-07: Carry over original remark + append PR reference
                         remarks: fullPR.remark
@@ -233,7 +242,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                         cost_center_id: fullPR.cost_center_id || undefined,
                         pr_tax_code_id: fullPR.pr_tax_code_id || undefined,
                         pr_tax_rate: fullPR.pr_tax_rate || undefined,
-                        lines: rfqLines,
+                        rfqLines: rfqLines,
                         vendors: initialVendors,
                     });
                     
@@ -251,7 +260,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
              setFormData({
                 ...initialRFQFormData,
                  rfq_no: 'DRAFT',
-                 lines: Array.from({ length: 5 }, (_, i) => ({
+                 rfqLines: Array.from({ length: 5 }, (_, i) => ({
                     ...initialRFQLineFormData,
                     line_no: i + 1,
                 })),
@@ -273,7 +282,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
             
             // Overwrite Guard: ONLY overwrite if lines are empty OR explicitly requested.
             // We check if the table truly has no entered data.
-            const hasData = formData.lines.some(l => l.item_code && l.item_code.trim() !== '');
+            const hasData = formData.rfqLines.some(l => (l.item_code && l.item_code.trim() !== '') || l.item_id || (l.description && l.description.trim() !== ''));
             if (hasData) return; // Never blindly overwrite user data
             
             try {
@@ -283,11 +292,13 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                         line_no: index + 1,
                         item_code: line.item_code,
                         item_name: line.item_name,
-                        item_description: line.description || line.item_name,
-                        required_qty: line.qty,
+                        description: line.description || line.item_name,
+                        qty: line.qty,
                         uom: line.uom,
-                        required_date: line.needed_date ? line.needed_date.split('T')[0] : '',
-                        remarks: line.remark || '',
+                        uom_id: Number(line.uom_id || 0),
+                        required_receipt_type: line.required_receipt_type || 'FULL',
+                        target_delivery_date: line.needed_date ? line.needed_date.split('T')[0] : '',
+                        note_to_vendor: line.remark || '',
                         item_id: line.item_id || undefined,
                         pr_line_id: line.pr_line_id || undefined,
                         est_unit_price: line.est_unit_price || 0,
@@ -295,7 +306,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                     }));
                     
                     // Replace empty table with mapped PR data
-                    setFormData(prev => ({ ...prev, lines: mappedPrLines }));
+                    setFormData(prev => ({ ...prev, rfqLines: mappedPrLines }));
                     setOriginalPRLines(mappedPrLines);
                     
                     // Auto-sync currency settings if the table was empty
@@ -303,9 +314,9 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                     setFormData(prev => ({
                         ...prev,
                         isMulticurrency: isMulti,
-                        currency: prDetail.pr_base_currency_code,
-                        target_currency: prDetail.pr_quote_currency_code || prev.target_currency,
-                        exchange_rate: prDetail.pr_exchange_rate || 1,
+                        rfq_base_currency_code: prDetail.pr_base_currency_code,
+                        rfq_quote_currency_code: prDetail.pr_quote_currency_code || prev.rfq_quote_currency_code,
+                        rfq_exchange_rate: prDetail.pr_exchange_rate || 1,
                     }));
                 }
             } catch (error) {
@@ -322,22 +333,22 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
 
     const rfqSchema = z.object({
         isMulticurrency: z.boolean(),
-        currency: z.string(),
-        exchange_rate: z.number(),
+        rfq_base_currency_code: z.string(),
+        rfq_exchange_rate: z.number(),
     }).superRefine((data, ctx) => {
         if (data.isMulticurrency) {
-             if (!data.currency || data.currency === 'THB') {
+             if (!data.rfq_base_currency_code || data.rfq_base_currency_code === 'THB') {
                  ctx.addIssue({
                     code: z.ZodIssueCode.custom,
                     message: "กรุณาระบุสกุลเงินต่างประเทศ",
-                    path: ["currency"]
+                    path: ["rfq_base_currency_code"]
                 });
             }
-            if (!data.exchange_rate || data.exchange_rate <= 0) {
+            if (!data.rfq_exchange_rate || data.rfq_exchange_rate <= 0) {
                  ctx.addIssue({
                     code: z.ZodIssueCode.custom,
                     message: "กรุณาระบุอัตราแลกเปลี่ยน",
-                    path: ["exchange_rate"]
+                    path: ["rfq_exchange_rate"]
                 });
             }
         }
@@ -349,10 +360,10 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
             rfqSchema.parse(data);
              // Basic manual validation
              const manualErrors: Record<string, string> = {};
-             if (!data.quote_due_date) manualErrors['quote_due_date'] = 'กรุณาระบุ ใช้ได้ถึงวันที่ (Quote Due Date)';
+             if (!data.quotation_due_date) manualErrors['quotation_due_date'] = 'กรุณาระบุ ใช้ได้ถึงวันที่ (Quote Due Date)';
              
-             const hasValidLine = data.lines.some(l => l.item_code && l.item_code.trim() !== '');
-             if (!hasValidLine) manualErrors['lines'] = 'กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ';
+             const hasValidLine = data.rfqLines.some(l => (l.item_code && l.item_code.trim() !== '') || l.item_id || (l.description && l.description.trim() !== ''));
+             if (!hasValidLine) manualErrors['rfqLines'] = 'กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ';
 
              if (Object.keys(manualErrors).length > 0) {
                  setErrors(manualErrors);
@@ -377,16 +388,16 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
     useEffect(() => {
         if (!formData.isMulticurrency) {
              setFormData(prev => {
-                if (prev.currency !== 'THB' || prev.exchange_rate !== 1) {
-                    return { ...prev, currency: 'THB', exchange_rate: 1 };
+                if (prev.rfq_base_currency_code !== 'THB' || prev.rfq_exchange_rate !== 1) {
+                    return { ...prev, rfq_base_currency_code: 'THB', rfq_exchange_rate: 1 };
                 }
                 return prev;
              });
              // Clear errors for currency fields
              setErrors(prev => {
                  const newErrors = { ...prev };
-                 delete newErrors.currency;
-                 delete newErrors.exchange_rate;
+                 delete newErrors.rfq_base_currency_code;
+                 delete newErrors.rfq_exchange_rate;
                  return newErrors;
              });
         }
@@ -407,16 +418,16 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
 
     const handleLineChange = useCallback((index: number, field: keyof RFQLineFormData, value: string | number) => {
         setFormData(prev => {
-            const newLines = [...prev.lines];
+            const newLines = [...prev.rfqLines];
             newLines[index] = { ...newLines[index], [field]: value };
-            return { ...prev, lines: newLines };
+            return { ...prev, rfqLines: newLines };
         });
     }, []);
 
     const handleAddLine = useCallback(() => {
         setFormData(prev => ({
             ...prev,
-            lines: [...prev.lines, { ...initialRFQLineFormData, line_no: prev.lines.length + 1 }],
+            rfqLines: [...prev.rfqLines, { ...initialRFQLineFormData, line_no: prev.rfqLines.length + 1 }],
         }));
     }, []);
     
@@ -428,40 +439,51 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         
         setFormData(prev => ({
             ...prev,
-            lines: resetLines
+            rfqLines: resetLines
         }));
         
         toast('คืนค่ารายการสินค้าจาก PR เรียบร้อย', 'success');
     }, [originalPRLines, toast]);
 
     const handleRemoveLine = useCallback((index: number) => {
-        if (formData.lines.length <= 1) {
+        if (formData.rfqLines.length <= 1) {
             toast('ต้องมีอย่างน้อย 1 รายการ', 'error');
             return;
         }
         setFormData(prev => ({
             ...prev,
-            lines: prev.lines.filter((_, i) => i !== index).map((line, i) => ({ ...line, line_no: i + 1 })),
+            rfqLines: prev.rfqLines.filter((_, i) => i !== index).map((line, i) => ({ ...line, line_no: i + 1 })),
         }));
-    }, [formData.lines.length, toast]);
+    }, [formData.rfqLines.length, toast]);
 
     const handleSave = async () => {
-        // Inline Validation & Toast
+        // ═══════════════════════════════════════════════════════════════
+        // INLINE VALIDATION — Check required fields before sending
+        // ═══════════════════════════════════════════════════════════════
         const newErrors: Record<string, string> = {};
         
         if (!formData.rfq_no) newErrors.rfq_no = 'กรุณากรอกเลขที่ RFQ';
         if (!formData.rfq_date) newErrors.rfq_date = 'กรุณาระบุวันที่สร้าง RFQ';
         if (!formData.pr_no && !formData.pr_id) newErrors.pr_no = 'กรุณาระบุ PR ต้นทาง';
         if (!formData.status) newErrors.status = 'กรุณาระบุสถานะ';
-        if (!formData.quote_due_date) newErrors.quote_due_date = 'กรุณาระบุวันกำหนดส่งใบเสนอราคา';
+        if (!formData.quotation_due_date) newErrors.quotation_due_date = 'กรุณาระบุวันกำหนดส่งใบเสนอราคา';
         
-        const validLines = formData.lines.filter(l => l.item_code?.trim());
-        if (validLines.length === 0) { 
-            newErrors.lines = 'กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ';
+        // branch_id is REQUIRED by backend (must be a number, not empty)
+        if (!formData.branch_id) newErrors.branch_id = 'กรุณาเลือกสาขา';
+        
+        // Validate lines: accept if item_code OR item_id OR description is present
+        const validLines = formData.rfqLines.filter(l =>
+            (l.item_code && l.item_code.trim() !== '') ||
+            l.item_id ||
+            (l.description && l.description.trim() !== '')
+        );
+        if (validLines.length === 0) {
+            newErrors.rfqLines = 'กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ';
         }
 
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
+            logger.error('[RFQ handleSave] Validation errors:', newErrors);
             toast('กรุณากรอกข้อมูลให้ครบถ้วนก่อนบันทึกเอกสาร', 'error');
             return;
         }
@@ -469,24 +491,140 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         setErrors({});
         setIsSaving(true);
         try {
-            const payload: RFQCreateData = {
-                ...formData,
-                // Filter out empty lines (no item_code)
-                lines: formData.lines.filter(l => l.item_code?.trim()),
-                // Extract vendor IDs for the junction table
-                vendor_ids: formData.vendors
-                    .filter(v => v.vendor_id)
-                    .map(v => v.vendor_id!),
+            // ═══════════════════════════════════════════════════════════════
+            // 🔒 FORENSIC FIX v3 (2026-03-06): THE DOUBLE REQUESTER STRIKE
+            // Root cause: Backend DTO requires BOTH fields simultaneously:
+            //   - requested_by_user_id (NUMBER) = employee ID
+            //   - requested_by (STRING) = employee name
+            // When we sent only one, backend threw 400 demanding the other.
+            //
+            // TWO-STEP TRANSACTION:
+            //   Step 1: Create RFQ Header + Lines (NO vendors)
+            //   Step 2: Associate vendors via separate endpoint
+            //
+            // FORBIDDEN on header: vendor_ids, rfqVendorIds,
+            //   isMulticurrency, rfq_no, pr_no, pr_tax_code_id,
+            //   pr_tax_rate, vendors
+            //
+            // REQUIRED on header:
+            //   ✅ requested_by_user_id (NUMBER, non-empty)
+            //   ✅ requested_by (STRING, non-empty)
+            //
+            // FORBIDDEN on lines: item_code, item_name, uom, est_unit_price, est_amount
+            // ═══════════════════════════════════════════════════════════════
+            
+            // Sanitize lines: ONLY fields the backend CreateRfqLineDto accepts
+            const cleanLines: RFQLineDTO[] = formData.rfqLines
+                .filter(line => (line.item_code || line.item_id || line.description) && line.qty > 0)
+                .map((line, index) => {
+                    const dto: RFQLineDTO = {
+                        line_no: index + 1,
+                        description: String(line.description || line.item_name || 'No description'),
+                        qty: Number(line.qty),
+                        uom_id: Number(line.uom_id || 1),
+                    };
+                    // Optional fields — only add if present
+                    if (line.item_id) dto.item_id = Number(line.item_id);
+                    if (line.pr_line_id) dto.pr_line_id = Number(line.pr_line_id);
+                    if (line.required_receipt_type) dto.required_receipt_type = String(line.required_receipt_type);
+                    if (line.target_delivery_date) dto.target_delivery_date = String(line.target_delivery_date);
+                    if (line.note_to_vendor) dto.note_to_vendor = String(line.note_to_vendor);
+                    // NOTE: item_code, item_name, uom, est_unit_price are NOT sent
+                    // They are display-only fields stored in the form but forbidden by backend DTO
+                    return dto;
+                });
+
+            // 🎯 THE DOUBLE REQUESTER STRIKE: Backend demands BOTH fields simultaneously.
+            //   - requested_by_user_id: NUMBER (employee ID)
+            //   - requested_by: STRING (employee name)
+            const resolvedRequestedByUserId: number = Number(
+                formData.requested_by_user_id || 1  // Fallback: never send empty/NaN
+            );
+            const resolvedRequestedByName: string = String(
+                formData.requested_by || 'System User'  // Fallback: never send empty string
+            );
+
+            // Build clean payload matching backend CreateRfqDto EXACTLY
+            // 🚫 NO vendor_ids — backend rejects this property
+            // ✅ BOTH requested_by_user_id (number) AND requested_by (string) — backend demands both
+            const payload: RFQCreateDTO = {
+                rfq_date: String(formData.rfq_date),
+                requested_by_user_id: resolvedRequestedByUserId,  // 🎯 NUMBER (employee ID)
+                requested_by: resolvedRequestedByName,            // 🎯 STRING (employee name)
+                status: formData.status || 'DRAFT',
+                quotation_due_date: String(formData.quotation_due_date),
+                branch_id: Number(formData.branch_id), // REQUIRED by backend, validated above
+                rfq_base_currency_code: String(formData.rfq_base_currency_code || 'THB'),
+                rfq_quote_currency_code: String(formData.rfq_quote_currency_code || 'THB'),
+                rfq_exchange_rate: Number(formData.rfq_exchange_rate || 1),
+                rfq_exchange_rate_date: String(formData.rfq_exchange_rate_date || formData.rfq_date),
+                remarks: String(formData.remarks || ''),
+                // 🚫 vendor_ids: REMOVED — will be sent in Step 2
+                rfqLines: cleanLines,
             };
 
+            // Conditionally add optional fields
+            if (formData.pr_id) payload.pr_id = Number(formData.pr_id);
+            if (formData.project_id) payload.project_id = Number(formData.project_id);
+            if (formData.receive_location) payload.receive_location = String(formData.receive_location);
+            if (formData.payment_term_hint) payload.payment_term_hint = String(formData.payment_term_hint);
+            if (formData.incoterm) payload.incoterm = String(formData.incoterm);
+            if (formData.purpose) payload.purpose = String(formData.purpose);
+
+            // Collect vendor IDs for Step 2 (separate from creation payload)
+            const selectedVendorIds = formData.vendors
+                .filter(v => v.vendor_id)
+                .map(v => Number(v.vendor_id));
+
+            logger.info('[RFQ handleSave] Payload ready:', {
+                fields: Object.keys(payload),
+                lineCount: cleanLines.length,
+                vendorCount: selectedVendorIds.length,
+                branch_id: payload.branch_id,
+                requested_by_user_id: payload.requested_by_user_id,
+                requested_by: payload.requested_by,  // 🎯 Log both requester fields
+            });
+
             if (editId) {
-                // ── Edit mode: update existing RFQ ──
+                // ══════════════════════════════════════════════════════════
+                // Edit mode: update existing RFQ
+                // ══════════════════════════════════════════════════════════
                 await RFQService.update(editId, payload);
                 logger.log('[RFQ] Updated successfully', { rfq_no: formData.rfq_no, editId });
             } else {
-                // ── Create mode: new RFQ ──
-                await RFQService.create(payload);
-                logger.log('[RFQ] Created successfully', { rfq_no: formData.rfq_no, pr_id: formData.pr_id });
+                // ══════════════════════════════════════════════════════════
+                // Create mode: TWO-STEP TRANSACTION
+                // Step 1: Create RFQ Header + Lines (no vendors)
+                // Step 2: Associate vendors to the new RFQ ID
+                // ══════════════════════════════════════════════════════════
+                const createdRFQ = await RFQService.create(payload);
+                logger.log('[RFQ] Step 1 Complete: RFQ created', {
+                    rfq_id: createdRFQ.rfq_id,
+                    rfq_no: createdRFQ.rfq_no || formData.rfq_no,
+                    pr_id: formData.pr_id,
+                });
+
+                // Step 2: Associate vendors (if any were selected)
+                if (selectedVendorIds.length > 0 && createdRFQ.rfq_id) {
+                    try {
+                        await RFQService.addVendorsToRFQ(
+                            String(createdRFQ.rfq_id),
+                            selectedVendorIds
+                        );
+                        logger.log('[RFQ] Step 2 Complete: Vendors associated', {
+                            rfq_id: createdRFQ.rfq_id,
+                            vendorCount: selectedVendorIds.length,
+                        });
+                    } catch (vendorError) {
+                        // Non-fatal: RFQ was created successfully, vendor mapping failed
+                        // This may happen if the backend doesn't have the endpoint yet
+                        logger.warn('[RFQ] Step 2 Warning: Vendor association failed (non-fatal)', vendorError);
+                        toast(
+                            'RFQ สร้างสำเร็จแล้ว แต่ยังไม่สามารถผูกผู้ขายได้ (สามารถเพิ่มภายหลังได้)',
+                            'warning'
+                        );
+                    }
+                }
             }
 
             // Call onSuccess callback (async - refetch list + close)
@@ -495,8 +633,9 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
             }
             onClose();
         } catch (error) {
-            logger.error('Failed to save RFQ:', error);
-            toast('เกิดข้อผิดพลาดในการบันทึก RFQ', 'error');
+            const errMsg = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการบันทึก RFQ';
+            logger.error('Failed to save RFQ:', errMsg);
+            toast(errMsg, 'error');
         } finally {
             setIsSaving(false);
         }
@@ -509,65 +648,131 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         setIsPRSelectionModalOpen(false);
         try {
             setIsLoadingEdit(true);
+            
+            // Deep Fetch: Get full PR with lines array
             const fullPR = await PRService.getDetail(prRecord.pr_id);
             
-            const rfqLines: RFQLineFormData[] = (fullPR.lines || []).map((line, index) => ({
-                ...initialRFQLineFormData,
-                line_no: index + 1,
-                item_code: line.item_code,
-                item_name: line.item_name,
-                item_description: line.description || line.item_name,
-                required_qty: line.qty,
-                uom: line.uom,
-                required_date: line.needed_date ? line.needed_date.split('T')[0] : '',
-                remarks: line.remark || '',
-                item_id: line.item_id || undefined,
-                pr_line_id: line.pr_line_id || undefined,
-                est_unit_price: line.est_unit_price || 0,
-                est_amount: line.est_amount || 0,
-            }));
+            // Defensive: Use list-level data as fallback for key identifiers
+            const prId = fullPR.pr_id || prRecord.pr_id;
+            const prNo = fullPR.pr_no || prRecord.pr_no;
+            
+            logger.info('[RFQ handlePRSelect] Deep fetch result:', {
+                pr_id: prId,
+                pr_no: prNo,
+                linesCount: fullPR.lines?.length ?? 0,
+                hasRemark: Boolean(fullPR.remark),
+                hasPurpose: Boolean(fullPR.purpose),
+            });
+            
+            // 🔍 Diagnostic: Log raw line structure to detect field name mismatches
+            if (fullPR.lines && fullPR.lines.length > 0) {
+                const sampleLine = fullPR.lines[0];
+                logger.info('[RFQ handlePRSelect] 🔍 RAW LINE[0] KEYS:', Object.keys(sampleLine));
+                logger.info('[RFQ handlePRSelect] 🔍 RAW LINE[0] DATA:', JSON.stringify(sampleLine, null, 2));
+            } else {
+                // Check if lines might be under a different key
+                const fullPRKeys = Object.keys(fullPR);
+                logger.warn('[RFQ handlePRSelect] ⚠️ No lines found! Full PR keys:', fullPRKeys);
+                // Check for alternative line array keys
+                const possibleLineKeys = fullPRKeys.filter(k =>
+                    k.includes('line') || k.includes('item') || k.includes('detail')
+                );
+                logger.warn('[RFQ handlePRSelect] ⚠️ Possible line keys:', possibleLineKeys);
+            }
+            
+            // 🎯 Phase 1: Strict Line Mapping (sanitize: NO remark on lines)
+            // Backend PR detail returns item_id/uom_id as numeric IDs without display names.
+            // We resolve item_code/item_name/uom from loaded master data.
+            const rawLines = fullPR.lines || [];
+            const rfqLines: RFQLineFormData[] = rawLines.map((line, index) => {
+                const lineItemId = String(line.item_id || '');
+                const lineUomId = String(line.uom_id || '');
+                
+                // Master data lookup: resolve display names from IDs
+                const masterItem = items.find(i => String(i.item_id) === lineItemId);
+                const masterUnit = units.find(u =>
+                    String(u.unit_id) === lineUomId ||
+                    String(u.uom_id) === lineUomId
+                );
+                
+                const resolvedItemCode = line.item_code || masterItem?.item_code || '';
+                const resolvedItemName = line.item_name || masterItem?.item_name || '';
+                const resolvedUom = line.uom || masterUnit?.unit_name || masterUnit?.uom_name || '';
+                const resolvedDesc = String(line.description || resolvedItemName || '');
+                
+                return {
+                    ...initialRFQLineFormData,
+                    line_no: index + 1,
+                    item_id: lineItemId || undefined,
+                    item_code: resolvedItemCode,
+                    item_name: resolvedItemName,
+                    description: resolvedDesc,
+                    qty: Number(line.qty || 0),
+                    uom: resolvedUom,
+                    uom_id: Number(line.uom_id || 0),
+                    required_receipt_type: line.required_receipt_type || 'FULL',
+                    target_delivery_date: line.needed_date ? String(line.needed_date).split('T')[0] : '',
+                    note_to_vendor: '',
+                    pr_line_id: line.pr_line_id ? String(line.pr_line_id) : undefined,
+                    est_unit_price: Number(line.est_unit_price || 0),
+                    est_amount: Number(line.est_amount || 0),
+                };
+            });
+            
+            // 🔍 Diagnostic: Log mapped result
+            if (rfqLines.length > 0) {
+                logger.info('[RFQ handlePRSelect] 🔍 MAPPED LINE[0]:', JSON.stringify(rfqLines[0], null, 2));
+            }
 
             setOriginalPRLines(rfqLines);
 
+            // 🎯 Phase 2: Currency & Vendor Logic
             const isMulti = fullPR.pr_base_currency_code !== 'THB';
             
-            const initialVendors = fullPR.preferred_vendor_id 
+            const initialVendors = fullPR.preferred_vendor_id
                 ? [{
                     vendor_id: fullPR.preferred_vendor_id,
                     vendor_code: '',
                     vendor_name: fullPR.vendor_name || '',
                     vendor_name_display: fullPR.vendor_name || '(Preferred Vendor from PR)',
                 }]
-                : []; // Note: Start fresh. 
+                : [];
 
+            // 🎯 Phase 3: Header State Update (Strict Sync)
+            // Default quotation_due_date to 7 days from now if not set
+            const defaultDueDate = new Date();
+            defaultDueDate.setDate(defaultDueDate.getDate() + 7);
+            const defaultDueDateStr = defaultDueDate.toLocaleDateString('en-CA');
+            
             setFormData(prev => ({
                 ...prev,
-                pr_id: fullPR.pr_id,
-                pr_no: fullPR.pr_no,
-                branch_id: fullPR.branch_id,
-                project_id: fullPR.project_id || null,
+                pr_id: prId,
+                pr_no: prNo,
+                branch_id: fullPR.branch_id || prRecord.branch_id,
+                project_id: fullPR.project_id || prRecord.project_id || null,
+                quotation_due_date: prev.quotation_due_date || defaultDueDateStr,
                 isMulticurrency: isMulti,
-                currency: fullPR.pr_base_currency_code,
-                target_currency: fullPR.pr_quote_currency_code || prev.target_currency,
-                exchange_rate: fullPR.pr_exchange_rate || 1,
-                exchange_rate_date: fullPR.pr_exchange_rate_date ? fullPR.pr_exchange_rate_date.split('T')[0] : prev.exchange_rate_date,
-                remarks: fullPR.remark ? `${fullPR.remark}\n[PR: ${fullPR.pr_no}]` : `Generated from PR: ${fullPR.pr_no}`,
-                purpose: fullPR.purpose || '',
+                rfq_base_currency_code: fullPR.pr_base_currency_code || prev.rfq_base_currency_code,
+                rfq_quote_currency_code: fullPR.pr_quote_currency_code || prev.rfq_quote_currency_code,
+                rfq_exchange_rate: fullPR.pr_exchange_rate || 1,
+                rfq_exchange_rate_date: fullPR.pr_exchange_rate_date ? fullPR.pr_exchange_rate_date.split('T')[0] : prev.rfq_exchange_rate_date,
+                remarks: fullPR.remark ? `${fullPR.remark}\n[PR: ${prNo}]` : `Generated from PR: ${prNo}`,
+                purpose: fullPR.purpose || prRecord.purpose || '',
                 cost_center_id: fullPR.cost_center_id || undefined,
                 pr_tax_code_id: fullPR.pr_tax_code_id || undefined,
                 pr_tax_rate: fullPR.pr_tax_rate || undefined,
-                lines: rfqLines,
-                vendors: initialVendors.length > 0 ? initialVendors : [{ vendor_code: '', vendor_name: '', vendor_name_display: '' }],
+                rfqLines: rfqLines,
+                vendors: initialVendors.length > 0 ? initialVendors : prev.vendors,
             }));
             
-            toast(`ดึงรายการสินค้าจาก PR ${fullPR.pr_no} เรียบร้อย`, 'success');
+            toast(`ดึงรายการสินค้าจาก PR ${prNo} เรียบร้อย (${rfqLines.length} รายการ)`, 'success');
         } catch (error) {
             logger.error('Failed to load PR details:', error);
             toast('ไม่สามารถโหลดข้อมูล PR ได้', 'error');
         } finally {
             setIsLoadingEdit(false);
         }
-    }, [toast]);
+    }, [toast, items, units]);
     // Vendor Search State
     const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
     const [activeVendorIndex, setActiveVendorIndex] = useState<number | null>(null);

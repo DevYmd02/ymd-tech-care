@@ -1,12 +1,13 @@
-import React from 'react';
+import { type FieldErrors } from 'react-hook-form';
 import type { ItemFormData, ItemFormChangeHandler } from '../hooks/useItemForm';
 import { 
-    ITEM_UOMS, 
     ITEM_PRODUCT_SUBTYPES, 
     ITEM_NATURES, 
     ITEM_COSTING_METHODS, 
     ITEM_COMMISSIONS 
 } from '@/modules/master-data/inventory/constants/itemConstants';
+
+import type { UnitListItem } from '@/modules/master-data/types/master-data-types';
 
 /**
  * @interface ItemStockDetailsProps
@@ -15,13 +16,15 @@ import {
 interface ItemStockDetailsProps {
     formData: ItemFormData;
     onChange: ItemFormChangeHandler;
-    errors: Partial<Record<keyof ItemFormData, string>>;
+    errors: FieldErrors<ItemFormData>;
+    units?: UnitListItem[];
 }
 
 export const ItemStockDetails: React.FC<ItemStockDetailsProps> = ({
     formData,
     onChange,
-    errors
+    errors,
+    units = []
 }) => {
     return (
         <div className="lg:col-span-4 space-y-2">
@@ -42,8 +45,8 @@ export const ItemStockDetails: React.FC<ItemStockDetailsProps> = ({
                         } rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-emerald-500 outline-none`}
                     >
                         <option value="">-- เลือก --</option>
-                        {ITEM_UOMS.map(u => (
-                            <option key={u.id} value={u.id}>{u.name} ({u.code})</option>
+                        {units.map(u => (
+                            <option key={u.unit_id} value={u.unit_id}>{u.unit_name} ({u.unit_code})</option>
                         ))}
                     </select>
                 </div>

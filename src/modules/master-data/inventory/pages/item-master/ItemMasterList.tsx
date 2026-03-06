@@ -5,8 +5,9 @@
  */
 import { useState, useMemo, useCallback } from 'react';
 import { Package, Edit2, Trash2 } from 'lucide-react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
+import { logger } from '@/shared/utils/logger';
 import type { ItemListItem } from '@/modules/master-data/types/master-data-types';
 import { ItemMasterFormModal } from './ItemMasterFormModal';
 import { ActiveStatusBadge } from '@ui';
@@ -145,6 +146,31 @@ export default function ItemMasterList() {
         setEditId(null);
     }, [queryClient]);
 
+    const deleteMutation = useMutation({
+        mutationFn: (id: string) => ItemMasterService.delete(id),
+        onSuccess: async () => {
+            await confirm({
+                title: 'ลบข้อมูลเรียบร้อยแล้ว!',
+                description: 'ระบบได้ทำการลบข้อมูลสินค้าเรียบร้อยแล้ว',
+                confirmText: 'ตกลง',
+                variant: 'success',
+                hideCancel: true
+            });
+            queryClient.invalidateQueries({ queryKey: ['items'] });
+        },
+        onError: async (error: unknown) => {
+            logger.error('Delete item error:', error);
+            const errorMessage = error instanceof Error ? error.message : 'ไม่สามารถลบข้อมูลได้ กรุณาลองใหม่อีกครั้ง';
+            await confirm({
+                title: 'เกิดข้อผิดพลาด',
+                description: errorMessage,
+                confirmText: 'ตกลง',
+                variant: 'danger',
+                hideCancel: true
+            });
+        }
+    });
+
     const handleDelete = useCallback(async (id: string, code: string) => {
         const isConfirmed = await confirm({
             title: 'คุณต้องการลบสินค้า?',
@@ -155,27 +181,9 @@ export default function ItemMasterList() {
         });
 
         if (isConfirmed) {
-            const success = await ItemMasterService.delete(id);
-            if (success) {
-                await confirm({
-                    title: 'ลบข้อมูลเรียบร้อยแล้ว!',
-                    description: 'ระบบได้ทำการลบข้อมูลสินค้าเรียบร้อยแล้ว',
-                    confirmText: 'ตกลง',
-                    variant: 'success',
-                    hideCancel: true
-                });
-                queryClient.invalidateQueries({ queryKey: ['items'] });
-            } else {
-                await confirm({
-                    title: 'เกิดข้อผิดพลาด',
-                    description: 'ไม่สามารถลบข้อมูลได้ กรุณาลองใหม่อีกครั้ง',
-                    confirmText: 'ตกลง',
-                    variant: 'danger',
-                    hideCancel: true
-                });
-            }
+            deleteMutation.mutate(id);
         }
-    }, [queryClient, confirm]);
+    }, [confirm, deleteMutation]);
 
     // ==================== TABLE COLUMNS ====================
     const columns = useMemo<ColumnDef<ItemListItem>[]>(() => [

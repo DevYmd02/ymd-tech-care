@@ -57,6 +57,54 @@ const _mockPOs: POListItem[] = [
         created_by: 'u3', item_count: 6,
         remarks: 'ยกเลิกเนื่องจากผู้ขายไม่สามารถส่งของในกำหนดได้'
     },
+    {
+        po_id: 'po-006', po_no: 'PO-202602-0006', po_date: '2026-02-25',
+        pr_id: 'pr-015', pr_no: 'PR-202602-0015',
+        qc_id: 'qc-010', qc_no: 'QC-202602-0010',
+        vendor_id: 'v004', vendor_name: 'Premium Hardware Co.',
+        branch_id: '1', status: 'REJECTED',
+        currency_code: 'THB', exchange_rate: 1, payment_term_days: 30,
+        subtotal: 500000, tax_amount: 35000, total_amount: 535000,
+        created_by: 'u1', item_count: 2,
+        remarks: 'สั่งซื้อ Server ชุดใหม่',
+        reject_reason: 'งบประมาณแผนก IT เกินกำหนด กรุณาปรับลดจำนวนสินค้า',
+        transactions: [
+            {
+                id: 'tx-001', po_id: 'po-006', from_status: 'DRAFT', to_status: 'PENDING_APPROVAL',
+                action_by: 'ผู้จัดทำ (Purchasing)', action_date: '2026-02-25T10:00:00Z'
+            },
+            {
+                id: 'tx-002', po_id: 'po-006', from_status: 'PENDING_APPROVAL', to_status: 'REJECTED',
+                action_by: 'ผู้อนุมัติ (Manager)', action_date: '2026-02-26T14:30:00Z',
+                remark: 'งบประมาณแผนก IT เกินกำหนด กรุณาปรับลดจำนวนสินค้า'
+            }
+        ]
+    },
+    {
+        po_id: 'po-007', po_no: 'PO-202603-0009', po_date: '2026-03-01',
+        pr_id: 'pr-018', pr_no: 'PR-202603-0018',
+        qc_id: 'qc-012', qc_no: 'QC-202603-0012',
+        vendor_id: 'v002', vendor_name: 'Metro Systems Corp.',
+        branch_id: '1', status: 'ISSUED',
+        currency_code: 'THB', exchange_rate: 1, payment_term_days: 30,
+        subtotal: 150000, tax_amount: 10500, total_amount: 160500,
+        created_by: 'u2', item_count: 1,
+        remarks: 'Software Licenses ประจำปี 2026',
+        transactions: [
+            {
+                id: 'tx-003', po_id: 'po-007', from_status: 'DRAFT', to_status: 'PENDING_APPROVAL',
+                action_by: 'ผู้จัดทำ (Purchasing)', action_date: '2026-03-01T09:00:00Z'
+            },
+            {
+                id: 'tx-004', po_id: 'po-007', from_status: 'PENDING_APPROVAL', to_status: 'APPROVED',
+                action_by: 'ผู้อนุมัติ (Manager)', action_date: '2026-03-01T13:15:00Z'
+            },
+            {
+                id: 'tx-005', po_id: 'po-007', from_status: 'APPROVED', to_status: 'ISSUED',
+                action_by: 'ผู้จัดทำ (Purchasing)', action_date: '2026-03-01T15:30:00Z'
+            }
+        ]
+    },
 ];
 
 export const MOCK_POS: POListItem[] = _mockPOs.map(po => ({

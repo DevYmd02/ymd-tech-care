@@ -10,17 +10,34 @@ import { z } from 'zod';
 // 1. STATUS ENUM (Canonical — Single Source of Truth)
 // ====================================================================================
 
-export const POStatusEnum = z.enum(['DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'ISSUED', 'COMPLETED', 'CANCELLED']);
+export const POStatusEnum = z.enum(['DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'ISSUED', 'COMPLETED', 'CANCELLED', 'REJECTED']);
 export type POStatus = z.infer<typeof POStatusEnum>;
 
 export const PO_STATUS_OPTIONS = [
     { value: 'DRAFT',            label: 'แบบร่าง' },
     { value: 'PENDING_APPROVAL', label: 'รออนุมัติ' },
     { value: 'APPROVED',         label: 'อนุมัติแล้ว' },
+    { value: 'REJECTED',         label: 'ไม่อนุมัติ' },
     { value: 'ISSUED',           label: 'ออก PO แล้ว' },
     { value: 'COMPLETED',        label: 'ปิดรายการ' },
     { value: 'CANCELLED',        label: 'ยกเลิก' },
 ] as const;
+
+// ====================================================================================
+// 2. PO TRANSACTION SCHEMA (History)
+// ====================================================================================
+
+export const POTransactionSchema = z.object({
+    id:           z.string().uuid().optional(),
+    po_id:        z.string().uuid().optional(),
+    from_status:  POStatusEnum.optional(),
+    to_status:    POStatusEnum,
+    action_by:    z.string(),
+    action_date:  z.string(),
+    remark:       z.string().optional(),
+});
+
+export type POTransaction = z.infer<typeof POTransactionSchema>;
 
 // ====================================================================================
 // 2. PO LINE SCHEMA
@@ -76,8 +93,10 @@ export const POListItemSchema = z.object({
     total_amount:     z.number().nonnegative(),
 
     remarks:          z.string().optional(),
+    reject_reason:    z.string().optional(),
     created_by:       z.string().optional(),
     created_at:       z.string().optional(),
+    transactions:     z.array(POTransactionSchema).optional(),
 
     // Aggregates
     item_count:       z.number().int().nonnegative().optional(),
@@ -113,6 +132,7 @@ export const CreatePOSchema = z.object({
 
     items:         z.array(POLineSchema).min(1, 'ต้องมีรายการสินค้าอย่างน้อย 1 รายการ'),
     remarks:       z.string().optional(),
+    reject_reason: z.string().optional(),
 });
 
 export type CreatePOData = z.infer<typeof CreatePOSchema>;
@@ -160,6 +180,7 @@ export const POFormSchema = z.object({
 
     // ── Remarks & Line Items ─────────────────────────────────────────────────
     remarks:  z.string().optional(),
+    reject_reason: z.string().optional(),
     lines:    z.array(POLineSchema).min(1, 'ต้องมีรายการสินค้าอย่างน้อย 1 รายการ'),
 });
 

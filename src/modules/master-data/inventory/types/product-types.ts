@@ -232,6 +232,8 @@ export interface ItemListItem {
     is_active: boolean;
     created_at: string;
     // W-01: Extended fields for proper PR mapping
+    uom_id: number | string;
+    uom_name?: string;
     warehouse_id?: string;
     warehouse_code?: string;
     purchasing_unit_id?: string;

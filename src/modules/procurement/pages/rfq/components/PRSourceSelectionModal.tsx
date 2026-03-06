@@ -1,8 +1,9 @@
-import React, { useState, useMemo } from 'react';
-import { Search, Check, FileText } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Search, Check, FileText, Loader2 } from 'lucide-react';
 import type { PRHeader } from '@/modules/procurement/types';
-import { MOCK_PRS } from '@/modules/procurement/mocks/data/prData';
+import { PRService } from '@/modules/procurement/services/pr.service';
 import { ModalLayout } from '@/shared/components/ui/layout/ModalLayout';
+import { logger } from '@/shared/utils/logger';
 
 interface PRSourceSelectionModalProps {
     isOpen: boolean;
@@ -12,14 +13,49 @@ interface PRSourceSelectionModalProps {
 
 export const PRSourceSelectionModal: React.FC<PRSourceSelectionModalProps> = ({ isOpen, onClose, onSelect }) => {
     const [searchTerm, setSearchTerm] = useState('');
+    const [prList, setPrList] = useState<PRHeader[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [fetchError, setFetchError] = useState<string | null>(null);
+
+    // Fetch APPROVED PRs from real API whenever modal opens
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const fetchApprovedPRs = async () => {
+            setIsLoading(true);
+            setFetchError(null);
+            try {
+                logger.info('[PRSourceSelectionModal] Fetching APPROVED PRs from API');
+                const response = await PRService.getList({ status: 'APPROVED' });
+                setPrList(response.data);
+                logger.info(`[PRSourceSelectionModal] Loaded ${response.data.length} APPROVED PRs`);
+            } catch (error) {
+                logger.error('[PRSourceSelectionModal] Failed to fetch APPROVED PRs:', error);
+                setFetchError('ไม่สามารถดึงข้อมูล PR ได้ กรุณาลองใหม่อีกครั้ง');
+                setPrList([]);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchApprovedPRs();
+    }, [isOpen]);
+
+    // Reset search when modal closes
+    useEffect(() => {
+        if (!isOpen) {
+            setSearchTerm('');
+        }
+    }, [isOpen]);
 
     const filteredPRs = useMemo(() => {
-        return MOCK_PRS.filter(pr => pr.status === 'APPROVED').filter(pr => {
-            const matchesSearch = pr.pr_no.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                  (pr.requester_name && pr.requester_name.toLowerCase().includes(searchTerm.toLowerCase()));
-            return matchesSearch;
-        });
-    }, [searchTerm]);
+        const term = searchTerm.toLowerCase();
+        if (!term) return prList;
+        return prList.filter(pr =>
+            pr.pr_no.toLowerCase().includes(term) ||
+            (pr.requester_name && pr.requester_name.toLowerCase().includes(term))
+        );
+    }, [prList, searchTerm]);
 
     return (
         <ModalLayout
@@ -40,6 +76,7 @@ export const PRSourceSelectionModal: React.FC<PRSourceSelectionModalProps> = ({ 
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent dark:text-white transition-all shadow-sm"
+                        disabled={isLoading}
                     />
                 </div>
 
@@ -51,27 +88,66 @@ export const PRSourceSelectionModal: React.FC<PRSourceSelectionModalProps> = ({ 
                                 <th className="px-5 py-3 font-semibold whitespace-nowrap">เลขที่ PR</th>
                                 <th className="px-5 py-3 font-semibold whitespace-nowrap">วันที่</th>
                                 <th className="px-5 py-3 font-semibold whitespace-nowrap">ผู้ขอ</th>
-                                <th className="px-5 py-3 font-semibold whitespace-nowrap">ความมุ่งหมาย</th>
-                                <th className="px-5 py-3 font-semibold text-center whitespace-nowrap">รายการ</th>
+                                <th className="px-5 py-3 font-semibold whitespace-nowrap">วัตถุประสงค์ / หมายเหตุ</th>
+                                <th className="px-5 py-3 font-semibold text-right whitespace-nowrap">ยอดรวม</th>
                                 <th className="px-5 py-3 font-semibold text-center whitespace-nowrap">จัดการ</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                            {filteredPRs.length > 0 ? (
-                                filteredPRs.map((pr) => (
+                            {/* Loading State */}
+                            {isLoading && (
+                                <tr>
+                                    <td colSpan={6} className="px-5 py-12 text-center">
+                                        <div className="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
+                                            <Loader2 size={32} className="mb-2 animate-spin text-teal-500" />
+                                            <p>กำลังโหลดข้อมูล PR ที่อนุมัติแล้ว...</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            )}
+
+                            {/* Error State */}
+                            {!isLoading && fetchError && (
+                                <tr>
+                                    <td colSpan={6} className="px-5 py-12 text-center">
+                                        <div className="flex flex-col items-center justify-center text-red-400 dark:text-red-500">
+                                            <Search size={32} className="mb-2 opacity-40" />
+                                            <p className="font-medium">{fetchError}</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            )}
+
+                            {/* Empty State */}
+                            {!isLoading && !fetchError && filteredPRs.length === 0 && (
+                                <tr>
+                                    <td colSpan={6} className="px-5 py-12 text-center">
+                                        <div className="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
+                                            <Search size={32} className="mb-2 opacity-20" />
+                                            <p>ไม่พบประวัติ PR ที่ได้รับการอนุมัติ (Status: APPROVED)</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            )}
+
+                            {/* Data Rows */}
+                            {!isLoading && !fetchError && filteredPRs.map((pr) => {
+                                const displayRemark = pr.remark || pr.purpose || '-';
+                                const displayTotal = pr.total_amount != null
+                                    ? Number(pr.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                                    : '-';
+                                return (
                                     <tr key={pr.pr_id} className="hover:bg-teal-50/50 dark:hover:bg-gray-700/50 transition-colors">
                                         <td className="px-5 py-3 font-medium text-teal-700 dark:text-teal-400 whitespace-nowrap">{pr.pr_no}</td>
                                         <td className="px-5 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">{pr.pr_date?.split('T')[0]}</td>
                                         <td className="px-5 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">{pr.requester_name}</td>
                                         <td className="px-5 py-3 text-gray-500 dark:text-gray-400">
-                                            <div className="truncate max-w-[200px]" title={pr.purpose}>
-                                                {pr.purpose || '-'}
+                                            <div className="truncate max-w-[200px]" title={displayRemark}>
+                                                {displayRemark}
                                             </div>
                                         </td>
-                                        <td className="px-5 py-3 text-center">
-                                            <span className="inline-flex items-center justify-center bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-gray-700 dark:text-gray-300">
-                                                {(pr.lines?.length || 0)}
-                                            </span>
+                                        <td className="px-5 py-3 text-right text-gray-600 dark:text-gray-300 whitespace-nowrap font-mono text-xs">
+                                            {displayTotal}
                                         </td>
                                         <td className="px-5 py-3 text-center">
                                             <button
@@ -87,17 +163,8 @@ export const PRSourceSelectionModal: React.FC<PRSourceSelectionModalProps> = ({ 
                                             </button>
                                         </td>
                                     </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan={6} className="px-5 py-12 text-center">
-                                        <div className="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
-                                            <Search size={32} className="mb-2 opacity-20" />
-                                            <p>ไม่พบประวัติ PR ที่ได้รับการอนุมัติ (Status: APPROVED)</p>
-                                        </div>
-                                    </td>
-                                </tr>
-                            )}
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>

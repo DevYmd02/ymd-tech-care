@@ -83,7 +83,7 @@ export const RFQFormLines: React.FC<RFQFormLinesProps> = ({
                                     <input
                                         type="text"
                                         placeholder="รายละเอียดสินค้า"
-                                        value={line.item_description}
+                                        value={line.description}
                                         readOnly
                                         disabled={isLocked}
                                         className={lockedInputLeft}
@@ -92,7 +92,7 @@ export const RFQFormLines: React.FC<RFQFormLinesProps> = ({
                                 <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700 p-1">
                                     <input
                                         type="text"
-                                        value={line.required_qty || 0}
+                                        value={line.qty || 0}
                                         readOnly
                                         disabled={isLocked}
                                         className={lockedInputCenter}
@@ -111,8 +111,8 @@ export const RFQFormLines: React.FC<RFQFormLinesProps> = ({
                                 <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">
                                     <input
                                         type="date"
-                                        value={line.required_date}
-                                        onChange={(e) => handleLineChange(index, 'required_date', e.target.value)}
+                                        value={line.target_delivery_date}
+                                        onChange={(e) => handleLineChange(index, 'target_delivery_date', e.target.value)}
                                         className="w-full px-2 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-400 disabled:opacity-70 disabled:cursor-not-allowed"
                                         disabled={isLocked}
                                     />
@@ -120,9 +120,9 @@ export const RFQFormLines: React.FC<RFQFormLinesProps> = ({
                                 <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">
                                     <input
                                         type="text"
-                                        placeholder="หมายเหตุ"
-                                        value={line.remarks}
-                                        onChange={(e) => handleLineChange(index, 'remarks', e.target.value)}
+                                        placeholder="หมายเหตุถึงผู้ประกาศ"
+                                        value={line.note_to_vendor}
+                                        onChange={(e) => handleLineChange(index, 'note_to_vendor', e.target.value)}
                                         className="w-full px-2 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-400 disabled:opacity-70 disabled:cursor-not-allowed"
                                         disabled={isLocked}
                                     />

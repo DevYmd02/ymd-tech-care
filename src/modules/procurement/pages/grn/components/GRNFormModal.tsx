@@ -6,6 +6,7 @@ import { GRNService } from '@/modules/procurement/services/grn.service';
 import type { POListItem } from '@/modules/procurement/types';
 import type { CreateGRNPayload, GRNLineItemInput } from '@/modules/procurement/types/grn-types';
 import { logger } from '@/shared/utils/logger';
+import { CustomDateInput } from '@/shared/components/forms/CustomDateInput';
 
 // ====================================================================================
 // PROPS
@@ -232,7 +233,13 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
                             <label className={labelClass}>
                                 วันที่รับ <span className="text-gray-400">(grn_date)</span> <span className="text-red-500">*</span>
                             </label>
-                            <input type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} className={inputClass} />
+                            <div className="h-10">
+                                <CustomDateInput 
+                                    value={formDate} 
+                                    onChange={(val) => setFormDate(val)} 
+                                    className={inputClass} 
+                                />
+                            </div>
                         </div>
                         <div>
                             <label className={labelClass}>

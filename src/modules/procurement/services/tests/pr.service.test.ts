@@ -71,23 +71,28 @@ describe('PRService Unit Tests', () => {
   });
 
   describe('create', () => {
-    it('should post new PR with correct payload mapping', async () => {
+    it('should post new PR with correct harmonized payload', async () => {
       const payload: CreatePRPayload = {
         pr_date: '2024-02-09',
-        requester_name: 'John Doe',
-        requester_user_id: '1',
-        branch_id: '1',
-        warehouse_id: '1',
-        cost_center_id: '1',
         need_by_date: '2024-02-20',
+        requester_user_id: 1,
+        branch_id: 1,
+        pr_tax_code_id: 1,
+        remark: 'Test PR',
+        status: 'DRAFT',
+        // Currency & exchange rate fields (Postman-aligned)
         pr_base_currency_code: 'THB',
         pr_quote_currency_code: 'THB',
         pr_exchange_rate: 1,
         pr_exchange_rate_date: '2024-02-09',
-        pr_tax_code_id: '1',
-        pr_discount_raw: '',
-        items: [
-          { item_id: '101', item_code: 'ITM-01', description: 'Item 1', qty: 2, est_unit_price: 500, uom: 'ชิ้น', uom_id: '1', warehouse_id: '1' }
+        // Terms fields (Postman-aligned)
+        payment_term_days: 30,
+        credit_days: 30,
+        vendor_quote_no: '',
+        shipping_method: '',
+        pr_discount_raw: '0%',
+        lines: [
+          { item_id: 101, qty: 2, est_unit_price: 500, uom_id: 1 }
         ]
       };
 
@@ -98,9 +103,10 @@ describe('PRService Unit Tests', () => {
 
       expect(api.post).toHaveBeenCalledWith('/pr', expect.objectContaining({
         pr_date: payload.pr_date,
-        total_amount: 1000,
+        requester_user_id: 1,
+        branch_id: 1,
         lines: expect.arrayContaining([
-          expect.objectContaining({ item_code: 'ITM-01', qty: 2 })
+          expect.objectContaining({ item_id: 101, qty: 2 })
         ])
       }));
       expect(result).toEqual(mockCreatedPR);
@@ -108,14 +114,14 @@ describe('PRService Unit Tests', () => {
   });
 
   describe('update', () => {
-    it('should put updated PR data', async () => {
-      const mockUpdatedPR = { pr_id: '1', requester_name: 'Modified' };
+    it('should patch updated PR data', async () => {
+      const mockUpdatedPR = { pr_id: '1', remark: 'Modified' };
       vi.mocked(api.put).mockResolvedValue(mockUpdatedPR);
 
-      const payload: PRUpdatePayload = { requester_name: 'Modified' };
+      const payload: PRUpdatePayload = { remark: 'Modified' };
       const result = await PRService.update('1', payload);
 
-      expect(api.put).toHaveBeenCalledWith('/pr/1', { requester_name: 'Modified' });
+      expect(api.put).toHaveBeenCalledWith('/pr/1', { remark: 'Modified' });
       expect(result).toEqual(mockUpdatedPR);
     });
   });
