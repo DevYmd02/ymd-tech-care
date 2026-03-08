@@ -33,7 +33,7 @@ const VALID_TRANSITIONS: Partial<Record<POStatus, POStatus>> = {
 
 export const setupPOHandlers = (mock: MockAdapter) => {
     // ── 1. GET PO List ──────────────────────────────────────────────────────
-    mock.onGet('/purchase-orders').reply((config: AxiosRequestConfig) => {
+    mock.onGet('/po').reply((config: AxiosRequestConfig) => {
         const params = config.params || {};
         const sanitizedData = MOCK_POS.map(po => ({
             ...po,
@@ -53,7 +53,7 @@ export const setupPOHandlers = (mock: MockAdapter) => {
     });
 
     // ── 2. GET PO Detail ────────────────────────────────────────────────────
-    mock.onGet(/\/purchase-orders\/.+/).reply((config: AxiosRequestConfig) => {
+    mock.onGet(/\/po\/.+/).reply((config: AxiosRequestConfig) => {
         const id = sanitizeId(config.url?.split('/').pop());
         const found = MOCK_POS.find(p => sanitizeId(p.po_id) === id);
 
@@ -82,7 +82,7 @@ export const setupPOHandlers = (mock: MockAdapter) => {
     });
 
     // ── 3. POST Create PO ───────────────────────────────────────────────────
-    mock.onPost('/purchase-orders').reply((config: AxiosRequestConfig) => {
+    mock.onPost('/po').reply((config: AxiosRequestConfig) => {
         const body = config.data ? JSON.parse(config.data) : {};
 
         // Basic guard: qc_id and vendor_id are required per CreatePOSchema
@@ -126,7 +126,7 @@ export const setupPOHandlers = (mock: MockAdapter) => {
     });
 
     // ── 4. POST Issue PO (APPROVED → ISSUED) ────────────────────────────────
-    mock.onPost(/\/purchase-orders\/.+\/issue/).reply((config: AxiosRequestConfig) => {
+    mock.onPost(/\/po\/.+\/issue/).reply((config: AxiosRequestConfig) => {
         const id = sanitizeId(config.url?.split('/')[2]);
         const po = MOCK_POS.find(p => sanitizeId(p.po_id) === id);
         if (!po) return [404, { message: 'PO Not Found' }];
@@ -145,7 +145,7 @@ export const setupPOHandlers = (mock: MockAdapter) => {
     });
 
     // ── 5. POST Approve PO (DRAFT → PENDING_APPROVAL or PENDING_APPROVAL → APPROVED)
-    mock.onPost(/\/purchase-orders\/.+\/approve/).reply((config: AxiosRequestConfig) => {
+    mock.onPost(/\/po\/.+\/approve/).reply((config: AxiosRequestConfig) => {
         const id = sanitizeId(config.url?.split('/')[2]);
         const po = MOCK_POS.find(p => sanitizeId(p.po_id) === id);
         if (!po) return [404, { message: 'PO Not Found' }];
@@ -167,7 +167,7 @@ export const setupPOHandlers = (mock: MockAdapter) => {
     });
 
     // ── 6. POST Reject PO (PENDING_APPROVAL → REJECTED) ─────────────────────────
-    mock.onPost(/\/purchase-orders\/.+\/reject/).reply((config: AxiosRequestConfig) => {
+    mock.onPost(/\/po\/.+\/reject/).reply((config: AxiosRequestConfig) => {
         const id = sanitizeId(config.url?.split('/')[2]);
         const body = config.data ? JSON.parse(config.data) : {};
         const po = MOCK_POS.find(p => sanitizeId(p.po_id) === id);
@@ -192,7 +192,8 @@ export const setupPOHandlers = (mock: MockAdapter) => {
     // ── 7. POST GRN Trigger (ISSUED → COMPLETED) ───────────────────────────
     //    Placeholder: real GRN flow will be in grn.handler.ts, but this
     //    endpoint allows the PO to close when goods are fully received.
-    mock.onPost(/\/purchase-orders\/.+\/complete/).reply((config: AxiosRequestConfig) => {
+    // ── 7. POST GRN Trigger (ISSUED → COMPLETED) ───────────────────────────
+    mock.onPost(/\/po\/.+\/complete/).reply((config: AxiosRequestConfig) => {
         const id = sanitizeId(config.url?.split('/')[2]);
         const po = MOCK_POS.find(p => sanitizeId(p.po_id) === id);
         if (!po) return [404, { message: 'PO Not Found' }];
@@ -201,5 +202,24 @@ export const setupPOHandlers = (mock: MockAdapter) => {
         }
         po.status = 'COMPLETED';
         return [200, { success: true, message: `PO ${po.po_no} ปิดรายการเรียบร้อย` }];
+    });
+
+    // ── 8. PATCH Pending PO (DRAFT → PENDING_APPROVAL) ──────────────────────
+    mock.onPatch(/\/po\/.+\/pending/).reply((config: AxiosRequestConfig) => {
+        const id = sanitizeId(config.url?.split('/')[2]);
+        const po = MOCK_POS.find(p => sanitizeId(p.po_id) === id);
+        if (!po) return [404, { message: 'PO Not Found' }];
+        if (po.status !== 'DRAFT') {
+            return [422, { message: `Cannot submit PO in status: ${po.status}` }];
+        }
+        const prevStatus = po.status;
+        po.status = 'PENDING_APPROVAL';
+        if (!po.transactions) po.transactions = [];
+        po.transactions.push({
+            id: `tx-${Date.now()}`, po_id: po.po_id,
+            from_status: prevStatus as POStatus, to_status: 'PENDING_APPROVAL',
+            action_by: 'mock-user', action_date: new Date().toISOString()
+        });
+        return [200, { success: true, message: `PO ${po.po_no} ส่งอนุมัติเรียบร้อย` }];
     });
 };

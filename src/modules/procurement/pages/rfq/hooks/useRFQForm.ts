@@ -565,7 +565,6 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
 
             // Conditionally add optional fields
             if (formData.pr_id) payload.pr_id = Number(formData.pr_id);
-            if (formData.project_id) payload.project_id = Number(formData.project_id);
             if (formData.receive_location) payload.receive_location = String(formData.receive_location);
             if (formData.payment_term_hint) payload.payment_term_hint = String(formData.payment_term_hint);
             if (formData.incoterm) payload.incoterm = String(formData.incoterm);

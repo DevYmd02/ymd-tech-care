@@ -23,7 +23,7 @@ export default function POListPage() {
         handlePageChange, handleSortChange, sortConfig,
     } = usePOList();
 
-    const { handleIssuePO } = usePOActions();
+    const { handleIssuePO, handleDirectSubmit } = usePOActions();
 
     // ── Modal State (URL Driven) ──────────────────────────────────────────────
     const isCreateInterceptorOpen = searchParams.get('mode') === 'select-source';
@@ -211,8 +211,8 @@ export default function POListPage() {
                             <Eye size={14} />
                         </button>
 
-                        {/* DRAFT or REJECTED: Edit (amber) + ส่งอนุมัติ (emerald) */}
-                        {(item.status === 'DRAFT' || item.status === 'REJECTED') && (
+                        {/* DRAFT only: Edit (amber) + ส่งอนุมัติ (emerald) */}
+                        {item.status === 'DRAFT' && (
                             <>
                                 <button
                                     onClick={() => handleEdit(item.po_id || '')}
@@ -223,7 +223,7 @@ export default function POListPage() {
                                     <span className="text-[10px] font-bold">แก้ไข</span>
                                 </button>
                                 <button
-                                    onClick={() => handleApprove(item.po_id || '')}
+                                    onClick={() => handleDirectSubmit(item)}
                                     className="flex items-center gap-1 px-1.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded shadow-sm transition-all"
                                 >
                                     <Send size={10} />
@@ -281,7 +281,7 @@ export default function POListPage() {
             size: 140,
             enableSorting: false,
         }),
-    ], [columnHelper, filters.page, filters.limit, data?.data, handleGRN, handleApprove, handleIssuePO, handleView, handleEdit]);
+    ], [columnHelper, filters.page, filters.limit, data?.data, handleGRN, handleApprove, handleIssuePO, handleDirectSubmit, handleView, handleEdit]);
 
     return (
         <>
@@ -435,7 +435,7 @@ export default function POListPage() {
                                         >
                                             <Eye size={14} /> ดู
                                         </button>
-                                        {(item.status === 'DRAFT' || item.status === 'REJECTED') && (
+                                        {item.status === 'DRAFT' && (
                                             <>
                                                 <button
                                                     onClick={() => handleEdit(item.po_id)}
@@ -444,7 +444,7 @@ export default function POListPage() {
                                                     <Edit size={14} /> แก้ไข
                                                 </button>
                                                 <button
-                                                    onClick={() => handleApprove(item.po_id)}
+                                                    onClick={() => handleDirectSubmit(item)}
                                                     className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm whitespace-nowrap"
                                                 >
                                                     <Send size={14} /> ส่งอนุมัติ

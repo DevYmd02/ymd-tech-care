@@ -137,7 +137,7 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
   const isPending = vqStatus === 'PENDING';
   const isRecorded = vqStatus === 'RECORDED';
   const isTerminalStatus = vqStatus === 'EXPIRED' || vqStatus === 'DECLINED' || vqStatus === 'CANCELLED';
-  const forceViewMode = isViewMode || isTerminalStatus;
+  const forceViewMode = isViewMode || isTerminalStatus || isRecorded;
 
   const modalTitle = forceViewMode 
     ? "รายละเอียดใบเสนอราคาจากผู้ขาย (VIEW VENDOR QUOTATION)" 

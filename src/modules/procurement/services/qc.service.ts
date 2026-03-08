@@ -63,7 +63,7 @@ export const QCService = {
 
   compare: async (id: string): Promise<{ success: boolean }> => {
     logger.info(`[QCService] Triggering Price Comparison for ${id}`);
-    return await api.post<{ success: boolean }>(ENDPOINTS.compare(id));
+    return await api.post<{ success: boolean }>(ENDPOINTS.compare(id), {});
   },
 
   submitWinner: async (id: string, data: SubmitQCWinnerData): Promise<{ qc_id: string }> => {
@@ -73,7 +73,7 @@ export const QCService = {
 
   cancel: async (id: string): Promise<SuccessResponse> => {
     logger.info(`[QCService] Cancelling QC: ${id}`);
-    return await api.post<SuccessResponse>(ENDPOINTS.cancel(id));
+    return await api.post<SuccessResponse>(ENDPOINTS.cancel(id), {});
   },
 };
 

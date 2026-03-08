@@ -51,5 +51,15 @@ export const GRNService = {
     create: async (data: CreateGRNPayload): Promise<SuccessResponse> => {
         logger.info('[GRNService] Creating GRN');
         return await api.post<SuccessResponse>(BASE_URL, data);
+    },
+
+    approve: async (id: string): Promise<SuccessResponse> => {
+        logger.info(`[GRNService] Approving GRN: ${id}`);
+        return await api.post<SuccessResponse>(`${BASE_URL}/${id}/approve`, {});
+    },
+
+    reject: async (id: string, remark: string): Promise<SuccessResponse> => {
+        logger.info(`[GRNService] Rejecting GRN: ${id}`);
+        return await api.post<SuccessResponse>(`${BASE_URL}/${id}/reject`, { remark });
     }
 };

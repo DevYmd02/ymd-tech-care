@@ -15,12 +15,11 @@ export type PRUpdatePayload = Partial<CreatePRPayload> & { status?: PRStatus };
 export type { PRListParams, PRListResponse, ConvertPRRequest };
 import { logger } from '@/shared/utils/logger';
 import type { SuccessResponse } from '@/shared/types/api-response.types';
-import { extractErrorMessage } from '@/core/api/api';
 
 const ENDPOINTS = {
   list: '/pr',
   detail: (id: string) => `/pr/${id}`,
-  submit: (id: string) => `/pr/${id}/submit`,
+  pending: (id: string) => `/pr/${id}/pending`, // 🎯 Precise Pending endpoint
   approve: (id: string) => `/pr/${id}/approve`,
   cancel: (id: string) => `/pr/${id}/cancel`,
   reject: (id: string) => `/pr/${id}/reject`,
@@ -241,27 +240,22 @@ export const PRService = {
     return response;
   },
 
-  submit: async (id: string): Promise<SuccessResponse & { pr_no?: string }> => {
-    try {
-      logger.info(`[PRService] Submitting PR: ${id}`);
-      const response = await api.patch<SuccessResponse & { pr_no?: string }>(ENDPOINTS.submit(id), {});
-      return response;
-    } catch (error) {
-      const errorMessage = extractErrorMessage(error);
-      throw new Error(errorMessage);
-    }
+  // 1. Submit for Approval (Draft -> Pending)
+  async processDirectApproval(id: string | number) {
+    // CRITICAL: Call the /pending endpoint with NO BODY
+    return await api.patch(`/pr/${id}/pending`);
   },
 
-  approve: async (id: string): Promise<SuccessResponse> => {
-    logger.info(`[PRService] Approving PR: ${id}`);
-    const response = await api.patch<SuccessResponse>(ENDPOINTS.approve(id), {});
-    return response;
+  // 2. Approve PR (Pending -> Approved)
+  async approvePR(id: string | number) {
+    // CRITICAL: Call the /approve endpoint with NO BODY
+    return await api.patch(`/pr/${id}/approve`);
   },
 
-  reject: async (id: string, reason: string): Promise<SuccessResponse> => {
-    logger.info(`[PRService] Rejecting PR: ${id}`);
-    const response = await api.patch<SuccessResponse>(ENDPOINTS.reject(id), { reason });
-    return response;
+  // 3. Reject PR (Pending -> Rejected)
+  async rejectPR(id: string | number) {
+    // CRITICAL: Call the /reject endpoint with NO BODY
+    return await api.patch(`/pr/${id}/reject`);
   },
 
   cancel: async (id: string): Promise<SuccessResponse> => {
@@ -298,33 +292,4 @@ export const PRService = {
     return response;
   },
 
-  /**
-   * processDirectApproval — Send for Approval Flow (DRAFT → PENDING)
-   *
-   * เรียก PATCH /pr/{id} พร้อม body { status: 'PENDING' }
-   * เพื่อเปลี่ยนสถานะจาก DRAFT → PENDING (รออนุมัติ)
-   *
-   * Backend endpoint: PATCH /pr/{id} with { status: 'PENDING' }
-   */
-  processDirectApproval: async (id: string): Promise<SuccessResponse> => {
-    logger.info(`🚀 [PRService] processDirectApproval: Starting for PR ${id} (DRAFT → PENDING)`);
-
-    try {
-      const result = await api.patch<SuccessResponse>(ENDPOINTS.detail(id), { status: 'PENDING' });
-      logger.info('✅ [PRService] processDirectApproval: PR status updated to PENDING successfully');
-      return result;
-    } catch (error: unknown) {
-      const axiosErr = error as { response?: { data?: unknown; status?: number } };
-      const backendResponse = axiosErr.response?.data;
-      logger.error('💥 [PRService] processDirectApproval: Failed to update status to PENDING', {
-        statusCode: axiosErr.response?.status,
-        backendResponse,
-      });
-      const rawMsg =
-        (backendResponse as { message?: string | string[] } | undefined)?.message ||
-        (backendResponse as { error?: string } | undefined)?.error ||
-        (error as Error).message;
-      throw new Error(Array.isArray(rawMsg) ? rawMsg.join(', ') : String(rawMsg));
-    }
-  },
 };

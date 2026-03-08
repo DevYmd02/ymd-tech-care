@@ -4,10 +4,14 @@
  * Business logic extracted to usePOApproval hook.
  */
 
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { CheckCircle, XCircle, AlertCircle, FileText, Eye, Clock } from 'lucide-react';
 import { WindowFormLayout } from '@ui';
 import { POStatusBadge } from '@ui';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
+import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal';
+import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { usePOApproval } from '../hooks';
 
 // ====================================================================================
@@ -42,7 +46,13 @@ export default function POApprovalModal({
     onSuccess,
 }: POApprovalModalProps) {
 
-    // ── Hook (All Business Logic) ─────────────────────────────────────────────
+    // ── Modern UI State & Logic ──────────────────────────────────────────────
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const [confirmAction, setConfirmAction] = useState<'APPROVE' | 'REJECT' | null>(null);
+    const { toast } = useToast();
+    const queryClient = useQueryClient();
+
+    // ── Hook (Data & Service Logic) ──────────────────────────────────────────
     const {
         po,
         isLoading,
@@ -52,7 +62,49 @@ export default function POApprovalModal({
         setRemark,
         handleApprove,
         handleReject,
-    } = usePOApproval({ isOpen, poId, onClose, onSuccess });
+    } = usePOApproval({ isOpen, poId });
+
+    // ── Handlers ──────────────────────────────────────────────────────────────
+    
+    /** Trigger confirmation before calling API */
+    const handleActionClick = (action: 'APPROVE' | 'REJECT') => {
+        if (action === 'REJECT' && (!remark || remark.trim() === '')) {
+            toast('กรุณาระบุเหตุผลในการปฏิเสธ', 'error');
+            return;
+        }
+        setConfirmAction(action);
+        setIsConfirmOpen(true);
+    };
+
+    /** Execute the actual mutation (Close-First Pattern) */
+    const handleConfirmExecution = async () => {
+        try {
+            if (confirmAction === 'APPROVE') {
+                await handleApprove();
+            } else if (confirmAction === 'REJECT') {
+                await handleReject();
+            }
+
+            // 🎯 THE CLOSE-FIRST PATTERN (ON SUCCESS)
+            setIsConfirmOpen(false); // Close confirm modal
+            onClose();              // Close the main PO details modal
+            
+            toast(confirmAction === 'APPROVE' ? 'อนุมัติเอกสารสำเร็จ' : 'ปฏิเสธเอกสารสำเร็จ', 'success');
+
+            // Delay query invalidation for smoother transition
+            setTimeout(() => {
+                queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
+                queryClient.invalidateQueries({ queryKey: ['po-detail', poId] });
+            }, 100);
+
+            onSuccess(); // Optional callback for parent
+        } catch {
+            // 🎯 ERROR RESILIENCE: Close ONLY the confirm modal
+            // Keep the main modal open so the user doesn't lose their remark.
+            setIsConfirmOpen(false);
+            toast(confirmAction === 'APPROVE' ? 'เกิดข้อผิดพลาดในการอนุมัติ' : 'เกิดข้อผิดพลาดในการปฏิเสธ', 'error');
+        }
+    };
 
     if (!isOpen) return null;
 
@@ -79,7 +131,7 @@ export default function POApprovalModal({
                     <div className="flex gap-2">
                         <button
                             type="button"
-                            onClick={handleReject}
+                            onClick={() => handleActionClick('REJECT')}
                             disabled={actionLoading}
                             className="flex items-center gap-1.5 px-4 py-2 border-2 border-red-500 text-red-600 hover:bg-red-50 rounded-md text-sm font-bold transition-colors disabled:opacity-50"
                         >
@@ -87,7 +139,7 @@ export default function POApprovalModal({
                         </button>
                         <button
                             type="button"
-                            onClick={handleApprove}
+                            onClick={() => handleActionClick('APPROVE')}
                             disabled={actionLoading}
                             className="flex items-center gap-1.5 px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-sm font-bold shadow-sm transition-colors disabled:opacity-50"
                         >
@@ -190,6 +242,23 @@ export default function POApprovalModal({
                     </>
                 )}
             </div>
+
+            {/* Confirmation Dialog */}
+            <ConfirmationModal
+                isOpen={isConfirmOpen}
+                onClose={() => setIsConfirmOpen(false)}
+                onConfirm={handleConfirmExecution}
+                isLoading={actionLoading}
+                variant={confirmAction === 'APPROVE' ? 'success' : 'danger'}
+                title={confirmAction === 'APPROVE' ? 'ยืนยันการอนุมัติ' : 'ยืนยันการปฏิเสธ'}
+                description={
+                    confirmAction === 'APPROVE' 
+                    ? 'คุณต้องการอนุมัติใบสั่งซื้อนี้ใช่หรือไม่?' 
+                    : `คุณต้องการปฏิเสธใบสั่งซื้อนี้ใช่หรือไม่?\nเหตุผล: ${remark}`
+                }
+                confirmText={confirmAction === 'APPROVE' ? 'อนุมัติ' : 'ปฏิเสธ'}
+                cancelText="ยกเลิก"
+            />
         </WindowFormLayout>
     );
 }

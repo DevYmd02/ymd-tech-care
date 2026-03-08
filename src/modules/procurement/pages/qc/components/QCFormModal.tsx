@@ -270,9 +270,14 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
         });
 
       if (result && result.qc_id) {
-        toast.success('บันทึกใบเปรียบเทียบราคาสำเร็จ!');
-        onSuccess?.();
+        // 🎯 Close-First Interaction Flow
         onClose();
+        toast.success('บันทึกใบเปรียบเทียบราคาสำเร็จ!');
+        
+        // Delayed invalidation
+        setTimeout(() => {
+          onSuccess?.();
+        }, 100);
       } else {
         toast.error('เกิดข้อผิดพลาดในการบันทึก');
       }
