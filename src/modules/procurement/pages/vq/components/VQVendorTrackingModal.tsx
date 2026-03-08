@@ -1,12 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Eye, Plus, Users, Loader2 } from 'lucide-react';
 import { WindowFormLayout } from '@ui';
 import { RFQService } from '@/modules/procurement/services';
-import type { RFQDetailResponse } from '@/modules/procurement/types';
-import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { VendorTrackingTable, type ExtendedVendor } from './VendorTrackingTable';
-import { logger } from '@/shared/utils/logger';
 
 interface VQVendorTrackingModalProps {
     isOpen: boolean;
@@ -22,31 +20,16 @@ export const VQVendorTrackingModal: React.FC<VQVendorTrackingModalProps> = ({
     rfqNo
 }) => {
     const navigate = useNavigate();
-    const { toast } = useToast();
-    const [isLoading, setIsLoading] = useState(false);
-    const [vendors, setVendors] = useState<ExtendedVendor[]>([]);
-    const [rfqHeader, setRfqHeader] = useState<RFQDetailResponse | null>(null);
 
-    useEffect(() => {
-        const fetchVendors = async () => {
-            if (!isOpen || !rfqId) return;
+    // Data Fetching with React Query
+    const { data: rfqHeader, isLoading } = useQuery({
+        queryKey: ['rfq-vendors', rfqId],
+        queryFn: () => RFQService.getById(rfqId!),
+        enabled: !!isOpen && !!rfqId,
+        staleTime: 5000,
+    });
 
-            setIsLoading(true);
-            try {
-                const rfqDetail: RFQDetailResponse = await RFQService.getById(rfqId);
-                const vendorList = (rfqDetail.vendors || []) as ExtendedVendor[];
-                setVendors(vendorList);
-                setRfqHeader(rfqDetail);
-            } catch (error) {
-                logger.error('[VQVendorTrackingModal] Failed to fetch RFQ vendors:', error);
-                toast('ไม่สามารถดึงข้อมูลผู้ขายได้', 'error');
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchVendors();
-    }, [isOpen, rfqId, toast]);
+    const vendors = (rfqHeader?.vendors || []) as ExtendedVendor[];
 
     const handleViewQT = (vendorName: string) => {
         navigate(`/procurement/vq?rfq_no=${encodeURIComponent(rfqNo)}&vendor_name=${encodeURIComponent(vendorName)}`);

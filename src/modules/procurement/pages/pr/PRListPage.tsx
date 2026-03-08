@@ -6,7 +6,7 @@
  */
 
 import { useState, useMemo, useCallback } from 'react';
-import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/react-query';
 import { FileText, Plus, Search, Send, AlertTriangle, Eye } from 'lucide-react';
 import { PageListLayout, SmartTable, PRStatusBadge, FilterField, MobileListCard, MobileListContainer } from '@ui';
 import { useTableFilters } from '@/shared/hooks';
@@ -50,6 +50,7 @@ const PR_STATUS_OPTIONS = [
 // ====================================================================================
 
 export default function PRListPage() {
+    const queryClient = useQueryClient();
     // URL-based Filter State (Explicit Search Pattern)
     const { filters, localFilters, handleFilterChange, handleApplyFilters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<PRStatus>({
         defaultStatus: 'ALL',
@@ -151,13 +152,23 @@ export default function PRListPage() {
         setIsReadOnly(false);
     };
 
-    const handleSendApproval = useCallback((pr: PRHeader) => {
-        handleDirectApproval(pr, { onSuccess: () => refetch() });
-    }, [handleDirectApproval, refetch]);
+    const handleSendApproval = useCallback(async (pr: PRHeader) => {
+        const confirmed = await handleDirectApproval(pr);
+        if (confirmed) {
+            setTimeout(() => {
+                queryClient.invalidateQueries({ queryKey: ['prs'] });
+            }, 100);
+        }
+    }, [handleDirectApproval, queryClient]);
 
-    const onApproveClick = useCallback((id: string) => {
-        handleApprove(id, { onSuccess: refetch });
-    }, [handleApprove, refetch]);
+    const onApproveClick = useCallback(async (id: string) => {
+        const confirmed = await handleApprove(id);
+        if (confirmed) {
+            setTimeout(() => {
+                queryClient.invalidateQueries({ queryKey: ['prs'] });
+            }, 100);
+        }
+    }, [handleApprove, queryClient]);
 
     // Columns Definition
     const columnHelper = createColumnHelper<PRHeader>();
@@ -574,7 +585,6 @@ export default function PRListPage() {
                         isOpen={isPRModalOpen}
                         onClose={handleClosePRModal}
                         id={selectedPRId}
-                        onSuccess={() => refetch()}
                         readOnly={isReadOnly}
                     />
                 </ErrorBoundary>
@@ -583,7 +593,14 @@ export default function PRListPage() {
             <RejectReasonModal
                 isOpen={isRejectReasonOpen}
                 onClose={closeRejectModal}
-                onConfirm={(reason) => submitReject(reason, { onSuccess: refetch })}
+                onConfirm={async () => {
+                    const success = await submitReject();
+                    if (success) {
+                        setTimeout(() => {
+                            queryClient.invalidateQueries({ queryKey: ['prs'] });
+                        }, 100);
+                    }
+                }}
                 isSubmitting={isRejecting}
             />
         </>

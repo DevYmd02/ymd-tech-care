@@ -7,6 +7,8 @@ import type { POListItem } from '@/modules/procurement/types';
 import type { CreateGRNPayload, GRNLineItemInput } from '@/modules/procurement/types/grn-types';
 import { logger } from '@/shared/utils/logger';
 import { CustomDateInput } from '@/shared/components/forms/CustomDateInput';
+import { useToast } from '@/shared/components/ui/feedback/Toast';
+import { useConfirmation } from '@/shared/hooks/useConfirmation';
 
 // ====================================================================================
 // PROPS
@@ -24,6 +26,8 @@ interface Props {
 // ====================================================================================
 
 export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }: Props) {
+    const { toast } = useToast();
+    const { confirm } = useConfirmation();
     const prevIsOpenRef = useRef(false);
     
     // -- State --
@@ -144,6 +148,19 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
 
     const handleSubmit = async () => {
         if (!selectedPOId) return;
+
+        // Custom Confirmation for PENDING QC
+        const hasPending = items.some(item => item.qc_status === 'PENDING');
+        if (hasPending) {
+            const isConfirmed = await confirm({
+                title: 'ยืนยันการบันทึก',
+                description: 'มีบางรายการยังไม่ได้ตรวจสอบ (PENDING) ยืนยันที่จะบันทึกหรือไม่?',
+                confirmText: 'บันทึก',
+                cancelText: 'ยกเลิก',
+                variant: 'warning'
+            });
+            if (!isConfirmed) return;
+        }
         
         const payload: CreateGRNPayload = {
              po_id: selectedPOId,
@@ -162,12 +179,19 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
 
         try {
             await GRNService.create(payload);
-            window.alert('บันทึกใบรับสินค้าเรียบร้อยแล้ว');
-            if (onSuccess) onSuccess();
-            onClose();
+            
+            // 🎯 Close-First Interaction Flow
+            onClose(); 
+            toast('บันทึกใบรับสินค้าเรียบร้อยแล้ว', 'success');
+            
+            // Delayed invalidation
+            setTimeout(() => {
+                if (onSuccess) onSuccess();
+            }, 100);
+            
         } catch (error) {
             logger.error('[GRNFormModal] handleSubmit error:', error);
-            window.alert('เกิดข้อผิดพลาดในการบันทึก');
+            toast('เกิดข้อผิดพลาดในการบันทึก', 'error');
         }
     };
 

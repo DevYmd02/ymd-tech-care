@@ -298,15 +298,23 @@ export const useVQForm = (
       if (vqId) {
         const response = await VQService.update(vqId, payload as Partial<VQListItem>);
         const vqNo = data.quotation_no || (response.id ? String(response.id) : vqId);
+        
+        // 🎯 Close-First Interaction Flow
+        onClose();
         toast(`แก้ไขใบเสนอราคา ${vqNo} สำเร็จ`, 'success', 'บันทึกสำเร็จ');
       } else {
         const response = await VQService.create(payload);
         const vqNo = data.quotation_no || (response.id ? String(response.id) : '');
+        
+        // 🎯 Close-First Interaction Flow
+        onClose();
         toast(`บันทึกใบเสนอราคา ${vqNo} สำเร็จ`, 'success', 'บันทึกสำเร็จ');
       }
       
-      onSuccess?.();
-      onClose();
+      // Delayed query invalidation
+      setTimeout(() => {
+        onSuccess?.();
+      }, 100);
     } catch (error) {
       logger.error('Save VQ failed:', error);
       toast('เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'error');

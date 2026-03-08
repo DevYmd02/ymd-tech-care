@@ -63,6 +63,16 @@ export const VQService = {
   update: async (id: string, data: Partial<VQListItem>): Promise<SuccessResponse> => {
     logger.info(`[VQService] Updating VQ ${id}`, data);
     return await api.patch<SuccessResponse>(`${ENDPOINTS.update}/${id}`, data);
+  },
+
+  submit: async (id: string): Promise<SuccessResponse> => {
+    logger.info(`[VQService] Submitting VQ ${id}`);
+    return await api.post<SuccessResponse>(`${ENDPOINTS.list}/${id}/submit`, {});
+  },
+
+  cancel: async (id: string): Promise<SuccessResponse> => {
+    logger.info(`[VQService] Cancelling VQ ${id}`);
+    return await api.post<SuccessResponse>(`${ENDPOINTS.list}/${id}/cancel`, {});
   }
 };
 

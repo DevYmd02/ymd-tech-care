@@ -46,7 +46,37 @@ export const usePOActions = () => {
         });
     }, [confirm, queryClient]);
 
+    /**
+     * Submit PO for Approval: DRAFT → PENDING_APPROVAL
+     * GOLD PATTERN: Close-First, Empty Body, Dynamic Modal
+     */
+    const handleDirectSubmit = useCallback((item: POListItem) => {
+        const formattedAmount = item.total_amount?.toLocaleString('th-TH', { 
+            minimumFractionDigits: 2, 
+            maximumFractionDigits: 2 
+        });
+
+        return confirm({
+            title:       'ยืนยันการส่งอนุมัติ',
+            description: `คุณต้องการส่งเอกสาร ${item.po_no} เพื่อขออนุมัติใช่หรือไม่?\nยอดรวม: ${formattedAmount} บาท`,
+            confirmText: 'ส่งอนุมัติ',
+            cancelText:  'ยกเลิก',
+            variant:     'info',
+            icon:        Send,
+            onConfirm:   async () => {
+                // 1. API Call (Strict Empty Body Payload)
+                await POService.submit(item.po_id || '');
+
+                // 2. Success Feedback (UI-only delay for invalidation)
+                setTimeout(() => {
+                    queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
+                }, 100);
+            },
+        });
+    }, [confirm, queryClient]);
+
     return {
         handleIssuePO,
+        handleDirectSubmit,
     };
 };

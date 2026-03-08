@@ -8,7 +8,7 @@
 
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/react-query';
 import { Eye, Edit, Filter, FileText, X, Search, Plus } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { PageListLayout, SmartTable, VQStatusBadge, FilterField, MobileListCard, MobileListContainer } from '@ui';
@@ -55,6 +55,7 @@ export default function VQListPage() {
     // ==========================================================================
     const [searchParams, setSearchParams] = useSearchParams();
     const rfqNoFilter = searchParams.get('rfq_no');
+    const queryClient = useQueryClient();
 
     const { filters, localFilters, handleFilterChange, handleApplyFilters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<VQStatus>({
         defaultStatus: 'ALL',
@@ -157,6 +158,16 @@ export default function VQListPage() {
         queryFn: () => VQService.getList(apiFilters),
         placeholderData: keepPreviousData,
     });
+
+    const handleVqSuccess = useCallback(() => {
+        // 1. Refresh main VQ List
+        refetch();
+        
+        // 2. Refresh RFQ Tracking Dashboard if open
+        if (selectedRfqId) {
+            queryClient.invalidateQueries({ queryKey: ['rfq-vendors', selectedRfqId] });
+        }
+    }, [refetch, selectedRfqId, queryClient]);
 
     // handleFilterChange is provided by useTableFilters directly — no local wrapper needed
 
@@ -314,10 +325,14 @@ export default function VQListPage() {
                 // 1. Record Price is ONLY for PENDING records without a VQ number yet.
                 const canRecord = item.status === 'PENDING' && !item.quotation_no;
                 
-                // 2. Edit and View are for RECORDED / DRAFT, or any record that already has a VQ number.
-                const hasVqDocument = !!item.quotation_no || item.status === 'RECORDED' || item.status === 'DRAFT';
+                // 2. Edit and View logic:
+                // - RECORDED or CANCELLED are read-only (View only)
+                // - DRAFT or partials with VQ no. (if any) can be edited
+                const isRecorded = item.status === 'RECORDED';
                 const isCancelled = item.status === 'CANCELLED';
-                const canEdit = hasVqDocument && !isCancelled;
+                const hasVqDocument = !!item.quotation_no || isRecorded || item.status === 'DRAFT';
+
+                const canEdit = hasVqDocument && !isCancelled && !isRecorded;
                 const canView = hasVqDocument || isCancelled;
                 
                 // If nothing can be done, render a dash
@@ -572,7 +587,7 @@ export default function VQListPage() {
                                                 <Edit size={14} /> บันทึกราคา
                                             </button>
                                         )}
-                                        {!!item.quotation_no && item.status !== 'CANCELLED' && (
+                                        {!!item.quotation_no && item.status !== 'CANCELLED' && item.status !== 'RECORDED' && (
                                             <button
                                                 onClick={() => handleOpenEdit(item.quotation_id)}
                                                 className="flex-1 bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1"
@@ -594,7 +609,7 @@ export default function VQListPage() {
                 <VQFormModal 
                     isOpen={modalConfig.isOpen}
                     onClose={handleCloseModal}
-                    onSuccess={refetch}
+                    onSuccess={handleVqSuccess}
                     initialRFQ={initialRFQForCreate}
                     vqId={modalConfig.vqId}
                     isViewMode={modalConfig.isViewMode}

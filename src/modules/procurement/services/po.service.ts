@@ -17,13 +17,14 @@ import { applyClientFilters, applyClientPagination, extractArrayFromResponse } f
 // ---------------------------------------------------------------------------
 
 const ENDPOINTS = {
-    list:     '/purchase-orders',
-    detail:   (id: string) => `/purchase-orders/${id}`,
-    create:   '/purchase-orders',
-    issue:    (id: string) => `/purchase-orders/${id}/issue`,
-    approve:  (id: string) => `/purchase-orders/${id}/approve`,
-    reject:   (id: string) => `/purchase-orders/${id}/reject`,
-    complete: (id: string) => `/purchase-orders/${id}/complete`,
+    list:     '/po',
+    detail:   (id: string) => `/po/${id}`,
+    create:   '/po',
+    issue:    (id: string) => `/po/${id}/issue`,
+    approve:  (id: string) => `/po/${id}/approve`,
+    reject:   (id: string) => `/po/${id}/reject`,
+    complete: (id: string) => `/po/${id}/complete`,
+    pending:  (id: string) => `/po/${id}/pending`,
 };
 
 export const POService = {
@@ -83,10 +84,18 @@ export const POService = {
         return await api.post<SuccessResponse>(ENDPOINTS.issue(id), { remark });
     },
 
+    /** Transition: DRAFT → PENDING_APPROVAL (send PO for approval) */
+    submit: async (id: string): Promise<SuccessResponse> => {
+        logger.info(`[POService] Submitting PO: ${id}`);
+        // 🎯 GOLD PATTERN: PATCH with EMPTY BODY {}
+        return await api.patch<SuccessResponse>(ENDPOINTS.pending(id), {});
+    },
+
     /** Transition: ISSUED → APPROVED (internal approval) */
-    approve: async (id: string, remark?: string): Promise<SuccessResponse> => {
+    approve: async (id: string): Promise<SuccessResponse> => {
         logger.info(`[POService] Approving PO: ${id}`);
-        return await api.post<SuccessResponse>(ENDPOINTS.approve(id), { remark });
+        // 🎯 FIX: Send EMPTY BODY {} to avoid 400 Bad Request (consistent with PR module)
+        return await api.post<SuccessResponse>(ENDPOINTS.approve(id), {});
     },
 
     /** Transition: ANY → CANCELLED */

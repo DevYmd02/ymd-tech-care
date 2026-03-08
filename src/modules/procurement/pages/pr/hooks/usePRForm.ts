@@ -62,10 +62,48 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
 
 
   const { 
-    createPRMutation, updatePR, deletePR, handleApprove, cancelPR, 
+    createPRMutation, updatePR, deletePR, 
+    handleApprove: baseApprove, 
+    cancelPR, 
     approvingId, isActionLoading, setIsActionLoading,
-    handleReject, submitReject, closeRejectModal, isRejectReasonOpen, isRejecting 
+    handleReject: baseReject, 
+    submitReject, closeRejectModal, isRejectReasonOpen, isRejecting 
   } = usePRActions();
+
+  const handleApprove = useCallback(async () => {
+    if (id) {
+      const confirmed = await baseApprove(id);
+      if (confirmed) {
+        // 2. Close Modal
+        onClose();
+        onSuccess?.();
+        
+        // 3. Invalidate (Delay)
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: ['prs'] });
+          queryClient.invalidateQueries({ queryKey: ['pr', id] });
+        }, 100);
+      }
+    }
+  }, [id, baseApprove, onSuccess, onClose, queryClient]);
+
+  const wrappedSubmitReject = useCallback(async () => {
+    const success = await submitReject();
+    if (success) {
+      onClose();
+      onSuccess?.();
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['prs'] });
+        if (id) queryClient.invalidateQueries({ queryKey: ['pr', id] });
+      }, 100);
+    }
+  }, [submitReject, onClose, onSuccess, queryClient, id]);
+
+  const handleReject = useCallback(() => {
+    if (id) {
+      baseReject(id);
+    }
+  }, [id, baseReject]);
   
   const isApproving = !!id && approvingId === id;
 
@@ -803,15 +841,6 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
     }
   };
 
-  const onApproveClick = useCallback(async () => {
-    if (!id) return;
-    handleApprove(id, { 
-        onSuccess: () => {
-             onSuccess?.(); 
-             onClose(); 
-        } 
-    });
-  }, [id, handleApprove, onSuccess, onClose]);
 
   const handleVoid = async () => {
     if (!id) return;
@@ -859,9 +888,9 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
     handleSubmit, setValue, watch, isSubmitting, isActionLoading, errors, handleFormError,
     products, costCenters, projects, purchaseTaxOptions, currencies, isSearchingProducts,
     addLine, removeLine, clearLine, updateLine, handleClearLines,
-    openProductSearch, openWarehouseSearch, openLocationSearch, selectProduct, selectWarehouse, selectLocation, handleVendorSelect, onSubmit, handleDelete, handleApprove: onApproveClick,
+    openProductSearch, openWarehouseSearch, openLocationSearch, selectProduct, selectWarehouse, selectLocation, handleVendorSelect, onSubmit, handleDelete, handleApprove,
     handleVoid, control, reset, formMethods, user, isApproving,
     // Reject Logic
-    handleReject, submitReject, closeRejectModal, isRejectReasonOpen, isRejecting
+    handleReject, submitReject: wrappedSubmitReject, closeRejectModal, isRejectReasonOpen, isRejecting
   };
 };

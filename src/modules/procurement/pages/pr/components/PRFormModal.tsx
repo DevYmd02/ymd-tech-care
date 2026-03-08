@@ -98,7 +98,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
                       <>
                         <button 
                             type="button" 
-                            onClick={() => handleReject(id!)} 
+                            onClick={handleReject} 
                             disabled={isSubmitting || isActionLoading} 
                             className="px-4 py-2 bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 rounded-md text-sm font-medium flex items-center gap-2 border border-red-200 dark:border-red-800/50"
                         >
@@ -340,7 +340,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
       <RejectReasonModal
           isOpen={isRejectReasonOpen}
           onClose={closeRejectModal}
-          onConfirm={(reason: string) => submitReject(reason, { onSuccess: () => { onSuccess?.(); onClose(); } })}
+          onConfirm={() => submitReject()}
           isSubmitting={isRejecting}
       />
     </WindowFormLayout>
