@@ -106,9 +106,9 @@ export default function PRTListPage() {
     });
 
     // Handlers
-    const handleView = (id: string) => alert(`ดูรายละเอียด PRT: ${id}`);
-    const handleCN = (id: string) => alert(`ออก CN สำหรับ PRT: ${id}`);
-    const handlePost = (id: string) => alert(`Post PRT: ${id}`);
+    const handleView = (id: number) => alert(`ดูรายละเอียด PRT: ${id}`);
+    const handleCN = (id: number) => alert(`ออก CN สำหรับ PRT: ${id}`);
+    const handlePost = (id: number) => alert(`Post PRT: ${id}`);
 
     const handleCreate = () => {
         setIsModalOpen(true);

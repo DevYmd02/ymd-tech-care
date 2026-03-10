@@ -44,7 +44,7 @@ interface ServiceConfig<T> {
     apiPath: string;
     idField: string;
     mockData: T[];
-    mapToEntity: (data: BaseFormData, id: string, now: string) => T;
+    mapToEntity: (data: BaseFormData, id: number, now: string) => T;
 }
 
 function createInventoryService<T extends IBaseMaster>(
@@ -72,7 +72,7 @@ function createInventoryService<T extends IBaseMaster>(
             }
         },
 
-        getById: async (id: string): Promise<T | null> => {
+        getById: async (id: number): Promise<T | null> => {
             if (USE_MOCK) {
                 const item = localData.find(i => i.id === id);
                 if (item) {
@@ -92,7 +92,7 @@ function createInventoryService<T extends IBaseMaster>(
         create: async (data: BaseFormData): Promise<{ success: boolean; data?: T; message?: string }> => {
             if (USE_MOCK) {
                 logger.info(`🎭 [Mock Mode] Creating ${config.entityName}`, data);
-                const newId = `${config.entityName.toUpperCase()}-${data.code.toUpperCase()}`;
+                const newId = Date.now();
                 const now = new Date().toISOString();
                 
                 // Construct object using the provided mapper for strict type safety
@@ -110,7 +110,7 @@ function createInventoryService<T extends IBaseMaster>(
             }
         },
 
-        update: async (id: string, data: BaseFormData): Promise<{ success: boolean; data?: T; message?: string }> => {
+        update: async (id: number, data: BaseFormData): Promise<{ success: boolean; data?: T; message?: string }> => {
             if (USE_MOCK) {
                 const index = localData.findIndex(i => i.id === id);
                 if (index !== -1) {
@@ -139,7 +139,7 @@ function createInventoryService<T extends IBaseMaster>(
             }
         },
 
-        delete: async (id: string): Promise<{ success: boolean; message?: string }> => {
+        delete: async (id: number): Promise<{ success: boolean; message?: string }> => {
             if (USE_MOCK) {
                 const initialLength = localData.length;
                 localData = localData.filter(i => i.id !== id);

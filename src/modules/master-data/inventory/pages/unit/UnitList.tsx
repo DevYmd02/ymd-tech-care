@@ -44,7 +44,7 @@ export default function UnitList() {
     });
 
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editingId, setEditingId] = useState<number | null>(null);
 
     // ==================== FILTER CONFIG ====================
     const filterConfig: FilterFieldConfig<Extract<keyof typeof filters, string>>[] = useMemo(() => [
@@ -120,12 +120,12 @@ export default function UnitList() {
         setIsModalOpen(true);
     };
 
-    const handleEdit = (id: string) => {
+    const handleEdit = (id: number) => {
         setEditingId(id);
         setIsModalOpen(true);
     };
 
-    const handleDelete = useCallback(async (id: string) => {
+    const handleDelete = useCallback(async (id: number) => {
         if (confirm('คุณต้องการลบข้อมูลหน่วยนับนี้หรือไม่?')) {
             await UnitService.delete(id);
             refetch();
@@ -151,7 +151,7 @@ export default function UnitList() {
             cell: ({ row }) => (
                 <span 
                     className="font-medium text-blue-600 dark:text-blue-400 cursor-pointer hover:underline"
-                    onClick={() => handleEdit(String(row.original.uom_id || row.original.unit_id))}
+                    onClick={() => handleEdit(row.original.id)}
                 >
                     {String(row.original.uom_code || row.original.unit_code || '-')}
                 </span>
@@ -185,14 +185,14 @@ export default function UnitList() {
             cell: ({ row }) => (
                 <div className="flex items-center justify-center gap-2">
                     <button 
-                        onClick={() => handleEdit(String(row.original.uom_id || row.original.unit_id))}
+                        onClick={() => handleEdit(row.original.id)}
                         className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                         title="แก้ไข"
                     >
                         <Edit2 size={18} />
                     </button>
                     <button 
-                        onClick={() => handleDelete(String(row.original.uom_id || row.original.unit_id))}
+                        onClick={() => handleDelete(row.original.id)}
                         className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                         title="ลบ"
                     >
@@ -257,7 +257,7 @@ export default function UnitList() {
                     }}
                     sortConfig={sortConfig}
                     onSortChange={handleSortChange}
-                    rowIdField="unit_id"
+                    rowIdField="id"
                     className="shadow-sm border border-gray-200 dark:border-gray-700"
                 />
             </div>

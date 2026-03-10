@@ -31,7 +31,7 @@ import { useVendorForm } from '../hooks/useVendorForm';
 interface VendorFormModalProps {
     isOpen: boolean;
     onClose: () => void;
-    vendorId?: string; // If provided, edit mode
+    vendorId?: number; // If provided, edit mode
     initialData?: VendorMaster | null; // Pre-filled data for edit mode
     onSuccess?: () => void;
     predictedVendorId?: string; // For Add Mode: Suggested ID

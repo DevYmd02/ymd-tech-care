@@ -4,9 +4,9 @@ import type { CostCenter } from '@/modules/master-data/types/master-data-types';
 
 interface CostCenterTabProps {
     data: CostCenter[];
-    expandedId: string | null;
-    toggleExpand: (id: string) => void;
-    handleEdit: (id: string) => void;
+    expandedId: number | null;
+    toggleExpand: (id: number) => void;
+    handleEdit: (id: number) => void;
     handleStatusToggle: (cc: CostCenter) => void;
     dbRelation: { dbTable: string; relations: string[]; fk: string };
 }
@@ -26,12 +26,12 @@ export const CostCenterTab: React.FC<CostCenterTabProps> = ({
     return (
         <div className="space-y-4">
             {data.map((cc) => {
-                const isExpanded = expandedId === cc.cost_center_id;
+                const isExpanded = expandedId === cc.id;
                 return (
-                    <div key={cc.cost_center_id} className={`bg-white dark:bg-gray-800 rounded-xl border ${cc.is_active ? 'border-gray-200 dark:border-gray-700' : 'border-red-200 dark:border-red-900/30 opacity-75'} overflow-hidden transition-all shadow-sm hover:shadow-md`}>
+                    <div key={cc.id} className={`bg-white dark:bg-gray-800 rounded-xl border ${cc.is_active ? 'border-gray-200 dark:border-gray-700' : 'border-red-200 dark:border-red-900/30 opacity-75'} overflow-hidden transition-all shadow-sm hover:shadow-md`}>
                         <div 
                             className="p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                            onClick={() => toggleExpand(cc.cost_center_id)}
+                            onClick={() => toggleExpand(cc.id)}
                         >
                             <div className="flex items-start justify-between gap-2">
                                 <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
@@ -59,7 +59,7 @@ export const CostCenterTab: React.FC<CostCenterTabProps> = ({
                                 </div>
                                 <div className="flex items-center gap-1 shrink-0 mt-1" onClick={(e) => e.stopPropagation()}>
                                     <button 
-                                        onClick={() => handleEdit(cc.cost_center_id)}
+                                        onClick={() => handleEdit(cc.id)}
                                         className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                                         title="แก้ไข"
                                     >

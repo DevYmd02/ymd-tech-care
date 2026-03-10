@@ -7,7 +7,7 @@ import { styles } from '@/shared/constants/styles';
 interface CustomerTypeFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  id?: string;
+  id?: number;
   initialData?: CustomerType | null;
   onSuccess?: () => void;
 }

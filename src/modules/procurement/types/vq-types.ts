@@ -23,14 +23,14 @@ export type QuotationStatus =
 
 /** Quotation Header - ใบเสนอราคาจากผู้ขาย */
 export interface QuotationHeader {
-    quotation_id: string;               // UUID - Primary Key (vq_id)
-    qc_id?: string;                     // UUID - FK -> qc_header
-    vendor_id: string;                  // UUID - FK -> vendor.vendor_id
+    quotation_id: number;               // INTEGER/pk
+    qc_id?: number;                     // INTEGER
+    vendor_id: number;                  // INTEGER
     quotation_no: string;               // VARCHAR(50) - เลขที่ใบเสนอราคา
     quotation_date: string;             // DATE - วันที่เสนอราคา (quote_date)
     valid_until: string | null;         // DATE - ราคามีผลถึงวันที่
-    payment_term_days: number | null;   // INTEGER
-    lead_time_days: number | null;      // INTEGER - ระยะส่งของ (days)
+    payment_term_days: number | null;   // int
+    lead_time_days: number | null;      // int
     currency: string;                   // VARCHAR(3) - e.g. THB, USD
     isMulticurrency?: boolean;
     exchange_rate_date?: string;
@@ -43,14 +43,14 @@ export interface QuotationHeader {
     contact_email?: string;
     contact_phone?: string;
     discount_raw?: string;
-    tax_code_id?: string;
+    tax_code_id?: number;
     
     // UI Extended Fields
     vendor_name?: string;               // Display
     vendor_code?: string;               // Display
-    rfq_id: string;                    // UUID - FK -> rfq_header (always required)
+    rfq_id: number;                    // INTEGER
     rfq_no?: string;                    // Display
-    pr_id?: string;                     // UUID - FK -> pr_header
+    pr_id?: number;                     // INTEGER
     pr_no?: string;                     // Display - Reference PR
     lines?: QuotationLine[];            // Detail items
 }
@@ -61,14 +61,14 @@ export interface QuotationHeader {
 
 /** Quotation Line - รายการสินค้าในใบเสนอราคา */
 export interface QuotationLine {
-    quotation_line_id?: string;         // UUID (Primary Key)
-    quotation_id?: string;              // UUID (Foreign Key)
-    pr_line_id?: string;                // FK
-    item_id?: string;                   // FK
+    quotation_line_id?: number;         // INTEGER
+    quotation_id?: number;              // INTEGER
+    pr_line_id?: number;                // INTEGER
+    item_id?: number;                   // INTEGER
     item_code: string;                  // Required
     item_name: string;                  // Required
     qty: number;                        // Required
-    uom_id?: string;                    // UUID
+    uom_id?: number;                    // INTEGER
     uom_name?: string;                  // Display
     unit_price?: number;                // NUMERIC(18,4)
     discount_amount?: number;           // NUMERIC(18,2)

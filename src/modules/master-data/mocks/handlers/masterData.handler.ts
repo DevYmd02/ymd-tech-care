@@ -24,8 +24,8 @@ export const setupMasterDataHandlers = (mock: MockAdapter) => {
   mock.onGet('/org-branches').reply((config) => [200, applyMockFilters(mockBranches, (config.params || {}) as Record<string, FilterValue>)]);
   mock.onGet('/org-branches/dropdown').reply(200, mockBranchDropdown);
   mock.onGet(/\/org-branches\/.+/).reply((config) => {
-    const id = config.url?.split('/').pop();
-    const found = mockBranches.find(b => b.branch_id === id);
+    const id = Number(config.url?.split('/').pop());
+    const found = mockBranches.find(b => b.id === id);
     return found ? [200, found] : [404, { message: 'Branch Not Found' }];
   });
 
@@ -44,16 +44,16 @@ export const setupMasterDataHandlers = (mock: MockAdapter) => {
   // --- EMPLOYEE GROUPS ---
   mock.onGet('/org-employee-groups').reply((config) => [200, applyMockFilters(mockEmployeeGroups, (config.params || {}) as Record<string, FilterValue>)]);
   mock.onGet(/\/org-employee-groups\/.+/).reply((config) => {
-    const id = config.url?.split('/').pop();
-    const found = mockEmployeeGroups.find((g: EmployeeGroupListItem) => g.group_id === id);
+    const id = Number(config.url?.split('/').pop());
+    const found = mockEmployeeGroups.find((g: EmployeeGroupListItem) => g.id === id);
     return found ? [200, found] : [404, { message: 'Group Not Found' }];
   });
 
   // --- EMPLOYEES ---
   mock.onGet('/org-employees').reply((config) => [200, applyMockFilters(mockEmployees, (config.params || {}) as Record<string, FilterValue>)]);
   mock.onGet(/\/org-employees\/.+/).reply((config) => {
-    const id = config.url?.split('/').pop();
-    const found = mockEmployees.find((e: EmployeeListItem) => e.employee_id === id);
+    const id = Number(config.url?.split('/').pop());
+    const found = mockEmployees.find((e: EmployeeListItem) => e.id === id);
     return found ? [200, found] : [404, { message: 'Employee Not Found' }];
   });
 

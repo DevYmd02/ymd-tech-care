@@ -25,6 +25,7 @@ import { PRService, type PRListParams } from '@/modules/procurement/services/pr.
 import { logger } from '@/shared/utils/logger';
 import type { PRHeader, PRStatus } from '@/modules/procurement/types';
 import { DEPARTMENT_NAME_MAP } from '@/modules/procurement/shared/constants/procurement.constants';
+import { usePRMasterData } from '@/modules/procurement/pages/pr/hooks';
 
 // ====================================================================================
 // STATUS OPTIONS
@@ -51,6 +52,9 @@ const PR_STATUS_OPTIONS = [
 
 export default function PRListPage() {
     const queryClient = useQueryClient();
+
+    // Master Data for department name lookup
+    const { costCenters, isLoading: isMasterDataLoading } = usePRMasterData();
     // URL-based Filter State (Explicit Search Pattern)
     const { filters, localFilters, handleFilterChange, handleApplyFilters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<PRStatus>({
         defaultStatus: 'ALL',
@@ -89,7 +93,7 @@ export default function PRListPage() {
     
     // PR Form Modal Local State
     const [isPRModalOpen, setIsPRModalOpen] = useState(false);
-    const [selectedPRId, setSelectedPRId] = useState<string | undefined>(undefined);
+    const [selectedPRId, setSelectedPRId] = useState<number | undefined>(undefined);
     const [isReadOnly, setIsReadOnly] = useState(false);
 
     // Hook Actions
@@ -134,13 +138,13 @@ export default function PRListPage() {
         setIsPRModalOpen(true);
     };
 
-    const handleEdit = useCallback((id: string) => {
+    const handleEdit = useCallback((id: number) => {
         setSelectedPRId(id);
         setIsReadOnly(false);
         setIsPRModalOpen(true);
     }, []);
 
-    const handleView = useCallback((id: string) => {
+    const handleView = useCallback((id: number) => {
         setSelectedPRId(id);
         setIsReadOnly(true);
         setIsPRModalOpen(true);
@@ -161,7 +165,7 @@ export default function PRListPage() {
         }
     }, [handleDirectApproval, queryClient]);
 
-    const onApproveClick = useCallback(async (id: string) => {
+    const onApproveClick = useCallback(async (id: number) => {
         const confirmed = await handleApprove(id);
         if (confirmed) {
             setTimeout(() => {
@@ -272,15 +276,19 @@ export default function PRListPage() {
                     ? String(reqName)
                     : (reqId ? `User ID: ${reqId}` : 'ไม่ระบุผู้ขอ');
 
-                // ── Aggressive Department Name Hydration ──
+                // ── Department Name Hydration — dynamic lookup from Master Data ──
                 const deptName = row.department_name || row.dept_name;
                 const deptFromMap = DEPARTMENT_NAME_MAP[row.cost_center_id];
-                const deptId = row.department_id || row.cost_center_id;
-                const displayDept = deptName
-                    ? String(deptName)
-                    : deptFromMap
-                        ? String(deptFromMap)
-                        : (deptId ? `Dept ID: ${deptId}` : 'ไม่ระบุแผนก');
+                const deptFromMaster = costCenters.find(
+                    cc => String(cc.cost_center_id) === String(row.cost_center_id)
+                )?.cost_center_name;
+                const displayDept = isMasterDataLoading
+                    ? '...'
+                    : deptName
+                        ? String(deptName)
+                        : deptFromMaster || deptFromMap
+                            ? String(deptFromMaster || deptFromMap)
+                            : 'ไม่ระบุแผนก';
 
                 // ── Vendor Name Hydration (shown as subtle tag) ──
                 const vendorName = row.vendor_name || row.suggested_vendor;
@@ -359,7 +367,7 @@ export default function PRListPage() {
             size: 160, 
             enableSorting: false,
         }),
-    ], [columnHelper, filters.page, filters.limit, data?.data, handleSendApproval, onApproveClick, handleReject, approvingId, handleEdit, handleCreateRFQ, handleView]);
+    ], [columnHelper, filters.page, filters.limit, data?.data, handleSendApproval, onApproveClick, handleReject, approvingId, handleEdit, handleCreateRFQ, handleView, costCenters, isMasterDataLoading]);
 
     // ====================================================================================
     // RENDER
@@ -496,9 +504,12 @@ export default function PRListPage() {
                                     },
                                     {
                                         label: 'แผนก:',
-                                        value: item.department_name || item.dept_name
-                                            || (DEPARTMENT_NAME_MAP as Record<string | number, string>)[item.cost_center_id]
-                                            || (item.department_id ? `Dept ID: ${item.department_id}` : (item.cost_center_id || 'ไม่ระบุแผนก')),
+                                        value: isMasterDataLoading
+                                            ? '...'
+                                            : item.department_name || item.dept_name
+                                                || costCenters.find(cc => String(cc.cost_center_id) === String(item.cost_center_id))?.cost_center_name
+                                                || (DEPARTMENT_NAME_MAP as Record<number, string>)[item.cost_center_id]
+                                                || 'ไม่ระบุแผนก',
                                     },
                                     ...((item.vendor_name || item.suggested_vendor || item.preferred_vendor_id)
                                         ? [{

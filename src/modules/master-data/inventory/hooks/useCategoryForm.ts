@@ -24,7 +24,7 @@ const initialFormData: CategoryFormData = {
     is_active: true,
 };
 
-export function useCategoryForm(editId: string | null, initialData?: ProductCategoryListItem | null, onSuccess?: () => void) {
+export function useCategoryForm(editId: number | null, initialData?: ProductCategoryListItem | null, onSuccess?: () => void) {
     const { confirm } = useConfirmation();
     const queryClient = useQueryClient();
 

@@ -11,7 +11,8 @@ import type { BaseMasterData } from '@/shared/types/common-master.types';
 
 /** BranchMaster - ข้อมูลสาขา */
 export interface BranchMaster extends BaseMasterData {
-    branch_id: string;
+    id: number;
+    branch_id: number;
     branch_code: string;
     branch_name: string;
 }
@@ -26,7 +27,8 @@ export interface BranchFormData {
 
 /** BranchListItem - สำหรับแสดงในตาราง */
 export interface BranchListItem {
-    branch_id: string;
+    id: number;
+    branch_id: number;
     branch_code: string;
     branch_name: string;
     is_active: boolean;
@@ -35,7 +37,7 @@ export interface BranchListItem {
 
 /** BranchDropdownItem - สำหรับ Dropdown/Select */
 export interface BranchDropdownItem {
-    branch_id: string;
+    branch_id: number;
     branch_code: string;
     branch_name: string;
 }
@@ -59,5 +61,5 @@ export interface BranchCreateRequest {
 }
 
 export interface BranchUpdateRequest extends Partial<BranchCreateRequest> {
-    branch_id: string;
+    branch_id: number;
 }

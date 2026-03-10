@@ -12,7 +12,7 @@ import type { WarehouseMaster } from '@/modules/master-data/types/master-data-ty
 export const warehouseSchema = z.object({
     warehouse_code: z.string().min(1, 'กรุณากรอกรหัสคลังสินค้า').max(20, 'รหัสคลังสินค้าต้องไม่เกิน 20 ตัวอักษร'),
     warehouse_name: z.string().min(1, 'กรุณากรอกชื่อคลังสินค้า').max(200, 'ชื่อคลังสินค้าต้องไม่เกิน 200 ตัวอักษร'),
-    branch_id: z.string().min(1, 'กรุณาเลือกสาขา'),
+    branch_id: z.coerce.number().min(1, 'กรุณาเลือกสาขา'),
     address: z.string().optional(),
     is_active: z.boolean(),
 });
@@ -22,12 +22,12 @@ export type WarehouseFormData = z.infer<typeof warehouseSchema>;
 const initialFormData: WarehouseFormData = {
     warehouse_code: '',
     warehouse_name: '',
-    branch_id: '',
+    branch_id: 0,
     address: '',
     is_active: true,
 };
 
-export function useWarehouseForm(editId: string | null, initialData?: WarehouseMaster | null, onSuccess?: () => void) {
+export function useWarehouseForm(editId: number | null, initialData?: WarehouseMaster | null, onSuccess?: () => void) {
     const { confirm } = useConfirmation();
     const queryClient = useQueryClient();
 
@@ -66,7 +66,7 @@ export function useWarehouseForm(editId: string | null, initialData?: WarehouseM
             reset({
                 warehouse_code: initialData.warehouse_code,
                 warehouse_name: initialData.warehouse_name,
-                branch_id: initialData.branch_id || (branches.length > 0 ? branches[0].branch_id : ''),
+                branch_id: initialData.branch_id || (branches.length > 0 ? branches[0].branch_id : 0),
                 address: initialData.address || '',
                 is_active: initialData.is_active ?? true,
             });

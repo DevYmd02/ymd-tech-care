@@ -18,7 +18,7 @@ interface Props {
     isOpen: boolean;
     onClose: () => void;
     onSuccess?: () => void;
-    initialPOId?: string;
+    initialPOId?: number;
 }
 
 // ====================================================================================
@@ -32,13 +32,13 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
     
     // -- State --
     const [grnNo] = useState<string>('GRN2024-xxx');
-    const [selectedPOId, setSelectedPOId] = useState<string>('');
+    const [selectedPOId, setSelectedPOId] = useState<number | undefined>(undefined);
     const [selectedPO, setSelectedPO] = useState<POListItem | null>(null);
     const [items, setItems] = useState<GRNLineItemInput[]>([]);
     const [formDate, setFormDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [remark, setRemark] = useState<string>('');
-    const [warehouseId, setWarehouseId] = useState<string>('');
-    const [receivedBy, setReceivedBy] = useState<string>('');
+    const [warehouseId, setWarehouseId] = useState<number | undefined>(undefined);
+    const [receivedBy, setReceivedBy] = useState<number | undefined>(undefined);
     const [status, setStatus] = useState<string>('Draft');
     const [isPOSearchOpen, setIsPOSearchOpen] = useState(false);
 
@@ -48,13 +48,13 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
     useEffect(() => {
         if (isOpen && !prevIsOpenRef.current) {
             // Reset form
-            setSelectedPOId(initialPOId || '');
+            setSelectedPOId(initialPOId);
             setSelectedPO(null);
             setItems([]);
             setFormDate(new Date().toISOString().split('T')[0]);
             setRemark('');
-            setWarehouseId('');
-            setReceivedBy('');
+            setWarehouseId(undefined);
+            setReceivedBy(undefined);
             setStatus('Draft');
             
             // Load POs
@@ -63,7 +63,7 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
             });
         }
         prevIsOpenRef.current = isOpen;
-    }, [isOpen, initialPOId]);
+    }, [isOpen, initialPOId, poList]);
 
     // -- Handle PO Selection --
     useEffect(() => {
@@ -72,8 +72,8 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
                 if (po) {
                     setSelectedPO(po);
                     const mockItems: GRNLineItemInput[] = Array.from({ length: po.item_count || 2 }).map((_, i) => ({
-                        po_line_id: `pol-${i}`,
-                        item_id: `item-${i}`,
+                        po_line_id: 1000 + i,
+                        item_id: 5000 + i,
                         item_code: `ITM00${i+1}`,
                         item_name: `คอมพิวเตอร์ Notebook Dell Ins`,
                         qty_ordered: 5 * (i + 1),
@@ -126,8 +126,8 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
 
     const handleAddLine = () => {
         setItems(prev => [...prev, {
-            po_line_id: `pol-new-${Date.now()}`,
-            item_id: '',
+            po_line_id: Date.now(),
+            item_id: undefined,
             item_code: '',
             item_name: '',
             qty_ordered: 0,
@@ -165,11 +165,11 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
         const payload: CreateGRNPayload = {
              po_id: selectedPOId,
              received_date: formDate,
-             warehouse_id: warehouseId || selectedPO?.ship_to_warehouse_id || 'wh-default',
+             warehouse_id: warehouseId || selectedPO?.ship_to_warehouse_id || 0,
              remark: remark,
              items: items.map(i => ({
-                 po_line_id: i.po_line_id || 'unknown-pol',
-                 item_id: i.item_id || 'unknown-item',
+                 po_line_id: Number(i.po_line_id) || 0,
+                 item_id: Number(i.item_id) || 0,
                  receiving_qty: i.receiving_qty,
                  accepted_qty: i.accepted_qty,
                  rejected_qty: i.rejected_qty,
@@ -296,20 +296,20 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
                             <label className={labelClass}>
                                 รับเข้าคลัง <span className="text-gray-400">(warehouse_id FK)</span> <span className="text-red-500">*</span>
                             </label>
-                            <select value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} className={selectClass}>
+                            <select value={warehouseId || ''} onChange={(e) => setWarehouseId(e.target.value ? Number(e.target.value) : undefined)} className={selectClass}>
                                 <option value="">-- เลือกคลังสินค้า --</option>
-                                <option value="wh-1">คลังสินค้าหลัก</option>
-                                <option value="wh-2">คลังสินค้าสาขา</option>
+                                <option value={1}>คลังสินค้าหลัก</option>
+                                <option value={2}>คลังสินค้าสาขา</option>
                             </select>
                         </div>
                         <div>
                             <label className={labelClass}>
                                 ผู้รับสินค้า <span className="text-gray-400">(received_by)</span> <span className="text-red-500">*</span>
                             </label>
-                            <select value={receivedBy} onChange={(e) => setReceivedBy(e.target.value)} className={selectClass}>
+                            <select value={receivedBy || ''} onChange={(e) => setReceivedBy(e.target.value ? Number(e.target.value) : undefined)} className={selectClass}>
                                 <option value="">-- เลือกผู้รับสินค้า --</option>
-                                <option value="user-1">สมชาย ใจดี</option>
-                                <option value="user-2">สมหญิง รักดี</option>
+                                <option value={1}>สมชาย ใจดี</option>
+                                <option value={2}>สมหญิง รักดี</option>
                             </select>
                         </div>
                         <div>

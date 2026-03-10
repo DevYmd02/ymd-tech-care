@@ -7,7 +7,7 @@ import type { UnitListItem } from '@/modules/master-data/types/master-data-types
 interface Props {
     isOpen: boolean;
     onClose: () => void;
-    editId?: string | null;
+    editId?: number | null;
     initialData?: UnitListItem | null;
     onSuccess?: () => void;
 }

@@ -119,8 +119,9 @@ export const applyMockFilters = <T>(
 };
 
 /**
- * Sanitizer: Ensures all IDs are strings
+ * Sanitizer: Ensures all IDs are numbers (for numeric schema)
  */
-export const sanitizeId = (id: string | number | undefined): string => {
-    return id ? String(id) : '';
+export const sanitizeId = (id: string | number | undefined | null): number => {
+    if (id === undefined || id === null || id === '') return 0;
+    return Number(id);
 };

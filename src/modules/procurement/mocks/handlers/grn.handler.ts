@@ -27,10 +27,9 @@ export const setupGRNHandlers = (mock: MockAdapter) => {
   // 2. GET GRN Detail
   mock.onGet(/\/procurement\/grn\/.+/).reply((config: AxiosRequestConfig) => {
     const urlParts = config.url?.split('/') || [];
-    const id = sanitizeId(urlParts[urlParts.length - 1]);
-    
     // Special case for summary-status
-    if (id === 'summary-status') {
+    const rawId = urlParts[urlParts.length - 1];
+    if (rawId === 'summary-status') {
         const summary = MOCK_GRNS.reduce((acc: Record<string, number>, item) => {
             acc[item.status] = (acc[item.status] || 0) + 1;
             return acc;
@@ -38,6 +37,7 @@ export const setupGRNHandlers = (mock: MockAdapter) => {
         return [200, summary];
     }
 
+    const id = sanitizeId(rawId);
     const found = MOCK_GRNS.find(g => sanitizeId(g.grn_id) === id);
     if (found) {
         const sanitized = {

@@ -24,7 +24,7 @@ export interface BaseMasterData {
  * Use this for entities like Brand, Color, ItemGroup, VendorType, etc.
  */
 export interface IBaseMaster extends BaseMasterData {
-    id: string;
+    id: number;
     code: string;
     name_th: string;
     name_en?: string;

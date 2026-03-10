@@ -39,13 +39,13 @@ export const QCMatrixVendorCellSchema = z.object({
  * Validates the Y-axis (Line items) in the comparison matrix.
  */
 export const QCMatrixRowSchema = z.object({
-  item_id: z.string().uuid('ID สินค้าไม่ถูกต้อง').optional(),
+  item_id: z.coerce.number().optional(),
   code: z.string().min(1, 'รหัสสินค้าจำเป็นต้องระบุ'),
   description: z.string().min(1, 'รายละเอียดสินค้าจำเป็นต้องระบุ'),
   qty: z.number().positive('จำนวนต้องมากกว่า 0'),
   unit: z.string().min(1, 'หน่วยนับจำเป็นต้องระบุ'),
   // Dynamic record of vendor_id -> cell data
-  vendors: z.record(z.string(), QCMatrixVendorCellSchema),
+  vendors: z.record(z.coerce.number(), QCMatrixVendorCellSchema),
 }).superRefine((data, ctx) => {
   // Logic Audit: Winning Logic
   const vendorValues = Object.values(data.vendors);
@@ -70,15 +70,15 @@ export const QCMatrixRowSchema = z.object({
  * Strictly follows the DB structure.
  */
 export const QCHeaderSchema = z.object({
-  qc_id: z.string().uuid().optional(),
+  qc_id: z.coerce.number().optional(),
   qc_no: z.string().optional(),
-  pr_id: z.string().uuid('กรุณาเลือกใบขอซื้อ (PR)').optional(),
-  rfq_id: z.string().uuid().optional(), // Added for precise RFQ tracking
-  winning_vq_id: z.string().uuid().optional(), // VQ ที่ชนะการเปรียบเทียบ
+  pr_id: z.coerce.number().optional(),
+  rfq_id: z.coerce.number().optional(), // Added for precise RFQ tracking
+  winning_vq_id: z.coerce.number().optional(), // VQ ที่ชนะการเปรียบเทียบ
   status: QCStatusEnum.default('DRAFT'),
   comparison_date: z.union([z.string(), z.date()]).optional(),
   dept_division: z.string().optional(),
-  created_by: z.string().uuid().optional(),
+  created_by: z.coerce.number().optional(),
   created_at: z.string().optional(),
 });
 
@@ -120,7 +120,7 @@ export const QCListItemSchema = QCHeaderSchema.extend({
   vendor_count: z.number().nonnegative().optional().default(0),
   lowest_price: z.number().nonnegative().optional().default(0),
   lowest_bidder_name: z.string().optional().default('-'),
-  winning_vendor_id: z.string().uuid().optional(),
+  winning_vendor_id: z.coerce.number().optional(),
   subject: z.string().optional(),
 });
 
@@ -146,7 +146,7 @@ export type CreateQCCreateData = z.infer<typeof CreateQCSchema>;
  * Minimal relational payload indicating which VQ won.
  */
 export const SubmitQCWinnerSchema = z.object({
-  winning_vq_id: z.string().uuid('กรุณาระบุ winning_vq_id'),
+  winning_vq_id: z.coerce.number(),
 });
 
 export type SubmitQCWinnerData = z.infer<typeof SubmitQCWinnerSchema>;

@@ -36,7 +36,7 @@ export const CostCenterService = {
     }
   },
 
-  getById: async (id: string): Promise<CostCenter | null> => {
+  getById: async (id: number): Promise<CostCenter | null> => {
     if (USE_MOCK) {
       return mockCostCenters.find(cc => cc.cost_center_id === id) || null;
     }
@@ -63,7 +63,7 @@ export const CostCenterService = {
     }
   },
 
-  update: async (id: string, data: Partial<CostCenter>): Promise<{ success: boolean; message?: string }> => {
+  update: async (id: number, data: Partial<CostCenter>): Promise<{ success: boolean; message?: string }> => {
     if (USE_MOCK) {
        logger.info('[CostCenterService] Mock Update:', id, data);
        return { success: true };
@@ -77,7 +77,7 @@ export const CostCenterService = {
     }
   },
 
-  toggleStatus: async (id: string, currentStatus: boolean): Promise<{ success: boolean; message?: string }> => {
+  toggleStatus: async (id: number, currentStatus: boolean): Promise<{ success: boolean; message?: string }> => {
     if (USE_MOCK) {
        const cc = mockCostCenters.find(c => c.cost_center_id === id);
        if (cc) cc.is_active = !currentStatus;

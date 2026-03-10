@@ -89,7 +89,7 @@ export const setupPRHandlers = (mock: MockAdapter) => {
     // 3. POST Create PR
     mock.onPost('/pr').reply((config: AxiosRequestConfig) => {
         const data = JSON.parse(config.data || '{}') as CreatePRPayload;
-        const newPrId = `pr-${Date.now()}`;
+        const newPrId = Date.now();
         
         // Logic Fix: Check if status is PENDING (submitted immediately)
         const isPending = data.status === 'PENDING';
@@ -107,25 +107,25 @@ export const setupPRHandlers = (mock: MockAdapter) => {
             total_amount: 0,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-            created_by_user_id: '1',
-            updated_by_user_id: '1',
+            created_by_user_id: 1,
+            updated_by_user_id: 1,
             attachment_count: 0,
             requester_name: 'Mock Requester',
             purpose: data.remark || '',
-            cost_center_id: '',
+            cost_center_id: 0,
             pr_base_currency_code: 'THB',
-            branch_id: String(data.branch_id),
-            requester_user_id: String(data.requester_user_id),
+            branch_id: data.branch_id,
+            requester_user_id: data.requester_user_id,
             remark: data.remark,
             lines: (data.lines || []).map((item: CreatePRLineItem, index: number) => ({
-                pr_line_id: `l-${Date.now()}-${index}`,
+                pr_line_id: Date.now() + index,
                 pr_id: newPrId,
                 line_no: index + 1,
-                item_id: String(item.item_id),
+                item_id: item.item_id,
                 item_code: 'MOCK-CODE',          // Mock enriches — not from payload
                 item_name: 'Mock Item Name',      // Mock enriches — not from payload
                 uom: 'PCS',                       // Mock enriches — not from payload
-                uom_id: String(item.uom_id),
+                uom_id: item.uom_id,
                 qty: item.qty,
                 est_unit_price: item.est_unit_price,
                 est_amount: item.qty * item.est_unit_price,

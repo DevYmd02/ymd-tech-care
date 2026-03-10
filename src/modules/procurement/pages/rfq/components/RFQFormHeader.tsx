@@ -1,30 +1,40 @@
 import React from 'react';
-import { FileText } from 'lucide-react';
-import type { RFQFormData } from '@/modules/procurement/types';
+import { FileText, Calendar } from 'lucide-react';
+import { useFormContext, Controller } from 'react-hook-form';
+import type { RFQFormValues } from '@/modules/procurement/schemas/rfq-schemas';
 import type { BranchListItem } from '@/modules/master-data/types/master-data-types';
 import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWrapper';
 
 interface RFQFormHeaderProps {
-    formData: RFQFormData;
     branches: BranchListItem[];
-    handleChange: (field: keyof RFQFormData, value: string | number | boolean) => void;
-    errors: Record<string, string>;
     onOpenPRModal: () => void;
     readOnly?: boolean;
     isInviteMode?: boolean;
 }
 
-export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches, handleChange, errors, onOpenPRModal, readOnly, isInviteMode }) => {
+export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ branches, onOpenPRModal, readOnly, isInviteMode }) => {
+    const { register, watch, setValue, formState: { errors } } = useFormContext<RFQFormValues>();
+    
+    const formData = watch();
+    const isLocked = readOnly || isInviteMode;
+
     const inputStyle = "w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent dark:text-white transition-all disabled:opacity-70 disabled:cursor-not-allowed";
     const selectStyle = "w-full h-8 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent dark:text-white disabled:opacity-70 disabled:cursor-not-allowed disabled:bg-gray-50";
     const labelStyle = "text-sm font-medium text-teal-700 dark:text-teal-300 mb-1 block";
     const hintStyle = "text-xs text-gray-400 dark:text-gray-500 mt-1";
     
-    // Validation Styles (Mirroring PRHeader)
     const errorInputClass = "border-red-500 ring-1 ring-red-500 focus:ring-red-500";
     const errorMsgClass = "text-red-500 text-[10px] mt-0.5 font-medium";
 
-    const isLocked = readOnly || isInviteMode;
+    // Format yyyy-mm-dd → dd/mm/yyyy for display
+    const formatDisplayDate = (val?: string) => {
+        if (!val) return '';
+        if (val.includes('-') && val.length >= 10) {
+            const [y, m, d] = val.split('-');
+            return `${d.substring(0, 2)}/${m}/${y}`;
+        }
+        return val;
+    };
 
     return (
         <div className="p-4">
@@ -37,31 +47,47 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div>
                     <label className={labelStyle}>เลขที่ RFQ <span className="text-red-500">*</span></label>
-                    <input type="text" value={formData.rfq_no} readOnly className={inputStyle} disabled={isLocked} />
+                    <input type="text" {...register('rfq_no')} readOnly className={inputStyle} disabled={isLocked} />
                     <p className={hintStyle}>ระบบจะสร้างรหัสอัตโนมัติเมื่อบันทึกเอกสารใหม่</p>
                 </div>
                 <div>
                     <label className={labelStyle}>วันที่สร้าง RFQ <span className="text-red-500">*</span></label>
-                    <input
-                        id="rfq_date"
-                        type="date"
-                        value={formData.rfq_date}
-                        onChange={(e) => handleChange('rfq_date', e.target.value)}
-                        className={`${inputStyle} ${errors.rfq_date ? errorInputClass : ''}`}
-                        disabled={isLocked}
+                    <Controller
+                        name="rfq_date"
+                        render={({ field: { value, onChange, onBlur, ref } }) => (
+                            <div className="relative w-full">
+                                <input
+                                    type="text"
+                                    readOnly
+                                    placeholder="dd/mm/yyyy"
+                                    value={formatDisplayDate(value)}
+                                    disabled={isLocked}
+                                    onClick={(e) => { try { (e.currentTarget.nextElementSibling as HTMLInputElement)?.showPicker(); } catch { /* noop */ } }}
+                                    className={`${inputStyle} cursor-pointer pr-8 ${errors.rfq_date ? errorInputClass : ''}`}
+                                />
+                                <input
+                                    type="date"
+                                    value={value || ''}
+                                    onChange={(e) => onChange(e.target.value)}
+                                    onBlur={onBlur}
+                                    ref={ref}
+                                    disabled={isLocked}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                />
+                                <Calendar size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 pointer-events-none" />
+                            </div>
+                        )}
                     />
-                    {errors.rfq_date && <p className={errorMsgClass}>{errors.rfq_date}</p>}
+                    {errors.rfq_date && <p className={errorMsgClass}>{errors.rfq_date.message}</p>}
                 </div>
                 <div>
                     <label className={labelStyle}>PR ต้นทาง <span className="text-red-500">*</span></label>
                     <div className="flex gap-2">
                         <input
-                            id="pr_no"
                             type="text"
                             placeholder="PR2024-xxx"
-                            value={formData.pr_no || ''}
+                            {...register('pr_no')}
                             readOnly={Boolean(formData.pr_id) || isLocked}
-                            onChange={(!formData.pr_id && !isLocked) ? (e) => handleChange('pr_no', e.target.value) : undefined}
                             className={`${inputStyle} ${errors.pr_no ? errorInputClass : ''} ${formData.pr_id ? 'bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300 font-medium cursor-default' : ''}`}
                             disabled={isLocked}
                         />
@@ -74,8 +100,7 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                             เลือก
                         </button>
                     </div>
-
-                    {errors.pr_no && <p className={errorMsgClass}>{errors.pr_no}</p>}
+                    {errors.pr_no && <p className={errorMsgClass}>{errors.pr_no.message}</p>}
                     <p className={hintStyle}>อ้างถึง pr_header.pr_id (PR ต้นทาง)</p>
                 </div>
             </div>
@@ -85,9 +110,7 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                 <div>
                     <label className={labelStyle}>สถานะ <span className="text-red-500">*</span></label>
                     <select
-                        id="status"
-                        value={formData.status}
-                        onChange={(e) => handleChange('status', e.target.value)}
+                        {...register('status')}
                         className={`${selectStyle} ${errors.status ? errorInputClass : ''}`}
                         disabled={isLocked}
                     >
@@ -96,14 +119,13 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                         <option value="CLOSED">CLOSED - ปิดแล้ว</option>
                         <option value="CANCELLED">CANCELLED - ยกเลิก</option>
                     </select>
-                    {errors.status && <p className={errorMsgClass}>{errors.status}</p>}
+                    {errors.status && <p className={errorMsgClass}>{errors.status.message}</p>}
                     <p className={hintStyle}>สถานะ: DRAFT/SENT/CLOSED/CANCELLED</p>
                 </div>
                 <div>
                     <label className={labelStyle}>สาขาที่สร้าง RFQ <span className="text-red-500">*</span></label>
                     <select
-                        value={formData.branch_id || ''}
-                        onChange={(e) => handleChange('branch_id', e.target.value)}
+                        {...register('branch_id', { valueAsNumber: true })}
                         className={`${selectStyle} ${errors.branch_id ? errorInputClass : ''}`}
                         disabled={isLocked}
                     >
@@ -114,7 +136,7 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                             </option>
                         ))}
                     </select>
-                    {errors.branch_id && <p className={errorMsgClass}>{errors.branch_id}</p>}
+                    {errors.branch_id && <p className={errorMsgClass}>{errors.branch_id.message}</p>}
                     <p className={hintStyle}>อ้างถึง branch_id (FK)</p>
                 </div>
                 <div>
@@ -134,16 +156,33 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div>
                     <label className={labelStyle}>กำหนดส่งใบเสนอราคา <span className="text-red-500">*</span></label>
-                    <input
-                        id="quotation_due_date"
-                        type="date"
-                        value={formData.quotation_due_date}
-                        onChange={(e) => handleChange('quotation_due_date', e.target.value)}
-                        className={`${inputStyle} ${errors.quotation_due_date ? errorInputClass : ''}`}
-                        placeholder="เลือกวันที่"
-                        disabled={isLocked}
+                    <Controller
+                        name="quotation_due_date"
+                        render={({ field: { value, onChange, onBlur, ref } }) => (
+                            <div className="relative w-full">
+                                <input
+                                    type="text"
+                                    readOnly
+                                    placeholder="dd/mm/yyyy"
+                                    value={formatDisplayDate(value)}
+                                    disabled={isLocked}
+                                    onClick={(e) => { try { (e.currentTarget.nextElementSibling as HTMLInputElement)?.showPicker(); } catch { /* noop */ } }}
+                                    className={`${inputStyle} cursor-pointer pr-8 ${errors.quotation_due_date ? errorInputClass : ''}`}
+                                />
+                                <input
+                                    type="date"
+                                    value={value || ''}
+                                    onChange={(e) => onChange(e.target.value)}
+                                    onBlur={onBlur}
+                                    ref={ref}
+                                    disabled={isLocked}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                />
+                                <Calendar size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 pointer-events-none" />
+                            </div>
+                        )}
                     />
-                    {errors.quotation_due_date && <p className={errorMsgClass}>{errors.quotation_due_date}</p>}
+                    {errors.quotation_due_date && <p className={errorMsgClass}>{errors.quotation_due_date.message}</p>}
                     <p className={hintStyle}>วันหมดอายุการเสนอราคา (quotation_due_date)</p>
                 </div>
                 <div className="md:col-span-2">
@@ -151,8 +190,7 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                     <input
                         type="text"
                         placeholder="ระบุสถานที่รับของ"
-                        value={formData.receive_location}
-                        onChange={(e) => handleChange('receive_location', e.target.value)}
+                        {...register('receive_location')}
                         className={inputStyle}
                         disabled={isLocked}
                     />
@@ -167,8 +205,7 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                     <input
                         type="text"
                         placeholder="เช่น Net 30"
-                        value={formData.payment_term_hint}
-                        onChange={(e) => handleChange('payment_term_hint', e.target.value)}
+                        {...register('payment_term_hint')}
                         className={inputStyle}
                         disabled={isLocked}
                     />
@@ -179,8 +216,7 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                     <input
                         type="text"
                         placeholder="FOB, CIF, EXW, etc."
-                        value={formData.incoterm}
-                        onChange={(e) => handleChange('incoterm', e.target.value)}
+                        {...register('incoterm')}
                         className={inputStyle}
                         disabled={isLocked}
                     />
@@ -190,8 +226,7 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                     <label className={labelStyle}>หมายเหตุเพิ่มเติม</label>
                     <textarea
                         placeholder="ระบุหมายเหตุ..."
-                        value={formData.remarks}
-                        onChange={(e) => handleChange('remarks', e.target.value)}
+                        {...register('remarks')}
                         rows={1}
                         className={`${inputStyle} h-8 resize-none py-1.5`}
                         disabled={isLocked}
@@ -206,31 +241,49 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                     checked={formData.isMulticurrency} 
                     onCheckedChange={(checked) => {
                         if (isLocked) return;
-                        handleChange('isMulticurrency', checked);
+                        setValue('isMulticurrency', checked);
                         if (!checked) {
-                            handleChange('rfq_exchange_rate_date', '');
-                            handleChange('rfq_base_currency_code', 'THB');
-                            handleChange('rfq_quote_currency_code', '');
-                            handleChange('rfq_exchange_rate', 1);
+                            setValue('rfq_exchange_rate_date', '');
+                            setValue('rfq_base_currency_code', 'THB');
+                            setValue('rfq_quote_currency_code', '');
+                            setValue('rfq_exchange_rate', 1);
                         }
                     }}
                 >
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
                         <div>
                             <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">วันที่อัตราแลกเปลี่ยน</label>
-                            <input 
-                                type="date" 
-                                value={formData.rfq_exchange_rate_date || ''}
-                                onChange={(e) => handleChange('rfq_exchange_rate_date', e.target.value)}
-                                className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow disabled:opacity-70 disabled:cursor-not-allowed"
-                                disabled={!formData.isMulticurrency || isLocked}
+                            <Controller
+                                name="rfq_exchange_rate_date"
+                                render={({ field: { value, onChange, onBlur, ref } }) => (
+                                    <div className="relative w-full">
+                                        <input
+                                            type="text"
+                                            readOnly
+                                            placeholder="dd/mm/yyyy"
+                                            value={formatDisplayDate(value)}
+                                            disabled={!formData.isMulticurrency || isLocked}
+                                            onClick={(e) => { try { (e.currentTarget.nextElementSibling as HTMLInputElement)?.showPicker(); } catch { /* noop */ } }}
+                                            className="w-full h-9 px-3 pr-8 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+                                        />
+                                        <input
+                                            type="date"
+                                            value={value || ''}
+                                            onChange={(e) => onChange(e.target.value)}
+                                            onBlur={onBlur}
+                                            ref={ref}
+                                            disabled={!formData.isMulticurrency || isLocked}
+                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                        />
+                                        <Calendar size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 pointer-events-none" />
+                                    </div>
+                                )}
                             />
                         </div>
                         <div>
                             <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">รหัสสกุลเงิน</label>
                             <select 
-                                value={formData.rfq_base_currency_code}
-                                onChange={(e) => handleChange('rfq_base_currency_code', e.target.value)}
+                                {...register('rfq_base_currency_code')}
                                 className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed disabled:bg-gray-50"
                                 disabled={!formData.isMulticurrency || isLocked}
                             >
@@ -244,8 +297,7 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                         <div>
                             <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">ไปยังสกุลเงิน (Target)</label>
                             <select 
-                                value={formData.rfq_quote_currency_code || ''}
-                                onChange={(e) => handleChange('rfq_quote_currency_code', e.target.value)}
+                                {...register('rfq_quote_currency_code')}
                                 className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed disabled:bg-gray-50"
                                 disabled={!formData.isMulticurrency || isLocked}
                             >
@@ -262,8 +314,7 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ formData, branches
                             <input 
                                 type="number"
                                 step="0.0001"
-                                value={formData.rfq_exchange_rate}
-                                onChange={(e) => handleChange('rfq_exchange_rate', parseFloat(e.target.value) || 0)}
+                                {...register('rfq_exchange_rate', { valueAsNumber: true })}
                                 readOnly={formData.rfq_base_currency_code === 'THB'}
                                 className={`w-full h-9 px-3 text-sm text-right border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition-colors disabled:opacity-70 disabled:cursor-not-allowed ${formData.rfq_base_currency_code === 'THB' ? 'bg-gray-50 dark:bg-gray-800/50 italic text-gray-500' : 'bg-white dark:bg-gray-800 font-semibold'}`}
                                 disabled={!formData.isMulticurrency || isLocked}

@@ -28,7 +28,7 @@ export default function ItemGroupList() {
     const [allData, setAllData] = useState<ItemGroup[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editingId, setEditingId] = useState<number | null>(null);
 
     const filterConfig: FilterFieldConfig<keyof typeof filters>[] = useMemo(() => [
         { name: 'search', label: 'รหัสกลุ่มสินค้า', type: 'text', placeholder: 'กรอกรหัส' },
@@ -73,8 +73,8 @@ export default function ItemGroupList() {
     }, [filteredData, filters.page, filters.limit]);
 
     const handleCreateNew = () => { setEditingId(null); setIsModalOpen(true); };
-    const handleEdit = (id: string) => { setEditingId(id); setIsModalOpen(true); };
-    const handleDelete = useCallback((id: string) => {
+    const handleEdit = (id: number) => { setEditingId(id); setIsModalOpen(true); };
+    const handleDelete = useCallback((id: number) => {
         if (confirm('คุณต้องการลบข้อมูลนี้หรือไม่?')) {
             ItemGroupService.delete(id).then(() => fetchData());
         }
@@ -113,7 +113,7 @@ export default function ItemGroupList() {
             </div>
             <div className="flex flex-col gap-4">
                 <h2 className="text-gray-700 dark:text-gray-300 font-medium">พบข้อมูล {filteredData.length} รายการ</h2>
-                <SmartTable data={paginatedData} columns={columns} isLoading={isLoading} pagination={{ pageIndex: filters.page, pageSize: filters.limit, totalCount: filteredData.length, onPageChange: handlePageChange, onPageSizeChange: (size) => setFilters({ limit: size, page: 1 }) }} rowIdField="item_group_id" className="shadow-sm" />
+                <SmartTable data={paginatedData} columns={columns} isLoading={isLoading} pagination={{ pageIndex: filters.page, pageSize: filters.limit, totalCount: filteredData.length, onPageChange: handlePageChange, onPageSizeChange: (size) => setFilters({ limit: size, page: 1 }) }} rowIdField="id" className="shadow-sm" />
             </div>
             <ItemGroupFormModal isOpen={isModalOpen} onClose={handleModalClose} editId={editingId} onSuccess={fetchData} />
         </div>

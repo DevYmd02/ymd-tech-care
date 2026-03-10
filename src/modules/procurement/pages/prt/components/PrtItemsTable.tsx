@@ -26,11 +26,11 @@ export const PrtItemsTable: React.FC<PrtItemsTableProps> = ({
 
     const handleAddItem = () => {
         append({
-            item_id: '',
+            item_id: undefined,
             item_code: '',
             item_name: '',
             qty_return: 1,
-            uom_id: 'PCS',
+            uom_id: 1, // Default to a numeric ID
             unit_price_ref: 0,
             line_total: 0
         });
@@ -82,12 +82,12 @@ export const PrtItemsTable: React.FC<PrtItemsTableProps> = ({
                                     {...register(`items.${index}.item_id` as const)}
                                     className="w-full h-8 px-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded focus:border-blue-500 outline-none text-sm text-gray-900 dark:text-white"
                                     onChange={(e) => {
-                                        const selected = itemOptions.find(i => i.id === e.target.value);
+                                        const selected = itemOptions.find(i => Number(i.id) === Number(e.target.value));
                                         if (selected) {
                                             setValue(`items.${index}.item_code`, selected.code);
                                             setValue(`items.${index}.item_name`, selected.name);
                                             setValue(`items.${index}.unit_price_ref`, selected.price);
-                                            setValue(`items.${index}.uom_id`, selected.uom);
+                                            setValue(`items.${index}.uom_id`, Number(selected.uom));
                                         }
                                     }}
                                 >

@@ -38,7 +38,7 @@ export const GRNService = {
         return applyClientPagination<GRNListItem>(allItems, page, limit);
     },
 
-    getById: async (id: string): Promise<GRNListItem> => {
+    getById: async (id: number): Promise<GRNListItem> => {
         logger.info(`[GRNService] Fetching GRN Detail: ${id}`);
         return await api.get<GRNListItem>(`${BASE_URL}/${id}`);
     },
@@ -53,12 +53,12 @@ export const GRNService = {
         return await api.post<SuccessResponse>(BASE_URL, data);
     },
 
-    approve: async (id: string): Promise<SuccessResponse> => {
+    approve: async (id: number): Promise<SuccessResponse> => {
         logger.info(`[GRNService] Approving GRN: ${id}`);
         return await api.post<SuccessResponse>(`${BASE_URL}/${id}/approve`, {});
     },
 
-    reject: async (id: string, remark: string): Promise<SuccessResponse> => {
+    reject: async (id: number, remark: string): Promise<SuccessResponse> => {
         logger.info(`[GRNService] Rejecting GRN: ${id}`);
         return await api.post<SuccessResponse>(`${BASE_URL}/${id}/reject`, { remark });
     }

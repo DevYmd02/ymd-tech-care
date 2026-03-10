@@ -17,7 +17,7 @@ interface EmployeeGroupFormModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
-    editId?: string | null;
+    editId?: number | null;
 }
 
 const employeeGroupSchema = z.object({
@@ -79,9 +79,9 @@ export const EmployeeGroupFormModal = ({ isOpen, onClose, onSuccess, editId }: E
         try {
             let res;
             if (isEdit && editId) {
-                res = await EmployeeGroupService.update(editId, data);
+                res = await EmployeeGroupService.update(editId, data as any);
             } else {
-                res = await EmployeeGroupService.create(data);
+                res = await EmployeeGroupService.create(data as any);
             }
 
             if (res.success) {

@@ -71,7 +71,7 @@ export default function VQListPage() {
     const [modalConfig, setModalConfig] = useState<{
         isOpen: boolean;
         isViewMode: boolean;
-        vqId: string | null;
+        vqId: number | null;
     }>({
         isOpen: false,
         isViewMode: false,
@@ -79,7 +79,7 @@ export default function VQListPage() {
     });
 
     const [isTrackingOpen, setIsTrackingOpen] = useState(false);
-    const [selectedRfqId, setSelectedRfqId] = useState<string | null>(null);
+    const [selectedRfqId, setSelectedRfqId] = useState<number | null>(null);
     const [selectedRfqNo, setSelectedRfqNo] = useState<string>('');
 
     // Auto-inject rfq_no from URL into search3 filter (runs once on mount or when param changes)
@@ -100,11 +100,11 @@ export default function VQListPage() {
         if (shouldCreate && !modalConfig.isOpen) {
             if (rfqId) {
                 // Fetch RFQ Detail to get items
-                RFQService.getById(rfqId).then((rfqData: RFQHeader) => {
+                RFQService.getById(Number(rfqId)).then((rfqData: RFQHeader) => {
                     // Create a modified header if vendorId is provided
-                    const header = { ...rfqData } as RFQHeader & { vendor_id?: string };
+                    const header = { ...rfqData } as RFQHeader & { vendor_id?: number };
                     if (vendorId) {
-                        header.vendor_id = vendorId; 
+                        header.vendor_id = Number(vendorId); 
                     }
                     setInitialRFQForCreate(header as RFQHeader);
                     setModalConfig({ isOpen: true, isViewMode: false, vqId: null });
@@ -167,15 +167,18 @@ export default function VQListPage() {
         if (selectedRfqId) {
             queryClient.invalidateQueries({ queryKey: ['rfq-vendors', selectedRfqId] });
         }
+
+        // 3. Close the View Modal
+        setModalConfig(prev => ({ ...prev, vqId: null, isOpen: false }));
     }, [refetch, selectedRfqId, queryClient]);
 
     // handleFilterChange is provided by useTableFilters directly — no local wrapper needed
 
-    const handleOpenView = (vqId: string) => {
+    const handleOpenView = (vqId: number) => {
         setModalConfig({ isOpen: true, isViewMode: true, vqId });
     };
 
-    const handleOpenEdit = (vqId: string) => {
+    const handleOpenEdit = (vqId: number) => {
         setModalConfig({ isOpen: true, isViewMode: false, vqId });
     };
 
@@ -183,7 +186,7 @@ export default function VQListPage() {
         setModalConfig({ isOpen: true, isViewMode: false, vqId: null });
     };
 
-    const handleOpenTracking = (rfqId: string | null | undefined, rfqNo: string | null | undefined) => {
+    const handleOpenTracking = (rfqId: number | null | undefined, rfqNo: string | null | undefined) => {
         if (!rfqId) {
             logger.warn('[VQListPage] Cannot open tracking: rfq_id is missing');
             return;

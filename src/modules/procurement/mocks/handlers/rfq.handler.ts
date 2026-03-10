@@ -67,7 +67,7 @@ export const setupRFQHandlers = (mock: MockAdapter) => {
     const foundIndex = MOCK_RFQS.findIndex(r => sanitizeId(r.rfq_id) === id);
     if (foundIndex !== -1) {
       const body = config.data ? (typeof config.data === 'string' ? JSON.parse(config.data) : config.data) : {};
-      const vendorIds: string[] = body.vendor_ids || [];
+      const vendorIds: number[] = body.vendor_ids || [];
       
       // FIX: State Synchronization.
       MOCK_RFQS[foundIndex].status = 'SENT';
@@ -87,15 +87,15 @@ export const setupRFQHandlers = (mock: MockAdapter) => {
               vendor.sent_date = new Date().toISOString();
 
               // PIPELINE: Ensure VQ record exists for this vendor
-              const vqId = sanitizeId(vendor.vendor_id);
+              const vqId = Number(vendor.vendor_id);
               const existingVQ = MOCK_VQS.find(vq => sanitizeId(vq.rfq_id) === id && sanitizeId(vq.vendor_id) === vqId);
               
                 if (!existingVQ) {
                   const rfqLines = MOCK_RFQ_LINES.filter(l => sanitizeId(l.rfq_id) === id);
                   MOCK_VQS.push({
-                    quotation_id: `vq-gen-${id}-${vqId}`,
+                    quotation_id: Date.now() + Math.floor(Math.random() * 1000),
                     quotation_no: '', // Pending records have no VQ ID
-                    qc_id: '',
+                    qc_id: 0,
                     rfq_no: MOCK_RFQS[foundIndex].rfq_no,
                     rfq_id: id,
                     pr_no: MOCK_RFQS[foundIndex].pr_no || '',
@@ -141,7 +141,7 @@ export const setupRFQHandlers = (mock: MockAdapter) => {
     const body = config.data ? (typeof config.data === 'string' ? JSON.parse(config.data) : config.data) : {};
     const vendorIds: string[] = (body.vendor_ids as string[]) || [];
     const newRFQ = {
-      rfq_id: `rfq-${Date.now()}`,
+      rfq_id: Date.now(),
       rfq_no: body.rfq_no || `RFQ-${new Date().getFullYear()}-${String(MOCK_RFQS.length + 1).padStart(4, '0')}`,
       rfq_date: body.rfq_date || new Date().toISOString().split('T')[0],
       pr_id: body.pr_id || null,
@@ -185,16 +185,15 @@ export const setupRFQHandlers = (mock: MockAdapter) => {
         // 2. Create new vendor entries with robust lookup
         const newVendorEntries = body.vendor_ids.map((vId: string, index: number) => {
           // Robust match: case-insensitive and dash-resilient
-          const cleanId = vId.replace(/-/g, '').toLowerCase();
           const poolVendor = VENDOR_POOL.find(p => 
-            p.id.replace(/-/g, '').toLowerCase() === cleanId || 
-            p.code.replace(/-/g, '').toLowerCase() === cleanId
+            p.id === Number(vId) || 
+            p.code === String(vId)
           );
 
           return {
-            rfq_vendor_id: `rv-${id}-${index + 1}`,
+            rfq_vendor_id: Number(`${id}${index + 1}`),
             rfq_id: targetRFQ.rfq_id,
-            vendor_id: poolVendor?.id || vId,
+            vendor_id: poolVendor?.id || Number(vId),
             sent_date: null,
             sent_via: 'EMAIL',
             email_sent_to: poolVendor?.email || null,

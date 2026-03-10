@@ -3,8 +3,8 @@ import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import type { FieldErrors, Path, FieldPathValue, SubmitHandler } from 'react-hook-form';
 import {
   PRFormSchema,
-  getDefaultFormValues,
-  createEmptyLine,
+  getPRDefaultFormValues,
+  createEmptyPRLine,
   getInitialLines
 } from '@/modules/procurement/schemas/pr-schemas';
 import type { PRFormData, PRLineFormData } from '@/modules/procurement/schemas/pr-schemas';
@@ -32,7 +32,7 @@ const PR_CONFIG = {
 } as const;
 
 export interface UsePRFormProps {
-  id?: string;
+  id?: number;
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
@@ -115,15 +115,15 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isWarehouseModalOpen, setIsWarehouseModalOpen] = useState(false);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
-  const prevCurrencyId = useRef<string>(getDefaultFormValues(user).pr_base_currency_code);
-  const prevCurrencyTypeId = useRef<string | undefined>(getDefaultFormValues(user).pr_quote_currency_code);
+  const prevCurrencyId = useRef<string>(getPRDefaultFormValues(user).pr_base_currency_code);
+  const prevCurrencyTypeId = useRef<string | undefined>(getPRDefaultFormValues(user).pr_quote_currency_code);
 
   const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [showAllItems, setShowAllItems] = useState(false);
 
   const formMethods = useForm<PRFormData>({
-    defaultValues: getDefaultFormValues(user),
+    defaultValues: getPRDefaultFormValues(user),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(PRFormSchema) as any,
     mode: 'onBlur',
@@ -141,7 +141,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
                           purchaseTaxOptions[0];
        
        if (defaultTax) {
-         setValue('pr_tax_code_id', defaultTax.value);
+         setValue('pr_tax_code_id', Number(defaultTax.value));
          setValue('pr_tax_rate', Number(defaultTax.original?.tax_rate || 0));
        }
      }
@@ -154,7 +154,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
       const name = user?.employee?.employee_fullname || user?.username || '';
       if (name) {
         setValue('requester_name', name, { shouldValidate: true });
-        setValue('requester_user_id', String(user.id));
+        setValue('requester_user_id', Number(user.id));
       }
     }
   }, [user, setValue, watch, id]);
@@ -213,7 +213,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
                          purchaseTaxOptions[0];
       
       if (defaultTax) {
-        setValue('pr_tax_code_id', defaultTax.value);
+        setValue('pr_tax_code_id', Number(defaultTax.value));
         setValue('pr_tax_rate', Number(defaultTax.original?.tax_rate || 0));
       }
     }
@@ -236,19 +236,20 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
                 const matchedUnit = masterUnits?.find(u => String(u.uom_id || u.unit_id) === String(line.uom_id));
 
                 return {
-                  item_id: line.item_id ? Number(line.item_id) : '',
+                  item_id: line.item_id ? Number(line.item_id) : undefined,
                   item_code: matchedItem?.item_code || line.item_code || '',
                   item_name: matchedItem?.item_name || line.item_name || '',
                   description: line.description || line.item_name || matchedItem?.item_name || '',
                   qty: Number(line.qty) || 0,
                   uom: matchedUnit?.uom_name || matchedUnit?.unit_name || line.uom || '',
-                  uom_id: line.uom_id ? Number(line.uom_id) : '',
+                  uom_id: line.uom_id ? Number(line.uom_id) : undefined,
                   est_unit_price: Number(line.est_unit_price) || 0,
                   est_amount: (Number(line.qty) || 0) * (Number(line.est_unit_price) || 0),
                   needed_date: line.needed_date,
-                  preferred_vendor_id: line.preferred_vendor_id,
+                  preferred_vendor_id: line.preferred_vendor_id ? Number(line.preferred_vendor_id) : undefined,
                   remark: line.remark,
-                  warehouse_id: pr.warehouse_id || '1', 
+                  warehouse_id: pr.warehouse_id ? Number(pr.warehouse_id) : 1, 
+                  warehouse_code: warehouses.find(w => String(w.value) === String(pr.warehouse_id))?.original?.warehouse_code || '',
                   location: line.location || '',
                   // Calculate discount amount from raw string (same logic as updateLine)
                   discount: (() => {
@@ -266,28 +267,45 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
               });
 
               while (mappedLines.length < PR_CONFIG.MIN_LINES) {
-                mappedLines.push(createEmptyLine());
+                mappedLines.push(createEmptyPRLine());
               }
 
+              // ── Robust Hydration — Use fallbacks for inconsistent API naming ─────────────
               const formData: PRFormData = {
                 ...pr,
                 pr_no: pr.pr_no || 'DRAFT-TEMP',
-                
-                // HEADER HYDRATION FIX: Use Numbers for IDs as requested for "Perfect Hydration"
-                cost_center_id: pr.cost_center_id ? Number(pr.cost_center_id) : '',
-                project_id: pr.project_id ? Number(pr.project_id) : '',
-                purpose: pr.purpose || '',
+
+                // 1. Cost Center / Department Fallback
+                cost_center_id: (() => {
+                  const val = pr.cost_center_id ?? pr.department_id;
+                  return val ? Number(val) : undefined;
+                })(),
+
+                // 2. Project
+                project_id: pr.project_id ? Number(pr.project_id) : undefined,
+
+                // 3. Purpose / Remark Fallback
+                purpose: (pr.purpose || pr.remark || '').trim(),
+
+                // 4. Vendor Fallback
+                preferred_vendor_id: (() => {
+                  const val = pr.preferred_vendor_id ?? pr.vendor_id;
+                  return val ? Number(val) : undefined;
+                })(),
+                vendor_name: pr.vendor_name || pr.suggested_vendor || '',
+
                 requester_user_id: pr.requester_user_id ? Number(pr.requester_user_id) : 1,
                 
-                preparer_name: pr.requester_name, 
-                requester_name: pr.requester_name,
+                preparer_name: pr.requester_name || pr.employee_name || '',
+                requester_name: pr.requester_name || pr.employee_name || '',
+                
                 pr_base_currency_code: pr.pr_base_currency_code || 'THB',
                 pr_quote_currency_code: pr.pr_quote_currency_code || 'THB',
                 isMulticurrency: (pr.pr_base_currency_code || 'THB') !== 'THB',
                 pr_exchange_rate: pr.pr_exchange_rate || 1,
                 lines: mappedLines,
                 is_on_hold: pr.status === 'DRAFT' ? 'Y' : 'N',
-                pr_tax_code_id: pr.pr_tax_code_id ? String(pr.pr_tax_code_id) : '',
+                pr_tax_code_id: pr.pr_tax_code_id ? Number(pr.pr_tax_code_id) : undefined,
                 pr_tax_rate: (() => {
                   if (pr.pr_tax_rate != null) return Number(pr.pr_tax_rate);
                   const matchedTax = purchaseTaxOptions.find(t => String(t.value) === String(pr.pr_tax_code_id));
@@ -309,11 +327,11 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
         } else {
           try {
             const nextPRNo = await PRService.generateNextDocumentNo();
-            reset({ ...getDefaultFormValues(user), pr_no: nextPRNo.document_no });
+            reset({ ...getPRDefaultFormValues(user), pr_no: nextPRNo.document_no });
           } catch (err) {
             logger.error('[usePRForm] Failed to generate PR No:', err);
             // Fallback securely so the form doesn't crash
-            reset({ ...getDefaultFormValues(user), pr_no: 'DRAFT-TEMP' });
+            reset({ ...getPRDefaultFormValues(user), pr_no: 'DRAFT-TEMP' });
           }
         }
       }, 0);
@@ -321,7 +339,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
     } else if (!isOpen) {
       prevIsOpenRef.current = false;
     }
-  }, [isOpen, isMasterDataLoading, reset, id, user, setIsActionLoading, masterItems, masterUnits, purchaseTaxOptions]);
+  }, [isOpen, isMasterDataLoading, reset, id, user, setIsActionLoading, masterItems, masterUnits, purchaseTaxOptions, warehouses]);
 
   // Currency Sync
   const sourceCurrencyCode = watch('pr_base_currency_code');
@@ -417,7 +435,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
     setValue('total_amount', Number(finalGrandTotal.toFixed(2)), { shouldDirty: true, shouldValidate: true });
   }, [subtotal, globalDiscountAmount, vatAmount, grandTotal, setValue, watchedLinesForCalc, watchedTaxRate, watchedTaxId]);
 
-  const addLine = useCallback(() => append(createEmptyLine()), [append]);
+  const addLine = useCallback(() => append(createEmptyPRLine()), [append]);
   
   const removeLine = useCallback((index: number) => {
     if (lines.length <= PR_CONFIG.MIN_LINES) {
@@ -428,7 +446,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
   }, [lines, remove, showAlert]);
   
   const clearLine = useCallback((index: number) => {
-    updateFieldArray(index, createEmptyLine());
+    updateFieldArray(index, createEmptyPRLine());
   }, [updateFieldArray]);
   
   const updateLine = useCallback((index: number, field: keyof PRLineFormData, value: string | number | undefined) => {
@@ -521,17 +539,19 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
     setIsLocationModalOpen(true);
   };
 
-  const selectWarehouse = (data: { warehouse_id: string; warehouse_name: string }) => {
+  const selectWarehouse = (data: WarehouseListItem) => {
     if (activeRowIndex !== null) {
       setValue(`lines.${activeRowIndex}.warehouse_id` as Path<PRFormData>, data.warehouse_id as FieldPathValue<PRFormData, Path<PRFormData>>);
+      setValue(`lines.${activeRowIndex}.warehouse_code` as Path<PRFormData>, data.warehouse_code as FieldPathValue<PRFormData, Path<PRFormData>>);
       setValue(`lines.${activeRowIndex}.location` as Path<PRFormData>, '' as FieldPathValue<PRFormData, Path<PRFormData>>);
       setIsWarehouseModalOpen(false);
     }
   };
 
-  const selectLocation = (data: { location_id: string; location_name: string }) => {
+  const selectLocation = (data: { location_id: number; location_name: string }) => {
     if (activeRowIndex !== null) {
-      setValue(`lines.${activeRowIndex}.location` as Path<PRFormData>, data.location_name as FieldPathValue<PRFormData, Path<PRFormData>>);
+      // location field in schema is string, but data is number
+      setValue(`lines.${activeRowIndex}.location` as Path<PRFormData>, String(data.location_id) as FieldPathValue<PRFormData, Path<PRFormData>>);
       setIsLocationModalOpen(false);
     }
   };
@@ -554,7 +574,8 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
           item_code: product.item_code,
           item_name: product.item_name,
           // W-01: Map warehouse from master data
-          warehouse_id: product.warehouse_id || product.warehouse || '1',
+          warehouse_id: Number(product.warehouse_id || product.warehouse || 1),
+          warehouse_code: warehouses.find(w => String(w.value) === String(product.warehouse_id || product.warehouse || 1))?.original?.warehouse_code || '',
           location: product.location || 'A1',
           // 🎯 THE CRITICAL FIX: Bind the UOM Data using backend-provided keys
           uom: product.uom_name || product.unit_name || 'ชิ้น',
@@ -565,7 +586,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
           // W-04: Store original standard cost for variance check
           _standard_cost: unitPrice,
           // Vendor-Item: Track item's preferred vendor for mismatch detection
-          _item_vendor_id: product.preferred_vendor_id ? String(product.preferred_vendor_id) : undefined,
+          _item_vendor_id: product.preferred_vendor_id ? Number(product.preferred_vendor_id) : undefined,
           required_receipt_type: "FULL",
           line_discount_raw: "0",
         };
@@ -587,7 +608,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
    useEffect(() => {
       if (isMasterDataLoading || !user?.employee?.branch_id || warehouses.length === 0) return;
        const branchWarehouse = warehouses.find((w: MappedOption<WarehouseListItem>) => String(w.original?.branch_id) === String(user.employee.branch_id));
-       if (branchWarehouse) setValue('warehouse_id', branchWarehouse.value);
+       if (branchWarehouse) setValue('warehouse_id', Number(branchWarehouse.value));
    }, [isMasterDataLoading, user?.employee?.branch_id, warehouses, setValue]);
 
    const handleVendorSelect = (vendor: VendorSelection | null) => {
@@ -608,7 +629,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
         // Smart Clean-up: Only filter out rows that are 100% empty.
         // A row with item_id filled but qty=0 is kept so backend validation can surface the error.
         const activeLines = (data.lines || []).filter((line: PRLineFormData) => {
-          const isItemIdEmpty = !line.item_id || String(line.item_id).trim() === '';
+          const isItemIdEmpty = !line.item_id || line.item_id === 0;
           const isItemCodeEmpty = !line.item_code || line.item_code.trim() === '';
           const isQtyZero = !line.qty || Number(line.qty) === 0;
           const isPriceZero = !line.est_unit_price || Number(line.est_unit_price) === 0;
@@ -660,7 +681,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
 
         // ─── VALID LINES: Filter to only lines with a real item_id & qty > 0 ─
         const validLines = activeLines
-          .filter((line: PRLineFormData) => line.item_id && String(line.item_id).trim() !== '' && Number(line.qty) > 0);
+          .filter((line: PRLineFormData) => line.item_id && line.item_id !== 0 && Number(line.qty) > 0);
 
         // ═══════════════════════════════════════════════════════════════════════
         // POSTMAN-SYNCED PAYLOAD — Every key matches the Postman golden response
@@ -876,7 +897,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
 
   // Derive currently active warehouse dynamically
   const activeWarehouseId = activeRowIndex !== null 
-    ? watch(`lines.${activeRowIndex}.warehouse_id` as Path<PRFormData>) as string || null 
+    ? watch(`lines.${activeRowIndex}.warehouse_id` as Path<PRFormData>) as number || null 
     : null;
 
   return {

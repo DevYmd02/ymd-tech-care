@@ -9,7 +9,7 @@ import { VendorTrackingTable, type ExtendedVendor } from './VendorTrackingTable'
 interface VQVendorTrackingModalProps {
     isOpen: boolean;
     onClose: () => void;
-    rfqId: string | null;
+    rfqId: number | null;
     rfqNo: string;
 }
 
@@ -35,7 +35,7 @@ export const VQVendorTrackingModal: React.FC<VQVendorTrackingModalProps> = ({
         navigate(`/procurement/vq?rfq_no=${encodeURIComponent(rfqNo)}&vendor_name=${encodeURIComponent(vendorName)}`);
     };
 
-    const handleCreateQT = (vendorId: string) => {
+    const handleCreateQT = (vendorId: number) => {
         if (!rfqId) return;
         navigate(`/procurement/vq?create=true&rfq_id=${rfqId}&vendor_id=${vendorId}`);
     };

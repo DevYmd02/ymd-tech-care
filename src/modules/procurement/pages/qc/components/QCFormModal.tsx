@@ -25,7 +25,7 @@ interface QCFormModalProps {
   onClose: () => void;
   initialRFQNo?: string;
   initialPRNo?: string;
-  qcId?: string | null;
+  qcId?: number | null;
   mode?: 'view' | 'edit' | 'create';
   onSuccess?: () => void;
 }
@@ -63,7 +63,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
   // Fetch Existing QC Data if mode is edit/view
   const { data: qcData } = useQuery({
     queryKey: ['qc-detail', qcId],
-    queryFn: () => QCService.getById(qcId!),
+    queryFn: () => QCService.getById(Number(qcId)),
     enabled: !!qcId && (mode === 'edit' || mode === 'view'),
   });
 
@@ -140,22 +140,22 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
   }, [vqList]);
 
   // VQ Selection State
-  const [selectedVQIds, setSelectedVQIds] = useState<string[]>([]);
+  const [selectedVQIds, setSelectedVQIds] = useState<number[]>([]);
 
   // Vendor-Level Winner State (the core of simplified comparison)
-  const [winnerVQId, setWinnerVQId] = useState<string | null>(null);
+  const [winnerVQId, setWinnerVQId] = useState<number | null>(null);
   const { confirm } = useConfirmation();
 
   const selectedVQs = useMemo(() => {
     return availableVQs.filter((vq) => selectedVQIds.includes(vq.quotation_id));
   }, [availableVQs, selectedVQIds]);
 
-  const toggleVQSelection = (vqId: string) => {
+  const toggleVQSelection = (vId: number) => {
     setSelectedVQIds((prev) =>
-      prev.includes(vqId) ? prev.filter((id) => id !== vqId) : [...prev, vqId]
+      prev.includes(vId) ? prev.filter((id) => id !== vId) : [...prev, vId]
     );
     // If we deselect the current winner, clear the winner
-    if (winnerVQId === vqId) {
+    if (winnerVQId === vId) {
       setWinnerVQId(null);
     }
   };
@@ -256,7 +256,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
     setIsLoading(true);
     try {
       const result = qcId
-        ? await QCService.submitWinner(qcId, { winning_vq_id: winnerVQId })
+        ? await QCService.submitWinner(Number(qcId), { winning_vq_id: winnerVQId })
         : await QCService.create({
             qc_no: generateQCNumber(),
             pr_id: prList?.data.find(pr => pr.pr_no === prNo)?.pr_id || undefined,

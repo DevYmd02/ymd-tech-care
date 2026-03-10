@@ -7,10 +7,10 @@ import { applyClientFilters, applyClientPagination, extractArrayFromResponse } f
 
 const ENDPOINTS = {
   list: '/prt',
-  detail: (id: string) => `/prt/${id}`,
+  detail: (id: number) => `/prt/${id}`,
   create: '/prt',
-  update: (id: string) => `/prt/${id}`,
-  delete: (id: string) => `/prt/${id}`,
+  update: (id: number) => `/prt/${id}`,
+  delete: (id: number) => `/prt/${id}`,
   items: '/prt-items', // Endpoint for dropdown items
 };
 
@@ -50,7 +50,7 @@ export const PrtService = {
     }
   },
 
-  getById: async (id: string): Promise<PurchaseReturn | null> => {
+  getById: async (id: number): Promise<PurchaseReturn | null> => {
       try {
           return await api.get<PurchaseReturn>(ENDPOINTS.detail(id));
       } catch (error) {
@@ -63,11 +63,11 @@ export const PrtService = {
       return await api.post<PurchaseReturn>(ENDPOINTS.create, data);
   },
 
-  update: async (id: string, data: Partial<PurchaseReturn>): Promise<PurchaseReturn> => {
+  update: async (id: number, data: Partial<PurchaseReturn>): Promise<PurchaseReturn> => {
       return await api.put<PurchaseReturn>(ENDPOINTS.update(id), data);
   },
 
-  delete: async (id: string): Promise<void> => {
+  delete: async (id: number): Promise<void> => {
       await api.delete(ENDPOINTS.delete(id));
   },
 
@@ -80,10 +80,10 @@ export const PrtService = {
       }
   },
   
-  getExchangeRate: async (currencyId: string, rateDate: string): Promise<number> => {
+  getExchangeRate: async (currencyCode: string, rateDate: string): Promise<number> => {
       try {
           const response = await api.get<{ rate: number }>('/master-data/exchange-rates/latest', { 
-              params: { currency_id: currencyId, rate_date: rateDate } 
+              params: { currency_code: currencyCode, rate_date: rateDate } 
           });
           return response.rate;
       } catch (error) {

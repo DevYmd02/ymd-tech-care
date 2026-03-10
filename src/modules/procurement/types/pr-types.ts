@@ -22,15 +22,15 @@ export type PRStatus =
 // ====================================================================================
 
 export interface PRHeader {
-  pr_id: string;                    // UUID - Primary Key
+  pr_id: number;                    // INTEGER @id
   pr_no: string;                    // VARCHAR(50) - เลขที่เอกสาร PR-202601-0001
-  branch_id: string;            // FK → org_branch
-  requester_user_id: string;    // FK → users
+  branch_id: number;            // INTEGER
+  requester_user_id: number;    // INTEGER
   requester_name: string;           // VARCHAR(200)
   pr_date: string;                  // DATE - วันที่ขอซื้อ
   need_by_date: string;             // DATE - วันที่ต้องการใช้
-  cost_center_id: string;       // FK → cost_center
-  project_id?: string;          // FK → project (Optional)
+  cost_center_id: number;       // INTEGER
+  project_id?: number;          // INTEGER
   purpose: string;                  // TEXT - วัตถุประสงค์
   status: PRStatus;
   pr_base_currency_code: string;    // VARCHAR(3) - THB
@@ -44,23 +44,23 @@ export interface PRHeader {
   created_at: string;               // TIMESTAMP
   updated_at: string;               // TIMESTAMP
   cancelflag?: 'Y' | 'N';           // CHAR(1) - Void/Cancel Flag
-  created_by_user_id: string;       // FK
-  updated_by_user_id: string;       // FK
+  created_by_user_id: number;       // INTEGER
+  updated_by_user_id: number;       // INTEGER
   
   // New Fields (Info Bar & Remark & Vendor)
   delivery_date?: string;           // DATE - วันที่กำหนดส่ง
-  credit_days?: number;             // INTEGER
-  payment_term_days?: number;       // INTEGER (Postman uses this)
+  credit_days?: number;             // int
+  payment_term_days?: number;       // int
   vendor_quote_no?: string;         // VARCHAR(100)
   shipping_method?: string;         // VARCHAR(100)
   remark?: string;                  // TEXT (Singular per Postman)
-  preferred_vendor_id?: string; // FK → vendor
+  preferred_vendor_id?: number; // INTEGER
   vendor_name?: string;             // VARCHAR(200)
   department_name?: string;         // Added for List Page display
   created_by_name?: string;         // Added for List Page display
-  pr_tax_code_id?: string;          // INTEGER (Postman: pr_tax_code_id)
-  pr_tax_rate?: number;             // Added for Snapshotting Tax Rate
-  warehouse_id?: string;            // Added for fetching
+  pr_tax_code_id?: number;          // INTEGER
+  pr_tax_rate?: number;             // snapshot
+  warehouse_id?: number;            // INTEGER
 
   // ── Data Hydration Fields (Fallback keys the backend may return) ──
   employee_name?: string;           // Possible JOIN from employee table
@@ -80,22 +80,22 @@ export interface PRHeader {
 // ====================================================================================
 
 export interface PRLine {
-  pr_line_id: string;               // UUID - Primary Key
-  pr_id: string;                    // UUID FK → pr_header
-  line_no: number;                  // INTEGER - ลำดับ (1, 2, 3...)
-  item_id: string;                  // FK → item
+  pr_line_id: number;               // INTEGER
+  pr_id: number;                    // INTEGER
+  line_no: number;                  // int
+  item_id: number;                  // INTEGER
   item_code: string;                // VARCHAR(50)
   item_name: string;                // VARCHAR(500)
   description?: string;             // TEXT (Postman uses 'description' inside lines)
   qty: number;                      // DECIMAL(18,4) (Postman: qty)
   uom: string;                      // VARCHAR(50) - หน่วยนับ
-  uom_id: string;                   // INTEGER
-  warehouse_id?: string;            // Postman: warehouse_id
+  uom_id: number;                   // INTEGER
+  warehouse_id?: number;            // INTEGER
   location?: string;                // Postman: location
   est_unit_price: number;           // DECIMAL(18,2) - ราคาต่อหน่วยโดยประมาณ
   est_amount: number;               // DECIMAL(18,2) - มูลค่ารวมโดยประมาณ
   needed_date: string;              // DATE - วันที่ต้องการสินค้า
-  preferred_vendor_id?: string; // FK → vendor (Optional)
+  preferred_vendor_id?: string; // uuid
   remark?: string;                  // TEXT - หมายเหตุ
   line_discount_raw?: string;       // Postman: line_discount_raw
   line_net_amount?: string | number; // Added: Backend returns this as the line total
@@ -116,11 +116,11 @@ export type ApprovalTaskStatus =
   | 'CANCELLED';  // ยกเลิก
 
 export interface ApprovalTask {
-  task_id: string;                  // UUID
+  task_id: number;                  // INTEGER
   document_type: 'PR' | 'RFQ' | 'PO';
-  document_id: string;              // UUID → pr_id
-  document_no: string;              // เลขที่เอกสาร
-  approver_user_id: string;         // Adjusted to number if users use numeric IDs
+  document_id: number;              // INTEGER
+  document_no: string;              // doc no
+  approver_user_id: number;         // INTEGER
   approver_name: string;
   approver_position: string;
   status: ApprovalTaskStatus;
@@ -207,17 +207,17 @@ export interface PRFormValues {
 // LINE ITEM — Only fields the backend DTO accepts (Postman-aligned)
 // ═══════════════════════════════════════════════════════════════════════════════
 export interface CreatePRLineItem {
-    item_id: number;                // FK → item (required, numeric)
-    qty: number;                    // DECIMAL quantity (required)
-    est_unit_price: number;         // DECIMAL unit price (required)
-    uom_id: number;                 // FK → uom (required, MUST be number)
+    item_id: number;                // INTEGER
+    qty: number;                    // decimal
+    est_unit_price: number;         // decimal
+    uom_id: number;                 // INTEGER
     line_no?: number;               // INTEGER (optional)
     description?: string;           // TEXT (optional)
     location?: string;              // VARCHAR (optional)
     required_receipt_type?: string; // VARCHAR (optional)
     remark?: string;                // TEXT (optional)
     line_discount_raw?: string;     // Discount string (optional)
-    warehouse_id?: number;          // FK (optional)
+    warehouse_id?: number;          // INTEGER
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -234,10 +234,10 @@ export interface CreatePRPayload {
     pr_no?: string;                 // Document number (omit if backend auto-generates)
     pr_date: string;                // YYYY-MM-DD
     need_by_date: string;           // YYYY-MM-DD
-    requester_user_id: number;      // FK → users (numeric)
-    branch_id: number;              // FK → org_branch (numeric)
-    project_id?: number;            // FK → project (numeric, optional)
-    pr_tax_code_id?: number;        // FK → tax_code (numeric, optional)
+    requester_user_id: number;      // INTEGER
+    branch_id: number;              // INTEGER
+    project_id?: number;            // INTEGER
+    pr_tax_code_id?: number;        // INTEGER
     remark?: string;                // Free text (optional)
     status: PRStatus;                 // "PENDING" | "DRAFT" (Literal union)
 
@@ -266,8 +266,8 @@ export interface CreatePRPayload {
 export interface PRListParams {
   pr_no?: string;
   status?: PRStatus | 'ALL';
-  cost_center_id?: string;
-  project_id?: string;
+  cost_center_id?: number;
+  project_id?: number;
   requester_name?: string;
   department?: string;
   date_from?: string;
@@ -287,11 +287,11 @@ export interface PRListResponse {
 }
 
 export interface SubmitPRRequest {
-  pr_id: string;
+  pr_id: number;
 }
 
 export interface ApprovalRequest {
-  pr_id: string;
+  pr_id: number;
   action: 'APPROVE' | 'REJECT';
   remark?: string;
 }
@@ -303,13 +303,13 @@ export interface ApprovalResponse {
 }
 
 export interface ConvertPRRequest {
-  pr_id: string;
+  pr_id: number;
   convert_to: 'RFQ' | 'PO';
-  line_ids?: string[];
+  line_ids?: number[];
 }
 
 export interface VendorSelection {
-  vendor_id: string;
+  vendor_id: number;
   vendor_code: string;
   vendor_name: string;
   tax_id?: string;

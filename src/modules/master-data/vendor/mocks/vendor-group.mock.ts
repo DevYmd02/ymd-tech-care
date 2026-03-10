@@ -3,8 +3,8 @@ import type { ListResponse } from '@/shared/types/common-api.types';
 
 const data: VendorGroupMaster[] = [
     {
-        vendor_group_id: 'VGRP-FUR',
-        id: 'VGRP-FUR',
+        vendor_group_id: 1,
+        id: 1,
         vendor_group_code: 'VGRP-FUR',
         code: 'VGRP-FUR',
         vendor_group_name: 'กลุ่มเฟอร์นิเจอร์',
@@ -15,8 +15,8 @@ const data: VendorGroupMaster[] = [
         updated_at: new Date().toISOString(),
     },
     {
-        vendor_group_id: 'VGRP-STA',
-        id: 'VGRP-STA',
+        vendor_group_id: 2,
+        id: 2,
         vendor_group_code: 'VGRP-STA',
         code: 'VGRP-STA',
         vendor_group_name: 'กลุ่มเครื่องเขียน',
@@ -27,8 +27,8 @@ const data: VendorGroupMaster[] = [
         updated_at: new Date().toISOString(),
     },
     {
-        vendor_group_id: 'VGRP-IT',
-        id: 'VGRP-IT',
+        vendor_group_id: 3,
+        id: 3,
         vendor_group_code: 'VGRP-IT',
         code: 'VGRP-IT',
         vendor_group_name: 'กลุ่มคอมพิวเตอร์',
@@ -39,8 +39,8 @@ const data: VendorGroupMaster[] = [
         updated_at: new Date().toISOString(),
     },
     {
-        vendor_group_id: 'VGRP-CON',
-        id: 'VGRP-CON',
+        vendor_group_id: 4,
+        id: 4,
         vendor_group_code: 'VGRP-CON',
         code: 'VGRP-CON',
         vendor_group_name: 'กลุ่มวัสดุก่อสร้าง',

@@ -32,7 +32,7 @@ export const BranchService = {
     return api.get<BranchDropdownItem[]>(`${ENDPOINT}/dropdown`);
   },
 
-  getById: async (id: string): Promise<BranchListItem | null> => {
+  getById: async (id: number): Promise<BranchListItem | null> => {
     return api.get<BranchListItem>(`${ENDPOINT}/${id}`);
   },
 
@@ -54,7 +54,7 @@ export const BranchService = {
     }
   },
 
-  delete: async (id: string): Promise<boolean> => {
+  delete: async (id: number): Promise<boolean> => {
     try {
       await api.delete<void>(`${ENDPOINT}/${id}`);
       return true;
@@ -63,7 +63,7 @@ export const BranchService = {
     }
   },
 
-  toggleStatus: async (id: string, isActive: boolean): Promise<{ success: boolean; message?: string }> => {
+  toggleStatus: async (id: number, isActive: boolean): Promise<{ success: boolean; message?: string }> => {
     try {
       await api.patch(`${ENDPOINT}/${id}/status`, { is_active: isActive });
       return { success: true };

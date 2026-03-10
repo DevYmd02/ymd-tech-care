@@ -21,7 +21,7 @@ interface Props {
   onClose: () => void;
   onSuccess?: () => void;
   initialRFQ?: RFQHeader | null;
-  vqId?: string | null;
+  vqId?: number | null;
   isViewMode?: boolean;
 }
 
@@ -102,9 +102,9 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
     }
   };
 
-  const handleClearVendor = () => {
+    const handleClearVendor = () => {
     // Cascading wipe of vendor auto-filled data
-    setValue('vendor_id', '');
+    setValue('vendor_id', 0);
     setValue('vendor_name', '');
     setValue('contact_person', '');
     setValue('contact_phone', '');
@@ -187,7 +187,7 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
             isOpen={isVendorModalOpen}
             onClose={() => setIsVendorModalOpen(false)}
             onSelect={(vendor) => {
-                setValue('vendor_id', vendor.vendor_id);
+                setValue('vendor_id', Number(vendor.vendor_id));
                 setValue('vendor_name', vendor.name);
                 // contact_person omitted as it's not in VendorSearchItem
                 setValue('contact_phone', vendor.phone || '');
@@ -675,7 +675,7 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
                                                       const selected = purchaseTaxOptions.find(t => String(t.value) === val);
                                                       field.onChange(selected ? selected.value : val);
                                                   }}
-                                                  className={`h-7 px-1 text-xs bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 cursor-pointer min-w-[140px] ${isViewMode ? 'bg-gray-50 dark:bg-gray-800/50 cursor-not-allowed opacity-70' : ''}`}
+                                                  className={`h-7 px-1 text-xs bg-white dark:bg-gray-800 border ${errors.tax_code_id ? 'border-red-500 ring-1 ring-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600'} rounded text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 cursor-pointer min-w-[140px] ${isViewMode ? 'bg-gray-50 dark:bg-gray-800/50 cursor-not-allowed opacity-70' : ''}`}
                                               >
                                                   <option value="">เลือกภาษี</option>
                                                   {purchaseTaxOptions.map(tax => (
@@ -686,6 +686,7 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
                                               </select>
                                           )}
                                       />
+                                      {errors.tax_code_id && <p className="text-red-500 text-[10px] absolute -bottom-3.5 left-20 font-medium whitespace-nowrap">{errors.tax_code_id.message}</p>}
                                       <span className="text-gray-400 dark:text-gray-500">-</span>
                                       <input 
                                           value={vatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} 

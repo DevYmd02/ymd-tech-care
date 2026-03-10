@@ -11,7 +11,7 @@ import { ItemStatusControl } from './components/ItemStatusControl';
 interface ItemMasterFormModalProps {
     isOpen: boolean;
     onClose: () => void;
-    editId?: string | null;
+    editId?: number | null;
     onSuccess?: () => void;
 }
 

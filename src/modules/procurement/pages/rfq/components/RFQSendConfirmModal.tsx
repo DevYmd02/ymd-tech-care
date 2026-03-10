@@ -20,8 +20,8 @@ import { MultiEmailInput } from '@/shared/components/ui/inputs/MultiEmailInput';
 // ====================================================================================
 
 interface VendorDetailDisplay {
-    rfq_vendor_id: string;
-    vendor_id: string;
+    rfq_vendor_id: number;
+    vendor_id: number;
     vendor_name: string;
     vendor_code: string;
     email_sent_to: string | null;
@@ -40,7 +40,7 @@ interface RFQSendConfirmModalProps {
     rfq: RFQHeader | null;
     onClose: () => void;
     onConfirm: (
-        selectedVendorIds: string[],
+        selectedVendorIds: number[],
         methods: string[],
         emailConfig: Record<string, VendorEmailConfig>
     ) => void;
@@ -254,8 +254,8 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
     const [vendors, setVendors] = useState<VendorDetailDisplay[]>([]);
     const [isFetching, setIsFetching] = useState(false);
     const [fetchError, setFetchError] = useState<string | null>(null);
-    const [selectedVendorIds, setSelectedVendorIds] = useState<string[]>([]);
-    const [emailConfig, setEmailConfig] = useState<Record<string, VendorEmailConfig>>({});
+    const [selectedVendorIds, setSelectedVendorIds] = useState<number[]>([]);
+    const [emailConfig, setEmailConfig] = useState<Record<number, VendorEmailConfig>>({});
 
     useEffect(() => {
         if (!isOpen || !rfq) {
@@ -288,7 +288,7 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
                 // Clean initial state — no vendors pre-selected; user must consciously choose
 
                 // Pre-fill To from vendor email, safe null guard
-                const initialConfig: Record<string, VendorEmailConfig> = {};
+                const initialConfig: Record<number, VendorEmailConfig> = {};
                 vendorList.forEach(v => {
                     const safeEmail = v.email_sent_to?.trim() ?? '';
                     initialConfig[v.vendor_id] = { 
@@ -312,7 +312,7 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
         return () => { cancelled = true; };
     }, [isOpen, rfq]);
 
-    const handleToggleVendor = useCallback((vendorId: string) => {
+    const handleToggleVendor = useCallback((vendorId: number) => {
         setSelectedVendorIds(prev =>
             prev.includes(vendorId) ? prev.filter(id => id !== vendorId) : [...prev, vendorId]
         );
@@ -328,11 +328,11 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
         }
     };
 
-    const handleEmailConfigChange = useCallback((vendorId: string, config: VendorEmailConfig) => {
+    const handleEmailConfigChange = useCallback((vendorId: number, config: VendorEmailConfig) => {
         setEmailConfig(prev => ({ ...prev, [vendorId]: config }));
     }, []);
 
-    const handlePerVendorEmailToggle = useCallback((vendorId: string, checked: boolean) => {
+    const handlePerVendorEmailToggle = useCallback((vendorId: number, checked: boolean) => {
         setEmailConfig(prev => ({
             ...prev,
             [vendorId]: { ...prev[vendorId], sendEmail: checked },

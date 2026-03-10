@@ -7,7 +7,7 @@ import type { WarehouseMaster } from '@/modules/master-data/types/master-data-ty
 interface Props {
     isOpen: boolean;
     onClose: () => void;
-    editId?: string | null;
+    editId?: number | null;
     initialData?: WarehouseMaster | null;
     onSuccess?: () => void;
 }

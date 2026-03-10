@@ -12,7 +12,7 @@ export const projectSchema = z.object({
     project_code: z.string().min(1, 'กรุณากรอกรหัสโครงการ'),
     project_name: z.string().min(1, 'กรุณากรอกชื่อโครงการ'),
     description: z.string(),
-    cost_center_id: z.string().min(1, 'กรุณาเลือกศูนย์ต้นทุน'),
+    cost_center_id: z.coerce.number().min(1, 'กรุณาเลือกศูนย์ต้นทุน'),
     budget_amount: z.number().min(0, 'งบประมาณต้องไม่ต่ำกว่า 0'),
     start_date: z.string().min(1, 'กรุณาระบุวันที่เริ่มโครงการ'),
     end_date: z.string().min(1, 'กรุณาระบุวันที่สิ้นสุดโครงการ'),
@@ -26,7 +26,7 @@ const initialFormData: ProjectFormData = {
     project_code: '',
     project_name: '',
     description: '',
-    cost_center_id: '',
+    cost_center_id: 0,
     budget_amount: 0,
     start_date: new Date().toISOString().split('T')[0],
     end_date: '',
@@ -34,7 +34,7 @@ const initialFormData: ProjectFormData = {
     is_active: true,
 };
 
-export function useProjectForm(editId: string | null, initialData?: Project | null, onSuccess?: () => void) {
+export function useProjectForm(editId: number | null, initialData?: Project | null, onSuccess?: () => void) {
     const { confirm } = useConfirmation();
     const queryClient = useQueryClient();
 

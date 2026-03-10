@@ -8,10 +8,10 @@ import { applyClientFilters, applyClientPagination, extractArrayFromResponse } f
 
 const ENDPOINTS = {
   list: '/rfq',
-  detail: (id: string) => `/rfq/${id}`,
+  detail: (id: number) => `/rfq/${id}`,
   create: '/rfq',
-  addVendors: (id: string) => `/rfq/${id}/vendors`,
-  sendToVendors: (id: string) => `/rfq/${id}/send`,
+  addVendors: (id: number) => `/rfq/${id}/vendors`,
+  sendToVendors: (id: number) => `/rfq/${id}/send`,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -52,7 +52,8 @@ export interface RFQLineDTO {
  *
  *  🚫 FORBIDDEN (will cause 400):
  *    vendor_ids, rfqVendorIds, isMulticurrency,
- *    rfq_no, pr_no, pr_tax_code_id, pr_tax_rate, vendors
+ *    rfq_no, pr_no, pr_tax_code_id, pr_tax_rate, vendors,
+ *    purpose, project_id (confirmed via backend error 2026-03-10)
  *
  *  🎯 THE DOUBLE REQUESTER STRIKE — Backend requires BOTH simultaneously:
  *    ✅ requested_by_user_id: number (employee ID, NOT empty)
@@ -74,13 +75,12 @@ export interface RFQCreateDTO {
   // 🚫 vendor_ids: REMOVED — backend rejects this property entirely
   rfqLines: RFQLineDTO[];
   pr_id?: number;
-  project_id?: number;
+  // ❌ project_id — backend rejects
+  // ❌ purpose    — backend rejects
   receive_location?: string;
   payment_term_hint?: string;
   incoterm?: string;
-  purpose?: string;
   cost_center_id?: number;
-  project_id_ref?: number;
 }
 
 export const RFQService = {
@@ -115,7 +115,7 @@ export const RFQService = {
     return applyClientPagination<RFQHeader>(allItems, page, limit);
   },
 
-  getById: async (id: string): Promise<RFQDetailResponse> => {
+  getById: async (id: number): Promise<RFQDetailResponse> => {
     logger.info(`[RFQService] Fetching RFQ Detail: ${id}`);
     return await api.get<RFQDetailResponse>(ENDPOINTS.detail(id));
   },
@@ -135,10 +135,10 @@ export const RFQService = {
     }
   },
 
-  update: async (id: string, payload: Partial<RFQCreateDTO>): Promise<SuccessResponse> => {
+  update: async (id: number, payload: Partial<RFQCreateDTO>): Promise<SuccessResponse> => {
     logger.info(`[RFQService] Updating RFQ: ${id}`);
     try {
-      return await api.put<SuccessResponse>(ENDPOINTS.detail(id), payload);
+      return await api.patch<SuccessResponse>(ENDPOINTS.detail(id), payload);
     } catch (error) {
       const errorMessage = extractErrorMessage(error);
       logger.error('💥 [RFQService] Backend Rejected RFQ Update:', errorMessage);
@@ -146,7 +146,7 @@ export const RFQService = {
     }
   },
 
-  delete: async (id: string): Promise<SuccessResponse> => {
+  delete: async (id: number): Promise<SuccessResponse> => {
     logger.info(`[RFQService] Deleting RFQ: ${id}`);
     return await api.delete<SuccessResponse>(ENDPOINTS.detail(id));
   },
@@ -160,7 +160,7 @@ export const RFQService = {
    *    a POST /rfq/:id/vendors endpoint that accepts { vendor_ids: number[] }.
    *    Vendors can still be associated later via sendToVendors().
    */
-  addVendorsToRFQ: async (rfqId: string, vendorIds: number[]): Promise<SuccessResponse> => {
+  addVendorsToRFQ: async (rfqId: number, vendorIds: number[]): Promise<SuccessResponse> => {
     logger.info(`[RFQService] Step 2: Adding vendors to RFQ ${rfqId}`, { vendorIds });
     try {
       return await api.post<SuccessResponse>(ENDPOINTS.addVendors(rfqId), { vendor_ids: vendorIds });
@@ -172,7 +172,7 @@ export const RFQService = {
     }
   },
 
-  sendToVendors: async (rfqId: string, vendorIds: string[], methods?: string[]): Promise<SuccessResponse> => {
+  sendToVendors: async (rfqId: number, vendorIds: number[], methods?: string[]): Promise<SuccessResponse> => {
     logger.info(`[RFQService] Sending RFQ ${rfqId} to vendors`, { methods });
     return await api.post<SuccessResponse>(ENDPOINTS.sendToVendors(rfqId), { vendor_ids: vendorIds, methods });
   }

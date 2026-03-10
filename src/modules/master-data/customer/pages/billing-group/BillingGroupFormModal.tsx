@@ -7,7 +7,7 @@ import { styles } from '@/shared/constants/styles';
 interface BillingGroupFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  id?: string;
+  id?: number;
   initialData?: CustomerBillingGroup | null;
   onSuccess?: () => void;
 }

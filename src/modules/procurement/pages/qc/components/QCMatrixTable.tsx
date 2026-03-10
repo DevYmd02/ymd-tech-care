@@ -5,8 +5,8 @@ import type { MatrixRow, VendorTotal } from '../hooks/useQCMatrix';
 interface QCMatrixTableProps {
   matrixData: MatrixRow[];
   vendorTotals: VendorTotal[];
-  onSelectWinner: (item_code: string, vq_id: string) => void;
-  onSelectAllForVendor: (vq_id: string) => void;
+  onSelectWinner: (item_code: string, vq_id: number) => void;
+  onSelectAllForVendor: (vq_id: number) => void;
   onOpenProductSearch?: (item_code: string) => void;
 }
 

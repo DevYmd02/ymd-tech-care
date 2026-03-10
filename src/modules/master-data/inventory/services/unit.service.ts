@@ -13,7 +13,7 @@ function mapUomToUnit(uom: Record<string, unknown>): UnitListItem {
   return {
     ...(uom as unknown as UnitListItem),
     // Map backend → frontend field names with safe fallbacks
-    unit_id: (uom.unit_id as string) || String(uom.uom_id || ''),
+    unit_id: (uom.unit_id as number) || Number(uom.uom_id || 0),
     unit_code: (uom.unit_code as string) || (uom.uom_code as string) || '',
     unit_name: (uom.unit_name as string) || (uom.uom_name as string) || '',
     unit_name_en: (uom.unit_name_en as string) || (uom.uom_nameeng as string) || '',
@@ -61,7 +61,7 @@ export const UnitService = {
     }
   },
 
-  get: async (id: string): Promise<UnitListItem | null> => {
+  get: async (id: number): Promise<UnitListItem | null> => {
     if (USE_MOCK) return mockUnits.find(u => u.unit_id === id) || null;
     try {
       const raw = await api.get<UnitListItem>(`/uom/${id}`);
@@ -86,7 +86,7 @@ export const UnitService = {
     }
   },
 
-  update: async (id: string, data: Partial<UnitUpdateRequest>): Promise<{ success: boolean; data?: UnitListItem; message?: string }> => {
+  update: async (id: number, data: Partial<UnitUpdateRequest>): Promise<{ success: boolean; data?: UnitListItem; message?: string }> => {
     if (USE_MOCK) {
         return { success: true, message: 'Mock Update Success' };
     }
@@ -98,7 +98,7 @@ export const UnitService = {
     }
   },
 
-  delete: async (id: string): Promise<boolean> => {
+  delete: async (id: number): Promise<boolean> => {
     if (USE_MOCK) return true;
     try {
       await api.delete<boolean>(`/uom/${id}`);
@@ -109,7 +109,7 @@ export const UnitService = {
     }
   },
 
-  toggleStatus: async (id: string, isActive: boolean): Promise<{ success: boolean; message?: string }> => {
+  toggleStatus: async (id: number, isActive: boolean): Promise<{ success: boolean; message?: string }> => {
     if (USE_MOCK) {
       const unit = mockUnits.find(u => u.unit_id === id);
       if (unit) unit.is_active = isActive;

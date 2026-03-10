@@ -16,7 +16,7 @@ import { useCustomerForm } from '@customer/hooks/useCustomerForm';
 interface CustomerFormModalProps {
     isOpen: boolean;
     onClose: () => void;
-    id?: string; // Standardized to 'id'
+    id?: number; // Standardized to 'id'
     initialData?: CustomerMaster | null;
     onSuccess?: () => void;
 }

@@ -10,7 +10,7 @@ import { DialogFormLayout } from '@ui';
 interface Props { 
     isOpen: boolean; 
     onClose: () => void; 
-    editId?: string | null;
+    editId?: number | null;
     onSuccess?: () => void;
 }
 
@@ -21,7 +21,7 @@ export function ItemTypeFormModal({ isOpen, onClose, editId, onSuccess }: Props)
     useEffect(() => {
         if (isOpen) {
             if (editId) {
-                const existing = mockItemTypes.find(i => i.item_type_id === editId);
+                const existing = mockItemTypes.find(i => Number(i.item_type_id) === Number(editId));
                 if (existing) {
                     setFormData({
                         itemTypeCode: existing.item_type_code,

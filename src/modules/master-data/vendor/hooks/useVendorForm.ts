@@ -17,13 +17,13 @@ import {
     toVendorCreateRequest,
 } from '../types/vendor-types';
 import { logger } from '@/shared/utils/logger';
-import { VendorSchema } from '../types/vendor-schemas';
+import { VendorSchema, type VendorSchemaType } from '../types/vendor-schemas';
 
 
 interface UseVendorFormProps {
     isOpen: boolean;
     onClose: () => void;
-    vendorId?: string;
+    vendorId?: number;
     initialData?: VendorMaster | null;
     onSuccess?: () => void;
     predictedVendorId?: string;
@@ -50,7 +50,7 @@ export function useVendorForm({
         reset, 
         getValues,
         formState: { errors, isSubmitting } 
-    } = useForm<VendorFormData>({
+    } = useForm<VendorSchemaType>({
         resolver: zodResolver(VendorSchema),
         defaultValues: initialVendorFormData,
         mode: 'onChange' 
@@ -132,7 +132,7 @@ export function useVendorForm({
     const addBankAccount = () => {
         const current = getValues('bankAccounts') || [];
         const newAccount: VendorBankAccount = {
-            id: Date.now().toString(),
+            id: Date.now(),
             bankName: '',
             branchName: '',
             accountNumber: '',
@@ -144,12 +144,12 @@ export function useVendorForm({
         setValue('bankAccounts', [...current, newAccount], { shouldDirty: true });
     };
 
-    const removeBankAccount = (id: string) => {
+    const removeBankAccount = (id: number) => {
         const current = getValues('bankAccounts');
         setValue('bankAccounts', current.filter(acc => acc.id !== id), { shouldDirty: true });
     };
 
-    const updateBankAccount = (id: string, field: keyof VendorBankAccount, value: string | boolean) => {
+    const updateBankAccount = (id: number, field: keyof VendorBankAccount, value: string | boolean) => {
         let finalValue = value;
         if (typeof value === 'string' && field === 'accountNumber') {
             finalValue = value.replace(/[^0-9]/g, '');
@@ -165,7 +165,7 @@ export function useVendorForm({
     const addContactPerson = () => {
         const current = getValues('additionalContacts') || [];
         const newContact: VendorContactPerson = {
-            id: Date.now().toString(),
+            id: Date.now(),
             name: '',
             position: '',
             phone: '',
@@ -176,12 +176,12 @@ export function useVendorForm({
         setValue('additionalContacts', [...current, newContact], { shouldDirty: true });
     };
 
-    const removeContactPerson = (id: string) => {
+    const removeContactPerson = (id: number) => {
         const current = getValues('additionalContacts');
         setValue('additionalContacts', current.filter(c => c.id !== id), { shouldDirty: true });
     };
 
-    const updateContactPerson = (id: string, field: keyof VendorContactPerson, value: string | boolean) => {
+    const updateContactPerson = (id: number, field: keyof VendorContactPerson, value: string | boolean) => {
         let finalValue = value;
         if (typeof value === 'string' && (field === 'phone' || field === 'mobile')) {
             finalValue = value.replace(/[^0-9]/g, '');
@@ -195,7 +195,7 @@ export function useVendorForm({
     };
 
     const addAddress = () => {
-        const id = Date.now().toString();
+        const id = Date.now();
         const current = getValues('addresses') || [];
         const newAddress: VendorAddressFormItem = {
             id,
@@ -253,14 +253,14 @@ export function useVendorForm({
             if (registeredAddr) {
                 current[1] = {
                     ...registeredAddr,
-                    id: current[1]?.id || 'contact-addr',
+                    id: current[1]?.id || Date.now() + 1,
                     isMain: false,
                     addressType: 'CONTACT'
                 };
             }
         } else {
             current[1] = {
-                id: current[1]?.id || 'contact-addr',
+                id: current[1]?.id || Date.now() + 1,
                 address: '',
                 subDistrict: '',
                 district: '',
@@ -284,7 +284,7 @@ export function useVendorForm({
         setValue('creditLimit', value, { shouldDirty: true, shouldValidate: true });
     };
 
-    const onSubmit: SubmitHandler<VendorFormData> = async (data) => {
+    const onSubmit: SubmitHandler<VendorSchemaType> = async (data) => {
         const isConfirmed = await confirm({
             title: headerTitle === 'แก้ไขข้อมูลเจ้าหนี้' ? 'ยืนยันการแก้ไข' : 'ยืนยันการบันทึก',
             description: headerTitle === 'แก้ไขข้อมูลเจ้าหนี้' 
@@ -428,7 +428,7 @@ export function useVendorForm({
         formData,
         setFormData: (data: VendorFormData | ((prev: VendorFormData) => VendorFormData)) => {
             if (typeof data === 'function') {
-                const current = getValues();
+                const current = getValues() as VendorFormData;
                 const newData = data(current);
                 reset(newData);
             } else {

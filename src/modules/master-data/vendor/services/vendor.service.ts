@@ -11,7 +11,6 @@ import type {
 import { logger } from '@/shared/utils/logger';
 import { 
   MOCK_VENDORS, 
-  getVendorById as mockGetById,
 } from '@/modules/master-data/vendor/mocks/vendorMocks';
 import type { SuccessResponse } from '@/shared/types/api-response.types';
 
@@ -57,9 +56,9 @@ export const VendorService = {
     }
   },
 
-  getById: async (vendorId: string): Promise<VendorMaster | null> => {
+  getById: async (vendorId: number): Promise<VendorMaster | null> => {
     if (USE_MOCK) {
-      const mockVendor = localVendorData.find(v => v.vendor_id === vendorId) || mockGetById(vendorId);
+      const mockVendor = localVendorData.find((v: VendorMaster) => v.vendor_id === vendorId);
       if (mockVendor) {
         logger.info(`🎭 [Mock Mode] Serving Vendor Detail: ${vendorId}`);
         return mockVendor;
@@ -108,16 +107,17 @@ export const VendorService = {
         logger.info('🎭 [Mock Mode] Creating Vendor', data);
         
         // Simulate Backend ID Generation
-        const newId = `VEN-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(localVendorData.length + 1).padStart(4, '0')}`;
+        const newId = Math.floor(Math.random() * 100000);
         
         // Map Request to Master (Mock)
         const newVendor: VendorMaster = {
-            vendor_id: newId, // Use as ID for mock
-            vendor_code: data.vendor_code || newId,
+            id: newId,
+            vendor_id: newId, 
+            vendor_code: data.vendor_code || String(newId),
             vendor_name: data.vendor_name,
             vendor_name_en: data.vendor_name_en,
             tax_id: data.tax_id,
-            vendor_type: data.vendor_type_id === '2' ? 'INDIVIDUAL' : 'COMPANY', // Simple logic
+            vendor_type: data.vendor_type_id === 2 ? 'INDIVIDUAL' : 'COMPANY', // Simple logic
             status: 'ACTIVE',
             vendor_type_id: data.vendor_type_id,
             vendor_group_id: data.vendor_group_id,
@@ -126,8 +126,8 @@ export const VendorService = {
             // Map Relations
             // Map Relations
             addresses: data.addresses.map((a, i) => ({
-                vendor_address_id: String(Math.floor(Math.random() * 10000)),
-                vendor_id: '0', // Mock doesn't care
+                vendor_address_id: Math.floor(Math.random() * 10000),
+                vendor_id: newId,
                 address_type: a.address_type || (i === 0 ? 'REGISTERED' : 'CONTACT'),
                 address: a.address || '',
                 district: a.district,
@@ -143,8 +143,8 @@ export const VendorService = {
             })),
             
             contacts: data.contacts.map((c) => ({
-                contact_id: String(Math.floor(Math.random() * 10000)),
-                vendor_id: '0',
+                contact_id: Math.floor(Math.random() * 10000),
+                vendor_id: newId,
                 contact_name: c.contact_name || '',
                 position: c.position,
                 phone: c.phone,
@@ -154,8 +154,8 @@ export const VendorService = {
             })),
 
             bank_accounts: data.bank_accounts.map((b) => ({
-                bank_account_id: String(Math.floor(Math.random() * 10000)),
-                vendor_id: '0',
+                bank_account_id: Math.floor(Math.random() * 10000),
+                vendor_id: newId,
                 bank_name: b.bank_name || '',
                 bank_branch: b.bank_branch,
                 account_no: b.account_no || '',
@@ -171,7 +171,7 @@ export const VendorService = {
             email: data.email,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-            updated_by: 'Admin',
+            updated_by: 1, // System Admin ID
             
             is_blocked: false,
             is_on_hold: false,
@@ -193,7 +193,7 @@ export const VendorService = {
     }
   },
 
-  update: async (vendorId: string, data: Partial<VendorCreateRequest>): Promise<VendorResponse> => {
+  update: async (vendorId: number, data: Partial<VendorCreateRequest>): Promise<VendorResponse> => {
     if (USE_MOCK) {
         const index = localVendorData.findIndex(v => v.vendor_id === vendorId);
         if (index !== -1) {
@@ -217,11 +217,11 @@ export const VendorService = {
     }
   },
 
-  delete: async (vendorId: string): Promise<{ success: boolean; message?: string }> => {
+  delete: async (vendorId: number): Promise<{ success: boolean; message?: string }> => {
     if (USE_MOCK) {
         const initialLength = localVendorData.length;
         // Simulate Dependency Conflict for vendor-001 (Safe Delete Test)
-        if (vendorId === 'vendor-001') {
+        if (vendorId === 1) {
              return { 
                  success: false, 
                  message: 'ไม่สามารถลบผู้ขายรายนี้ได้ เนื่องจากมีการใช้งานอยู่ในเอกสาร PR/PO (Simulation)' 
@@ -243,7 +243,7 @@ export const VendorService = {
     }
   },
 
-  block: async (vendorId: string, remark?: string): Promise<VendorResponse> => {
+  block: async (vendorId: number, remark?: string): Promise<VendorResponse> => {
     if (USE_MOCK) {
         const index = localVendorData.findIndex(v => v.vendor_id === vendorId);
         if (index !== -1) {
@@ -260,7 +260,7 @@ export const VendorService = {
     }
   },
 
-  unblock: async (vendorId: string): Promise<VendorResponse> => {
+  unblock: async (vendorId: number): Promise<VendorResponse> => {
     try {
       return await api.post<VendorResponse>(`/vendors/${vendorId}/unblock`);
     } catch (error) {
@@ -269,7 +269,7 @@ export const VendorService = {
     }
   },
 
-  setOnHold: async (vendorId: string, onHold: boolean): Promise<VendorResponse> => {
+  setOnHold: async (vendorId: number, onHold: boolean): Promise<VendorResponse> => {
     try {
       return await api.post<VendorResponse>(`/vendors/${vendorId}/hold`, { on_hold: onHold });
     } catch (error) {
@@ -278,7 +278,7 @@ export const VendorService = {
     }
   },
 
-  updateStatus: async (vendorId: string, status: string): Promise<VendorResponse> => {
+  updateStatus: async (vendorId: number, status: string): Promise<VendorResponse> => {
     if (USE_MOCK) {
         const index = localVendorData.findIndex(v => v.vendor_id === vendorId);
         if (index !== -1) {

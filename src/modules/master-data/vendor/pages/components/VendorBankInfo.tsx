@@ -5,15 +5,15 @@ import { BANK_ACCOUNT_TYPES } from '@/modules/master-data/vendor/constants/vendo
 import type { VendorFormData, VendorBankAccount } from '@/modules/master-data/vendor/types/vendor-types';
 
 interface VendorBankInfoProps {
-    formData: VendorFormData;
+    formData: Partial<VendorFormData>;
     addBankAccount: () => void;
-    removeBankAccount: (id: string) => void;
-    updateBankAccount: (id: string, field: keyof VendorBankAccount, value: string | boolean) => void;
+    removeBankAccount: (id: number) => void;
+    updateBankAccount: (id: number, field: keyof VendorBankAccount, value: string | boolean) => void;
     errors: { [key: string]: string };
 }
 
 export const VendorBankInfo: React.FC<VendorBankInfoProps> = ({
-    formData,
+    formData = {},
     addBankAccount,
     removeBankAccount,
     updateBankAccount,
@@ -36,7 +36,7 @@ export const VendorBankInfo: React.FC<VendorBankInfoProps> = ({
             </div>
             
             <div className="space-y-4">
-                {formData.bankAccounts.map((account, index) => (
+                {formData.bankAccounts?.map((account, index) => (
                     <div key={account.id} className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm relative">
                         <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-3 block">บัญชีที่ {index + 1}</h4>
                         
@@ -125,7 +125,7 @@ export const VendorBankInfo: React.FC<VendorBankInfoProps> = ({
                         </div>
                     </div>
                 ))}
-                {formData.bankAccounts.length === 0 && (
+                {(formData.bankAccounts?.length || 0) === 0 && (
                     <div className="text-center py-6 bg-gray-100 dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 text-gray-500">
                         ยังไม่มีบัญชีธนาคาร
                     </div>

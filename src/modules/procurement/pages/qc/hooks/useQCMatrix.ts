@@ -15,11 +15,11 @@ export interface MatrixRow {
   description: string;
   qty: number;
   unit: string;
-  vendors: Record<string, MatrixVendorCell>; // vq_id is the key
+  vendors: Record<number, MatrixVendorCell>; // vq_id is the key
 }
 
 export interface VendorTotal {
-  vq_id: string;
+  vq_id: number;
   vendor_name: string;
   grand_total: number;
   winning_total: number;
@@ -32,7 +32,7 @@ export function useQCMatrix(
   productMappings: Record<string, ProductLookup> = {}
 ) {
   // winningMap: { [item_code]: vq_id }
-  const [winningMap, setWinningMap] = useState<Record<string, string>>({});
+  const [winningMap, setWinningMap] = useState<Record<string, number>>({});
 
   // Phase 2: Matrix Transformation Engine
   const matrixData = useMemo((): MatrixRow[] => {
@@ -62,7 +62,7 @@ export function useQCMatrix(
   }, [rfqLines, selectedVQs, winningMap, productMappings]);
 
   // Phase 3: State Management & Interactivity
-  const handleSelectWinner = useCallback((item_id: string, vq_id: string) => {
+  const handleSelectWinner = useCallback((item_id: string, vq_id: number) => {
     setWinningMap(prev => {
         const currentWinner = prev[item_id];
         const newMap = { ...prev };
@@ -75,7 +75,7 @@ export function useQCMatrix(
     });
   }, []);
 
-  const handleSelectAllForVendor = useCallback((vq_id: string) => {
+  const handleSelectAllForVendor = useCallback((vq_id: number) => {
     setWinningMap(prev => {
         const newWinningMap = { ...prev };
         let anyChanged = false;
@@ -108,7 +108,7 @@ export function useQCMatrix(
   }, [rfqLines, selectedVQs]);
 
   // Phase 4: Real-time Calculators
-  const getVendorGrandTotal = useCallback((vq_id: string) => {
+  const getVendorGrandTotal = useCallback((vq_id: number) => {
     const vq = selectedVQs.find(v => v.quotation_id === vq_id);
     if (!vq) return 0;
     return rfqLines.reduce((sum, rfqLine) => {

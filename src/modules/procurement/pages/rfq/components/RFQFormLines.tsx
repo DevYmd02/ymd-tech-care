@@ -1,31 +1,35 @@
-import { FileText, Trash2, RefreshCcw } from 'lucide-react';
-import type { RFQLineFormData } from '@/modules/procurement/types';
+import React from 'react';
+import { FileText, Trash2, Plus, RefreshCcw } from 'lucide-react';
+import { useFormContext, useFieldArray } from 'react-hook-form';
+import type { RFQFormValues } from '@/modules/procurement/schemas/rfq-schemas';
 
 interface RFQFormLinesProps {
-    lines: RFQLineFormData[];
-    handleLineChange: (index: number, field: keyof RFQLineFormData, value: string | number) => void;
-    handleRemoveLine: (index: number) => void;
-    handleResetLines?: () => void;
-    originalLinesCount?: number;
     readOnly?: boolean;
     isInviteMode?: boolean;
+    onAddLine: () => void;
+    onRemoveLine: (index: number) => void;
+    onResetLines?: () => void;
 }
 
 export const RFQFormLines: React.FC<RFQFormLinesProps> = ({
-    lines,
-    handleLineChange,
-    handleRemoveLine,
-    handleResetLines,
-    originalLinesCount = 0,
     readOnly,
-    isInviteMode
+    isInviteMode,
+    onAddLine,
+    onRemoveLine,
+    onResetLines
 }) => {
+    const { register, control, formState: { errors } } = useFormContext<RFQFormValues>();
+    const { fields } = useFieldArray({
+        control,
+        name: 'rfqLines'
+    });
 
     const isLocked = readOnly || isInviteMode;
 
     // Locked styles for inherited PR data
     const lockedInputCenter = "w-full h-8 px-3 text-sm bg-gray-100/70 dark:bg-gray-800/70 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded text-center cursor-not-allowed font-medium disabled:opacity-70 disabled:cursor-not-allowed";
     const lockedInputLeft = "w-full h-8 px-3 text-sm bg-gray-100/70 dark:bg-gray-800/70 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded text-left cursor-not-allowed font-medium disabled:opacity-70 disabled:cursor-not-allowed";
+    const editableInput = "w-full h-8 px-3 text-sm bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-purple-500 focus:outline-none transition-all dark:text-white";
 
     return (
         <div className="p-4" id="lines">
@@ -35,15 +39,28 @@ export const RFQFormLines: React.FC<RFQFormLinesProps> = ({
                     <span className="font-semibold">รายการสินค้า - Line RFQ (Request for Quotation)</span>
                 </div>
 
-                {!isLocked && handleResetLines && originalLinesCount > 0 && lines.length < originalLinesCount && (
-                    <button
-                        type="button"
-                        onClick={handleResetLines}
-                        className="flex items-center gap-1.5 px-3 py-1 text-xs font-medium text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-md hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-colors shadow-sm"
-                    >
-                        <RefreshCcw size={13} className="animate-in fade-in zoom-in duration-300" />
-                        <span>คืนค่าจาก PR ต้นทาง ({originalLinesCount} รายการ)</span>
-                    </button>
+                {!isLocked && (
+                    <div className="flex items-center gap-2">
+                        {onResetLines && (
+                            <button
+                                type="button"
+                                onClick={onResetLines}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-300 rounded-md text-sm font-medium transition-colors border border-gray-300 dark:border-gray-600"
+                                title="คืนค่ารายการดั้งเดิมจาก PR"
+                            >
+                                <RefreshCcw size={16} />
+                                <span>คืนค่าจาก PR</span>
+                            </button>
+                        )}
+                        <button
+                            type="button"
+                            onClick={onAddLine}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-md text-sm font-medium transition-colors shadow-sm"
+                        >
+                            <Plus size={16} />
+                            <span>เพิ่มรายการ</span>
+                        </button>
+                    </div>
                 )}
             </div>
 
@@ -62,48 +79,42 @@ export const RFQFormLines: React.FC<RFQFormLinesProps> = ({
                         </tr>
                     </thead>
                     <tbody>
-                        {lines.map((line, index) => (
-                            <tr key={index} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                        {fields.map((field, index) => (
+                            <tr key={field.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
                                 <td className="px-3 py-1.5 text-center text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 font-medium border-r border-gray-200 dark:border-gray-700">
-                                    {line.line_no}
+                                    {index + 1}
                                 </td>
                                 <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">
-                                    <div className="flex items-center gap-1">
-                                        <input
-                                            type="text"
-                                            value={line.item_code}
-                                            readOnly
-                                            disabled={isLocked}
-                                            className={lockedInputCenter}
-                                            placeholder="รหัสสินค้า"
-                                        />
-                                    </div>
+                                    <input
+                                        type="text"
+                                        {...register(`rfqLines.${index}.item_code`)}
+                                        readOnly
+                                        className={lockedInputCenter}
+                                        placeholder="รหัสสินค้า"
+                                    />
                                 </td>
                                 <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">
                                     <input
                                         type="text"
                                         placeholder="รายละเอียดสินค้า"
-                                        value={line.description}
+                                        {...register(`rfqLines.${index}.description`)}
                                         readOnly
-                                        disabled={isLocked}
                                         className={lockedInputLeft}
                                     />
                                 </td>
                                 <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700 p-1">
                                     <input
-                                        type="text"
-                                        value={line.qty || 0}
+                                        type="number"
+                                        {...register(`rfqLines.${index}.qty`, { valueAsNumber: true })}
                                         readOnly
-                                        disabled={isLocked}
                                         className={lockedInputCenter}
                                     />
                                 </td>
                                 <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700 p-1">
                                     <input
                                         type="text"
-                                        value={line.uom}
+                                        {...register(`rfqLines.${index}.uom`)}
                                         readOnly
-                                        disabled={isLocked}
                                         className={lockedInputCenter}
                                         placeholder="หน่วย"
                                     />
@@ -111,19 +122,17 @@ export const RFQFormLines: React.FC<RFQFormLinesProps> = ({
                                 <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">
                                     <input
                                         type="date"
-                                        value={line.target_delivery_date}
-                                        onChange={(e) => handleLineChange(index, 'target_delivery_date', e.target.value)}
-                                        className="w-full px-2 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-400 disabled:opacity-70 disabled:cursor-not-allowed"
+                                        {...register(`rfqLines.${index}.target_delivery_date`)}
+                                        className={`${editableInput} ${errors.rfqLines?.[index]?.target_delivery_date ? 'border-red-500' : ''}`}
                                         disabled={isLocked}
                                     />
                                 </td>
                                 <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">
                                     <input
                                         type="text"
-                                        placeholder="หมายเหตุถึงผู้ประกาศ"
-                                        value={line.note_to_vendor}
-                                        onChange={(e) => handleLineChange(index, 'note_to_vendor', e.target.value)}
-                                        className="w-full px-2 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-400 disabled:opacity-70 disabled:cursor-not-allowed"
+                                        placeholder="หมายเหตุถึงผู้ขาย"
+                                        {...register(`rfqLines.${index}.note_to_vendor`)}
+                                        className={isLocked ? lockedInputLeft : editableInput}
                                         disabled={isLocked}
                                     />
                                 </td>
@@ -132,14 +141,14 @@ export const RFQFormLines: React.FC<RFQFormLinesProps> = ({
                                         <div className="flex items-center justify-center gap-1">
                                             <button 
                                                 type="button" 
-                                                onClick={() => handleRemoveLine(index)} 
-                                                disabled={lines.length === 1}
+                                                onClick={() => onRemoveLine(index)} 
+                                                disabled={fields.length === 1}
                                                 className={`p-1.5 rounded transition-colors ${
-                                                    lines.length === 1 
+                                                    fields.length === 1 
                                                     ? 'text-gray-300 cursor-not-allowed' 
                                                     : 'text-rose-500 hover:text-white hover:bg-rose-500'
                                                 }`}
-                                                title={lines.length === 1 ? "ต้องมีอย่างน้อย 1 รายการ" : "ลบรายการนี้ออกจากการขอใบเสนอราคา (ไม่ลบออกจาก PR)"}
+                                                title={fields.length === 1 ? "ต้องมีอย่างน้อย 1 รายการ" : "ลบรายการนี้"}
                                             >
                                                 <Trash2 size={16} />
                                             </button>

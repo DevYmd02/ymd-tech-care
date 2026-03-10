@@ -50,7 +50,7 @@ export default function VendorTypeList() {
     const [allVendorTypes, setAllVendorTypes] = useState<VendorTypeMaster[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editingId, setEditingId] = useState<number | null>(null);
 
     // ==================== FILTER CONFIG ====================
     const filterConfig: FilterFieldConfig<keyof typeof filters>[] = useMemo(() => [
@@ -132,12 +132,12 @@ export default function VendorTypeList() {
         setIsModalOpen(true);
     };
 
-    const handleEdit = (id: string) => {
+    const handleEdit = (id: number) => {
         setEditingId(id);
         setIsModalOpen(true);
     };
 
-    const handleDelete = useCallback((id: string) => {
+    const handleDelete = useCallback((id: number) => {
         if (confirm('คุณต้องการลบข้อมูลประเภทเจ้าหนี้นี้หรือไม่?')) {
             VendorTypeService.delete(id).then(() => fetchData());
         }
