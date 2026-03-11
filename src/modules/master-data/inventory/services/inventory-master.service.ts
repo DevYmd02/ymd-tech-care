@@ -24,6 +24,7 @@ import type { ListResponse } from '@/shared/types/common-api.types';
 import type { ItemGroupFormValues } from '../hooks/useItemGroupForm';
 import type { BrandFormValues } from '../hooks/useBrandForm';
 import type { PatternFormValues } from '../hooks/usePatternForm';
+import type { DesignFormValues } from '../hooks/useDesignForm';
 import {
     MOCK_ITEM_GROUPS, MOCK_BRANDS, MOCK_PATTERNS, MOCK_DESIGNS, MOCK_GRADES,
     MOCK_MODELS, MOCK_SIZES, MOCK_COLORS, MOCK_LOCATIONS, MOCK_SHELVES, MOCK_LOT_NUMBERS
@@ -188,7 +189,7 @@ function createInventoryService<T extends IBaseMaster, F = any>(
 type ItemGroupService = ReturnType<typeof createInventoryService<ItemGroup, ItemGroupFormValues>>;
 type BrandService = ReturnType<typeof createInventoryService<Brand>>;
 type PatternService = ReturnType<typeof createInventoryService<Pattern>>;
-type DesignService = ReturnType<typeof createInventoryService<Design>>;
+type DesignService = ReturnType<typeof createInventoryService<Design, DesignFormValues>>;
 type GradeService = ReturnType<typeof createInventoryService<Grade>>;
 type ModelService = ReturnType<typeof createInventoryService<Model>>;
 type SizeService = ReturnType<typeof createInventoryService<Size>>;
@@ -310,9 +311,9 @@ export const PatternService = createInventoryService<Pattern, PatternFormValues>
 });
 
 // Design Service
-export const DesignService = createInventoryService<Design, any>({
+export const DesignService = createInventoryService<Design, DesignFormValues>({
     entityName: 'Design',
-    apiPath: '/designs',
+    apiPath: '/item-design',
     idField: 'design_id',
     mockData: MOCK_DESIGNS,
     mapToEntity: (data, id, now) => ({
@@ -324,6 +325,22 @@ export const DesignService = createInventoryService<Design, any>({
         is_active: data.isActive,
         created_at: now,
         updated_at: now,
+    }),
+    mapFromApi: (item: any): Design => ({
+        id: item.item_design_id,
+        design_id: item.item_design_id,
+        code: item.item_design_code,
+        name_th: item.item_design_name,
+        name_en: item.item_design_nameeng || '',
+        is_active: item.is_active,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+    }),
+    mapToApi: (data: DesignFormValues) => ({
+        item_design_code: data.code?.trim(),
+        item_design_name: data.nameTh?.trim(),
+        item_design_nameeng: data.nameEn?.trim() || '',
+        is_active: data.isActive,
     }),
 });
 
