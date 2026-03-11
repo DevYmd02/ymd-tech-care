@@ -5,16 +5,6 @@ import type { SuccessResponse, PaginatedListResponse } from '@/shared/types/api-
 import type { ProductCategoryListItem, ProductCategoryCreateRequest, ProductCategoryUpdateRequest } from '@/modules/master-data/types/master-data-types';
 import { type TableFilters } from '@/shared/hooks/useTableFilters';
 
-// Backend Response Interface
-interface BackendProductCategory {
-  item_category_id: number;
-  item_category_code: string;
-  item_category_name: string;
-  item_category_nameeng?: string;
-  is_active: boolean;
-  created_at?: string;
-}
-
 function mapToProductCategory(item: any): ProductCategoryListItem {
   return {
     id: item.item_category_id || item.category_id,
