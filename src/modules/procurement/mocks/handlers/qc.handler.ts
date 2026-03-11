@@ -88,9 +88,9 @@ export const setupQCHandlers = (mock: MockAdapter) => {
     // Read-only lookup: cache winner display info on the QC document for list-page speed
     const targetVQ = MOCK_VQS.find(vq => sanitizeId(vq.quotation_id) === found.winning_vq_id);
     if (targetVQ) {
-        found.lowest_price = targetVQ.total_amount || 0;
+        found.lowest_price = Number(targetVQ.total_amount) || 0;
         found.lowest_bidder_name = targetVQ.vendor_name || '';
-        found.winning_vendor_id = targetVQ.vendor_id; // Added for the Smart Intercept Hydration
+        found.winning_vendor_id = targetVQ.vendor_id ?? undefined; // Fixed: Use ?? undefined
     }
 
     return [200, { success: true, qc_id: found.qc_id }];

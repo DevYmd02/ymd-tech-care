@@ -34,7 +34,8 @@ const ENDPOINTS = {
 // ═══════════════════════════════════════════════════════════════════════════════
 const KNOWN_DTO_FIELDS = new Set([
   'pr_no', 'pr_date', 'need_by_date', 'requester_user_id', 'branch_id',
-  'project_id', 'pr_tax_code_id', 'remark', 'status',
+  'project_id', 'cost_center_id', 'preferred_vendor_id', // 🎯 FIX: Added for explicit recognition
+  'pr_tax_code_id', 'remark', 'status',
   'pr_base_currency_code', 'pr_quote_currency_code',
   'pr_exchange_rate', 'pr_exchange_rate_date',
   'pr_discount_raw', 'payment_term_days', 'credit_days',
@@ -45,7 +46,8 @@ const KNOWN_DTO_FIELDS = new Set([
 // NOTE: 'remark' is NOT allowed on lines per backend DTO (whitelist: true + forbidNonWhitelisted: true)
 const KNOWN_LINE_DTO_FIELDS = new Set([
   'line', 'item_id', 'qty', 'est_unit_price', 'uom_id',
-  'line_discount_raw',
+  'line_discount_raw', 'line_no', 'description', 'warehouse_id',
+  'location', 'required_receipt_type'
 ]);
 
 export const PRService = {

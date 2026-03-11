@@ -237,6 +237,8 @@ export interface CreatePRPayload {
     requester_user_id: number;      // INTEGER
     branch_id: number;              // INTEGER
     project_id?: number;            // INTEGER
+    cost_center_id?: number;        // INTEGER (Added for persistence)
+    preferred_vendor_id?: number;   // INTEGER (Added for persistence)
     pr_tax_code_id?: number;        // INTEGER
     remark?: string;                // Free text (optional)
     status: PRStatus;                 // "PENDING" | "DRAFT" (Literal union)

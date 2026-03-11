@@ -7,7 +7,7 @@
  */
 
 import { useState, useMemo, useCallback } from 'react';
-import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/react-query';
 import { FileText, Eye, Send, Edit, Search, Plus } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { PageListLayout, SmartTable, RFQStatusBadge, FilterField, MobileListCard, MobileListContainer } from '@ui';
@@ -15,12 +15,10 @@ import { useTableFilters } from '@/shared/hooks';
 import { createColumnHelper } from '@tanstack/react-table';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { logger } from '@/shared/utils/logger';
-
 // Services & Types
 import { RFQService } from '@/modules/procurement/services';
-import type { RFQFilterCriteria, RFQHeader, RFQStatus } from '@/modules/procurement/types';
+import type { RFQFilterCriteria, RFQHeader, RFQStatus, SendRFQToVendorPayload } from '@/modules/procurement/types';
 import { RFQFormModal, RFQSendConfirmModal } from './components';
-import type { VendorEmailConfig } from './components/RFQSendConfirmModal';
 
 
 
@@ -87,6 +85,7 @@ export default function RFQListPage() {
         placeholderData: keepPreviousData,
     });
 
+    const queryClient = useQueryClient();
     const { toast } = useToast();
 
     // Modal States (RFQ Form only — QT modal removed, belongs to QT page)
@@ -139,33 +138,38 @@ export default function RFQListPage() {
     }, []);
 
     const executeSendRFQ = async (
-        selectedVendorIds: number[],
-        methods: string[],
-        emailConfig: Record<string, VendorEmailConfig>
+        batchData: Array<{ rfqVendorId: number; payload: SendRFQToVendorPayload }>
     ) => {
-        if (!sendingRFQ) return;
-
-        // Build structured payload — ready for backend
-        const emailPayload = selectedVendorIds.map(vendorId => ({
-            vendor_id: vendorId,
-            dispatch_method: 'EMAIL' as const,
-            to_emails: emailConfig[vendorId]?.to ?? [],
-            cc_emails: emailConfig[vendorId]?.cc ?? [],
-        }));
-
-        logger.info('[RFQListPage] executeSendRFQ payload:', { vendorIds: selectedVendorIds, methods, emailPayload });
+        if (!sendingRFQ || batchData.length === 0) return;
 
         setIsSending(true);
         try {
-            // Use sendToVendors API with filtered vendor IDs and methods (Clean Payload)
-            await RFQService.sendToVendors(sendingRFQ.rfq_id, selectedVendorIds, methods);
+            logger.info(`[RFQListPage] Executing batch send for ${batchData.length} vendors`);
+            
+            // Execute multiple PATCH calls in parallel
+            // We use allSettled to ensure we try all even if some fail
+            const results = await Promise.allSettled(
+                batchData.map(item => RFQService.sendToVendor(item.rfqVendorId, item.payload))
+            );
 
-            toast(`ส่ง RFQ ${sendingRFQ.rfq_no} ไปยังผู้ขาย ${selectedVendorIds.length} ราย เรียบร้อยแล้ว`, 'success');
-            handleApplyFilters();
+            const failures = results.filter(r => r.status === 'rejected');
+            if (failures.length > 0) {
+                logger.error('[RFQListPage] Some RFQ sends failed:', failures);
+                toast(`ส่งสำเร็จ ${batchData.length - failures.length} รายการ, ล้มเหลว ${failures.length} รายการ`, 'error');
+            } else {
+                toast(`ส่ง RFQ ${sendingRFQ.rfq_no} เรียบร้อยแล้วทุกรายการ`, 'success');
+            }
+
+            // Always invalidate to get fresh X/Y counters
+            // Delay 100ms to ensure backend consistency (Gold Standard pattern)
+            setTimeout(() => {
+                queryClient.invalidateQueries({ queryKey: ['rfqs'] });
+                handleApplyFilters();
+            }, 100);
             setSendingRFQ(null);
         } catch (error) {
-            toast('เกิดข้อผิดพลาดในการส่ง RFQ', 'error');
-            logger.error('[RFQListPage] executeSendRFQ error:', error);
+            logger.error('[RFQListPage] executeSendRFQ unexpected error:', error);
+            toast('เกิดข้อผิดพลาดไม่คาดคิดในการส่ง RFQ', 'error');
         } finally {
             setIsSending(false);
         }
@@ -274,14 +278,17 @@ export default function RFQListPage() {
         }),
         columnHelper.display({
             id: 'vendors',
-            header: () => <div className="flex justify-center items-center w-full h-full">VENDORS</div>,
-            cell: (info) => {
-                const sentCount = info.row.original.sent_vendors_count || 0;
-                const total = info.row.original.vendor_count || 0;
+            header: () => <div className="flex justify-center items-center w-full h-full">ผู้ขาย (ส่ง/ทั้งหมด)</div>,
+            cell: ({ row }) => {
+                const item = row.original;
+                // UI Counters from Backend (X / Y)
+                const sentCount = item.vendor_sent ?? item.sent_vendors_count ?? 0;
+                const total = item.vendor_total ?? item.vendor_count ?? 0;
+
                 return (
                     <div className="flex flex-col items-center justify-center h-full py-2">
                         <span className="text-gray-700 dark:text-gray-300 font-medium leading-none mb-0.5">
-                            {`${sentCount}/${total}`}
+                            {`${sentCount} / ${total}`}
                         </span>
                     </div>
                 );
@@ -292,11 +299,29 @@ export default function RFQListPage() {
         columnHelper.accessor(row => row.status, {
             id: 'status',
             header: () => <div className="flex justify-center items-center w-full h-full">สถานะ</div>,
-            cell: (info) => (
-                <div className="flex justify-center items-center h-full py-2">
-                    <RFQStatusBadge status={info.getValue()} />
-                </div>
-            ),
+            cell: (info) => {
+                const item = info.row.original;
+                
+                let dynamicStatus = info.getValue() as string;
+                
+                // Override status dynamically based on X/Y logic from backend
+                const sentCount = item.vendor_sent ?? 0;
+                const total = item.vendor_total ?? 0;
+                
+                if (total > 0 && sentCount === total) {
+                    dynamicStatus = 'SENT';
+                } else if (total > 0 && sentCount > 0 && sentCount < total) {
+                    // Partially sent can still show DRAFT or maybe a new "PARTIAL" if we had one
+                    // but according to prompt: SENT if sent===total, else DRAFT
+                    dynamicStatus = 'DRAFT';
+                }
+
+                return (
+                    <div className="flex justify-center items-center h-full py-2">
+                        <RFQStatusBadge status={dynamicStatus as RFQStatus} />
+                    </div>
+                );
+            },
             size: 100,
             enableSorting: false,
         }),
@@ -505,7 +530,16 @@ export default function RFQListPage() {
                                                 ? `${u.employee_firstname_th} ${u.employee_lastname_th}`.trim()
                                                 : (item.created_by_name || item.creator_name || '-');
                                         })() },
-                                        { label: 'Vendors:', value: `${item.sent_vendors_count || 0}/${item.vendor_count || 0} ราย` },
+                                        { label: 'Vendors:', value: (() => {
+                                            const rfqVendors = item.rfqVendors || item.vendors;
+                                            let sentCount = item.sent_vendors_count || 0;
+                                            let total = item._count?.rfqVendors ?? item.vendor_count ?? 0;
+                                            if (Array.isArray(rfqVendors)) {
+                                                total = rfqVendors.length;
+                                                sentCount = rfqVendors.filter(v => v.status === 'SENT').length;
+                                            }
+                                            return `${sentCount} / ${total} ราย`;
+                                        })() },
                                         ...(item.quotation_due_date ? [{ label: 'ครบกำหนด:', value: formatThaiDate(item.quotation_due_date) }] : []),
                                     ]}
                                     actions={
@@ -558,6 +592,7 @@ export default function RFQListPage() {
                     readOnly={isReadOnly}
                     isInviteMode={isInviteMode}
                     onSuccess={() => {
+                        queryClient.invalidateQueries({ queryKey: ['rfqs'] });
                         handleApplyFilters();
                         handleCloseModal();
                     }}

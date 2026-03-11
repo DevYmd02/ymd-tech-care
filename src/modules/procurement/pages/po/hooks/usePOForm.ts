@@ -101,9 +101,9 @@ export const usePOForm = ({
         queryFn: async () => {
             if (!initialValues?.qc_id || !initialValues?.vendor_id) return null;
             const res = await VQService.getList({});
-            const sourceVQ = res.data.find(vq => vq.qc_id === initialValues.qc_id && vq.vendor_id === initialValues.vendor_id);
-            if (sourceVQ?.quotation_id) {
-                return await VQService.getById(sourceVQ.quotation_id);
+            const sourceVQ = res.data.find(vq => (vq.qc_id === initialValues.qc_id || vq.vq_header_id === initialValues.qc_id) && vq.vendor_id === initialValues.vendor_id);
+            if (sourceVQ?.vq_header_id || sourceVQ?.quotation_id) {
+                return await VQService.getById(sourceVQ.vq_header_id || sourceVQ.quotation_id!);
             }
             return null;
         },
@@ -162,11 +162,11 @@ export const usePOForm = ({
                 branch_id:            initialValues?.branch_id            ?? undefined,
                 ship_to_warehouse_id: initialValues?.ship_to_warehouse_id ?? undefined,
                 is_multicurrency:     false,
-                currency_code:        (inheritedVQ?.currency || initialValues?.currency_code) ?? 'THB',
+                currency_code:        (inheritedVQ?.base_currency_code || inheritedVQ?.currency || initialValues?.currency_code) ?? 'THB',
                 target_currency:      undefined,
                 exchange_rate_date:   new Date().toISOString().split('T')[0],
-                exchange_rate:        (inheritedVQ?.exchange_rate || initialValues?.exchange_rate) ?? 1,
-                payment_term_days:    (inheritedVQ?.payment_term_days || initialValues?.payment_term_days) ?? 30,
+                exchange_rate:        Number(inheritedVQ?.exchange_rate || initialValues?.exchange_rate || 1),
+                payment_term_days:    Number(inheritedVQ?.payment_term_days || initialValues?.payment_term_days || 30),
                 delivery_date:        initialValues?.delivery_date ?? '',
                 remarks:              initialValues?.remarks ?? '',
                 lines:                initialLines,

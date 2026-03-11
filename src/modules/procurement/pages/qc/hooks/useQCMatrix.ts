@@ -49,11 +49,11 @@ export function useQCMatrix(
 
       selectedVQs.forEach(vq => {
         const vqLine = vq.lines?.find(l => l.item_code === rfqLine.item_code);
-        row.vendors[vq.quotation_id] = {
+        row.vendors[(vq.quotation_id || vq.vq_header_id) as number] = {
           unit_price: vqLine?.unit_price || 0,
           total_price: vqLine?.net_amount || 0,
           is_no_quote: !!vqLine?.no_quote || (!vqLine),
-          is_winner: winningMap[rfqLine.item_code] === vq.quotation_id
+          is_winner: rfqLine.item_code ? winningMap[rfqLine.item_code] === (vq.quotation_id || vq.vq_header_id) : false
         };
       });
 
@@ -80,7 +80,7 @@ export function useQCMatrix(
         const newWinningMap = { ...prev };
         let anyChanged = false;
 
-        const vq = selectedVQs.find(v => v.quotation_id === vq_id);
+        const vq = selectedVQs.find(v => (v.quotation_id || v.vq_header_id) === vq_id);
         if (!vq) return prev;
 
         rfqLines.forEach(rfqLine => {
@@ -109,7 +109,7 @@ export function useQCMatrix(
 
   // Phase 4: Real-time Calculators
   const getVendorGrandTotal = useCallback((vq_id: number) => {
-    const vq = selectedVQs.find(v => v.quotation_id === vq_id);
+    const vq = selectedVQs.find(v => (v.quotation_id || v.vq_header_id) === vq_id);
     if (!vq) return 0;
     return rfqLines.reduce((sum, rfqLine) => {
        const vqLine = vq.lines?.find(l => l.item_code === rfqLine.item_code);
@@ -123,9 +123,9 @@ export function useQCMatrix(
   const getWinningTotal = useCallback(() => {
     let total = 0;
     rfqLines.forEach(rfqLine => {
-        const vq_id = winningMap[rfqLine.item_code];
+        const vq_id = rfqLine.item_code ? winningMap[rfqLine.item_code] : undefined;
         if (vq_id) {
-            const vq = selectedVQs.find(v => v.quotation_id === vq_id);
+            const vq = selectedVQs.find(v => (v.quotation_id || v.vq_header_id) === vq_id);
             const vqLine = vq?.lines?.find(l => l.item_code === rfqLine.item_code);
             if (vqLine && !vqLine.no_quote) {
                 total += (vqLine.net_amount || 0);
@@ -146,7 +146,7 @@ export function useQCMatrix(
         const vqLine = vq.lines?.find(l => l.item_code === rfqLine.item_code);
         if (vqLine && !vqLine.no_quote) {
            total_biddable_items++;
-           if (winningMap[rfqLine.item_code] === vq.quotation_id) {
+           if (winningMap[rfqLine.item_code] === (vq.quotation_id || vq.vq_header_id)) {
              winning_total += vqLine.net_amount || 0;
              won_items_count++;
            }
@@ -154,9 +154,9 @@ export function useQCMatrix(
       });
 
       return {
-        vq_id: vq.quotation_id,
+        vq_id: (vq.quotation_id || vq.vq_header_id) as number,
         vendor_name: vq.vendor_name || 'Unknown',
-        grand_total: getVendorGrandTotal(vq.quotation_id),
+        grand_total: vq.vq_header_id || vq.quotation_id ? getVendorGrandTotal((vq.vq_header_id || vq.quotation_id) as number) : 0,
         winning_total,
         is_all_won: total_biddable_items > 0 && won_items_count === total_biddable_items
       };

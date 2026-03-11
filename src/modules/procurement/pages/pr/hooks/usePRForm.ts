@@ -624,6 +624,9 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
   };
 
   const handleSaveData = async (data: PRFormData) => {
+    // 🔍 [DIAGNOSTIC]: Capture raw RHF data before transformation
+    logger.debug("🔍 [usePRForm] handleSaveData CAPTURED DATA:", JSON.parse(JSON.stringify(data)));
+    
     setIsActionLoading(true);
     try {
         // Smart Clean-up: Only filter out rows that are 100% empty.
@@ -683,6 +686,14 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
         const validLines = activeLines
           .filter((line: PRLineFormData) => line.item_id && line.item_id !== 0 && Number(line.qty) > 0);
 
+        // ─── DIAGNOSTIC: Log raw data from RHF before any mapping
+        logger.debug('🧪 [usePRForm] RAW RHF DATA:', {
+          vendor_quote_no: data.vendor_quote_no,
+          preferred_vendor_id: data.preferred_vendor_id,
+          cost_center_id: data.cost_center_id,
+          purpose: data.purpose
+        });
+
         // ═══════════════════════════════════════════════════════════════════════
         // POSTMAN-SYNCED PAYLOAD — Every key matches the Postman golden response
         // ═══════════════════════════════════════════════════════════════════════
@@ -694,9 +705,15 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
           branch_id: Number(data.branch_id || 1),
           requester_user_id: Number(data.requester_user_id || 2),
           project_id: data.project_id ? Number(data.project_id) : 1,
+          
+          // 🎯 PRO-TIP FIX: Map cost_center_id & preferred_vendor_id with explicit casting
+          cost_center_id: data.cost_center_id ? Number(data.cost_center_id) : undefined,
+          preferred_vendor_id: data.preferred_vendor_id ? Number(data.preferred_vendor_id) : undefined,
+          
           pr_base_currency_code: data.pr_base_currency_code || 'THB',
           pr_quote_currency_code: data.pr_quote_currency_code || 'THB', // MUST BE THB, NOT USD
-          pr_exchange_rate: Number(data.pr_exchange_rate || 1), // Exchange rate must be 1 for THB-to-THB
+          pr_exchange_rate: Number(Number(data.pr_exchange_rate || 1).toFixed(4)), // Enforce max 4 decimal places
+
           pr_exchange_rate_date: data.pr_exchange_rate_date || data.pr_date,
           pr_discount_raw: String(data.pr_discount_raw || '0'),
           payment_term_days: Number(data.payment_term_days || 30),
@@ -729,51 +746,65 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
           })),
         };
 
+        // ─── DIAGNOSTIC: Log payload after mapping but before stripping
+        logger.debug('🧪 [usePRForm] MAPPED PAYLOAD (Before Strip):', {
+          vendor_quote_no: payload.vendor_quote_no,
+          preferred_vendor_id: payload.preferred_vendor_id,
+          cost_center_id: payload.cost_center_id,
+        });
+
         // ═══════════════════════════════════════════════════════════════════════
-        // 🛡️ SAFETY NET — Strip any forbidden fields that could leak through
-        // TypeScript type widening. LAST LINE OF DEFENSE before wire.
+        // 🚀 WHITELIST-ONLY PAYLOAD RECONSTRUCTION (FINAL WIRE-READY)
         // ═══════════════════════════════════════════════════════════════════════
-        // ═══════════════════════════════════════════════════════════════════
-        // 🛡️ FORBIDDEN FIELDS — Fields the backend DTO rejects (400).
-        // NOTE: 'requester_name' was REMOVED from this list intentionally.
-        //       The backend accepts it and stores it in pr_header.requester_name.
-        //       Without it, the List Page shows "ไม่ระบุ" for all new PRs.
-        // ═══════════════════════════════════════════════════════════════════
-        const FORBIDDEN_FIELDS = [
-          'purpose', 'cost_center_id', 'department_id',
-          'isMulticurrency', 'preparer_name',
-          'vendor_name', 'is_on_hold',
-          'cancelflag', 'total_amount', 'pr_sub_total',
-          'pr_discount_amount', 'pr_tax_amount', 'pr_tax_rate',
-          'warehouse_id', 'preferred_vendor_id',
-        ] as const;
+        // Instead of 'delete' logic which is prone to accidental stripping,
+        // we rebuild the object with ONLY what the backend explicitly expects.
+        // ═══════════════════════════════════════════════════════════════════════
+        const wirePayload: CreatePRPayload = {
+          // ── HEADER ──
+          ...(payload.pr_no && { pr_no: payload.pr_no }),
+          pr_date: payload.pr_date,
+          need_by_date: payload.need_by_date,
+          requester_user_id: payload.requester_user_id,
+          branch_id: payload.branch_id,
+          project_id: payload.project_id,
+          cost_center_id: payload.cost_center_id,
+          preferred_vendor_id: payload.preferred_vendor_id,
+          pr_tax_code_id: payload.pr_tax_code_id,
+          remark: payload.remark,
+          status: payload.status,
+          
+          // ── CURRENCY & TERMS ──
+          pr_base_currency_code: payload.pr_base_currency_code,
+          pr_quote_currency_code: payload.pr_quote_currency_code,
+          pr_exchange_rate: payload.pr_exchange_rate,
+          pr_exchange_rate_date: payload.pr_exchange_rate_date,
+          pr_discount_raw: payload.pr_discount_raw,
+          payment_term_days: payload.payment_term_days,
+          credit_days: payload.credit_days,
+          vendor_quote_no: payload.vendor_quote_no,
+          shipping_method: payload.shipping_method,
+          
+          // ── HYDRATION HELPERS ──
+          delivery_date: payload.delivery_date,
+          requester_name: payload.requester_name,
+          
+          // ── LINES (Whitelist-only Re-mapping) ──
+          lines: payload.lines.map((line, index) => ({
+            line_no: index + 1,
+            item_id: line.item_id,
+            description: line.description,
+            warehouse_id: line.warehouse_id,
+            location: line.location,
+            qty: Number(Number(line.qty || 0).toFixed(4)),
+            est_unit_price: Number(Number(line.est_unit_price || 0).toFixed(4)),
+            uom_id: line.uom_id,
+            required_receipt_type: line.required_receipt_type,
+            line_discount_raw: line.line_discount_raw,
+          })),
+        };
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const safePayload = payload as Record<string, any>;
-        for (const field of FORBIDDEN_FIELDS) {
-          if (field in safePayload) {
-            logger.warn(`🚫 [usePRForm] STRIPPED forbidden field from payload: "${field}"`);
-            delete safePayload[field];
-          }
-        }
-
-        // Strip forbidden fields from each line item too
-        const LINE_FORBIDDEN_FIELDS = [
-          'line', 'item_code', 'item_name', 'uom', 'est_amount', 'discount',
-          'needed_date', 'preferred_vendor_id', '_standard_cost', '_item_vendor_id',
-          'location', 'warehouse_id', 'description', 'remark',
-        ] as const;
-
-        for (const line of payload.lines) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const safeLine = line as Record<string, any>;
-          for (const field of LINE_FORBIDDEN_FIELDS) {
-            if (field in safeLine) {
-              logger.warn(`🚫 [usePRForm] STRIPPED forbidden line field: "${field}"`);
-              delete safeLine[field];
-            }
-          }
-        }
+        // Use the wirePayload for the actual transmission
+        const finalPayload = wirePayload;
 
         // ─── DIAGNOSTIC: Print Postman-synced payload before send ────────────
         logger.debug('🔧 [usePRForm] POSTMAN-SYNCED PAYLOAD (wire-ready):', JSON.stringify(payload, null, 2));
@@ -804,7 +835,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
         // ─────────────────────────────────────────────────────────────────────
         
         if (isEditMode && id) {
-            await updatePR(id, payload);
+            await updatePR(id, finalPayload);
             await confirm({
                 title: 'แก้ไขสำเร็จ',
                 description: isOnHold ? 'บันทึกเป็นแบบร่างแล้ว (On Hold)' : 'ส่งอนุมัติเรียบร้อยแล้ว',
@@ -813,7 +844,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
             onSuccess?.(); onClose();
             queryClient.invalidateQueries({ queryKey: ['prs'] });
         } else {
-            const { newPR } = await createPRMutation.mutateAsync(payload);
+            const { newPR } = await createPRMutation.mutateAsync(finalPayload);
             const displayNo = newPR.pr_no.startsWith('DRAFT-TEMP') ? 'รอรันเลข (NEW)' : newPR.pr_no;
             await confirm({
                 title: isOnHold ? 'บันทึกแบบร่างสำเร็จ!' : 'สร้างใบขอซื้อสำเร็จ!',

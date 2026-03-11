@@ -106,7 +106,20 @@ export const useVQForm = (
         setIsDataLoading(true);
         // --- VIEW / EDIT MODE: Fetch Existing VQ ---
         VQService.getById(vqId).then(async (data: VQListItem) => {
-            setVqStatus(data.status);
+            // @Agent_Data_Mapper: Add safety net mapping for legacy fields
+            const mappedData: VQListItem = {
+                ...data,
+                quotation_id: data.vq_header_id,
+                quotation_no: data.vq_no,
+                total_amount: Number(data.base_total_amount) || 0,
+                currency: data.base_currency_code,
+                isMulticurrency: Boolean(data.base_currency_code && data.base_currency_code !== 'THB'),
+                valid_until: data.quotation_expiry_date,
+                remark: data.remarks,
+                qc_id: data.qc_id // maintain what's there
+            };
+
+            setVqStatus(mappedData.status);
 
             // SPECIAL CASE: If PENDING, we must pull LATEST lines from the referenced RFQ
             let linesToMap: QuotationLine[] = data.lines || [];
@@ -132,27 +145,27 @@ export const useVQForm = (
             }
 
             reset({
-                quotation_no: data.quotation_no || '',
-                quotation_date: data.quotation_date?.split('T')[0] || new Date().toISOString().split('T')[0],
-                vendor_id: Number(data.vendor_id || 0),
-                vendor_name: data.vendor_name,
-                contact_person: data.contact_person,
-                contact_email: data.contact_email,
-                contact_phone: data.contact_phone,
-                currency: data.currency || 'THB',
-                isMulticurrency: data.isMulticurrency || false,
-                exchange_rate_date: data.exchange_rate_date,
-                target_currency: data.target_currency,
-                exchange_rate: data.exchange_rate || 1,
-                payment_term_days: data.payment_term_days || 0,
-                lead_time_days: data.lead_time_days || 0,
-                valid_until: data.valid_until?.split('T')[0] || '', // Match schema: string
-                qc_id: Number(data.qc_id || 0),
-                rfq_id: Number(data.rfq_id || 0),
-                rfq_no: data.rfq_no,
-                remark: data.remarks,
-                discount_raw: data.discount_raw || '',
-                tax_code_id: Number(data.tax_code_id || 0),
+                quotation_no: mappedData.quotation_no || '',
+                quotation_date: mappedData.quotation_date?.split('T')[0] || new Date().toISOString().split('T')[0],
+                vendor_id: Number(mappedData.vendor_id || 0),
+                vendor_name: mappedData.vendor_name,
+                contact_person: mappedData.contact_person,
+                contact_email: mappedData.contact_email,
+                contact_phone: mappedData.contact_phone,
+                currency: mappedData.currency || 'THB',
+                isMulticurrency: mappedData.isMulticurrency || false,
+                exchange_rate_date: mappedData.exchange_rate_date,
+                target_currency: mappedData.target_currency,
+                exchange_rate: Number(mappedData.exchange_rate) || 1,
+                payment_term_days: mappedData.payment_term_days || 0,
+                lead_time_days: mappedData.lead_time_days || 0,
+                valid_until: mappedData.valid_until?.split('T')[0] || '', // Match schema: string
+                qc_id: Number(mappedData.qc_id || 0),
+                rfq_id: Number(mappedData.rfq_id || 0),
+                rfq_no: mappedData.rfq_no || '',
+                remark: mappedData.remarks,
+                discount_raw: mappedData.discount_raw || '',
+                tax_code_id: Number(mappedData.tax_code_id || 0),
                 lines: linesToMap.map((l: QuotationLine) => ({
                     item_code: l.item_code || '',
                     item_name: l.item_name || '',
@@ -289,7 +302,11 @@ export const useVQForm = (
       // 🎯 STRICT TYPE CASTING: IDs are already numbers thanks to Zod coercion
       const payload: VQCreateData = {
           ...data,
-          total_amount: totals.grandTotal,
+          base_total_amount: totals.grandTotal,
+          total_amount: totals.grandTotal, // backward compatibility
+          base_currency_code: data.currency || 'THB',
+          quotation_expiry_date: data.valid_until,
+          remarks: data.remark,
           status: 'RECORDED',
           lines: data.lines
             .filter(l => l.item_code)

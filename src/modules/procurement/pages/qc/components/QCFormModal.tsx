@@ -147,7 +147,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
   const { confirm } = useConfirmation();
 
   const selectedVQs = useMemo(() => {
-    return availableVQs.filter((vq) => selectedVQIds.includes(vq.quotation_id));
+    return availableVQs.filter((vq) => selectedVQIds.includes(vq.vq_header_id || vq.quotation_id!));
   }, [availableVQs, selectedVQIds]);
 
   const toggleVQSelection = (vId: number) => {
@@ -179,7 +179,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
     if (rfqId && vqList?.data && vqList.data.length > 0) {
       const recordedVQs = vqList.data
         .filter((vq) => vq.status === 'RECORDED')
-        .map((vq) => vq.quotation_id);
+        .map((vq) => vq.vq_header_id || vq.quotation_id!);
       if (recordedVQs.length > 0) {
         setSelectedVQIds(recordedVQs);
       }
@@ -223,7 +223,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
   const minGrandTotal = useMemo(() => {
     if (selectedVQs.length === 0) return 0;
     const totals = selectedVQs
-      .map((vq) => vq.total_amount || 0)
+      .map((vq) => Number(vq.total_amount || vq.base_total_amount) || 0)
       .filter((t) => t > 0);
     return totals.length > 0 ? Math.min(...totals) : 0;
   }, [selectedVQs]);
@@ -237,7 +237,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
       return;
     }
 
-    const winnerVQ = selectedVQs.find((vq) => vq.quotation_id === winnerVQId);
+    const winnerVQ = selectedVQs.find((vq) => (vq.vq_header_id || vq.quotation_id) === winnerVQId);
     if (!winnerVQ) {
       toast.error('ไม่พบข้อมูลผู้เสนอราคาที่เลือก');
       return;
@@ -459,7 +459,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => setSelectedVQIds(availableVQs.map((v) => v.quotation_id))}
+                    onClick={() => setSelectedVQIds(availableVQs.map((v) => (v.vq_header_id || v.quotation_id) as number))}
                     className="text-xs text-blue-600 hover:underline font-medium"
                   >
                     เลือกทั้งหมด
@@ -492,11 +492,11 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {availableVQs.map((vq) => {
-                  const isSelected = selectedVQIds.includes(vq.quotation_id);
+                  const isSelected = selectedVQIds.includes((vq.vq_header_id || vq.quotation_id) as number);
                   return (
                     <div
                       key={vq.quotation_id}
-                      onClick={() => toggleVQSelection(vq.quotation_id)}
+                      onClick={() => toggleVQSelection((vq.vq_header_id || vq.quotation_id) as number)}
                       className={`p-3 rounded-lg border cursor-pointer transition-all flex items-start gap-3 ${
                         isSelected
                           ? 'bg-blue-50 border-blue-500 dark:bg-blue-900/20 dark:border-blue-500'
@@ -516,7 +516,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
                         <div className="text-xs text-gray-500 mt-1 flex justify-between">
                           <span>{vq.quotation_no || 'ยังไม่มีเลขที่'}</span>
                           <span className="font-medium text-gray-700 dark:text-gray-300">
-                            {vq.total_amount?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            {Number(vq.total_amount || vq.base_total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                           </span>
                         </div>
                       </div>
@@ -542,9 +542,9 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {selectedVQs.map((vq) => {
-                  const grandTotal = vq.total_amount || 0;
+                  const grandTotal = Number(vq.total_amount || vq.base_total_amount) || 0;
                   const isLowest = grandTotal > 0 && grandTotal === minGrandTotal;
-                  const isWinner = winnerVQId === vq.quotation_id;
+                  const isWinner = winnerVQId === (vq.vq_header_id || vq.quotation_id);
 
                   return (
                     <div
@@ -600,7 +600,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
                       {/* Select Winner Button */}
                       <button
                         type="button"
-                        onClick={() => setWinnerVQId(isWinner ? null : vq.quotation_id)}
+                        onClick={() => setWinnerVQId(winnerVQId === (vq.vq_header_id || vq.quotation_id) ? null : (vq.vq_header_id || vq.quotation_id) as number)}
                         className={`w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold transition-all ${
                           isWinner
                             ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm'
@@ -626,7 +626,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
 
               {/* Summary Footer */}
               {winnerVQId && (() => {
-                const winnerVQ = selectedVQs.find((v) => v.quotation_id === winnerVQId);
+                const winnerVQ = selectedVQs.find((v) => (v.vq_header_id || v.quotation_id) === winnerVQId);
                 return winnerVQ ? (
                   <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
                     <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
@@ -638,7 +638,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
                     <div className="text-right">
                       <div className="text-xs text-gray-500">ราคารวม</div>
                       <div className="text-lg font-black text-emerald-600 dark:text-emerald-400">
-                        {(winnerVQ.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} บาท
+                        {Number(winnerVQ.total_amount || winnerVQ.base_total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} บาท
                       </div>
                     </div>
                   </div>

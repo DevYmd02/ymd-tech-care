@@ -1,6 +1,6 @@
 import api from '@/core/api/api';
 import { USE_MOCK } from '@/core/api/api';
-import type { RFQHeader, RFQListResponse, RFQFilterCriteria, RFQDetailResponse } from '@/modules/procurement/types';
+import type { RFQHeader, RFQListResponse, RFQFilterCriteria, RFQDetailResponse, SendRFQToVendorPayload } from '@/modules/procurement/types';
 import { logger } from '@/shared/utils/logger';
 import type { SuccessResponse } from '@/shared/types/api-response.types';
 import { extractErrorMessage } from '@/core/api/api';
@@ -11,7 +11,7 @@ const ENDPOINTS = {
   detail: (id: number) => `/rfq/${id}`,
   create: '/rfq',
   addVendors: (id: number) => `/rfq/${id}/vendors`,
-  sendToVendors: (id: number) => `/rfq/${id}/send`,
+  sendToVendor: (rfqVendorId: number) => `/rfq/${rfqVendorId}/send-to-vendor`,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -73,6 +73,7 @@ export interface RFQCreateDTO {
   rfq_exchange_rate_date: string;
   remarks: string;
   // 🚫 vendor_ids: REMOVED — backend rejects this property entirely
+  rfqVendors?: { vendor_id: number }[]; // newly supported direct binding
   rfqLines: RFQLineDTO[];
   pr_id?: number;
   // ❌ project_id — backend rejects
@@ -172,8 +173,8 @@ export const RFQService = {
     }
   },
 
-  sendToVendors: async (rfqId: number, vendorIds: number[], methods?: string[]): Promise<SuccessResponse> => {
-    logger.info(`[RFQService] Sending RFQ ${rfqId} to vendors`, { methods });
-    return await api.post<SuccessResponse>(ENDPOINTS.sendToVendors(rfqId), { vendor_ids: vendorIds, methods });
+  sendToVendor: async (rfqVendorId: number, payload: SendRFQToVendorPayload): Promise<SuccessResponse> => {
+    logger.info(`[RFQService] Sending RFQ via vendor row ${rfqVendorId} using PATCH ${ENDPOINTS.sendToVendor(rfqVendorId)}`, payload);
+    return await api.patch<SuccessResponse>(ENDPOINTS.sendToVendor(rfqVendorId), payload);
   }
 };

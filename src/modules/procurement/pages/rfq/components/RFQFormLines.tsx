@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, Trash2, Plus, RefreshCcw } from 'lucide-react';
+import { FileText, Trash2, Plus } from 'lucide-react';
 import { useFormContext, useFieldArray } from 'react-hook-form';
 import type { RFQFormValues } from '@/modules/procurement/schemas/rfq-schemas';
 
@@ -8,7 +8,6 @@ interface RFQFormLinesProps {
     isInviteMode?: boolean;
     onAddLine: () => void;
     onRemoveLine: (index: number) => void;
-    onResetLines?: () => void;
 }
 
 export const RFQFormLines: React.FC<RFQFormLinesProps> = ({
@@ -16,7 +15,6 @@ export const RFQFormLines: React.FC<RFQFormLinesProps> = ({
     isInviteMode,
     onAddLine,
     onRemoveLine,
-    onResetLines
 }) => {
     const { register, control, formState: { errors } } = useFormContext<RFQFormValues>();
     const { fields } = useFieldArray({
@@ -41,17 +39,6 @@ export const RFQFormLines: React.FC<RFQFormLinesProps> = ({
 
                 {!isLocked && (
                     <div className="flex items-center gap-2">
-                        {onResetLines && (
-                            <button
-                                type="button"
-                                onClick={onResetLines}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-300 rounded-md text-sm font-medium transition-colors border border-gray-300 dark:border-gray-600"
-                                title="คืนค่ารายการดั้งเดิมจาก PR"
-                            >
-                                <RefreshCcw size={16} />
-                                <span>คืนค่าจาก PR</span>
-                            </button>
-                        )}
                         <button
                             type="button"
                             onClick={onAddLine}

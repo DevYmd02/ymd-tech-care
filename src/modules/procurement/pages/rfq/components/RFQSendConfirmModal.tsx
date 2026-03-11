@@ -10,10 +10,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Send, AlertTriangle, Users, Loader2, Mail, Printer } from 'lucide-react';
-import type { RFQHeader } from '@/modules/procurement/types';
+import type { RFQHeader, SendRFQToVendorPayload } from '@/modules/procurement/types';
 import { RFQService } from '@/modules/procurement/services/rfq.service';
 import { logger } from '@/shared/utils/logger';
 import { MultiEmailInput } from '@/shared/components/ui/inputs/MultiEmailInput';
+import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
 
 // ====================================================================================
 // TYPES
@@ -32,6 +33,7 @@ interface VendorDetailDisplay {
 export interface VendorEmailConfig {
     to: string[];
     cc: string[];
+    note: string;
     sendEmail: boolean;
 }
 
@@ -40,9 +42,7 @@ interface RFQSendConfirmModalProps {
     rfq: RFQHeader | null;
     onClose: () => void;
     onConfirm: (
-        selectedVendorIds: number[],
-        methods: string[],
-        emailConfig: Record<string, VendorEmailConfig>
+        batchData: Array<{ rfqVendorId: number; payload: SendRFQToVendorPayload }>
     ) => void;
     isLoading?: boolean;
 }
@@ -85,6 +85,10 @@ const VendorSmartCard: React.FC<VendorSmartCardProps> = ({
     );
     const handleCcChange = useCallback(
         (emails: string[]) => onEmailConfigChange({ ...emailConfig, cc: emails }),
+        [emailConfig, onEmailConfigChange]
+    );
+    const handleNoteChange = useCallback(
+        (e: React.ChangeEvent<HTMLTextAreaElement>) => onEmailConfigChange({ ...emailConfig, note: e.target.value }),
         [emailConfig, onEmailConfigChange]
     );
 
@@ -230,6 +234,17 @@ const VendorSmartCard: React.FC<VendorSmartCardProps> = ({
                                             placeholder="ระบุอีเมล CC (ถ้ามี)"
                                         />
                                     </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-1.5 tracking-wider uppercase">
+                                            Note (ข้อความถึงผู้ขาย)
+                                        </label>
+                                        <textarea
+                                            value={emailConfig.note}
+                                            onChange={handleNoteChange}
+                                            className="w-full min-h-[60px] p-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-gray-200 resize-y"
+                                            placeholder="พิมพ์ข้อความที่ต้องการส่งถึงผู้ขาย..."
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -274,7 +289,27 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
                 const response = await RFQService.getById(rfq.rfq_id);
                 if (cancelled) return;
 
-                const vendorList: VendorDetailDisplay[] = response.vendors.map(v => ({
+                const sourceVendors = response.rfqVendors || response.vendors || [];
+                
+                // HYDRATION: Fetch vendor identity details if missing from backend
+                const enhancedVendors = await Promise.all(sourceVendors.map(async (v) => {
+                    if (v.vendor_name && v.vendor_code) return v;
+                    try {
+                        const vendorDetail = await VendorService.getById(v.vendor_id);
+                        if (vendorDetail) {
+                            return {
+                                ...v,
+                                vendor_name: vendorDetail.vendor_name || v.vendor_name || '',
+                                vendor_code: vendorDetail.vendor_code || v.vendor_code || '',
+                            };
+                        }
+                    } catch {
+                        logger.warn('Failed to fetch vendor detail for id', v.vendor_id);
+                    }
+                    return v;
+                }));
+
+                const vendorList: VendorDetailDisplay[] = enhancedVendors.map(v => ({
                     rfq_vendor_id: v.rfq_vendor_id,
                     vendor_id: v.vendor_id,
                     vendor_name: v.vendor_name || '',
@@ -294,7 +329,8 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
                     initialConfig[v.vendor_id] = { 
                         to: safeEmail ? [safeEmail] : [], 
                         cc: [], 
-                        sendEmail: false 
+                        note: '',
+                        sendEmail: true // Default to true based on instructions
                     };
                 });
                 setEmailConfig(initialConfig);
@@ -319,10 +355,10 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
     }, []);
 
     const handleSelectAllVendors = () => {
-        const interactive = vendors.filter(v => v.status === 'PENDING');
+        const interactive = vendors.filter(v => v.status === 'PENDING' || v.status === 'WAITING' || v.status === 'DRAFT');
         const allSelected = interactive.every(v => selectedVendorIds.includes(v.vendor_id));
         if (allSelected) {
-            setSelectedVendorIds(vendors.filter(v => v.status !== 'PENDING').map(v => v.vendor_id));
+            setSelectedVendorIds(vendors.filter(v => v.status !== 'PENDING' && v.status !== 'WAITING' && v.status !== 'DRAFT').map(v => v.vendor_id));
         } else {
             setSelectedVendorIds(vendors.map(v => v.vendor_id));
         }
@@ -346,20 +382,31 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
     }, []);
 
     const handleConfirm = () => {
-        const newVendorIdsToSend = vendors
-            .filter(v => v.status === 'PENDING' && selectedVendorIds.includes(v.vendor_id))
-            .map(v => v.vendor_id);
+        // Collect selected vendors that are still interactive
+        const targetVendors = vendors.filter(v => 
+            (v.status === 'PENDING' || v.status === 'WAITING' || v.status === 'DRAFT') && 
+            selectedVendorIds.includes(v.vendor_id)
+        );
 
-        // Dynamic methods: if at least one selected vendor has email ON, include 'EMAIL'
-        const isAnyEmailEnabled = newVendorIdsToSend.some(id => emailConfig[id]?.sendEmail);
-        const dynamicMethods = isAnyEmailEnabled ? ['EMAIL'] : [];
+        // Transformation Rule (Mandatory): Email string to Array of Strings
+        const formatEmails = (emails: string[] | string) => {
+            if (Array.isArray(emails)) return emails.flatMap(e => e.split(',').map(s => s.trim())).filter(Boolean);
+            return (emails || '').split(',').map(s => s.trim()).filter(Boolean);
+        };
 
-        logger.info('[RFQSendConfirmModal] Confirm payload:', {
-            vendor_ids: newVendorIdsToSend,
-            methods: dynamicMethods,
-            emailConfig,
+        const batchData = targetVendors.map(v => {
+            const cfg = emailConfig[v.vendor_id];
+            return {
+                rfqVendorId: v.rfq_vendor_id,
+                payload: {
+                    to: formatEmails(cfg?.to || []),
+                    cc: formatEmails(cfg?.cc || [])
+                }
+            };
         });
-        onConfirm(newVendorIdsToSend, dynamicMethods, emailConfig);
+
+        logger.info('[RFQSendConfirmModal] Confirming batch send:', batchData);
+        onConfirm(batchData);
     };
 
     // ====================================================================================
@@ -367,8 +414,8 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
     // ====================================================================================
 
     const hasVendors = vendors.length > 0;
-    const isAllSentMode = vendors.length > 0 && vendors.every(v => v.status !== 'PENDING');
-    const newSelectedVendors = vendors.filter(v => v.status === 'PENDING' && selectedVendorIds.includes(v.vendor_id));
+    const isAllSentMode = vendors.length > 0 && vendors.every(v => v.status !== 'PENDING' && v.status !== 'WAITING' && v.status !== 'DRAFT');
+    const newSelectedVendors = vendors.filter(v => (v.status === 'PENDING' || v.status === 'WAITING' || v.status === 'DRAFT') && selectedVendorIds.includes(v.vendor_id));
 
     // Block confirm only if a selected vendor has email toggle ON and is missing a To address
     const hasEmptyToConfig = newSelectedVendors.some(v => {
@@ -464,14 +511,14 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
                                 <div className="flex flex-col gap-2">
                                     {vendors.map(vendor => {
                                         const isSelected = selectedVendorIds.includes(vendor.vendor_id);
-                                        const isLocked = vendor.status !== 'PENDING';
+                                        const isLocked = vendor.status !== 'PENDING' && vendor.status !== 'WAITING' && vendor.status !== 'DRAFT';
                                         return (
                                             <VendorSmartCard
                                                 key={vendor.vendor_id}
                                                 vendor={vendor}
                                                 isSelected={isSelected}
                                                 isLocked={isLocked}
-                                                emailConfig={emailConfig[vendor.vendor_id] ?? { to: [], cc: [], sendEmail: false }}
+                                                emailConfig={emailConfig[vendor.vendor_id] ?? { to: [], cc: [], note: '', sendEmail: true }}
                                                 onToggle={() => !isLocked && handleToggleVendor(vendor.vendor_id)}
                                                 onEmailToggle={checked => handlePerVendorEmailToggle(vendor.vendor_id, checked)}
                                                 onEmailConfigChange={cfg => handleEmailConfigChange(vendor.vendor_id, cfg)}

@@ -129,7 +129,7 @@ export interface UnitListItem {
     is_active: boolean;
     created_at: string;
     // Backend API mapping
-    uom_id?: string | number;
+    uom_id?: number;
     uom_code?: string;
     uom_name?: string;
     uom_nameeng?: string;

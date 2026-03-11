@@ -265,7 +265,7 @@ export default function UnitList() {
             <UnitFormModal 
                 isOpen={isModalOpen} 
                 onClose={handleModalClose}
-                editId={editingId}
+                editId={typeof editingId === 'string' ? Number(editingId) : editingId}
                 onSuccess={refetch}
             />
         </div>

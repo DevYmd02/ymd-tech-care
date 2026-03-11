@@ -43,7 +43,6 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
         // Field Handlers
         appendLine,
         removeLine,
-        handleResetLines,
     } = useRFQForm(isOpen, onClose, initialPR, onSuccess, editId);
 
     const { watch, setValue } = methods;
@@ -145,7 +144,6 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
                         <RFQFormLines 
                             onAddLine={appendLine}
                             onRemoveLine={removeLine}
-                            onResetLines={handleResetLines}
                             readOnly={readOnly}
                             isInviteMode={isInviteMode}
                         />

@@ -21,38 +21,77 @@ export type QuotationStatus =
 // QUOTATION HEADER - ตาราง quotation_header
 // ====================================================================================
 
-/** Quotation Header - ใบเสนอราคาจากผู้ขาย */
+/** Quotation Header - ใบเสนอราคาจากผู้ขาย (Aligned with backend payload) */
 export interface QuotationHeader {
-    quotation_id: number;               // INTEGER/pk
-    qc_id?: number;                     // INTEGER
-    vendor_id: number;                  // INTEGER
-    quotation_no: string;               // VARCHAR(50) - เลขที่ใบเสนอราคา
-    quotation_date: string;             // DATE - วันที่เสนอราคา (quote_date)
-    valid_until: string | null;         // DATE - ราคามีผลถึงวันที่
+    vq_header_id: number;               // INTEGER/pk (backend: vq_header_id)
+    vq_no: string;                      // VARCHAR(50) (backend: vq_no)
+    quotation_no?: string;              // Legacy/Fallback
+    quotation_date: string;             // DATE - วันที่เสนอราคา
+    quotation_expiry_date?: string;     // DATE (backend: quotation_expiry_date)
+    
+    vendor_id: number | null;           // Relation ID
+    rfq_id: number | null;              // Relation ID
+    pr_id: number | null;               // Relation ID
+    rfq_vendor_id?: number | null;      // Relation ID
+
+    // Nested Objects (Anticipating JOINs)
+    vendor?: { vendor_id: number; vendor_name: string; vendor_code?: string };
+    rfq?: { rfq_id: number; rfq_no: string };
+    pr?: { pr_id: number; pr_no: string };
+    
     payment_term_days: number | null;   // int
     lead_time_days: number | null;      // int
-    currency: string;                   // VARCHAR(3) - e.g. THB, USD
-    isMulticurrency?: boolean;
-    exchange_rate_date?: string;
-    target_currency?: string;
-    exchange_rate?: number;              // NUMERIC(18,6)
-    total_amount: number;               // DECIMAL(18,2)
+    
+    base_currency_code: string;         // VARCHAR(3) e.g. THB
+    quote_currency_code?: string;       // VARCHAR(3) e.g. USD
+    exchange_rate?: string | number;    // NUMERIC
+    exchange_rate_date?: string;        // DATE
+    
+    base_total_amount: string | number; // DECIMAL (Backend sends string)
+    quote_total_amount?: string | number; // DECIMAL
+    base_tax_amount?: string | number;
+    base_discount_amount?: string | number;
+    
     status: QuotationStatus;            // VARCHAR(50)
+    is_awarded?: boolean;
+    tax_code_id?: number;
+    tax_rate?: string | number;
+    
     remarks?: string;
+    created_at?: string;
+    updated_at?: string;
+    created_by?: number;
+    updated_by?: number | null;
+
+    // UI Layout Helpers / Legacy Fallbacks (Backward Compatibility)
+    // @deprecated Use vq_header_id
+    quotation_id?: number;
+    // @deprecated Use base_total_amount
+    total_amount?: number | string;
+    // @deprecated Use base_currency_code
+    currency?: string;
+    // @deprecated Use quotation_expiry_date
+    valid_until?: string;
+    // @deprecated Use base_currency_code !== 'THB'
+    isMulticurrency?: boolean;
+    // @deprecated Use quote_currency_code
+    target_currency?: string;
+    // @deprecated Use remarks
+    remark?: string;
+
+    // Additional Form Fields
     contact_person?: string;
     contact_email?: string;
     contact_phone?: string;
     discount_raw?: string;
-    tax_code_id?: number;
-    
-    // UI Extended Fields
-    vendor_name?: string;               // Display
-    vendor_code?: string;               // Display
-    rfq_id: number;                    // INTEGER
-    rfq_no?: string;                    // Display
-    pr_id?: number;                     // INTEGER
-    pr_no?: string;                     // Display - Reference PR
-    lines?: QuotationLine[];            // Detail items
+    qc_id?: number;
+
+    // UI Layout Helpers / Legacy Fallbacks
+    vendor_name?: string;
+    vendor_code?: string;
+    rfq_no?: string;                    
+    pr_no?: string;                     
+    lines?: QuotationLine[];            
 }
 
 // ====================================================================================

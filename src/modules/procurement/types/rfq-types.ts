@@ -46,6 +46,10 @@ export interface RFQHeader {
     vendor_count?: number;              // From COUNT(rfq_vendor)
     vendor_responded?: number;          // From COUNT where responded
     
+    // UI Counters from Backend
+    vendor_total?: number;              // Y: Total vendors in this RFQ
+    vendor_sent?: number;               // X: Vendors already sent
+    
     // New Required Fields
     purpose: string;                    // REQUIRED: เรื่อง/วัตถุประสงค์
     responded_vendors_count: number;    // REQUIRED: จำนวนผู้ขายที่เสนอราคามาแล้ว
@@ -57,6 +61,16 @@ export interface RFQHeader {
         pr_id: number;
         pr_no: string;
     } | null;
+
+    _count?: {
+        rfqVendors?: number;
+    } | null;
+    
+    // Relation Fields 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    rfqVendors?: any[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vendors?: any[];
 
     requested_by_user?: {
         employee_id: number;
@@ -282,10 +296,26 @@ export interface RFQCreateData extends Omit<RFQFormData, 'rfqLines'> {
 
 /** RFQ Detail Response - สำหรับ API GET /rfq/{id} */
 export interface RFQDetailResponse extends RFQHeader {
-    vendors: (RFQVendor & { 
+    vendors?: (RFQVendor & { 
         vendor_name: string; 
         vendor_code: string; 
         vq_no?: string; 
     })[];
-    lines: RFQLine[];
+    rfqVendors?: (RFQVendor & { 
+        vendor_name: string; 
+        vendor_code: string; 
+        vq_no?: string; 
+    })[];
+    lines?: RFQLine[];
+    rfqLines?: RFQLine[];
+}
+
+// ====================================================================================
+// PAYLOAD TYPES
+// ====================================================================================
+
+/** Payload for PATCH /rfq/:id/send-to-vendor - Strict Alignment Object */
+export interface SendRFQToVendorPayload {
+    to: string[];
+    cc: string[];
 }

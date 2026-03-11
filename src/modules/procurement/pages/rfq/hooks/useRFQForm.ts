@@ -5,6 +5,7 @@ import { MasterDataService } from '@/modules/master-data';
 import type { BranchListItem, ItemListItem, UnitListItem } from '@/modules/master-data/types/master-data-types';
 import type { VendorSearchItem } from '@/modules/master-data/vendor/types/vendor-types';
 import type { RFQVendor, RFQLine, RFQDetailResponse, RFQStatus } from '@/modules/procurement/types/rfq-types';
+import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
 import type { PRHeader } from '@/modules/procurement/types';
 import type { Resolver } from 'react-hook-form';
 import { PRService } from '@/modules/procurement/services/pr.service';
@@ -187,16 +188,38 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                 const rfq = await RFQService.getById(rfqId) as RFQDetailResponse;
                 if (!rfq) return;
 
-                setTrackingVendors(rfq.vendors || []);
+                const sourceVendors = rfq.rfqVendors || rfq.vendors || [];
+                const sourceLines = rfq.rfqLines || rfq.lines || [];
 
-                const mappedVendors: RFQVendorValues[] = (rfq.vendors || []).map((v) => ({
+                // Hydrate vendor details if missing from backend (since standard backend list only has vendor_id)
+                const enhancedVendors = await Promise.all(sourceVendors.map(async (v) => {
+                    if (v.vendor_name && v.vendor_code) return v;
+                    try {
+                        const vendorDetail = await VendorService.getById(v.vendor_id);
+                        if (vendorDetail) {
+                            return {
+                                ...v,
+                                vendor_name: vendorDetail.vendor_name || v.vendor_name || '',
+                                vendor_code: vendorDetail.vendor_code || v.vendor_code || '',
+                            };
+                        }
+                    } catch {
+                         logger.warn('Failed to fetch vendor detail for id', v.vendor_id);
+                    }
+                    return v;
+                }));
+
+                setTrackingVendors(enhancedVendors);
+
+                const mappedVendors: RFQVendorValues[] = enhancedVendors.map((v) => ({
                     vendor_id: v.vendor_id,
                     vendor_code: v.vendor_code || '',
                     vendor_name: v.vendor_name || '',
                     vendor_name_display: v.vendor_code ? `${v.vendor_code} - ${v.vendor_name}` : v.vendor_name || '',
+                    is_existing: true,
                 }));
 
-                const mappedLines: RFQLineValues[] = (rfq.lines || []).map((line: RFQLine, i: number) => ({
+                const mappedLines: RFQLineValues[] = sourceLines.map((line: RFQLine, i: number) => ({
                     line_no: i + 1,
                     item_code: line.item_code,
                     item_name: line.item_name,
@@ -211,12 +234,25 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                     pr_line_id: line.pr_line_id || undefined,
                 }));
 
+                // Fetch PR detail if pr_id exists but pr_no is missing from backend response 
+                let fetchedPrNo = rfq.pr?.pr_no || rfq.ref_pr_no || rfq.pr_no || null;
+                if (rfq.pr_id && !fetchedPrNo) {
+                    try {
+                        const prData = await PRService.getDetail(rfq.pr_id);
+                        if (prData && prData.pr_no) {
+                            fetchedPrNo = prData.pr_no;
+                        }
+                    } catch (e) {
+                        logger.warn('Failed to fetch PR details for mapping pr_no:', e);
+                    }
+                }
+
                 reset({
                     ...getRFQDefaultFormValues(),
                     rfq_no: rfq.rfq_no,
                     rfq_date: rfq.rfq_date?.split('T')[0] || new Date().toLocaleDateString('en-CA'),
                     pr_id: rfq.pr_id || null,
-                    pr_no: rfq.pr_no || null,
+                    pr_no: fetchedPrNo,
                     branch_id: rfq.branch_id ? Number(rfq.branch_id) : 0,
                     status: (rfq.status as RFQStatus) || 'DRAFT',
                     quotation_due_date: rfq.quotation_due_date?.split('T')[0] || '',
@@ -430,23 +466,19 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                 rfqLines: cleanLines,
             };
 
-            const selectedVendorIds = stagedPayload.vendors
+            const selectedVendors = stagedPayload.vendors
                 .filter(v => v.vendor_id)
-                .map(v => Number(v.vendor_id));
+                .map(v => ({ vendor_id: Number(v.vendor_id), status: 'WAITING' }));
+                
+            if (selectedVendors.length > 0) {
+                payload.rfqVendors = selectedVendors;
+            }
 
             if (editId) {
                 await RFQService.update(editId, payload);
                 toast('บันทึกการแก้ไข RFQ สำเร็จ', 'success');
             } else {
-                const createdRFQ = await RFQService.create(payload);
-                if (selectedVendorIds.length > 0 && createdRFQ.rfq_id) {
-                    try {
-                        await RFQService.addVendorsToRFQ(createdRFQ.rfq_id, selectedVendorIds);
-                    } catch (vError) {
-                        logger.warn('[RFQ] Vendor association failed', vError);
-                        toast('RFQ สร้างสำเร็จแล้ว แต่ติดปัญหาการผูกผู้ขาย', 'warning');
-                    }
-                }
+                await RFQService.create(payload);
                 toast('สร้าง RFQ สำเร็จ', 'success');
             }
 

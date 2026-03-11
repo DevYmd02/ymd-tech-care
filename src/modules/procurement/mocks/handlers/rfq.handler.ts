@@ -93,11 +93,14 @@ export const setupRFQHandlers = (mock: MockAdapter) => {
                 if (!existingVQ) {
                   const rfqLines = MOCK_RFQ_LINES.filter(l => sanitizeId(l.rfq_id) === id);
                   MOCK_VQS.push({
+                    vq_header_id: Date.now() + Math.floor(Math.random() * 1000),
+                    vq_no: '',
                     quotation_id: Date.now() + Math.floor(Math.random() * 1000),
                     quotation_no: '', // Pending records have no VQ ID
                     qc_id: 0,
                     rfq_no: MOCK_RFQS[foundIndex].rfq_no,
                     rfq_id: id,
+                    pr_id: Number(MOCK_RFQS[foundIndex].pr_id) || 0,
                     pr_no: MOCK_RFQS[foundIndex].pr_no || '',
                     vendor_id: vqId,
                     vendor_code: vendor.vendor_code,
@@ -107,7 +110,9 @@ export const setupRFQHandlers = (mock: MockAdapter) => {
                     payment_term_days: 0,
                     lead_time_days: 0,
                     total_amount: 0,
+                    base_total_amount: "0",
                     currency: 'THB',
+                    base_currency_code: 'THB',
                     isMulticurrency: false,
                     exchange_rate: 1,
                     status: 'PENDING',
