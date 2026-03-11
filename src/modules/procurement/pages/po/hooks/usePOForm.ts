@@ -116,8 +116,8 @@ export const usePOForm = ({
             let initialLines = initialValues?.lines || [];
 
             // Phase 3 Hydration: Auto-populate lines ONLY if they don't exist yet and we just fetched from VQ
-            if (initialLines.length === 0 && inheritedVQ?.lines && inheritedVQ.lines.length > 0) {
-                initialLines = inheritedVQ.lines.map((l) => ({
+            if (initialLines.length === 0 && inheritedVQ?.vq_lines && inheritedVQ.vq_lines.length > 0) {
+                initialLines = inheritedVQ.vq_lines.map((l) => ({
                     item_id:         Number(l.item_id) || undefined,
                     item_code:       l.item_code || '',
                     item_name:       l.item_name || '',

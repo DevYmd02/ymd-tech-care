@@ -12,14 +12,25 @@ export type ExtendedVendor = RFQVendor & {
     reject_reason?: string | null;
     decline_reason?: string | null;
     cancel_note?: string | null;
+    contact_email?: string | null;
+    note?: string | null;
+    remarks?: string | null;
+    sent_at?: string | null;
+    responded_at?: string | null;
+    created_at?: string | null;
 };
 
-interface VendorTrackingTableProps {
+export interface VendorTrackingTableProps {
     vendors: ExtendedVendor[];
+    vendorMap?: Map<number, string>;
     actionComponent?: (vendor: ExtendedVendor) => React.ReactNode;
 }
 
-export const VendorTrackingTable: React.FC<VendorTrackingTableProps> = ({ vendors, actionComponent }) => {
+export const VendorTrackingTable: React.FC<VendorTrackingTableProps> = ({ 
+    vendors,
+    vendorMap,
+    actionComponent 
+}) => {
     const repliedCount  = vendors.filter(v => v.status === 'RESPONDED').length;
     const declinedCount = vendors.filter(v => v.status === 'DECLINED').length;
     const waitingCount  = vendors.filter(v => v.status === 'SENT' || v.status === 'PENDING').length;
@@ -106,10 +117,14 @@ export const VendorTrackingTable: React.FC<VendorTrackingTableProps> = ({ vendor
                                 {vendors.map((vendor, index) => {
                                     const isResponded = vendor.status === 'RESPONDED';
                                     const isDeclined  = vendor.status === 'DECLINED';
-                                    const vendorName = [vendor.vendor_code, vendor.vendor_name].filter(Boolean).join(' - ') || '-';
+                                    // Robust Fallback Sequence for Name & Details
+                                    const mappedName = vendorMap && vendor.vendor_id ? vendorMap.get(vendor.vendor_id) : undefined;
+                                    const vendorName = [vendor.vendor_code, mappedName || vendor.vendor_name].filter(Boolean).join(' - ') || '-';
                                     
-                                    // Robust Fallback Sequence for Remark/Reason
-                                    const remarkText = vendor.reject_reason || vendor.decline_reason || vendor.cancel_note || vendor.remark || '-';
+                                    const emailText = vendor.contact_email || vendor.email_sent_to || '-';
+                                    const sentDateStr = vendor.sent_at || vendor.created_at || null;
+                                    const respondedDateStr = vendor.responded_at || null;
+                                    const remarkText = vendor.note || vendor.remarks || vendor.reject_reason || vendor.decline_reason || vendor.cancel_note || vendor.remark || '-';
                                     const hasValidRemark = remarkText !== '-';
 
                                     return (
@@ -133,15 +148,15 @@ export const VendorTrackingTable: React.FC<VendorTrackingTableProps> = ({ vendor
 
                                             {/* 3. Email */}
                                             <div className="min-w-0">
-                                                <span className="text-sm text-gray-600 dark:text-gray-400 truncate block font-medium" title={vendor.email_sent_to || ''}>
-                                                    {vendor.email_sent_to || '-'}
+                                                <span className="text-sm text-gray-600 dark:text-gray-400 truncate block font-medium" title={emailText}>
+                                                    {emailText}
                                                 </span>
                                             </div>
 
                                             {/* 4. Sent Date */}
                                             <div className="min-w-0">
                                                 <span className="text-[13px] text-gray-900 dark:text-gray-200 font-semibold">
-                                                    {vendor.sent_date ? formatThaiDate(vendor.sent_date) : '-'}
+                                                    {sentDateStr ? formatThaiDate(sentDateStr) : '-'}
                                                 </span>
                                             </div>
 
@@ -152,27 +167,39 @@ export const VendorTrackingTable: React.FC<VendorTrackingTableProps> = ({ vendor
                                                     : isDeclined ? 'text-rose-600 dark:text-rose-400'
                                                     : 'text-gray-400 dark:text-gray-600'
                                                 }`}>
-                                                    {vendor.response_date ? formatThaiDate(vendor.response_date) : '-'}
+                                                    {respondedDateStr ? formatThaiDate(respondedDateStr) : '-'}
                                                 </span>
                                             </div>
 
                                             {/* 6. Status Badge */}
-                                            <div className="min-w-0">
-                                                <div className="flex">
-                                                    {isResponded ? (
-                                                        <span className="px-3 py-1 rounded-full text-[10px] font-black bg-emerald-100/80 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-200/50 dark:border-emerald-700/30">
-                                                            ตอบกลับแล้ว
-                                                        </span>
-                                                    ) : isDeclined ? (
-                                                        <span className="px-3 py-1 rounded-full text-[10px] font-black bg-rose-100/80 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300 border border-rose-200/50 dark:border-rose-700/30">
-                                                            ปฏิเสธ
-                                                        </span>
-                                                    ) : (
-                                                        <span className="px-3 py-1 rounded-full text-[10px] font-black bg-blue-50/80 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100/50 dark:border-blue-700/30">
+                                            <div className="min-w-0 flex items-center">
+                                                {(() => {
+                                                    const status = vendor.status;
+                                                    const isSuccess = status === 'RESPONDED' || status === 'RECORDED' || !!vendor.vq_no;
+                                                    const isError = status === 'DECLINED' || status === 'NO_RESPONSE';
+
+                                                    if (isSuccess) {
+                                                        return (
+                                                            <span className="px-2.5 py-0.5 rounded-md text-[10px] font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700/50 uppercase tracking-tighter whitespace-nowrap shadow-sm">
+                                                                ตอบกลับแล้ว
+                                                            </span>
+                                                        );
+                                                    }
+                                                    if (isError) {
+                                                        return (
+                                                            <span className="px-2.5 py-0.5 rounded-md text-[10px] font-black bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300 border border-rose-200 dark:border-rose-700/50 uppercase tracking-tighter whitespace-nowrap shadow-sm">
+                                                                ปฏิเสธ
+                                                            </span>
+                                                        );
+                                                    }
+                                                    
+                                                    // Default: Pending/Sent
+                                                    return (
+                                                        <span className="px-2.5 py-0.5 rounded-md text-[10px] font-black bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-700/50 uppercase tracking-tighter whitespace-nowrap shadow-sm">
                                                             รอตอบกลับ
                                                         </span>
-                                                    )}
-                                                </div>
+                                                    );
+                                                })()}
                                             </div>
 
                                             {/* 7. Remark / Rejection Reason */}

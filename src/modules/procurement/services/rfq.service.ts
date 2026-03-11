@@ -96,6 +96,8 @@ export const RFQService = {
       if (params.rfq_no) filterParams.rfq_no = params.rfq_no;
       if (params.creator_name) filterParams.creator_name = params.creator_name;
       if (params.ref_pr_no) filterParams.ref_pr_no = params.ref_pr_no;
+      // 🎯 Map generic search term to 'q' for applyClientFilters logic
+      if (params.search || params.keyword) filterParams.q = params.search || params.keyword;
       if (params.status && params.status !== 'ALL') filterParams.status = params.status;
       if (params.date_from) filterParams.date_from = params.date_from;
       if (params.date_to) filterParams.date_to = params.date_to;
@@ -104,7 +106,7 @@ export const RFQService = {
       if (params.sort) filterParams.sort = params.sort;
 
       return applyClientFilters<RFQHeader>(allItems, filterParams, {
-        searchableFields: ['rfq_no', 'creator_name', 'ref_pr_no'],
+        searchableFields: ['rfq_no', 'creator_name', 'ref_pr_no', 'purpose', 'vendor_name'],
         dateField: 'rfq_date',
       });
     }

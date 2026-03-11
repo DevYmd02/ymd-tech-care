@@ -83,7 +83,7 @@ export interface QuotationHeader {
     contact_person?: string;
     contact_email?: string;
     contact_phone?: string;
-    discount_raw?: string;
+    discount_expression?: string;
     qc_id?: number;
 
     // UI Layout Helpers / Legacy Fallbacks
@@ -91,7 +91,7 @@ export interface QuotationHeader {
     vendor_code?: string;
     rfq_no?: string;                    
     pr_no?: string;                     
-    lines?: QuotationLine[];            
+    vq_lines?: QuotationLine[];            
 }
 
 // ====================================================================================
@@ -110,6 +110,7 @@ export interface QuotationLine {
     uom_id?: number;                    // INTEGER
     uom_name?: string;                  // Display
     unit_price?: number;                // NUMERIC(18,4)
+    discount_expression?: string;
     discount_amount?: number;           // NUMERIC(18,2)
     tax_code?: string;                  // VARCHAR(20)
     net_amount: number;                 // Required
@@ -118,6 +119,8 @@ export interface QuotationLine {
     remark?: string;
     warehouse?: string;
     location?: string;
+    uom?: string;                       // Utility field for RFQ-to-VQ mapping
+    status?: string;                    // Utility field for mixed mapping
 }
 
 // ====================================================================================
@@ -156,4 +159,32 @@ export interface VQListResponse {
   totalPages: number;
 }
 
-export type VQCreateData = Partial<VQListItem> & { lines?: Partial<QuotationLine>[] };
+export type VQCreateData = Partial<VQListItem> & { vq_lines?: Partial<QuotationLine>[] };
+
+// ====================================================================================
+// PENDING QUEUES (Waiting for RFQ / Waiting for VQ)
+// ====================================================================================
+
+/** 
+ * Item representing a vendor waiting for an RFQ or a VQ response. 
+ * Data is pre-joined from the backend (no micro-components needed).
+ */
+export interface VQPendingQueueItem {
+    rfq_vendor_id: number;
+    pr_id: number;
+    pr_no: string;
+    rfq_id: number;
+    rfq_no: string;
+    vendor_id: number;
+    vendor_code: string;
+    vendor_name: string;
+    status: string;
+    created_at: string;
+}
+
+export interface VQPendingQueueResponse {
+    data: VQPendingQueueItem[];
+    page: number;
+    pageSize: number;
+    total: number;
+}

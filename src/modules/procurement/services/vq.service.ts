@@ -1,6 +1,6 @@
 import api from '@/core/api/api';
 import { USE_MOCK } from '@/core/api/api';
-import type { VQListParams, VQListResponse, VQCreateData, VQListItem } from '@/modules/procurement/types';
+import type { VQListParams, VQListResponse, VQCreateData, VQListItem, VQPendingQueueResponse } from '@/modules/procurement/types';
 import { logger } from '@/shared/utils/logger';
 import type { SuccessResponse } from '@/shared/types/api-response.types';
 import { applyClientFilters, applyClientPagination, extractArrayFromResponse } from '@/shared/utils/clientFilterUtils';
@@ -10,6 +10,8 @@ const ENDPOINTS = {
   create: '/vq',
   update: '/vq',
   detail: (id: number) => `/vq/${id}`,
+  waitingForRfq: '/vq/pr/waiting-for-rfq-vendor',
+  waitingForVq: '/vq/pr/waiting-for-vq-vendor',
 };
 
 export const VQService = {
@@ -48,6 +50,30 @@ export const VQService = {
   getVQsByRfqId: async (rfqId: number): Promise<VQListResponse> => {
     logger.info(`[VQService] Fetching VQs for RFQ ID: ${rfqId}`);
     return await api.get<VQListResponse>(ENDPOINTS.list, { params: { rfq_id: rfqId } });
+  },
+
+  getWaitingForRFQ: async (params?: { page?: number; limit?: number }): Promise<VQPendingQueueResponse> => {
+    logger.info('[VQService] Fetching Waiting for RFQ list');
+    type ApiResponse = VQPendingQueueResponse | { data: VQPendingQueueResponse };
+    const response = await api.get<ApiResponse>(ENDPOINTS.waitingForRfq, { params });
+    
+    // Safely unwrap if the pagination payload is nested inside another data layer
+    if (response && 'data' in response && response.data && !Array.isArray(response.data)) {
+       return response.data;
+    }
+    return response as VQPendingQueueResponse;
+  },
+
+  getWaitingForVQ: async (params?: { page?: number; limit?: number }): Promise<VQPendingQueueResponse> => {
+    logger.info('[VQService] Fetching Waiting for VQ list');
+    type ApiResponse = VQPendingQueueResponse | { data: VQPendingQueueResponse };
+    const response = await api.get<ApiResponse>(ENDPOINTS.waitingForVq, { params });
+    
+    // Safely unwrap if the pagination payload is nested inside another data layer
+    if (response && 'data' in response && response.data && !Array.isArray(response.data)) {
+       return response.data;
+    }
+    return response as VQPendingQueueResponse;
   },
 
   getById: async (id: number): Promise<VQListItem> => {

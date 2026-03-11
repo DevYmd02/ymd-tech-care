@@ -25,10 +25,12 @@ export const QuotationLineSchema = z.object({
   uom_id: z.coerce.number().optional().or(z.literal(0)),
   uom_name: z.string().optional(),
   unit_price: z.number().min(0, 'Price cannot be negative'),
+  discount_expression: z.string().optional(),
   discount_amount: z.number().min(0),
   net_amount: z.number(),
   no_quote: z.boolean(),
   reference_price: z.number().optional(),
+  status: z.string().optional(),
 }).refine(data => {
   // If no_quote is false (offered), unit_price must be > 0
   if (!data.no_quote) {
@@ -44,6 +46,7 @@ export const QuotationHeaderSchema = z.object({
   quotation_no: z.string().optional(),
   quotation_date: z.string().min(1, 'Date is required'),
   vendor_id: z.coerce.number().min(1, 'Vendor is required'),
+  vendor_code: z.string().optional(),
   vendor_name: z.string().optional(),
   contact_person: z.string().optional(),
   contact_email: z.string().email().optional().or(z.literal('')),
@@ -62,7 +65,7 @@ export const QuotationHeaderSchema = z.object({
   lead_time_days: z.number().min(0).optional(),
   valid_until: z.string().min(1, 'Valid until date is required'),
   remark: z.string().optional(),
-  discount_raw: z.string().optional(),
+  discount_expression: z.string().optional(),
   tax_code_id: z.coerce.number().min(1, 'กรุณาเลือกภาษี'),
   sub_total: z.number().optional(),
   pre_tax_amount: z.number().optional(),
@@ -71,7 +74,7 @@ export const QuotationHeaderSchema = z.object({
   net_amount: z.number().optional(),
   total_amount: z.number().optional(),
   status: VQStatusEnum,
-  lines: z.array(QuotationLineSchema).min(1, 'At least one item is required'),
+  vq_lines: z.array(QuotationLineSchema).min(1, 'At least one item is required'),
 }).superRefine((data, ctx) => {
   if (data.isMulticurrency) {
     if (!data.currency || data.currency === 'THB') {

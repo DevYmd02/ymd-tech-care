@@ -30,6 +30,7 @@ export type Vendor = VendorSearchItem;
 const transformVendor = (v: VendorListItem): VendorSearchItem => ({
     vendor_id: v.vendor_id,
     code: v.vendor_code,
+    vendor_code: v.vendor_code,
     name: v.vendor_name,
     name_en: v.vendor_name_en,
     address: v.address_line1 || '-',

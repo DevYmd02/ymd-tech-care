@@ -238,6 +238,7 @@ export interface VendorDropdownItem {
 export interface VendorSearchItem {
     vendor_id: number;
     code: string;
+    vendor_code?: string;
     name: string;
     name_en?: string;
     address?: string;
