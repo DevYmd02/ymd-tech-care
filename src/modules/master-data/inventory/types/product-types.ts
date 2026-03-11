@@ -101,6 +101,55 @@ export interface ItemTypeUpdateRequest extends Partial<ItemTypeCreateRequest> {
 }
 
 // ====================================================================================
+// ITEM GROUP - กลุ่มสินค้า
+// ====================================================================================
+
+export interface ItemGroup extends BaseMasterData {
+    item_group_id: number;
+    item_group_code: string;
+    item_group_name: string;
+    item_group_nameeng?: string;
+}
+
+export interface ItemGroupFormData {
+    item_group_code: string;
+    item_group_name: string;
+    item_group_nameeng: string;
+    is_active: boolean;
+}
+
+export interface ItemGroupListItem {
+    item_group_id: number;
+    item_group_code: string;
+    item_group_name: string;
+    item_group_nameeng: string;
+    item_group_is_active: boolean;
+}
+
+export const initialItemGroupFormData: ItemGroupFormData = {
+    item_group_code: '',
+    item_group_name: '',
+    item_group_nameeng: '',
+    is_active: true,
+};
+
+export interface ItemGroupCreateRequest {
+    item_group_code: string;
+    item_group_name: string;
+    item_group_nameeng?: string;
+    is_active?: boolean;
+}
+
+export interface ItemGroupUpdateRequest extends Partial<ItemGroupCreateRequest> {
+    item_group_id: number;
+}
+
+
+
+
+
+
+// ====================================================================================
 // UNIT OF MEASURE - กำหนดรหัสหน่วยนับ
 // ====================================================================================
 
