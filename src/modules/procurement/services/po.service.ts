@@ -18,13 +18,13 @@ import { applyClientFilters, applyClientPagination, extractArrayFromResponse } f
 
 const ENDPOINTS = {
     list:     '/po',
-    detail:   (id: string) => `/po/${id}`,
+    detail:   (id: number) => `/po/${id}`,
     create:   '/po',
-    issue:    (id: string) => `/po/${id}/issue`,
-    approve:  (id: string) => `/po/${id}/approve`,
-    reject:   (id: string) => `/po/${id}/reject`,
-    complete: (id: string) => `/po/${id}/complete`,
-    pending:  (id: string) => `/po/${id}/pending`,
+    issue:    (id: number) => `/po/${id}/issue`,
+    approve:  (id: number) => `/po/${id}/approve`,
+    reject:   (id: number) => `/po/${id}/reject`,
+    complete: (id: number) => `/po/${id}/complete`,
+    pending:  (id: number) => `/po/${id}/pending`,
 };
 
 export const POService = {
@@ -59,7 +59,7 @@ export const POService = {
         return applyClientPagination<POListItem>(allItems, page, limit);
     },
 
-    getById: async (id: string): Promise<POListItem> => {
+    getById: async (id: number): Promise<POListItem> => {
         logger.info(`[POService] Fetching PO Detail: ${id}`);
         return await api.get<POListItem>(ENDPOINTS.detail(id));
     },
@@ -79,33 +79,33 @@ export const POService = {
     },
 
     /** Transition: DRAFT → ISSUED (send PO to vendor) */
-    issue: async (id: string, remark?: string): Promise<SuccessResponse> => {
+    issue: async (id: number, remark?: string): Promise<SuccessResponse> => {
         logger.info(`[POService] Issuing PO: ${id}`);
         return await api.post<SuccessResponse>(ENDPOINTS.issue(id), { remark });
     },
 
     /** Transition: DRAFT → PENDING_APPROVAL (send PO for approval) */
-    submit: async (id: string): Promise<SuccessResponse> => {
+    submit: async (id: number): Promise<SuccessResponse> => {
         logger.info(`[POService] Submitting PO: ${id}`);
         // 🎯 GOLD PATTERN: PATCH with EMPTY BODY {}
         return await api.patch<SuccessResponse>(ENDPOINTS.pending(id), {});
     },
 
     /** Transition: ISSUED → APPROVED (internal approval) */
-    approve: async (id: string): Promise<SuccessResponse> => {
+    approve: async (id: number): Promise<SuccessResponse> => {
         logger.info(`[POService] Approving PO: ${id}`);
         // 🎯 FIX: Send EMPTY BODY {} to avoid 400 Bad Request (consistent with PR module)
         return await api.post<SuccessResponse>(ENDPOINTS.approve(id), {});
     },
 
     /** Transition: ANY → CANCELLED */
-    reject: async (id: string, remark?: string): Promise<SuccessResponse> => {
+    reject: async (id: number, remark?: string): Promise<SuccessResponse> => {
         logger.info(`[POService] Rejecting/Cancelling PO: ${id}`);
         return await api.post<SuccessResponse>(ENDPOINTS.reject(id), { remark });
     },
 
     /** Transition: APPROVED → COMPLETED (goods fully received via GRN) */
-    complete: async (id: string): Promise<SuccessResponse> => {
+    complete: async (id: number): Promise<SuccessResponse> => {
         logger.info(`[POService] Completing PO: ${id}`);
         return await api.post<SuccessResponse>(ENDPOINTS.complete(id));
     },

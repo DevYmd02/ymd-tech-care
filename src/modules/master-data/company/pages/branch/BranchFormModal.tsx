@@ -19,7 +19,7 @@ import type { BranchListItem } from '@/modules/master-data/types/master-data-typ
 interface Props {
     isOpen: boolean;
     onClose: () => void;
-    editId?: string | null;
+    editId?: number | null;
     initialData?: BranchListItem | null;
     onSuccess?: () => void;
 }

@@ -11,7 +11,7 @@ import { logger } from '@/shared/utils/logger';
 interface UseCustomerFormProps {
     isOpen: boolean;
     onClose: () => void;
-    id?: string;
+    id?: number;
     initialData?: CustomerMaster | null;
     onSuccess?: () => void;
     toast: (message: string, type?: 'success' | 'error' | 'warning' | 'info') => void;

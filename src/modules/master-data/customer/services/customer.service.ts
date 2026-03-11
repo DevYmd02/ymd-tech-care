@@ -78,7 +78,7 @@ export const CustomerService = {
   },
 
   /** Get Customer Detail */
-  getById: async (id: string): Promise<CustomerMaster | null> => {
+  getById: async (id: number): Promise<CustomerMaster | null> => {
     if (USE_MOCK) {
       return localCustomers.find(c => c.customer_id === id) || null;
     }
@@ -93,7 +93,7 @@ export const CustomerService = {
   /** Create New Customer */
   create: async (payload: Partial<CustomerMaster>): Promise<MasterDataResponse<CustomerMaster>> => {
     if (USE_MOCK) {
-      const newId = `CUS-${Date.now()}`;
+      const newId = Number(Date.now().toString().slice(-6)); // Keep it small but numeric
       const newCustomer: CustomerMaster = {
         ...payload as CustomerMaster, // Mock assumption
         customer_id: newId,
@@ -109,7 +109,7 @@ export const CustomerService = {
   },
 
   /** Update Customer */
-  update: async (id: string, payload: Partial<CustomerMaster>): Promise<MasterDataResponse<CustomerMaster>> => {
+  update: async (id: number, payload: Partial<CustomerMaster>): Promise<MasterDataResponse<CustomerMaster>> => {
     if (USE_MOCK) {
       const index = localCustomers.findIndex(c => c.customer_id === id);
       if (index !== -1) {
@@ -122,7 +122,7 @@ export const CustomerService = {
   },
 
   /** Delete Customer */
-  delete: async (id: string): Promise<MasterDataResponse<null>> => {
+  delete: async (id: number): Promise<MasterDataResponse<null>> => {
     if (USE_MOCK) {
       localCustomers = localCustomers.filter(c => c.customer_id !== id);
       return { success: true };

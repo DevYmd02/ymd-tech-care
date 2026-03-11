@@ -89,7 +89,7 @@ export default function GRNListPage() {
     });
 
     // 3. Actions
-    const handleView = (id: string) => alert(`View GRN: ${id}`);
+    const handleView = (id: number) => alert(`View GRN: ${id}`);
 
     // 4. Columns
     const columnHelper = createColumnHelper<GRNListItem>();

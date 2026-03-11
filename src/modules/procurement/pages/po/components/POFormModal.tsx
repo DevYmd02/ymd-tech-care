@@ -119,7 +119,7 @@ interface POFormModalProps {
     onClose:        () => void;
     onSuccess?:     () => void;
     /** Post ID for edit/view */
-    poId?:          string;
+    poId?:          number;
     /** Pre-fill from QC winner selection */
     initialValues?: Partial<POFormData>;
     /** Read-only view */
@@ -276,7 +276,7 @@ export default function POFormModal({
                                             </button>
                                         )}
                                         {watchPrNo && !isView && (
-                                            <button type="button" onClick={() => { setValue('pr_id', ''); setValue('pr_no', ''); }}
+                                            <button type="button" onClick={() => { setValue('pr_id', undefined); setValue('pr_no', ''); }}
                                                 className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors border border-red-200 dark:border-red-800/50" title="ล้างข้อมูล PR">
                                                 <XIcon size={14} />
                                             </button>

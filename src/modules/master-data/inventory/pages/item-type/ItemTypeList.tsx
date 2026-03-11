@@ -41,7 +41,7 @@ export default function ItemTypeList() {
     });
 
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editingId, setEditingId] = useState<number | null>(null);
     const [editingData, setEditingData] = useState<ItemTypeListItem | null>(null); // ✅ เพิ่ม
 
     // ==================== FILTER CONFIG ====================
@@ -118,13 +118,13 @@ export default function ItemTypeList() {
     };
 
     // ✅ รับ item ทั้ง row มาด้วย
-    const handleEdit = useCallback((id: string, item: ItemTypeListItem) => {
+    const handleEdit = useCallback((id: number, item: ItemTypeListItem) => {
         setEditingId(id);
         setEditingData(item); // ✅ เก็บข้อมูล row ที่คลิก
         setIsModalOpen(true);
     }, []);
 
-    const handleDelete = useCallback(async (id: string) => {
+    const handleDelete = useCallback(async (id: number) => {
         if (confirm('คุณต้องการลบข้อมูลประเภทสินค้านี้หรือไม่?')) {
             await ItemTypeService.delete(id);
             refetch();
@@ -151,7 +151,7 @@ export default function ItemTypeList() {
             cell: ({ getValue, row }) => (
                 <span
                     className="font-medium text-blue-600 cursor-pointer hover:underline"
-                    onClick={() => handleEdit(String(row.original.item_type_id), row.original)} // ✅ ส่ง row ไปด้วย
+                    onClick={() => handleEdit(Number(row.original.item_type_id), row.original)} // ✅ ส่ง row ไปด้วย
                 >
                     {getValue() as string}
                 </span>
@@ -186,14 +186,14 @@ export default function ItemTypeList() {
             cell: ({ row }) => (
                 <div className="flex items-center justify-center gap-2">
                     <button
-                        onClick={() => handleEdit(String(row.original.item_type_id), row.original)} // ✅ ส่ง row ไปด้วย
+                        onClick={() => handleEdit(Number(row.original.item_type_id), row.original)} // ✅ ส่ง row ไปด้วย
                         className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                         title="แก้ไข"
                     >
                         <Edit2 size={18} />
                     </button>
                     <button
-                        onClick={() => handleDelete(String(row.original.item_type_id))}
+                        onClick={() => handleDelete(Number(row.original.item_type_id))}
                         className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         title="ลบ"
                     >

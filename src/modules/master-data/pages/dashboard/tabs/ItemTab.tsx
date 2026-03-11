@@ -4,10 +4,10 @@ import type { ItemListItem } from '@/modules/master-data/inventory/types/product
 
 interface ItemTabProps {
     data: ItemListItem[];
-    expandedId: string | null;
-    toggleExpand: (id: string) => void;
-    handleEdit: (id: string) => void;
-    handleDelete: (id: string) => void;
+    expandedId: number | null;
+    toggleExpand: (id: number) => void;
+    handleEdit: (id: number) => void;
+    handleDelete: (id: number) => void;
     dbRelation: { dbTable: string; relations: string[]; fk: string };
 }
 
@@ -26,12 +26,12 @@ export const ItemTab: React.FC<ItemTabProps> = ({
     return (
         <div className="space-y-4">
             {data.map((item) => {
-                const isExpanded = expandedId === item.item_id;
+                const isExpanded = expandedId === item.id;
                 return (
-                    <div key={item.item_id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <div key={item.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
                         <div 
                             className="p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                            onClick={() => toggleExpand(item.item_id)}
+                            onClick={() => toggleExpand(item.id)}
                         >
                             <div className="flex items-start justify-between gap-2">
                                 <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
@@ -121,14 +121,14 @@ export const ItemTab: React.FC<ItemTabProps> = ({
 
                                 <div className="px-4 pb-4 flex gap-2 pt-2">
                                     <button 
-                                        onClick={(e) => { e.stopPropagation(); handleEdit(item.item_id); }}
+                                        onClick={(e) => { e.stopPropagation(); handleEdit(item.id); }}
                                         className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                                     >
                                         <Edit2 size={16} />
                                         Edit
                                     </button>
                                     <button 
-                                        onClick={(e) => { e.stopPropagation(); handleDelete(item.item_id); }}
+                                        onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
                                         className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
                                     >
                                         <Trash2 size={16} />

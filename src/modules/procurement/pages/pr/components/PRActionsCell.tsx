@@ -3,12 +3,12 @@ import type { PRHeader } from '@/modules/procurement/types';
 
 interface PRActionsCellProps {
     row: PRHeader;
-    onEdit: (id: string) => void;
-    onView: (id: string) => void;
+    onEdit: (id: number) => void;
+    onView: (id: number) => void;
 
     onSendApproval: (row: PRHeader) => void;
-    onApprove: (id: string) => void;
-    onReject: (id: string) => void;
+    onApprove: (id: number) => void;
+    onReject: (id: number) => void;
     onCreateRFQ: (item: PRHeader) => void;
     isApproving?: boolean;
 }

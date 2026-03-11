@@ -10,7 +10,7 @@ import { logger } from '@/shared/utils/logger';
 
 interface UsePOApprovalOptions {
     isOpen:    boolean;
-    poId:      string;
+    poId:      number;
 }
 
 // ====================================================================================

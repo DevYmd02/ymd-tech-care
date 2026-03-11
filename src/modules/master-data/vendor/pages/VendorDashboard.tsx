@@ -39,7 +39,7 @@ export default function VendorDashboard() {
     const [isLoading, setIsLoading] = useState(true);
     
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
+    const [selectedVendorId, setSelectedVendorId] = useState<number | null>(null);
 
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<'ALL' | VendorStatus>('ALL');
@@ -99,7 +99,7 @@ export default function VendorDashboard() {
         setIsModalOpen(true);
     };
 
-    const handleEdit = (vendorId: string) => {
+    const handleEdit = (vendorId: number) => {
         setSelectedVendorId(vendorId);
         setIsModalOpen(true);
     };

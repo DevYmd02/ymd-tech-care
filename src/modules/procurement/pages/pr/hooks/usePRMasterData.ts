@@ -6,7 +6,7 @@ import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
 import { logger } from '@/shared/utils/logger';
 
 export interface MappedOption<T> {
-    value: string;
+    value: number | string;
     label: string;
     original?: T;
 }
@@ -61,7 +61,7 @@ export const usePRMasterData = () => {
             logger.info('[usePRMasterData] Unwrapped Projects count:', Array.isArray(prj) ? prj.length : 0);
 
              setWarehouses((wh || []).map(w => ({
-               value: w.warehouse_id,
+               value: Number(w.warehouse_id),
                label: `${w.warehouse_code} - ${w.warehouse_name}`,
                original: w
              })));
@@ -93,7 +93,7 @@ export const usePRMasterData = () => {
                }
              );
              setPurchaseTaxOptions(filtered.map((t: TaxCode) => ({
-               value: String(t.tax_code_id || t.tax_id),
+               value: Number(t.tax_code_id || t.tax_id),
                label: `${t.tax_code} (${t.tax_rate}%)`,
                original: t
              })));

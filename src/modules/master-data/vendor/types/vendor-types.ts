@@ -21,7 +21,7 @@ export type VendorAddressType = 'REGISTERED' | 'CONTACT' | 'BILLING' | 'SHIPPING
 
 /** Bank Account Interface */
 export interface VendorBankAccount {
-    id: string;
+    id: number;
     bankName: string;
     branchName: string;
     accountNumber: string;
@@ -33,7 +33,7 @@ export interface VendorBankAccount {
 
 /** Additional Contact Interface */
 export interface VendorContactPerson {
-    id: string;
+    id: number;
     name: string;
     position: string;
     phone: string;
@@ -44,7 +44,7 @@ export interface VendorContactPerson {
 
 /** Address Item for Form Data */
 export interface VendorAddressFormItem {
-    id: string; // Temp ID for UI key
+    id: number; // Temp ID for UI key
     address: string;
     subDistrict?: string; // Tambon / Khwaeng (Optional)
     district: string;    // Amphoe / Khet
@@ -69,8 +69,8 @@ export interface VendorAddressFormItem {
  * VendorAddress (Backend Schema)
  */
 export interface VendorAddress {
-    vendor_address_id: string;
-    vendor_id: string;
+    vendor_address_id: number;
+    vendor_id: number;
     address_type: VendorAddressType;
     address: string;
     sub_district?: string | null;
@@ -90,8 +90,8 @@ export interface VendorAddress {
  * VendorContact (Backend Schema)
  */
 export interface VendorContact {
-    contact_id: string;
-    vendor_id: string;
+    contact_id: number;
+    vendor_id: number;
     contact_name: string;
     position?: string;
     phone?: string;
@@ -105,8 +105,8 @@ export interface VendorContact {
  */
 export interface VendorBankAccountData {
     // Renamed to avoid conflict with frontend form type
-    bank_account_id: string;
-    vendor_id: string;
+    bank_account_id: number;
+    vendor_id: number;
     bank_name: string;
     bank_branch?: string; // Renamed from branch_name
     account_no: string;   // Renamed from account_number
@@ -120,7 +120,8 @@ export interface VendorBankAccountData {
  * VendorMaster - ข้อมูลหลักของผู้ขาย (ตาม vendor_master table + relations)
  */
 export interface VendorMaster {
-    vendor_id: string;
+    id: number;
+    vendor_id: number;
     vendor_code: string;
     vendor_name: string;
     vendor_name_en?: string;
@@ -128,10 +129,10 @@ export interface VendorMaster {
     vendor_type: VendorType;
     status: VendorStatus;
     
-    // Numeric IDs matching Backend JSON -> Changed to String for Consistency
-    vendor_type_id: string;
-    vendor_group_id: string;
-    currency_id: string;
+    // Numeric IDs matching Backend JSON
+    vendor_type_id: number;
+    vendor_group_id: number;
+    currency_id: number;
 
     // Relational Data (Matches JSON structure)
     addresses: VendorAddress[];
@@ -166,65 +167,30 @@ export interface VendorMaster {
     // Audit
     created_at: string;
     updated_at: string;
-    updated_by?: string; // Add optional updated_by field
+    updated_by?: number; // Add optional updated_by field
 }
 
 /**
- * VendorFormData - สำหรับ Frontend Form (camelCase)
+ * Sanitizer: Ensures all IDs are numbers (for numeric schema)
  */
-export interface VendorFormData {
-    vendorCode: string;
-    vendorCodeSearch: string;
-    vendorName: string;
-    vendorNameTh: string;
-    vendorNameEn: string;
-    vendorType: VendorType;
-    
-    // ID strings (from <select>)
-    vendorTypeId: string;
-    vendorGroupId: string;
-    currencyId: string;
-    
-    businessCategory: string;
-    taxId: string;
-    branchName: string;
-    currency: string;
-    vatRegistered: boolean;
-    whtRegistered: boolean;
-    
-    // Address List - Fixed 2 items: [0]=REGISTERED, [1]=CONTACT
-    addresses: VendorAddressFormItem[];
-    // Checkbox: "Same as Primary" - when true, CONTACT address copies from REGISTERED
-    sameAsRegistered: boolean;
-    
-    // Contact Info
-    contactName: string;
-    phone: string;
-    mobile: string;
-    email: string;
-    website: string;
-    
-    // Payment
-    paymentTerms: string;
-    creditLimit: number;
-    
-    // Lists
-    bankAccounts: VendorBankAccount[];
-    additionalContacts: VendorContactPerson[];
-    
-    remarks: string;
-    
-    // Status flags
-    onHold: boolean;
-    blocked: boolean;
-    inactive: boolean;
-}
+export const sanitizeId = (id: string | number | undefined | null): number => {
+    if (id === undefined || id === null || id === '') return 0;
+    return Number(id);
+};
+
+import type { VendorSchemaType } from './vendor-schemas';
+
+/**
+ * VendorFormData - สำหรับ Frontend Form (Inferred from Zod Schema)
+ */
+export type VendorFormData = VendorSchemaType;
 
 /**
  * VendorListItem - สำหรับแสดงในตาราง (subset ของ VendorMaster)
  */
 export interface VendorListItem {
-    vendor_id: string;
+    id: number;
+    vendor_id: number;
     vendor_code: string;
     vendor_name: string;
     vendor_name_en?: string;
@@ -261,6 +227,7 @@ export interface VendorListItem {
  * VendorDropdownItem - สำหรับ Dropdown/Select
  */
 export interface VendorDropdownItem {
+    vendor_id: number;
     vendor_code: string;
     vendor_name: string;
 }
@@ -269,7 +236,7 @@ export interface VendorDropdownItem {
  * VendorSearchItem - สำหรับ SearchModal
  */
 export interface VendorSearchItem {
-    vendor_id: string;
+    vendor_id: number;
     code: string;
     name: string;
     name_en?: string;
@@ -312,11 +279,11 @@ export interface VendorCreateRequest {
     tax_id?: string;
     vendor_type?: VendorType; // Backend uses vendor_type_id instead
     
-    vendor_id?: string;
+    vendor_id?: number; // Changed from number to string
     
-    vendor_type_id: string;
-    vendor_group_id: string;
-    currency_id: string;
+    vendor_type_id: number; // Changed from number to string
+    vendor_group_id: number; // Changed from number to string
+    currency_id: number; // Changed from number to string
     
     // New Structure Matches JSON Response
     addresses: Partial<VendorAddress>[];
@@ -414,9 +381,9 @@ export function toVendorCreateRequest(form: VendorFormData): VendorCreateRequest
         vendor_name: form.vendorNameTh,
         vendor_name_en: form.vendorNameEn,
         tax_id: form.taxId || undefined,
-        vendor_type_id: form.vendorTypeId,
-        vendor_group_id: form.vendorGroupId,
-        currency_id: form.currencyId,
+        vendor_type_id: Number(form.vendorTypeId),
+        vendor_group_id: Number(form.vendorGroupId),
+        currency_id: Number(form.currencyId),
         addresses: addresses,
         contacts: contacts,
         bank_accounts: bank_accounts,
@@ -446,7 +413,7 @@ function areAddressesEqual(addr1: VendorAddressFormItem, addr2: VendorAddressFor
 export function toVendorFormData(vendor: VendorMaster): VendorFormData {
     // Map Addresses - ensure we have exactly 2 items: [0]=REGISTERED, [1]=CONTACT
     let registeredAddress: VendorAddressFormItem = {
-        id: '1',
+        id: 1,
         address: '',
         subDistrict: '',
         district: '',
@@ -458,7 +425,7 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
     };
     
     let contactAddress: VendorAddressFormItem = {
-        id: '2',
+        id: 2,
         address: '',
         subDistrict: '',
         district: '',
@@ -487,7 +454,7 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
         const regAddr = addressesArray.find((a: { address_type?: string }) => a.address_type === 'REGISTERED');
         if (regAddr) {
             registeredAddress = {
-                id: regAddr.vendor_address_id?.toString() || '1',
+                id: Number(regAddr.vendor_address_id) || 1,
                 address: regAddr.address || '',
                 subDistrict: '',
                 district: regAddr.district || '',
@@ -498,13 +465,12 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
                 addressType: 'REGISTERED',
                 contactPerson: regAddr.contact_person || '',
                 phone: regAddr.phone || '',
-                phoneExtension: regAddr.phone_extension || '',
                 email: regAddr.email || ''
             };
         } else if (addressesArray[0]) {
             const firstAddr = addressesArray[0];
             registeredAddress = {
-                id: firstAddr.vendor_address_id?.toString() || '1',
+                id: Number(firstAddr.vendor_address_id) || 1,
                 address: firstAddr.address || '',
                 subDistrict: '',
                 district: firstAddr.district || '',
@@ -515,7 +481,6 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
                 addressType: 'REGISTERED',
                 contactPerson: firstAddr.contact_person || '',
                 phone: firstAddr.phone || '',
-                phoneExtension: firstAddr.phone_extension || '',
                 email: firstAddr.email || ''
             };
         }
@@ -524,7 +489,7 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
         const contAddr = addressesArray.find((a: { address_type?: string }) => a.address_type === 'CONTACT');
         if (contAddr) {
             contactAddress = {
-                id: contAddr.vendor_address_id?.toString() || '2',
+                id: Number(contAddr.vendor_address_id) || 2,
                 address: contAddr.address || '',
                 subDistrict: '',
                 district: contAddr.district || '',
@@ -535,13 +500,12 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
                 addressType: 'CONTACT',
                 contactPerson: contAddr.contact_person || '',
                 phone: contAddr.phone || '',
-                phoneExtension: contAddr.phone_extension || '',
                 email: contAddr.email || ''
             };
         } else if (addressesArray[1]) {
             const secondAddr = addressesArray[1];
             contactAddress = {
-                id: secondAddr.vendor_address_id?.toString() || '2',
+                id: Number(secondAddr.vendor_address_id) || 2,
                 address: secondAddr.address || '',
                 subDistrict: '',
                 district: secondAddr.district || '',
@@ -552,20 +516,19 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
                 addressType: 'CONTACT',
                 contactPerson: secondAddr.contact_person || '',
                 phone: secondAddr.phone || '',
-                phoneExtension: secondAddr.phone_extension || '',
                 email: secondAddr.email || ''
             };
         } else {
             contactAddress = {
                 ...registeredAddress,
-                id: '2',
+                id: 2,
                 isMain: false,
                 addressType: 'CONTACT'
             };
         }
     } else if (vendor.address_line1) {
         registeredAddress = {
-            id: '1',
+            id: 1,
             address: vendor.address_line1 || '',
             subDistrict: '',
             district: vendor.district || '',
@@ -577,7 +540,7 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
         };
         contactAddress = {
             ...registeredAddress,
-            id: '2',
+            id: 2,
             isMain: false,
             addressType: 'CONTACT'
         };
@@ -589,8 +552,8 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
     // Map Contacts
     const contactsArray = vendor.contacts || vendorAny.vendorContacts || [];
     const formContacts: VendorContactPerson[] = (contactsArray.length > 0)
-        ? contactsArray.map((c: {
-            contact_id?: string | number;
+        ? contactsArray.map((        c: {
+            contact_id?: number;
             contact_name: string;
             position?: string;
             phone?: string;
@@ -598,7 +561,7 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
             email?: string;
             is_primary?: boolean;
         }) => ({
-            id: c.contact_id?.toString() || Math.random().toString(),
+            id: Number(c.contact_id) || Math.random(),
             name: c.contact_name,
             position: c.position || '',
             phone: c.phone || '',
@@ -611,8 +574,8 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
     // Map Bank Accounts
     const bankAccountsArray = vendor.bank_accounts || vendorAny.vendorBankAccounts || [];
     const formBankAccounts: VendorBankAccount[] = (bankAccountsArray.length > 0)
-        ? bankAccountsArray.map((b: {
-            bank_account_id?: string | number;
+        ? bankAccountsArray.map((        b: {
+            bank_account_id?: number;
             bank_name: string;
             bank_branch?: string;
             account_no: string;
@@ -621,7 +584,7 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
             swift_code?: string;
             is_default: boolean;
         }) => ({
-            id: b.bank_account_id?.toString() || Math.random().toString(),
+            id: Number(b.bank_account_id) || Math.random(),
             bankName: b.bank_name,
             branchName: b.bank_branch || '',
             accountNumber: b.account_no,
@@ -640,9 +603,9 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
         vendorNameEn: vendor.vendor_name_en || '',
         taxId: vendor.tax_id || '',
         vendorType: vendor.vendor_type,
-        vendorTypeId: vendor.vendor_type_id?.toString() || '1',
-        vendorGroupId: vendor.vendor_group_id?.toString() || '1',
-        currencyId: vendor.currency_id?.toString() || '1',
+        vendorTypeId: Number(vendor.vendor_type_id) || 1,
+        vendorGroupId: Number(vendor.vendor_group_id) || 1,
+        currencyId: Number(vendor.currency_id) || 1,
         businessCategory: '',
         branchName: 'สำนักงานใหญ่',
         currency: vendor.currency_code || 'THB',
@@ -676,9 +639,9 @@ export const initialVendorFormData: VendorFormData = {
     vendorNameTh: '',
     vendorNameEn: '',
     vendorType: 'COMPANY',
-    vendorTypeId: '',
-    vendorGroupId: '',
-    currencyId: '1',
+    vendorTypeId: 0,
+    vendorGroupId: 0,
+    currencyId: 1,
     businessCategory: '',
     taxId: '',
     branchName: '',
@@ -686,7 +649,7 @@ export const initialVendorFormData: VendorFormData = {
     vatRegistered: true,
     whtRegistered: false,
     addresses: [{
-        id: '1',
+        id: 1,
         address: '',
         subDistrict: '',
         district: '',
@@ -700,7 +663,7 @@ export const initialVendorFormData: VendorFormData = {
         phoneExtension: '',
         email: ''
     }, {
-        id: '2',
+        id: 2,
         address: '',
         subDistrict: '',
         district: '',
@@ -737,8 +700,9 @@ export const initialVendorFormData: VendorFormData = {
 /**
  * VendorTypeMaster - ข้อมูลประเภทเจ้าหนี้
  */
-export interface VendorTypeMaster extends IBaseMaster {
-    vendor_type_id: string;
+export interface VendorTypeMaster extends Omit<IBaseMaster, 'id'> {
+    id: number;
+    vendor_type_id: number;
     vendor_type_code: string;
     vendor_type_name: string;
     vendor_type_name_en?: string;
@@ -761,8 +725,9 @@ export interface VendorTypeFormData {
 /**
  * VendorGroupMaster - ข้อมูลกลุ่มเจ้าหนี้
  */
-export interface VendorGroupMaster extends IBaseMaster {
-    vendor_group_id: string;
+export interface VendorGroupMaster extends Omit<IBaseMaster, 'id'> {
+    id: number;
+    vendor_group_id: number;
     vendor_group_code: string;
     vendor_group_name: string;
     vendor_group_name_en?: string;

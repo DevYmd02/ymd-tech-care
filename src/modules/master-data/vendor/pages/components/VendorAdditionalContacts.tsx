@@ -4,15 +4,15 @@ import { styles } from '@/shared/constants/styles';
 import type { VendorFormData, VendorContactPerson } from '@/modules/master-data/vendor/types/vendor-types';
 
 interface VendorAdditionalContactsProps {
-    formData: VendorFormData;
+    formData: Partial<VendorFormData>;
     addContactPerson: () => void;
-    removeContactPerson: (id: string) => void;
-    updateContactPerson: (id: string, field: keyof VendorContactPerson, value: string | boolean) => void;
+    removeContactPerson: (id: number) => void;
+    updateContactPerson: (id: number, field: keyof VendorContactPerson, value: string | boolean) => void;
     errors: { [key: string]: string };
 }
 
 export const VendorAdditionalContacts: React.FC<VendorAdditionalContactsProps> = ({
-    formData,
+    formData = {},
     addContactPerson,
     removeContactPerson,
     updateContactPerson,
@@ -35,7 +35,7 @@ export const VendorAdditionalContacts: React.FC<VendorAdditionalContactsProps> =
             </div>
             
             <div className="space-y-4">
-                {formData.additionalContacts.map((contact, index) => (
+                {formData.additionalContacts?.map((contact, index) => (
                     <div key={contact.id} className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm relative">
                         <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-3 block">ผู้ติดต่อที่ {index + 1}</h4>
                         
@@ -109,7 +109,7 @@ export const VendorAdditionalContacts: React.FC<VendorAdditionalContactsProps> =
                         </div>
                     </div>
                 ))}
-                {formData.additionalContacts.length === 0 && (
+                {(formData.additionalContacts?.length || 0) === 0 && (
                     <div className="text-center py-6 bg-gray-100 dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 text-gray-500">
                         ไม่มีผู้ติดต่อเพิ่มเติม
                     </div>

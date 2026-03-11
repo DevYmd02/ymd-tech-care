@@ -10,7 +10,8 @@ import type { BaseMasterData } from '@/shared/types/common-master.types';
 // ====================================================================================
 
 export interface DepartmentMaster extends BaseMasterData {
-    department_id: string;
+    id: number;
+    department_id: number;
     department_code: string;
     department_name: string;
     department_name_en?: string;
@@ -30,11 +31,12 @@ export type DepartmentListItem = DepartmentMaster;
 // ====================================================================================
 
 export interface SectionMaster extends BaseMasterData {
-    section_id: string;
+    id: number;
+    section_id: number;
     section_code: string;
     section_name: string;
     section_name_en?: string;
-    department_id?: string;
+    department_id?: number;
     department_code?: string;
     department_name?: string;
 }
@@ -43,7 +45,7 @@ export interface SectionFormData {
     sectionCode: string;
     sectionName: string;
     sectionNameEn: string;
-    departmentId: string;
+    departmentId: number;
     isActive: boolean;
 }
 
@@ -54,7 +56,8 @@ export type SectionListItem = SectionMaster;
 // ====================================================================================
 
 export interface JobMaster extends BaseMasterData {
-    job_id: string;
+    id: number;
+    job_id: number;
     job_code: string;
     job_name: string;
 }
@@ -72,7 +75,8 @@ export type JobListItem = JobMaster;
 // ====================================================================================
 
 export interface EmployeeGroupMaster extends BaseMasterData {
-    group_id: string;
+    id: number;
+    group_id: number;
     group_code: string;
     group_name: string;
     group_name_en?: string;
@@ -92,7 +96,8 @@ export type EmployeeGroupListItem = EmployeeGroupMaster;
 // ====================================================================================
 
 export interface PositionMaster extends BaseMasterData {
-    position_id: string;
+    id: number;
+    position_id: number;
     position_code: string;
     position_name: string;
     position_name_en?: string;
@@ -112,7 +117,8 @@ export type PositionListItem = PositionMaster;
 // ====================================================================================
 
 export interface EmployeeMaster extends BaseMasterData {
-    employee_id: string;
+    id: number;
+    employee_id: number;
     employee_code: string;
     employee_name: string;
     title_name?: string;
@@ -120,9 +126,9 @@ export interface EmployeeMaster extends BaseMasterData {
     last_name?: string;
     email?: string;
     phone?: string;
-    position_id?: string;
+    position_id?: number;
     position_name?: string;
-    department_id?: string;
+    department_id?: number;
     department_name?: string;
     status: 'ACTIVE' | 'RESIGNED' | 'SUSPENDED';
 }
@@ -133,8 +139,8 @@ export interface EmployeeFormData {
     lastName: string;
     email: string;
     phone: string;
-    positionId: string;
-    departmentId: string;
+    positionId: number;
+    departmentId: number;
     isActive: boolean;
 }
 

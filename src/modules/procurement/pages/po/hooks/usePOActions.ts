@@ -27,7 +27,7 @@ export const usePOActions = () => {
             variant:     'info',
             icon:        Send,
             onConfirm:   async () => {
-                await POService.issue(item.po_id || '');
+                await POService.issue(item.po_id);
             },
         }).then((confirmed) => {
             if (confirmed) {
@@ -65,7 +65,7 @@ export const usePOActions = () => {
             icon:        Send,
             onConfirm:   async () => {
                 // 1. API Call (Strict Empty Body Payload)
-                await POService.submit(item.po_id || '');
+                await POService.submit(item.po_id);
 
                 // 2. Success Feedback (UI-only delay for invalidation)
                 setTimeout(() => {

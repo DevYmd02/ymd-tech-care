@@ -1,22 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { DialogFormLayout } from '@ui';
 import { Search } from 'lucide-react';
+import { WarehouseService } from '@/modules/master-data/inventory/services/warehouse.service';
+import type { WarehouseListItem } from '@/modules/master-data/inventory/types/warehouse-types';
 
 interface WarehouseSearchModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (data: { warehouse_id: string; warehouse_name: string }) => void;
+  onSelect: (data: WarehouseListItem) => void;
 }
-
-import { MOCK_WAREHOUSES } from '@/modules/procurement/mocks/data/warehouseData';
 
 export const WarehouseSearchModal: React.FC<WarehouseSearchModalProps> = ({ isOpen, onClose, onSelect }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
-  const filteredItems = MOCK_WAREHOUSES.filter(wh => 
-    wh.warehouse_name.includes(searchTerm) || 
-    wh.warehouse_id.includes(searchTerm)
-  );
+  const { data, isLoading } = useQuery({
+    queryKey: ['warehouses'],
+    queryFn: () => WarehouseService.getAll(),
+    enabled: isOpen,
+    staleTime: 5 * 60 * 1000, // Caching Master Data for 5 mins
+  });
+
+  const filteredItems = useMemo(() => {
+    const items = data?.items || [];
+    if (!searchTerm) return items;
+    
+    const lowerSearch = searchTerm.toLowerCase();
+    return items.filter(wh => 
+      wh.warehouse_name.toLowerCase().includes(lowerSearch) || 
+      wh.warehouse_code.toLowerCase().includes(lowerSearch) ||
+      String(wh.warehouse_id).includes(searchTerm)
+    );
+  }, [data, searchTerm]);
 
   return (
     <DialogFormLayout
@@ -53,7 +68,15 @@ export const WarehouseSearchModal: React.FC<WarehouseSearchModalProps> = ({ isOp
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-900">
-              {filteredItems.length > 0 ? (
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, idx) => (
+                  <tr key={idx} className="animate-pulse">
+                    <td className="px-3 py-3 text-center"><div className="h-6 w-12 bg-gray-200 dark:bg-gray-700 rounded mx-auto" /></td>
+                    <td className="px-3 py-3"><div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded" /></td>
+                    <td className="px-3 py-3"><div className="h-4 w-40 bg-gray-200 dark:bg-gray-700 rounded" /></td>
+                  </tr>
+                ))
+              ) : filteredItems.length > 0 ? (
                 filteredItems.map((item) => (
                   <tr key={item.warehouse_id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 transition-colors">
                     <td className="px-3 py-3 text-center">
@@ -68,7 +91,7 @@ export const WarehouseSearchModal: React.FC<WarehouseSearchModalProps> = ({ isOp
                         เลือก
                       </button>
                     </td>
-                    <td className="px-3 py-3 font-medium text-gray-900 dark:text-cyan-100">{item.warehouse_id}</td>
+                    <td className="px-3 py-3 font-medium text-gray-900 dark:text-cyan-100">{item.warehouse_code}</td>
                     <td className="px-3 py-3 text-gray-700 dark:text-gray-300">{item.warehouse_name}</td>
                   </tr>
                 ))

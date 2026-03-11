@@ -7,7 +7,7 @@
  */
 
 import { useState, useMemo, useCallback } from 'react';
-import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/react-query';
 import { FileText, Eye, Send, Edit, Search, Plus } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { PageListLayout, SmartTable, RFQStatusBadge, FilterField, MobileListCard, MobileListContainer } from '@ui';
@@ -15,12 +15,10 @@ import { useTableFilters } from '@/shared/hooks';
 import { createColumnHelper } from '@tanstack/react-table';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { logger } from '@/shared/utils/logger';
-
 // Services & Types
 import { RFQService } from '@/modules/procurement/services';
-import type { RFQFilterCriteria, RFQHeader, RFQStatus } from '@/modules/procurement/types';
+import type { RFQFilterCriteria, RFQHeader, RFQStatus, SendRFQToVendorPayload } from '@/modules/procurement/types';
 import { RFQFormModal, RFQSendConfirmModal } from './components';
-import type { VendorEmailConfig } from './components/RFQSendConfirmModal';
 
 
 
@@ -87,11 +85,12 @@ export default function RFQListPage() {
         placeholderData: keepPreviousData,
     });
 
+    const queryClient = useQueryClient();
     const { toast } = useToast();
 
     // Modal States (RFQ Form only — QT modal removed, belongs to QT page)
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [selectedRFQId, setSelectedRFQId] = useState<string | null>(null);
+    const [selectedRFQId, setSelectedRFQId] = useState<number | null>(null);
     const [isReadOnly, setIsReadOnly] = useState(false);
     const [isInviteMode, setIsInviteMode] = useState(false);
 
@@ -108,7 +107,7 @@ export default function RFQListPage() {
         setIsModalOpen(true);
     };
 
-    const handleView = useCallback((id: string) => {
+    const handleView = useCallback((id: number) => {
         setSelectedRFQId(id);
         setIsReadOnly(true);
         setIsInviteMode(false);
@@ -139,33 +138,38 @@ export default function RFQListPage() {
     }, []);
 
     const executeSendRFQ = async (
-        selectedVendorIds: string[],
-        methods: string[],
-        emailConfig: Record<string, VendorEmailConfig>
+        batchData: Array<{ rfqVendorId: number; payload: SendRFQToVendorPayload }>
     ) => {
-        if (!sendingRFQ) return;
-
-        // Build structured payload — ready for backend
-        const emailPayload = selectedVendorIds.map(vendorId => ({
-            vendor_id: vendorId,
-            dispatch_method: 'EMAIL' as const,
-            to_emails: emailConfig[vendorId]?.to ?? [],
-            cc_emails: emailConfig[vendorId]?.cc ?? [],
-        }));
-
-        logger.info('[RFQListPage] executeSendRFQ payload:', { vendorIds: selectedVendorIds, methods, emailPayload });
+        if (!sendingRFQ || batchData.length === 0) return;
 
         setIsSending(true);
         try {
-            // Use sendToVendors API with filtered vendor IDs and methods (Clean Payload)
-            await RFQService.sendToVendors(sendingRFQ.rfq_id, selectedVendorIds, methods);
+            logger.info(`[RFQListPage] Executing batch send for ${batchData.length} vendors`);
+            
+            // Execute multiple PATCH calls in parallel
+            // We use allSettled to ensure we try all even if some fail
+            const results = await Promise.allSettled(
+                batchData.map(item => RFQService.sendToVendor(item.rfqVendorId, item.payload))
+            );
 
-            toast(`ส่ง RFQ ${sendingRFQ.rfq_no} ไปยังผู้ขาย ${selectedVendorIds.length} ราย เรียบร้อยแล้ว`, 'success');
-            handleApplyFilters();
+            const failures = results.filter(r => r.status === 'rejected');
+            if (failures.length > 0) {
+                logger.error('[RFQListPage] Some RFQ sends failed:', failures);
+                toast(`ส่งสำเร็จ ${batchData.length - failures.length} รายการ, ล้มเหลว ${failures.length} รายการ`, 'error');
+            } else {
+                toast(`ส่ง RFQ ${sendingRFQ.rfq_no} เรียบร้อยแล้วทุกรายการ`, 'success');
+            }
+
+            // Always invalidate to get fresh X/Y counters
+            // Delay 100ms to ensure backend consistency (Gold Standard pattern)
+            setTimeout(() => {
+                queryClient.invalidateQueries({ queryKey: ['rfqs'] });
+                handleApplyFilters();
+            }, 100);
             setSendingRFQ(null);
         } catch (error) {
-            toast('เกิดข้อผิดพลาดในการส่ง RFQ', 'error');
-            logger.error('[RFQListPage] executeSendRFQ error:', error);
+            logger.error('[RFQListPage] executeSendRFQ unexpected error:', error);
+            toast('เกิดข้อผิดพลาดไม่คาดคิดในการส่ง RFQ', 'error');
         } finally {
             setIsSending(false);
         }
@@ -184,43 +188,62 @@ export default function RFQListPage() {
         }),
         columnHelper.accessor('rfq_no', {
             header: 'ข้อมูล RFQ',
-            cell: (info) => (
-                <div className="flex flex-col py-2">
-                    <span className="font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline cursor-pointer" title={info.getValue()}>
-                        {info.getValue()}
-                    </span>
-                    {info.row.original.ref_pr_no && (
-                        <span className="text-xs text-gray-500 mt-1">
-                            Ref: {info.row.original.ref_pr_no}
+            cell: (info) => {
+                const item = info.row.original;
+                const prNumber = item.ref_pr_no || item.pr_no || item.pr?.pr_no;
+
+                return (
+                    <div className="flex flex-col py-2">
+                        <span className="font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline cursor-pointer" title={info.getValue()}>
+                            {info.getValue()}
                         </span>
-                    )}
-                </div>
-            ),
+                        {prNumber && (
+                            <span className="text-xs text-gray-500 mt-1">
+                                Ref: {prNumber}
+                            </span>
+                        )}
+                    </div>
+                );
+            },
             size: 180,
             enableSorting: true,
         }),
-        columnHelper.accessor('purpose', {
+        columnHelper.display({
+            id: 'purpose',
             header: 'เรื่อง/วัตถุประสงค์',
-            cell: (info) => (
-                <div className="max-w-[250px] truncate py-2" title={info.getValue()}>
-                    {info.getValue()}
-                </div>
-            ),
+            cell: ({ row }) => {
+                const item = row.original;
+                // API list endpoint ไม่ส่ง `purpose` มาโดยตรง — fallback ไปใช้บรรทัดแรกของ remarks
+                const purposeText = item.purpose || item.remarks?.split('\n')[0]?.trim() || '-';
+                return (
+                    <div className="max-w-[250px] truncate py-2" title={purposeText}>
+                        {purposeText}
+                    </div>
+                );
+            },
             size: 250,
             enableSorting: false,
         }),
-        columnHelper.accessor('created_by_name', {
+        columnHelper.display({
+            id: 'creator',
             header: 'ผู้สร้าง RFQ',
-            cell: (info) => (
-                <div className="flex flex-col py-2">
-                    <span className="text-gray-900 dark:text-gray-100 font-medium">
-                        {info.getValue() || '-'}
-                    </span>
-                    <span className="text-xs text-gray-400">
-                        {formatThaiDate(info.row.original.rfq_date)}
-                    </span>
-                </div>
-            ),
+            cell: ({ row }) => {
+                const item = row.original;
+                const u = item.requested_by_user;
+                const creatorName = u
+                    ? `${u.employee_firstname_th} ${u.employee_lastname_th}`.trim()
+                    : (item.created_by_name || item.creator_name || '-');
+                return (
+                    <div className="flex flex-col py-2">
+                        <span className="text-gray-900 dark:text-gray-100 font-medium">
+                            {creatorName}
+                        </span>
+                        <span className="text-xs text-gray-400">
+                            {formatThaiDate(item.rfq_date)}
+                        </span>
+                    </div>
+                );
+            },
             size: 160,
             enableSorting: false,
         }),
@@ -255,14 +278,17 @@ export default function RFQListPage() {
         }),
         columnHelper.display({
             id: 'vendors',
-            header: () => <div className="flex justify-center items-center w-full h-full">VENDORS</div>,
-            cell: (info) => {
-                const sentCount = info.row.original.sent_vendors_count || 0;
-                const total = info.row.original.vendor_count || 0;
+            header: () => <div className="flex justify-center items-center w-full h-full">ผู้ขาย (ส่ง/ทั้งหมด)</div>,
+            cell: ({ row }) => {
+                const item = row.original;
+                // UI Counters from Backend (X / Y)
+                const sentCount = item.vendor_sent ?? item.sent_vendors_count ?? 0;
+                const total = item.vendor_total ?? item.vendor_count ?? 0;
+
                 return (
                     <div className="flex flex-col items-center justify-center h-full py-2">
                         <span className="text-gray-700 dark:text-gray-300 font-medium leading-none mb-0.5">
-                            {`${sentCount}/${total}`}
+                            {`${sentCount} / ${total}`}
                         </span>
                     </div>
                 );
@@ -273,11 +299,29 @@ export default function RFQListPage() {
         columnHelper.accessor(row => row.status, {
             id: 'status',
             header: () => <div className="flex justify-center items-center w-full h-full">สถานะ</div>,
-            cell: (info) => (
-                <div className="flex justify-center items-center h-full py-2">
-                    <RFQStatusBadge status={info.getValue()} />
-                </div>
-            ),
+            cell: (info) => {
+                const item = info.row.original;
+                
+                let dynamicStatus = info.getValue() as string;
+                
+                // Override status dynamically based on X/Y logic from backend
+                const sentCount = item.vendor_sent ?? 0;
+                const total = item.vendor_total ?? 0;
+                
+                if (total > 0 && sentCount === total) {
+                    dynamicStatus = 'SENT';
+                } else if (total > 0 && sentCount > 0 && sentCount < total) {
+                    // Partially sent can still show DRAFT or maybe a new "PARTIAL" if we had one
+                    // but according to prompt: SENT if sent===total, else DRAFT
+                    dynamicStatus = 'DRAFT';
+                }
+
+                return (
+                    <div className="flex justify-center items-center h-full py-2">
+                        <RFQStatusBadge status={dynamicStatus as RFQStatus} />
+                    </div>
+                );
+            },
             size: 100,
             enableSorting: false,
         }),
@@ -470,54 +514,71 @@ export default function RFQListPage() {
                         isEmpty={!data?.data.length}
                         pagination={data?.total ? { page: filters.page, total: data.total, limit: filters.limit, onPageChange: handlePageChange } : undefined}
                     >
-                        {data?.data.map((item) => (
-                            <MobileListCard
-                                key={item.rfq_id}
-                                title={item.rfq_no}
-                                subtitle={formatThaiDate(item.rfq_date)}
-                                statusBadge={<RFQStatusBadge status={item.status} />}
-                                details={[
-                                    ...(item.ref_pr_no ? [{ label: 'PR อ้างอิง:', value: <span className="font-medium text-blue-600 dark:text-blue-400">{item.ref_pr_no}</span> }] : []),
-                                    { label: 'ผู้สร้าง:', value: item.created_by_name || '-' },
-                                    { label: 'Vendors:', value: `${item.sent_vendors_count || 0}/${item.vendor_count || 0} ราย` },
-                                    ...(item.quotation_due_date ? [{ label: 'ครบกำหนด:', value: formatThaiDate(item.quotation_due_date) }] : []),
-                                ]}
-                                actions={
-                                    <>
-                                        <button
-                                            onClick={() => handleView(item.rfq_id)}
-                                            className="flex-1 bg-gray-50 dark:bg-slate-700 hover:bg-gray-100 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1 border border-gray-200 dark:border-slate-600"
-                                        >
-                                            <Eye size={14} /> ดู
-                                        </button>
-                                        {item.status === 'DRAFT' && (
-                                            <>
-                                                <button
-                                                    onClick={() => handleEdit(item)}
-                                                    className="flex-1 bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1"
-                                                >
-                                                    <Edit size={14} /> แก้ไข
-                                                </button>
-                                                <button
-                                                    onClick={() => handleSendRFQ(item)}
-                                                    className="flex-[2] bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
-                                                >
-                                                    <Send size={14} /> ส่ง RFQ
-                                                </button>
-                                            </>
-                                        )}
-                                        {item.status === 'SENT' && (
+                        {data?.data.map((item) => {
+                            const prNumber = item.ref_pr_no || item.pr_no || item.pr?.pr_no;
+                            return (
+                                <MobileListCard
+                                    key={item.rfq_id}
+                                    title={item.rfq_no}
+                                    subtitle={formatThaiDate(item.rfq_date)}
+                                    statusBadge={<RFQStatusBadge status={item.status} />}
+                                    details={[
+                                        ...(prNumber ? [{ label: 'PR อ้างอิง:', value: <span className="font-medium text-blue-600 dark:text-blue-400">{prNumber}</span> }] : []),
+                                        { label: 'ผู้สร้าง:', value: (() => {
+                                            const u = item.requested_by_user;
+                                            return u
+                                                ? `${u.employee_firstname_th} ${u.employee_lastname_th}`.trim()
+                                                : (item.created_by_name || item.creator_name || '-');
+                                        })() },
+                                        { label: 'Vendors:', value: (() => {
+                                            const rfqVendors = item.rfqVendors || item.vendors;
+                                            let sentCount = item.sent_vendors_count || 0;
+                                            let total = item._count?.rfqVendors ?? item.vendor_count ?? 0;
+                                            if (Array.isArray(rfqVendors)) {
+                                                total = rfqVendors.length;
+                                                sentCount = rfqVendors.filter(v => v.status === 'SENT').length;
+                                            }
+                                            return `${sentCount} / ${total} ราย`;
+                                        })() },
+                                        ...(item.quotation_due_date ? [{ label: 'ครบกำหนด:', value: formatThaiDate(item.quotation_due_date) }] : []),
+                                    ]}
+                                    actions={
+                                        <>
                                             <button
-                                                onClick={() => handleAddMoreVendors(item)}
-                                                className="flex-[2] bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
+                                                onClick={() => handleView(item.rfq_id)}
+                                                className="flex-1 bg-gray-50 dark:bg-slate-700 hover:bg-gray-100 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1 border border-gray-200 dark:border-slate-600"
                                             >
-                                                <Send size={14} /> ส่งเพิ่ม
+                                                <Eye size={14} /> ดู
                                             </button>
-                                        )}
-                                    </>
-                                }
-                            />
-                        ))}
+                                            {item.status === 'DRAFT' && (
+                                                <>
+                                                    <button
+                                                        onClick={() => handleEdit(item)}
+                                                        className="flex-1 bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1"
+                                                    >
+                                                        <Edit size={14} /> แก้ไข
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleSendRFQ(item)}
+                                                        className="flex-[2] bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
+                                                    >
+                                                        <Send size={14} /> ส่ง RFQ
+                                                    </button>
+                                                </>
+                                            )}
+                                            {item.status === 'SENT' && (
+                                                <button
+                                                    onClick={() => handleAddMoreVendors(item)}
+                                                    className="flex-[2] bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
+                                                >
+                                                    <Send size={14} /> ส่งเพิ่ม
+                                                </button>
+                                            )}
+                                        </>
+                                    }
+                                />
+                            );
+                        })}
                     </MobileListContainer>
                 </div>
 
@@ -531,6 +592,7 @@ export default function RFQListPage() {
                     readOnly={isReadOnly}
                     isInviteMode={isInviteMode}
                     onSuccess={() => {
+                        queryClient.invalidateQueries({ queryKey: ['rfqs'] });
                         handleApplyFilters();
                         handleCloseModal();
                     }}

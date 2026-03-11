@@ -47,7 +47,7 @@ export default function VendorGroupList() {
     const [allVendorGroups, setAllVendorGroups] = useState<VendorGroupMaster[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editingId, setEditingId] = useState<number | null>(null);
 
     // ==================== FILTER CONFIG ====================
     const filterConfig: FilterFieldConfig<keyof typeof filters>[] = useMemo(() => [
@@ -129,12 +129,12 @@ export default function VendorGroupList() {
         setIsModalOpen(true);
     };
 
-    const handleEdit = (id: string) => {
+    const handleEdit = (id: number) => {
         setEditingId(id);
         setIsModalOpen(true);
     };
 
-    const handleDelete = useCallback((id: string) => {
+    const handleDelete = useCallback((id: number) => {
         if (confirm('คุณต้องการลบข้อมูลกลุ่มเจ้าหนี้นี้หรือไม่?')) {
             VendorGroupService.delete(id).then(() => fetchData());
         }

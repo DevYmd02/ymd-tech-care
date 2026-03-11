@@ -28,7 +28,7 @@ export const UOMConversionService = {
     }
   },
 
-  delete: async (id: string): Promise<boolean> => {
+  delete: async (id: number): Promise<boolean> => {
     if (USE_MOCK) return true;
     try {
       await api.delete<SuccessResponse>(`/uom-conversions/${id}`);

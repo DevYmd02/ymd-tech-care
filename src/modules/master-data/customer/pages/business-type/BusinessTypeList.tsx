@@ -16,7 +16,7 @@ import { BusinessTypeFormModal } from './BusinessTypeFormModal';
 
 export default function BusinessTypeList() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
 
   const { filters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters({
     customParamKeys: {
@@ -40,12 +40,12 @@ export default function BusinessTypeList() {
     setIsModalOpen(true);
   };
 
-  const handleEdit = (id: string) => {
+  const handleEdit = (id: number) => {
     setSelectedId(id);
     setIsModalOpen(true);
   };
 
-  const handleDelete = useCallback(async (_: string, code: string) => {
+  const handleDelete = useCallback(async (_: number, code: string) => {
     const isConfirmed = await confirm({
       title: 'ยืนยันการลบข้อมูล',
       description: `คุณต้องการลบประเภทธุรกิจ ${code} ใช่หรือไม่?`,

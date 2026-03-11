@@ -7,7 +7,7 @@ import type { ItemTypeListItem } from '@/modules/master-data/types/master-data-t
 interface Props {
     isOpen: boolean;
     onClose: () => void;
-    editId?: string | null;
+    editId?: number | null;
     initialData?: ItemTypeListItem | null;
     onSuccess?: () => void;
 }

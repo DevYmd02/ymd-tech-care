@@ -13,7 +13,7 @@ function mapItemFields(raw: Record<string, unknown>): ItemListItem {
   return {
     ...(raw as unknown as ItemListItem),
     // Ensure unit_id is populated from backend uom_id or base_uom_id
-    unit_id: (raw.unit_id as string) || String(raw.uom_id || raw.base_uom_id || ''),
+    unit_id: (raw.unit_id as number) || Number(raw.uom_id || raw.base_uom_id || 0),
     unit_name: (raw.unit_name as string) || (raw.uom_name as string) || '',
   };
 }
@@ -74,7 +74,7 @@ export const ItemMasterService = {
     }
   },
 
-  getById: async (id: string): Promise<ItemListItem | null> => {
+  getById: async (id: number): Promise<ItemListItem | null> => {
       if (USE_MOCK) {
           return mockItems.find(i => i.item_id === id) || null;
       }
@@ -103,7 +103,7 @@ export const ItemMasterService = {
     }
   },
 
-  update: async (id: string, data: Partial<ItemMasterFormData>): Promise<boolean> => {
+  update: async (id: number, data: Partial<ItemMasterFormData>): Promise<boolean> => {
     if (USE_MOCK) {
         logger.info('🎭 [Mock Mode] Update Item:', id, data);
         return true;
@@ -117,7 +117,7 @@ export const ItemMasterService = {
     }
   },
 
-  delete: async (id: string): Promise<boolean> => {
+  delete: async (id: number): Promise<boolean> => {
     if (USE_MOCK) return true;
     try {
       await api.delete<SuccessResponse>(`/items/${id}`);

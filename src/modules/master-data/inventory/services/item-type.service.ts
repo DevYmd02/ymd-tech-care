@@ -70,7 +70,7 @@ update: async (id: string, data: ItemTypeCreateRequest): Promise<SuccessResponse
     }
 },
 
-  delete: async (id: string): Promise<boolean> => {
+  delete: async (id: number): Promise<boolean> => {
     if (USE_MOCK) return true;
 
     try {

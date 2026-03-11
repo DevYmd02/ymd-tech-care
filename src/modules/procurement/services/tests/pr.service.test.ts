@@ -23,7 +23,7 @@ describe('PRService Unit Tests', () => {
     it('should fetch PR list with correct mapping and endpoint', async () => {
       const mockResponse = {
         items: [
-          { pr_id: '1', pr_no: 'PR-001', requester_name: 'Test user', status: 'DRAFT' }
+          { pr_id: 1, pr_no: 'PR-001', requester_name: 'Test user', status: 'DRAFT' }
         ],
         total: 1,
         page: 1,
@@ -55,10 +55,10 @@ describe('PRService Unit Tests', () => {
 
   describe('getDetail', () => {
     it('should fetch a single PR by ID', async () => {
-      const mockPR = { pr_id: '1', pr_no: 'PR-001' };
+      const mockPR = { pr_id: 1, pr_no: 'PR-001' };
       vi.mocked(api.get).mockResolvedValue(mockPR);
 
-      const result = await PRService.getDetail('1');
+      const result = await PRService.getDetail(1);
 
       expect(api.get).toHaveBeenCalledWith('/pr/1');
       expect(result).toEqual(mockPR);
@@ -66,7 +66,7 @@ describe('PRService Unit Tests', () => {
 
     it('should return null on getDetail error', async () => {
       vi.mocked(api.get).mockRejectedValue(new Error('Not Found'));
-      await expect(PRService.getDetail('999')).rejects.toThrow('Not Found');
+      await expect(PRService.getDetail(999)).rejects.toThrow('Not Found');
     });
   });
 
@@ -96,7 +96,7 @@ describe('PRService Unit Tests', () => {
         ]
       };
 
-      const mockCreatedPR = { pr_id: 'PR-NEW', pr_no: 'PR-001' };
+      const mockCreatedPR = { pr_id: 1, pr_no: 'PR-001' };
       vi.mocked(api.post).mockResolvedValue(mockCreatedPR);
 
       const result = await PRService.create(payload);
@@ -115,11 +115,11 @@ describe('PRService Unit Tests', () => {
 
   describe('update', () => {
     it('should patch updated PR data', async () => {
-      const mockUpdatedPR = { pr_id: '1', remark: 'Modified' };
+      const mockUpdatedPR = { pr_id: 1, remark: 'Modified' };
       vi.mocked(api.put).mockResolvedValue(mockUpdatedPR);
 
       const payload: PRUpdatePayload = { remark: 'Modified' };
-      const result = await PRService.update('1', payload);
+      const result = await PRService.update(1, payload);
 
       expect(api.put).toHaveBeenCalledWith('/pr/1', { remark: 'Modified' });
       expect(result).toEqual(mockUpdatedPR);
@@ -133,7 +133,7 @@ describe('PRService Unit Tests', () => {
         const mockSuccess = { success: true, message: 'Cancelled' };
         vi.mocked(api.post).mockResolvedValue(mockSuccess);
   
-        const result = await PRService.cancel('123'); // Removed reason
+        const result = await PRService.cancel(123); // Removed reason
   
         expect(api.post).toHaveBeenCalledWith('/pr/123/cancel'); // Removed body
         expect(result).toEqual(mockSuccess);
@@ -143,8 +143,8 @@ describe('PRService Unit Tests', () => {
         const mockResponse = { success: true, document_id: 'PO-001' };
         vi.mocked(api.post).mockResolvedValue(mockResponse);
   
-        const request = { pr_id: '123', convert_to: 'PO' as const, line_ids: ['L1'] };
-        const result = await PRService.convert('123', request);
+        const request = { pr_id: 123, convert_to: 'PO' as const, line_ids: [1] };
+        const result = await PRService.convert(123, request);
   
         expect(api.post).toHaveBeenCalledWith('/pr/123/convert', request);
         expect(result).toEqual(mockResponse);
@@ -167,7 +167,7 @@ describe('PRService Unit Tests', () => {
     it('should call delete endpoint and return true', async () => {
       vi.mocked(api.delete).mockResolvedValue({ success: true });
 
-      const result = await PRService.delete('123');
+      const result = await PRService.delete(123);
 
       expect(api.delete).toHaveBeenCalledWith('/pr/123');
       expect(result).toBe(true);
@@ -176,7 +176,7 @@ describe('PRService Unit Tests', () => {
     it('should throw on delete error', async () => {
       vi.mocked(api.delete).mockRejectedValue(new Error('Delete failed'));
 
-      await expect(PRService.delete('123')).rejects.toThrow('Delete failed');
+      await expect(PRService.delete(123)).rejects.toThrow('Delete failed');
     });
   });
 });

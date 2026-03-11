@@ -29,10 +29,12 @@ export default function BranchForm() {
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
 
+    const numericEditId = editId ? Number(editId) : null;
+    
     // Load data if editing
     useEffect(() => {
-        if (editId) {
-            const existing = mockBranches.find(b => b.branch_id === editId);
+        if (numericEditId) {
+            const existing = mockBranches.find(b => b.branch_id === numericEditId);
             if (existing) {
                 setFormData({
                     branchCode: existing.branch_code,

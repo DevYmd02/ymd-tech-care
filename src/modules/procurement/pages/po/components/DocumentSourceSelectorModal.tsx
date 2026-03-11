@@ -9,7 +9,7 @@ import { cn } from '@/shared/utils/cn';
 interface DocumentSourceSelectorModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSelectSource: (sourceType: 'QC' | 'BLANK', qcId?: string, vendorId?: string) => void;
+    onSelectSource: (sourceType: 'QC' | 'BLANK', qcId?: number, vendorId?: number) => void;
 }
 
 export const DocumentSourceSelectorModal: React.FC<DocumentSourceSelectorModalProps> = ({
@@ -17,7 +17,7 @@ export const DocumentSourceSelectorModal: React.FC<DocumentSourceSelectorModalPr
     onClose,
     onSelectSource
 }) => {
-    const [selectedQcId, setSelectedQcId] = useState<string | null>(null);
+    const [selectedQcId, setSelectedQcId] = useState<number | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
 
     // Fetch QCs that are ready (COMPLETED and not yet converted to PO)

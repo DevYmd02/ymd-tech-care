@@ -51,7 +51,7 @@ export const setupPRTHandlers = (mock: MockAdapter) => {
       const newPRT: PurchaseReturn = {
           ...MOCK_PRT_DATA[0], // fallback template
           ...data as PurchaseReturn, // simplified casting for mock
-          prt_id: `prt-${Date.now()}`,
+          prt_id: Number(Date.now()),
           prt_no: `PRT-MOCK-${Date.now()}`,
           status: 'DRAFT',
           created_at: new Date().toISOString(),

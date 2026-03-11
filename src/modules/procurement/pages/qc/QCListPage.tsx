@@ -68,7 +68,7 @@ export default function QCListPage() {
 
     // Modal State
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-    const [selectedQcId, setSelectedQcId] = useState<string | null>(null);
+    const [selectedQcId, setSelectedQcId] = useState<number | null>(null);
     const [modalMode, setModalMode] = useState<'view' | 'edit' | 'create'>('create');
 
     const handleCreate = useCallback(() => {
@@ -78,20 +78,22 @@ export default function QCListPage() {
     }, []);
 
     const handleView = useCallback((row: QCListItem) => {
-        setSelectedQcId(row.qc_id || null);
+        if (!row.qc_id) return;
+        setSelectedQcId(row.qc_id);
         setModalMode('view');
         setIsFormModalOpen(true);
     }, []);
 
     const handleEdit = useCallback((row: QCListItem) => {
-        setSelectedQcId(row.qc_id || null);
+        if (!row.qc_id) return;
+        setSelectedQcId(row.qc_id);
         setModalMode('edit');
         setIsFormModalOpen(true);
     }, []);
 
     // Price Comparison Mutation
     const compareMutation = useMutation({
-        mutationFn: (id: string) => QCService.compare(id),
+        mutationFn: (id: number) => QCService.compare(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['quote-comparisons'] });
             toast.success('ส่งเปรียบเทียบราคาสำเร็จ!');
@@ -102,7 +104,7 @@ export default function QCListPage() {
         }
     });
 
-    const handleCompare = useCallback(async (id: string) => {
+    const handleCompare = useCallback(async (id: number) => {
         const isConfirmed = await confirm({
             title: 'ยืนยันการเปรียบเทียบ',
             description: 'คุณต้องการส่งเปรียบเทียบราคารายการนี้ใช่หรือไม่?',

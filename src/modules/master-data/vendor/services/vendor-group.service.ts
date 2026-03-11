@@ -31,7 +31,7 @@ export const VendorGroupService = {
     /**
      * Get vendor group by ID
      */
-    getById: async (id: string): Promise<VendorGroupMaster | null> => {
+    getById: async (id: number): Promise<VendorGroupMaster | null> => {
         if (USE_MOCK) {
             const vendorGroup = localVendorGroups.items.find(vg => vg.vendor_group_id === id);
             if (vendorGroup) {
@@ -55,7 +55,7 @@ export const VendorGroupService = {
     create: async (data: VendorGroupFormData): Promise<{ success: boolean; data?: VendorGroupMaster; message?: string }> => {
         if (USE_MOCK) {
             logger.info('🎭 [Mock Mode] Creating Vendor Group', data);
-            const newId = `VGRP-${data.groupCode.toUpperCase()}`;
+            const newId = Date.now();
             const newVendorGroup: VendorGroupMaster = {
                 vendor_group_id: newId,
                 id: newId,
@@ -85,7 +85,7 @@ export const VendorGroupService = {
     /**
      * Update vendor group
      */
-    update: async (id: string, data: VendorGroupFormData): Promise<{ success: boolean; data?: VendorGroupMaster; message?: string }> => {
+    update: async (id: number, data: VendorGroupFormData): Promise<{ success: boolean; data?: VendorGroupMaster; message?: string }> => {
         if (USE_MOCK) {
             const index = localVendorGroups.items.findIndex(vg => vg.vendor_group_id === id);
             if (index !== -1) {
@@ -116,7 +116,7 @@ export const VendorGroupService = {
     /**
      * Delete vendor group
      */
-    delete: async (id: string): Promise<{ success: boolean; message?: string }> => {
+    delete: async (id: number): Promise<{ success: boolean; message?: string }> => {
         if (USE_MOCK) {
             const initialLength = localVendorGroups.items.length;
             localVendorGroups.items = localVendorGroups.items.filter(vg => vg.vendor_group_id !== id);

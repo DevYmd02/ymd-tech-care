@@ -15,11 +15,11 @@ export interface MatrixRow {
   description: string;
   qty: number;
   unit: string;
-  vendors: Record<string, MatrixVendorCell>; // vq_id is the key
+  vendors: Record<number, MatrixVendorCell>; // vq_id is the key
 }
 
 export interface VendorTotal {
-  vq_id: string;
+  vq_id: number;
   vendor_name: string;
   grand_total: number;
   winning_total: number;
@@ -32,7 +32,7 @@ export function useQCMatrix(
   productMappings: Record<string, ProductLookup> = {}
 ) {
   // winningMap: { [item_code]: vq_id }
-  const [winningMap, setWinningMap] = useState<Record<string, string>>({});
+  const [winningMap, setWinningMap] = useState<Record<string, number>>({});
 
   // Phase 2: Matrix Transformation Engine
   const matrixData = useMemo((): MatrixRow[] => {
@@ -49,11 +49,11 @@ export function useQCMatrix(
 
       selectedVQs.forEach(vq => {
         const vqLine = vq.lines?.find(l => l.item_code === rfqLine.item_code);
-        row.vendors[vq.quotation_id] = {
+        row.vendors[(vq.quotation_id || vq.vq_header_id) as number] = {
           unit_price: vqLine?.unit_price || 0,
           total_price: vqLine?.net_amount || 0,
           is_no_quote: !!vqLine?.no_quote || (!vqLine),
-          is_winner: winningMap[rfqLine.item_code] === vq.quotation_id
+          is_winner: rfqLine.item_code ? winningMap[rfqLine.item_code] === (vq.quotation_id || vq.vq_header_id) : false
         };
       });
 
@@ -62,7 +62,7 @@ export function useQCMatrix(
   }, [rfqLines, selectedVQs, winningMap, productMappings]);
 
   // Phase 3: State Management & Interactivity
-  const handleSelectWinner = useCallback((item_id: string, vq_id: string) => {
+  const handleSelectWinner = useCallback((item_id: string, vq_id: number) => {
     setWinningMap(prev => {
         const currentWinner = prev[item_id];
         const newMap = { ...prev };
@@ -75,12 +75,12 @@ export function useQCMatrix(
     });
   }, []);
 
-  const handleSelectAllForVendor = useCallback((vq_id: string) => {
+  const handleSelectAllForVendor = useCallback((vq_id: number) => {
     setWinningMap(prev => {
         const newWinningMap = { ...prev };
         let anyChanged = false;
 
-        const vq = selectedVQs.find(v => v.quotation_id === vq_id);
+        const vq = selectedVQs.find(v => (v.quotation_id || v.vq_header_id) === vq_id);
         if (!vq) return prev;
 
         rfqLines.forEach(rfqLine => {
@@ -108,8 +108,8 @@ export function useQCMatrix(
   }, [rfqLines, selectedVQs]);
 
   // Phase 4: Real-time Calculators
-  const getVendorGrandTotal = useCallback((vq_id: string) => {
-    const vq = selectedVQs.find(v => v.quotation_id === vq_id);
+  const getVendorGrandTotal = useCallback((vq_id: number) => {
+    const vq = selectedVQs.find(v => (v.quotation_id || v.vq_header_id) === vq_id);
     if (!vq) return 0;
     return rfqLines.reduce((sum, rfqLine) => {
        const vqLine = vq.lines?.find(l => l.item_code === rfqLine.item_code);
@@ -123,9 +123,9 @@ export function useQCMatrix(
   const getWinningTotal = useCallback(() => {
     let total = 0;
     rfqLines.forEach(rfqLine => {
-        const vq_id = winningMap[rfqLine.item_code];
+        const vq_id = rfqLine.item_code ? winningMap[rfqLine.item_code] : undefined;
         if (vq_id) {
-            const vq = selectedVQs.find(v => v.quotation_id === vq_id);
+            const vq = selectedVQs.find(v => (v.quotation_id || v.vq_header_id) === vq_id);
             const vqLine = vq?.lines?.find(l => l.item_code === rfqLine.item_code);
             if (vqLine && !vqLine.no_quote) {
                 total += (vqLine.net_amount || 0);
@@ -146,7 +146,7 @@ export function useQCMatrix(
         const vqLine = vq.lines?.find(l => l.item_code === rfqLine.item_code);
         if (vqLine && !vqLine.no_quote) {
            total_biddable_items++;
-           if (winningMap[rfqLine.item_code] === vq.quotation_id) {
+           if (winningMap[rfqLine.item_code] === (vq.quotation_id || vq.vq_header_id)) {
              winning_total += vqLine.net_amount || 0;
              won_items_count++;
            }
@@ -154,9 +154,9 @@ export function useQCMatrix(
       });
 
       return {
-        vq_id: vq.quotation_id,
+        vq_id: (vq.quotation_id || vq.vq_header_id) as number,
         vendor_name: vq.vendor_name || 'Unknown',
-        grand_total: getVendorGrandTotal(vq.quotation_id),
+        grand_total: vq.vq_header_id || vq.quotation_id ? getVendorGrandTotal((vq.vq_header_id || vq.quotation_id) as number) : 0,
         winning_total,
         is_all_won: total_biddable_items > 0 && won_items_count === total_biddable_items
       };

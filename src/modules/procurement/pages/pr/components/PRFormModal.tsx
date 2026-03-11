@@ -24,7 +24,7 @@ const SHIPPING_OPTIONS = [
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  id?: string;
+  id?: number;
   onSuccess?: () => void;
   readOnly?: boolean;
 }
@@ -53,6 +53,10 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
   // V-04: Force readOnly if status is not DRAFT (prevent editing APPROVED/PENDING PRs)
   const currentStatus = watch('status');
   const readOnly = readOnlyProp || (!!id && currentStatus !== undefined && currentStatus !== 'DRAFT');
+
+  // Action permissions — decoupled from readOnly (which is only for input fields)
+  const canApproveReject = isEditMode && currentStatus === 'PENDING';
+  const canSaveDraft = !readOnly; // Only editable forms can save
 
   // Tabs state
   const [activeTab, setActiveTab] = useState('detail');
@@ -91,22 +95,32 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
                  )}
             </div>
             <div className="flex items-center gap-2">
-                <button type="button" onClick={onClose} disabled={isSubmitting || isActionLoading} className="px-4 py-2 border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-md text-sm font-medium">{readOnly ? 'ปิด' : 'ยกเลิก'}</button>
-                {!readOnly && (
+                <button type="button" onClick={onClose} disabled={isSubmitting || isActionLoading} className="px-4 py-2 border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-md text-sm font-medium">{'ปิด'}</button>
+
+                {/* Approve / Reject — shown when PENDING (regardless of readOnly) */}
+                {canApproveReject && (
                   <>
-                    {isEditMode && (
-                      <>
-                        <button 
-                            type="button" 
-                            onClick={handleReject} 
-                            disabled={isSubmitting || isActionLoading} 
-                            className="px-4 py-2 bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 rounded-md text-sm font-medium flex items-center gap-2 border border-red-200 dark:border-red-800/50"
-                        >
-                            <XCircle size={16} /> ไม่อนุมัติ
-                        </button>
-                        <button type="button" onClick={handleApprove} disabled={isSubmitting || isActionLoading} className="px-6 py-2 bg-green-600 text-white hover:bg-green-700 rounded-md text-sm font-medium flex items-center gap-2"><CheckCircle size={16} /> อนุมัติ</button>
-                      </>
-                    )}
+                    <button 
+                        type="button" 
+                        onClick={handleReject} 
+                        disabled={isSubmitting || isActionLoading} 
+                        className="px-4 py-2 bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 rounded-md text-sm font-medium flex items-center gap-2 border border-red-200 dark:border-red-800/50"
+                    >
+                        <XCircle size={16} /> ไม่อนุมัติ
+                    </button>
+                    <button 
+                        type="button" 
+                        onClick={handleApprove} 
+                        disabled={isSubmitting || isActionLoading} 
+                        className="px-6 py-2 bg-green-600 text-white hover:bg-green-700 rounded-md text-sm font-medium flex items-center gap-2"
+                    >
+                        <CheckCircle size={16} /> อนุมัติ
+                    </button>
+                  </>
+                )}
+
+                {/* Save/Submit — shown only when form is editable (DRAFT) */}
+                {canSaveDraft && (
                     <button 
                       type="button" 
                       onClick={handleSubmit(handleSubmitWrapper, handleFormError)} 
@@ -116,7 +130,6 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
                       {(isSubmitting || isActionLoading) && <Loader2 className="animate-spin" size={16} />}
                       {watch('is_on_hold') === 'Y' ? 'บันทึกแบบร่าง (Draft)' : 'บันทึกและส่งอนุมัติ'}
                     </button>
-                  </>
                 )}
             </div>
           </div>

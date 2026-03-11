@@ -16,33 +16,34 @@ interface UomResponse {
     updated_at?: string;
 }
 
+ 
 // ✅ This is the wrapper for mutation responses
 interface UomMutationSuccessResponse {
     success: true;
     data: UomResponse;
     message: string;
 }
-
+ 
 // ✅ type-safe ไม่ใช้ any
 function mapUomToUnit(item: UomResponse): UnitListItem {
     return {
-        unit_id: String(item.uom_id),
+        id: item.uom_id,
+        unit_id: item.uom_id,
         unit_code: item.uom_code,
         unit_name: item.uom_name,
         unit_name_en: item.uom_nameeng ?? '',
         is_active: item.is_active ?? true,
-        created_at: item.created_at,
-
+        created_at: item.created_at || new Date().toISOString(),
+ 
         // ✅ Add these back so UI components that rely on them still work
         uom_id: item.uom_id,
         uom_code: item.uom_code,
         uom_name: item.uom_name,
         uom_nameeng: item.uom_nameeng,
-    } as unknown as UnitListItem;
+    };
 }
-
+ 
 export const UnitService = {
-
     getAll: async (params?: Partial<TableFilters>): Promise<PaginatedListResponse<UnitListItem>> => {
         if (USE_MOCK) {
             logger.info('🎭 [Mock Mode] Serving Unit List');
@@ -59,7 +60,7 @@ export const UnitService = {
         }
     },
 
-    get: async (id: string): Promise<UnitListItem | null> => {
+    get: async (id: number): Promise<UnitListItem | null> => {
         if (USE_MOCK) return mockUnits.find(u => u.unit_id === id) ?? null;
         try {
             // ✅ รองรับ response ที่อาจจะถูก wrap ด้วย { data: ... } หรือส่งมาตรงๆ
@@ -85,7 +86,6 @@ export const UnitService = {
             return null;
         }
     },
-
     create: async (data: UnitCreateRequest): Promise<{ success: boolean; data?: UnitListItem; message?: string }> => {
         if (USE_MOCK) return { success: true, message: 'Mock Create Success' };
         try {
@@ -109,7 +109,7 @@ export const UnitService = {
     },
 
     // ✅ แก้แล้ว
-    update: async (id: string, data: Partial<UnitUpdateRequest>) => {
+    update: async (id: number, data: Partial<UnitUpdateRequest>) => {
         if (USE_MOCK) return { success: true, message: 'Mock Update Success' };
         try {
             const payload = {
@@ -133,7 +133,7 @@ export const UnitService = {
         }
     },
     
-    delete: async (id: string): Promise<boolean> => {
+    delete: async (id: number): Promise<boolean> => {
         if (USE_MOCK) return true;
         try {
             await api.delete<void>(`/uom/${id}`);
@@ -144,7 +144,7 @@ export const UnitService = {
         }
     },
 
-    toggleStatus: async (id: string, isActive: boolean): Promise<{ success: boolean; message?: string }> => {
+    toggleStatus: async (id: number, isActive: boolean): Promise<{ success: boolean; message?: string }> => {
         if (USE_MOCK) {
             const unit = mockUnits.find(u => u.unit_id === id);
             if (unit) unit.is_active = isActive;

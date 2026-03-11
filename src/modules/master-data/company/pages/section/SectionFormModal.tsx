@@ -8,25 +8,26 @@ import { useEffect, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import type { SubmitHandler } from 'react-hook-form';
 import { Save, X, Layers } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
 import { SectionService, DepartmentService } from '@/modules/master-data/company/services/company.service';
-import type { DepartmentListItem } from '@/modules/master-data/types/master-data-types';
+import type { DepartmentListItem, SectionFormData } from '@/modules/master-data/types/master-data-types';
 import { logger } from '@/shared/utils/logger';
 
 interface SectionFormModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
-    editId?: string | null;
+    editId?: number | null;
 }
 
 const sectionSchema = z.object({
     sectionCode: z.string().min(1, 'กรุณากรอกรหัสแผนก').max(20, 'รหัสแผนกต้องไม่เกิน 20 ตัวอักษร'),
     sectionName: z.string().min(1, 'กรุณากรอกชื่อแผนก (ภาษาไทย)').max(100, 'ชื่อแผนกต้องไม่เกิน 100 ตัวอักษร'),
     sectionNameEn: z.string().max(100, 'ชื่อแผนก (English) ต้องไม่เกิน 100 ตัวอักษร'),
-    departmentId: z.string().min(1, 'กรุณาเลือกฝ่าย'),
+    departmentId: z.number().min(1, 'กรุณาเลือกฝ่าย'),
     isActive: z.boolean(),
 });
 
@@ -43,13 +44,13 @@ export const SectionFormModal = ({ isOpen, onClose, onSuccess, editId }: Section
         formState: { errors, isSubmitting },
         setValue,
         control,
-    } = useForm<SectionFormValues>({
+    } = useForm<SectionFormData>({
         resolver: zodResolver(sectionSchema),
         defaultValues: {
             sectionCode: '',
             sectionName: '',
             sectionNameEn: '',
-            departmentId: '',
+            departmentId: 0,
             isActive: true,
         },
     });
@@ -72,8 +73,8 @@ export const SectionFormModal = ({ isOpen, onClose, onSuccess, editId }: Section
                             sectionCode: data.section_code,
                             sectionName: data.section_name,
                             sectionNameEn: data.section_name_en || '',
-                            departmentId: data.department_id || '',
-                            isActive: data.is_active ?? true,
+                            departmentId: data.department_id || 0,
+                            isActive: data.is_active || false,
                         });
                     }
                 });
@@ -82,14 +83,14 @@ export const SectionFormModal = ({ isOpen, onClose, onSuccess, editId }: Section
                     sectionCode: '',
                     sectionName: '',
                     sectionNameEn: '',
-                    departmentId: '',
+                    departmentId: 0,
                     isActive: true,
                 });
             }
         }
     }, [isOpen, isEdit, editId, reset]);
 
-    const onSubmit = async (data: SectionFormValues) => {
+    const onSubmit: SubmitHandler<SectionFormValues> = async (data) => {
         try {
             let res;
             if (isEdit && editId) {
@@ -205,7 +206,7 @@ export const SectionFormModal = ({ isOpen, onClose, onSuccess, editId }: Section
                     </label>
                     <select 
                         className={`${styles.input} cursor-pointer ${errors.departmentId ? 'border-red-500 focus:ring-red-200' : ''}`}
-                        {...register('departmentId')}
+                        {...register('departmentId', { valueAsNumber: true })}
                     >
                         <option value="">-- เลือกฝ่าย --</option>
                         {departments.map(dept => (
@@ -237,5 +238,3 @@ export const SectionFormModal = ({ isOpen, onClose, onSuccess, editId }: Section
         </DialogFormLayout>
     );
 };
-
-

@@ -44,6 +44,7 @@ export const setupVQHandlers = (mock: MockAdapter) => {
         const sanitized = {
             ...found,
             quotation_id: sanitizeId(found.quotation_id),
+            action_by: 1, action_date: '2026-02-25T10:00:00Z',
             qc_id: sanitizeId(found.qc_id),
             vendor_id: sanitizeId(found.vendor_id),
         };
@@ -58,7 +59,7 @@ export const setupVQHandlers = (mock: MockAdapter) => {
     
     const newVQ = {
       ...body,
-      quotation_id: `vq-${Date.now()}`,
+      quotation_id: Date.now(),
       quotation_no: body.quotation_no || `VQ-2026-${String(MOCK_VQS.length + 1).padStart(4, '0')}`,
       status: body.status || 'DRAFT',
       created_at: new Date().toISOString(),

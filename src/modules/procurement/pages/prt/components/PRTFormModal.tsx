@@ -127,8 +127,9 @@ export default function PRTFormModal({ isOpen, onClose, onSuccess, initialValues
     } = useForm<PrtFormValues>({
         resolver: zodResolver(prtSchema) as Resolver<PrtFormValues>,
         defaultValues: {
+            prt_no: undefined,
             prt_date: new Date().toISOString().split('T')[0],
-            vendor_id: '',
+            vendor_id: undefined,
             status: 'DRAFT',
             stock_effect: 'Y',
             is_multicurrency: false,
@@ -136,11 +137,10 @@ export default function PRTFormModal({ isOpen, onClose, onSuccess, initialValues
             tax_rate: 7,
             is_vat_included: false,
             reason: '',
-            reference_grn_id: '',
-            prt_no: '',
-            currency_id: 'THB',
+            reference_grn_id: undefined,
+            currency_id: undefined,
             exchange_rate: 1,
-            currency_type_id: '',
+            currency_type_id: undefined,
             rate_date: new Date().toISOString().split('T')[0]
         }
     });
@@ -149,6 +149,7 @@ export default function PRTFormModal({ isOpen, onClose, onSuccess, initialValues
 
     const isMulticurrency = watch('is_multicurrency');
     const currencyId = watch('currency_id');
+    const currencyCode = watch('currency_code');
     const rateDate = watch('rate_date');
     const [isRateLoading, setIsRateLoading] = useState(false);
 
@@ -157,14 +158,14 @@ export default function PRTFormModal({ isOpen, onClose, onSuccess, initialValues
         const fetchRate = async () => {
             if (!currencyId || !rateDate) return;
 
-            if (currencyId === 'THB') {
+            if (currencyCode === 'THB') {
                 setValue('exchange_rate', 1);
                 return;
             }
 
             setIsRateLoading(true);
             try {
-                const rate = await PrtService.getExchangeRate(currencyId, rateDate);
+                const rate = await PrtService.getExchangeRate(currencyCode || 'THB', rateDate);
                 setValue('exchange_rate', rate);
             } catch (error) {
                 logger.error('[PRTFormModal] Failed to fetch exchange rate:', error);
@@ -174,29 +175,29 @@ export default function PRTFormModal({ isOpen, onClose, onSuccess, initialValues
         };
 
         fetchRate();
-    }, [currencyId, rateDate, setValue]);
+    }, [currencyId, rateDate, setValue, currencyCode]);
 
     useEffect(() => {
         if (isOpen) {
-             reset({
-                prt_no: initialValues?.prt_no ?? 'PRT2024-xxx',
-                prt_date: initialValues?.prt_date ?? new Date().toISOString().split('T')[0],
-                vendor_id: initialValues?.vendor_id ?? '',
-                status: initialValues?.status ?? 'DRAFT',
-                stock_effect: initialValues?.stock_effect ?? 'Y',
-                is_multicurrency: initialValues?.is_multicurrency ?? false,
-                items: initialValues?.items ?? [
-                    { item_id: 'item-1', item_code: 'ITM-001', item_name: 'คอมพิวเตอร์ Notebook Dell Inspiron', qty_return: 2, uom_id: 'PCS', unit_price_ref: 25000, line_total: 50000 }
-                ], 
+            reset({
+                ...initialValues,
+                prt_no: initialValues?.prt_no || undefined,
+                prt_date: initialValues?.prt_date || new Date().toISOString().split('T')[0],
+                vendor_id: initialValues?.vendor_id ? Number(initialValues.vendor_id) : undefined,
+                status: initialValues?.status || 'DRAFT',
+                stock_effect: initialValues?.stock_effect || 'Y',
+                is_multicurrency: initialValues?.is_multicurrency || false,
                 tax_rate: initialValues?.tax_rate ?? 7,
                 is_vat_included: initialValues?.is_vat_included ?? false,
                 reason: initialValues?.reason ?? '',
-                reference_grn_id: initialValues?.reference_grn_id ?? '',
-                currency_id: initialValues?.currency_id ?? 'THB',
+                reference_grn_id: initialValues?.reference_grn_id ? Number(initialValues.reference_grn_id) : undefined,
+                currency_id: initialValues?.currency_id ? Number(initialValues.currency_id) : undefined,
+                currency_code: initialValues?.currency_code || 'THB',
                 exchange_rate: initialValues?.exchange_rate ?? 1,
-                currency_type_id: initialValues?.currency_type_id ?? '',
-                rate_date: initialValues?.rate_date ?? new Date().toISOString().split('T')[0]
-             });
+                currency_type_id: initialValues?.currency_type_id ? Number(initialValues.currency_type_id) : undefined,
+                rate_date: initialValues?.rate_date ?? new Date().toISOString().split('T')[0],
+                items: initialValues?.items || [],
+            } as PrtFormValues);
         }
     }, [isOpen, reset, initialValues]);
 
@@ -269,13 +270,13 @@ export default function PRTFormModal({ isOpen, onClose, onSuccess, initialValues
 
                             <div className="space-y-1">
                                 <label className="text-xs font-semibold text-gray-500 dark:text-gray-400">ผู้ขาย (vendor_id FK) <span className="text-red-500">*</span></label>
-                                <select 
-                                    {...register('vendor_id')}
+                                <select
+                                    {...register('vendor_id', { valueAsNumber: true })}
                                     className="w-full h-9 px-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded focus:border-blue-500 outline-none text-sm text-gray-900 dark:text-white"
                                 >
                                     <option value="">-- เลือกผู้ขาย --</option>
                                     {vendorOptions.map(v => (
-                                        <option key={v.vendor_code} value={v.vendor_code}>{v.vendor_name}</option>
+                                        <option key={v.vendor_id} value={Number(v.vendor_id)}>{v.vendor_name}</option>
                                     ))}
                                 </select>
                                 {errors.vendor_id && <p className="text-red-500 text-xs mt-1">{errors.vendor_id.message}</p>}
@@ -284,7 +285,7 @@ export default function PRTFormModal({ isOpen, onClose, onSuccess, initialValues
                             <div className="space-y-1">
                                 <label className="text-xs font-semibold text-gray-500 dark:text-gray-400">เลขที่ GRN อ้างอิง (reference_grn_id FK - nullable)</label>
                                 <div className="flex gap-2">
-                                    <input 
+                                    <input
                                         {...register('reference_grn_id')}
                                         className="w-full h-9 px-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded focus:border-blue-500 outline-none text-sm text-gray-900 dark:text-white"
                                         placeholder="GRN2024-xxx (ถ้ามี)"
@@ -297,11 +298,11 @@ export default function PRTFormModal({ isOpen, onClose, onSuccess, initialValues
 
                             <div className="space-y-1">
                                 <label className="text-xs font-semibold text-gray-500 dark:text-gray-400">สถานะ (status)</label>
-                                <select 
+                                <select
                                     {...register('status')}
                                     className="w-full h-9 px-3 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 text-sm"
                                 >
-                                    {STATUS_OPTIONS.map(opt => ( 
+                                    {STATUS_OPTIONS.map(opt => (
                                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                                     ))}
                                 </select>
@@ -309,7 +310,7 @@ export default function PRTFormModal({ isOpen, onClose, onSuccess, initialValues
 
                             <div className="space-y-1">
                                 <label className="text-xs font-semibold text-gray-500 dark:text-gray-400">มีผลต่อ Stock (stockeffect) <span className="text-red-500">*</span></label>
-                                <select 
+                                <select
                                     {...register('stock_effect')}
                                     className="w-full h-9 px-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded focus:border-blue-500 outline-none text-sm text-gray-900 dark:text-white"
                                 >
@@ -318,10 +319,10 @@ export default function PRTFormModal({ isOpen, onClose, onSuccess, initialValues
                                     ))}
                                 </select>
                             </div>
-                            
+
                             <div className="col-span-full space-y-1">
                                 <label className="text-xs font-semibold text-gray-500 dark:text-gray-400">เหตุผลการคืน (reason - nullable)</label>
-                                <textarea 
+                                <textarea
                                     {...register('reason')}
                                     rows={2}
                                     className="w-full p-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded focus:border-blue-500 outline-none text-sm resize-none text-gray-900 dark:text-white"
@@ -332,7 +333,7 @@ export default function PRTFormModal({ isOpen, onClose, onSuccess, initialValues
 
                          <div className="mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
                              <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer w-fit select-none">
-                                <input 
+                                <input
                                     type="checkbox"
                                     {...register('is_multicurrency')}
                                     className="w-4 h-4 text-gray-600 rounded border-gray-300 focus:ring-gray-500"
@@ -348,27 +349,26 @@ export default function PRTFormModal({ isOpen, onClose, onSuccess, initialValues
                             <div className="space-y-4">
                                 <div className="flex items-center mb-2">
                                      <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                                        <Coins size={16} className="text-yellow-500" /> 
+                                        <Coins size={16} className="text-yellow-500" />
                                         ข้อมูลสกุลเงินและอัตราแลกเปลี่ยน (Currency & Rate)
                                      </h3>
                                 </div>
-                                
+
                                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
                                     <div>
                                         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">วันที่อัตราแลกเปลี่ยน</label>
-                                        <input 
-                                            type="date" 
+                                        <input
+                                            type="date"
                                             {...register('rate_date')}
                                             className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                                         />
                                     </div>
                                     <div>
                                         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">รหัสสกุลเงิน</label>
-                                        <select 
-                                            {...register('currency_id')}
+                                        <select
+                                            {...register('currency_code')}
                                             className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                                         >
-                                            <option value="">เลือกสกุลเงิน</option>
                                             <option value="THB">THB - บาท</option>
                                             <option value="USD">USD - ดอลลาร์สหรัฐ</option>
                                             <option value="EUR">EUR - ยูโร</option>
@@ -378,7 +378,7 @@ export default function PRTFormModal({ isOpen, onClose, onSuccess, initialValues
                                     </div>
                                     <div>
                                         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">ไปยังสกุลเงิน (Target)</label>
-                                        <select 
+                                        <select
                                             {...register('currency_type_id')}
                                             className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                                         >
@@ -392,19 +392,19 @@ export default function PRTFormModal({ isOpen, onClose, onSuccess, initialValues
                                     </div>
                                     <div>
                                         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">อัตราแลกเปลี่ยน {isRateLoading && <span className="text-blue-500 text-[10px] animate-pulse">(Updating...)</span>}</label>
-                                        <input 
+                                        <input
                                             type="number"
                                             step="0.0001"
                                             {...register('exchange_rate', { valueAsNumber: true })}
-                                            readOnly={watch('currency_id') === 'THB'}
+                                            readOnly={currencyCode === 'THB'}
                                             disabled={isRateLoading}
-                                            className={`w-full h-9 px-3 text-sm text-right border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${watch('currency_id') === 'THB' || isRateLoading ? 'bg-gray-100 dark:bg-gray-700 italic' : 'bg-white dark:bg-gray-800'}`}
+                                            className={`w-full h-9 px-3 text-sm text-right border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${currencyCode === 'THB' || isRateLoading ? 'bg-gray-100 dark:bg-gray-700 italic' : 'bg-white dark:bg-gray-800'}`}
                                         />
-                                         {watch('currency_id') && watch('currency_id') !== 'THB' && (
+                                         {currencyCode && currencyCode !== 'THB' && (
                                            <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 text-right">
-                                              1 {watch('currency_id')} ≈ {Number(watch('exchange_rate') || 0).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })} THB
+                                              1 {currencyCode} ≈ {Number(watch('exchange_rate') || 0).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })} THB
                                            </div>
-                                        )}
+                                         )}
                                     </div>
                                 </div>
                             </div>

@@ -49,7 +49,7 @@ export default function ItemMasterList() {
     const { confirm } = useConfirmation();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editId, setEditId] = useState<string | null>(null);
+    const [editId, setEditId] = useState<number | null>(null);
 
     // ==================== FILTER CONFIG ====================
     const filterConfig: FilterFieldConfig<Extract<keyof typeof filters, string>>[] = useMemo(() => [
@@ -130,7 +130,7 @@ export default function ItemMasterList() {
         setIsModalOpen(true);
     }, []);
 
-    const handleEdit = useCallback((id: string) => {
+    const handleEdit = useCallback((id: number) => {
         setEditId(id);
         setIsModalOpen(true);
     }, []);
@@ -147,7 +147,7 @@ export default function ItemMasterList() {
     }, [queryClient]);
 
     const deleteMutation = useMutation({
-        mutationFn: (id: string) => ItemMasterService.delete(id),
+        mutationFn: (id: number) => ItemMasterService.delete(id),
         onSuccess: async () => {
             await confirm({
                 title: 'ลบข้อมูลเรียบร้อยแล้ว!',
@@ -171,7 +171,7 @@ export default function ItemMasterList() {
         }
     });
 
-    const handleDelete = useCallback(async (id: string, code: string) => {
+    const handleDelete = useCallback(async (id: number, code: string) => {
         const isConfirmed = await confirm({
             title: 'คุณต้องการลบสินค้า?',
             description: `ต้องการลบรหัสสินค้า ${code} ใช่หรือไม่?`,

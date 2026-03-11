@@ -15,7 +15,7 @@ import { CustomerGroupFormModal } from './CustomerGroupFormModal';
 
 export default function CustomerGroupList() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
 
   const { filters, setFilters, resetFilters, handlePageChange } = useTableFilters({
     customParamKeys: { search: 'customer_group_code', search2: 'customer_group_name_th' }
@@ -35,12 +35,12 @@ export default function CustomerGroupList() {
     setIsModalOpen(true);
   };
 
-  const handleEdit = (id: string) => {
+  const handleEdit = (id: number) => {
     setSelectedId(id);
     setIsModalOpen(true);
   };
 
-  const handleDelete = useCallback(async (_: string, code: string) => {
+  const handleDelete = useCallback(async (_: number, code: string) => {
     const isConfirmed = await confirm({
       title: 'ยืนยันการลบข้อมูล',
       description: `คุณต้องการลบกลุ่มลูกค้า ${code} ใช่หรือไม่?`,

@@ -41,7 +41,7 @@ export default function UnitList() {
     });
 
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editingId, setEditingId] = useState<number | null>(null);
     const [editingData, setEditingData] = useState<UnitListItem | null>(null); // ✅ เพิ่ม
 
     // ==================== FILTER CONFIG ====================
@@ -122,13 +122,13 @@ export default function UnitList() {
     };
 
     // ✅ รับ item ทั้ง row มาด้วย
-    const handleEdit = useCallback((id: string, item: UnitListItem) => {
+    const handleEdit = useCallback((id: number, item: UnitListItem) => {
         setEditingId(id);
         setEditingData(item); // ✅ เก็บข้อมูล row ที่คลิก
         setIsModalOpen(true);
     }, []);
 
-    const handleDelete = useCallback(async (id: string) => {
+    const handleDelete = useCallback(async (id: number) => {
         if (confirm('คุณต้องการลบข้อมูลหน่วยนับนี้หรือไม่?')) {
             await UnitService.delete(id);
             refetch();
@@ -156,7 +156,7 @@ export default function UnitList() {
                 <span
                     className="font-medium text-blue-600 dark:text-blue-400 cursor-pointer hover:underline"
                     onClick={() => handleEdit(
-                        String(row.original.uom_id || row.original.unit_id),
+                        Number(row.original.uom_id || row.original.unit_id),
                         row.original // ✅ ส่ง row ไปด้วย
                     )}
                 >
@@ -199,7 +199,7 @@ export default function UnitList() {
                 <div className="flex items-center justify-center gap-2">
                     <button
                         onClick={() => handleEdit(
-                            String(row.original.uom_id || row.original.unit_id),
+                            Number(row.original.uom_id || row.original.unit_id),
                             row.original // ✅ ส่ง row ไปด้วย
                         )}
                         className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
@@ -208,7 +208,7 @@ export default function UnitList() {
                         <Edit2 size={18} />
                     </button>
                     <button
-                        onClick={() => handleDelete(String(row.original.uom_id || row.original.unit_id))}
+                        onClick={() => handleDelete(Number(row.original.uom_id || row.original.unit_id))}
                         className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                         title="ลบ"
                     >
@@ -273,7 +273,7 @@ export default function UnitList() {
                     }}
                     sortConfig={sortConfig}
                     onSortChange={handleSortChange}
-                    rowIdField="unit_id"
+                    rowIdField="id"
                     className="shadow-sm border border-gray-200 dark:border-gray-700"
                 />
             </div>

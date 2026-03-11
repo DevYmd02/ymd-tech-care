@@ -9,9 +9,9 @@ export const usePRActions = () => {
     const queryClient = useQueryClient();
     const { confirm } = useConfirmation();
     const [isActionLoading, setIsActionLoading] = useState(false);
-    const [approvingId, setApprovingId] = useState<string | null>(null);
+    const [approvingId, setApprovingId] = useState<number | null>(null);
 
-    const [rejectPRId, setRejectPRId] = useState<string | null>(null);
+    const [rejectPRId, setRejectPRId] = useState<number | null>(null);
     const [isRejectReasonOpen, setIsRejectReasonOpen] = useState(false);
     const [isRejecting, setIsRejecting] = useState(false);
 
@@ -25,18 +25,18 @@ export const usePRActions = () => {
     });
 
     const approveMutation = useMutation({
-        mutationFn: (id: string) => PRService.approvePR(id)
+        mutationFn: (id: number) => PRService.approvePR(id)
     });
 
     const rejectMutation = useMutation({
-        mutationFn: (id: string) => PRService.rejectPR(id)
+        mutationFn: (id: number) => PRService.rejectPR(id)
     });
 
     const submitMutation = useMutation({
-        mutationFn: (id: string) => PRService.processDirectApproval(id)
+        mutationFn: (id: number) => PRService.processDirectApproval(id)
     });
 
-    const updatePR = useCallback(async (id: string, payload: CreatePRPayload) => {
+    const updatePR = useCallback(async (id: number, payload: CreatePRPayload) => {
         setIsActionLoading(true);
         try {
             const result = await PRService.update(id, payload);
@@ -46,7 +46,7 @@ export const usePRActions = () => {
         }
     }, []);
 
-    const deletePR = useCallback(async (id: string) => {
+    const deletePR = useCallback(async (id: number) => {
         setIsActionLoading(true);
         try {
             const success = await PRService.delete(id);
@@ -59,7 +59,7 @@ export const usePRActions = () => {
         }
     }, [queryClient]);
 
-    const approvePR = useCallback(async (id: string) => {
+    const approvePR = useCallback(async (id: number) => {
         // Kept for backward compatibility or direct API usage if needed without UI
         const success = await PRService.approvePR(id);
         if (success) {
@@ -72,7 +72,7 @@ export const usePRActions = () => {
         return success;
     }, [queryClient]);
 
-    const handleApprove = useCallback((id: string) => {
+    const handleApprove = useCallback((id: number) => {
         return confirm({
             title: 'ยืนยันการอนุมัติ',
             description: 'คุณต้องการอนุมัติเอกสารนี้ใช่หรือไม่?',
@@ -96,7 +96,7 @@ export const usePRActions = () => {
         });
     }, [confirm, approveMutation, queryClient]);
 
-    const handleReject = useCallback(async (id: string) => {
+    const handleReject = useCallback(async (id: number) => {
         const isConfirmed = await confirm({
             title: 'ยืนยันการไม่อนุมัติ',
             description: "คุณต้องการ 'ไม่อนุมัติ' เอกสารนี้ใช่หรือไม่?",
@@ -139,7 +139,7 @@ export const usePRActions = () => {
         setRejectPRId(null);
     }, []);
 
-    const cancelPR = useCallback(async (id: string) => {
+    const cancelPR = useCallback(async (id: number) => {
         setIsActionLoading(true);
         try {
             const response = await PRService.cancel(id);

@@ -18,7 +18,7 @@ export const itemMasterSchema = z.object({
     item_name_en: z.string().optional().default(''),
     marketing_name: z.string().optional().default(''),
     billing_name: z.string().optional().default(''),
-    category_id: z.string().optional().default(''),
+    category_id: z.coerce.number().optional().default(0),
     good_class_id: z.string().optional().default(''),
     good_brand_id: z.string().optional().default(''),
     good_pattern_id: z.string().optional().default(''),
@@ -27,7 +27,7 @@ export const itemMasterSchema = z.object({
     good_model_id: z.string().optional().default(''),
     good_grade_id: z.string().optional().default(''),
     good_color_id: z.string().optional().default(''),
-    base_uom_id: z.string().min(1, 'กรุณากรอกหน่วยนับหลัก'),
+    base_uom_id: z.coerce.number().min(1, 'กรุณากรอกหน่วยนับหลัก'),
     item_type_code: z.string().optional().default('FG'),
     costing_method: z.string().optional().default('FIFO'),
     default_tax_code: z.string().optional().default('VAT7'),
@@ -53,7 +53,7 @@ const initialFormData: ItemFormData = {
     item_name_en: '',
     marketing_name: '',
     billing_name: '',
-    category_id: '',
+    category_id: 0,
     good_class_id: '',
     good_brand_id: '',
     good_pattern_id: '',
@@ -62,7 +62,7 @@ const initialFormData: ItemFormData = {
     good_model_id: '',
     good_grade_id: '',
     good_color_id: '',
-    base_uom_id: '',
+    base_uom_id: 0,
     item_type_code: 'FG',
     costing_method: 'FIFO',
     default_tax_code: 'VAT7',
@@ -78,7 +78,7 @@ const initialFormData: ItemFormData = {
     is_buddy: false,
 };
 
-export function useItemForm(editId: string | null, onSuccess?: () => void) {
+export function useItemForm(editId: number | null, onSuccess?: () => void) {
     const { confirm } = useConfirmation();
     const queryClient = useQueryClient();
 
@@ -132,8 +132,8 @@ export function useItemForm(editId: string | null, onSuccess?: () => void) {
                 item_name_en: existingItem.item_name_en || '',
                 marketing_name: existingItem.marketing_name || '',
                 billing_name: existingItem.billing_name || '',
-                category_id: existingItem.category_name, // Backend currently maps name to ID or name
-                base_uom_id: existingItem.unit_id || '',
+                category_id: existingItem.category_id || 0, 
+                base_uom_id: existingItem.unit_id || 0,
                 item_type_code: existingItem.item_type_code || 'FG',
                 product_subtype_id: 'NORMAL',
                 costing_method: 'FIFO',

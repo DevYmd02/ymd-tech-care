@@ -8,10 +8,10 @@ import { applyClientFilters, applyClientPagination, extractArrayFromResponse } f
 
 const ENDPOINTS = {
   list:    '/qc',
-  detail:  (id: string) => `/qc/${id}`,
   create:  '/qc',
-  compare: (id: string) => `/qc/compare/${id}`,
-  cancel:  (id: string) => `/qc/${id}/cancel`,
+  detail:  (id: number) => `/qc/${id}`,
+  compare: (id: number) => `/qc/compare/${id}`,
+  cancel:  (id: number) => `/qc/cancel/${id}`,
 };
 
 export const QCService = {
@@ -46,7 +46,7 @@ export const QCService = {
     return applyClientPagination<QCListItem>(allItems, page, limit);
   },
 
-  getById: async (id: string): Promise<QCListItem> => {
+  getById: async (id: number): Promise<QCListItem> => {
     logger.info(`[QCService] Fetching QC Detail: ${id}`);
     return await api.get<QCListItem>(ENDPOINTS.detail(id));
   },
@@ -56,22 +56,22 @@ export const QCService = {
     return await api.get<QCListResponse>('/qc/ready-for-po');
   },
 
-  create: async (data: QCCreateData): Promise<{ qc_id: string }> => {
+  create: async (data: QCCreateData): Promise<{ qc_id: number }> => {
     logger.info('[QCService] Creating QC');
-    return await api.post<{ qc_id: string }>(ENDPOINTS.create, data);
+    return await api.post<{ qc_id: number }>(ENDPOINTS.create, data);
   },
 
-  compare: async (id: string): Promise<{ success: boolean }> => {
+  compare: async (id: number): Promise<{ success: boolean }> => {
     logger.info(`[QCService] Triggering Price Comparison for ${id}`);
     return await api.post<{ success: boolean }>(ENDPOINTS.compare(id), {});
   },
 
-  submitWinner: async (id: string, data: SubmitQCWinnerData): Promise<{ qc_id: string }> => {
+  submitWinner: async (id: number, data: SubmitQCWinnerData): Promise<{ qc_id: number }> => {
     logger.info(`[QCService] Submitting Winner for QC: ${id}`, data);
-    return await api.post<{ qc_id: string }>(`/qc/submit-winner/${id}`, data);
+    return await api.post<{ qc_id: number }>(`/qc/submit-winner/${id}`, data);
   },
 
-  cancel: async (id: string): Promise<SuccessResponse> => {
+  cancel: async (id: number): Promise<SuccessResponse> => {
     logger.info(`[QCService] Cancelling QC: ${id}`);
     return await api.post<SuccessResponse>(ENDPOINTS.cancel(id), {});
   },

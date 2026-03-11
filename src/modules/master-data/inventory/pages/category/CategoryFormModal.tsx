@@ -7,7 +7,7 @@ import type { ProductCategoryListItem } from '@/modules/master-data/types/master
 interface Props {
     isOpen: boolean;
     onClose: () => void;
-    editId?: string | null;
+    editId?: number | null;
     initialData?: ProductCategoryListItem | null;
     onSuccess?: () => void;
 }
