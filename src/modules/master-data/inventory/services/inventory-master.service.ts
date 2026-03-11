@@ -22,6 +22,7 @@ import type {
 } from '../types/inventory-master.types';
 import type { ListResponse } from '@/shared/types/common-api.types';
 import type { ItemGroupFormValues } from '../hooks/useItemGroupForm';
+import type { BrandFormValues } from '../hooks/useBrandForm';
 import {
     MOCK_ITEM_GROUPS, MOCK_BRANDS, MOCK_PATTERNS, MOCK_DESIGNS, MOCK_GRADES,
     MOCK_MODELS, MOCK_SIZES, MOCK_COLORS, MOCK_LOCATIONS, MOCK_SHELVES, MOCK_LOT_NUMBERS
@@ -111,13 +112,15 @@ function createInventoryService<T extends IBaseMaster, F = any>(
             }
             try {
               const payload = config.mapToApi ? config.mapToApi(data) : data;
-                const response = await api.post<any>(config.apiPath, payload);
-                const rawData = response?.data || response;
-                const resultData = config.mapFromApi ? config.mapFromApi(rawData) : rawData;
-                return { success: response.success ?? true, data: resultData as T, message: response.message };
-            } catch (error) {
+              const response = await api.post<any>(config.apiPath, payload);
+              const isSuccess = response?.success ?? true; // Assume success if not specified
+              const rawData = response?.data || response;
+              const resultData = config.mapFromApi && rawData ? config.mapFromApi(rawData) : rawData;
+              return { success: isSuccess, data: resultData as T, message: response?.message };
+            } catch (error: any) {
                 logger.error(`[${config.entityName}Service] create error:`, error);
-                return { success: false, message: `เกิดข้อผิดพลาดในการสร้าง${config.entityName}` };
+                const backendMsg = error?.response?.data?.message || error?.response?.data?.error || error.message;
+                return { success: false, message: backendMsg || `เกิดข้อผิดพลาดในการสร้าง ${config.entityName}` };
             }
         },
 
@@ -143,16 +146,15 @@ function createInventoryService<T extends IBaseMaster, F = any>(
             }
             try {
               const payload = config.mapToApi ? config.mapToApi(data) : data;
-
-const response = await api.patch<any>(`${config.apiPath}/${id}`, payload);
-
-const rawData = response?.data || response;
-
-const resultData = config.mapFromApi ? config.mapFromApi(rawData) : rawData;
-                return { success: response.success ?? true, data: resultData as T, message: response.message };
-            } catch (error) {
+              const response = await api.patch<any>(`${config.apiPath}/${id}`, payload);
+              const isSuccess = response?.success ?? true; // Assume success if not specified
+              const rawData = response?.data || response;
+              const resultData = config.mapFromApi && rawData ? config.mapFromApi(rawData) : rawData;
+              return { success: isSuccess, data: resultData as T, message: response?.message };
+            } catch (error: any) {
                 logger.error(`[${config.entityName}Service] update error:`, error);
-                return { success: false, message: `เกิดข้อผิดพลาดในการอัปเดต${config.entityName}` };
+                const backendMsg = error?.response?.data?.message || error?.response?.data?.error || error.message;
+                return { success: false, message: backendMsg || `เกิดข้อผิดพลาดในการอัปเดต ${config.entityName}` };
             }
         },
 
@@ -168,9 +170,10 @@ const resultData = config.mapFromApi ? config.mapFromApi(rawData) : rawData;
             try {
                 await api.delete<T>(`${config.apiPath}/${id}`);
                 return { success: true };
-            } catch (error) {
+            } catch (error: any) {
                 logger.error(`[${config.entityName}Service] delete error:`, error);
-                return { success: false, message: `เกิดข้อผิดพลาดในการลบ${config.entityName}` };
+                const backendMsg = error?.response?.data?.message || error.message;
+                return { success: false, message: backendMsg || `เกิดข้อผิดพลาดในการลบ${config.entityName}` };
             }
         },
     };
@@ -238,9 +241,9 @@ export const ItemGroupService = createInventoryService<ItemGroup, ItemGroupFormV
 });
 
 // Brand Service
-export const BrandService = createInventoryService<Brand, any>({
+export const BrandService = createInventoryService<Brand, BrandFormValues>({
     entityName: 'Brand',
-    apiPath: '/brands',
+    apiPath: '/item-brand',
     idField: 'brand_id',
     mockData: MOCK_BRANDS,
     mapToEntity: (data, id, now) => ({
@@ -252,6 +255,22 @@ export const BrandService = createInventoryService<Brand, any>({
         is_active: data.isActive,
         created_at: now,
         updated_at: now,
+    }),
+    mapFromApi: (item: any): Brand => ({
+        id: item.item_brand_id,
+        brand_id: item.item_brand_id,
+        code: item.item_brand_code,
+        name_th: item.item_brand_name,
+        name_en: item.item_brand_nameeng || '',
+        is_active: item.is_active,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+    }),
+    mapToApi: (data: BrandFormValues) => ({
+        item_brand_code: data.code?.trim(),
+        item_brand_name: data.nameTh?.trim(),
+        item_brand_nameeng: data.nameEn?.trim() || '',
+        is_active: data.isActive,
     }),
 });
 
