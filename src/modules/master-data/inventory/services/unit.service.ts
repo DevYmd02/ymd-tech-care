@@ -5,121 +5,161 @@ import type { UnitListItem, UnitCreateRequest, UnitUpdateRequest } from '@/modul
 import { type PaginatedListResponse } from '@/shared/types/api-response.types';
 import { type TableFilters } from '@/shared/hooks/useTableFilters';
 
-/**
- * Maps raw backend UOM fields (uom_*) to frontend UnitListItem fields (unit_*).
- * Uses safe fallbacks so both backend and mock data work correctly.
- */
-function mapUomToUnit(uom: Record<string, unknown>): UnitListItem {
-  return {
-    ...(uom as unknown as UnitListItem),
-    // Map backend → frontend field names with safe fallbacks
-    unit_id: (uom.unit_id as string) || String(uom.uom_id || ''),
-    unit_code: (uom.unit_code as string) || (uom.uom_code as string) || '',
-    unit_name: (uom.unit_name as string) || (uom.uom_name as string) || '',
-    unit_name_en: (uom.unit_name_en as string) || (uom.uom_nameeng as string) || '',
-    is_active: (uom.is_active as boolean) ?? true,
-    created_at: (uom.created_at as string) || new Date().toISOString(),
-  };
+// ✅ กำหนด type Backend response ชัดเจน
+interface UomResponse {
+    uom_id: number;
+    uom_code: string;
+    uom_name: string;
+    uom_nameeng?: string;
+    is_active: boolean;
+    created_at: string;
+    updated_at?: string;
+}
+
+// ✅ This is the wrapper for mutation responses
+interface UomMutationSuccessResponse {
+    success: true;
+    data: UomResponse;
+    message: string;
+}
+
+// ✅ type-safe ไม่ใช้ any
+function mapUomToUnit(item: UomResponse): UnitListItem {
+    return {
+        unit_id: String(item.uom_id),
+        unit_code: item.uom_code,
+        unit_name: item.uom_name,
+        unit_name_en: item.uom_nameeng ?? '',
+        is_active: item.is_active ?? true,
+        created_at: item.created_at,
+
+        // ✅ Add these back so UI components that rely on them still work
+        uom_id: item.uom_id,
+        uom_code: item.uom_code,
+        uom_name: item.uom_name,
+        uom_nameeng: item.uom_nameeng,
+    } as unknown as UnitListItem;
 }
 
 export const UnitService = {
-  getAll: async (params?: Partial<TableFilters>): Promise<PaginatedListResponse<UnitListItem>> => {
-    if (USE_MOCK) {
-       logger.info('🎭 [Mock Mode] Serving Unit List');
-       return {
-           items: mockUnits,
-           total: mockUnits.length,
-           page: 1,
-           limit: 100
-       };
-    }
-    try {
-      type UomResponse = UnitListItem[] | { data?: UnitListItem[]; items?: UnitListItem[] };
-      const response = await api.get<UomResponse>('/uom', { params });
-      
-      let uomArray: UnitListItem[] = [];
-      if (Array.isArray(response)) {
-        uomArray = response;
-      } else if (response && 'data' in response && Array.isArray(response.data)) {
-        uomArray = response.data;
-      } else if (response && 'items' in response && Array.isArray(response.items)) {
-         uomArray = response.items;
-      }
 
-      // Map backend uom_* fields → frontend unit_* fields
-      const mappedArray = uomArray.map((item) => mapUomToUnit(item as unknown as Record<string, unknown>));
+    getAll: async (params?: Partial<TableFilters>): Promise<PaginatedListResponse<UnitListItem>> => {
+        if (USE_MOCK) {
+            logger.info('🎭 [Mock Mode] Serving Unit List');
+            return { items: mockUnits, total: mockUnits.length, page: 1, limit: 100 };
+        }
+        try {
+            // ✅ interceptor unwrap แล้ว → ได้ array ตรงๆ
+            const response = await api.get<UomResponse[]>('/uom', { params });
+            const items = response.map(mapUomToUnit);
+            return { items, total: items.length, page: 1, limit: items.length || 10 };
+        } catch (error) {
+            logger.error('[UnitService] getAll error:', error);
+            return { items: [], total: 0, page: 1, limit: 10 };
+        }
+    },
 
-      return {
-        items: mappedArray,
-        total: mappedArray.length,
-        page: 1,
-        limit: mappedArray.length || 10
-      };
-    } catch (error) {
-      logger.error('[UnitService] getAll error:', error);
-      return { items: [], total: 0, page: 1, limit: 10 };
-    }
-  },
+    get: async (id: string): Promise<UnitListItem | null> => {
+        if (USE_MOCK) return mockUnits.find(u => u.unit_id === id) ?? null;
+        try {
+            // ✅ รองรับ response ที่อาจจะถูก wrap ด้วย { data: ... } หรือส่งมาตรงๆ
+            const response = await api.get<any>(`/uom/${id}`);
 
-  get: async (id: string): Promise<UnitListItem | null> => {
-    if (USE_MOCK) return mockUnits.find(u => u.unit_id === id) || null;
-    try {
-      const raw = await api.get<UnitListItem>(`/uom/${id}`);
-      if (!raw) return null;
-      // Map backend uom_* fields → frontend unit_* fields
-      return mapUomToUnit(raw as unknown as Record<string, unknown>);
-    } catch (error) {
-      logger.error('[UnitService] get error:', error);
-      return null;
-    }
-  },
+            // Handle wrapped response { success: true, data: {...} }
+            if (response?.success && response?.data) {
+                return mapUomToUnit(response.data);
+            }
 
-  create: async (data: UnitCreateRequest): Promise<{ success: boolean; data?: UnitListItem; message?: string }> => {
-    if (USE_MOCK) {
-        return { success: true, message: 'Mock Create Success' };
-    }
-    try {
-      return await api.post<{ success: boolean; data?: UnitListItem; message?: string }>('/uom', data);
-    } catch (error) {
-      logger.error('[UnitService] create error:', error);
-      return { success: false, message: 'เกิดข้อผิดพลาดในการสร้างข้อมูล' };
-    }
-  },
+            // Handle axios-like response or direct data property
+            if (response?.data && response.data.uom_id) {
+                return mapUomToUnit(response.data);
+            }
 
-  update: async (id: string, data: Partial<UnitUpdateRequest>): Promise<{ success: boolean; data?: UnitListItem; message?: string }> => {
-    if (USE_MOCK) {
-        return { success: true, message: 'Mock Update Success' };
-    }
-    try {
-      return await api.put<{ success: boolean; data?: UnitListItem; message?: string }>(`/uom/${id}`, data);
-    } catch (error) {
-      logger.error('[UnitService] update error:', error);
-      return { success: false, message: 'เกิดข้อผิดพลาดในการแก้ใขข้อมูล' };
-    }
-  },
+            if (response?.uom_id) {
+                return mapUomToUnit(response);
+            }
 
-  delete: async (id: string): Promise<boolean> => {
-    if (USE_MOCK) return true;
-    try {
-      await api.delete<boolean>(`/uom/${id}`);
-      return true;
-    } catch (error) {
-      logger.error('[UnitService] delete error:', error);
-      return false;
-    }
-  },
+            return null;
+        } catch (error) {
+            logger.error('[UnitService] get error:', error);
+            return null;
+        }
+    },
 
-  toggleStatus: async (id: string, isActive: boolean): Promise<{ success: boolean; message?: string }> => {
-    if (USE_MOCK) {
-      const unit = mockUnits.find(u => u.unit_id === id);
-      if (unit) unit.is_active = isActive;
-      return { success: true, message: 'Mock Status Toggle Success' };
-    }
-    try {
-      return await api.patch<{ success: boolean; message?: string }>(`/uom/${id}/status`, { is_active: isActive });
-    } catch (error) {
-      logger.error('[UnitService] toggleStatus error:', error);
-      return { success: false, message: 'ไม่สามารถเปลี่ยนสถานะได้' };
-    }
-  }
+    create: async (data: UnitCreateRequest): Promise<{ success: boolean; data?: UnitListItem; message?: string }> => {
+        if (USE_MOCK) return { success: true, message: 'Mock Create Success' };
+        try {
+            const payload = {
+                uom_code: data.unit_code,
+                uom_name: data.unit_name,
+                uom_nameeng: data.unit_name_en,
+                is_active: data.is_active,
+            };
+            // The API client returns the full response object, not an unwrapped one.
+            const response = await api.post<UomMutationSuccessResponse>('/uom', payload);
+            return {
+                success: response.success,
+                data: response.data ? mapUomToUnit(response.data) : undefined,
+                message: response.message,
+            };
+        } catch (error) {
+            logger.error('[UnitService] create error:', error);
+            return { success: false, message: 'เกิดข้อผิดพลาดในการสร้างข้อมูล' };
+        }
+    },
+
+    // ✅ แก้แล้ว
+    update: async (id: string, data: Partial<UnitUpdateRequest>) => {
+        if (USE_MOCK) return { success: true, message: 'Mock Update Success' };
+        try {
+            const payload = {
+                uom_code: data.unit_code,
+                uom_name: data.unit_name,
+                uom_nameeng: data.unit_name_en,
+                is_active: data.is_active,
+            };
+
+            // interceptor unwrap แล้ว → ได้ UomResponse ตรงๆ
+            const response = await api.patch<UomResponse>(`/uom/${id}`, payload);
+
+            return {
+                success: true,
+                data: mapUomToUnit(response),
+                message: 'แก้ไขหน่วยสำเร็จ',
+            };
+        } catch (error) {
+            logger.error('[UnitService] update error:', error);
+            return { success: false, message: 'เกิดข้อผิดพลาดในการแก้ไขข้อมูล' };
+        }
+    },
+    
+    delete: async (id: string): Promise<boolean> => {
+        if (USE_MOCK) return true;
+        try {
+            await api.delete<void>(`/uom/${id}`);
+            return true;
+        } catch (error) {
+            logger.error('[UnitService] delete error:', error);
+            return false;
+        }
+    },
+
+    toggleStatus: async (id: string, isActive: boolean): Promise<{ success: boolean; message?: string }> => {
+        if (USE_MOCK) {
+            const unit = mockUnits.find(u => u.unit_id === id);
+            if (unit) unit.is_active = isActive;
+            return { success: true };
+        }
+        try {
+            // ✅ interceptor unwrap แล้ว → ได้ { success, message } ตรงๆ
+            // เพราะ toggleStatus Backend ไม่มี data field จึงไม่ unwrap
+            return await api.patch<{ success: boolean; message?: string }>(
+                `/uom/${id}/status`,
+                { is_active: isActive },
+            );
+        } catch (error) {
+            logger.error('[UnitService] toggleStatus error:', error);
+            return { success: false, message: 'ไม่สามารถเปลี่ยนสถานะได้' };
+        }
+    },
 };

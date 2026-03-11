@@ -15,10 +15,6 @@ import { useTableFilters } from '@/shared/hooks';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useQuery } from '@tanstack/react-query';
 
-// ====================================================================================
-// CONFIG
-// ====================================================================================
-
 const STATUS_OPTIONS = [
     { value: 'ALL', label: 'ทั้งหมด' },
     { value: 'ACTIVE', label: 'ใช้งาน' },
@@ -26,14 +22,15 @@ const STATUS_OPTIONS = [
 ];
 
 export default function UnitList() {
+
     // ==================== STATE & FILTERS ====================
-    const { 
-        filters, 
-        setFilters, 
-        handlePageChange, 
+    const {
+        filters,
+        setFilters,
+        handlePageChange,
         resetFilters,
         handleSortChange,
-        sortConfig 
+        sortConfig
     } = useTableFilters({
         defaultLimit: 10,
         customParamKeys: {
@@ -45,27 +42,28 @@ export default function UnitList() {
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
+    const [editingData, setEditingData] = useState<UnitListItem | null>(null); // ✅ เพิ่ม
 
     // ==================== FILTER CONFIG ====================
     const filterConfig: FilterFieldConfig<Extract<keyof typeof filters, string>>[] = useMemo(() => [
-        { 
-            name: 'search', 
-            label: 'รหัสหน่วยนับ', 
-            type: 'text', 
+        {
+            name: 'search',
+            label: 'รหัสหน่วยนับ',
+            type: 'text',
             placeholder: 'กรอกรหัสหน่วยนับ',
             colSpan: 1
         },
-        { 
-            name: 'search2', 
-            label: 'ชื่อหน่วยนับ', 
-            type: 'text', 
+        {
+            name: 'search2',
+            label: 'ชื่อหน่วยนับ',
+            type: 'text',
             placeholder: 'กรอกชื่อหน่วยนับ',
             colSpan: 1
         },
-        { 
-            name: 'status', 
-            label: 'สถานะ', 
-            type: 'select', 
+        {
+            name: 'status',
+            label: 'สถานะ',
+            type: 'select',
             options: STATUS_OPTIONS,
             colSpan: 1
         },
@@ -77,31 +75,33 @@ export default function UnitList() {
         queryFn: async () => {
             const result = await UnitService.getAll();
             let items = result.items || [];
-            
-            // Client-side filtering for demonstration
+
+            // Client-side filtering
             if (filters.status !== 'ALL') {
                 items = items.filter(u => filters.status === 'ACTIVE' ? u.is_active : !u.is_active);
             }
             if (filters.search) {
                 const term = filters.search.toLowerCase();
-                items = items.filter(u => String(u.uom_code || u.unit_code || '').toLowerCase().includes(term));
+                items = items.filter(u =>
+                    String(u.uom_code || u.unit_code || '').toLowerCase().includes(term)
+                );
             }
-             if (filters.search2) {
+            if (filters.search2) {
                 const term = filters.search2.toLowerCase();
-                items = items.filter(u => String(u.uom_name || u.unit_name || '').toLowerCase().includes(term));
+                items = items.filter(u =>
+                    String(u.uom_name || u.unit_name || '').toLowerCase().includes(term)
+                );
             }
-            
+
             // Sorting
             if (sortConfig) {
                 items.sort((a, b) => {
                     const fieldValA = a[sortConfig.key as keyof UnitListItem];
                     const fieldValB = b[sortConfig.key as keyof UnitListItem];
-                    
-                    const valA = fieldValA !== undefined && fieldValA !== null ? String(fieldValA) : '';
-                    const valB = fieldValB !== undefined && fieldValB !== null ? String(fieldValB) : '';
-                    
-                    return sortConfig.direction === 'asc' 
-                        ? valA.localeCompare(valB, 'th') 
+                    const valA = fieldValA != null ? String(fieldValA) : '';
+                    const valB = fieldValB != null ? String(fieldValB) : '';
+                    return sortConfig.direction === 'asc'
+                        ? valA.localeCompare(valB, 'th')
                         : valB.localeCompare(valA, 'th');
                 });
             }
@@ -117,13 +117,16 @@ export default function UnitList() {
     // ==================== HANDLERS ====================
     const handleCreateNew = () => {
         setEditingId(null);
+        setEditingData(null); // ✅ ล้างข้อมูลเดิม
         setIsModalOpen(true);
     };
 
-    const handleEdit = (id: string) => {
+    // ✅ รับ item ทั้ง row มาด้วย
+    const handleEdit = useCallback((id: string, item: UnitListItem) => {
         setEditingId(id);
+        setEditingData(item); // ✅ เก็บข้อมูล row ที่คลิก
         setIsModalOpen(true);
-    };
+    }, []);
 
     const handleDelete = useCallback(async (id: string) => {
         if (confirm('คุณต้องการลบข้อมูลหน่วยนับนี้หรือไม่?')) {
@@ -135,6 +138,7 @@ export default function UnitList() {
     const handleModalClose = () => {
         setIsModalOpen(false);
         setEditingId(null);
+        setEditingData(null); // ✅ ล้างข้อมูลเมื่อปิด modal
     };
 
     // ==================== TABLE COLUMNS ====================
@@ -149,9 +153,12 @@ export default function UnitList() {
             id: 'uom_code',
             header: 'รหัส',
             cell: ({ row }) => (
-                <span 
+                <span
                     className="font-medium text-blue-600 dark:text-blue-400 cursor-pointer hover:underline"
-                    onClick={() => handleEdit(String(row.original.uom_id || row.original.unit_id))}
+                    onClick={() => handleEdit(
+                        String(row.original.uom_id || row.original.unit_id),
+                        row.original // ✅ ส่ง row ไปด้วย
+                    )}
                 >
                     {String(row.original.uom_code || row.original.unit_code || '-')}
                 </span>
@@ -161,12 +168,18 @@ export default function UnitList() {
         {
             id: 'uom_name',
             header: 'ชื่อ (ไทย)',
-            cell: ({ row }) => <span>{String(row.original.uom_name || row.original.unit_name || '-')}</span>
+            cell: ({ row }) => (
+                <span>{String(row.original.uom_name || row.original.unit_name || '-')}</span>
+            ),
         },
         {
             id: 'uom_nameeng',
             header: 'ชื่อ (EN)',
-            cell: ({ row }) => <span className="text-gray-500">{String(row.original.uom_nameeng || row.original.unit_name_en || '-')}</span>
+            cell: ({ row }) => (
+                <span className="text-gray-500">
+                    {String(row.original.uom_nameeng || row.original.unit_name_en || '-')}
+                </span>
+            ),
         },
         {
             accessorKey: 'is_active',
@@ -184,14 +197,17 @@ export default function UnitList() {
             size: 100,
             cell: ({ row }) => (
                 <div className="flex items-center justify-center gap-2">
-                    <button 
-                        onClick={() => handleEdit(String(row.original.uom_id || row.original.unit_id))}
+                    <button
+                        onClick={() => handleEdit(
+                            String(row.original.uom_id || row.original.unit_id),
+                            row.original // ✅ ส่ง row ไปด้วย
+                        )}
                         className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                         title="แก้ไข"
                     >
                         <Edit2 size={18} />
                     </button>
-                    <button 
+                    <button
                         onClick={() => handleDelete(String(row.original.uom_id || row.original.unit_id))}
                         className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                         title="ลบ"
@@ -201,12 +217,13 @@ export default function UnitList() {
                 </div>
             ),
         },
-    ], [filters.page, filters.limit, handleDelete]);
+    ], [filters.page, filters.limit, handleEdit, handleDelete]);
 
     // ==================== RENDER ====================
     return (
         <div className="p-6 space-y-6">
-            {/* Header Section */}
+
+            {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
@@ -219,7 +236,7 @@ export default function UnitList() {
                 </div>
             </div>
 
-            {/* Filter Section */}
+            {/* Filter */}
             <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
                 <FilterFormBuilder
                     config={filterConfig}
@@ -238,12 +255,11 @@ export default function UnitList() {
                 />
             </div>
 
-            {/* Data Table Section */}
+            {/* Table */}
             <div className="flex flex-col gap-4">
                 <h2 className="text-gray-700 dark:text-gray-300 font-medium">
                     พบข้อมูล {response?.total || 0} รายการ
                 </h2>
-
                 <SmartTable
                     data={response?.items || []}
                     columns={columns}
@@ -262,15 +278,14 @@ export default function UnitList() {
                 />
             </div>
 
-            <UnitFormModal 
-                isOpen={isModalOpen} 
+            {/* ✅ ส่ง initialData เข้า Modal */}
+            <UnitFormModal
+                isOpen={isModalOpen}
                 onClose={handleModalClose}
                 editId={editingId}
+                initialData={editingData}
                 onSuccess={refetch}
             />
         </div>
     );
 }
-
-
-

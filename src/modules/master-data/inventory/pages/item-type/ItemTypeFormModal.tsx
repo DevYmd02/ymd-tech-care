@@ -1,119 +1,132 @@
-import { useState, useEffect } from 'react';
-import { Layers, Search, Save, RotateCcw } from 'lucide-react';
+import { Layers, Save, X, RotateCcw } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
-import { logger } from '@/shared/utils/logger';
-import { mockItemTypes } from '@/modules/master-data/mocks/masterDataMocks';
-import type { ItemTypeFormData } from '@/modules/master-data/types/master-data-types';
-import { initialItemTypeFormData } from '@/modules/master-data/types/master-data-types';
 import { DialogFormLayout } from '@ui';
+import { useItemTypeForm } from '../../hooks/useItemTypeForm';
+import type { ItemTypeListItem } from '@/modules/master-data/types/master-data-types';
 
-interface Props { 
-    isOpen: boolean; 
-    onClose: () => void; 
+interface Props {
+    isOpen: boolean;
+    onClose: () => void;
     editId?: string | null;
+    initialData?: ItemTypeListItem | null;
     onSuccess?: () => void;
 }
 
-export function ItemTypeFormModal({ isOpen, onClose, editId, onSuccess }: Props) {
-    const [formData, setFormData] = useState<ItemTypeFormData>(initialItemTypeFormData);
-    const [isSearching, setIsSearching] = useState(false);
+export function ItemTypeFormModal({ isOpen, onClose, editId, initialData, onSuccess }: Props) {
+    const {
+        register,
+        errors,
+        isSaving,
+        handleSave,
+        clearForm
+    } = useItemTypeForm(editId || null, initialData, onSuccess);
 
-    useEffect(() => {
-        if (isOpen) {
-            if (editId) {
-                const existing = mockItemTypes.find(i => i.item_type_id === editId);
-                if (existing) {
-                    setFormData({
-                        itemTypeCode: existing.item_type_code,
-                        itemTypeCodeSearch: existing.item_type_code,
-                        itemTypeName: existing.item_type_name,
-                        itemTypeNameEn: existing.item_type_name_en || '',
-                        isActive: existing.is_active,
-                    });
-                }
-            } else {
-                setFormData(initialItemTypeFormData);
-            }
-        }
-    }, [isOpen, editId]);
-
-    const handleInputChange = (field: keyof ItemTypeFormData, value: string | boolean) => {
-        setFormData(prev => ({ ...prev, [field]: value }));
-    };
-
-    const handleSearch = () => {
-        if (!formData.itemTypeCodeSearch.trim()) return;
-        setIsSearching(true);
-        setTimeout(() => {
-            const found = mockItemTypes.find(i => i.item_type_code.toLowerCase() === formData.itemTypeCodeSearch.toLowerCase());
-            if (found) {
-                setFormData({
-                    itemTypeCode: found.item_type_code,
-                    itemTypeCodeSearch: found.item_type_code,
-                    itemTypeName: found.item_type_name,
-                    itemTypeNameEn: found.item_type_name_en || '',
-                    isActive: found.is_active,
-                });
-            } else { alert('ไม่พบรหัสประเภทสินค้าที่ค้นหา'); }
-            setIsSearching(false);
-        }, 300);
-    };
-
-    const handleSave = () => {
-        if (!formData.itemTypeCode.trim() || !formData.itemTypeName.trim()) { alert('กรุณากรอกข้อมูลให้ครบถ้วน'); return; }
-        logger.log('Save item type:', formData);
-        alert(editId ? 'บันทึกการแก้ไขสำเร็จ' : 'เพิ่มประเภทสินค้าใหม่สำเร็จ');
-        if (onSuccess) onSuccess();
+    const handleClose = () => {
+        clearForm();
         onClose();
     };
 
-    const handleReset = () => { setFormData(initialItemTypeFormData); };
+    const TitleIcon = <Layers size={24} className="text-white" />;
 
-    const Footer = (
-        <div className="flex justify-end gap-3">
-            <button onClick={handleReset} className={`${styles.btnSecondary} flex items-center gap-2`}><RotateCcw size={18} />ล้างข้อมูล</button>
-            <button onClick={handleSave} className={`${styles.btnPrimary} flex items-center gap-2`}><Save size={18} />บันทึก</button>
+    const FormFooter = (
+        <div className="flex justify-end gap-3 p-4">
+            <button
+                type="button"
+                onClick={clearForm}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg flex items-center gap-2 transition-colors border border-gray-300"
+            >
+                <RotateCcw size={18} />
+                ล้างฟอร์ม
+            </button>
+            <button
+                type="button"
+                onClick={handleClose}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg flex items-center gap-2 transition-colors border border-gray-300"
+            >
+                <X size={18} />
+                ยกเลิก
+            </button>
+            <button
+                type="button"
+                onClick={handleSave}
+                disabled={isSaving}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50"
+            >
+                <Save size={18} />
+                {isSaving ? 'กำลังบันทึก...' : 'บันทึก'}
+            </button>
         </div>
     );
 
     return (
         <DialogFormLayout
             isOpen={isOpen}
-            onClose={onClose}
-            title="กำหนดรหัสประเภทสินค้า (Item Type)"
-            titleIcon={<Layers size={24} />}
-            footer={Footer}
-            isLoading={isSearching}
+            onClose={handleClose}
+            title={editId ? 'แก้ไขข้อมูลประเภทสินค้า' : 'เพิ่มประเภทสินค้าใหม่'}
+            titleIcon={TitleIcon}
+            footer={FormFooter}
         >
-            <div className="space-y-6">
-                <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div><label className={styles.label}>รหัสประเภท</label><input type="text" value={formData.itemTypeCodeSearch} readOnly className={`${styles.input} bg-gray-100 dark:bg-gray-600`} /></div>
-                        <div><label className={styles.label}>ชื่อประเภท</label><input type="text" value={formData.itemTypeName} readOnly className={`${styles.input} bg-gray-100 dark:bg-gray-600`} /></div>
+            <div className="p-6 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Item Type Code */}
+                    <div>
+                        <label className={styles.label}>
+                            รหัสประเภท <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            {...register('item_type_code')}
+                            type="text"
+                            placeholder="กรอกรหัสประเภทสินค้า"
+                            className={`${styles.input} ${errors.item_type_code ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        />
+                        {errors.item_type_code && (
+                            <p className="text-red-500 text-xs mt-1">{errors.item_type_code.message}</p>
+                        )}
                     </div>
-                </div>
-
-                <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className={styles.label}>รหัสประเภท</label>
-                            <div className="flex gap-2">
-                                <input type="text" value={formData.itemTypeCodeSearch} onChange={(e) => handleInputChange('itemTypeCodeSearch', e.target.value)} className={styles.input} />
-                                <button onClick={handleSearch} disabled={isSearching} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"><Search size={18} /></button>
-                            </div>
-                        </div>
-                        <div className="flex items-end pb-2">
-                            <label className="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" checked={formData.isActive} onChange={(e) => handleInputChange('isActive', e.target.checked)} className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-                                <span className="text-gray-700 dark:text-gray-300 font-medium">ใช้งานอยู่</span>
+                    {/* Status */}
+                    <div className="flex items-end pb-2">
+                        <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700 w-full">
+                            <input
+                                {...register('is_active')}
+                                type="checkbox"
+                                id="item_type_is_active"
+                                className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                            />
+                            <label htmlFor="item_type_is_active" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                                สถานะใช้งาน (Active)
                             </label>
                         </div>
                     </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div><label className={styles.label}>ชื่อประเภท</label><input type="text" value={formData.itemTypeName} onChange={(e) => handleInputChange('itemTypeName', e.target.value)} className={styles.input} /></div>
-                        <div><label className={styles.label}>ชื่อประเภท (EN)</label><input type="text" value={formData.itemTypeNameEn} onChange={(e) => handleInputChange('itemTypeNameEn', e.target.value)} className={styles.input} /></div>
-                    </div>
+                </div>
+                {/* Item Type Name (Thai) */}
+                <div>
+                    <label className={styles.label}>
+                        ชื่อประเภท (ภาษาไทย) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        {...register('item_type_name')}
+                        type="text"
+                        placeholder="กรอกชื่อประเภทสินค้า"
+                        className={`${styles.input} ${errors.item_type_name ? 'border-red-500 focus:ring-red-200' : ''}`}
+                    />
+                    {errors.item_type_name && (
+                        <p className="text-red-500 text-xs mt-1">{errors.item_type_name.message}</p>
+                    )}
+                </div>
+                {/* Item Type Name (English) */}
+                <div>
+                    <label className={styles.label}>
+                        ชื่อประเภท (ภาษาอังกฤษ)
+                    </label>
+                    <input
+                        {...register('item_type_nameeng')}
+                        type="text"
+                        placeholder="Item Type Name (English)"
+                        className={styles.input}
+                    />
+                    {errors.item_type_nameeng && (
+                        <p className="text-red-500 text-xs mt-1">{errors.item_type_nameeng.message}</p>
+                    )}
                 </div>
             </div>
         </DialogFormLayout>

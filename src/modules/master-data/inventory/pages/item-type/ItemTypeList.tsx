@@ -22,14 +22,15 @@ const STATUS_OPTIONS = [
 ];
 
 export default function ItemTypeList() {
+
     // ==================== STATE & FILTERS ====================
-    const { 
-        filters, 
-        setFilters, 
-        handlePageChange, 
+    const {
+        filters,
+        setFilters,
+        handlePageChange,
         resetFilters,
         handleSortChange,
-        sortConfig 
+        sortConfig
     } = useTableFilters({
         defaultLimit: 10,
         customParamKeys: {
@@ -41,27 +42,28 @@ export default function ItemTypeList() {
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
+    const [editingData, setEditingData] = useState<ItemTypeListItem | null>(null); // ✅ เพิ่ม
 
     // ==================== FILTER CONFIG ====================
     const filterConfig: FilterFieldConfig<Extract<keyof typeof filters, string>>[] = useMemo(() => [
-        { 
-            name: 'search', 
-            label: 'รหัสประเภทสินค้า', 
-            type: 'text', 
+        {
+            name: 'search',
+            label: 'รหัสประเภทสินค้า',
+            type: 'text',
             placeholder: 'กรอกรหัส',
             colSpan: 1
         },
-        { 
-            name: 'search2', 
-            label: 'ชื่อประเภทสินค้า', 
-            type: 'text', 
+        {
+            name: 'search2',
+            label: 'ชื่อประเภทสินค้า',
+            type: 'text',
             placeholder: 'กรอกชื่อ',
             colSpan: 1
         },
-        { 
-            name: 'status', 
-            label: 'สถานะ', 
-            type: 'select', 
+        {
+            name: 'status',
+            label: 'สถานะ',
+            type: 'select',
             options: STATUS_OPTIONS,
             colSpan: 1
         },
@@ -73,7 +75,7 @@ export default function ItemTypeList() {
         queryFn: async () => {
             const result = await ItemTypeService.getAll();
             let items = result.items || [];
-            
+
             // Client-side filtering
             if (filters.status !== 'ALL') {
                 items = items.filter(i => filters.status === 'ACTIVE' ? i.is_active : !i.is_active);
@@ -92,12 +94,10 @@ export default function ItemTypeList() {
                 items.sort((a, b) => {
                     const fieldValA = a[sortConfig.key as keyof ItemTypeListItem];
                     const fieldValB = b[sortConfig.key as keyof ItemTypeListItem];
-                    
-                    const valA = fieldValA !== undefined && fieldValA !== null ? String(fieldValA) : '';
-                    const valB = fieldValB !== undefined && fieldValB !== null ? String(fieldValB) : '';
-                    
-                    return sortConfig.direction === 'asc' 
-                        ? valA.localeCompare(valB, 'th') 
+                    const valA = fieldValA != null ? String(fieldValA) : '';
+                    const valB = fieldValB != null ? String(fieldValB) : '';
+                    return sortConfig.direction === 'asc'
+                        ? valA.localeCompare(valB, 'th')
                         : valB.localeCompare(valA, 'th');
                 });
             }
@@ -113,13 +113,16 @@ export default function ItemTypeList() {
     // ==================== HANDLERS ====================
     const handleCreateNew = () => {
         setEditingId(null);
+        setEditingData(null); // ✅ ล้างข้อมูลเดิม
         setIsModalOpen(true);
     };
 
-    const handleEdit = (id: string) => {
+    // ✅ รับ item ทั้ง row มาด้วย
+    const handleEdit = useCallback((id: string, item: ItemTypeListItem) => {
         setEditingId(id);
+        setEditingData(item); // ✅ เก็บข้อมูล row ที่คลิก
         setIsModalOpen(true);
-    };
+    }, []);
 
     const handleDelete = useCallback(async (id: string) => {
         if (confirm('คุณต้องการลบข้อมูลประเภทสินค้านี้หรือไม่?')) {
@@ -131,6 +134,7 @@ export default function ItemTypeList() {
     const handleModalClose = () => {
         setIsModalOpen(false);
         setEditingId(null);
+        setEditingData(null); // ✅ ล้างข้อมูลเมื่อปิด modal
     };
 
     // ==================== TABLE COLUMNS ====================
@@ -145,9 +149,9 @@ export default function ItemTypeList() {
             accessorKey: 'item_type_code',
             header: 'รหัส',
             cell: ({ getValue, row }) => (
-                <span 
+                <span
                     className="font-medium text-blue-600 cursor-pointer hover:underline"
-                    onClick={() => handleEdit(row.original.item_type_id)}
+                    onClick={() => handleEdit(String(row.original.item_type_id), row.original)} // ✅ ส่ง row ไปด้วย
                 >
                     {getValue() as string}
                 </span>
@@ -159,9 +163,11 @@ export default function ItemTypeList() {
             header: 'ชื่อ (ไทย)',
         },
         {
-            accessorKey: 'item_type_name_en',
+            accessorKey: 'item_type_nameeng', // ✅ ตรง Backend
             header: 'ชื่อ (EN)',
-            cell: ({ getValue }) => <span className="text-gray-500">{getValue() as string || '-'}</span>
+            cell: ({ getValue }) => (
+                <span className="text-gray-500">{(getValue() as string) || '-'}</span>
+            ),
         },
         {
             accessorKey: 'is_active',
@@ -179,15 +185,15 @@ export default function ItemTypeList() {
             size: 100,
             cell: ({ row }) => (
                 <div className="flex items-center justify-center gap-2">
-                    <button 
-                        onClick={() => handleEdit(row.original.item_type_id)}
+                    <button
+                        onClick={() => handleEdit(String(row.original.item_type_id), row.original)} // ✅ ส่ง row ไปด้วย
                         className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                         title="แก้ไข"
                     >
                         <Edit2 size={18} />
                     </button>
-                    <button 
-                        onClick={() => handleDelete(row.original.item_type_id)}
+                    <button
+                        onClick={() => handleDelete(String(row.original.item_type_id))}
                         className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         title="ลบ"
                     >
@@ -196,12 +202,13 @@ export default function ItemTypeList() {
                 </div>
             ),
         },
-    ], [filters.page, filters.limit, handleDelete]);
+    ], [filters.page, filters.limit, handleEdit, handleDelete]);
 
     // ==================== RENDER ====================
     return (
         <div className="p-6 space-y-6">
-            {/* Header Section */}
+
+            {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
@@ -214,7 +221,7 @@ export default function ItemTypeList() {
                 </div>
             </div>
 
-            {/* Filter Section */}
+            {/* Filter */}
             <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
                 <FilterFormBuilder
                     config={filterConfig}
@@ -233,12 +240,11 @@ export default function ItemTypeList() {
                 />
             </div>
 
-            {/* Data Table Section */}
+            {/* Table */}
             <div className="flex flex-col gap-4">
                 <h2 className="text-gray-700 dark:text-gray-300 font-medium">
                     พบข้อมูล {response?.total || 0} รายการ
                 </h2>
-
                 <SmartTable
                     data={response?.items || []}
                     columns={columns}
@@ -257,15 +263,14 @@ export default function ItemTypeList() {
                 />
             </div>
 
-            <ItemTypeFormModal 
-                isOpen={isModalOpen} 
+            {/* ✅ ส่ง initialData เข้า Modal */}
+            <ItemTypeFormModal
+                isOpen={isModalOpen}
                 onClose={handleModalClose}
                 editId={editingId}
+                initialData={editingData}
                 onSuccess={refetch}
             />
         </div>
     );
 }
-
-
-

@@ -72,10 +72,10 @@ export interface ItemTypeFormData {
 }
 
 export interface ItemTypeListItem {
-    item_type_id: string;
+    item_type_id: number;
     item_type_code: string;
     item_type_name: string;
-    item_type_name_en?: string;
+    item_type_nameeng?: string;
     is_active: boolean;
     created_at: string;
 }
@@ -91,7 +91,7 @@ export const initialItemTypeFormData: ItemTypeFormData = {
 export interface ItemTypeCreateRequest {
     item_type_code: string;
     item_type_name: string;
-    item_type_name_en?: string;
+    item_type_nameeng?: string;
     is_active?: boolean;
 }
 
