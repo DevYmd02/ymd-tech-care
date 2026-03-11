@@ -55,7 +55,7 @@ create: async (data: ItemTypeCreateRequest): Promise<SuccessResponse> => {
     }
 },
 
-update: async (id: string, data: ItemTypeCreateRequest): Promise<SuccessResponse> => {
+update: async (id: number, data: ItemTypeCreateRequest): Promise<SuccessResponse> => {
     if (USE_MOCK) {
         logger.info('🎭 [Mock Mode] Update Item Type', id, data);
         return { success: true };
