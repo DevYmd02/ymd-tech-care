@@ -23,6 +23,7 @@ import type {
 import type { ListResponse } from '@/shared/types/common-api.types';
 import type { ItemGroupFormValues } from '../hooks/useItemGroupForm';
 import type { BrandFormValues } from '../hooks/useBrandForm';
+import type { PatternFormValues } from '../hooks/usePatternForm';
 import {
     MOCK_ITEM_GROUPS, MOCK_BRANDS, MOCK_PATTERNS, MOCK_DESIGNS, MOCK_GRADES,
     MOCK_MODELS, MOCK_SIZES, MOCK_COLORS, MOCK_LOCATIONS, MOCK_SHELVES, MOCK_LOT_NUMBERS
@@ -275,9 +276,9 @@ export const BrandService = createInventoryService<Brand, BrandFormValues>({
 });
 
 // Pattern Service
-export const PatternService = createInventoryService<Pattern, any>({
+export const PatternService = createInventoryService<Pattern, PatternFormValues>({
     entityName: 'Pattern',
-    apiPath: '/patterns',
+    apiPath: '/item-pattern',
     idField: 'pattern_id',
     mockData: MOCK_PATTERNS,
     mapToEntity: (data, id, now) => ({
@@ -289,6 +290,22 @@ export const PatternService = createInventoryService<Pattern, any>({
         is_active: data.isActive,
         created_at: now,
         updated_at: now,
+    }),
+    mapFromApi: (item: any): Pattern => ({
+        id: item.item_pattern_id,
+        pattern_id: item.item_pattern_id,
+        code: item.item_pattern_code,
+        name_th: item.item_pattern_name,
+        name_en: item.item_pattern_nameeng || '',
+        is_active: item.is_active,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+    }),
+    mapToApi: (data: PatternFormValues) => ({
+        item_pattern_code: data.code?.trim(),
+        item_pattern_name: data.nameTh?.trim(),
+        item_pattern_nameeng: data.nameEn?.trim() || '',
+        is_active: data.isActive,
     }),
 });
 

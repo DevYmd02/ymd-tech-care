@@ -3,7 +3,7 @@
  * @description หน้ารายการรูปแบบสินค้า (Pattern Master Data List)
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Edit2, Trash2, Grid3X3 } from 'lucide-react';
 import { PatternFormModal } from './PatternFormModal';
 import { PatternService } from '@/modules/master-data/inventory/services/inventory-master.service';
@@ -13,15 +13,23 @@ import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
+import { useQuery } from '@tanstack/react-query';
 
 const STATUS_OPTIONS = [{ value: 'ALL', label: 'ทั้งหมด' }, { value: 'ACTIVE', label: 'ใช้งาน' }, { value: 'INACTIVE', label: 'ไม่ใช้งาน' }];
 
 export default function PatternList() {
-    const { filters, setFilters, handlePageChange, resetFilters } = useTableFilters({ customParamKeys: { search: 'code', search2: 'name' } });
-    const [allData, setAllData] = useState<Pattern[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const {
+        filters,
+        setFilters,
+        handlePageChange,
+        resetFilters,
+        handleSortChange,
+        sortConfig
+    } = useTableFilters({ customParamKeys: { search: 'code', search2: 'name', status: 'status' } });
+
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
+    const [editingData, setEditingData] = useState<Pattern | null>(null);
 
     const filterConfig: FilterFieldConfig<keyof typeof filters>[] = useMemo(() => [
         { name: 'search', label: 'รหัสรูปแบบ', type: 'text', placeholder: 'กรอกรหัส' },
@@ -29,40 +37,123 @@ export default function PatternList() {
         { name: 'status', label: 'สถานะ', type: 'select', options: STATUS_OPTIONS },
     ], []);
 
-    const fetchData = useCallback(async () => { setIsLoading(true); try { const response = await PatternService.getAll(); setAllData(response.items); } finally { setIsLoading(false); } }, []);
-    useEffect(() => { fetchData(); }, [fetchData]);
+    const { data: response, isLoading, refetch } = useQuery({
+        queryKey: ['patterns', filters],
+        queryFn: async () => {
+            const response = await PatternService.getAll();
+            let items = response.items || [];
 
-    const filteredData = useMemo(() => {
-        let result = [...allData];
-        if (filters.status !== 'ALL') result = result.filter(item => filters.status === 'ACTIVE' ? item.is_active : !item.is_active);
-        if (filters.search) result = result.filter(item => item.code.toLowerCase().includes(filters.search.toLowerCase()));
-        if (filters.search2) result = result.filter(item => item.name_th.toLowerCase().includes(filters.search2.toLowerCase()));
-        return result;
-    }, [allData, filters]);
+            if (filters.status !== 'ALL') {
+                items = items.filter(item => filters.status === 'ACTIVE' ? item.is_active : !item.is_active);
+            }
+            if (filters.search) {
+                const term = filters.search.toLowerCase();
+                items = items.filter(item => item.code.toLowerCase().includes(term));
+            }
+            if (filters.search2) {
+                const term = filters.search2.toLowerCase();
+                items = items.filter(item => item.name_th.toLowerCase().includes(term));
+            }
 
-    const paginatedData = useMemo(() => filteredData.slice((filters.page - 1) * filters.limit, filters.page * filters.limit), [filteredData, filters.page, filters.limit]);
-    const handleCreateNew = () => { setEditingId(null); setIsModalOpen(true); };
-    const handleEdit = (id: number) => { setEditingId(id); setIsModalOpen(true); };
-    const handleDelete = useCallback((id: number) => { if (confirm('คุณต้องการลบข้อมูลนี้หรือไม่?')) PatternService.delete(id).then(() => fetchData()); }, [fetchData]);
+            if (sortConfig) {
+                items.sort((a, b) => {
+                    const fieldValA = a[sortConfig.key as keyof Pattern];
+                    const fieldValB = b[sortConfig.key as keyof Pattern];
+                    const valA = fieldValA != null ? String(fieldValA) : '';
+                    const valB = fieldValB != null ? String(fieldValB) : '';
+                    return sortConfig.direction === 'asc'
+                        ? valA.localeCompare(valB, 'th')
+                        : valB.localeCompare(valA, 'th');
+                });
+            }
+
+            const total = items.length;
+            const start = (filters.page - 1) * filters.limit;
+            const paginatedItems = items.slice(start, start + filters.limit);
+
+            return { items: paginatedItems, total };
+        }
+    });
+
+    const handleCreateNew = () => {
+        setEditingId(null);
+        setEditingData(null);
+        setIsModalOpen(true);
+    };
+
+    const handleEdit = useCallback((item: Pattern) => {
+        setEditingId(item.id);
+        setEditingData(item);
+        setIsModalOpen(true);
+    }, []);
+
+    const handleDelete = useCallback(async (id: number) => {
+        if (confirm('คุณต้องการลบข้อมูลนี้หรือไม่?')) {
+            await PatternService.delete(id);
+            refetch();
+        }
+    }, [refetch]);
+
+    const handleModalClose = () => {
+        setIsModalOpen(false);
+        setEditingId(null);
+        setEditingData(null);
+    };
 
     const columns = useMemo<ColumnDef<Pattern>[]>(() => [
         { id: 'sequence', header: 'ลำดับ', accessorFn: (_, index) => (filters.page - 1) * filters.limit + index + 1, size: 60 },
-        { accessorKey: 'code', header: 'รหัส', cell: ({ getValue }) => <span className="font-medium text-blue-600">{getValue() as string}</span> },
+        {
+            accessorKey: 'code',
+            header: 'รหัส',
+            cell: ({ row }) => (
+                <span className="font-medium text-blue-600 cursor-pointer hover:underline" onClick={() => handleEdit(row.original)}>
+                    {row.getValue('code') as string}
+                </span>
+            )
+        },
         { accessorKey: 'name_th', header: 'ชื่อ (ไทย)' },
         { accessorKey: 'name_en', header: 'ชื่อ (EN)', cell: ({ getValue }) => <span className="text-gray-600">{getValue() as string || '-'}</span> },
         { accessorKey: 'is_active', header: 'สถานะ', cell: ({ getValue }) => <ActiveStatusBadge isActive={getValue() as boolean} />, size: 100 },
-        { id: 'actions', header: 'จัดการ', size: 100, cell: ({ row }) => (<div className="flex items-center gap-2"><button onClick={() => handleEdit(row.original.id)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit2 size={18} /></button><button onClick={() => handleDelete(row.original.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={18} /></button></div>)},
-    ], [filters.page, filters.limit, handleDelete]);
+        {
+            id: 'actions', header: 'จัดการ', size: 100,
+            cell: ({ row }) => (
+                <div className="flex items-center gap-2">
+                    <button onClick={() => handleEdit(row.original)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg" title="แก้ไข"><Edit2 size={18} /></button>
+                    <button onClick={() => handleDelete(row.original.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg" title="ลบ"><Trash2 size={18} /></button>
+                </div>
+            )
+        },
+    ], [filters.page, filters.limit, handleEdit, handleDelete]);
 
     return (
         <div className="p-6 space-y-6">
-            <div><h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2"><Grid3X3 className="text-blue-600" /> กำหนดรูปแบบสินค้า (Pattern Master)</h1><p className="text-gray-500 mt-1 text-sm">จัดการข้อมูลรูปแบบสินค้าในระบบ</p></div>
+            <div>
+                <h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                    <Grid3X3 className="text-blue-600" /> กำหนดลวดลาย (Pattern)
+                </h1>
+                <p className="text-gray-500 mt-1 text-sm">จัดการข้อมูลลวดลายในระบบ</p>
+            </div>
             <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700"><FilterFormBuilder config={filterConfig} filters={filters} onFilterChange={(name: string, value: string) => setFilters({ [name]: value })} onSearch={() => handlePageChange(1)} onReset={resetFilters} onCreate={handleCreateNew} createLabel="เพิ่มรูปแบบใหม่" accentColor="indigo" /></div>
-            <div className="flex flex-col gap-4"><h2 className="text-gray-700 font-medium">พบข้อมูล {filteredData.length} รายการ</h2><SmartTable data={paginatedData} columns={columns} isLoading={isLoading} pagination={{ pageIndex: filters.page, pageSize: filters.limit, totalCount: filteredData.length, onPageChange: handlePageChange, onPageSizeChange: (size) => setFilters({ limit: size, page: 1 }) }} rowIdField="pattern_id" /></div>
-            <PatternFormModal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setEditingId(null); }} editId={editingId} onSuccess={fetchData} />
+            <div className="flex flex-col gap-4">
+                <h2 className="text-gray-700 font-medium">พบข้อมูล {response?.total || 0} รายการ</h2>
+                <SmartTable
+                    data={response?.items || []}
+                    columns={columns}
+                    isLoading={isLoading}
+                    pagination={{
+                        pageIndex: filters.page,
+                        pageSize: filters.limit,
+                        totalCount: response?.total || 0,
+                        onPageChange: handlePageChange,
+                        onPageSizeChange: (size) => setFilters({ limit: size, page: 1 }),
+                    }}
+                    sortConfig={sortConfig}
+                    onSortChange={handleSortChange}
+                    rowIdField="id"
+                    className="shadow-sm"
+                />
+            </div>
+            <PatternFormModal isOpen={isModalOpen} onClose={handleModalClose} editId={editingId} initialData={editingData} onSuccess={refetch} />
         </div>
     );
 }
-
-
-
