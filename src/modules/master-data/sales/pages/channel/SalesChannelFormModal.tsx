@@ -39,7 +39,7 @@ type ChannelFormValues = z.infer<typeof channelSchema>;
 interface Props {
     isOpen: boolean;
     onClose: () => void;
-    editId?: string | null;
+    editId?: number | null;
     onSuccess?: () => void;
 }
 

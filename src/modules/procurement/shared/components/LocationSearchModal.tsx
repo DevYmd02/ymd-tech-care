@@ -5,11 +5,11 @@ import { Search } from 'lucide-react';
 interface LocationSearchModalProps {
   isOpen: boolean;
   onClose: () => void;
-  warehouseId: string | null;
-  onSelect: (data: { location_id: string; location_name: string }) => void;
+  warehouseId: number | null;
+  onSelect: (data: { location_id: number; location_name: string }) => void;
 }
 
-import { MOCK_LOCATIONS } from '@/modules/procurement/mocks/data/warehouseData';
+import { MOCK_LOCATIONS } from '@/modules/master-data/inventory/mocks/warehouseData';
 
 export const LocationSearchModal: React.FC<LocationSearchModalProps> = ({ isOpen, onClose, warehouseId, onSelect }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -17,7 +17,7 @@ export const LocationSearchModal: React.FC<LocationSearchModalProps> = ({ isOpen
   // Critical: Filter locations to only show those belonging to the selected warehouse
   const filteredItems = MOCK_LOCATIONS.filter(loc => 
     loc.warehouse_id === warehouseId &&
-    (loc.location_name.includes(searchTerm) || loc.location_id.includes(searchTerm))
+    (loc.location_name.includes(searchTerm) || String(loc.location_id).includes(searchTerm))
   );
 
   return (
@@ -60,7 +60,7 @@ export const LocationSearchModal: React.FC<LocationSearchModalProps> = ({ isOpen
                   <tr key={item.location_id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 transition-colors">
                     <td className="px-3 py-3 text-center">
                       <button 
-                        type="button"
+                         type="button"
                         onClick={() => {
                           onSelect(item);
                           onClose();

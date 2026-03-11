@@ -22,7 +22,7 @@ const initialFormData: BranchFormData = {
     is_active: true,
 };
 
-export function useBranchForm(editId: string | null, initialData?: BranchListItem | null, onSuccess?: () => void) {
+export function useBranchForm(editId: number | null, initialData?: BranchListItem | null, onSuccess?: () => void) {
     const { confirm } = useConfirmation();
     const queryClient = useQueryClient();
 

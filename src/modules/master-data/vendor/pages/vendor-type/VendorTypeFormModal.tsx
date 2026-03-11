@@ -39,7 +39,7 @@ type VendorTypeFormValues = z.infer<typeof vendorTypeSchema>;
 interface Props {
     isOpen: boolean;
     onClose: () => void;
-    editId?: string | null;
+    editId?: number | null;
     onSuccess?: () => void;
 }
 

@@ -9,7 +9,7 @@ import type { Project } from '@/modules/master-data/types/master-data-types';
 interface ProjectFormModalProps {
     isOpen: boolean;
     onClose: () => void;
-    editId?: string | null;
+    editId?: number | null;
     initialData?: Project | null;
     onSuccess?: () => void;
 }

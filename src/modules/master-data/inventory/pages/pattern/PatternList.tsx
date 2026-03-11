@@ -21,7 +21,7 @@ export default function PatternList() {
     const [allData, setAllData] = useState<Pattern[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editingId, setEditingId] = useState<number | null>(null);
 
     const filterConfig: FilterFieldConfig<keyof typeof filters>[] = useMemo(() => [
         { name: 'search', label: 'รหัสรูปแบบ', type: 'text', placeholder: 'กรอกรหัส' },
@@ -42,8 +42,8 @@ export default function PatternList() {
 
     const paginatedData = useMemo(() => filteredData.slice((filters.page - 1) * filters.limit, filters.page * filters.limit), [filteredData, filters.page, filters.limit]);
     const handleCreateNew = () => { setEditingId(null); setIsModalOpen(true); };
-    const handleEdit = (id: string) => { setEditingId(id); setIsModalOpen(true); };
-    const handleDelete = useCallback((id: string) => { if (confirm('คุณต้องการลบข้อมูลนี้หรือไม่?')) PatternService.delete(id).then(() => fetchData()); }, [fetchData]);
+    const handleEdit = (id: number) => { setEditingId(id); setIsModalOpen(true); };
+    const handleDelete = useCallback((id: number) => { if (confirm('คุณต้องการลบข้อมูลนี้หรือไม่?')) PatternService.delete(id).then(() => fetchData()); }, [fetchData]);
 
     const columns = useMemo<ColumnDef<Pattern>[]>(() => [
         { id: 'sequence', header: 'ลำดับ', accessorFn: (_, index) => (filters.page - 1) * filters.limit + index + 1, size: 60 },

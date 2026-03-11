@@ -4,12 +4,12 @@ import { styles } from '@/shared/constants/styles';
 import type { VendorFormData } from '@/modules/master-data/vendor/types/vendor-types';
 
 interface VendorContactInfoProps {
-    formData: VendorFormData;
+    formData: Partial<VendorFormData>;
     onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void;
     errors: { [key: string]: string };
 }
 
-export const VendorContactInfo: React.FC<VendorContactInfoProps> = ({ formData, onChange, errors }) => {
+export const VendorContactInfo: React.FC<VendorContactInfoProps> = ({ formData = {}, onChange, errors }) => {
     return (
         <section>
             <div className="flex items-center gap-2 mb-4 text-green-600 dark:text-green-400">

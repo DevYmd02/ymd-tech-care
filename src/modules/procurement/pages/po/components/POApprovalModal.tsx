@@ -31,7 +31,7 @@ const s = {
 interface POApprovalModalProps {
     isOpen:    boolean;
     onClose:   () => void;
-    poId:      string;
+    poId:      number;
     onSuccess: () => void;
 }
 

@@ -19,7 +19,7 @@ interface JobFormModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
-    editId?: string | null;
+    editId?: number | null;
 }
 
 const jobSchema = z.object({
@@ -77,9 +77,9 @@ export const JobFormModal = ({ isOpen, onClose, onSuccess, editId }: JobFormModa
         try {
             let res;
             if (isEdit && editId) {
-                res = await JobService.update(editId, data);
+                res = await JobService.update(editId, data as any);
             } else {
-                res = await JobService.create(data);
+                res = await JobService.create(data as any);
             }
 
             if (res.success) {

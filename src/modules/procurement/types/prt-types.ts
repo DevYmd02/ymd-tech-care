@@ -2,22 +2,24 @@
 export type PRTStatus = 'DRAFT' | 'POSTED' | 'CANCELLED';
 
 export interface PurchaseReturn {
-    prt_id: string;
+    prt_id: number;
     prt_no: string;
-    prt_date: string; // ISO Date string
-    vendor_id: string;
-    vendor_name: string;
+    prt_date: string;
+    po_id?: number;
+    po_no?: string;
+    vendor_id: number;
     vendor_code: string;
-    ref_grn_id: string;
-    ref_grn_no: string;
-    currency_id?: string;
+    vendor_name: string;
+    ref_grn_id?: number;
+    ref_grn_no?: string;
+    currency_id?: number;
     exchange_rate?: number;
     rate_date?: string;
     is_multicurrency?: boolean;
     total_qty: number;
     total_amount: number;
     status: PRTStatus;
-    created_by: string;
+    created_by: number;
     created_at: string;
     updated_at: string;
     items?: PrtLineItem[];
@@ -44,7 +46,7 @@ export interface PRTListResponse {
 }
 
 export interface PrtItem {
-    id: string;
+    id: number;
     code: string;
     name: string;
     uom: string;
@@ -52,11 +54,11 @@ export interface PrtItem {
 }
 
 export interface PrtLineItem {
-    item_id: string;
+    item_id: number;
     item_code: string;
     item_name: string;
     qty_return: number;
-    uom_id?: string;
+    uom_id?: number;
     unit_price_ref: number;
     line_total: number;
 }
@@ -68,11 +70,12 @@ export interface PrtLineItem {
 import { z } from 'zod';
 
 export const prtLineSchema = z.object({
-    item_id: z.string(),
+    item_id:         z.coerce.number().optional(),
     item_code: z.string().min(1, 'ระบุรหัสสินค้า'),
     item_name: z.string().min(1, 'ระบุชื่อสินค้า'),
     qty_return: z.coerce.number().min(0.001, 'จำนวนต้องมากกว่า 0'),
-    uom_id: z.string().optional(),
+    uom_id:          z.coerce.number().optional(),
+    uom:             z.string().optional(),
     unit_price_ref: z.coerce.number().min(0, 'ราคาห้ามติดลบ'),
     line_total: z.coerce.number()
 });
@@ -80,14 +83,15 @@ export const prtLineSchema = z.object({
 export const prtSchema = z.object({
     prt_no: z.string().optional(),
     prt_date: z.string().refine(val => !isNaN(Date.parse(val)), 'วันที่ไม่ถูกต้อง'),
-    vendor_id: z.string().min(1, 'กรุณาเลือกผู้ขาย'),
-    reference_grn_id: z.string().optional(),
+    vendor_id: z.coerce.number().min(1, 'กรุณาเลือกผู้ขาย'),
+    reference_grn_id: z.coerce.number().optional(),
     status: z.string(),
     stock_effect: z.string(),
     reason: z.string().optional(),
     is_multicurrency: z.boolean(),
-    currency_id: z.string().optional(),
-    currency_type_id: z.string().optional(),
+    currency_id: z.coerce.number().optional(),
+    currency_code: z.string().optional().default('THB'),
+    currency_type_id: z.coerce.number().optional(),
     exchange_rate: z.coerce.number().optional(),
     rate_date: z.string().optional(),
     items: z.array(prtLineSchema).min(1, 'ต้องมีรายการสินค้าอย่างน้อย 1 รายการ'),

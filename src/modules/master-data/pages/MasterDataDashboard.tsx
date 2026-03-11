@@ -118,10 +118,10 @@ export default function MasterDataDashboard() {
     
     // Modal & UI states
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editingId, setEditingId] = useState<number | null>(null);
     const [selectedVendor, setSelectedVendor] = useState<VendorMaster | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
-    const [expandedId, setExpandedId] = useState<string | null>(null);
+    const [expandedId, setExpandedId] = useState<number | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -343,7 +343,7 @@ export default function MasterDataDashboard() {
         setIsModalOpen(true);
     };
 
-    const handleEdit = async (id: string) => {
+    const handleEdit = async (id: number) => {
         if (activeTab === 'vendor') {
             try {
                 // Fetch full vendor data before opening modal
@@ -367,27 +367,27 @@ export default function MasterDataDashboard() {
         try {
             if (activeTab === 'cost-center') {
                 const center = data as CostCenter;
-                const res = await MasterDataService.toggleCostCenterStatus(center.cost_center_id, !center.is_active);
+                const res = await MasterDataService.toggleCostCenterStatus(center.id, !center.is_active);
                 if (res.success) fetchData();
             } else if (activeTab === 'project') {
                 const project = data as Project;
-                const res = await MasterDataService.toggleProjectStatus(project.project_id, !project.is_active);
+                const res = await MasterDataService.toggleProjectStatus(project.id, !project.is_active);
                 if (res.success) fetchData();
             } else if (activeTab === 'branch') {
                 const branch = data as BranchListItem;
-                const res = await MasterDataService.toggleBranchStatus(branch.branch_id, !branch.is_active);
+                const res = await MasterDataService.toggleBranchStatus(branch.id, !branch.is_active);
                 if (res.success) fetchData();
             } else if (activeTab === 'warehouse') {
                 const warehouse = data as WarehouseListItem;
-                const res = await MasterDataService.toggleWarehouseStatus(warehouse.warehouse_id, !warehouse.is_active);
+                const res = await MasterDataService.toggleWarehouseStatus(warehouse.id, !warehouse.is_active);
                 if (res.success) fetchData();
             } else if (activeTab === 'unit') {
                 const unit = data as UnitListItem;
-                const res = await MasterDataService.toggleUnitStatus(unit.unit_id, !unit.is_active);
+                const res = await MasterDataService.toggleUnitStatus(unit.id, !unit.is_active);
                 if (res.success) fetchData();
             } else if (activeTab === 'category') {
                 const category = data as ProductCategoryListItem;
-                const res = await MasterDataService.toggleCategoryStatus(category.category_id, !category.is_active);
+                const res = await MasterDataService.toggleCategoryStatus(category.id, !category.is_active);
                 if (res.success) fetchData();
             }
         } catch (error) {
@@ -395,7 +395,7 @@ export default function MasterDataDashboard() {
         }
     };
 
-    const handleDelete = async (id: string) => {
+    const handleDelete = async (id: number) => {
         if (confirm('ต้องการลบข้อมูลนี้หรือไม่?')) {
             if (activeTab === 'vendor') {
                 const result = await VendorService.delete(id);
@@ -428,7 +428,7 @@ export default function MasterDataDashboard() {
         }
     };
 
-    const toggleExpand = (id: string) => {
+    const toggleExpand = (id: number) => {
         setExpandedId(expandedId === id ? null : id);
     };
 

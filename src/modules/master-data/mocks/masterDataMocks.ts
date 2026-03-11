@@ -46,28 +46,32 @@ const IS_DEV = import.meta.env.DEV;
 
 const _mockBranches: BranchListItem[] = [
     {
-        branch_id: 'BR001',
+        id: 1,
+        branch_id: 1,
         branch_code: 'HQ',
         branch_name: 'สำนักงานใหญ่',
         is_active: true,
         created_at: '2024-01-15T00:00:00Z',
     },
     {
-        branch_id: 'BR002',
+        id: 2,
+        branch_id: 2,
         branch_code: 'BKK01',
         branch_name: 'สาขากรุงเทพ 1',
         is_active: true,
         created_at: '2024-02-01T00:00:00Z',
     },
     {
-        branch_id: 'BR003',
+        id: 3,
+        branch_id: 3,
         branch_code: 'CNX01',
         branch_name: 'สาขาเชียงใหม่',
         is_active: true,
         created_at: '2024-03-10T00:00:00Z',
     },
     {
-        branch_id: 'BR004',
+        id: 4,
+        branch_id: 4,
         branch_code: 'PKT01',
         branch_name: 'สาขาภูเก็ต',
         is_active: false,
@@ -81,50 +85,51 @@ const _mockBranches: BranchListItem[] = [
 // ====================================================================================
 
 export const mockDepartments: DepartmentListItem[] = [
-    { department_id: 'D01', department_code: 'ACC', department_name: 'ฝ่ายบัญชี', department_name_en: 'Accounting Department', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
-    { department_id: 'D02', department_code: 'IT', department_name: 'ฝ่ายเทคโนโลยีสารสนเทศ', department_name_en: 'Information Technology Department', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
-    { department_id: 'D03', department_code: 'HR', department_name: 'ฝ่ายทรัพยากรบุคคล', department_name_en: 'Human Resources Department', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
-    { department_id: 'D04', department_code: 'FIN', department_name: 'ฝ่ายการเงิน', department_name_en: 'Finance Department', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { id: 1, department_id: 1, department_code: 'ACC', department_name: 'ฝ่ายบัญชี', department_name_en: 'Accounting Department', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { id: 2, department_id: 2, department_code: 'IT', department_name: 'ฝ่ายเทคโนโลยีสารสนเทศ', department_name_en: 'Information Technology Department', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { id: 3, department_id: 3, department_code: 'HR', department_name: 'ฝ่ายทรัพยากรบุคคล', department_name_en: 'Human Resources Department', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { id: 4, department_id: 4, department_code: 'FIN', department_name: 'ฝ่ายการเงิน', department_name_en: 'Finance Department', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
 ];
 
 export const mockSections: SectionListItem[] = [
-    { section_id: 'S01', section_code: 'FIN-TRS', section_name: 'แผนกธุรการการเงิน', section_name_en: 'Treasury Department', department_id: 'D04', department_code: 'FIN', department_name: 'ฝ่ายการเงิน', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
-    { section_id: 'S02', section_code: 'FIN-BUD', section_name: 'แผนกงบประมาณ', section_name_en: 'Budget Department', department_id: 'D04', department_code: 'FIN', department_name: 'ฝ่ายการเงิน', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
-    { section_id: 'S03', section_code: 'ACC-GL', section_name: 'แผนกบัญชีทั่วไป', section_name_en: 'General Ledger Department', department_id: 'D01', department_code: 'ACC', department_name: 'ฝ่ายบัญชี', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { id: 1, section_id: 1, section_code: 'FIN-TRS', section_name: 'แผนกธุรการการเงิน', section_name_en: 'Treasury Department', department_id: 4, department_code: 'FIN', department_name: 'ฝ่ายการเงิน', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { id: 2, section_id: 2, section_code: 'FIN-BUD', section_name: 'แผนกงบประมาณ', section_name_en: 'Budget Department', department_id: 4, department_code: 'FIN', department_name: 'ฝ่ายการเงิน', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { id: 3, section_id: 3, section_code: 'ACC-GL', section_name: 'แผนกบัญชีทั่วไป', section_name_en: 'General Ledger Department', department_id: 1, department_code: 'ACC', department_name: 'ฝ่ายบัญชี', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
 ];
 
 export const mockJobs: JobListItem[] = [
-    { job_id: 'J01', job_code: 'J-DEV', job_name: 'Developer', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
-    { job_id: 'J02', job_code: 'J-MGR', job_name: 'Manager', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { id: 1, job_id: 1, job_code: 'J-DEV', job_name: 'Developer', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { id: 2, job_id: 2, job_code: 'J-MGR', job_name: 'Manager', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
 ];
 
 export const mockEmployeeGroups: EmployeeGroupListItem[] = [
-    { group_id: 'G01', group_code: 'FULL', group_name: 'Full-Time', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
-    { group_id: 'G02', group_code: 'CONT', group_name: 'Contractor', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { id: 1, group_id: 1, group_code: 'FULL', group_name: 'Full-Time', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { id: 2, group_id: 2, group_code: 'CONT', group_name: 'Contractor', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
 ];
 
 export const mockPositions: PositionListItem[] = [
-    { position_id: 'P01', position_code: 'SE', position_name: 'Software Engineer', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
-    { position_id: 'P02', position_code: 'SSR', position_name: 'Senior Sales Key Account', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { id: 1, position_id: 1, position_code: 'SE', position_name: 'Software Engineer', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { id: 2, position_id: 2, position_code: 'SSR', position_name: 'Senior Sales Key Account', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
 ];
 
 export const mockSalesZones: SalesZoneListItem[] = [
-    { zone_id: 'Z01', zone_code: 'BKK', zone_name: 'Bangkok', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
-    { zone_id: 'Z02', zone_code: 'NORTH', zone_name: 'Northern Region', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { id: 1, zone_id: 1, zone_code: 'BKK', zone_name: 'Bangkok', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { id: 2, zone_id: 2, zone_code: 'NORTH', zone_name: 'Northern Region', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
 ];
 
 export const mockSalesChannels: SalesChannelListItem[] = [
-    { channel_id: 'C01', channel_code: 'ONLINE', channel_name: 'Online Store', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
-    { channel_id: 'C02', channel_code: 'RETAIL', channel_name: 'Retail Shop', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { id: 1, channel_id: 1, channel_code: 'ONLINE', channel_name: 'Online Store', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { id: 2, channel_id: 2, channel_code: 'RETAIL', channel_name: 'Retail Shop', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
 ];
 
 export const mockSalesTargets: SalesTargetListItem[] = [
-    { target_id: 'T01', target_code: 'FY2026-Q1', target_name: 'Q1 2026 Sales Target', amount: 1000000, year: 2026, period: 1, is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { id: 1, target_id: 1, target_code: 'FY2026-Q1', target_name: 'Q1 2026 Sales Target', amount: 1000000, year: 2026, period: 1, is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
 ];
 
 export const mockEmployees: EmployeeListItem[] = [
     { 
-        employee_id: 'E001', 
+        id: 1,
+        employee_id: 1, 
         employee_code: 'EMP001', 
         employee_name: 'Somchai Jaidee', 
         title_name: 'Mr.',
@@ -132,9 +137,9 @@ export const mockEmployees: EmployeeListItem[] = [
         last_name: 'Jaidee',
         email: 'somchai@ymd.com', 
         phone: '0812345678',
-        department_id: 'D02', 
+        department_id: 2, 
         department_name: 'Information Technology',
-        position_id: 'P01', 
+        position_id: 1, 
         position_name: 'Software Engineer',
         status: 'ACTIVE', 
         is_active: true, 
@@ -160,37 +165,41 @@ export const mockBranchDropdown: BranchDropdownItem[] = IS_DEV
 
 const _mockWarehouses: WarehouseListItem[] = [
     {
-        warehouse_id: 'WH001',
+        id: 1,
+        warehouse_id: 1,
         warehouse_code: 'WH-HQ',
         warehouse_name: 'คลังสำนักงานใหญ่',
-        branch_id: 'BR001',
+        branch_id: 1,
         branch_name: 'สำนักงานใหญ่',
         is_active: true,
         created_at: '2024-01-15T00:00:00Z',
     },
     {
-        warehouse_id: 'WH002',
+        id: 2,
+        warehouse_id: 2,
         warehouse_code: 'WH-BKK1',
         warehouse_name: 'คลังกรุงเทพ 1',
-        branch_id: 'BR002',
+        branch_id: 2,
         branch_name: 'สาขากรุงเทพ 1',
         is_active: true,
         created_at: '2024-02-01T00:00:00Z',
     },
     {
-        warehouse_id: 'WH003',
+        id: 3,
+        warehouse_id: 3,
         warehouse_code: 'WH-CNX',
         warehouse_name: 'คลังเชียงใหม่',
-        branch_id: 'BR003',
+        branch_id: 3,
         branch_name: 'สาขาเชียงใหม่',
         is_active: true,
         created_at: '2024-03-10T00:00:00Z',
     },
     {
-        warehouse_id: 'WH004',
+        id: 4,
+        warehouse_id: 4,
         warehouse_code: 'WH-PKT',
         warehouse_name: 'คลังภูเก็ต',
-        branch_id: 'BR004',
+        branch_id: 4,
         branch_name: 'สาขาภูเก็ต',
         is_active: false,
         created_at: '2024-04-20T00:00:00Z',
@@ -206,7 +215,8 @@ export const mockWarehouses: WarehouseListItem[] = IS_DEV ? _mockWarehouses : []
 
 const _mockProductCategories: ProductCategoryListItem[] = [
     {
-        category_id: 'CAT001',
+        id: 1,
+        category_id: 1,
         category_code: 'MED',
         category_name: 'เวชภัณฑ์',
         category_name_en: 'Medical Supplies',
@@ -214,7 +224,8 @@ const _mockProductCategories: ProductCategoryListItem[] = [
         created_at: '2024-01-01T00:00:00Z',
     },
     {
-        category_id: 'CAT002',
+        id: 2,
+        category_id: 2,
         category_code: 'EQP',
         category_name: 'อุปกรณ์การแพทย์',
         category_name_en: 'Medical Equipment',
@@ -222,7 +233,8 @@ const _mockProductCategories: ProductCategoryListItem[] = [
         created_at: '2024-01-01T00:00:00Z',
     },
     {
-        category_id: 'CAT003',
+        id: 3,
+        category_id: 3,
         category_code: 'CON',
         category_name: 'วัสดุสิ้นเปลือง',
         category_name_en: 'Consumables',
@@ -230,7 +242,8 @@ const _mockProductCategories: ProductCategoryListItem[] = [
         created_at: '2024-01-01T00:00:00Z',
     },
     {
-        category_id: 'CAT004',
+        id: 4,
+        category_id: 4,
         category_code: 'LAB',
         category_name: 'อุปกรณ์ห้องปฏิบัติการ',
         category_name_en: 'Laboratory Equipment',
@@ -248,7 +261,8 @@ export const mockProductCategories: ProductCategoryListItem[] = IS_DEV ? _mockPr
 
 const _mockItemTypes: ItemTypeListItem[] = [
     {
-        item_type_id: 'IT001',
+        id: 1,
+        item_type_id: 1,
         item_type_code: 'DRUG',
         item_type_name: 'ยา',
         item_type_name_en: 'Drug',
@@ -256,7 +270,8 @@ const _mockItemTypes: ItemTypeListItem[] = [
         created_at: '2024-01-01T00:00:00Z',
     },
     {
-        item_type_id: 'IT002',
+        id: 2,
+        item_type_id: 2,
         item_type_code: 'SUPP',
         item_type_name: 'เวชภัณฑ์ทั่วไป',
         item_type_name_en: 'General Supplies',
@@ -264,7 +279,8 @@ const _mockItemTypes: ItemTypeListItem[] = [
         created_at: '2024-01-01T00:00:00Z',
     },
     {
-        item_type_id: 'IT003',
+        id: 3,
+        item_type_id: 3,
         item_type_code: 'INST',
         item_type_name: 'เครื่องมือ',
         item_type_name_en: 'Instrument',
@@ -272,7 +288,8 @@ const _mockItemTypes: ItemTypeListItem[] = [
         created_at: '2024-01-01T00:00:00Z',
     },
     {
-        item_type_id: 'IT004',
+        id: 4,
+        item_type_id: 4,
         item_type_code: 'CHEM',
         item_type_name: 'สารเคมี',
         item_type_name_en: 'Chemical',
@@ -290,7 +307,8 @@ export const mockItemTypes: ItemTypeListItem[] = IS_DEV ? _mockItemTypes : [];
 
 const _mockUnits: UnitListItem[] = [
     {
-        unit_id: 'UN001',
+        id: 1,
+        unit_id: 1,
         unit_code: 'PCS',
         unit_name: 'ชิ้น',
         unit_name_en: 'Piece',
@@ -298,7 +316,8 @@ const _mockUnits: UnitListItem[] = [
         created_at: '2024-01-01T00:00:00Z',
     },
     {
-        unit_id: 'UN002',
+        id: 2,
+        unit_id: 2,
         unit_code: 'BOX',
         unit_name: 'กล่อง',
         unit_name_en: 'Box',
@@ -306,7 +325,8 @@ const _mockUnits: UnitListItem[] = [
         created_at: '2024-01-01T00:00:00Z',
     },
     {
-        unit_id: 'UN003',
+        id: 3,
+        unit_id: 3,
         unit_code: 'BTL',
         unit_name: 'ขวด',
         unit_name_en: 'Bottle',
@@ -314,7 +334,8 @@ const _mockUnits: UnitListItem[] = [
         created_at: '2024-01-01T00:00:00Z',
     },
     {
-        unit_id: 'UN004',
+        id: 4,
+        unit_id: 4,
         unit_code: 'SET',
         unit_name: 'ชุด',
         unit_name_en: 'Set',
@@ -322,7 +343,8 @@ const _mockUnits: UnitListItem[] = [
         created_at: '2024-01-01T00:00:00Z',
     },
     {
-        unit_id: 'UN005',
+        id: 5,
+        unit_id: 5,
         unit_code: 'PKG',
         unit_name: 'แพ็ค',
         unit_name_en: 'Package',
@@ -340,11 +362,13 @@ export const mockUnits: UnitListItem[] = IS_DEV ? _mockUnits : [];
 
 const _mockItems: ItemListItem[] = [
     {
-        item_id: 'IT001',
+        id: 1,
+        item_id: 1,
         item_code: 'RM-001',
         item_name: 'แผ่นเหล็ก เกรด A', // Thai Name
         item_name_en: 'Steel Sheet Grade A', // English Name
         description: 'High quality steel sheet for manufacturing',
+        category_id: 1,
         category_name: 'Raw Materials (วัตถุดิบ)',
         item_type_code: 'RM',
         unit_name: 'Sheet (แผ่น)',
@@ -353,17 +377,19 @@ const _mockItems: ItemListItem[] = [
         warehouse: '1001',
         location: 'A-12',
         standard_cost: 500,
-        preferred_vendor_id: 'V-003', // Siam Cement
+        preferred_vendor_id: 3, // Siam Cement
         stock_qty: 150,
         is_active: true,
         created_at: '2024-01-01T00:00:00Z',
     },
     {
-        item_id: 'IT002',
+        id: 2,
+        item_id: 2,
         item_code: 'IT-001',
         item_name: 'โน้ตบุ๊ก Dell Latitude',
         item_name_en: 'Notebook Dell Latitude',
         description: 'Core i7, 16GB RAM, 512GB SSD',
+        category_id: 1,
         category_name: 'IT Assets (สินทรัพย์ไอที)',
         item_type_code: 'ASSET',
         unit_name: 'Unit (เครื่อง)',
@@ -372,17 +398,19 @@ const _mockItems: ItemListItem[] = [
         warehouse: '9001',
         location: 'C-05',
         standard_cost: 25000,
-        preferred_vendor_id: 'V-002', // JIB Computer
+        preferred_vendor_id: 2, // JIB Computer
         stock_qty: 25,
         is_active: true,
         created_at: '2024-01-02T00:00:00Z',
     },
     {
-        item_id: 'IT003',
+        id: 3,
+        item_id: 3,
         item_code: 'SP-001',
         item_name: 'ปั๊มไฮดรอลิก รุ่น X',
         item_name_en: 'Hydraulic Pump Model X',
         description: 'Spare part for heavy machinery',
+        category_id: 1,
         category_name: 'Spare Parts (อะไหล่)',
         item_type_code: 'SP',
         unit_name: 'Set (ชุด)',
@@ -391,17 +419,19 @@ const _mockItems: ItemListItem[] = [
         warehouse: '3001',
         location: 'B-03',
         standard_cost: 15000,
-        preferred_vendor_id: 'V-005', // Somchai Construction
+        preferred_vendor_id: 5, // Somchai Construction
         stock_qty: 0,
         is_active: true,
         created_at: '2024-01-05T00:00:00Z',
     },
     {
-        item_id: 'IT004',
+        id: 4,
+        item_id: 4,
         item_code: 'OF-001',
         item_name: 'กระดาษ A4 Double A',
         item_name_en: 'A4 Paper Double A',
         description: '80 gsm, 500 sheets per ream',
+        category_id: 1,
         category_name: 'Office Supplies (วัสดุสำนักงาน)',
         item_type_code: 'CON',
         unit_name: 'Ream (รีม)',
@@ -410,17 +440,19 @@ const _mockItems: ItemListItem[] = [
         warehouse: '2001',
         location: 'Z-C',
         standard_cost: 120,
-        preferred_vendor_id: 'V-001', // OfficeMate
+        preferred_vendor_id: 1, // OfficeMate
         stock_qty: 500,
         is_active: true,
         created_at: '2024-01-10T00:00:00Z',
     },
     {
-        item_id: 'IT005',
+        id: 5,
+        item_id: 5,
         item_code: 'SF-001',
         item_name: 'หมวกนิรภัย 3M',
         item_name_en: 'Safety Helmet 3M',
         description: 'Industrial grade safety helmet, White',
+        category_id: 1,
         category_name: 'Safety Gear (อุปกรณ์ความปลอดภัย)',
         item_type_code: 'CON',
         unit_name: 'Piece (ใบ)',
@@ -429,17 +461,19 @@ const _mockItems: ItemListItem[] = [
         warehouse: '4001',
         location: 'B-10',
         standard_cost: 450,
-        preferred_vendor_id: 'V-003', // Siam Cement
+        preferred_vendor_id: 3, // Siam Cement
         stock_qty: 80,
         is_active: true,
         created_at: '2024-01-12T00:00:00Z',
     },
     {
-        item_id: 'IT006',
+        id: 6,
+        item_id: 6,
         item_code: 'PN-001',
         item_name: 'ปากกาลูกลื่น (Pens)',
         item_name_en: 'Ballpoint Pens',
         description: 'Blue ink, box of 12',
+        category_id: 1,
         category_name: 'Office Supplies (วัสดุสำนักงาน)',
         item_type_code: 'CON',
         unit_name: 'Box (กล่อง)',
@@ -448,7 +482,7 @@ const _mockItems: ItemListItem[] = [
         warehouse: '2001',
         location: 'Z-D',
         standard_cost: 150,
-        preferred_vendor_id: 'V-001', // OfficeMate
+        preferred_vendor_id: 1, // OfficeMate
         stock_qty: 1200,
         is_active: true,
         created_at: '2024-01-15T00:00:00Z',
@@ -464,7 +498,8 @@ export const mockItems: ItemListItem[] = IS_DEV ? _mockItems : [];
 
 const _mockUOMConversions: UOMConversionListItem[] = [
     {
-        conversion_id: 'UC001',
+        id: 1,
+        conversion_id: 1,
         item_code: 'RM-001',
         item_name: 'Paracetamol 500mg',
         from_unit_name: 'ลัง',
@@ -475,7 +510,8 @@ const _mockUOMConversions: UOMConversionListItem[] = [
         created_at: '2024-01-01T00:00:00Z',
     },
     {
-        conversion_id: 'UC002',
+        id: 2,
+        conversion_id: 2,
         item_code: 'RM-001',
         item_name: 'Paracetamol 500mg',
         from_unit_name: 'แพ็ค',
@@ -486,7 +522,8 @@ const _mockUOMConversions: UOMConversionListItem[] = [
         created_at: '2024-01-01T00:00:00Z',
     },
     {
-        conversion_id: 'UC003',
+        id: 3,
+        conversion_id: 3,
         item_code: 'EQ-005',
         item_name: 'Surgical Mask',
         from_unit_name: 'ลัง',
@@ -507,7 +544,8 @@ export const mockUOMConversions: UOMConversionListItem[] = IS_DEV ? _mockUOMConv
 
 const _mockItemBarcodes: ItemBarcodeListItem[] = [
     {
-        barcode_id: 'BC001',
+        id: 1,
+        barcode_id: 1,
         item_code: 'RM-001',
         item_name: 'Paracetamol 500mg',
         barcode: '8850007001234',
@@ -517,7 +555,8 @@ const _mockItemBarcodes: ItemBarcodeListItem[] = [
         created_at: '2024-01-01T00:00:00Z',
     },
     {
-        barcode_id: 'BC002',
+        id: 2,
+        barcode_id: 2,
         item_code: 'RM-001',
         item_name: 'Paracetamol 500mg',
         barcode: '8850007001241',
@@ -527,7 +566,8 @@ const _mockItemBarcodes: ItemBarcodeListItem[] = [
         created_at: '2024-01-01T00:00:00Z',
     },
     {
-        barcode_id: 'BC003',
+        id: 3,
+        barcode_id: 3,
         item_code: 'EQ-005',
         item_name: 'Surgical Mask',
         barcode: '8850007005678',
@@ -547,7 +587,8 @@ export const mockItemBarcodes: ItemBarcodeListItem[] = IS_DEV ? _mockItemBarcode
 
 const _mockCostCenters: CostCenter[] = [
     {
-        cost_center_id: 'CC001',
+        id: 1,
+        cost_center_id: 1,
         cost_center_code: 'CC-IT',
         cost_center_name: 'แผนกไอที',
         description: 'Information Technology Department',
@@ -556,7 +597,8 @@ const _mockCostCenters: CostCenter[] = [
         is_active: true,
     },
     {
-        cost_center_id: 'CC002',
+        id: 2,
+        cost_center_id: 2,
         cost_center_code: 'CC-HR',
         cost_center_name: 'แผนกทรัพยากรบุคคล',
         description: 'Human Resources Department',
@@ -565,7 +607,8 @@ const _mockCostCenters: CostCenter[] = [
         is_active: true,
     },
     {
-        cost_center_id: 'CC003',
+        id: 3,
+        cost_center_id: 3,
         cost_center_code: 'CC-ACC',
         cost_center_name: 'แผนกบัญชี',
         description: 'Accounting Department',
@@ -574,7 +617,8 @@ const _mockCostCenters: CostCenter[] = [
         is_active: true,
     },
     {
-        cost_center_id: 'CC004',
+        id: 4,
+        cost_center_id: 4,
         cost_center_code: 'CC-MKT',
         cost_center_name: 'แผนกการตลาด',
         description: 'Marketing Department',
@@ -593,11 +637,12 @@ export const mockCostCenters: CostCenter[] = IS_DEV ? _mockCostCenters : [];
 
 const _mockProjects: Project[] = [
     {
-        project_id: 'PRJ001',
+        id: 1,
+        project_id: 1,
         project_code: 'PRJ-2024-001',
         project_name: 'ปรับปรุงระบบ ERP Phase 1',
         description: 'Implementation of Procurement Module',
-        cost_center_id: 'CC001',
+        cost_center_id: 1,
         budget_amount: 1500000,
         start_date: '2024-01-01',
         end_date: '2024-06-30',
@@ -605,11 +650,12 @@ const _mockProjects: Project[] = [
         is_active: true,
     },
     {
-        project_id: 'PRJ002',
+        id: 2,
+        project_id: 2,
         project_code: 'PRJ-2024-002',
         project_name: 'ก่อสร้างอาคารใหม่',
         description: 'New Office Building Construction',
-        cost_center_id: 'CC-GEN',
+        cost_center_id: 999, // Custom generic
         budget_amount: 20000000,
         start_date: '2024-02-15',
         end_date: '2024-12-31',
@@ -617,11 +663,12 @@ const _mockProjects: Project[] = [
         is_active: true,
     },
     {
-        project_id: 'PRJ003',
+        id: 3,
+        project_id: 3,
         project_code: 'PRJ-2024-003',
         project_name: 'จัดจ้างทำความสะอาดประจำปี',
         description: 'Annual Cleaning Service Contract',
-        cost_center_id: 'CC002',
+        cost_center_id: 2,
         budget_amount: 500000,
         start_date: '2024-01-01',
         end_date: '2024-12-31',

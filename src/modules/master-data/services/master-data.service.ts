@@ -35,7 +35,7 @@ export const MasterDataService = {
     }
   },
 
-  toggleBranchStatus: async (id: string, isActive: boolean) => {
+  toggleBranchStatus: async (id: number, isActive: boolean) => {
     try {
       return await BranchService.toggleStatus(id, isActive);
     } catch (error) {
@@ -54,7 +54,7 @@ export const MasterDataService = {
     }
   },
 
-  toggleWarehouseStatus: async (id: string, isActive: boolean) => {
+  toggleWarehouseStatus: async (id: number, isActive: boolean) => {
     try {
       return await WarehouseService.toggleStatus(id, isActive);
     } catch (error) {
@@ -83,7 +83,7 @@ export const MasterDataService = {
     }
   },
 
-  toggleUnitStatus: async (id: string, isActive: boolean) => {
+  toggleUnitStatus: async (id: number, isActive: boolean) => {
     try {
       return await UnitService.toggleStatus(id, isActive);
     } catch (error) {
@@ -101,7 +101,7 @@ export const MasterDataService = {
     }
   },
 
-  toggleCostCenterStatus: async (id: string, isActive: boolean) => {
+  toggleCostCenterStatus: async (id: number, isActive: boolean) => {
     try {
       return await CostCenterService.toggleStatus(id, isActive);
     } catch (error) {
@@ -129,7 +129,7 @@ export const MasterDataService = {
     }
   },
 
-  toggleProjectStatus: async (id: string, isActive: boolean) => {
+  toggleProjectStatus: async (id: number, isActive: boolean) => {
     try {
       return await ProjectService.toggleStatus(id, isActive);
     } catch (error) {
@@ -148,7 +148,7 @@ export const MasterDataService = {
     }
   },
 
-  toggleCategoryStatus: async (id: string, isActive: boolean) => {
+  toggleCategoryStatus: async (id: number, isActive: boolean) => {
     try {
       return await ProductCategoryService.toggleStatus(id, isActive);
     } catch (error) {

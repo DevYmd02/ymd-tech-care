@@ -51,7 +51,7 @@ export default function JobList() {
     const [totalCount, setTotalCount] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editingId, setEditingId] = useState<number | null>(null);
 
     // ==================== FILTER CONFIG ====================
     const filterConfig: FilterFieldConfig<keyof typeof filters>[] = useMemo(() => [
@@ -102,12 +102,12 @@ export default function JobList() {
         setIsModalOpen(true);
     };
 
-    const handleEdit = (id: string) => {
+    const handleEdit = (id: number) => {
         setEditingId(id);
         setIsModalOpen(true);
     };
 
-    const handleDelete = useCallback((id: string) => {
+    const handleDelete = useCallback((id: number) => {
         if (confirm('คุณต้องการลบข้อมูล Job นี้หรือไม่?')) {
             JobService.delete(id).then(() => fetchData());
         }
@@ -162,14 +162,14 @@ export default function JobList() {
             cell: ({ row }) => (
                 <div className="flex items-center gap-2">
                     <button 
-                        onClick={() => handleEdit(row.original.job_id)}
+                        onClick={() => handleEdit(row.original.id)}
                         className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                         title="แก้ไข"
                     >
                         <Edit2 size={18} />
                     </button>
                     <button 
-                        onClick={() => handleDelete(row.original.job_id)}
+                        onClick={() => handleDelete(row.original.id)}
                         className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                         title="ลบ"
                     >
@@ -232,7 +232,7 @@ export default function JobList() {
                         onPageChange: handlePageChange,
                         onPageSizeChange: (size) => setFilters({ limit: size, page: 1 }),
                     }}
-                    rowIdField="job_id"
+                    rowIdField="id"
                     className="shadow-sm"
                 />
             </div>

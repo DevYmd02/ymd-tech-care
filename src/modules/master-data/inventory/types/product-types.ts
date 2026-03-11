@@ -10,7 +10,7 @@ import type { BaseMasterData } from '@/shared/types/common-master.types';
 // ====================================================================================
 
 export interface ProductCategoryMaster extends BaseMasterData {
-    category_id: string;
+    category_id: number;
     category_code: string;
     category_name: string;
     category_name_en?: string;
@@ -25,7 +25,8 @@ export interface ProductCategoryFormData {
 }
 
 export interface ProductCategoryListItem {
-    category_id: string;
+    id: number;
+    category_id: number;
     category_code: string;
     category_name: string;
     category_name_en?: string;
@@ -49,7 +50,7 @@ export interface ProductCategoryCreateRequest {
 }
 
 export interface ProductCategoryUpdateRequest extends Partial<ProductCategoryCreateRequest> {
-    category_id: string;
+    category_id: number;
 }
 
 // ====================================================================================
@@ -57,7 +58,7 @@ export interface ProductCategoryUpdateRequest extends Partial<ProductCategoryCre
 // ====================================================================================
 
 export interface ItemTypeMaster extends BaseMasterData {
-    item_type_id: string;
+    item_type_id: number;
     item_type_code: string;
     item_type_name: string;
     item_type_name_en?: string;
@@ -72,7 +73,8 @@ export interface ItemTypeFormData {
 }
 
 export interface ItemTypeListItem {
-    item_type_id: string;
+    id: number;
+    item_type_id: number;
     item_type_code: string;
     item_type_name: string;
     item_type_name_en?: string;
@@ -96,7 +98,7 @@ export interface ItemTypeCreateRequest {
 }
 
 export interface ItemTypeUpdateRequest extends Partial<ItemTypeCreateRequest> {
-    item_type_id: string;
+    item_type_id: number;
 }
 
 // ====================================================================================
@@ -104,7 +106,7 @@ export interface ItemTypeUpdateRequest extends Partial<ItemTypeCreateRequest> {
 // ====================================================================================
 
 export interface UnitMaster extends BaseMasterData {
-    unit_id: string;
+    unit_id: number;
     unit_code: string;
     unit_name: string;
     unit_name_en?: string;
@@ -119,14 +121,15 @@ export interface UnitFormData {
 }
 
 export interface UnitListItem {
-    unit_id: string;
+    id: number;
+    unit_id: number;
     unit_code: string;
     unit_name: string;
     unit_name_en?: string;
     is_active: boolean;
     created_at: string;
     // Backend API mapping
-    uom_id?: string | number;
+    uom_id?: number;
     uom_code?: string;
     uom_name?: string;
     uom_nameeng?: string;
@@ -148,7 +151,7 @@ export interface UnitCreateRequest {
 }
 
 export interface UnitUpdateRequest extends Partial<UnitCreateRequest> {
-    unit_id: string;
+    unit_id: number;
 }
 
 // ====================================================================================
@@ -156,7 +159,7 @@ export interface UnitUpdateRequest extends Partial<UnitCreateRequest> {
 // ====================================================================================
 
 export interface ItemMaster extends BaseMasterData {
-    item_id: string;
+    item_id: number;
     item_code: string;
     item_name: string;
     item_name_en?: string;
@@ -167,16 +170,16 @@ export interface ItemMaster extends BaseMasterData {
     location?: string;
     standard_cost?: number;
     barcode?: string;
-    category_id?: string;
+    category_id?: number;
     category_name: string;
-    item_type_id?: string;
+    item_type_id?: number;
     item_type_code?: string;
     item_type_name?: string;
-    unit_id?: string;
+    unit_id?: number;
     unit_name: string;
-    purchasing_unit_id?: string;
+    purchasing_unit_id?: number;
     purchasing_unit_name?: string;
-    sales_unit_id?: string;
+    sales_unit_id?: number;
     sales_unit_name?: string;
     tax_code?: string;
     is_active: boolean;
@@ -188,7 +191,7 @@ export interface ItemMasterFormData {
     item_name_en: string;
     marketing_name: string;
     billing_name: string;
-    category_id: string;
+    category_id: number;
     good_class_id: string;
     good_brand_id: string;
     good_pattern_id: string;
@@ -197,7 +200,7 @@ export interface ItemMasterFormData {
     good_model_id?: string;
     good_grade_id?: string;
     good_color_id?: string;
-    base_uom_id: string;
+    base_uom_id: number;
     item_type_code: string;
     costing_method?: string;
     default_tax_code: string;
@@ -214,7 +217,8 @@ export interface ItemMasterFormData {
 }
 
 export interface ItemListItem {
-    item_id: string;
+    id: number;
+    item_id: number;
     item_code: string;
     item_name: string;
     item_name_en?: string;
@@ -224,19 +228,20 @@ export interface ItemListItem {
     warehouse?: string;
     location?: string;
     standard_cost?: number;
+    category_id: number;
     category_name: string;
     item_type_code?: string;
     unit_name: string;
-    unit_id?: string;
-    preferred_vendor_id?: string;
+    unit_id?: number;
+    preferred_vendor_id?: number;
     is_active: boolean;
     created_at: string;
     // W-01: Extended fields for proper PR mapping
-    uom_id: number | string;
+    uom_id: number;
     uom_name?: string;
-    warehouse_id?: string;
+    warehouse_id?: number;
     warehouse_code?: string;
-    purchasing_unit_id?: string;
+    purchasing_unit_id?: number;
     purchasing_unit_name?: string;
     purchasing_conversion_factor?: number;  // conversion_factor for purchasing unit
     stock_qty?: number; // Mock field for PR Product Search Modal
@@ -248,7 +253,7 @@ export const initialItemMasterFormData: ItemMasterFormData = {
     item_name_en: '',
     marketing_name: '',
     billing_name: '',
-    category_id: '',
+    category_id: 0,
     good_class_id: '',
     good_brand_id: '',
     good_pattern_id: '',
@@ -257,7 +262,7 @@ export const initialItemMasterFormData: ItemMasterFormData = {
     good_model_id: '',
     good_grade_id: '',
     good_color_id: '',
-    base_uom_id: '',
+    base_uom_id: 0,
     item_type_code: '',
     costing_method: '',
     default_tax_code: 'VAT7',
@@ -277,13 +282,13 @@ export const initialItemMasterFormData: ItemMasterFormData = {
 // ====================================================================================
 
 export interface ItemUOMConversion {
-    conversion_id: string;
-    item_id: string;
+    conversion_id: number;
+    item_id: number;
     item_code: string;
     item_name: string;
-    from_unit_id: string;
+    from_unit_id: number;
     from_unit_name: string;
-    to_unit_id: string;
+    to_unit_id: number;
     to_unit_name: string;
     conversion_factor: number;
     is_purchase_unit: boolean;
@@ -303,7 +308,8 @@ export interface UOMConversionFormData {
 }
 
 export interface UOMConversionListItem {
-    conversion_id: string;
+    id: number;
+    conversion_id: number;
     item_code: string;
     item_name: string;
     from_unit_name: string;
@@ -329,12 +335,12 @@ export const initialUOMConversionFormData: UOMConversionFormData = {
 // ====================================================================================
 
 export interface ItemBarcode {
-    barcode_id: string;
-    item_id: string;
+    barcode_id: number;
+    item_id: number;
     item_code: string;
     item_name: string;
     barcode: string;
-    unit_id?: string;
+    unit_id?: number;
     unit_name?: string;
     is_primary: boolean;
     is_active: boolean;
@@ -352,7 +358,8 @@ export interface ItemBarcodeFormData {
 }
 
 export interface ItemBarcodeListItem {
-    barcode_id: string;
+    id: number;
+    barcode_id: number;
     item_code: string;
     item_name: string;
     barcode: string;

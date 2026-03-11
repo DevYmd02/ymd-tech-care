@@ -3,8 +3,8 @@ import type { ListResponse } from '@/shared/types/common-api.types';
 
 const data: VendorTypeMaster[] = [
     {
-        vendor_type_id: 'VTYPE-MFG',
-        id: 'VTYPE-MFG',
+        vendor_type_id: 1,
+        id: 1,
         vendor_type_code: 'VTYPE-MFG',
         code: 'VTYPE-MFG',
         vendor_type_name: 'ผู้ผลิตเฟอร์นิเจอร์',
@@ -15,8 +15,8 @@ const data: VendorTypeMaster[] = [
         updated_at: new Date().toISOString(),
     },
     {
-        vendor_type_id: 'VTYPE-DIS',
-        id: 'VTYPE-DIS',
+        vendor_type_id: 2,
+        id: 2,
         vendor_type_code: 'VTYPE-DIS',
         code: 'VTYPE-DIS',
         vendor_type_name: 'ผู้จัดจำหน่ายเครื่องเขียน',
@@ -27,8 +27,8 @@ const data: VendorTypeMaster[] = [
         updated_at: new Date().toISOString(),
     },
     {
-        vendor_type_id: 'VTYPE-IT',
-        id: 'VTYPE-IT',
+        vendor_type_id: 3,
+        id: 3,
         vendor_type_code: 'VTYPE-IT',
         code: 'VTYPE-IT',
         vendor_type_name: 'ผู้จัดจำหน่าย IT',
@@ -39,8 +39,8 @@ const data: VendorTypeMaster[] = [
         updated_at: new Date().toISOString(),
     },
     {
-        vendor_type_id: 'VTYPE-RET',
-        id: 'VTYPE-RET',
+        vendor_type_id: 4,
+        id: 4,
         vendor_type_code: 'VTYPE-RET',
         code: 'VTYPE-RET',
         vendor_type_name: 'ร้านค้าปลีก',

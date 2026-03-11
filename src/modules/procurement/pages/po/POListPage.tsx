@@ -36,14 +36,14 @@ export default function POListPage() {
     const initialCreateValues = useMemo<Partial<POFormData> | undefined>(() => {
         if (createFromQC) {
             return {
-                vendor_id: vendorIdParam || undefined,
-                qc_id: qcIdParam || undefined,
+                vendor_id: vendorIdParam ? Number(vendorIdParam) : undefined,
+                qc_id: qcIdParam ? Number(qcIdParam) : undefined,
                 remarks: remarksParam || undefined,
                 lines: [],
             };
         }
         if (vendorIdParam) {
-            return { vendor_id: vendorIdParam };
+            return { vendor_id: Number(vendorIdParam) };
         }
         return undefined;
     }, [createFromQC, vendorIdParam, qcIdParam, remarksParam]);
@@ -64,33 +64,33 @@ export default function POListPage() {
     // ── View / Edit Modal State ───────────────────────────────────────────────
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [selectedPOId, setSelectedPOId]       = useState<string | undefined>(undefined);
+    const [selectedPOId, setSelectedPOId]       = useState<number | undefined>(undefined);
 
     // ── GRN Modal State ───────────────────────────────────────────────────────
     const [isGRNModalOpen, setIsGRNModalOpen] = useState(false);
-    const [selectedPOIdForGRN, setSelectedPOIdForGRN] = useState<string | undefined>(undefined);
+    const [selectedPOIdForGRN, setSelectedPOIdForGRN] = useState<number | undefined>(undefined);
 
     // ── Approval Modal State ──────────────────────────────────────────────────
     const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
-    const [selectedPOIdForApproval, setSelectedPOIdForApproval] = useState<string | undefined>(undefined);
+    const [selectedPOIdForApproval, setSelectedPOIdForApproval] = useState<number | undefined>(undefined);
 
     // ── Action Handlers (UI-only: open modals) ────────────────────────────────
-    const handleView = useCallback((id: string) => {
+    const handleView = useCallback((id: number) => {
         setSelectedPOId(id);
         setIsViewModalOpen(true);
     }, []);
 
-    const handleEdit = useCallback((id: string) => {
+    const handleEdit = useCallback((id: number) => {
         setSelectedPOId(id);
         setIsEditModalOpen(true);
     }, []);
 
-    const handleApprove = useCallback((id: string) => {
+    const handleApprove = useCallback((id: number) => {
         setSelectedPOIdForApproval(id);
         setIsApprovalModalOpen(true);
     }, []);
 
-    const handleGRN = useCallback((id: string) => {
+    const handleGRN = useCallback((id: number) => {
         setSelectedPOIdForGRN(id);
         setIsGRNModalOpen(true);
     }, []);
@@ -204,7 +204,7 @@ export default function POListPage() {
                     <div className="flex items-center justify-center gap-1">
                         {/* Eye — PR pattern */}
                         <button
-                            onClick={() => handleView(item.po_id || '')}
+                            onClick={() => handleView(item.po_id)}
                             className="p-1 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-all"
                             title="ดูรายละเอียด"
                         >
@@ -215,7 +215,7 @@ export default function POListPage() {
                         {item.status === 'DRAFT' && (
                             <>
                                 <button
-                                    onClick={() => handleEdit(item.po_id || '')}
+                                    onClick={() => handleEdit(item.po_id)}
                                     className="flex items-center gap-1 px-1.5 py-1 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded shadow-sm border border-transparent hover:border-amber-200 transition-all"
                                     title="แก้ไข"
                                 >
@@ -235,7 +235,7 @@ export default function POListPage() {
                         {/* PENDING_APPROVAL: อนุมัติ (emerald) */}
                         {item.status === 'PENDING_APPROVAL' && (
                             <button
-                                onClick={() => handleApprove(item.po_id || '')}
+                                onClick={() => handleApprove(item.po_id)}
                                 className="flex items-center gap-1 px-1.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded shadow-sm transition-all"
                                 title="อนุมัติ PO"
                             >
@@ -259,7 +259,7 @@ export default function POListPage() {
                         {/* ISSUED: เปิด GRN (violet = special process) */}
                         {item.status === 'ISSUED' && (
                             <button
-                                onClick={() => handleGRN(item.po_id || '')}
+                                onClick={() => handleGRN(item.po_id)}
                                 className="flex items-center gap-1 px-1.5 py-1 bg-violet-600 hover:bg-violet-700 text-white text-[10px] font-bold rounded shadow-sm transition-all"
                                 title="เปิดใบรับสินค้า"
                             >
@@ -453,7 +453,7 @@ export default function POListPage() {
                                         )}
                                         {item.status === 'PENDING_APPROVAL' && (
                                             <button
-                                                onClick={() => handleApprove(item.po_id || '')}
+                                                onClick={() => handleApprove(item.po_id)}
                                                 className="flex-[2] bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
                                             >
                                                 <CheckCircle size={14} /> อนุมัติ
@@ -469,7 +469,7 @@ export default function POListPage() {
                                         )}
                                         {item.status === 'ISSUED' && (
                                             <button
-                                                onClick={() => handleGRN(item.po_id || '')}
+                                                onClick={() => handleGRN(item.po_id)}
                                                 className="flex-[2] bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
                                             >
                                                 <Package size={14} /> เปิด GRN
@@ -487,13 +487,13 @@ export default function POListPage() {
             <DocumentSourceSelectorModal
                 isOpen={isCreateInterceptorOpen}
                 onClose={() => handleCloseCreateModal()}
-                onSelectSource={(sourceType: 'QC' | 'BLANK', qcId?: string, vendorId?: string) => {
+                onSelectSource={(sourceType: 'QC' | 'BLANK', qcId?: number, vendorId?: number) => {
                     if (sourceType === 'QC' && qcId) {
                         setSearchParams({ 
                             mode: 'create', 
                             createFromQC: 'true', 
-                            sourceQcId: qcId,
-                            ...(vendorId ? { vendorId } : {})
+                            sourceQcId: String(qcId),
+                            ...(vendorId ? { vendorId: String(vendorId) } : {})
                         });
                     } else {
                         setSearchParams({ mode: 'create' });

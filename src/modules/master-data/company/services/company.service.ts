@@ -28,72 +28,72 @@ import { type TableFilters } from '@/shared/hooks/useTableFilters';
 
 export const DepartmentService = {
   getList: (params?: Partial<TableFilters>) => api.get<PaginatedListResponse<DepartmentListItem>>('/org-departments', { params }),
-  get: (id: string) => api.get<DepartmentListItem>(`/org-departments/${id}`),
+  get: (id: number) => api.get<DepartmentListItem>(`/org-departments/${id}`),
   create: (data: DepartmentFormData) => api.post<{ success: boolean; data?: DepartmentListItem; message?: string }>('/org-departments', data),
-  update: (id: string, data: Partial<DepartmentFormData>) => api.put<{ success: boolean; data?: DepartmentListItem; message?: string }>(`/org-departments/${id}`, data),
-  delete: (id: string) => api.delete<boolean>(`/org-departments/${id}`),
+  update: (id: number, data: Partial<DepartmentFormData>) => api.put<{ success: boolean; data?: DepartmentListItem; message?: string }>(`/org-departments/${id}`, data),
+  delete: (id: number) => api.delete<boolean>(`/org-departments/${id}`),
 };
 
 export const SectionService = {
   getList: (params?: Partial<TableFilters>) => api.get<PaginatedListResponse<SectionListItem>>('/org-sections', { params }),
-  get: (id: string) => api.get<SectionListItem>(`/org-sections/${id}`),
+  get: (id: number) => api.get<SectionListItem>(`/org-sections/${id}`),
   create: (data: SectionFormData) => api.post<{ success: boolean; data?: SectionListItem; message?: string }>('/org-sections', data),
-  update: (id: string, data: Partial<SectionFormData>) => api.put<{ success: boolean; data?: SectionListItem; message?: string }>(`/org-sections/${id}`, data),
-  delete: (id: string) => api.delete<boolean>(`/org-sections/${id}`),
+  update: (id: number, data: Partial<SectionFormData>) => api.put<{ success: boolean; data?: SectionListItem; message?: string }>(`/org-sections/${id}`, data),
+  delete: (id: number) => api.delete<boolean>(`/org-sections/${id}`),
 };
 
 export const JobService = {
   getList: (params?: Partial<TableFilters>) => api.get<PaginatedListResponse<JobListItem>>('/org-jobs', { params }),
-  get: (id: string) => api.get<JobListItem>(`/org-jobs/${id}`),
+  get: (id: number) => api.get<JobListItem>(`/org-jobs/${id}`),
   create: (data: JobFormData) => api.post<{ success: boolean; data?: JobListItem; message?: string }>('/org-jobs', data),
-  update: (id: string, data: Partial<JobFormData>) => api.put<{ success: boolean; data?: JobListItem; message?: string }>(`/org-jobs/${id}`, data),
-  delete: (id: string) => api.delete<boolean>(`/org-jobs/${id}`),
+  update: (id: number, data: Partial<JobFormData>) => api.put<{ success: boolean; data?: JobListItem; message?: string }>(`/org-jobs/${id}`, data),
+  delete: (id: number) => api.delete<boolean>(`/org-jobs/${id}`),
 };
 
 export const EmployeeGroupService = {
   getList: (params?: Partial<TableFilters>) => api.get<PaginatedListResponse<EmployeeGroupListItem>>('/org-employee-groups', { params }),
-  get: (id: string) => api.get<EmployeeGroupListItem>(`/org-employee-groups/${id}`),
+  get: (id: number) => api.get<EmployeeGroupListItem>(`/org-employee-groups/${id}`),
   create: (data: EmployeeGroupFormData) => api.post<{ success: boolean; data?: EmployeeGroupListItem; message?: string }>('/org-employee-groups', data),
-  update: (id: string, data: Partial<EmployeeGroupFormData>) => api.put<{ success: boolean; data?: EmployeeGroupListItem; message?: string }>(`/org-employee-groups/${id}`, data),
-  delete: (id: string) => api.delete<boolean>(`/org-employee-groups/${id}`),
+  update: (id: number, data: Partial<EmployeeGroupFormData>) => api.put<{ success: boolean; data?: EmployeeGroupListItem; message?: string }>(`/org-employee-groups/${id}`, data),
+  delete: (id: number) => api.delete<boolean>(`/org-employee-groups/${id}`),
 };
 
 export const PositionService = {
   getList: (params?: Partial<TableFilters>) => api.get<PaginatedListResponse<PositionListItem>>('/org-positions', { params }),
-  get: (id: string) => api.get<PositionListItem>(`/org-positions/${id}`),
+  get: (id: number) => api.get<PositionListItem>(`/org-positions/${id}`),
   create: (data: PositionFormData) => api.post<{ success: boolean; data?: PositionListItem; message?: string }>('/org-positions', data),
-  update: (id: string, data: Partial<PositionFormData>) => api.put<{ success: boolean; data?: PositionListItem; message?: string }>(`/org-positions/${id}`, data),
-  delete: (id: string) => api.delete<boolean>(`/org-positions/${id}`),
+  update: (id: number, data: Partial<PositionFormData>) => api.put<{ success: boolean; data?: PositionListItem; message?: string }>(`/org-positions/${id}`, data),
+  delete: (id: number) => api.delete<boolean>(`/org-positions/${id}`),
 };
 
 export const SalesZoneService = {
   getList: () => api.get<SalesZoneListItem[]>('/org-sales-zones'),
-  get: (id: string) => api.get<SalesZoneListItem>(`/org-sales-zones/${id}`),
+  get: (id: number) => api.get<SalesZoneListItem>(`/org-sales-zones/${id}`),
   create: (data: SalesZoneFormData) => api.post<{ success: boolean; data?: SalesZoneListItem; message?: string }>('/org-sales-zones', data),
-  update: (id: string, data: Partial<SalesZoneFormData>) => api.put<{ success: boolean; data?: SalesZoneListItem; message?: string }>(`/org-sales-zones/${id}`, data),
-  delete: (id: string) => api.delete<boolean>(`/org-sales-zones/${id}`),
+  update: (id: number, data: Partial<SalesZoneFormData>) => api.put<{ success: boolean; data?: SalesZoneListItem; message?: string }>(`/org-sales-zones/${id}`, data),
+  delete: (id: number) => api.delete<boolean>(`/org-sales-zones/${id}`),
 };
 
 export const SalesChannelService = {
   getList: () => api.get<SalesChannelListItem[]>('/org-sales-channels'),
-  get: (id: string) => api.get<SalesChannelListItem>(`/org-sales-channels/${id}`),
+  get: (id: number) => api.get<SalesChannelListItem>(`/org-sales-channels/${id}`),
   create: (data: SalesChannelFormData) => api.post<{ success: boolean; data?: SalesChannelListItem; message?: string }>('/org-sales-channels', data),
-  update: (id: string, data: Partial<SalesChannelFormData>) => api.put<{ success: boolean; data?: SalesChannelListItem; message?: string }>(`/org-sales-channels/${id}`, data),
-  delete: (id: string) => api.delete<boolean>(`/org-sales-channels/${id}`),
+  update: (id: number, data: Partial<SalesChannelFormData>) => api.put<{ success: boolean; data?: SalesChannelListItem; message?: string }>(`/org-sales-channels/${id}`, data),
+  delete: (id: number) => api.delete<boolean>(`/org-sales-channels/${id}`),
 };
 
 export const SalesTargetService = {
   getList: () => api.get<SalesTargetListItem[]>('/org-sales-targets'),
-  get: (id: string) => api.get<SalesTargetListItem>(`/org-sales-targets/${id}`),
+  get: (id: number) => api.get<SalesTargetListItem>(`/org-sales-targets/${id}`),
   create: (data: SalesTargetFormData) => api.post<{ success: boolean; data?: SalesTargetListItem; message?: string }>('/org-sales-targets', data),
-  update: (id: string, data: Partial<SalesTargetFormData>) => api.put<{ success: boolean; data?: SalesTargetListItem; message?: string }>(`/org-sales-targets/${id}`, data),
-  delete: (id: string) => api.delete<boolean>(`/org-sales-targets/${id}`),
+  update: (id: number, data: Partial<SalesTargetFormData>) => api.put<{ success: boolean; data?: SalesTargetListItem; message?: string }>(`/org-sales-targets/${id}`, data),
+  delete: (id: number) => api.delete<boolean>(`/org-sales-targets/${id}`),
 };
 
 export const OrgEmployeeService = {
   getList: (params?: Partial<TableFilters>) => api.get<PaginatedListResponse<EmployeeListItem>>('/org-employees', { params }),
-  get: (id: string) => api.get<EmployeeListItem>(`/org-employees/${id}`),
+  get: (id: number) => api.get<EmployeeListItem>(`/org-employees/${id}`),
   create: (data: EmployeeFormData) => api.post<{ success: boolean; data?: EmployeeListItem; message?: string }>('/org-employees', data),
-  update: (id: string, data: Partial<EmployeeFormData>) => api.put<{ success: boolean; data?: EmployeeListItem; message?: string }>(`/org-employees/${id}`, data),
-  delete: (id: string) => api.delete<boolean>(`/org-employees/${id}`),
+  update: (id: number, data: Partial<EmployeeFormData>) => api.put<{ success: boolean; data?: EmployeeListItem; message?: string }>(`/org-employees/${id}`, data),
+  delete: (id: number) => api.delete<boolean>(`/org-employees/${id}`),
 };

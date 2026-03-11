@@ -20,8 +20,9 @@ import { createColumnHelper } from '@tanstack/react-table';
 // Services & Types
 import { VQService, type VQListParams } from '@/modules/procurement/services/vq.service';
 import { RFQService } from '@/modules/procurement/services/rfq.service';
-import type { VQListItem, VQStatus } from '@/modules/procurement/types';
-import type { RFQHeader } from '@/modules/procurement/types';
+import { PRService } from '@/modules/procurement/services/pr.service';
+import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
+import type { VQListItem, VQStatus, RFQHeader } from '@/modules/procurement/types';
 import { VQFormModal, VQVendorTrackingModal } from './components';
 import { logger } from '@/shared/utils/logger';
 
@@ -44,6 +45,43 @@ const VQ_STATUS_OPTIONS = [
 
 
 
+
+// ====================================================================================
+// MICRO-COMPONENTS FOR DATA HYDRATION
+// ====================================================================================
+
+const VendorNameDisplay = ({ vendorId }: { vendorId: number }) => {
+    const { data: vendor, isLoading } = useQuery({
+        queryKey: ['vendor', vendorId],
+        queryFn: () => VendorService.getById(vendorId),
+        enabled: !!vendorId,
+        staleTime: 5 * 60 * 1000,
+    });
+    if (isLoading) return <span className="text-gray-400 font-normal italic">กำลังโหลด...</span>;
+    return <span>{vendor?.vendor_name || `รออัปเดตชื่อผู้ขาย (ID: ${vendorId})`}</span>;
+};
+
+const RFQNoDisplay = ({ rfqId }: { rfqId: number }) => {
+    const { data: rfq, isLoading } = useQuery({
+        queryKey: ['rfq', rfqId],
+        queryFn: () => RFQService.getById(rfqId),
+        enabled: !!rfqId,
+        staleTime: 5 * 60 * 1000,
+    });
+    if (isLoading) return <span className="text-gray-400 font-normal italic">กำลังโหลด...</span>;
+    return <span>{rfq?.rfq_no || `รออัปเดตเลข RFQ (ID: ${rfqId})`}</span>;
+};
+
+const PRNoDisplay = ({ prId }: { prId: number }) => {
+    const { data: pr, isLoading } = useQuery({
+        queryKey: ['pr', prId],
+        queryFn: () => PRService.getDetail(prId),
+        enabled: !!prId,
+        staleTime: 5 * 60 * 1000,
+    });
+    if (isLoading) return <span className="text-gray-400 font-normal italic">กำลังโหลด...</span>;
+    return <span>{pr?.pr_no || `PR ID: ${prId}`}</span>;
+};
 
 // ====================================================================================
 // MAIN COMPONENT
@@ -71,7 +109,7 @@ export default function VQListPage() {
     const [modalConfig, setModalConfig] = useState<{
         isOpen: boolean;
         isViewMode: boolean;
-        vqId: string | null;
+        vqId: number | null;
     }>({
         isOpen: false,
         isViewMode: false,
@@ -79,7 +117,7 @@ export default function VQListPage() {
     });
 
     const [isTrackingOpen, setIsTrackingOpen] = useState(false);
-    const [selectedRfqId, setSelectedRfqId] = useState<string | null>(null);
+    const [selectedRfqId, setSelectedRfqId] = useState<number | null>(null);
     const [selectedRfqNo, setSelectedRfqNo] = useState<string>('');
 
     // Auto-inject rfq_no from URL into search3 filter (runs once on mount or when param changes)
@@ -100,11 +138,11 @@ export default function VQListPage() {
         if (shouldCreate && !modalConfig.isOpen) {
             if (rfqId) {
                 // Fetch RFQ Detail to get items
-                RFQService.getById(rfqId).then((rfqData: RFQHeader) => {
+                RFQService.getById(Number(rfqId)).then((rfqData: RFQHeader) => {
                     // Create a modified header if vendorId is provided
-                    const header = { ...rfqData } as RFQHeader & { vendor_id?: string };
+                    const header = { ...rfqData } as RFQHeader & { vendor_id?: number };
                     if (vendorId) {
-                        header.vendor_id = vendorId; 
+                        header.vendor_id = Number(vendorId); 
                     }
                     setInitialRFQForCreate(header as RFQHeader);
                     setModalConfig({ isOpen: true, isViewMode: false, vqId: null });
@@ -159,6 +197,12 @@ export default function VQListPage() {
         placeholderData: keepPreviousData,
     });
 
+    // ==========================================================================
+    // DATA HYDRATION: Master Data for Lookups
+    // ==========================================================================
+    
+    // Removed previous bulk hydration and lookup maps to use Micro-Components pattern.
+
     const handleVqSuccess = useCallback(() => {
         // 1. Refresh main VQ List
         refetch();
@@ -167,15 +211,18 @@ export default function VQListPage() {
         if (selectedRfqId) {
             queryClient.invalidateQueries({ queryKey: ['rfq-vendors', selectedRfqId] });
         }
+
+        // 3. Close the View Modal
+        setModalConfig(prev => ({ ...prev, vqId: null, isOpen: false }));
     }, [refetch, selectedRfqId, queryClient]);
 
     // handleFilterChange is provided by useTableFilters directly — no local wrapper needed
 
-    const handleOpenView = (vqId: string) => {
+    const handleOpenView = (vqId: number) => {
         setModalConfig({ isOpen: true, isViewMode: true, vqId });
     };
 
-    const handleOpenEdit = (vqId: string) => {
+    const handleOpenEdit = (vqId: number) => {
         setModalConfig({ isOpen: true, isViewMode: false, vqId });
     };
 
@@ -183,7 +230,7 @@ export default function VQListPage() {
         setModalConfig({ isOpen: true, isViewMode: false, vqId: null });
     };
 
-    const handleOpenTracking = (rfqId: string | null | undefined, rfqNo: string | null | undefined) => {
+    const handleOpenTracking = (rfqId: number | null | undefined, rfqNo: string | null | undefined) => {
         if (!rfqId) {
             logger.warn('[VQListPage] Cannot open tracking: rfq_id is missing');
             return;
@@ -210,15 +257,15 @@ export default function VQListPage() {
             size: 60,
             enableSorting: false,
         }),
-        columnHelper.accessor('quotation_no', {
+        columnHelper.accessor('vq_no', {
             header: 'เลขที่ VQ',
             cell: (info) => {
                 const item = info.row.original;
-                // Only RECORDED status gets a real VQ number
-                const hasVqNo = item.status === 'RECORDED' && !!info.getValue();
-                return hasVqNo ? (
-                    <span className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline cursor-pointer block" title={info.getValue()}>
-                        {info.getValue()}
+                const vqNo = info.getValue() || item.quotation_no;
+                
+                return vqNo ? (
+                    <span className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline cursor-pointer block" title={vqNo}>
+                        {vqNo}
                     </span>
                 ) : (
                     <span className="text-gray-400 dark:text-gray-600 font-medium">-</span>
@@ -241,10 +288,12 @@ export default function VQListPage() {
             header: 'ผู้ขาย',
             cell: (info) => {
                 const item = info.row.original;
+                const vendorText = info.getValue() || item.vendor?.vendor_name;
+
                 return (
                     <div className="flex flex-col min-w-0">
-                        <span className="text-gray-900 dark:text-gray-100 font-medium truncate" title={info.getValue() || ''}>
-                            {info.getValue() || ''}
+                        <span className="text-gray-900 dark:text-gray-100 font-medium truncate" title={vendorText as string | undefined}>
+                            {vendorText || (item.vendor_id ? <VendorNameDisplay vendorId={item.vendor_id} /> : '-')}
                         </span>
                         <div className="text-[10px] text-gray-500 dark:text-gray-400 truncate mt-0.5">
                             เครดิต {item.payment_term_days || '-'} วัน | Lead {item.lead_time_days || '-'} วัน
@@ -259,18 +308,24 @@ export default function VQListPage() {
             header: 'เอกสารอ้างอิง',
             cell: (info) => {
                 const item = info.row.original;
+                const rfqText = info.getValue() || item.rfq?.rfq_no;
+                const rfqDisplay = rfqText || (item.rfq_id ? <RFQNoDisplay rfqId={item.rfq_id} /> : '-');
+                
+                const prText = item.pr_no || item.pr?.pr_no;
+                const prDisplay = prText || (item.pr_id ? <PRNoDisplay prId={item.pr_id} /> : null);
+                
                 return (
                     <div className="flex flex-col py-1 min-w-0">
                         <button 
-                            onClick={() => handleOpenTracking(item.rfq_id, item.rfq_no)}
+                            onClick={() => handleOpenTracking(item.rfq_id, rfqText as string | undefined)}
                             className="text-purple-600 dark:text-purple-400 font-semibold hover:underline cursor-pointer leading-tight truncate text-left w-fit" 
-                            title={`คลิกเพื่อดูภาพรวมการตอบกลับของกลุ่ม RFQ: ${item.rfq_no}`}
+                            title={rfqText ? `คลิกเพื่อดูภาพรวมการตอบกลับของกลุ่ม RFQ: ${rfqText}` : undefined}
                         >
-                            {item.rfq_no || '-'}
+                            {rfqDisplay}
                         </button>
-                        {item.pr_no && (
-                            <span className="text-[10px] text-gray-400 dark:text-gray-500 truncate leading-tight mt-1" title={`Ref: ${item.pr_no}`}>
-                                Ref: {item.pr_no}
+                        {prDisplay && (
+                            <span className="text-[10px] text-gray-400 dark:text-gray-500 truncate leading-tight mt-1">
+                                Ref: {prDisplay}
                             </span>
                         )}
                     </div>
@@ -279,15 +334,17 @@ export default function VQListPage() {
             size: 140,
             enableSorting: false,
         }),
-        columnHelper.accessor('total_amount', {
+        columnHelper.accessor('base_total_amount', {
             header: () => <div className="text-right w-full">ยอดสุทธิ</div>,
             cell: (info) => {
                 const item = info.row.original;
+                const amount = info.getValue();
                 const isRecorded = item.status === 'RECORDED';
+                
                 return (
-                    <div className={`text-right font-bold whitespace-nowrap ${isRecorded ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-600'}`}>
-                        {isRecorded
-                            ? (info.getValue() ?? 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                    <div className={`text-right font-bold whitespace-nowrap ${isRecorded ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-700 dark:text-gray-200'}`}>
+                        {amount
+                            ? Number(amount).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                             : '-'
                         }
                     </div>
@@ -296,7 +353,7 @@ export default function VQListPage() {
             size: 120,
             enableSorting: true,
         }),
-        columnHelper.accessor('valid_until', {
+        columnHelper.accessor('quotation_expiry_date', {
             header: () => <div className="text-center w-full">วันหมดเขต</div>,
             cell: (info) => (
                 <div className="text-center text-[12.5px] text-gray-500 dark:text-gray-400 font-medium">
@@ -345,7 +402,7 @@ export default function VQListPage() {
                         {/* View — PR pattern eye */}
                         {canView && (
                             <button 
-                                onClick={() => handleOpenView(item.quotation_id)}
+                                onClick={() => handleOpenView(item.vq_header_id)}
                                 className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-all"
                                 title="ดูรายละเอียด"
                             >
@@ -356,7 +413,7 @@ export default function VQListPage() {
                         {/* Edit — amber transparent-border compact (PR pattern) */}
                         {canEdit && (
                             <button 
-                                onClick={() => handleOpenEdit(item.quotation_id)}
+                                onClick={() => handleOpenEdit(item.vq_header_id)}
                                 className="flex items-center gap-1 pl-1.5 pr-2 py-1 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded shadow-sm border border-transparent hover:border-amber-200 dark:hover:border-amber-800 transition-all whitespace-nowrap"
                                 title="แก้ไข"
                             >
@@ -368,7 +425,7 @@ export default function VQListPage() {
                         {/* บันทึกราคา — blue solid (create-next-doc style, matching สร้าง RFQ) */}
                         {canRecord && (
                             <button 
-                                onClick={() => handleOpenEdit(item.quotation_id)}
+                                onClick={() => handleOpenEdit(item.vq_header_id)}
                                 className="flex items-center gap-1 pl-1.5 pr-2 py-1 ml-1 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap"
                                 title="บันทึกราคา"
                             >
@@ -382,7 +439,8 @@ export default function VQListPage() {
             footer: () => {
                  // Only sum RECORDED amounts for the grand total
                  const total = (data?.data ?? []).reduce((sum, item) => {
-                    return item.status === 'RECORDED' ? sum + (item.total_amount ?? 0) : sum;
+                    const amount = item.base_total_amount;
+                    return item.status === 'RECORDED' && amount ? sum + Number(amount) : sum;
                  }, 0);
                  return (
                      <div className="text-right font-bold text-base text-emerald-600 dark:text-emerald-400 whitespace-nowrap pr-2">
@@ -535,7 +593,7 @@ export default function VQListPage() {
                             }}
                             sortConfig={sortConfig}
                             onSortChange={handleSortChange}
-                            rowIdField="quotation_id"
+                            rowIdField="vq_header_id"
                             className="flex-1"
                             showFooter={true}
                         />
@@ -547,33 +605,40 @@ export default function VQListPage() {
                         isEmpty={!data?.data?.length}
                         pagination={data?.total ? { page: filters.page, total: data.total, limit: filters.limit, onPageChange: handlePageChange } : undefined}
                     >
-                        {(data?.data ?? []).map((item) => (
-                            <MobileListCard
-                                key={item.quotation_id}
-                                title={item.quotation_no || <span className="text-gray-400 dark:text-slate-500 italic text-base">รอเลขใบเสนอราคา</span>}
-                                subtitle={formatThaiDate(item.quotation_date)}
-                                statusBadge={<VQStatusBadge status={item.status} />}
-                                details={[
-                                    { label: 'ผู้ขาย:', value: item.vendor_name || '-' },
-                                    { label: 'RFQ อ้างอิง:', value: <span className="font-semibold text-blue-600 dark:text-blue-400">{item.rfq_no || '-'}</span> },
-                                    ...(item.pr_no ? [{ label: 'PR อ้างอิง:', value: item.pr_no }] : []),
-                                    { label: 'เครดิต / Lead:', value: `${item.payment_term_days || '-'} วัน / ${item.lead_time_days || '-'} วัน` },
-                                ]}
-                                amountLabel="ยอดสุทธิ"
-                                amountValue={
-                                    <span className={`font-bold text-lg ${
-                                        item.status === 'RECORDED' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-slate-500'
-                                    }`}>
-                                        {item.status === 'RECORDED'
-                                            ? (item.total_amount ?? 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })
-                                            : '-'}
-                                    </span>
-                                }
-                                actions={
+                        {(data?.data ?? []).map((item) => {
+                            const vendorDisplay = item.vendor_name || item.vendor?.vendor_name || (item.vendor_id ? <VendorNameDisplay vendorId={item.vendor_id} /> : '-');
+                            
+                            const rfqDisplay = item.rfq_no || item.rfq?.rfq_no || (item.rfq_id ? <RFQNoDisplay rfqId={item.rfq_id} /> : '-');
+                            
+                            const prDisplay = item.pr_no || item.pr?.pr_no || (item.pr_id ? <PRNoDisplay prId={item.pr_id} /> : '-');
+
+                            return (
+                                <MobileListCard
+                                    key={item.vq_header_id}
+                                    title={item.vq_no || item.quotation_no || <span className="text-gray-400 dark:text-slate-500 italic text-base">รอเลขใบเสนอราคา</span>}
+                                    subtitle={formatThaiDate(item.quotation_date)}
+                                    statusBadge={<VQStatusBadge status={item.status} />}
+                                    details={[
+                                        { label: 'ผู้ขาย:', value: vendorDisplay },
+                                        { label: 'RFQ อ้างอิง:', value: <span className="font-semibold text-blue-600 dark:text-blue-400">{rfqDisplay}</span> },
+                                        { label: 'PR อ้างอิง:', value: prDisplay },
+                                        { label: 'เครดิต / Lead:', value: `${item.payment_term_days || '-'} วัน / ${item.lead_time_days || '-'} วัน` },
+                                    ]}
+                                    amountLabel="ยอดสุทธิ"
+                                    amountValue={
+                                        <span className={`font-bold text-lg ${
+                                            item.status === 'RECORDED' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-700 dark:text-slate-200'
+                                        }`}>
+                                            {item.base_total_amount
+                                                ? Number(item.base_total_amount).toLocaleString('th-TH', { minimumFractionDigits: 2 })
+                                                : '-'}
+                                        </span>
+                                    }
+                                    actions={
                                     <>
                                         {(!!item.quotation_no || item.status === 'RECORDED' || item.status === 'CANCELLED') && (
                                             <button
-                                                onClick={() => handleOpenView(item.quotation_id)}
+                                                onClick={() => handleOpenView(item.vq_header_id)}
                                                 className="flex-1 bg-gray-50 dark:bg-slate-700 hover:bg-gray-100 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1 border border-gray-200 dark:border-slate-600"
                                             >
                                                 <Eye size={14} /> ดู
@@ -581,7 +646,7 @@ export default function VQListPage() {
                                         )}
                                         {item.status === 'PENDING' && !item.quotation_no && (
                                             <button
-                                                onClick={() => handleOpenEdit(item.quotation_id)}
+                                                onClick={() => handleOpenEdit(item.vq_header_id)}
                                                 className="flex-[2] bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
                                             >
                                                 <Edit size={14} /> บันทึกราคา
@@ -589,16 +654,17 @@ export default function VQListPage() {
                                         )}
                                         {!!item.quotation_no && item.status !== 'CANCELLED' && item.status !== 'RECORDED' && (
                                             <button
-                                                onClick={() => handleOpenEdit(item.quotation_id)}
+                                                onClick={() => handleOpenEdit(item.vq_header_id)}
                                                 className="flex-1 bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1"
                                             >
                                                 <Edit size={14} /> แก้ไข
                                             </button>
                                         )}
                                     </>
-                                }
-                            />
-                        ))}
+                                    }
+                                />
+                            );
+                        })}
                     </MobileListContainer>
                 </div>
 

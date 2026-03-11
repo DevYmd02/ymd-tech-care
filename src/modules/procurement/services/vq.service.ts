@@ -8,7 +8,8 @@ import { applyClientFilters, applyClientPagination, extractArrayFromResponse } f
 const ENDPOINTS = {
   list: '/vq',
   create: '/vq',
-  update: '/vq', // Base endpoint for updates
+  update: '/vq',
+  detail: (id: number) => `/vq/${id}`,
 };
 
 export const VQService = {
@@ -44,12 +45,12 @@ export const VQService = {
     return applyClientPagination<VQListItem>(allItems, page, limit);
   },
 
-  getVQsByRfqId: async (rfqId: string): Promise<VQListResponse> => {
+  getVQsByRfqId: async (rfqId: number): Promise<VQListResponse> => {
     logger.info(`[VQService] Fetching VQs for RFQ ID: ${rfqId}`);
     return await api.get<VQListResponse>(ENDPOINTS.list, { params: { rfq_id: rfqId } });
   },
 
-  getById: async (id: string): Promise<VQListItem> => {
+  getById: async (id: number): Promise<VQListItem> => {
     logger.info(`[VQService] Fetching VQ Detail ${id}`);
     return await api.get<VQListItem>(`${ENDPOINTS.list}/${id}`);
   },
@@ -60,17 +61,17 @@ export const VQService = {
   },
 
   // TODO: Check if backend requires a specific endpoint like POST /api/qt/{id}/close-bidding instead of a generic PATCH update, as closing bids often triggers vendor notifications.
-  update: async (id: string, data: Partial<VQListItem>): Promise<SuccessResponse> => {
+  update: async (id: number, data: Partial<VQListItem>): Promise<SuccessResponse> => {
     logger.info(`[VQService] Updating VQ ${id}`, data);
     return await api.patch<SuccessResponse>(`${ENDPOINTS.update}/${id}`, data);
   },
 
-  submit: async (id: string): Promise<SuccessResponse> => {
+  submit: async (id: number): Promise<SuccessResponse> => {
     logger.info(`[VQService] Submitting VQ ${id}`);
     return await api.post<SuccessResponse>(`${ENDPOINTS.list}/${id}/submit`, {});
   },
 
-  cancel: async (id: string): Promise<SuccessResponse> => {
+  cancel: async (id: number): Promise<SuccessResponse> => {
     logger.info(`[VQService] Cancelling VQ ${id}`);
     return await api.post<SuccessResponse>(`${ENDPOINTS.list}/${id}/cancel`, {});
   }

@@ -21,16 +21,16 @@ import type { POStatus } from '@/modules/procurement/schemas/po-schemas';
  * Table: po_header
  */
 export interface POHeader {
-    po_id: string;                  // uuid @id
+    po_id: number;                  // INTEGER @id
     po_no: string;                  // varchar(30)
     po_date: string;                // date
-    pr_id: string;                  // uuid
+    pr_id: number;                  // INTEGER
     pr_no?: string;                 // Display Only (Joined)
-    vendor_id: string;              // uuid
+    vendor_id: number;              // INTEGER
     vendor_name?: string;           // Display Only (Joined)
-    branch_id: string;              // uuid
+    branch_id: number;              // INTEGER
     branch_name?: string;           // Display Only
-    ship_to_warehouse_id?: string;  // uuid (Nullable)
+    ship_to_warehouse_id?: number;  // INTEGER (Nullable)
     
     status: POStatus;               // varchar(20)
     
@@ -44,14 +44,14 @@ export interface POHeader {
     
     remarks?: string;               // text
     reject_reason?: string;         // text
-    created_by: string;             // uuid
+    created_by: number;             // INTEGER
     created_by_name?: string;       // Display Only
     created_at?: string;            // timestamp (Implying from base fields if needed)
     updated_at?: string;            // timestamp
     transactions?: import('@/modules/procurement/schemas/po-schemas').POTransaction[]; // History log
     
     // QC Traceability (Source document)
-    qc_id?: string;                 // uuid — FK -> qc_header
+    qc_id?: number;                 // INTEGER — FK -> qc_header
     qc_no?: string;                 // Display Only
 
     // Aggregates for List View
@@ -63,10 +63,10 @@ export interface POHeader {
  * Table: po_line
  */
 export interface POLine {
-    po_line_id: string;             // uuid @id
-    po_id: string;                  // uuid (FK)
-    pr_line_id?: string;            // uuid (FK) - มาจาก PR Line ใด
-    item_id?: string;               // uuid (FK)
+    po_line_id: number;             // INTEGER @id
+    po_id: number;                  // INTEGER (FK)
+    pr_line_id?: number;            // INTEGER (FK) - มาจาก PR Line ใด
+    item_id?: number;               // INTEGER (FK)
     item_code?: string;             // Display
     item_name?: string;             // Display
     
@@ -75,7 +75,7 @@ export interface POLine {
     qty_ordered: number;            // numeric(18,3)
     qty_received: number;           // numeric(18,3)
     
-    uom_id: string;                 // uuid
+    uom_id: number;                 // INTEGER
     uom_name?: string;              // Display
     
     unit_price: number;             // numeric(18,4)
@@ -115,7 +115,7 @@ export interface POListResponse {
   totalPages: number;
 }
 export interface POLineItemInput {
-    item_id: string; // or item_code if searching
+    item_id: number; // or item_code if searching
     item_code?: string;
     item_name?: string;
     description?: string;
@@ -133,12 +133,12 @@ export interface POLineItemInput {
 // ====================================================================================
 
 export interface CreatePOLineItem {
-    item_id?: string; // Optional — new lines may not have a DB UUID yet
+    item_id?: number; // Optional — new lines may not have a DB UUID yet
     item_code?: string;
     item_name?: string;
     description?: string;
     qty_ordered: number;
-    uom_id: string;
+    uom_id: number;
     unit_price: number;
     discount_amount?: number;
     tax_code?: string;
@@ -148,12 +148,12 @@ export interface CreatePOLineItem {
 
 export interface CreatePOPayload {
     // Source document linkage
-    qc_id?:  string;
+    qc_id?:  number;
     qc_no?:  string;
-    pr_id?:  string;
+    pr_id?:  number;
     pr_no?:  string;
 
-    vendor_id:    string;
+    vendor_id:    number;
     vendor_name?: string;
 
     order_date:         string;
@@ -170,7 +170,7 @@ export interface CreatePOPayload {
 }
 
 export interface POFormData {
-    vendor_id?: string;
+    vendor_id?: number;
     po_no?: string; // Should be added if not present
     po_date?: string;
     delivery_date?: string;

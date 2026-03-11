@@ -5,12 +5,12 @@ import { VENDOR_TYPES, BUSINESS_CATEGORIES, CURRENCIES } from '@/modules/master-
 import type { VendorFormData } from '@/modules/master-data/vendor/types/vendor-types';
 
 interface VendorGeneralInfoProps {
-    formData: VendorFormData;
+    formData: Partial<VendorFormData>;
     onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void;
     errors: { [key: string]: string };
 }
 
-export const VendorGeneralInfo: React.FC<VendorGeneralInfoProps> = ({ formData, onChange, errors }) => {
+export const VendorGeneralInfo: React.FC<VendorGeneralInfoProps> = ({ formData = {}, onChange, errors }) => {
     return (
         <section>
             <div className="flex items-center gap-2 mb-4 text-blue-600 dark:text-blue-400">

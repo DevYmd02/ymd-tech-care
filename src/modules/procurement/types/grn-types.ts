@@ -19,16 +19,16 @@ export type GRNStatus =
 // ====================================================================================
 
 export interface GRNHeader {
-    grn_id: string;               // uuid
+    grn_id: number;               // INTEGER
     grn_no: string;               // varchar(30)
-    po_id: string;                // uuid
+    po_id: number;                // INTEGER
     po_no: string;                // display
     
     received_date: string;        // date
-    warehouse_id: string;         // uuid
+    warehouse_id: number;         // INTEGER
     warehouse_name: string;       // display
     
-    received_by: string;          // uuid
+    received_by: number;          // INTEGER
     received_by_name: string;     // display
     
     status: GRNStatus;
@@ -40,8 +40,8 @@ export interface GRNHeader {
 }
 
 export interface GRNLine {
-    grn_line_id: string;
-    grn_id: string;
+    grn_line_id: number;
+    grn_id: number;
     item_code: string;
     item_name: string;
     
@@ -91,8 +91,8 @@ export interface GRNSummaryCounts {
 }
 
 export interface GRNLineItemInput {
-    po_line_id?: string; // Added for linking
-    item_id?: string;    // Added for linking
+    po_line_id?: number; // Added for linking
+    item_id?: number;    // Added for linking
     item_code: string;
     item_name: string; // Captured for history
     qty_ordered?: number; // PO quantity for reference
@@ -112,8 +112,8 @@ export interface GRNLineItemInput {
 // ====================================================================================
 
 export interface CreateGRNLineItem {
-    po_line_id: string; // Critical: Link to specific PO line
-    item_id: string;
+    po_line_id: number; // Critical: Link to specific PO line
+    item_id: number;
     receiving_qty: number;
     accepted_qty: number;
     rejected_qty: number;
@@ -121,10 +121,10 @@ export interface CreateGRNLineItem {
 }
 
 export interface CreateGRNPayload {
-    po_id: string; // Link to Parent PO
+    po_id: number; // Link to Parent PO
     delivery_note_no?: string;
     received_date: string;
-    warehouse_id: string;
+    warehouse_id: number;
     items: CreateGRNLineItem[]; // The Batch Array
     remark?: string;
 }

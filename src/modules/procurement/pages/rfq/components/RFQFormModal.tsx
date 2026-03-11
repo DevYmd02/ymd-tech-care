@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { FileText, Trash2, XCircle } from 'lucide-react';
+import { FormProvider } from 'react-hook-form';
 import { useRFQForm } from '@/modules/procurement/pages/rfq/hooks';
 import { RFQFormHeader } from './RFQFormHeader';
 import { RFQFormLines } from './RFQFormLines';
@@ -11,12 +12,13 @@ import { WindowFormLayout } from '@ui';
 import { SharedRemarksTab } from '@/shared/components/forms/SharedRemarksTab';
 import type { PRHeader } from '@/modules/procurement/types';
 import { logger } from '@/shared/utils/logger';
+import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal';
 
 interface Props {
     isOpen: boolean;
     onClose: () => void;
     onSuccess?: () => void;
-    editId?: string | null;
+    editId?: number | null;
     initialPR?: PRHeader | null;
     readOnly?: boolean;
     isInviteMode?: boolean;
@@ -24,12 +26,11 @@ interface Props {
 
 export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, readOnly = false, isInviteMode = false }: Props) => {
     const {
-        formData, errors, isSaving, activeTab, setActiveTab, trackingVendors,
+        methods, errors, isSaving, activeTab, setActiveTab, trackingVendors,
         branches,
         
-        handleChange, handleLineChange, handleResetLines, handleRemoveLine,
-        handleSave, 
-        originalLinesCount,
+        onRequestSave, 
+        isConfirmOpen, handleCancelConfirm, executeSave,
 
         // PR Logic
         isPRSelectionModalOpen, setIsPRSelectionModalOpen, handlePRSelect,
@@ -37,8 +38,15 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
         // Vendor Props
         isVendorModalOpen, setIsVendorModalOpen,
         handleAddVendor, handleRemoveVendor,
-        handleOpenVendorModal, handleVendorSelect
+        handleOpenVendorModal, handleVendorSelect,
+
+        // Field Handlers
+        appendLine,
+        removeLine,
     } = useRFQForm(isOpen, onClose, initialPR, onSuccess, editId);
+
+    const { watch, setValue } = methods;
+    const formData = watch(); // Watch all for UI reactivity in modal wrapper
 
     const cardClass = 'bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden shadow-sm';
 
@@ -110,7 +118,7 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
                         {!readOnly && (
                             <button
                                 type="button"
-                                onClick={handleSave}
+                                onClick={onRequestSave}
                                 disabled={isSaving}
                                 className={`px-6 py-2 text-white rounded-md text-sm font-medium shadow-sm transition-colors disabled:opacity-50 ${isInviteMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-teal-600 hover:bg-teal-700'}`}
                             >
@@ -121,55 +129,50 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
                 </div>
             }
         >
-            <div className="space-y-6 p-4">
-                <div className={cardClass}>
-                    <RFQFormHeader 
-                        formData={formData} 
-                        branches={branches} 
-                        handleChange={handleChange}
-                        errors={errors}
-                        onOpenPRModal={() => setIsPRSelectionModalOpen(true)}
-                        readOnly={readOnly}
-                        isInviteMode={isInviteMode}
-                    />
-                </div>
-
-                <div className={cardClass}>
-                    <RFQFormLines 
-                        lines={formData.rfqLines} 
-                        handleLineChange={handleLineChange}
-                        handleRemoveLine={handleRemoveLine}
-                        handleResetLines={handleResetLines}
-                        originalLinesCount={originalLinesCount}
-                        readOnly={readOnly}
-                        isInviteMode={isInviteMode}
-                    />
-                </div>
-
-                {/* Vendor Logic Restored */}
-                <div className={cardClass}>
-                    {(!!formData.status && formData.status !== 'DRAFT' && !isInviteMode) ? (
-                        <VendorDispatchTable vendors={trackingVendors} />
-                    ) : (
-                        <RFQVendorSelection  
-                            vendors={formData.vendors}
-                            onAdd={handleAddVendor}
-                            onRemove={handleRemoveVendor}
-                            handleOpenVendorModal={handleOpenVendorModal}
-                            isViewMode={readOnly}
+            <FormProvider {...methods}>
+                <div className="space-y-6 p-4">
+                    <div className={cardClass}>
+                        <RFQFormHeader 
+                            branches={branches} 
+                            onOpenPRModal={() => setIsPRSelectionModalOpen(true)}
+                            readOnly={readOnly}
                             isInviteMode={isInviteMode}
                         />
-                    )}
-                </div>
+                    </div>
 
-                <SharedRemarksTab
-                    activeTab={activeTab}
-                    onTabChange={setActiveTab}
-                    remarks={formData.remarks}
-                    onRemarksChange={(val: string) => handleChange('remarks', val)}
-                    readOnly={readOnly}
-                />
-            </div>
+                    <div className={cardClass}>
+                        <RFQFormLines 
+                            onAddLine={appendLine}
+                            onRemoveLine={removeLine}
+                            readOnly={readOnly}
+                            isInviteMode={isInviteMode}
+                        />
+                    </div>
+
+                    {/* Vendor Logic Restored */}
+                    <div className={cardClass}>
+                        {(!!formData.status && formData.status !== 'DRAFT' && !isInviteMode) ? (
+                            <VendorDispatchTable vendors={trackingVendors} />
+                        ) : (
+                            <RFQVendorSelection  
+                                onAdd={handleAddVendor}
+                                onRemove={handleRemoveVendor}
+                                handleOpenVendorModal={handleOpenVendorModal}
+                                isViewMode={readOnly}
+                                isInviteMode={isInviteMode}
+                            />
+                        )}
+                    </div>
+
+                    <SharedRemarksTab
+                        activeTab={activeTab}
+                        onTabChange={setActiveTab}
+                        remarks={formData.remarks}
+                        onRemarksChange={(val: string) => setValue('remarks', val)}
+                        readOnly={readOnly}
+                    />
+                </div>
+            </FormProvider>
 
 
             {/* Vendor Search Modal */}
@@ -184,6 +187,18 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
                 isOpen={isPRSelectionModalOpen}
                 onClose={() => setIsPRSelectionModalOpen(false)}
                 onSelect={handlePRSelect}
+            />
+
+            <ConfirmationModal
+                isOpen={isConfirmOpen}
+                onClose={handleCancelConfirm}
+                onConfirm={executeSave}
+                title="ยืนยันการบันทึก"
+                description={editId ? "ต้องการบันทึกการแก้ไขเอกสารใช่หรือไม่?" : "ต้องการบันทึกการสร้างเอกสารใช่หรือไม่?"}
+                confirmText="บันทึก"
+                cancelText="ยกเลิก"
+                variant="info"
+                isLoading={isSaving}
             />
         </WindowFormLayout>
     );

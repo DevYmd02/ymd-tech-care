@@ -17,7 +17,7 @@ interface PositionFormModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
-    editId?: string | null;
+    editId?: number | null;
 }
 
 const positionSchema = z.object({
@@ -79,9 +79,9 @@ export const PositionFormModal = ({ isOpen, onClose, onSuccess, editId }: Positi
         try {
             let res;
             if (isEdit && editId) {
-                res = await PositionService.update(editId, data);
+                res = await PositionService.update(editId, data as any);
             } else {
-                res = await PositionService.create(data);
+                res = await PositionService.create(data as any);
             }
 
             if (res.success) {

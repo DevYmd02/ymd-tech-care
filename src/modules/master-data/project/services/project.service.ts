@@ -36,7 +36,7 @@ export const ProjectService = {
     }
   },
 
-  getById: async (id: string): Promise<Project | null> => {
+  getById: async (id: number): Promise<Project | null> => {
     if (USE_MOCK) {
       return mockProjects.find(p => p.project_id === id) || null;
     }
@@ -63,7 +63,7 @@ export const ProjectService = {
     }
   },
 
-  update: async (id: string, data: Partial<Project>): Promise<{ success: boolean; message?: string }> => {
+  update: async (id: number, data: Partial<Project>): Promise<{ success: boolean; message?: string }> => {
     if (USE_MOCK) {
        logger.info('[ProjectService] Mock Update:', id, data);
        return { success: true };
@@ -77,7 +77,7 @@ export const ProjectService = {
     }
   },
 
-  toggleStatus: async (id: string, currentStatus: boolean): Promise<{ success: boolean; message?: string }> => {
+  toggleStatus: async (id: number, currentStatus: boolean): Promise<{ success: boolean; message?: string }> => {
     if (USE_MOCK) {
        const p = mockProjects.find(proj => proj.project_id === id);
        if (p) p.is_active = !currentStatus;

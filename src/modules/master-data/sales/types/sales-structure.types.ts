@@ -10,7 +10,8 @@ import type { BaseMasterData } from '@/shared/types/common-master.types';
 // ====================================================================================
 
 export interface SalesZoneMaster extends BaseMasterData {
-    zone_id: string;
+    id: number;
+    zone_id: number;
     zone_code: string;
     zone_name: string;
     zone_name_en?: string;
@@ -30,7 +31,8 @@ export type SalesZoneListItem = SalesZoneMaster;
 // ====================================================================================
 
 export interface SalesChannelMaster extends BaseMasterData {
-    channel_id: string;
+    id: number;
+    channel_id: number;
     channel_code: string;
     channel_name: string;
     channel_name_en?: string;
@@ -50,7 +52,8 @@ export type SalesChannelListItem = SalesChannelMaster;
 // ====================================================================================
 
 export interface SalesTargetMaster extends BaseMasterData {
-    target_id: string;
+    id: number;
+    target_id: number;
     target_code: string;
     target_name: string;
     amount: number;

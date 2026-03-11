@@ -21,7 +21,7 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
-interface Props { isOpen: boolean; onClose: () => void; editId?: string | null; onSuccess?: () => void; }
+interface Props { isOpen: boolean; onClose: () => void; editId?: number | null; onSuccess?: () => void; }
 
 export function BrandFormModal({ isOpen, onClose, editId, onSuccess }: Props) {
     const { register, handleSubmit, reset, formState: { errors, isSubmitting }, control, setValue } = useForm<FormValues>({

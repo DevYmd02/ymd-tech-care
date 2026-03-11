@@ -85,7 +85,7 @@ export default function VendorList() {
     const { confirm } = useConfirmation();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editId, setEditId] = useState<string | null>(null);
+    const [editId, setEditId] = useState<number | null>(null);
 
     // ==================== FILTER CONFIG ====================
     const filterConfig: FilterFieldConfig<Extract<keyof typeof filters, string>>[] = useMemo(() => [
@@ -161,7 +161,7 @@ export default function VendorList() {
         setIsModalOpen(true);
     }, []);
 
-    const handleEdit = useCallback((id: string) => {
+    const handleEdit = useCallback((id: number) => {
         setEditId(id);
         setIsModalOpen(true);
     }, []);
@@ -178,7 +178,7 @@ export default function VendorList() {
     }, [queryClient]);
 
     const statusMutation = useMutation({
-        mutationFn: ({ id, newStatus }: { id: string, code: string, newStatus: VendorStatus }) => 
+        mutationFn: ({ id, newStatus }: { id: number, code: string, newStatus: VendorStatus }) => 
             VendorService.updateStatus(id, newStatus),
         onMutate: async ({ id, newStatus }) => {
             // Cancel any outgoing refetches
@@ -234,7 +234,7 @@ export default function VendorList() {
         },
     });
 
-    const handleStatusChange = useCallback(async (id: string, code: string, newStatus: VendorStatus) => {
+    const handleStatusChange = useCallback(async (id: number, code: string, newStatus: VendorStatus) => {
         const config = STATUS_CONFIG[newStatus];
         if (!config) return;
 

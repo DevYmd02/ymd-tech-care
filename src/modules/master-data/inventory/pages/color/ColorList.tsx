@@ -19,7 +19,7 @@ export default function ColorList() {
     const [allData, setAllData] = useState<Color[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editingId, setEditingId] = useState<number | null>(null);
 
     const filterConfig: FilterFieldConfig<keyof typeof filters>[] = useMemo(() => [
         { name: 'search', label: 'รหัสสี', type: 'text', placeholder: 'กรอกรหัส' },
@@ -39,7 +39,7 @@ export default function ColorList() {
     }, [allData, filters]);
 
     const paginatedData = useMemo(() => filteredData.slice((filters.page - 1) * filters.limit, filters.page * filters.limit), [filteredData, filters.page, filters.limit]);
-    const handleDelete = useCallback((id: string) => { if (confirm('ลบข้อมูลนี้?')) ColorService.delete(id).then(() => fetchData()); }, [fetchData]);
+    const handleDelete = useCallback((id: number) => { if (confirm('ลบข้อมูลนี้?')) ColorService.delete(id).then(() => fetchData()); }, [fetchData]);
 
     const columns = useMemo<ColumnDef<Color>[]>(() => [
         { id: 'sequence', header: 'ลำดับ', accessorFn: (_, index) => (filters.page - 1) * filters.limit + index + 1, size: 60 },
@@ -58,7 +58,7 @@ export default function ColorList() {
         <div className="p-6 space-y-6">
             <div><h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2"><Palette className="text-blue-600" /> กำหนดสีสินค้า (Color Master)</h1><p className="text-gray-500 mt-1 text-sm">จัดการข้อมูลสีสินค้า</p></div>
             <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700"><FilterFormBuilder config={filterConfig} filters={filters} onFilterChange={(name: string, value: string) => setFilters({ [name]: value })} onSearch={() => handlePageChange(1)} onReset={resetFilters} onCreate={() => { setEditingId(null); setIsModalOpen(true); }} createLabel="เพิ่มสีใหม่" accentColor="indigo" /></div>
-            <div className="flex flex-col gap-4"><h2 className="text-gray-700 font-medium">พบข้อมูล {filteredData.length} รายการ</h2><SmartTable data={paginatedData} columns={columns} isLoading={isLoading} pagination={{ pageIndex: filters.page, pageSize: filters.limit, totalCount: filteredData.length, onPageChange: handlePageChange, onPageSizeChange: (size) => setFilters({ limit: size, page: 1 }) }} rowIdField="color_id" /></div>
+            <div className="flex flex-col gap-4"><h2 className="text-gray-700 font-medium">พบข้อมูล {filteredData.length} รายการ</h2><SmartTable data={paginatedData} columns={columns} isLoading={isLoading} pagination={{ pageIndex: filters.page, pageSize: filters.limit, totalCount: filteredData.length, onPageChange: handlePageChange, onPageSizeChange: (size) => setFilters({ limit: size, page: 1 }) }} rowIdField="id" /></div>
             <ColorFormModal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setEditingId(null); }} editId={editingId} onSuccess={fetchData} />
         </div>
     );

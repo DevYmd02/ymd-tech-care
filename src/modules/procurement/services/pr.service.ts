@@ -18,14 +18,14 @@ import type { SuccessResponse } from '@/shared/types/api-response.types';
 
 const ENDPOINTS = {
   list: '/pr',
-  detail: (id: string) => `/pr/${id}`,
-  pending: (id: string) => `/pr/${id}/pending`, // 🎯 Precise Pending endpoint
-  approve: (id: string) => `/pr/${id}/approve`,
-  cancel: (id: string) => `/pr/${id}/cancel`,
-  reject: (id: string) => `/pr/${id}/reject`,
-  convert: (id: string) => `/pr/${id}/convert`,
-  attachments: (id: string) => `/pr/${id}/attachments`,
-  attachment: (id: string, attachmentId: string) => `/pr/${id}/attachments/${attachmentId}`,
+  detail: (id: number) => `/pr/${id}`,
+  pending: (id: number) => `/pr/${id}/pending`, // 🎯 Precise Pending endpoint
+  approve: (id: number) => `/pr/${id}/approve`,
+  cancel: (id: number) => `/pr/${id}/cancel`,
+  reject: (id: number) => `/pr/${id}/reject`,
+  convert: (id: number) => `/pr/${id}/convert`,
+  attachments: (id: number) => `/pr/${id}/attachments`,
+  attachment: (id: number, attachmentId: string) => `/pr/${id}/attachments/${attachmentId}`,
   generateNo: '/pr/generate-no',
 };
 
@@ -34,7 +34,8 @@ const ENDPOINTS = {
 // ═══════════════════════════════════════════════════════════════════════════════
 const KNOWN_DTO_FIELDS = new Set([
   'pr_no', 'pr_date', 'need_by_date', 'requester_user_id', 'branch_id',
-  'project_id', 'pr_tax_code_id', 'remark', 'status',
+  'project_id', 'cost_center_id', 'preferred_vendor_id', // 🎯 FIX: Added for explicit recognition
+  'pr_tax_code_id', 'remark', 'status',
   'pr_base_currency_code', 'pr_quote_currency_code',
   'pr_exchange_rate', 'pr_exchange_rate_date',
   'pr_discount_raw', 'payment_term_days', 'credit_days',
@@ -45,7 +46,8 @@ const KNOWN_DTO_FIELDS = new Set([
 // NOTE: 'remark' is NOT allowed on lines per backend DTO (whitelist: true + forbidNonWhitelisted: true)
 const KNOWN_LINE_DTO_FIELDS = new Set([
   'line', 'item_id', 'qty', 'est_unit_price', 'uom_id',
-  'line_discount_raw',
+  'line_discount_raw', 'line_no', 'description', 'warehouse_id',
+  'location', 'required_receipt_type'
 ]);
 
 export const PRService = {
@@ -84,19 +86,63 @@ export const PRService = {
     return applyClientPagination<PRHeader>(allItems, page, limit);
   },
 
-  getDetail: async (id: string): Promise<PRHeader> => {
+  getDetail: async (id: number): Promise<PRHeader> => {
     logger.info(`[PRService] Fetching PR Detail: ${id}`);
-    const response = await api.get<PRHeader | { data: PRHeader }>(ENDPOINTS.detail(id));
-    // Defensive unwrap: NestJS backend may return { data: { pr_id, pr_no, ... } }
-    // The interceptor only unwraps { success: true, data: ... } pattern.
-    // If the response has a nested 'data' property containing pr_id, unwrap it.
-    const raw = response as PRHeader | { data: PRHeader };
-    if ('data' in raw && raw.data && typeof raw.data === 'object' && 'pr_id' in raw.data) {
-      logger.info('[PRService] Unwrapped nested data envelope for PR detail');
-      return raw.data;
+    const response = await api.get<unknown>(ENDPOINTS.detail(id));
+    
+    // 🔍 DIAGNOSTIC: Log the raw response structure to identify unwrap issues
+    logger.debug('[PRService.getDetail] RAW response keys:', Object.keys(response as object || {}));
+    logger.debug('[PRService.getDetail] RAW response (first 500 chars):', JSON.stringify(response).slice(0, 500));
+    
+    const raw = response as Record<string, unknown>;
+
+    // ─── Shape 1: Already unwrapped by interceptor → { pr_id, pr_no, ... } ─────
+    if (raw && 'pr_id' in raw) {
+      const result = raw as unknown as PRHeader;
+      logger.debug('[PRService.getDetail] Shape 1 (direct): pr_no=', result.pr_no, 'lines=', result.lines?.length ?? 0);
+      return result;
     }
-    return raw as PRHeader;
+    
+    // ─── Shape 2: Single envelope { data: { pr_id, pr_no, ... } } ───────────────
+    if (raw && 'data' in raw && raw.data && typeof raw.data === 'object') {
+      const inner = raw.data as Record<string, unknown>;
+      if ('pr_id' in inner) {
+        const result = inner as unknown as PRHeader;
+        logger.debug('[PRService.getDetail] Shape 2 (data envelope): pr_no=', result.pr_no, 'lines=', result.lines?.length ?? 0);
+        return result;
+      }
+      
+      // ─── Shape 3: Double envelope { data: { data: { pr_id, ... } } } ───────── 
+      if ('data' in inner && inner.data && typeof inner.data === 'object') {
+        const deepInner = inner.data as Record<string, unknown>;
+        if ('pr_id' in deepInner) {
+          const result = deepInner as unknown as PRHeader;
+          logger.debug('[PRService.getDetail] Shape 3 (double envelope): pr_no=', result.pr_no, 'lines=', result.lines?.length ?? 0);
+          return result;
+        }
+      }
+    }
+
+    // ─── Shape 4: { header: { pr_id, pr_no, ... }, lines: [...] } ────────────────
+    // ✅ CONFIRMED: Real NestJS backend returns this shape (seen in browser log)
+    if (raw && 'header' in raw && raw.header && typeof raw.header === 'object') {
+      const header = raw.header as Record<string, unknown>;
+      if ('pr_id' in header) {
+        const result = {
+          ...header,
+          // Merge lines from the top-level `lines` key into the PRHeader
+          lines: Array.isArray(raw.lines) ? raw.lines : [],
+        } as unknown as PRHeader;
+        logger.debug('[PRService.getDetail] Shape 4 (header+lines): pr_no=', result.pr_no, 'lines=', result.lines?.length ?? 0);
+        return result;
+      }
+    }
+
+    // ─── Fallback: Return as-is and let TS handle it ─────────────────────────────
+    logger.warn('[PRService.getDetail] Could not determine response shape — using raw as PRHeader');
+    return raw as unknown as PRHeader;
   },
+
 
   create: async (payload: CreatePRPayload): Promise<PRHeader> => {
     // ═══════════════════════════════════════════════════════════════════════
@@ -194,7 +240,7 @@ export const PRService = {
     }
   },
 
-  update: async (id: string, payload: PRUpdatePayload): Promise<PRHeader> => {
+  update: async (id: number, payload: PRUpdatePayload): Promise<PRHeader> => {
     logger.info(`[PRService] Updating PR: ${id}`);
     logger.debug('🔧 [PRService] UPDATE WIRE-READY JSON:', JSON.stringify(payload, null, 2));
     
@@ -234,43 +280,43 @@ export const PRService = {
     }
   },
 
-  delete: async (id: string): Promise<SuccessResponse> => {
+  delete: async (id: number): Promise<SuccessResponse> => {
     logger.info(`[PRService] Deleting PR: ${id}`);
     const response = await api.delete<SuccessResponse>(ENDPOINTS.detail(id));
     return response;
   },
 
   // 1. Submit for Approval (Draft -> Pending)
-  async processDirectApproval(id: string | number) {
+  async processDirectApproval(id: number) {
     // CRITICAL: Call the /pending endpoint with NO BODY
-    return await api.patch(`/pr/${id}/pending`);
+    return await api.patch(ENDPOINTS.pending(id));
   },
 
   // 2. Approve PR (Pending -> Approved)
-  async approvePR(id: string | number) {
+  async approvePR(id: number) {
     // CRITICAL: Call the /approve endpoint with NO BODY
-    return await api.patch(`/pr/${id}/approve`);
+    return await api.patch(ENDPOINTS.approve(id));
   },
 
   // 3. Reject PR (Pending -> Rejected)
-  async rejectPR(id: string | number) {
+  async rejectPR(id: number) {
     // CRITICAL: Call the /reject endpoint with NO BODY
-    return await api.patch(`/pr/${id}/reject`);
+    return await api.patch(ENDPOINTS.reject(id));
   },
 
-  cancel: async (id: string): Promise<SuccessResponse> => {
+  cancel: async (id: number): Promise<SuccessResponse> => {
     logger.info(`[PRService] Cancelling PR: ${id}`);
     const response = await api.patch<SuccessResponse>(ENDPOINTS.cancel(id), {});
     return response;
   },
 
-  convert: async (id: string, request: ConvertPRRequest): Promise<SuccessResponse> => {
+  convert: async (id: number, request: ConvertPRRequest): Promise<SuccessResponse> => {
     logger.info(`[PRService] Converting PR: ${id}`);
     const response = await api.post<SuccessResponse>(ENDPOINTS.convert(id), request);
     return response;
   },
 
-  uploadAttachment: async (id: string, file: File): Promise<SuccessResponse> => {
+  uploadAttachment: async (id: number, file: File): Promise<SuccessResponse> => {
     logger.info(`[PRService] Uploading attachment for PR: ${id}`);
     const formData = new FormData();
     formData.append('file', file);
@@ -280,7 +326,7 @@ export const PRService = {
     return response;
   },
 
-  deleteAttachment: async (id: string, attachmentId: string): Promise<SuccessResponse> => {
+  deleteAttachment: async (id: number, attachmentId: string): Promise<SuccessResponse> => {
     logger.info(`[PRService] Deleting attachment ${attachmentId} for PR: ${id}`);
     const response = await api.delete<SuccessResponse>(ENDPOINTS.attachment(id, attachmentId));
     return response;

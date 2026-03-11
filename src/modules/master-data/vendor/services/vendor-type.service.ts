@@ -29,7 +29,7 @@ export const VendorTypeService = {
     /**
      * Get vendor type by ID
      */
-    getById: async (id: string): Promise<VendorTypeMaster | null> => {
+    getById: async (id: number): Promise<VendorTypeMaster | null> => {
         if (USE_MOCK) {
             const vendorType = localVendorTypes.items.find(vt => vt.vendor_type_id === id);
             if (vendorType) {
@@ -52,7 +52,7 @@ export const VendorTypeService = {
     create: async (data: VendorTypeFormData): Promise<{ success: boolean; data?: VendorTypeMaster; message?: string }> => {
         if (USE_MOCK) {
             logger.info('🎭 [Mock Mode] Creating Vendor Type', data);
-            const newId = `VTYPE-${data.typeCode.toUpperCase()}`;
+            const newId = Date.now();
             const newVendorType: VendorTypeMaster = {
                 vendor_type_id: newId,
                 id: newId,
@@ -81,7 +81,7 @@ export const VendorTypeService = {
     /**
      * Update vendor type
      */
-    update: async (id: string, data: VendorTypeFormData): Promise<{ success: boolean; data?: VendorTypeMaster; message?: string }> => {
+    update: async (id: number, data: VendorTypeFormData): Promise<{ success: boolean; data?: VendorTypeMaster; message?: string }> => {
         if (USE_MOCK) {
             const index = localVendorTypes.items.findIndex(vt => vt.vendor_type_id === id);
             if (index !== -1) {
@@ -111,7 +111,7 @@ export const VendorTypeService = {
     /**
      * Delete vendor type
      */
-    delete: async (id: string): Promise<{ success: boolean; message?: string }> => {
+    delete: async (id: number): Promise<{ success: boolean; message?: string }> => {
         if (USE_MOCK) {
             const initialLength = localVendorTypes.items.length;
             localVendorTypes.items = localVendorTypes.items.filter(vt => vt.vendor_type_id !== id);

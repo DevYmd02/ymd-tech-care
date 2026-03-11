@@ -17,7 +17,7 @@ export type { IBaseMaster, IBaseFormData };
 // ====================================================================================
 
 export interface ItemGroup extends IBaseMaster {
-    item_group_id: string;
+    item_group_id: number;
 }
 
 export type ItemGroupFormData = IBaseFormData;
@@ -27,7 +27,7 @@ export type ItemGroupFormData = IBaseFormData;
 // ====================================================================================
 
 export interface Brand extends IBaseMaster {
-    brand_id: string;
+    brand_id: number;
 }
 
 export type BrandFormData = IBaseFormData;
@@ -37,7 +37,7 @@ export type BrandFormData = IBaseFormData;
 // ====================================================================================
 
 export interface Pattern extends IBaseMaster {
-    pattern_id: string;
+    pattern_id: number;
 }
 
 export type PatternFormData = IBaseFormData;
@@ -47,7 +47,7 @@ export type PatternFormData = IBaseFormData;
 // ====================================================================================
 
 export interface Design extends IBaseMaster {
-    design_id: string;
+    design_id: number;
 }
 
 export type DesignFormData = IBaseFormData;
@@ -57,7 +57,7 @@ export type DesignFormData = IBaseFormData;
 // ====================================================================================
 
 export interface Grade extends IBaseMaster {
-    grade_id: string;
+    grade_id: number;
 }
 
 export type GradeFormData = IBaseFormData;
@@ -67,7 +67,7 @@ export type GradeFormData = IBaseFormData;
 // ====================================================================================
 
 export interface Model extends IBaseMaster {
-    model_id: string;
+    model_id: number;
 }
 
 export type ModelFormData = IBaseFormData;
@@ -77,7 +77,7 @@ export type ModelFormData = IBaseFormData;
 // ====================================================================================
 
 export interface Size extends IBaseMaster {
-    size_id: string;
+    size_id: number;
 }
 
 export type SizeFormData = IBaseFormData;
@@ -87,7 +87,7 @@ export type SizeFormData = IBaseFormData;
 // ====================================================================================
 
 export interface Color extends IBaseMaster {
-    color_id: string;
+    color_id: number;
     hex_code?: string; // Optional hex color code
 }
 
@@ -100,12 +100,12 @@ export interface ColorFormData extends IBaseFormData {
 // ====================================================================================
 
 export interface Location extends IBaseMaster {
-    location_id: string;
-    warehouse_id?: string; // Reference to warehouse
+    location_id: number;
+    warehouse_id?: number; // Reference to warehouse
 }
 
 export interface LocationFormData extends IBaseFormData {
-    warehouseId?: string;
+    warehouseId?: number;
 }
 
 // ====================================================================================
@@ -113,12 +113,12 @@ export interface LocationFormData extends IBaseFormData {
 // ====================================================================================
 
 export interface Shelf extends IBaseMaster {
-    shelf_id: string;
-    location_id?: string; // Reference to location
+    shelf_id: number;
+    location_id?: number; // Reference to location
 }
 
 export interface ShelfFormData extends IBaseFormData {
-    locationId?: string;
+    locationId?: number;
 }
 
 // ====================================================================================
@@ -126,7 +126,7 @@ export interface ShelfFormData extends IBaseFormData {
 // ====================================================================================
 
 export interface LotNo extends IBaseMaster {
-    lot_no_id: string;
+    lot_no_id: number;
     expiry_date?: string;
 }
 

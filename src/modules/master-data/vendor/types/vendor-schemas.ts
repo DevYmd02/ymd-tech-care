@@ -6,7 +6,7 @@ import { z } from 'zod';
 // ====================================================================================
 
 const VendorAddressSchema = z.object({
-    id: z.string(),
+    id: z.number(),
     address: z.string().min(1, 'กรุณากรอกที่อยู่'),
     subDistrict: z.string().optional().or(z.literal('')),
     district: z.string().min(1, 'กรุณากรอกอำเภอ/เขต'),
@@ -24,7 +24,7 @@ const VendorAddressSchema = z.object({
 });
 
 const VendorContactPersonSchema = z.object({
-    id: z.string(),
+    id: z.number(),
     name: z.string().min(1, 'กรุณากรอกชื่อผู้ติดต่อ'),
     position: z.string(),
     phone: z.string(),
@@ -34,7 +34,7 @@ const VendorContactPersonSchema = z.object({
 });
 
 const VendorBankAccountSchema = z.object({
-    id: z.string(),
+    id: z.number(),
     bankName: z.string().min(1, 'กรุณากรอกชื่อธนาคาร'),
     branchName: z.string(),
     accountNumber: z.string().min(1, 'กรุณากรอกเลขบัญชี'),
@@ -57,10 +57,10 @@ export const VendorSchema = z.object({
     
     vendorType: z.enum(['COMPANY', 'INDIVIDUAL', 'GOVERNMENT']),
     
-    // ID Strings
-    vendorTypeId: z.string().min(1, 'กรุณาเลือกประเภทเจ้าหนี้'),
-    vendorGroupId: z.string().min(1, 'กรุณาเลือกกลุ่มเจ้าหนี้'),
-    currencyId: z.string().min(1, 'กรุณาเลือกสกุลเงิน'),
+    // ID Number
+    vendorTypeId: z.number().min(1, 'กรุณาเลือกประเภทเจ้าหนี้'),
+    vendorGroupId: z.number().min(1, 'กรุณาเลือกกลุ่มเจ้าหนี้'),
+    currencyId: z.number().min(1, 'กรุณาเลือกสกุลเงิน'),
     
     businessCategory: z.string(),
     
@@ -99,3 +99,5 @@ export const VendorSchema = z.object({
     blocked: z.boolean(),
     inactive: z.boolean()
 });
+
+export type VendorSchemaType = z.infer<typeof VendorSchema>;

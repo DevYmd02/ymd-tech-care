@@ -12,7 +12,7 @@ import { LotNoService } from '@/modules/master-data/inventory/services/inventory
 
 const schema = z.object({ code: z.string().min(1, 'กรุณากรอกรหัส').max(50), nameTh: z.string().min(1, 'กรุณากรอกชื่อ').max(200), nameEn: z.string().max(200), isActive: z.boolean() });
 type FormValues = z.infer<typeof schema>;
-interface Props { isOpen: boolean; onClose: () => void; editId?: string | null; onSuccess?: () => void; }
+interface Props { isOpen: boolean; onClose: () => void; editId?: number | null; onSuccess?: () => void; }
 
 export function LotNoFormModal({ isOpen, onClose, editId, onSuccess }: Props) {
     const { register, handleSubmit, reset, formState: { errors, isSubmitting }, control, setValue } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { code: '', nameTh: '', nameEn: '', isActive: true } });

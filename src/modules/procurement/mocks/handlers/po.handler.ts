@@ -91,7 +91,7 @@ export const setupPOHandlers = (mock: MockAdapter) => {
         }
 
         const newPO: POListItem = {
-            po_id:            `po-${Date.now()}`,
+            po_id:            Date.now(),
             po_no:            generateNextPONumber(),
             po_date:          body.po_date || new Date().toISOString().split('T')[0],
             pr_id:            sanitizeId(body.pr_id || ''),
@@ -109,14 +109,14 @@ export const setupPOHandlers = (mock: MockAdapter) => {
             tax_amount:       body.tax_amount ?? 0,
             total_amount:     body.total_amount ?? 0,
             remarks:          body.remarks || '',
-            created_by:       'mock-user',
+            created_by:       1,
             item_count:       (body.lines ?? []).length,
             transactions:     [{
-                id: `tx-${Date.now()}`,
-                po_id: `po-${Date.now()}`,
+                id: Date.now(),
+                po_id: Date.now(),
                 from_status: undefined,
                 to_status: 'DRAFT',
-                action_by: 'mock-user',
+                action_by: 1,
                 action_date: new Date().toISOString()
             }]
         };
@@ -137,9 +137,9 @@ export const setupPOHandlers = (mock: MockAdapter) => {
         po.status = 'ISSUED';
         if (!po.transactions) po.transactions = [];
         po.transactions.push({
-            id: `tx-${Date.now()}`, po_id: po.po_id,
+            id: Date.now() + Math.floor(Math.random() * 1000), po_id: po.po_id,
             from_status: prevStatus as POStatus, to_status: 'ISSUED',
-            action_by: 'mock-user', action_date: new Date().toISOString()
+            action_by: 1, action_date: new Date().toISOString()
         });
         return [200, { success: true, message: `PO ${po.po_no} ออก PO เรียบร้อย` }];
     });
@@ -158,9 +158,9 @@ export const setupPOHandlers = (mock: MockAdapter) => {
         po.status = nextStatus;
         if (!po.transactions) po.transactions = [];
         po.transactions.push({
-            id: `tx-${Date.now()}`, po_id: po.po_id,
+            id: Date.now() + Math.floor(Math.random() * 1000), po_id: po.po_id,
             from_status: prevStatus as POStatus, to_status: nextStatus,
-            action_by: 'mock-user', action_date: new Date().toISOString()
+            action_by: 1, action_date: new Date().toISOString()
         });
         const msg = po.status === 'PENDING_APPROVAL' ? 'ส่งอนุมัติเรียบร้อย' : 'อนุมัติเรียบร้อย';
         return [200, { success: true, message: `PO ${po.po_no} ${msg}` }];
@@ -180,9 +180,9 @@ export const setupPOHandlers = (mock: MockAdapter) => {
         po.reject_reason = body.remark || '';
         if (!po.transactions) po.transactions = [];
         po.transactions.push({
-            id: `tx-${Date.now()}`, po_id: po.po_id,
+            id: Date.now() + Math.floor(Math.random() * 1000), po_id: po.po_id,
             from_status: prevStatus as POStatus, to_status: 'REJECTED',
-            action_by: 'mock-user', action_date: new Date().toISOString(),
+            action_by: 1, action_date: new Date().toISOString(),
             remark: body.remark || ''
         });
 
@@ -216,9 +216,9 @@ export const setupPOHandlers = (mock: MockAdapter) => {
         po.status = 'PENDING_APPROVAL';
         if (!po.transactions) po.transactions = [];
         po.transactions.push({
-            id: `tx-${Date.now()}`, po_id: po.po_id,
+            id: Date.now() + Math.floor(Math.random() * 1000), po_id: po.po_id,
             from_status: prevStatus as POStatus, to_status: 'PENDING_APPROVAL',
-            action_by: 'mock-user', action_date: new Date().toISOString()
+            action_by: 1, action_date: new Date().toISOString()
         });
         return [200, { success: true, message: `PO ${po.po_no} ส่งอนุมัติเรียบร้อย` }];
     });

@@ -18,7 +18,7 @@ interface DepartmentFormModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
-    editId?: string | null;
+    editId?: number | null;
 }
 
 const departmentSchema = z.object({

@@ -28,7 +28,7 @@ export const ProductCategoryService = {
     }
   },
 
-  get: async (id: string): Promise<ProductCategoryListItem | null> => {
+  get: async (id: number): Promise<ProductCategoryListItem | null> => {
     if (USE_MOCK) return mockProductCategories.find(c => c.category_id === id) || null;
     try {
       return await api.get<ProductCategoryListItem>(`/product-categories/${id}`);
@@ -50,7 +50,7 @@ export const ProductCategoryService = {
     }
   },
 
-  update: async (id: string, data: Partial<ProductCategoryUpdateRequest>): Promise<{ success: boolean; data?: ProductCategoryListItem; message?: string }> => {
+  update: async (id: number, data: Partial<ProductCategoryUpdateRequest>): Promise<{ success: boolean; data?: ProductCategoryListItem; message?: string }> => {
     if (USE_MOCK) {
         return { success: true, message: 'Mock Update Success' };
     }
@@ -62,7 +62,7 @@ export const ProductCategoryService = {
     }
   },
 
-  delete: async (id: string): Promise<boolean> => {
+  delete: async (id: number): Promise<boolean> => {
     if (USE_MOCK) return true;
     try {
       await api.delete<SuccessResponse>(`/product-categories/${id}`);
@@ -73,7 +73,7 @@ export const ProductCategoryService = {
     }
   },
 
-  toggleStatus: async (id: string, isActive: boolean): Promise<{ success: boolean; message?: string }> => {
+  toggleStatus: async (id: number, isActive: boolean): Promise<{ success: boolean; message?: string }> => {
     if (USE_MOCK) {
       const category = mockProductCategories.find(c => c.category_id === id);
       if (category) category.is_active = isActive;

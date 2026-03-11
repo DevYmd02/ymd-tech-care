@@ -28,7 +28,7 @@ const initialFormData: CostCenterFormData = {
     is_active: true,
 };
 
-export function useCostCenterForm(editId: string | null, initialData?: CostCenter | null, onSuccess?: () => void) {
+export function useCostCenterForm(editId: number | null, initialData?: CostCenter | null, onSuccess?: () => void) {
     const { confirm } = useConfirmation();
     const queryClient = useQueryClient();
 

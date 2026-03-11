@@ -4,9 +4,9 @@ import type { Project } from '@/modules/master-data/types/master-data-types';
 
 interface ProjectTabProps {
     data: Project[];
-    expandedId: string | null;
-    toggleExpand: (id: string) => void;
-    handleEdit: (id: string) => void;
+    expandedId: number | null;
+    toggleExpand: (id: number) => void;
+    handleEdit: (id: number) => void;
     handleStatusToggle: (project: Project) => void;
     dbRelation: { dbTable: string; relations: string[]; fk: string };
 }
@@ -26,12 +26,12 @@ export const ProjectTab: React.FC<ProjectTabProps> = ({
     return (
         <div className="space-y-4">
             {data.map((project) => {
-                const isExpanded = expandedId === project.project_id;
+                const isExpanded = expandedId === project.id;
                 return (
-                    <div key={project.project_id} className={`bg-white dark:bg-gray-800 rounded-xl border ${project.is_active ? 'border-gray-200 dark:border-gray-700' : 'border-red-200 dark:border-red-900/30 opacity-75'} overflow-hidden transition-all shadow-sm hover:shadow-md`}>
+                    <div key={project.id} className={`bg-white dark:bg-gray-800 rounded-xl border ${project.is_active ? 'border-gray-200 dark:border-gray-700' : 'border-red-200 dark:border-red-900/30 opacity-75'} overflow-hidden transition-all shadow-sm hover:shadow-md`}>
                         <div 
                             className="p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                            onClick={() => toggleExpand(project.project_id)}
+                            onClick={() => toggleExpand(project.id)}
                         >
                             <div className="flex items-start justify-between gap-2">
                                 <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
@@ -67,7 +67,7 @@ export const ProjectTab: React.FC<ProjectTabProps> = ({
                                 </div>
                                 <div className="flex items-center gap-1 shrink-0 mt-1" onClick={(e) => e.stopPropagation()}>
                                     <button 
-                                        onClick={() => handleEdit(project.project_id)}
+                                        onClick={() => handleEdit(project.id)}
                                         className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                                         title="แก้ไข"
                                     >

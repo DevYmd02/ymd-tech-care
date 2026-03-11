@@ -21,38 +21,77 @@ export type QuotationStatus =
 // QUOTATION HEADER - ตาราง quotation_header
 // ====================================================================================
 
-/** Quotation Header - ใบเสนอราคาจากผู้ขาย */
+/** Quotation Header - ใบเสนอราคาจากผู้ขาย (Aligned with backend payload) */
 export interface QuotationHeader {
-    quotation_id: string;               // UUID - Primary Key (vq_id)
-    qc_id?: string;                     // UUID - FK -> qc_header
-    vendor_id: string;                  // UUID - FK -> vendor.vendor_id
-    quotation_no: string;               // VARCHAR(50) - เลขที่ใบเสนอราคา
-    quotation_date: string;             // DATE - วันที่เสนอราคา (quote_date)
-    valid_until: string | null;         // DATE - ราคามีผลถึงวันที่
-    payment_term_days: number | null;   // INTEGER
-    lead_time_days: number | null;      // INTEGER - ระยะส่งของ (days)
-    currency: string;                   // VARCHAR(3) - e.g. THB, USD
-    isMulticurrency?: boolean;
-    exchange_rate_date?: string;
-    target_currency?: string;
-    exchange_rate?: number;              // NUMERIC(18,6)
-    total_amount: number;               // DECIMAL(18,2)
+    vq_header_id: number;               // INTEGER/pk (backend: vq_header_id)
+    vq_no: string;                      // VARCHAR(50) (backend: vq_no)
+    quotation_no?: string;              // Legacy/Fallback
+    quotation_date: string;             // DATE - วันที่เสนอราคา
+    quotation_expiry_date?: string;     // DATE (backend: quotation_expiry_date)
+    
+    vendor_id: number | null;           // Relation ID
+    rfq_id: number | null;              // Relation ID
+    pr_id: number | null;               // Relation ID
+    rfq_vendor_id?: number | null;      // Relation ID
+
+    // Nested Objects (Anticipating JOINs)
+    vendor?: { vendor_id: number; vendor_name: string; vendor_code?: string };
+    rfq?: { rfq_id: number; rfq_no: string };
+    pr?: { pr_id: number; pr_no: string };
+    
+    payment_term_days: number | null;   // int
+    lead_time_days: number | null;      // int
+    
+    base_currency_code: string;         // VARCHAR(3) e.g. THB
+    quote_currency_code?: string;       // VARCHAR(3) e.g. USD
+    exchange_rate?: string | number;    // NUMERIC
+    exchange_rate_date?: string;        // DATE
+    
+    base_total_amount: string | number; // DECIMAL (Backend sends string)
+    quote_total_amount?: string | number; // DECIMAL
+    base_tax_amount?: string | number;
+    base_discount_amount?: string | number;
+    
     status: QuotationStatus;            // VARCHAR(50)
+    is_awarded?: boolean;
+    tax_code_id?: number;
+    tax_rate?: string | number;
+    
     remarks?: string;
+    created_at?: string;
+    updated_at?: string;
+    created_by?: number;
+    updated_by?: number | null;
+
+    // UI Layout Helpers / Legacy Fallbacks (Backward Compatibility)
+    // @deprecated Use vq_header_id
+    quotation_id?: number;
+    // @deprecated Use base_total_amount
+    total_amount?: number | string;
+    // @deprecated Use base_currency_code
+    currency?: string;
+    // @deprecated Use quotation_expiry_date
+    valid_until?: string;
+    // @deprecated Use base_currency_code !== 'THB'
+    isMulticurrency?: boolean;
+    // @deprecated Use quote_currency_code
+    target_currency?: string;
+    // @deprecated Use remarks
+    remark?: string;
+
+    // Additional Form Fields
     contact_person?: string;
     contact_email?: string;
     contact_phone?: string;
     discount_raw?: string;
-    tax_code_id?: string;
-    
-    // UI Extended Fields
-    vendor_name?: string;               // Display
-    vendor_code?: string;               // Display
-    rfq_id: string;                    // UUID - FK -> rfq_header (always required)
-    rfq_no?: string;                    // Display
-    pr_id?: string;                     // UUID - FK -> pr_header
-    pr_no?: string;                     // Display - Reference PR
-    lines?: QuotationLine[];            // Detail items
+    qc_id?: number;
+
+    // UI Layout Helpers / Legacy Fallbacks
+    vendor_name?: string;
+    vendor_code?: string;
+    rfq_no?: string;                    
+    pr_no?: string;                     
+    lines?: QuotationLine[];            
 }
 
 // ====================================================================================
@@ -61,14 +100,14 @@ export interface QuotationHeader {
 
 /** Quotation Line - รายการสินค้าในใบเสนอราคา */
 export interface QuotationLine {
-    quotation_line_id?: string;         // UUID (Primary Key)
-    quotation_id?: string;              // UUID (Foreign Key)
-    pr_line_id?: string;                // FK
-    item_id?: string;                   // FK
+    quotation_line_id?: number;         // INTEGER
+    quotation_id?: number;              // INTEGER
+    pr_line_id?: number;                // INTEGER
+    item_id?: number;                   // INTEGER
     item_code: string;                  // Required
     item_name: string;                  // Required
     qty: number;                        // Required
-    uom_id?: string;                    // UUID
+    uom_id?: number;                    // INTEGER
     uom_name?: string;                  // Display
     unit_price?: number;                // NUMERIC(18,4)
     discount_amount?: number;           // NUMERIC(18,2)

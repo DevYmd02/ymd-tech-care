@@ -40,7 +40,7 @@ export default function ItemTypeList() {
     });
 
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editingId, setEditingId] = useState<number | null>(null);
 
     // ==================== FILTER CONFIG ====================
     const filterConfig: FilterFieldConfig<Extract<keyof typeof filters, string>>[] = useMemo(() => [
@@ -116,12 +116,12 @@ export default function ItemTypeList() {
         setIsModalOpen(true);
     };
 
-    const handleEdit = (id: string) => {
+    const handleEdit = (id: number) => {
         setEditingId(id);
         setIsModalOpen(true);
     };
 
-    const handleDelete = useCallback(async (id: string) => {
+    const handleDelete = useCallback(async (id: number) => {
         if (confirm('คุณต้องการลบข้อมูลประเภทสินค้านี้หรือไม่?')) {
             await ItemTypeService.delete(id);
             refetch();
@@ -147,7 +147,7 @@ export default function ItemTypeList() {
             cell: ({ getValue, row }) => (
                 <span 
                     className="font-medium text-blue-600 cursor-pointer hover:underline"
-                    onClick={() => handleEdit(row.original.item_type_id)}
+                    onClick={() => handleEdit(row.original.id)}
                 >
                     {getValue() as string}
                 </span>
@@ -180,14 +180,14 @@ export default function ItemTypeList() {
             cell: ({ row }) => (
                 <div className="flex items-center justify-center gap-2">
                     <button 
-                        onClick={() => handleEdit(row.original.item_type_id)}
+                        onClick={() => handleEdit(row.original.id)}
                         className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                         title="แก้ไข"
                     >
                         <Edit2 size={18} />
                     </button>
                     <button 
-                        onClick={() => handleDelete(row.original.item_type_id)}
+                        onClick={() => handleDelete(row.original.id)}
                         className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         title="ลบ"
                     >
@@ -252,7 +252,7 @@ export default function ItemTypeList() {
                     }}
                     sortConfig={sortConfig}
                     onSortChange={handleSortChange}
-                    rowIdField="item_type_id"
+                    rowIdField="id"
                     className="shadow-sm border border-gray-200 dark:border-gray-700"
                 />
             </div>

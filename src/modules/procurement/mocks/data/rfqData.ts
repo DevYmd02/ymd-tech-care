@@ -1,54 +1,41 @@
-﻿import type { RFQHeader, RFQVendor, RFQLine } from '@/modules/procurement/types';
+import type { RFQHeader, RFQVendor, RFQLine, RFQVendorStatus } from '@/modules/procurement/types';
 
 /**
  * MOCK RFQ DATA — (RELATIONALLY SYNCED EDITION)
- *
- * ⚠️  CRITICAL: The vendor lists here MUST EXACTLY MATCH the vendors in vqData.ts.
- *     Each rfq_id → vendor_id pairing drives both:
- *       1. The Tracking Modal (VQVendorTrackingModal) — fetched from RFQService.getById()
- *       2. The VQ List Page — each VQ row references rfq_id + vendor_id
- *
- * RFQ → Vendor Map (Synchronized with vqData.ts):
- *   rfq-001 → V-002 (OfficeMate), V-003 (B2S/SCG), V-004 (Local Store/AIS)
- *   rfq-005 → V-001 (IT Supply Co./OfficeMate), V-005 (Smart Tech/Somchai), V-002 (OfficeMate)
- *   rfq-006 → V-006 (Industrial Part Ltd./PTT Global), V-007 (Global Oil Co./Kerry)
- *   rfq-007 → V-001 (IT Supply Co./OfficeMate), V-005 (Smart Tech/Somchai)
- *   rfq-008 → V-009 (Air Service Pro/Sa-ard)
- *   rfq-009 → V-008 (Hardware Hub/108 Shop)
  */
 
 // ====================================================================================
 // VENDOR DEFINITIONS (must match vendorMocks.ts IDs and names)
 // ====================================================================================
 
-const VENDOR_MAP = {
-  'V-001': { id: 'V-001', code: 'V001', name: 'บริษัท ออฟฟิศเมท (ไทย) จำกัด',                         email: 'sales@officemateItsupplythail.co.th' },
-  'V-002': { id: 'V-002', code: 'V002', name: 'บริษัท จิ๊บ คอมพิวเตอร์ กรุ๊ป จำกัด',                   email: 'sales@jibcomputergroupco.co.th' },
-  'V-003': { id: 'V-003', code: 'V003', name: 'บริษัท ปูนซิเมนต์ไทย จำกัด (มหาชน)',                    email: 'sales@thesiamcementpublicco.co.th' },
-  'V-004': { id: 'V-004', code: 'V004', name: 'บริษัท แอดวานซ์ อินโฟร์ เซอร์วิส จำกัด (มหาชน)',       email: 'sales@advancedinfoservicepublicco.co.th' },
-  'V-005': { id: 'V-005', code: 'V005', name: 'หจก. สมชายการช่าง',                                      email: 'sales@somchaiconstruction.co.th' },
-  'V-006': { id: 'V-006', code: 'V006', name: 'บริษัท พีทีที โกลบอล เคมิคอล จำกัด (มหาชน)',           email: 'sales@pttglobalchemicalpublicco.co.th' },
-  'V-007': { id: 'V-007', code: 'V007', name: 'บริษัท เคอรี่ เอ็กซ์เพรส (ประเทศไทย) จำกัด (มหาชน)', email: 'sales@kerryexpresspublicco.co.th' },
-  'V-008': { id: 'V-008', code: 'V008', name: 'บริษัท 108 ช็อป จำกัด',                                  email: 'sales@108shop.co.th' },
-  'V-009': { id: 'V-009', code: 'V009', name: 'หจก. สะอาดบริการ',                                       email: 'sales@saardservice.co.th' },
-  'V-010': { id: 'V-010', code: 'V010', name: 'บริษัท รักษาความปลอดภัย การ์ดฟอร์ซ จำกัด',             email: 'sales@guardforcesecurity.co.th' },
-} as const;
+const VENDOR_MAP: Record<number, { id: number; code: string; name: string; email: string }> = {
+  1: { id: 1, code: 'V001', name: 'บริษัท ออฟฟิศเมท (ไทย) จำกัด',                         email: 'sales@officemateItsupplythail.co.th' },
+  2: { id: 2, code: 'V002', name: 'บริษัท จิ๊บ คอมพิวเตอร์ กรุ๊ป จำกัด',                   email: 'sales@jibcomputergroupco.co.th' },
+  3: { id: 3, code: 'V003', name: 'บริษัท ปูนซิเมนต์ไทย จำกัด (มหาชน)',                    email: 'sales@thesiamcementpublicco.co.th' },
+  4: { id: 4, code: 'V004', name: 'บริษัท แอดวานซ์ อินโฟร์ เซอร์วิส จำกัด (มหาชน)',       email: 'sales@advancedinfoservicepublicco.co.th' },
+  5: { id: 5, code: 'V005', name: 'หจก. สมชายการช่าง',                                      email: 'sales@somchaiconstruction.co.th' },
+  6: { id: 6, code: 'V006', name: 'บริษัท พีทีที โกลบอล เคมิคอล จำกัด (มหาชน)',           email: 'sales@pttglobalchemicalpublicco.co.th' },
+  7: { id: 7, code: 'V007', name: 'บริษัท เคอรี่ เอ็กซ์เพรส (ประเทศไทย) จำกัด (มหาชน)', email: 'sales@kerryexpresspublicco.co.th' },
+  8: { id: 8, code: 'V008', name: 'บริษัท 108 ช็อป จำกัด',                                  email: 'sales@108shop.co.th' },
+  9: { id: 9, code: 'V009', name: 'หจก. สะอาดบริการ',                                       email: 'sales@saardservice.co.th' },
+  10: { id: 10, code: 'V010', name: 'บริษัท รักษาความปลอดภัย การ์ดฟอร์ซ จำกัด',             email: 'sales@guardforcesecurity.co.th' },
+};
 
 // ====================================================================================
 // VENDOR BUILDER HELPER
 // ====================================================================================
 
 function makeVendor(
-  rfqId: string,
+  rfqId: number,
   seq: number,
-  vendorKey: keyof typeof VENDOR_MAP,
+  vendorId: number,
   rfqDate: string,
-  status: 'PENDING' | 'SENT' | 'RESPONDED' | 'DECLINED',
+  status: RFQVendorStatus,
   responseDate: string | null = null
 ): RFQVendor & { vendor_name: string; vendor_code: string } {
-  const v = VENDOR_MAP[vendorKey];
+  const v = VENDOR_MAP[vendorId];
   return {
-    rfq_vendor_id : `rv-${rfqId}-${seq}`,
+    rfq_vendor_id : rfqId * 100 + seq,
     rfq_id        : rfqId,
     vendor_id     : v.id,
     vendor_code   : v.code,
@@ -57,10 +44,9 @@ function makeVendor(
     sent_via      : 'EMAIL',
     email_sent_to : v.email,
     response_date : responseDate,
-    vq_no         : undefined, // VQ No is managed by vqData.ts, not here
     status,
     remark        : null,
-  } as RFQVendor & { vendor_name: string; vendor_code: string };
+  };
 }
 
 // ====================================================================================
@@ -69,15 +55,14 @@ function makeVendor(
 
 const EXPLICIT_RFQS: RFQHeader[] = [
 
-  // ── rfq-001: วัสดุสำนักงาน (Stationery) ─────────────────────────────────────────
-  // VQ List shows: OfficeMate (RECORDED), B2S (RECORDED), Local Store (RECORDED)
+  // ── 1: วัสดุสำนักงาน (Stationery) ─────────────────────────────────────────
   {
-    rfq_id: 'rfq-001', rfq_no: 'RFQ-202601-0001',
-    pr_id: 'pr-001', pr_no: 'PR-202601-0003', ref_pr_no: 'PR-202601-0003',
-    branch_id: '1', branch_name: 'สำนักงานใหญ่',
+    rfq_id: 1, rfq_no: 'RFQ-202601-0001',
+    pr_id: 1, pr_no: 'PR-202601-0003', ref_pr_no: 'PR-202601-0003',
+    branch_id: 1, branch_name: 'สำนักงานใหญ่',
     rfq_date: '2026-01-17', quotation_due_date: '2026-01-24',
     status: 'CLOSED',
-    created_by_user_id: 'user-1', created_by_name: 'นายจัดซื้อ หนึ่ง',
+    created_by_user_id: 1, created_by_name: 'นายจัดซื้อ หนึ่ง',
     created_at: '2026-01-17T10:00:00Z', updated_at: '2026-01-20T10:00:00Z',
     purpose: 'จัดซื้อวัสดุสำนักงานประจำเดือน',
     vendor_count: 3,
@@ -92,15 +77,14 @@ const EXPLICIT_RFQS: RFQHeader[] = [
     vendor_name: 'บริษัท จิ๊บ คอมพิวเตอร์ กรุ๊ป จำกัด',
   },
 
-  // ── rfq-005: Monitor / Display ──────────────────────────────────────────────────
-  // VQ List shows: IT Supply Co./V-001 (RECORDED), Smart Tech/V-005 (RECORDED), OfficeMate/V-002 (RECORDED)
+  // ── 5: Monitor / Display ──────────────────────────────────────────────────
   {
-    rfq_id: 'rfq-005', rfq_no: 'RFQ-202601-0005',
-    pr_id: 'pr-005', pr_no: 'PR-202601-0008', ref_pr_no: 'PR-202601-0008',
-    branch_id: '1', branch_name: 'สำนักงานใหญ่',
+    rfq_id: 5, rfq_no: 'RFQ-202601-0005',
+    pr_id: 5, pr_no: 'PR-202601-0008', ref_pr_no: 'PR-202601-0008',
+    branch_id: 1, branch_name: 'สำนักงานใหญ่',
     rfq_date: '2026-01-26', quotation_due_date: '2026-02-02',
     status: 'CLOSED',
-    created_by_user_id: 'user-1', created_by_name: 'นายจัดซื้อ หนึ่ง',
+    created_by_user_id: 1, created_by_name: 'นายจัดซื้อ หนึ่ง',
     created_at: '2026-01-26T10:00:00Z', updated_at: '2026-01-29T10:00:00Z',
     purpose: 'จัดซื้อจอแสดงผล (Monitor / Display)',
     vendor_count: 3,
@@ -115,15 +99,14 @@ const EXPLICIT_RFQS: RFQHeader[] = [
     vendor_name: 'บริษัท ออฟฟิศเมท (ไทย) จำกัด',
   },
 
-  // ── rfq-006: น้ำมันโรงงาน (Factory Oil) ────────────────────────────────────────
-  // VQ List shows: Industrial Part Ltd./V-006 (RECORDED), Global Oil Co./V-007 (RECORDED)
+  // ── 6: น้ำมันโรงงาน (Factory Oil) ────────────────────────────────────────
   {
-    rfq_id: 'rfq-006', rfq_no: 'RFQ-202602-0006',
-    pr_id: 'pr-006', pr_no: 'PR-202602-0010', ref_pr_no: 'PR-202602-0010',
-    branch_id: '1', branch_name: 'สำนักงานใหญ่',
+    rfq_id: 6, rfq_no: 'RFQ-202602-0006',
+    pr_id: 6, pr_no: 'PR-202602-0010', ref_pr_no: 'PR-202602-0010',
+    branch_id: 1, branch_name: 'สำนักงานใหญ่',
     rfq_date: '2026-02-05', quotation_due_date: '2026-02-12',
     status: 'CLOSED',
-    created_by_user_id: 'user-2', created_by_name: 'นางสาวจัดซื้อ สอง',
+    created_by_user_id: 2, created_by_name: 'นางสาวจัดซื้อ สอง',
     created_at: '2026-02-05T09:00:00Z', updated_at: '2026-02-07T09:00:00Z',
     purpose: 'จัดซื้อน้ำมันหล่อลื่นสำหรับเครื่องจักรโรงงาน',
     vendor_count: 3,
@@ -138,15 +121,14 @@ const EXPLICIT_RFQS: RFQHeader[] = [
     vendor_name: 'บริษัท พีทีที โกลบอล เคมิคอล จำกัด (มหาชน)',
   },
 
-  // ── rfq-007: Laptop Computer  ───────────────────────────────────────────────────
-  // VQ List shows: IT Supply Co./V-001 (RECORDED), Smart Tech/V-005 (PENDING — no VQ yet)
+  // ── 7: Laptop Computer  ───────────────────────────────────────────────────
   {
-    rfq_id: 'rfq-007', rfq_no: 'RFQ-202602-0007',
-    pr_id: 'pr-007', pr_no: 'PR-202602-0012', ref_pr_no: 'PR-202602-0012',
-    branch_id: '1', branch_name: 'สำนักงานใหญ่',
+    rfq_id: 7, rfq_no: 'RFQ-202602-0007',
+    pr_id: 7, pr_no: 'PR-202602-0012', ref_pr_no: 'PR-202602-0012',
+    branch_id: 1, branch_name: 'สำนักงานใหญ่',
     rfq_date: '2026-02-10', quotation_due_date: '2026-03-17',
     status: 'SENT',
-    created_by_user_id: 'user-1', created_by_name: 'นายจัดซื้อ หนึ่ง',
+    created_by_user_id: 1, created_by_name: 'นายจัดซื้อ หนึ่ง',
     created_at: '2026-02-10T09:00:00Z', updated_at: '2026-02-12T09:00:00Z',
     purpose: 'จัดซื้อคอมพิวเตอร์แบบพกพา (Laptop) สำหรับทีมขาย',
     vendor_count: 2,
@@ -161,15 +143,14 @@ const EXPLICIT_RFQS: RFQHeader[] = [
     vendor_name: 'บริษัท ออฟฟิศเมท (ไทย) จำกัด',
   },
 
-  // ── rfq-008: บริการทำความสะอาด (Cleaning Service) ──────────────────────────────
-  // VQ List shows: Air Service Pro/V-009 (EXPIRED)
+  // ── 8: บริการทำความสะอาด (Cleaning Service) ──────────────────────────────
   {
-    rfq_id: 'rfq-008', rfq_no: 'RFQ-202602-0008',
-    pr_id: 'pr-008', pr_no: 'PR-202602-0014', ref_pr_no: 'PR-202602-0014',
-    branch_id: '1', branch_name: 'สำนักงานใหญ่',
+    rfq_id: 8, rfq_no: 'RFQ-202602-0008',
+    pr_id: 8, pr_no: 'PR-202602-0014', ref_pr_no: 'PR-202602-0014',
+    branch_id: 1, branch_name: 'สำนักงานใหญ่',
     rfq_date: '2026-02-10', quotation_due_date: '2026-03-10',
     status: 'SENT',
-    created_by_user_id: 'user-1', created_by_name: 'นายจัดซื้อ หนึ่ง',
+    created_by_user_id: 1, created_by_name: 'นายจัดซื้อ หนึ่ง',
     created_at: '2026-02-10T09:00:00Z', updated_at: '2026-02-10T09:00:00Z',
     purpose: 'จ้างบริการทำความสะอาดสำนักงาน ประจำปี',
     vendor_count: 1,
@@ -184,15 +165,14 @@ const EXPLICIT_RFQS: RFQHeader[] = [
     vendor_name: 'หจก. สะอาดบริการ',
   },
 
-  // ── rfq-009: Hardware Hub (อุปกรณ์ฮาร์ดแวร์) ──────────────────────────────────
-  // VQ List shows: Hardware Hub/V-008 (PENDING)
+  // ── 9: Hardware Hub (อุปกรณ์ฮาร์ดแวร์) ──────────────────────────────────
   {
-    rfq_id: 'rfq-009', rfq_no: 'RFQ-202602-0009',
+    rfq_id: 9, rfq_no: 'RFQ-202602-0009',
     pr_id: null, pr_no: null, ref_pr_no: null,
-    branch_id: '1', branch_name: 'สำนักงานใหญ่',
+    branch_id: 1, branch_name: 'สำนักงานใหญ่',
     rfq_date: '2026-02-13', quotation_due_date: '2026-03-13',
     status: 'SENT',
-    created_by_user_id: 'user-2', created_by_name: 'นางสาวจัดซื้อ สอง',
+    created_by_user_id: 2, created_by_name: 'นางสาวจัดซื้อ สอง',
     created_at: '2026-02-13T09:00:00Z', updated_at: '2026-02-13T09:00:00Z',
     purpose: 'จัดซื้ออุปกรณ์ฮาร์ดแวร์และอะไหล่เครื่องจักร',
     vendor_count: 1,
@@ -207,14 +187,14 @@ const EXPLICIT_RFQS: RFQHeader[] = [
     vendor_name: 'บริษัท 108 ช็อป จำกัด',
   },
 
-  // ── rfq-010: DRAFT — คอมพิวเตอร์ตั้งโต๊ะ ──────────────────────────────────────
+  // ── 10: DRAFT — คอมพิวเตอร์ตั้งโต๊ะ ──────────────────────────────────────
   {
-    rfq_id: 'rfq-010', rfq_no: 'RFQ-202602-0010',
-    pr_id: 'pr-010', pr_no: 'PR-202602-0020', ref_pr_no: 'PR-202602-0020',
-    branch_id: '1', branch_name: 'สำนักงานใหญ่',
+    rfq_id: 10, rfq_no: 'RFQ-202602-0010',
+    pr_id: 10, pr_no: 'PR-202602-0020', ref_pr_no: 'PR-202602-0020',
+    branch_id: 1, branch_name: 'สำนักงานใหญ่',
     rfq_date: '2026-02-25', quotation_due_date: null,
     status: 'DRAFT',
-    created_by_user_id: 'user-2', created_by_name: 'นางสาวจัดซื้อ สอง',
+    created_by_user_id: 2, created_by_name: 'นางสาวจัดซื้อ สอง',
     created_at: '2026-02-25T09:00:00Z', updated_at: '2026-02-25T09:00:00Z',
     purpose: 'จัดซื้อคอมพิวเตอร์ตั้งโต๊ะ (Desktop PC) ฝ่ายบัญชี',
     vendor_count: 2,
@@ -229,14 +209,14 @@ const EXPLICIT_RFQS: RFQHeader[] = [
     vendor_name: null,
   },
 
-  // ── rfq-011: DRAFT — เก้าอี้สำนักงาน ────────────────────────────────────────────
+  // ── 11: DRAFT — เก้าอี้สำนักงาน ────────────────────────────────────────────
   {
-    rfq_id: 'rfq-011', rfq_no: 'RFQ-202602-0011',
+    rfq_id: 11, rfq_no: 'RFQ-202602-0011',
     pr_id: null, pr_no: null, ref_pr_no: null,
-    branch_id: '1', branch_name: 'สำนักงานใหญ่',
+    branch_id: 1, branch_name: 'สำนักงานใหญ่',
     rfq_date: '2026-02-26', quotation_due_date: null,
     status: 'DRAFT',
-    created_by_user_id: 'user-1', created_by_name: 'นายจัดซื้อ หนึ่ง',
+    created_by_user_id: 1, created_by_name: 'นายจัดซื้อ หนึ่ง',
     created_at: '2026-02-26T10:00:00Z', updated_at: '2026-02-26T10:00:00Z',
     purpose: 'จัดซื้อเก้าอี้สำนักงานและโต๊ะทำงาน (Ergonomic Series)',
     vendor_count: 0,
@@ -251,14 +231,14 @@ const EXPLICIT_RFQS: RFQHeader[] = [
     vendor_name: null,
   },
 
-  // ── rfq-012: DRAFT — บริการ Cloud Server ───────────────────────────────────────
+  // ── 12: DRAFT — บริการ Cloud Server ───────────────────────────────────────
   {
-    rfq_id: 'rfq-012', rfq_no: 'RFQ-202602-0012',
-    pr_id: 'pr-012', pr_no: 'PR-202602-0022', ref_pr_no: 'PR-202602-0022',
-    branch_id: '1', branch_name: 'สำนักงานใหญ่',
+    rfq_id: 12, rfq_no: 'RFQ-202602-0012',
+    pr_id: 12, pr_no: 'PR-202602-0022', ref_pr_no: 'PR-202602-0022',
+    branch_id: 1, branch_name: 'สำนักงานใหญ่',
     rfq_date: '2026-02-27', quotation_due_date: null,
     status: 'DRAFT',
-    created_by_user_id: 'user-1', created_by_name: 'นายจัดซื้อ หนึ่ง',
+    created_by_user_id: 1, created_by_name: 'นายจัดซื้อ หนึ่ง',
     created_at: '2026-02-27T08:00:00Z', updated_at: '2026-02-27T08:00:00Z',
     purpose: 'จ้างเหมาบริการ Cloud Server และ Storage ประจำปี 2569',
     vendor_count: 1,
@@ -277,64 +257,68 @@ const EXPLICIT_RFQS: RFQHeader[] = [
 export const MOCK_RFQS: RFQHeader[] = EXPLICIT_RFQS;
 export const MOCK_RFQ_LINES: RFQLine[] = [
   {
-    rfq_line_id: 'rl-007-1',
-    rfq_id: 'rfq-007',
+    rfq_line_id: 701,
+    rfq_id: 7,
     line_no: 1,
-    pr_line_id: 'prl-007-1',
-    item_id: 'item-001',
+    pr_line_id: 701,
+    item_id: 1,
     item_code: 'COMP-001',
     item_name: 'Laptop Business Pro 14"',
     description: 'Core i7, 16GB RAM, 512GB SSD',
     qty: 10,
     uom: 'เครื่อง',
+    uom_id: 1,
     target_delivery_date: '2026-03-31',
     technical_spec: 'Military standard, Win 11 Pro',
     est_unit_price: 25000,
     note_to_vendor: null
   },
   {
-    rfq_line_id: 'rl-007-2',
-    rfq_id: 'rfq-007',
-     line_no: 2,
-    pr_line_id: 'prl-007-2',
-    item_id: 'item-002',
+    rfq_line_id: 702,
+    rfq_id: 7,
+    line_no: 2,
+    pr_line_id: 702,
+    item_id: 2,
     item_code: 'COMP-002',
     item_name: 'Wireless Mouse',
     description: 'Ergonomic, Silent click',
     qty: 10,
     uom: 'ตัว',
+    uom_id: 1,
     target_delivery_date: '2026-03-31',
     technical_spec: 'Bluetooth & 2.4GHz',
     est_unit_price: 1200,
     note_to_vendor: null
   },
   {
-    rfq_line_id: 'rl-006-1',
-    rfq_id: 'rfq-006',
+    rfq_line_id: 601,
+    rfq_id: 6,
     line_no: 1,
-    pr_line_id: 'prl-006-1',
-    item_id: 'item-oil-1',
+    pr_line_id: 601,
+    item_id: 101,
     item_code: 'OIL-IND-046',
     item_name: 'Industrial Oil 46 (200L)',
     description: 'High-performance hydraulic oil',
     qty: 10,
     uom: 'ถัง',
+    uom_id: 1,
     target_delivery_date: '2026-02-28',
     technical_spec: 'ISO VG 46, Anti-wear',
     est_unit_price: 8000,
     note_to_vendor: null
   },
   {
-    rfq_line_id: 'rl-006-2',
-    rfq_id: 'rfq-006',
+    rfq_line_id: 602,
+    rfq_id: 6,
     line_no: 2,
-    pr_line_id: 'prl-006-2',
-    item_id: 'item-oil-2',
+    pr_line_id: 602,
+    item_id: 102,
     item_code: 'OIL-GRS-001',
     item_name: 'Machine Grease (15kg)',
     description: 'Heavy duty lithium grease',
     qty: 5,
     uom: 'ถัง',
+    uom_id: 1,
     target_delivery_date: '2026-02-28',
     technical_spec: 'NLGI 2, High temp',
     est_unit_price: 3500,
@@ -347,40 +331,29 @@ export const MOCK_RFQ_LINES: RFQLine[] = [
 // ====================================================================================
 
 export const MOCK_RFQ_VENDORS: (RFQVendor & { vendor_name: string; vendor_code: string })[] = [
+  makeVendor(1, 1, 2, '2026-01-17', 'RESPONDED', '2026-01-18'), // OfficeMate
+  makeVendor(1, 2, 3, '2026-01-17', 'RESPONDED', '2026-01-19'), // B2S (SCG)
+  makeVendor(1, 3, 4, '2026-01-17', 'RESPONDED', '2026-01-20'), // Local/AIS
 
-  // -- rfq-001 vendors: stationery (3 vendors, all responded) ---------------------
-  makeVendor('rfq-001', 1, 'V-002', '2026-01-17', 'RESPONDED', '2026-01-18'), // OfficeMate -> vq-003
-  makeVendor('rfq-001', 2, 'V-003', '2026-01-17', 'RESPONDED', '2026-01-19'), // B2S (SCG)  -> vq-002
-  makeVendor('rfq-001', 3, 'V-004', '2026-01-17', 'RESPONDED', '2026-01-20'), // Local/AIS  -> vq-001
+  makeVendor(5, 1, 1, '2026-01-26', 'RESPONDED', '2026-01-27'), // IT Supply
+  makeVendor(5, 2, 5, '2026-01-26', 'RESPONDED', '2026-01-28'), // Smart Tech
+  makeVendor(5, 3, 2, '2026-01-26', 'RESPONDED', '2026-01-29'), // OfficeMate
 
-  // -- rfq-005 vendors: monitor/display (3 vendors, all responded) ---------------
-  makeVendor('rfq-005', 1, 'V-001', '2026-01-26', 'RESPONDED', '2026-01-27'), // IT Supply  -> vq-006
-  makeVendor('rfq-005', 2, 'V-005', '2026-01-26', 'RESPONDED', '2026-01-28'), // Smart Tech -> vq-005
-  makeVendor('rfq-005', 3, 'V-002', '2026-01-26', 'RESPONDED', '2026-01-29'), // OfficeMate -> vq-004
+  makeVendor(6, 1, 6, '2026-02-05', 'RESPONDED', '2026-02-06'), // Industrial
+  makeVendor(6, 2, 7, '2026-02-05', 'RESPONDED', '2026-02-07'), // Global Oil
+  makeVendor(6, 3, 5, '2026-02-05', 'RESPONDED', '2026-02-08'), // Smart Tech
 
-  // -- rfq-006 vendors: factory oil (2 vendors, all responded) -------------------
-  makeVendor('rfq-006', 1, 'V-006', '2026-02-05', 'RESPONDED', '2026-02-06'), // Industrial -> vq-008
-  makeVendor('rfq-006', 2, 'V-007', '2026-02-05', 'RESPONDED', '2026-02-07'), // Global Oil -> vq-007
-  makeVendor('rfq-006', 3, 'V-005', '2026-02-05', 'RESPONDED', '2026-02-08'), // Smart Tech  -> vq-014
+  makeVendor(7, 1, 1, '2026-02-10', 'SENT',      null),         // IT Supply
+  makeVendor(7, 2, 5, '2026-02-10', 'SENT',      null),         // Smart Tech
 
-  // -- rfq-007 vendors: laptop (sent to 2, awaiting reply) ----------------------
-  makeVendor('rfq-007', 1, 'V-001', '2026-02-10', 'SENT',      null),         // IT Supply  -> vq-010
-  makeVendor('rfq-007', 2, 'V-005', '2026-02-10', 'SENT',      null),         // Smart Tech -> vq-009
+  makeVendor(8, 1, 9, '2026-02-10', 'SENT',      null),         // Air Service
 
-  // -- rfq-008 vendors: cleaning service (sent, expired VQ) ---------------------
-  makeVendor('rfq-008', 1, 'V-009', '2026-02-10', 'SENT',      null),         // Air Service -> vq-011
+  makeVendor(9, 1, 8, '2026-02-13', 'SENT',      null),         // Hardware Hub
 
-  // -- rfq-009 vendors: hardware hub (sent, pending reply) ----------------------
-  makeVendor('rfq-009', 1, 'V-008', '2026-02-13', 'SENT',      null),         // Hardware Hub -> vq-012
+  makeVendor(10, 1, 2, '2026-02-25', 'PENDING',   null),         // JIB Computer
+  makeVendor(10, 2, 4, '2026-02-25', 'PENDING',   null),         // AIS Advanced Info
 
-  // -- rfq-010 vendors: DRAFT Desktop PC (2 vendors selected, not yet sent) -----
-  makeVendor('rfq-010', 1, 'V-002', '2026-02-25', 'PENDING',   null),         // JIB Computer
-  makeVendor('rfq-010', 2, 'V-004', '2026-02-25', 'PENDING',   null),         // AIS Advanced Info
-
-  // rfq-011: DRAFT - vendor_count 0 (no vendors selected yet - correct)
-
-  // -- rfq-012 vendors: DRAFT Cloud Server (1 vendor selected, not yet sent) ----
-  makeVendor('rfq-012', 1, 'V-004', '2026-02-27', 'PENDING',   null),         // AIS Advanced Info
+  makeVendor(12, 1, 4, '2026-02-27', 'PENDING',   null),         // AIS Advanced Info
 ];
 
 // Also export VENDOR_POOL for backward compat
@@ -389,5 +362,5 @@ export const VENDOR_POOL = MOCK_VENDORS.map(v => ({
   id: v.vendor_id,
   code: v.vendor_code,
   name: v.vendor_name,
-  email: v.email || `sales@${v.vendor_name_en?.toLowerCase().replace(/\s+/g, '') || 'vendor'}.co.th`
+  email: v.email || `sales@vendor.co.th`
 }));

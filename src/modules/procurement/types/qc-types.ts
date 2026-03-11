@@ -20,9 +20,9 @@ export const QC_STATUS_OPTIONS = [
 
 /** Quotation Comparison Header - ใบเปรียบเทียบราคา */
 export interface QCHeader {
-    qc_id: string;                      // UUID
+    qc_id: number;                      // INTEGER
     qc_no: string;                      // QC-2024-xxxx
-    pr_id: string;                      // FK -> pr_header
+    pr_id: number;                      // FK -> pr_header
     pr_no?: string;                     // Display
     rfq_no?: string;                    // Added for traceability
     created_at: string;                 // Date

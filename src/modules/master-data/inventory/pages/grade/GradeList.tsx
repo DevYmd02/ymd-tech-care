@@ -19,7 +19,7 @@ export default function GradeList() {
     const [allData, setAllData] = useState<Grade[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editingId, setEditingId] = useState<number | null>(null);
 
     const filterConfig: FilterFieldConfig<keyof typeof filters>[] = useMemo(() => [
         { name: 'search', label: 'รหัสเกรด', type: 'text', placeholder: 'กรอกรหัส' },
@@ -39,7 +39,7 @@ export default function GradeList() {
     }, [allData, filters]);
 
     const paginatedData = useMemo(() => filteredData.slice((filters.page - 1) * filters.limit, filters.page * filters.limit), [filteredData, filters.page, filters.limit]);
-    const handleDelete = useCallback((id: string) => { if (confirm('ลบข้อมูลนี้?')) GradeService.delete(id).then(() => fetchData()); }, [fetchData]);
+    const handleDelete = useCallback((id: number) => { if (confirm('ลบข้อมูลนี้?')) GradeService.delete(id).then(() => fetchData()); }, [fetchData]);
 
     const columns = useMemo<ColumnDef<Grade>[]>(() => [
         { id: 'sequence', header: 'ลำดับ', accessorFn: (_, index) => (filters.page - 1) * filters.limit + index + 1, size: 60 },

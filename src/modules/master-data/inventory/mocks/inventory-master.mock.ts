@@ -13,16 +13,19 @@ interface SimpleMockItem {
 }
 
 function createMockData<T>(prefix: string, items: SimpleMockItem[]): T[] {
-    return items.map((item) => ({
-        id: `${prefix}-${item.code}`,
-        [`${prefix.toLowerCase()}_id`]: `${prefix}-${item.code}`,
-        code: item.code,
-        name_th: item.nameTh,
-        name_en: item.nameEn,
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-    })) as T[];
+    return items.map((item, index) => {
+        const numericId = 1000 + index; // Simple numeric ID for mocks
+        return {
+            id: numericId,
+            [`${prefix.toLowerCase()}_id`]: numericId,
+            code: item.code,
+            name_th: item.nameTh,
+            name_en: item.nameEn,
+            is_active: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+        };
+    }) as T[];
 }
 
 export const MOCK_ITEM_GROUPS = createMockData<ItemGroup>('IGRP', [
@@ -75,11 +78,11 @@ export const MOCK_SIZES = createMockData<Size>('SZ', [
 ]);
 
 export const MOCK_COLORS: Color[] = [
-    { id: 'CLR-RED', color_id: 'CLR-RED', code: 'RED', name_th: 'แดง', name_en: 'Red', hex_code: '#FF0000', is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-    { id: 'CLR-BLUE', color_id: 'CLR-BLUE', code: 'BLUE', name_th: 'น้ำเงิน', name_en: 'Blue', hex_code: '#0000FF', is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-    { id: 'CLR-GREEN', color_id: 'CLR-GREEN', code: 'GREEN', name_th: 'เขียว', name_en: 'Green', hex_code: '#00FF00', is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-    { id: 'CLR-BLACK', color_id: 'CLR-BLACK', code: 'BLACK', name_th: 'ดำ', name_en: 'Black', hex_code: '#000000', is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-    { id: 'CLR-WHITE', color_id: 'CLR-WHITE', code: 'WHITE', name_th: 'ขาว', name_en: 'White', hex_code: '#FFFFFF', is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+    { id: 1001, color_id: 1001, code: 'RED', name_th: 'แดง', name_en: 'Red', hex_code: '#FF0000', is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+    { id: 1002, color_id: 1002, code: 'BLUE', name_th: 'น้ำเงิน', name_en: 'Blue', hex_code: '#0000FF', is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+    { id: 1003, color_id: 1003, code: 'GREEN', name_th: 'เขียว', name_en: 'Green', hex_code: '#00FF00', is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+    { id: 1004, color_id: 1004, code: 'BLACK', name_th: 'ดำ', name_en: 'Black', hex_code: '#000000', is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+    { id: 1005, color_id: 1005, code: 'WHITE', name_th: 'ขาว', name_en: 'White', hex_code: '#FFFFFF', is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
 ];
 
 export const MOCK_LOCATIONS = createMockData<Location>('LOC', [

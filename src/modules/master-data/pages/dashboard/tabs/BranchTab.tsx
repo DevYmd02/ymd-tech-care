@@ -4,9 +4,9 @@ import type { BranchListItem } from '@/modules/master-data/types/master-data-typ
 
 interface BranchTabProps {
     data: BranchListItem[];
-    expandedId: string | null;
-    toggleExpand: (id: string) => void;
-    handleEdit: (id: string) => void;
+    expandedId: number | null;
+    toggleExpand: (id: number) => void;
+    handleEdit: (id: number) => void;
     handleStatusToggle: (data: BranchListItem) => void;
     dbRelation: { dbTable: string; relations: string[]; fk: string };
 }
@@ -26,12 +26,12 @@ export const BranchTab: React.FC<BranchTabProps> = ({
     return (
         <div className="space-y-4">
             {data.map((branch) => {
-                const isExpanded = expandedId === branch.branch_id;
+                const isExpanded = expandedId === branch.id;
                 return (
-                    <div key={branch.branch_id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <div key={branch.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
                         <div 
                             className="p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                            onClick={() => toggleExpand(branch.branch_id)}
+                            onClick={() => toggleExpand(branch.id)}
                         >
                             <div className="flex items-start justify-between gap-2">
                                 <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
@@ -63,7 +63,7 @@ export const BranchTab: React.FC<BranchTabProps> = ({
                             <div className="border-t border-gray-200 dark:border-gray-700 p-4">
                                 <div className="flex gap-2 mb-4">
                                     <button 
-                                        onClick={(e) => { e.stopPropagation(); handleEdit(branch.branch_id); }}
+                                        onClick={(e) => { e.stopPropagation(); handleEdit(branch.id); }}
                                         className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-blue-600 dark:text-blue-400 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-200 dark:hover:border-blue-800 transition-all font-medium text-sm"
                                     >
                                         <Edit2 size={16} /> แก้ไข (Edit)

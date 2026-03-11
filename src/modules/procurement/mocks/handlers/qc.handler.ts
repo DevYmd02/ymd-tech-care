@@ -53,6 +53,7 @@ export const setupQCHandlers = (mock: MockAdapter) => {
             ...found,
             qc_id: sanitizeId(found.qc_id),
             pr_id: sanitizeId(found.pr_id),
+            action_by: 1, action_date: '2026-02-25T10:00:00Z'
         };
         return [200, sanitized];
     }
@@ -87,9 +88,9 @@ export const setupQCHandlers = (mock: MockAdapter) => {
     // Read-only lookup: cache winner display info on the QC document for list-page speed
     const targetVQ = MOCK_VQS.find(vq => sanitizeId(vq.quotation_id) === found.winning_vq_id);
     if (targetVQ) {
-        found.lowest_price = targetVQ.total_amount || 0;
+        found.lowest_price = Number(targetVQ.total_amount) || 0;
         found.lowest_bidder_name = targetVQ.vendor_name || '';
-        found.winning_vendor_id = targetVQ.vendor_id; // Added for the Smart Intercept Hydration
+        found.winning_vendor_id = targetVQ.vendor_id ?? undefined; // Fixed: Use ?? undefined
     }
 
     return [200, { success: true, qc_id: found.qc_id }];
@@ -113,9 +114,10 @@ export const setupQCHandlers = (mock: MockAdapter) => {
       }, 0);
 
     const newQC = {
-      qc_id:              `qc-${Date.now()}`,
+      qc_id:              Date.now(),
       qc_no:              `${prefix}-${String(maxSeq + 1).padStart(4, '0')}`,
       pr_id:              sanitizeId(body.pr_id || ''),
+      action_by: 2, action_date: '2026-02-26T14:30:00Z',
       pr_no:              body.pr_no || '',
       rfq_no:             body.rfq_no || '',
       created_at:         now.toISOString().split('T')[0],

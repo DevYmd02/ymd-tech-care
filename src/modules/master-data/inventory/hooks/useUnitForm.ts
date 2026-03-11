@@ -24,7 +24,7 @@ const initialFormData: UnitFormData = {
     is_active: true,
 };
 
-export function useUnitForm(editId: string | null, initialData?: UnitListItem | null, onSuccess?: () => void) {
+export function useUnitForm(editId: number | null, initialData?: UnitListItem | null, onSuccess?: () => void) {
     const { confirm } = useConfirmation();
     const queryClient = useQueryClient();
 

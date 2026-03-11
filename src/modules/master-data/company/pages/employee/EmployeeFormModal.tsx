@@ -7,11 +7,12 @@ import { useEffect, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import type { SubmitHandler } from 'react-hook-form';
 import { Save, X, User } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
 import { OrgEmployeeService, DepartmentService, PositionService } from '@/modules/master-data/company/services/company.service';
-import type { DepartmentListItem, PositionListItem } from '@/modules/master-data/types/master-data-types';
+import type { DepartmentListItem, PositionListItem, EmployeeFormData } from '@/modules/master-data/types/master-data-types';
 
 
 
@@ -19,7 +20,7 @@ interface EmployeeFormModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
-    editId?: string | null;
+    editId?: number | null;
 }
 
 const employeeSchema = z.object({
@@ -28,8 +29,8 @@ const employeeSchema = z.object({
     lastName: z.string().min(1, 'กรุณากรอกนามสกุล'),
     email: z.string().email('รูปแบบอีเมลไม่ถูกต้อง').or(z.literal('')),
     phone: z.string().max(20).or(z.literal('')),
-    positionId: z.string().min(1, 'กรุณาเลือกตำแหน่ง'),
-    departmentId: z.string().min(1, 'กรุณาเลือกฝ่าย'),
+    positionId: z.number().min(1, 'กรุณาเลือกตำแหน่ง'),
+    departmentId: z.number().min(1, 'กรุณาเลือกฝ่าย'),
     isActive: z.boolean(),
 });
 
@@ -47,7 +48,7 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
         formState: { errors, isSubmitting },
         setValue,
         control,
-    } = useForm<EmployeeFormValues>({
+    } = useForm<EmployeeFormData>({
         resolver: zodResolver(employeeSchema),
         defaultValues: {
             employeeCode: '',
@@ -55,8 +56,8 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
             lastName: '',
             email: '',
             phone: '',
-            positionId: '',
-            departmentId: '',
+            positionId: 0,
+            departmentId: 0,
             isActive: true,
         },
     });
@@ -83,9 +84,9 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                         setValue('lastName', data.last_name || '');
                         setValue('email', data.email || '');
                         setValue('phone', data.phone || '');
-                        setValue('positionId', data.position_id || '');
-                        setValue('departmentId', data.department_id || '');
-                        setValue('isActive', data.is_active);
+                        setValue('positionId', data.position_id || 0);
+                        setValue('departmentId', data.department_id || 0);
+                        setValue('isActive', data.is_active || false);
                     }
                 });
             } else {
@@ -96,15 +97,15 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                     lastName: '',
                     email: '',
                     phone: '',
-                    positionId: '',
-                    departmentId: '',
+                    positionId: 0,
+                    departmentId: 0,
                     isActive: true,
                 });
             }
         }
     }, [isOpen, isEdit, editId, reset, setValue]);
 
-    const onSubmit = async (data: EmployeeFormValues) => {
+    const onSubmit: SubmitHandler<EmployeeFormValues> = async (data) => {
         try {
             let res;
             if (isEdit && editId) {
@@ -259,7 +260,7 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                         </label>
                         <select
                             className={`${styles.input} cursor-pointer ${errors.departmentId ? 'border-red-500 focus:ring-red-200' : ''}`}
-                            {...register('departmentId')}
+                            {...register('departmentId', { valueAsNumber: true })}
                         >
                             <option value="">เลือกฝ่าย</option>
                             {departments.map(dept => (
@@ -280,7 +281,7 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                         </label>
                         <select
                             className={`${styles.input} cursor-pointer ${errors.positionId ? 'border-red-500 focus:ring-red-200' : ''}`}
-                            {...register('positionId')}
+                            {...register('positionId', { valueAsNumber: true })}
                         >
                             <option value="">เลือกตำแหน่ง</option>
                             {positions.map(pos => (

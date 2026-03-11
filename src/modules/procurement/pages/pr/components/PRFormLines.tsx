@@ -125,7 +125,7 @@ export const PRFormLines: React.FC<PRFormLinesProps> = React.memo(({
                                             disabled={readOnly}
                                             title="คลิกเพื่อเลือกคลัง"
                                         >
-                                            <span className="truncate">{line.warehouse_id || '-'}</span>
+                                            <span className="truncate">{line.warehouse_code || line.warehouse_id || '-'}</span>
                                         </button>
                                         <input type="hidden" {...register(`lines.${index}.warehouse_id`)} />
                                     </td>

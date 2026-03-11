@@ -19,7 +19,7 @@ interface EmployeeSideFormModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
-    editId?: string | null;
+    editId?: number | null;
 }
 
 const employeeSideSchema = z.object({
@@ -81,9 +81,9 @@ export const EmployeeSideFormModal = ({ isOpen, onClose, onSuccess, editId }: Em
         try {
             let res;
             if (isEdit && editId) {
-                res = await DepartmentService.update(editId, data);
+                res = await DepartmentService.update(editId, data as any);
             } else {
-                res = await DepartmentService.create(data);
+                res = await DepartmentService.create(data as any);
             }
 
             if (res.success) {

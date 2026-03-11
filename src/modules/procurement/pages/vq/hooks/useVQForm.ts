@@ -14,9 +14,8 @@ import { useCallback } from 'react';
 import type { FieldErrors } from 'react-hook-form';
 
 
-/** Type for RFQ with incidental vendor info often passed in VQ creation flow */
 export interface ExtendedRFQHeader extends RFQHeader {
-    vendor_id?: string;
+    vendor_id?: number;
     vendor_name?: string | null;
     isMulticurrency?: boolean;
 }
@@ -38,7 +37,7 @@ export const useVQForm = (
   onClose: () => void, 
   initialRFQ?: ExtendedRFQHeader | null, 
   onSuccess?: () => void,
-  vqId?: string | null,
+  vqId?: number | null,
   isViewMode?: boolean
 ) => {
   const { toast } = useToast();
@@ -51,20 +50,21 @@ export const useVQForm = (
     defaultValues: {
       quotation_no: '',
       quotation_date: new Date().toISOString().split('T')[0],
-      vendor_id: '',
+      vendor_id: 0,   // Numeric ID
       currency: 'THB',
       isMulticurrency: false,
       exchange_rate_date: '',
       target_currency: '',
       exchange_rate: 1,
       lines: [createEmptyLine(), createEmptyLine(), createEmptyLine(), createEmptyLine(), createEmptyLine()],
-      payment_term_days: 30,
-      lead_time_days: 7,
+      payment_term_days: 0,
+      lead_time_days: 0,
       remark: '',
       discount_raw: '',
-      tax_code_id: '',
+      tax_code_id: 0, // Numeric ID
+      rfq_id: 0,      // Numeric ID
       rfq_no: '',
-      qc_id: '',
+      qc_id: 0,       // Numeric ID
     }
   });
 
@@ -106,7 +106,20 @@ export const useVQForm = (
         setIsDataLoading(true);
         // --- VIEW / EDIT MODE: Fetch Existing VQ ---
         VQService.getById(vqId).then(async (data: VQListItem) => {
-            setVqStatus(data.status);
+            // @Agent_Data_Mapper: Add safety net mapping for legacy fields
+            const mappedData: VQListItem = {
+                ...data,
+                quotation_id: data.vq_header_id,
+                quotation_no: data.vq_no,
+                total_amount: Number(data.base_total_amount) || 0,
+                currency: data.base_currency_code,
+                isMulticurrency: Boolean(data.base_currency_code && data.base_currency_code !== 'THB'),
+                valid_until: data.quotation_expiry_date,
+                remark: data.remarks,
+                qc_id: data.qc_id // maintain what's there
+            };
+
+            setVqStatus(mappedData.status);
 
             // SPECIAL CASE: If PENDING, we must pull LATEST lines from the referenced RFQ
             let linesToMap: QuotationLine[] = data.lines || [];
@@ -132,26 +145,27 @@ export const useVQForm = (
             }
 
             reset({
-                quotation_no: data.quotation_no,
-                quotation_date: data.quotation_date?.split('T')[0],
-                vendor_id: data.vendor_id,
-                vendor_name: data.vendor_name,
-                contact_person: data.contact_person,
-                contact_email: data.contact_email,
-                contact_phone: data.contact_phone,
-                currency: data.currency,
-                isMulticurrency: data.isMulticurrency || false,
-                exchange_rate_date: data.exchange_rate_date,
-                target_currency: data.target_currency,
-                exchange_rate: data.exchange_rate,
-                payment_term_days: data.payment_term_days || 0,
-                lead_time_days: data.lead_time_days || 0,
-                valid_until: data.valid_until?.split('T')[0],
-                qc_id: data.qc_id,
-                rfq_no: data.rfq_no,
-                remark: data.remarks,
-                discount_raw: data.discount_raw || '',
-                tax_code_id: data.tax_code_id ? String(data.tax_code_id) : '',
+                quotation_no: mappedData.quotation_no || '',
+                quotation_date: mappedData.quotation_date?.split('T')[0] || new Date().toISOString().split('T')[0],
+                vendor_id: Number(mappedData.vendor_id || 0),
+                vendor_name: mappedData.vendor_name,
+                contact_person: mappedData.contact_person,
+                contact_email: mappedData.contact_email,
+                contact_phone: mappedData.contact_phone,
+                currency: mappedData.currency || 'THB',
+                isMulticurrency: mappedData.isMulticurrency || false,
+                exchange_rate_date: mappedData.exchange_rate_date,
+                target_currency: mappedData.target_currency,
+                exchange_rate: Number(mappedData.exchange_rate) || 1,
+                payment_term_days: mappedData.payment_term_days || 0,
+                lead_time_days: mappedData.lead_time_days || 0,
+                valid_until: mappedData.valid_until?.split('T')[0] || '', // Match schema: string
+                qc_id: Number(mappedData.qc_id || 0),
+                rfq_id: Number(mappedData.rfq_id || 0),
+                rfq_no: mappedData.rfq_no || '',
+                remark: mappedData.remarks,
+                discount_raw: mappedData.discount_raw || '',
+                tax_code_id: Number(mappedData.tax_code_id || 0),
                 lines: linesToMap.map((l: QuotationLine) => ({
                     item_code: l.item_code || '',
                     item_name: l.item_name || '',
@@ -194,16 +208,17 @@ export const useVQForm = (
         reset({
           quotation_no: `VQ-${new Date().getFullYear()}-xxx (Auto)`,
           quotation_date: new Date().toISOString().split('T')[0],
-          vendor_id: initialRFQ.vendor_id || '', 
+          vendor_id: Number(initialRFQ.vendor_id) || 0, 
           currency: initialRFQ.rfq_base_currency_code || 'THB',
           isMulticurrency: initialRFQ.isMulticurrency || false,
           exchange_rate_date: initialRFQ.rfq_exchange_rate_date || '',
           target_currency: initialRFQ.rfq_quote_currency_code || '',
           exchange_rate: initialRFQ.rfq_exchange_rate || 1,
           lines: mappedLines,
-          payment_term_days: 30,
-          lead_time_days: 7,
-          qc_id: '', 
+          payment_term_days: 0,
+          lead_time_days: 0,
+          qc_id: 0, 
+          rfq_id: Number(initialRFQ.rfq_id) || 0,
           rfq_no: initialRFQ.rfq_no || '',
           remark: '',
           valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // Default +30 days
@@ -213,16 +228,18 @@ export const useVQForm = (
         reset({
           quotation_no: '',
           quotation_date: new Date().toISOString().split('T')[0],
-          vendor_id: '',
           currency: 'THB',
           isMulticurrency: false,
           exchange_rate_date: '',
           target_currency: '',
           exchange_rate: 1,
           lines: [createEmptyLine(), createEmptyLine(), createEmptyLine(), createEmptyLine(), createEmptyLine()],
-          payment_term_days: 30,
-          lead_time_days: 7,
+          payment_term_days: 0,
+          lead_time_days: 0,
           remark: '',
+          tax_code_id: 0,
+          vendor_id: 0,
+          rfq_id: 0,
           valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
         });
       }
@@ -282,10 +299,14 @@ export const useVQForm = (
     try {
       if (!data.vendor_id) return;
       
-      // Map form data to VQ format, forcing RECORDED status
+      // 🎯 STRICT TYPE CASTING: IDs are already numbers thanks to Zod coercion
       const payload: VQCreateData = {
           ...data,
-          total_amount: totals.grandTotal,
+          base_total_amount: totals.grandTotal,
+          total_amount: totals.grandTotal, // backward compatibility
+          base_currency_code: data.currency || 'THB',
+          quotation_expiry_date: data.valid_until,
+          remarks: data.remark,
           status: 'RECORDED',
           lines: data.lines
             .filter(l => l.item_code)
@@ -381,9 +402,9 @@ export const useVQForm = (
 
       reset({
         ...getValues(),
-        qc_id: '', // Reset comparison ID as we are linking to a new RFQ source
+        qc_id: 0, // Reset comparison ID
         rfq_no: fullRFQ.rfq_no,
-        vendor_id: primaryVendor?.vendor_id || '',
+        vendor_id: Number(primaryVendor?.vendor_id || 0),
         vendor_name: primaryVendor?.vendor_name || '',
         currency: fullRFQ.rfq_base_currency_code || 'THB',
         isMulticurrency: Boolean(fullRFQ.rfq_base_currency_code && fullRFQ.rfq_base_currency_code !== 'THB'),
@@ -413,7 +434,7 @@ export const useVQForm = (
     });
 
     if (isConfirmed) {
-        setValue('qc_id', '');
+        setValue('qc_id', 0);
         setValue('rfq_no', '');
         setValue('lines', [createEmptyLine(), createEmptyLine(), createEmptyLine(), createEmptyLine(), createEmptyLine()]);
     }

@@ -5,14 +5,14 @@ import { PAYMENT_TERMS } from '@/modules/master-data/vendor/constants/vendorCons
 import type { VendorFormData } from '@/modules/master-data/vendor/types/vendor-types';
 
 interface VendorPaymentConditionsProps {
-    formData: VendorFormData;
+    formData: Partial<VendorFormData>;
     onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void;
     onCreditLimitChange: (value: number) => void;
     errors: { [key: string]: string };
 }
 
 export const VendorPaymentConditions: React.FC<VendorPaymentConditionsProps> = ({
-    formData,
+    formData = {},
     onChange,
     onCreditLimitChange,
     errors
@@ -46,7 +46,7 @@ export const VendorPaymentConditions: React.FC<VendorPaymentConditionsProps> = (
                         type="text"
                         inputMode="numeric"
                         name="creditLimit" 
-                        value={formData.creditLimit || ''} 
+                        value={formData.creditLimit ?? ''} 
                         onChange={(e) => {
                             const val = e.target.value;
                             // Allow strictly only digits

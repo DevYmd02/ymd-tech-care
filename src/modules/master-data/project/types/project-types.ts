@@ -8,7 +8,8 @@
 // ====================================================================================
 
 export interface CostCenter {
-    cost_center_id: string;
+    id: number;
+    cost_center_id: number;
     cost_center_code: string;
     cost_center_name: string;
     description?: string;
@@ -24,11 +25,12 @@ export interface CostCenter {
 export type ProjectStatus = 'ACTIVE' | 'COMPLETED' | 'ON_HOLD' | 'CANCELLED';
 
 export interface Project {
-    project_id: string;
+    id: number;
+    project_id: number;
     project_code: string;
     project_name: string;
     description?: string;
-    cost_center_id: string;
+    cost_center_id: number;
     budget_amount: number;
     start_date: string;
     end_date: string;
