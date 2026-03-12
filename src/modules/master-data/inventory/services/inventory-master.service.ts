@@ -28,6 +28,7 @@ import type { DesignFormValues } from '../hooks/useDesignForm';
 import type { GradeFormValues } from '../hooks/useGradeForm';
 import type { ModelFormValues } from '../hooks/useModelForm';
 import type { SizeFormValues } from '../hooks/useSizeForm';
+import type { ColorFormValues } from '../hooks/useColorForm';
 import {
     MOCK_ITEM_GROUPS, MOCK_BRANDS, MOCK_PATTERNS, MOCK_DESIGNS, MOCK_GRADES,
     MOCK_MODELS, MOCK_SIZES, MOCK_COLORS, MOCK_LOCATIONS, MOCK_SHELVES, MOCK_LOT_NUMBERS
@@ -196,7 +197,7 @@ type DesignService = ReturnType<typeof createInventoryService<Design, DesignForm
 type GradeService = ReturnType<typeof createInventoryService<Grade, GradeFormValues>>;
 type ModelService = ReturnType<typeof createInventoryService<Model>>;
 type SizeService = ReturnType<typeof createInventoryService<Size, SizeFormValues>>;
-type ColorService = ReturnType<typeof createInventoryService<Color>>;
+type ColorService = ReturnType<typeof createInventoryService<Color, ColorFormValues>>;
 type LocationService = ReturnType<typeof createInventoryService<Location>>;
 type ShelfService = ReturnType<typeof createInventoryService<Shelf>>;
 type LotNoService = ReturnType<typeof createInventoryService<LotNo>>;
@@ -450,9 +451,9 @@ export const SizeService = createInventoryService<Size, SizeFormValues>({
 });
 
 // Color Service (with hex_code support)
-export const ColorService = createInventoryService<Color, any>({
+export const ColorService = createInventoryService<Color, ColorFormValues>({
     entityName: 'Color',
-    apiPath: '/colors',
+    apiPath: '/item-color',
     idField: 'color_id',
     mockData: MOCK_COLORS,
     mapToEntity: (data, id, now) => ({
@@ -464,7 +465,22 @@ export const ColorService = createInventoryService<Color, any>({
         is_active: data.isActive,
         created_at: now,
         updated_at: now,
-        hex_code: data.hexCode
+    }),
+    mapFromApi: (item: any): Color => ({
+        id: item.item_color_id,
+        color_id: item.item_color_id,
+        code: item.item_color_code,
+        name_th: item.item_color_name,
+        name_en: item.item_color_nameeng || '',
+        is_active: item.is_active,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+    }),
+    mapToApi: (data: ColorFormValues) => ({
+        item_color_code: data.code?.trim(),
+        item_color_name: data.nameTh?.trim(),
+        item_color_nameeng: data.nameEn?.trim() || '',
+        is_active: data.isActive,
     }),
 });
 
