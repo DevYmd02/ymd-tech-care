@@ -27,6 +27,7 @@ import type { PatternFormValues } from '../hooks/usePatternForm';
 import type { DesignFormValues } from '../hooks/useDesignForm';
 import type { GradeFormValues } from '../hooks/useGradeForm';
 import type { ModelFormValues } from '../hooks/useModelForm';
+import type { SizeFormValues } from '../hooks/useSizeForm';
 import {
     MOCK_ITEM_GROUPS, MOCK_BRANDS, MOCK_PATTERNS, MOCK_DESIGNS, MOCK_GRADES,
     MOCK_MODELS, MOCK_SIZES, MOCK_COLORS, MOCK_LOCATIONS, MOCK_SHELVES, MOCK_LOT_NUMBERS
@@ -194,7 +195,7 @@ type PatternService = ReturnType<typeof createInventoryService<Pattern>>;
 type DesignService = ReturnType<typeof createInventoryService<Design, DesignFormValues>>;
 type GradeService = ReturnType<typeof createInventoryService<Grade, GradeFormValues>>;
 type ModelService = ReturnType<typeof createInventoryService<Model>>;
-type SizeService = ReturnType<typeof createInventoryService<Size>>;
+type SizeService = ReturnType<typeof createInventoryService<Size, SizeFormValues>>;
 type ColorService = ReturnType<typeof createInventoryService<Color>>;
 type LocationService = ReturnType<typeof createInventoryService<Location>>;
 type ShelfService = ReturnType<typeof createInventoryService<Shelf>>;
@@ -415,9 +416,9 @@ export const ModelService = createInventoryService<Model, ModelFormValues>({
 });
 
 // Size Service
-export const SizeService = createInventoryService<Size, any>({
+export const SizeService = createInventoryService<Size, SizeFormValues>({
     entityName: 'Size',
-    apiPath: '/sizes',
+    apiPath: '/item-size',
     idField: 'size_id',
     mockData: MOCK_SIZES,
     mapToEntity: (data, id, now) => ({
@@ -429,6 +430,22 @@ export const SizeService = createInventoryService<Size, any>({
         is_active: data.isActive,
         created_at: now,
         updated_at: now,
+    }),
+    mapFromApi: (item: any): Size => ({
+        id: item.item_size_id,
+        size_id: item.item_size_id,
+        code: item.item_size_code,
+        name_th: item.item_size_name,
+        name_en: item.item_size_nameeng || '',
+        is_active: item.is_active,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+    }),
+    mapToApi: (data: SizeFormValues) => ({
+        item_size_code: data.code?.trim(),
+        item_size_name: data.nameTh?.trim(),
+        item_size_nameeng: data.nameEn?.trim() || '',
+        is_active: data.isActive,
     }),
 });
 
