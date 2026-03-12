@@ -25,6 +25,7 @@ import type { ItemGroupFormValues } from '../hooks/useItemGroupForm';
 import type { BrandFormValues } from '../hooks/useBrandForm';
 import type { PatternFormValues } from '../hooks/usePatternForm';
 import type { DesignFormValues } from '../hooks/useDesignForm';
+import type { GradeFormValues } from '../hooks/useGradeForm';
 import {
     MOCK_ITEM_GROUPS, MOCK_BRANDS, MOCK_PATTERNS, MOCK_DESIGNS, MOCK_GRADES,
     MOCK_MODELS, MOCK_SIZES, MOCK_COLORS, MOCK_LOCATIONS, MOCK_SHELVES, MOCK_LOT_NUMBERS
@@ -190,7 +191,7 @@ type ItemGroupService = ReturnType<typeof createInventoryService<ItemGroup, Item
 type BrandService = ReturnType<typeof createInventoryService<Brand>>;
 type PatternService = ReturnType<typeof createInventoryService<Pattern>>;
 type DesignService = ReturnType<typeof createInventoryService<Design, DesignFormValues>>;
-type GradeService = ReturnType<typeof createInventoryService<Grade>>;
+type GradeService = ReturnType<typeof createInventoryService<Grade, GradeFormValues>>;
 type ModelService = ReturnType<typeof createInventoryService<Model>>;
 type SizeService = ReturnType<typeof createInventoryService<Size>>;
 type ColorService = ReturnType<typeof createInventoryService<Color>>;
@@ -345,9 +346,9 @@ export const DesignService = createInventoryService<Design, DesignFormValues>({
 });
 
 // Grade Service
-export const GradeService = createInventoryService<Grade, any>({
+export const GradeService = createInventoryService<Grade, GradeFormValues>({
     entityName: 'Grade',
-    apiPath: '/grades',
+    apiPath: '/item-grade',
     idField: 'grade_id',
     mockData: MOCK_GRADES,
     mapToEntity: (data, id, now) => ({
@@ -359,6 +360,22 @@ export const GradeService = createInventoryService<Grade, any>({
         is_active: data.isActive,
         created_at: now,
         updated_at: now,
+    }),
+    mapFromApi: (item: any): Grade => ({
+        id: item.item_grade_id,
+        grade_id: item.item_grade_id,
+        code: item.item_grade_code,
+        name_th: item.item_grade_name,
+        name_en: item.item_grade_nameeng || '',
+        is_active: item.is_active,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+    }),
+    mapToApi: (data: GradeFormValues) => ({
+        item_grade_code: data.code?.trim(),
+        item_grade_name: data.nameTh?.trim(),
+        item_grade_nameeng: data.nameEn?.trim() || '',
+        is_active: data.isActive,
     }),
 });
 
