@@ -52,7 +52,7 @@ export const POLineSchema = z.object({
     uom_id:          z.coerce.number(),
     unit_price:      z.number().nonnegative('ราคาต่อหน่วยต้องไม่ติดลบ'),
     discount_amount: z.number().nonnegative().default(0),
-    tax_code:        z.string().optional(),
+    tax_code_id:     z.coerce.number().optional(),
     line_total:      z.number().nonnegative(),
     receipt_type:    z.enum(['GOODS', 'SERVICE']).default('GOODS'),
 });
@@ -120,6 +120,7 @@ export const CreatePOSchema = z.object({
     // Vendor (Pro-Tip #2) — must be the winner vendor from QC
     vendor_id:     z.coerce.number(),           // Required — prevents vendor leak
     vendor_name:   z.string().optional(),
+    branch_id:     z.coerce.number().optional(),
 
     order_date:    z.string().min(1, 'วันที่สั่งซื้อจำเป็นต้องระบุ'),    // ISO date
     delivery_date: z.string().optional(),
@@ -128,6 +129,7 @@ export const CreatePOSchema = z.object({
     currency_code: z.string().default('THB'),
     exchange_rate: z.number().positive().default(1),
 
+    tax_code_id:   z.coerce.number().optional(),
     total_amount:  z.number().positive('ยอดรวมต้องมากกว่า 0'),
 
     items:         z.array(POLineSchema).min(1, 'ต้องมีรายการสินค้าอย่างน้อย 1 รายการ'),
@@ -166,6 +168,7 @@ export const POFormSchema = z.object({
     vendor_name:            z.string().optional(),
     branch_id:              z.coerce.number().optional(),
     ship_to_warehouse_id:   z.coerce.number().optional(),
+    tax_code_id:            z.coerce.number().optional(),
 
     // ── Row 3 ─ Multicurrency ────────────────────────────────────────────────
     is_multicurrency:   z.boolean().default(false),

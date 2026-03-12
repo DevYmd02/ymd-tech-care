@@ -5,14 +5,14 @@ import { WindowFormLayout } from '@ui';
 import { MasterDataService } from '@/modules/master-data';
 import type { UnitListItem } from '@/modules/master-data/types/master-data-types';
 import { VendorSearchModal } from '@/modules/master-data/vendor/components/selector/VendorSearchModal';
-import { ProductSearchModal } from '@/modules/master-data/inventory/components/ProductSearchModal';
+import { ProductSearchModal, type Product } from '@/modules/master-data/inventory/components/ProductSearchModal';
 import { useVQForm } from '../hooks/useVQForm';
 import { RFQSelectorModal } from './RFQSelectorModal';
 import { SharedRemarksTab } from '@/shared/components/forms/SharedRemarksTab';
-import type { ProductLookup } from '@/modules/master-data/inventory/mocks/products';
 import { VQFormHeader } from './VQFormHeader';
 import { VQFormLines } from './VQFormLines';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
+import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal';
 import type { RFQHeader } from '@/modules/procurement/types';
 
 interface Props {
@@ -29,23 +29,20 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
   // -- Custom Hook --
   const { 
     formMethods, totals, handleSave, updateLineCalculation, 
-    handleSelectRFQ, handleClearRFQ,
+    handleSelectRFQ, handleClearRFQ, handleClearVendor,
     createEmptyLine,
     purchaseTaxOptions,
     currencyOptions,
     isMasterLoading,
     vqStatus,
     isDataLoading
-  } = useVQForm(isOpen, onClose, initialRFQ, onSuccess, vqId, isViewMode);
+  } = useVQForm(isOpen, onClose, initialRFQ, onSuccess, vqId);
 
   const {
     register,
     setValue,
     watch,
   } = formMethods;
-
-
-
 
   const watchCurrency = watch('currency');
   const watchExchangeRate = watch('exchange_rate');
@@ -61,6 +58,7 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
   const [isRFQModalOpen, setIsRFQModalOpen] = useState(false);
   const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState('detail');
+  const [showConfirm, setShowConfirm] = useState(false);
 
   // -- Effects --
   useEffect(() => {
@@ -69,37 +67,39 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
     }
   }, [isOpen]);
 
-  // REMOVED: Loop Terminator - This effect was causing infinite re-renders because 
-  // updateLineCalculation calls setValue, which triggers this effect again.
-  // Calculations are now handled by explicit onChange events in the inputs.
-
   // -- Handlers --
+  const handleConfirmSave = () => {
+    setShowConfirm(false); // Close immediately (Pro-Tip)
+    handleSave();
+  };
   const openProductSearch = (index: number) => {
     setActiveRowIndex(index);
     setIsProductModalOpen(true);
   };
 
-  const selectProduct = (product: ProductLookup) => {
+  const selectProduct = (product: Product) => {
     if (activeRowIndex !== null) {
-      setValue(`vq_lines.${activeRowIndex}.item_code`, product.item_code);
-      setValue(`vq_lines.${activeRowIndex}.item_name`, product.item_name);
-      setValue(`vq_lines.${activeRowIndex}.uom_name`, product.unit);
-      setValue(`vq_lines.${activeRowIndex}.unit_price`, product.unit_price);
-      setValue(`vq_lines.${activeRowIndex}.qty`, 1);
+      console.log(`🎯 [VQFormModal] Selecting product for index ${activeRowIndex}:`, product);
       
+      const index = activeRowIndex;
+      setValue(`vq_lines.${index}.item_id`, Number(product.item_id));
+      setValue(`vq_lines.${index}.item_code`, String(product.item_code || ''));
+      setValue(`vq_lines.${index}.item_name`, String(product.item_name || ''));
+      setValue(`vq_lines.${index}.uom_id`, Number(product.uom_id || 0));
+      setValue(`vq_lines.${index}.uom_name`, String(product.uom_name || product.unit_name || ''));
+      setValue(`vq_lines.${index}.unit_price`, Number(product.standard_cost) || 0);
+      setValue(`vq_lines.${index}.qty`, 1);
+      
+      // Trigger calculation
+      updateLineCalculation(index);
+
       setIsProductModalOpen(false);
+      setActiveRowIndex(null); // Clear active index
+    } else {
+      console.warn('⚠️ [VQFormModal] selectProduct called but activeRowIndex is null');
     }
   };
 
-    const handleClearVendor = () => {
-    // Cascading wipe of vendor auto-filled data
-    setValue('vendor_id', 0);
-    setValue('vendor_name', '');
-    setValue('contact_person', '');
-    setValue('contact_phone', '');
-    setValue('contact_email', '');
-    setValue('payment_terms', '');
-  };
 
   // -- Rendering Helpers --
 
@@ -151,7 +151,15 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
                   {forceViewMode ? 'ปิด' : 'ยกเลิก'}
               </button>
               {!forceViewMode && (
-                  <button type="button" onClick={handleSave} className="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md text-sm font-medium shadow-sm transition-colors">
+                  <button 
+                      type="button" 
+                      onClick={() => {
+                        console.log('💾 Triggering Confirmation for VQ...');
+                        setShowConfirm(true);
+                      }}
+                      disabled={isDataLoading}
+                      className={`px-6 py-2 rounded-md text-sm font-medium shadow-sm transition-colors ${isDataLoading ? 'bg-gray-400 text-gray-200 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                  >
                       บันทึก
                   </button>
               )}
@@ -176,13 +184,13 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
             isOpen={isVendorModalOpen}
             onClose={() => setIsVendorModalOpen(false)}
             onSelect={(vendor) => {
-                setValue('vendor_id', Number(vendor.vendor_id));
-                setValue('vendor_code', vendor.vendor_code || '');
-                setValue('vendor_name', vendor.name);
+                setValue('vendor_id', Number(vendor.vendor_id), { shouldValidate: true });
+                setValue('vendor_code', vendor.vendor_code || '', { shouldValidate: true });
+                setValue('vendor_name', vendor.name, { shouldValidate: true });
                 // contact_person omitted as it's not in VendorSearchItem
-                setValue('contact_phone', vendor.phone || '');
-                setValue('contact_email', vendor.email || '');
-                setValue('payment_terms', vendor.payment_term_days ? `${vendor.payment_term_days} วัน` : '');
+                setValue('contact_phone', vendor.phone || '', { shouldValidate: true });
+                setValue('contact_email', vendor.email || '', { shouldValidate: true });
+                setValue('payment_terms', vendor.payment_term_days ? `${vendor.payment_term_days} วัน` : '', { shouldValidate: true });
                 setIsVendorModalOpen(false);
             }}
         />
@@ -203,9 +211,9 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
                 currencyOptions={currencyOptions}
                 watchVendorCode={watchVendorCode || ''}
                 watchVendorName={watchVendorName || ''}
-                watchVendorId={watchVendorId}
+                watchVendorId={watchVendorId || 0}
                 watchRfqNo={watchRfqNo || ''}
-                watchCurrency={watchCurrency}
+                watchCurrency={watchCurrency || 'THB'}
                 watchExchangeRate={watchExchangeRate || 1}
                 onOpenVendorModal={() => !forceViewMode && setIsVendorModalOpen(true)}
                 onClearVendor={handleClearVendor}
@@ -238,6 +246,17 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
       </div>
             </>
         )}
+
+        <ConfirmationModal 
+            isOpen={showConfirm}
+            onClose={() => setShowConfirm(false)}
+            onConfirm={handleConfirmSave}
+            title="ยืนยันการบันทึก"
+            description="คุณต้องการบันทึกข้อมูลใบเสนอราคานี้ใช่หรือไม่?"
+            confirmText="บันทึก"
+            cancelText="ยกเลิก"
+            variant="info"
+        />
       </WindowFormLayout>
     </FormProvider>
   );

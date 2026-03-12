@@ -13,7 +13,8 @@ export const CurrencyService = {
     // Currency Codes
     getCurrencies: async (): Promise<BaseResponse<Currency>> => {
         try {
-            const res = await api.get<{ data?: Currency[] } | Currency[]>('/currency');
+            // 📡 @Agent_Network_Optimizer: Increased timeout for master data resiliency
+            const res = await api.get<{ data?: Currency[] } | Currency[]>('/currency', { timeout: 30000 });
             const resData = res;
             const items = Array.isArray(resData) ? resData : (resData?.data || []);
             return { items, total: items.length, page: 1, limit: items.length || 20 };

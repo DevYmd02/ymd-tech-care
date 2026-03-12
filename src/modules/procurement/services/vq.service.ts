@@ -87,9 +87,9 @@ export const VQService = {
   },
 
   // TODO: Check if backend requires a specific endpoint like POST /api/qt/{id}/close-bidding instead of a generic PATCH update, as closing bids often triggers vendor notifications.
-  update: async (id: number, data: Partial<VQListItem>): Promise<SuccessResponse> => {
+  update: async (id: number, data: VQCreateData): Promise<SuccessResponse> => {
     logger.info(`[VQService] Updating VQ ${id}`, data);
-    return await api.patch<SuccessResponse>(`${ENDPOINTS.update}/${id}`, data);
+    return await api.patch<SuccessResponse>(`${ENDPOINTS.update}/${id}`, data as Partial<VQListItem>);
   },
 
   submit: async (id: number): Promise<SuccessResponse> => {

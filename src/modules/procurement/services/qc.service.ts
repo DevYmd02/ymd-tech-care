@@ -1,6 +1,6 @@
 import api from '@/core/api/api';
 import { USE_MOCK } from '@/core/api/api';
-import type { QCListParams, QCListResponse, QCCreateData, SubmitQCWinnerData } from '@/modules/procurement/schemas/qc-schemas';
+import type { QCListParams, QCListResponse, CreateQCPayload, SubmitQCWinnerData } from '@/modules/procurement/schemas/qc-schemas';
 import type { QCListItem } from '@/modules/procurement/schemas/qc-schemas';
 import { logger } from '@/shared/utils/logger';
 import type { SuccessResponse } from '@/shared/types/api-response.types';
@@ -56,8 +56,8 @@ export const QCService = {
     return await api.get<QCListResponse>('/qc/ready-for-po');
   },
 
-  create: async (data: QCCreateData): Promise<{ qc_id: number }> => {
-    logger.info('[QCService] Creating QC');
+  create: async (data: CreateQCPayload): Promise<{ qc_id: number }> => {
+    logger.info('[QCService] Creating QC with 5-field payload', data);
     return await api.post<{ qc_id: number }>(ENDPOINTS.create, data);
   },
 
@@ -77,5 +77,5 @@ export const QCService = {
   },
 };
 
-export type { QCListParams, QCListResponse, QCCreateData };
+export type { QCListParams, QCListResponse, CreateQCPayload as QCCreateData };
 

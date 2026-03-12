@@ -31,7 +31,7 @@ export const VQFormLines: React.FC<VQFormLinesProps> = ({
     purchaseTaxOptions,
     totals
 }) => {
-    const { register, control, setValue, formState: { errors } } = useFormContext<QuotationFormData>();
+    const { register, control, formState: { errors } } = useFormContext<QuotationFormData>();
     
     // @Agent_Payload_Interceptor - Mapping form array
     const { fields, append, remove, insert } = useFieldArray({
@@ -82,171 +82,229 @@ export const VQFormLines: React.FC<VQFormLinesProps> = ({
                                 </tr>
                             </thead>
                             <tbody>
-                                {fields.map((field: FieldArrayWithId<QuotationFormData, "vq_lines", "id">, index: number) => {
-                                    const isNoQuote = watchVqLines[index]?.no_quote;
-                                    return (
-                                        <tr key={field.id} className={`border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors group ${isNoQuote ? 'bg-amber-50 dark:bg-amber-950/10' : ''}`}>
-                                            <td className="px-3 py-2 text-center text-xs text-gray-700 dark:text-gray-300 border-r border-b border-gray-200 dark:border-gray-700">{index + 1}</td>
-                                            
-                                            {/* Item Code */}
-                                            <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">
-                                                {isLineReadonly ? (
-                                                    <div className="relative">
-                                                        <input {...register(`vq_lines.${index}.item_code`)} className="w-full h-8 px-3 text-sm bg-gray-100/70 dark:bg-gray-800/70 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded text-center cursor-not-allowed font-medium disabled:opacity-70 disabled:cursor-not-allowed" readOnly />
-                                                        <div className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500">
-                                                            <Search size={14} />
-                                                        </div>
-                                                    </div>
-                                                ) : (
+                                {fields.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={forceViewMode ? 9 : 10} className="px-6 py-16 text-center text-gray-500 dark:text-gray-400 bg-gray-50/30 dark:bg-gray-800/10">
+                                            <div className="flex flex-col items-center justify-center gap-3">
+                                                <div className="w-14 h-14 bg-indigo-50 dark:bg-indigo-900/20 rounded-full flex items-center justify-center text-indigo-500/80 dark:text-indigo-400/80 border border-indigo-100/50 dark:border-indigo-800/30 shadow-sm">
+                                                    <FileText size={28} />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <p className="text-base font-semibold text-gray-700 dark:text-gray-200">กรุณาเลือก RFQ อ้างอิงเพื่อดึงรายการสินค้า</p>
+                                                    <p className="text-sm text-gray-500 dark:text-gray-400">หรือกดปุ่ม "เพิ่มรายการสินค้า (Add Row)" ด้านล่างเพื่อเพิ่มแบบแมนนวล</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    fields.map((field: FieldArrayWithId<QuotationFormData, "vq_lines", "id">, index: number) => {
+                                        const isNoQuote = watchVqLines[index]?.no_quote;
+                                        // 🔓 @Agent_Row_Liberator: Identify manual entries
+                                        const isManualRow = !field.pr_line_id && !field.rfq_line_id;
+                                        const isItemLocked = isLineReadonly && !isManualRow;
+
+                                        return (
+                                            <tr key={field.id} className={`border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors group ${isNoQuote ? 'bg-amber-50 dark:bg-amber-950/10' : ''}`}>
+                                                <td className="px-3 py-2 text-center text-xs text-gray-700 dark:text-gray-300 border-r border-b border-gray-200 dark:border-gray-700">{index + 1}</td>
+                                                
+                                                <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">
                                                     <div className="relative group/search">
-                                                        <input {...register(`vq_lines.${index}.item_code`)} className="w-full h-8 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white transition-all" />
-                                                        <button type="button" onClick={() => onOpenProductSearch(index)} className="absolute right-1 top-1 h-[24px] w-[24px] flex items-center justify-center bg-gray-200 dark:bg-slate-700 group-hover/search:bg-indigo-600 dark:group-hover/search:bg-indigo-600 text-gray-600 group-hover/search:text-white dark:text-white rounded transition-all duration-200">
-                                                            <Search size={14} />
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </td>
-
-                                            {/* Item Description */}
-                                            <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">
-                                                <input {...register(`vq_lines.${index}.item_name`)} className={`w-full h-8 px-3 text-sm ${isLineReadonly ? 'bg-gray-100/70 dark:bg-gray-800/70 text-gray-500 border-gray-200 cursor-not-allowed' : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600'} dark:text-gray-400 border dark:border-gray-700 rounded text-left font-medium disabled:opacity-70 disabled:cursor-not-allowed transition-colors`} readOnly={isLineReadonly} />
-                                            </td>
-                                            
-                                            {/* Qty */}
-                                            <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">
-                                                <input 
-                                                    type="number" step="any"
-                                                    {...register(`vq_lines.${index}.qty`, { 
-                                                        valueAsNumber: true, 
-                                                        onChange: () => updateLineCalculation(index)
-                                                    })} 
-                                                    className={`w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white text-center transition-all disabled:opacity-70 disabled:cursor-not-allowed ${isLineReadonly ? 'bg-gray-100/70 dark:bg-gray-800/70 cursor-not-allowed font-medium' : ''}`} 
-                                                    readOnly={isLineReadonly}
-                                                />
-                                            </td>
-                                            
-                                            {/* Unit */}
-                                            <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">
-                                                {isLineReadonly ? (
-                                                    <input
-                                                        type="text"
-                                                        {...register(`vq_lines.${index}.uom_name`)}
-                                                        className="w-full h-8 px-3 text-sm bg-gray-100/70 dark:bg-gray-800/70 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded text-center cursor-not-allowed font-medium disabled:opacity-70 disabled:cursor-not-allowed"
-                                                        readOnly
-                                                    />
-                                                ) : (
-                                                    <select {...register(`vq_lines.${index}.uom_name`)} className="w-full h-8 px-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white text-center cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed disabled:bg-gray-50">
-                                                        <option value="" hidden>หน่วย</option>
-                                                        {units.map((u: UnitListItem) => (
-                                                            <option key={u.unit_id} value={u.unit_name}>{u.unit_name}</option>
-                                                        ))}
-                                                    </select>
-                                                )}
-                                            </td>
-
-                                            {/* Unit Price */}
-                                            <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">
-                                                <input 
-                                                    type="number" step="any" disabled={isNoQuote || forceViewMode}
-                                                    {...register(`vq_lines.${index}.unit_price`, { 
-                                                        valueAsNumber: true,
-                                                        onChange: () => updateLineCalculation(index)
-                                                    })} 
-                                                    className={`w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white text-right transition-all ${(isNoQuote || forceViewMode) ? 'opacity-70 cursor-not-allowed disabled:bg-gray-50 font-medium' : ''}`} 
-                                                    placeholder="0.00"
-                                                />
-                                                {watchVqLines[index]?.reference_price ? (Number(watchVqLines[index]?.reference_price) || 0) > 0 && (
-                                                    <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 text-right flex flex-col leading-tight">
-                                                        <span className="font-medium">Ref: {(Number(watchVqLines[index]?.reference_price) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                                                        <span className="opacity-70">(Budget)</span>
-                                                    </div>
-                                                ) : null}
-                                            </td>
-
-                                            {/* Discount Raw (Amount or %) */}
-                                            <td className="px-4 py-3 text-right border-r border-gray-200 dark:border-gray-700">
-                                                <input 
-                                                    type="text" disabled={isNoQuote || forceViewMode}
-                                                    {...register(`vq_lines.${index}.discount_expression`, { 
-                                                        onChange: () => updateLineCalculation(index)
-                                                    })} 
-                                                    className={`w-full h-8 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white text-right transition-all ${(isNoQuote || forceViewMode) ? 'opacity-70 cursor-not-allowed disabled:bg-gray-50 font-medium' : ''}`} 
-                                                    placeholder="0 or 5%"
-                                                />
-                                                {(Number(watchVqLines[index]?.discount_amount) || 0) > 0 && (
-                                                    <span className="text-[10px] text-rose-500 text-right pr-1 italic">
-                                                        -{(Number(watchVqLines[index]?.discount_amount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                                    </span>
-                                                )}
-                                            </td>
-                                            
-                                            {/* Net Amount - @Agent_Fallback_Renderer applied safely */}
-                                            <td className="p-3 text-right pr-6 border-r border-gray-200 dark:border-gray-700">
-                                                <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400 tracking-tight">
-                                                {(Number(watchedLines?.[index]?.net_amount) || 0).toLocaleString(undefined, {minimumFractionDigits: 2})} 
-                                                </span>
-                                            </td>
-                                            
-                                            {/* No Quote Toggle */}
-                                            <td className="px-4 py-3 text-center border-r border-gray-200 dark:border-gray-700">
-                                                <input
-                                                    type="checkbox"
-                                                    {...register(`vq_lines.${index}.no_quote`)} 
-                                                    className={`w-4 h-4 text-amber-500 border-gray-300 rounded focus:ring-amber-500 dark:border-slate-600 dark:bg-slate-700 ${forceViewMode ? 'opacity-70 cursor-not-allowed' : ''}`}
-                                                    disabled={forceViewMode}
-                                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                                                        const val = e.target.checked;
-                                                        setValue(`vq_lines.${index}.no_quote`, val);
-                                                        updateLineCalculation(index);
-                                                    }}
-                                                />
-                                            </td>
-
-                                            {/* Actions */}
-                                            {!isLineReadonly && (
-                                                <td className="px-4 py-3 text-center border-r border-gray-200 dark:border-gray-700">
-                                                    <div className="flex items-center justify-center gap-2">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => insert(index + 1, createEmptyLine())}
-                                                            className="p-1.5 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded transition-colors"
-                                                            title="เพิ่มบรรทัดใหม่"
-                                                        >
-                                                            <Plus size={16} />
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => remove(index)}
-                                                            className="p-1.5 text-gray-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded transition-colors"
-                                                            title="ลบบรรทัด"
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
+                                                        <Controller
+                                                            name={`vq_lines.${index}.item_code`}
+                                                            control={control}
+                                                            render={({ field: controllerField }) => (
+                                                                <input 
+                                                                    {...controllerField}
+                                                                    value={controllerField.value || ''}
+                                                                    className={`w-full h-8 px-3 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white transition-all ${isItemLocked ? 'bg-gray-100/70 dark:bg-gray-800/70 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 cursor-not-allowed font-medium' : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600'}`} 
+                                                                    readOnly={isItemLocked}
+                                                                />
+                                                            )}
+                                                        />
+                                                        <input type="hidden" {...register(`vq_lines.${index}.item_id`, { valueAsNumber: true })} />
+                                                        {!isItemLocked && (
+                                                            <button type="button" onClick={() => onOpenProductSearch(index)} className="absolute right-1 top-1 h-[24px] w-[24px] flex items-center justify-center bg-gray-200 dark:bg-slate-700 group-hover/search:bg-indigo-600 dark:group-hover/search:bg-indigo-600 text-gray-600 group-hover/search:text-white dark:text-white rounded transition-all duration-200">
+                                                                <Search size={14} />
+                                                            </button>
+                                                        )}
+                                                        {isItemLocked && (
+                                                            <div className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500">
+                                                                <Search size={14} />
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </td>
-                                            )}
-                                        </tr>
-                                    );
-                                })}
+                                                
+                                                {/* Item Description */}
+                                                <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">
+                                                    <Controller
+                                                        name={`vq_lines.${index}.item_name`}
+                                                        control={control}
+                                                        render={({ field: controllerField }) => (
+                                                            <input 
+                                                                {...controllerField}
+                                                                value={controllerField.value || ''}
+                                                                className={`w-full h-8 px-3 text-sm ${isItemLocked ? 'bg-gray-100/70 dark:bg-gray-800/70 text-gray-500 border-gray-200 cursor-not-allowed' : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600'} dark:text-gray-400 border dark:border-gray-700 rounded text-left font-medium disabled:opacity-70 disabled:cursor-not-allowed transition-colors`} 
+                                                                readOnly={isItemLocked}
+                                                            />
+                                                        )}
+                                                    />
+                                                </td>
+                                                
+                                                {/* Qty */}
+                                                <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">
+                                                    <input 
+                                                        type="number" step="any"
+                                                        {...register(`vq_lines.${index}.qty`, { 
+                                                            valueAsNumber: true, 
+                                                            onChange: () => updateLineCalculation(index)
+                                                        })} 
+                                                        className={`w-full h-8 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white text-center transition-all disabled:opacity-70 disabled:cursor-not-allowed`} 
+                                                    />
+                                                </td>
+                                                
+                                                {/* Unit */}
+                                                <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">
+                                                    {isItemLocked ? (
+                                                        <>
+                                                            <input type="hidden" {...register(`vq_lines.${index}.uom_id`, { valueAsNumber: true })} />
+                                                            <Controller
+                                                                name={`vq_lines.${index}.uom_id`}
+                                                                control={control}
+                                                                render={({ field: controllerField }) => {
+                                                                    const uomName = units.find(u => u.unit_id === Number(controllerField.value))?.unit_name || controllerField.value || '-';
+                                                                    return (
+                                                                        <input
+                                                                            type="text"
+                                                                            value={uomName}
+                                                                            className="w-full h-8 px-3 text-sm bg-gray-100/70 dark:bg-gray-800/70 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded text-center cursor-not-allowed font-medium"
+                                                                            readOnly
+                                                                        />
+                                                                    );
+                                                                }}
+                                                            />
+                                                        </>
+                                                    ) : (
+                                                        <select 
+                                                            {...register(`vq_lines.${index}.uom_id`, { valueAsNumber: true })} 
+                                                            className="w-full h-8 px-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white text-center cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed disabled:bg-gray-50 transition-all shadow-sm"
+                                                        >
+                                                            <option value={0}>- หน่วย -</option>
+                                                            {units.map((u: UnitListItem) => (
+                                                                <option key={u.unit_id} value={u.unit_id}>{u.unit_name}</option>
+                                                            ))}
+                                                        </select>
+                                                    )}
+                                                </td>
+                                                
+                                                {/* Unit Price */}
+                                                <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">
+                                                    <input 
+                                                        type="number" step="any" disabled={isNoQuote || forceViewMode}
+                                                        {...register(`vq_lines.${index}.unit_price`, { 
+                                                            valueAsNumber: true,
+                                                            onChange: () => updateLineCalculation(index)
+                                                        })} 
+                                                        className={`w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white text-right transition-all ${(isNoQuote || forceViewMode) ? 'opacity-70 cursor-not-allowed disabled:bg-gray-50 font-medium' : ''}`} 
+                                                        placeholder="0.00"
+                                                    />
+                                                    {watchVqLines[index]?.reference_price ? (Number(watchVqLines[index]?.reference_price) || 0) > 0 && (
+                                                        <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 text-right flex flex-col leading-tight">
+                                                            <span className="font-medium">Ref: {(Number(watchVqLines[index]?.reference_price) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                            <span className="opacity-70">(Budget)</span>
+                                                        </div>
+                                                    ) : null}
+                                                </td>
+
+                                                {/* Discount Raw (Amount or %) */}
+                                                <td className="px-4 py-3 text-right border-r border-gray-200 dark:border-gray-700">
+                                                    <input 
+                                                        type="text" disabled={isNoQuote || forceViewMode}
+                                                        {...register(`vq_lines.${index}.discount_expression`, { 
+                                                            onChange: () => updateLineCalculation(index)
+                                                        })} 
+                                                        className={`w-full h-8 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white text-right transition-all ${(isNoQuote || forceViewMode) ? 'opacity-70 cursor-not-allowed disabled:bg-gray-50 font-medium' : ''}`} 
+                                                        placeholder="0 or 5%"
+                                                    />
+                                                    {(Number(watchVqLines[index]?.discount_amount) || 0) > 0 && (
+                                                        <span className="text-[10px] text-rose-500 text-right pr-1 italic">
+                                                            -{(Number(watchVqLines[index]?.discount_amount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                
+                                                {/* Net Amount - @Agent_Fallback_Renderer applied safely */}
+                                                <td className="p-3 text-right pr-6 border-r border-gray-200 dark:border-gray-700">
+                                                    <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400 tracking-tight">
+                                                    {(Number(watchedLines?.[index]?.net_amount) || 0).toLocaleString(undefined, {minimumFractionDigits: 2})} 
+                                                    </span>
+                                                </td>
+                                                
+                                                {/* No Quote Toggle */}
+                                                <td className="px-4 py-3 text-center border-r border-gray-200 dark:border-gray-700">
+                                                    <Controller
+                                                        name={`vq_lines.${index}.no_quote`}
+                                                        control={control}
+                                                        render={({ field }) => (
+                                                            <input
+                                                                type="checkbox"
+                                                                id={`vq_lines_${index}_no_quote`}
+                                                                checked={field.value ?? false} 
+                                                                className={`w-4 h-4 text-amber-500 border-gray-300 rounded focus:ring-amber-500 dark:border-slate-600 dark:bg-slate-700 ${forceViewMode ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                                                disabled={forceViewMode}
+                                                                onChange={(e) => {
+                                                                    field.onChange(e.target.checked);
+                                                                    updateLineCalculation(index);
+                                                                }}
+                                                            />
+                                                        )}
+                                                    />
+                                                </td>
+
+                                                {/* Actions */}
+                                                {!forceViewMode && (
+                                                    <td className="px-4 py-3 text-center border-r border-gray-200 dark:border-gray-700">
+                                                        <div className="flex items-center justify-center gap-2">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => insert(index + 1, createEmptyLine())}
+                                                                className="p-1.5 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded transition-colors"
+                                                                title="เพิ่มบรรทัดใหม่"
+                                                            >
+                                                                <Plus size={16} />
+                                                            </button>
+                                                            {/* 🗑️ @Agent_Trash_Collector: Trash button for all rows in non-view mode */}
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => remove(index)}
+                                                                className="p-1.5 text-gray-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded transition-colors"
+                                                                title="ลบบรรทัด"
+                                                            >
+                                                                <Trash2 size={16} />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                )}
+                                            </tr>
+                                        );
+                                    })
+                                )}
                             </tbody>
                         </table>
                     </div>
 
-                    {/* Add Row Section */}
-                    {!isLineReadonly && (
-                        <div className="bg-slate-100 dark:bg-slate-800/20 border-t border-gray-300 dark:border-slate-800 p-4">
-                            <button
-                                type="button"
-                                onClick={() => append(createEmptyLine())}
-                                className="flex items-center gap-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
-                            >
-                                <div className="bg-indigo-100 dark:bg-indigo-900/40 p-1 rounded">
-                                    <Plus size={16} />
-                                </div>
-                                เพิ่มรายการสินค้า (Add Row)
-                            </button>
-                        </div>
-                    )}
+                    <div className="bg-slate-100 dark:bg-slate-800/20 border-t border-gray-300 dark:border-slate-800 p-4">
+                        <button
+                            type="button"
+                            onClick={() => append(createEmptyLine())}
+                            className="flex items-center gap-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
+                        >
+                            <div className="bg-indigo-100 dark:bg-indigo-900/40 p-1 rounded">
+                                <Plus size={16} />
+                            </div>
+                            เพิ่มรายการสินค้า (Add Row)
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -278,8 +336,8 @@ export const VQFormLines: React.FC<VQFormLinesProps> = ({
                                                 <input 
                                                     type="text" 
                                                     {...field}
-                                                    className="w-16 h-7 px-2 text-xs bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-right focus:ring-1 focus:ring-indigo-500"
-                                                    placeholder="0 or 5%"
+                                                    className="w-16 h-7 px-2 text-xs bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-right focus:ring-1 focus:ring-indigo-500 dark:text-white"
+                                                    placeholder="0"
                                                     disabled={forceViewMode}
                                                 />
                                             )}
@@ -288,7 +346,7 @@ export const VQFormLines: React.FC<VQFormLinesProps> = ({
                                         <input 
                                             value={(Number(discountAmount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} 
                                             readOnly 
-                                            className={`w-28 ${inputReadonlyClass}`} 
+                                            className={`w-28 ${inputReadonlyClass} dark:text-white`} 
                                         />
                                         <span className="text-gray-400 dark:text-gray-500">-</span>
                                         <input 
@@ -306,42 +364,48 @@ export const VQFormLines: React.FC<VQFormLinesProps> = ({
                                         <input 
                                             value={(Number(vatAmount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} 
                                             readOnly 
-                                            className={`w-20 ${inputReadonlyClass}`} 
+                                            className={`w-20 ${inputReadonlyClass} dark:text-white`} 
                                         />
                                         {/* Tax Code Select */}
-                                        <Controller
-                                            name="tax_code_id"
-                                            control={control}
-                                            render={({ field }) => (
-                                                <select
-                                                    {...field}
-                                                    value={field.value ? String(field.value) : ''}
-                                                    disabled={forceViewMode}
-                                                    onChange={(e) => {
-                                                        const val = e.target.value;
-                                                        const selected = purchaseTaxOptions.find(t => String(t.value) === val);
-                                                        field.onChange(selected ? selected.value : val);
-                                                    }}
-                                                    className={`h-7 px-1 text-xs bg-white dark:bg-gray-800 border ${errors.tax_code_id ? 'border-red-500 ring-1 ring-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600'} rounded text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 cursor-pointer min-w-[140px] ${forceViewMode ? 'bg-gray-50 dark:bg-gray-800/50 cursor-not-allowed opacity-70' : ''}`}
-                                                >
-                                                    <option value="">เลือกภาษี</option>
-                                                    {purchaseTaxOptions.map((tax) => (
-                                                        <option key={tax.value} value={tax.value}>
-                                                            {tax.label}
-                                                        </option>
-                                                    ))}
-                                                </select>
+                                        <div className="relative group/tax">
+                                            <Controller
+                                                name="tax_code_id"
+                                                control={control}
+                                                render={({ field }) => (
+                                                    <select
+                                                        {...field}
+                                                        value={field.value ? String(field.value) : ''}
+                                                        disabled={forceViewMode}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value;
+                                                            const selected = purchaseTaxOptions.find(t => String(t.value) === val);
+                                                            field.onChange(selected ? selected.value : val);
+                                                        }}
+                                                        className={`h-7 px-1 text-xs bg-white dark:bg-gray-800 border ${errors.tax_code_id ? 'border-red-500 ring-1 ring-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600'} rounded text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 cursor-pointer min-w-[140px] ${forceViewMode ? 'bg-gray-50 dark:bg-gray-800/50 cursor-not-allowed opacity-70' : ''}`}
+                                                    >
+                                                        <option value="">เลือกภาษี</option>
+                                                        {purchaseTaxOptions.map((tax) => (
+                                                            <option key={tax.value} value={tax.value}>
+                                                                {tax.label}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                )}
+                                            />
+                                            {errors.tax_code_id && (
+                                                <p className="text-red-500 text-[10px] absolute top-full left-0 mt-0.5 font-medium whitespace-nowrap z-10 animate-in fade-in slide-in-from-top-1 duration-200">
+                                                    {errors.tax_code_id?.message}
+                                                </p>
                                             )}
-                                        />
-                                        <span className="text-gray-400 dark:text-gray-500">-</span>
-                                        <input 
-                                            value={(Number(vatAmount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} 
-                                            readOnly 
-                                            className={`w-28 ${inputReadonlyClass} bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-900/50 text-blue-700 dark:text-blue-300 font-medium`} 
-                                        />
-                                    </div>
-                                    {errors.tax_code_id && <p className="text-red-500 text-[10px] absolute -bottom-3.5 left-20 font-medium whitespace-nowrap">{errors.tax_code_id.message}</p>}
-                                </div>
+                                         </div>
+                                         <span className="text-gray-400 dark:text-gray-500">-</span>
+                                         <input 
+                                             value={(Number(vatAmount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} 
+                                             readOnly 
+                                             className={`w-28 ${inputReadonlyClass} bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-900/50 text-blue-700 dark:text-blue-300 font-medium`} 
+                                         />
+                                     </div>
+                                 </div>
 
                                 {/* รวมทั้งสิ้น (Grand Total) */}
                                 <div className="flex justify-between items-center pt-2 border-t border-gray-300 dark:border-gray-600">

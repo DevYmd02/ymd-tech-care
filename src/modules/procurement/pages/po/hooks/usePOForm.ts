@@ -73,6 +73,7 @@ export const usePOForm = ({
             payment_term_days: 30,
             delivery_date: '',
             remarks: '',
+            tax_code_id: undefined,
             lines: [],
         },
     });
@@ -127,7 +128,7 @@ export const usePOForm = ({
                     // CRITICAL: Must use the winning price from VQ, NOT standard general cost
                     unit_price:      l.unit_price || 0,
                     discount_amount: l.discount_amount || 0,
-                    tax_code:        l.tax_code || 'VAT',
+                    tax_code_id:     (l as unknown as { tax_code_id?: number }).tax_code_id || undefined,
                     receipt_type:    'GOODS' as const,
                     line_total:      l.net_amount || 0,
                 }));
@@ -144,7 +145,7 @@ export const usePOForm = ({
                     uom_id:          0,
                     unit_price:      0,
                     discount_amount: 0,
-                    tax_code:        'VAT',
+                    tax_code_id:     undefined,
                     receipt_type:    'GOODS' as const,
                     line_total:      0,
                 }];
@@ -169,6 +170,7 @@ export const usePOForm = ({
                 payment_term_days:    Number(inheritedVQ?.payment_term_days || initialValues?.payment_term_days || 30),
                 delivery_date:        initialValues?.delivery_date ?? '',
                 remarks:              initialValues?.remarks ?? '',
+                tax_code_id:          initialValues?.tax_code_id ?? undefined,
                 lines:                initialLines,
             });
         }
@@ -248,30 +250,32 @@ export const usePOForm = ({
             uom_id:          1, // Numeric ID for Unit
             unit_price:      0,
             discount_amount: 0,
-            tax_code:        'VAT',
+            tax_code_id:     undefined,
             receipt_type:    'GOODS' as const,
             line_total:      0,
         });
     }, [append]);
 
     const onSubmit: SubmitHandler<POFormData> = async (data) => {
-        try {
-            const subtotal = data.lines.reduce((s, l) => s + l.qty_ordered * l.unit_price - (l.discount_amount ?? 0), 0);
-            const tax      = subtotal * 0.07;
+    try {
+        const subtotal = data.lines.reduce((s, l) => s + l.qty_ordered * l.unit_price - (l.discount_amount ?? 0), 0);
+        const tax      = subtotal * 0.07;
 
-            await POService.create({
-                qc_id:             data.qc_id!,
-                qc_no:             data.qc_no,
-                pr_id:             data.pr_id,
-                pr_no:             data.pr_no,
-                vendor_id:         data.vendor_id!,
-                vendor_name:       data.vendor_name,
-                order_date:        data.po_date,
-                delivery_date:     data.delivery_date,
-                payment_term_days: data.payment_term_days,
-                currency_code:     data.currency_code,
-                exchange_rate:     data.exchange_rate,
-                total_amount:      subtotal + tax,
+        await POService.create({
+            qc_id:             data.qc_id!,
+            qc_no:             data.qc_no,
+            pr_id:             data.pr_id,
+            pr_no:             data.pr_no,
+            vendor_id:         data.vendor_id!,
+            vendor_name:       data.vendor_name,
+            branch_id:         data.branch_id,
+            tax_code_id:       data.tax_code_id,
+            order_date:        data.po_date,
+            delivery_date:     data.delivery_date,
+            payment_term_days: data.payment_term_days,
+            currency_code:     data.currency_code,
+            exchange_rate:     data.exchange_rate,
+            total_amount:      subtotal + tax,
                 items: data.lines.map(l => ({
                     item_id:         l.item_id || undefined,
                     item_code:       l.item_code,
@@ -281,24 +285,23 @@ export const usePOForm = ({
                     unit_price:      l.unit_price,
                     discount_amount: l.discount_amount ?? 0,
                     uom_id:          l.uom_id,
-                    tax_code:        l.tax_code,
+                    tax_code_id:     l.tax_code_id ?? data.tax_code_id,
                     line_total:      l.line_total,
                     receipt_type:    l.receipt_type,
                 })),
-                remarks:           data.remarks,
-            });
+            remarks:           data.remarks,
+        });
 
-            // Auto-Refresh: invalidate PO list cache
-            queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
-            toast.success('บันทึกใบสั่งซื้อสำเร็จ');
+        queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
+        toast.success('บันทึกใบสั่งซื้อสำเร็จ');
 
-            if (onSuccess) onSuccess();
-            onClose();
-        } catch (error) {
-            logger.error('[usePOForm] onSubmit error:', error);
-            toast.error('เกิดข้อผิดพลาดในการบันทึก กรุณาลองใหม่');
-        }
-    };
+        if (onSuccess) onSuccess();
+        onClose();
+    } catch (error) {
+        logger.error('[usePOForm] onSubmit error:', error);
+        toast.error('เกิดข้อผิดพลาดในการบันทึก กรุณาลองใหม่');
+    }
+};
 
     return {
         // Form

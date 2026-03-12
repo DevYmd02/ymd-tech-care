@@ -53,11 +53,23 @@ export const useVQMasterData = () => {
 
                 // 2. Map Currencies
                 const currArray = Array.isArray(currencies) ? currencies : (currencies?.items || []);
-                setCurrencyOptions(currArray.map((c: Currency) => ({
+                
+                let mappedCurrencies = currArray.map((c: Currency) => ({
                     value: String(c.currency_code),
                     label: `${c.currency_code} - ${c.name_th || c.name_en}`,
                     original: c
-                })));
+                }));
+
+                // 📡 @Agent_Network_Optimizer: Fallback to THB if API fails or returns empty
+                if (mappedCurrencies.length === 0) {
+                    mappedCurrencies = [{ 
+                        value: 'THB', 
+                        label: 'THB - บาท',
+                        original: { currency_code: 'THB', name_th: 'บาท', name_en: 'Baht' } as Currency 
+                    }];
+                }
+
+                setCurrencyOptions(mappedCurrencies);
 
             } catch (err) {
                 logger.error('[useVQMasterData] Failed to fetch master data:', err);

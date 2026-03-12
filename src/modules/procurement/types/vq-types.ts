@@ -103,6 +103,7 @@ export interface QuotationLine {
     quotation_line_id?: number;         // INTEGER
     quotation_id?: number;              // INTEGER
     pr_line_id?: number;                // INTEGER
+    rfq_line_id?: number;               // INTEGER (Reference to specific RFQ line)
     item_id?: number;                   // INTEGER
     item_code: string;                  // Required
     item_name: string;                  // Required
@@ -121,6 +122,7 @@ export interface QuotationLine {
     location?: string;
     uom?: string;                       // Utility field for RFQ-to-VQ mapping
     status?: string;                    // Utility field for mixed mapping
+    line_no?: number;                   // INTEGER (Backend mandatory)
 }
 
 // ====================================================================================
@@ -180,6 +182,8 @@ export interface VQPendingQueueItem {
     vendor_name: string;
     status: string;
     created_at: string;
+    vq_no?: string;                     // Added for filtering logic
+    vq_header_id?: number;              // Added for navigation/linkage
 }
 
 export interface VQPendingQueueResponse {

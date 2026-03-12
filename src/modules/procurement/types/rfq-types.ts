@@ -112,6 +112,20 @@ export interface RFQLine {
     note_to_vendor: string | null;      // TEXT - หมายเหตุ (จาก Golden Payload)
     discount_raw?: string;              // Legacy/Utility field for mapping
     status?: string | null;             // Utility field for mapping
+    
+    // 💧 @Agent_UI_Hydrator: Fallback fields for strict type-safe hydration
+    itemCode?: string;                  
+    itemName?: string;
+    product_code?: string;
+    product_name?: string;
+    item?: {
+        item_code?: string;
+        item_name?: string;
+    };
+    product?: {
+        product_code?: string;
+        product_name?: string;
+    };
 }
 
 // ====================================================================================

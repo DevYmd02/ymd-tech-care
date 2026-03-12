@@ -466,9 +466,13 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                 rfqLines: cleanLines,
             };
 
-            const selectedVendors = stagedPayload.vendors
-                .filter(v => v.vendor_id)
-                .map(v => ({ vendor_id: Number(v.vendor_id), status: 'WAITING' }));
+            const selectedVendors = Array.from(
+                new Map(
+                    stagedPayload.vendors
+                        .filter(v => v.vendor_id)
+                        .map(v => [Number(v.vendor_id), { vendor_id: Number(v.vendor_id), status: 'WAITING' }])
+                ).values()
+            );
                 
             if (selectedVendors.length > 0) {
                 payload.rfqVendors = selectedVendors;

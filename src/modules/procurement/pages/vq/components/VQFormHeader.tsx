@@ -48,9 +48,10 @@ export const VQFormHeader: React.FC<VQFormHeaderProps> = ({
                     <span className="font-semibold">ส่วนหัวเอกสาร - Header VQ (Vendor Quotation)</span>
                 </div>
 
+                {/* Row 1: Document Info */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                     <div>
-                        <label className="text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-1 block">เลขที่ใบเสนอราคา <span className="text-red-500">*</span></label>
+                        <label className="text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-1 block">เลขที่ใบเสนอราคา</label>
                         <input type="text" {...register('quotation_no')} className="w-full h-8 px-3 text-sm bg-gray-100/70 dark:bg-gray-800/70 text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg cursor-not-allowed font-medium disabled:opacity-70 disabled:cursor-not-allowed" readOnly disabled={forceViewMode} />
                         <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">ระบบจะแสดงอัตโนมัติเมื่อบันทึก</p>
                     </div>
@@ -62,7 +63,7 @@ export const VQFormHeader: React.FC<VQFormHeaderProps> = ({
                                 control={control}
                                 render={({ field }) => (
                                     <CustomDateInput
-                                        value={field.value}
+                                        value={field.value || ""}
                                         onChange={field.onChange}
                                         disabled={forceViewMode}
                                         className={`w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white transition-all disabled:opacity-70 disabled:cursor-not-allowed ${errors.quotation_date ? 'border-red-500 ring-1 ring-red-500 focus:ring-red-500' : ''}`}
@@ -71,7 +72,6 @@ export const VQFormHeader: React.FC<VQFormHeaderProps> = ({
                             />
                         </div>
                         {errors.quotation_date && <p className="text-red-500 text-[10px] mt-0.5 font-medium">{errors.quotation_date.message}</p>}
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">วันที่ออกเอกสารใบเสนอราคา</p>
                     </div>
                     <div>
                         <label className="text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-1 block">วันที่ใช้ได้ถึง (Valid Until) <span className="text-red-500">*</span></label>
@@ -81,7 +81,7 @@ export const VQFormHeader: React.FC<VQFormHeaderProps> = ({
                                 control={control}
                                 render={({ field }) => (
                                     <CustomDateInput
-                                        value={field.value}
+                                        value={field.value || ""}
                                         onChange={field.onChange}
                                         disabled={forceViewMode}
                                         className={`w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white transition-all disabled:opacity-70 disabled:cursor-not-allowed ${errors.valid_until ? 'border-red-500 ring-1 ring-red-500 focus:ring-red-500' : ''}`}
@@ -90,75 +90,11 @@ export const VQFormHeader: React.FC<VQFormHeaderProps> = ({
                             />
                         </div>
                         {errors.valid_until && <p className="text-red-500 text-[10px] mt-0.5 font-medium">{errors.valid_until.message}</p>}
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">วันหมดอายุของใบเสนอราคา</p>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div className="md:col-span-2">
-                        <label className="text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-1 block">ชื่อผู้ขาย (Vendor) <span className="text-red-500">*</span></label>
-                        <div className="flex gap-2">
-                            <input type="hidden" {...register('vendor_id')} />
-                            <input 
-                                value={watchVendorCode || ''}
-                                placeholder="VND-..." 
-                                className={`w-32 h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border ${errors.vendor_id ? 'border-red-500 ring-1 ring-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white transition-all disabled:opacity-70 disabled:cursor-not-allowed`} 
-                                disabled={forceViewMode} 
-                                readOnly 
-                            />
-                            <input 
-                                type="text" 
-                                value={watchVendorName || ''} 
-                                readOnly 
-                                className="flex-1 h-8 px-3 text-sm bg-gray-100/70 dark:bg-gray-800/70 text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg cursor-not-allowed font-medium disabled:opacity-70 disabled:cursor-not-allowed" 
-                                placeholder="ชื่อบริษัท/ผู้ขาย" 
-                            />
-                            <button 
-                                type="button" 
-                                onClick={onOpenVendorModal}
-                                disabled={forceViewMode}
-                                className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors shrink-0 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
-                            >
-                                <Search size={14} /> เลือก
-                            </button>
-                            {!!watchVendorId && !forceViewMode && (
-                            <button
-                                type="button"
-                                onClick={onClearVendor}
-                                className="flex items-center justify-center w-8 h-8 border border-rose-500 text-rose-500 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors focus:outline-none shrink-0"
-                                title="ล้างค่าผู้ขาย"
-                            >
-                                <XIcon className="w-4 h-4" />
-                            </button>
-                            )}
-                        </div>
-                    </div>
-                    <div>
-                        <label className="text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-1 block">ผู้ติดต่อ (Contact Person)</label>
-                        <input type="text" {...register('contact_person')} className="w-full h-8 px-3 text-sm bg-gray-100/70 dark:bg-gray-800/70 text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg cursor-not-allowed font-medium disabled:opacity-70 disabled:cursor-not-allowed" readOnly disabled={forceViewMode} />
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div>
-                        <label className="text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-1 block">โทรศัพท์ (Phone)</label>
-                        <input type="text" {...register('contact_phone')} className="w-full h-8 px-3 text-sm bg-gray-100/70 dark:bg-gray-800/70 text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg cursor-not-allowed font-medium disabled:opacity-70 disabled:cursor-not-allowed" readOnly disabled={forceViewMode} />
-                    </div>
-                    <div>
-                        <label className="text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-1 block">อีเมล (Email)</label>
-                        <input type="email" {...register('contact_email')} className="w-full h-8 px-3 text-sm bg-gray-100/70 dark:bg-gray-800/70 text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg cursor-not-allowed font-medium disabled:opacity-70 disabled:cursor-not-allowed" readOnly disabled={forceViewMode} />
-                    </div>
-                    <div>
-                        <label className="text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-1 block">เงื่อนไขการชำระ (Payment Terms)</label>
-                        <input type="text" {...register('payment_terms')} placeholder="เช่น 30 วัน, เงินสด" className="w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white transition-all disabled:opacity-70 disabled:cursor-not-allowed" disabled={forceViewMode} />
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div>
-                        <label className="text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-1 block">ระยะเวลานำส่ง (Lead Time / Days)</label>
-                        <input type="number" {...register('delivery_days')} className="w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white transition-all disabled:opacity-70 disabled:cursor-not-allowed" disabled={forceViewMode} />
-                    </div>
+                {/* Row 2: Reference & Terms */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                     <div className="md:col-span-2">
                         <label className="text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-1 block">เลขที่ RFQ อ้างอิง</label>
                         <div className="flex gap-2">
@@ -182,6 +118,73 @@ export const VQFormHeader: React.FC<VQFormHeaderProps> = ({
                             </button>
                             )}
                         </div>
+                    </div>
+                    <div className="md:col-span-1">
+                        <label className="text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-1 block">ระยะเวลานำส่ง (Lead Time / Days)</label>
+                        <input type="number" {...register('delivery_days')} className="w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white transition-all disabled:opacity-70 disabled:cursor-not-allowed" disabled={forceViewMode} />
+                    </div>
+                    <div className="md:col-span-1">
+                        <label className="text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-1 block">เงื่อนไขการชำระ (Payment Terms)</label>
+                        <input type="text" {...register('payment_terms')} placeholder="เช่น 30 วัน, เงินสด" className="w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white transition-all disabled:opacity-70 disabled:cursor-not-allowed" disabled={forceViewMode} />
+                    </div>
+                </div>
+
+                {/* Row 3: Vendor Main Info */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div className="md:col-span-2">
+                        <label className="text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-1 block">ชื่อผู้ขาย (Vendor) <span className="text-red-500">*</span></label>
+                        <div className="flex gap-2">
+                            <input type="hidden" {...register('vendor_id')} />
+                            <input 
+                                value={watchVendorCode || ''}
+                                placeholder="VND-..." 
+                                className={`w-32 h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border ${errors.vendor_id ? 'border-red-500 ring-1 ring-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white transition-all disabled:opacity-70 disabled:cursor-not-allowed`} 
+                                disabled={forceViewMode} 
+                                readOnly 
+                            />
+                            <input 
+                                type="text" 
+                                value={watchVendorName || ''} 
+                                readOnly 
+                                className="flex-1 h-8 px-3 text-sm bg-gray-100/70 dark:bg-gray-800/70 text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg cursor-not-allowed font-medium disabled:opacity-70 disabled:cursor-not-allowed" 
+                                placeholder="ชื่อบริษัท/ผู้ขาย" 
+                            />
+                            <button 
+                                type="button" 
+                                onClick={onOpenVendorModal}
+                                disabled={forceViewMode || !!watchRfqNo}
+                                className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors shrink-0 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
+                            >
+                                <Search size={14} /> เลือก
+                            </button>
+                            {!!watchVendorId && !forceViewMode && (
+                            <button
+                                type="button"
+                                onClick={onClearVendor}
+                                className="flex items-center justify-center w-8 h-8 border border-rose-500 text-rose-500 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors focus:outline-none shrink-0"
+                                title="ล้างค่าผู้ขาย"
+                            >
+                                <XIcon className="w-4 h-4" />
+                            </button>
+                            )}
+                        </div>
+                        {errors.vendor_id && <p className="text-red-500 text-[10px] mt-0.5 font-medium">{errors.vendor_id.message}</p>}
+                    </div>
+                    <div className="md:col-span-1">
+                        <label className="text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-1 block">ผู้ติดต่อ (Contact Person)</label>
+                        <input type="text" {...register('contact_person')} className="w-full h-8 px-3 text-sm bg-gray-100/70 dark:bg-gray-800/70 text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg cursor-not-allowed font-medium disabled:opacity-70 disabled:cursor-not-allowed" readOnly disabled={forceViewMode} />
+                    </div>
+                </div>
+
+                {/* Row 4: Vendor Contact Info */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div className="md:col-span-1">
+                        <label className="text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-1 block">โทรศัพท์ (Phone)</label>
+                        <input type="text" {...register('contact_phone')} className="w-full h-8 px-3 text-sm bg-gray-100/70 dark:bg-gray-800/70 text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg cursor-not-allowed font-medium disabled:opacity-70 disabled:cursor-not-allowed" readOnly disabled={forceViewMode} />
+                    </div>
+                    <div className="md:col-span-1">
+                        <label className="text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-1 block">อีเมล (Email)</label>
+                        <input type="email" {...register('contact_email')} className="w-full h-8 px-3 text-sm bg-gray-100/70 dark:bg-gray-800/70 text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg cursor-not-allowed font-medium disabled:opacity-70 disabled:cursor-not-allowed" readOnly disabled={forceViewMode} />
                     </div>
                 </div>
                 

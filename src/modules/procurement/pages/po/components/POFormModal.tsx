@@ -338,8 +338,12 @@ export default function POFormModal({
                                     </div>
                                 </div>
                                 <div>
-                                    <label className={s.label}>หมายเหตุ</label>
-                                    <input {...register('remarks')} className={s.input} disabled={isView} placeholder="ระบุหมายเหตุเพิ่มเติม..." />
+                                    <label className={s.label}>รหัสภาษี (Header)</label>
+                                    <select {...register('tax_code_id', { valueAsNumber: true })} className={s.select} disabled={isView}>
+                                        <option value="">— เลือกภาษี —</option>
+                                        <option value="2">VAT 7% (ซื้อ)</option>
+                                        <option value="3">EXEMPT (ยกเว้น)</option>
+                                    </select>
                                 </div>
                             </div>
 
@@ -447,9 +451,6 @@ export default function POFormModal({
                                             <th className="px-2 py-2 text-center w-24 border-r border-slate-200 dark:border-slate-800 font-medium">
                                                 ส่วนลด<br />
                                             </th>
-                                            <th className="px-2 py-2 text-center w-24 border-r border-slate-200 dark:border-slate-800 font-medium whitespace-nowrap">
-                                                รหัสภาษี<br />
-                                            </th>
                                             <th className="px-2 py-2 text-center w-32 border-r border-slate-200 dark:border-slate-800 font-medium">
                                                 ยอดสุทธิ<br />
                                             </th>
@@ -547,16 +548,6 @@ export default function POFormModal({
                                                         placeholder="0.00"
                                                         readOnly={isView}
                                                     />
-                                                </td>
-                                                <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
-                                                    <select
-                                                        {...register(`lines.${idx}.tax_code`)}
-                                                        className={`${s.select} !h-9 text-center px-1 text-[13px] border-slate-300 shadow-sm`}
-                                                        disabled={isView}
-                                                    >
-                                                        <option value="VAT">VAT</option>
-                                                        <option value="NON">NON</option>
-                                                    </select>
                                                 </td>
                                                 <td className="px-3 py-2 text-right font-semibold text-slate-800 dark:text-slate-200 border-r border-gray-200 dark:border-gray-700 text-[13px] bg-slate-50/50 dark:bg-slate-900/50">
                                                     <RowTotal control={control} index={idx} />

@@ -17,6 +17,7 @@ import { PRService } from '@/modules/procurement/services/pr.service';
 import { VQService } from '@/modules/procurement/services/vq.service';
 import type { RFQHeader, PRHeader } from '@/modules/procurement/types';
 import { SelectionModal } from './SelectionModal';
+import { useQCForm } from '../hooks/useQCForm';
 import { useConfirmation } from '@/shared/hooks';
 import toast from 'react-hot-toast';
 
@@ -59,6 +60,10 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
 
   const [isRFQSelectorOpen, setIsRFQSelectorOpen] = useState(false);
   const [isPRSelectorOpen, setIsPRSelectorOpen] = useState(false);
+
+  // Reorder state declarations to fix "used before declaration" errors
+  const [selectedVQIds, setSelectedVQIds] = useState<number[]>([]);
+  const [winnerVQId, setWinnerVQId] = useState<number | null>(null);
 
   // Fetch Existing QC Data if mode is edit/view
   const { data: qcData } = useQuery({
@@ -139,11 +144,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
     return vqList?.data.filter((vq) => vq.status === 'RECORDED') || [];
   }, [vqList]);
 
-  // VQ Selection State
-  const [selectedVQIds, setSelectedVQIds] = useState<number[]>([]);
-
   // Vendor-Level Winner State (the core of simplified comparison)
-  const [winnerVQId, setWinnerVQId] = useState<number | null>(null);
   const { confirm } = useConfirmation();
 
   const selectedVQs = useMemo(() => {
@@ -160,7 +161,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
     }
   };
 
-  const [isLoading, setIsLoading] = useState(false);
+  const { isSubmitting, handleSaveQC } = useQCForm(onSuccess, onClose);
 
   // Reset form when modal opens
   useEffect(() => {
@@ -228,7 +229,6 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
     return totals.length > 0 ? Math.min(...totals) : 0;
   }, [selectedVQs]);
 
-  // Build a safe, type-compliant QCCreateData payload using the winner's VQ lines.
   // Per the pro-tip: we derive item_id, qty, unit, and unit_price from the winning VQ's lines,
   // with sensible defaults so Zod does not reject the payload.
   const handleSave = async () => {
@@ -243,51 +243,37 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
       return;
     }
 
+    const selectedPR = prList?.data.find(pr => pr.pr_no === prNo);
+    const resolvedPrId = selectedPR?.pr_id;
+    const resolvedDeptId = selectedPR?.department_id;
+
+    if (!resolvedPrId || !resolvedDeptId) {
+      toast.error('ไม่พบข้อมูล PR หรือแผนกที่เกี่ยวข้อง กรุณาเลือก PR อีกครั้ง');
+      return;
+    }
+
+    if (!rfqId) {
+      toast.error('ไม่พบรหัส RFQ กรุณาเลือก RFQ อีกครั้ง');
+      return;
+    }
+
     const isConfirmed = await confirm({
-      title: 'ยืนยันการบันทึกผล',
-      description: 'คุณต้องการยืนยันผลการเปรียบเทียบราคาและเลือกผู้ชนะใช่หรือไม่? ข้อมูลจะไม่สามารถแก้ไขได้หลังจากการยืนยัน',
-      confirmText: 'ยืนยัน',
-      cancelText: 'ยกเลิก',
+      title: 'ยืนยันการบันทึกผล (Create QC)',
+      description: `คุณต้องการยืนยันการเลือกผู้ชนะคือ "${winnerVQ.vendor_name}" และบันทึกผลการเปรียบเทียบราคาใช่หรือไม่?`,
+      confirmText: 'ยืนยันการเลือกผู้ชนะ',
+      cancelText: 'ตรวจสอบอีกครั้ง',
       variant: 'warning',
     });
 
     if (!isConfirmed) return;
 
-    setIsLoading(true);
-    try {
-      const result = qcId
-        ? await QCService.submitWinner(Number(qcId), { winning_vq_id: winnerVQId })
-        : await QCService.create({
-            qc_no: generateQCNumber(),
-            pr_id: prList?.data.find(pr => pr.pr_no === prNo)?.pr_id || undefined,
-            rfq_id: rfqId || undefined,
-            pr_no: prNo || undefined,
-            rfq_no: rfqNo || undefined,
-            status: 'DRAFT',
-            comparison_date: qcDate,
-            items: [], // Will be simplified in another pass or rely on winner VQ extraction backend side.
-            winning_vq_id: winnerVQId,
-        });
-
-      if (result && result.qc_id) {
-        // 🎯 Close-First Interaction Flow
-        onClose();
-        toast.success('บันทึกใบเปรียบเทียบราคาสำเร็จ!');
-        
-        // Delayed invalidation
-        setTimeout(() => {
-          onSuccess?.();
-        }, 100);
-      } else {
-        toast.error('เกิดข้อผิดพลาดในการบันทึก');
-      }
-    } catch (error) {
-      const err = error as { response?: { data?: { message?: string } } };
-      logger.error('[QCFormModal] Save QC Winner failed:', error);
-      toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาดในการบันทึก / ไม่สามารถระบุผู้ชนะได้');
-    } finally {
-      setIsLoading(false);
-    }
+    // Call the purified hook logic
+    await handleSaveQC({
+      rfq_id: rfqId,
+      pr_id: resolvedPrId,
+      department_id: Number(resolvedDeptId),
+      winning_vq_id: winnerVQId,
+    });
   };
 
   // Styles
@@ -312,7 +298,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              disabled={isLoading}
+              disabled={isSubmitting}
               className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md text-sm font-medium transition-colors disabled:opacity-50"
             >
               ยกเลิก
@@ -320,7 +306,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
             <button
               type="button"
               onClick={handleSave}
-              disabled={isLoading || !winnerVQId}
+              disabled={isSubmitting || !winnerVQId}
               className="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md text-sm font-medium shadow-sm transition-colors disabled:opacity-50"
             >
               บันทึก
@@ -509,7 +495,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
                       <div className="flex-1 min-w-0">
                         <div
                           className="font-semibold text-gray-900 dark:text-gray-100 truncate"
-                          title={vq.vendor_name}
+                          title={vq.vendor_name ?? undefined}
                         >
                           {vq.vendor_name}
                         </div>
@@ -574,7 +560,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
                       <div className="mb-3">
                         <div
                           className="font-bold text-gray-900 dark:text-gray-100 truncate text-base"
-                          title={vq.vendor_name}
+                          title={vq.vendor_name ?? undefined}
                         >
                           {vq.vendor_name}
                         </div>

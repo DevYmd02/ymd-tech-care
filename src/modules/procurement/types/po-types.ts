@@ -80,7 +80,7 @@ export interface POLine {
     
     unit_price: number;             // numeric(18,4)
     discount_amount: number;        // numeric(18,2)
-    tax_code?: string;              // varchar(20)
+    tax_code_id?: number;           // INTEGER
     line_total: number;             // numeric(18,2)
     
     required_receipt_type: 'GOODS' | 'SERVICE'; // varchar(20)
@@ -141,7 +141,7 @@ export interface CreatePOLineItem {
     uom_id: number;
     unit_price: number;
     discount_amount?: number;
-    tax_code?: string;
+    tax_code_id?: number;
     line_total?: number;
     receipt_type: 'GOODS' | 'SERVICE';
 }
@@ -155,6 +155,7 @@ export interface CreatePOPayload {
 
     vendor_id:    number;
     vendor_name?: string;
+    branch_id?:   number;
 
     order_date:         string;
     delivery_date?:     string;
@@ -162,6 +163,7 @@ export interface CreatePOPayload {
 
     currency_code?: string;
     exchange_rate?: number;
+    tax_code_id?:   number;
     total_amount?:  number;
 
     items: CreatePOLineItem[];
