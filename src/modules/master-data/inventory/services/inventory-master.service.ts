@@ -29,6 +29,8 @@ import type { GradeFormValues } from '../hooks/useGradeForm';
 import type { ModelFormValues } from '../hooks/useModelForm';
 import type { SizeFormValues } from '../hooks/useSizeForm';
 import type { ColorFormValues } from '../hooks/useColorForm';
+import type { ShelfFormValues } from '../hooks/useShelfForm';
+import type { LocationFormValues } from '../hooks/useLocationForm';
 import {
     MOCK_ITEM_GROUPS, MOCK_BRANDS, MOCK_PATTERNS, MOCK_DESIGNS, MOCK_GRADES,
     MOCK_MODELS, MOCK_SIZES, MOCK_COLORS, MOCK_LOCATIONS, MOCK_SHELVES, MOCK_LOT_NUMBERS
@@ -198,8 +200,8 @@ type GradeService = ReturnType<typeof createInventoryService<Grade, GradeFormVal
 type ModelService = ReturnType<typeof createInventoryService<Model>>;
 type SizeService = ReturnType<typeof createInventoryService<Size, SizeFormValues>>;
 type ColorService = ReturnType<typeof createInventoryService<Color, ColorFormValues>>;
-type LocationService = ReturnType<typeof createInventoryService<Location>>;
-type ShelfService = ReturnType<typeof createInventoryService<Shelf>>;
+type LocationService = ReturnType<typeof createInventoryService<Location, LocationFormValues>>;
+type ShelfService = ReturnType<typeof createInventoryService<Shelf, ShelfFormValues>>;
 type LotNoService = ReturnType<typeof createInventoryService<LotNo>>;
 
 // Suppress unused type warnings by exporting type union
@@ -485,9 +487,9 @@ export const ColorService = createInventoryService<Color, ColorFormValues>({
 });
 
 // Location Service
-export const LocationService = createInventoryService<Location, any>({
+export const LocationService = createInventoryService<Location, LocationFormValues>({
     entityName: 'Location',
-    apiPath: '/locations',
+    apiPath: '/location',
     idField: 'location_id',
     mockData: MOCK_LOCATIONS,
     mapToEntity: (data, id, now) => ({
@@ -500,12 +502,28 @@ export const LocationService = createInventoryService<Location, any>({
         created_at: now,
         updated_at: now,
     }),
+    mapFromApi: (item: any): Location => ({
+        id: item.location_id,
+        location_id: item.location_id,
+        code: item.location_code,
+        name_th: item.location_name,
+        name_en: item.location_nameeng || '',
+        is_active: item.is_active,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+    }),
+    mapToApi: (data: LocationFormValues) => ({
+        location_code: data.code?.trim(),
+        location_name: data.nameTh?.trim(),
+        location_nameeng: data.nameEn?.trim() || null,
+        is_active: data.isActive,
+    }),
 });
 
 // Shelf Service
-export const ShelfService = createInventoryService<Shelf, any>({
+export const ShelfService = createInventoryService<Shelf, ShelfFormValues>({
     entityName: 'Shelf',
-    apiPath: '/shelves',
+    apiPath: '/shelf',
     idField: 'shelf_id',
     mockData: MOCK_SHELVES,
     mapToEntity: (data, id, now) => ({
@@ -517,6 +535,22 @@ export const ShelfService = createInventoryService<Shelf, any>({
         is_active: data.isActive,
         created_at: now,
         updated_at: now,
+    }),
+    mapFromApi: (item: any): Shelf => ({
+        id: item.shelf_id,
+        shelf_id: item.shelf_id,
+        code: item.shelf_code,
+        name_th: item.shelf_name,
+        name_en: item.shelf_nameeng || '',
+        is_active: item.is_active,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+    }),
+    mapToApi: (data: ShelfFormValues) => ({
+        shelf_code: data.code?.trim(),
+        shelf_name: data.nameTh?.trim(),
+        shelf_nameeng: data.nameEn?.trim() || null,
+        is_active: data.isActive,
     }),
 });
 
