@@ -26,6 +26,7 @@ import type { BrandFormValues } from '../hooks/useBrandForm';
 import type { PatternFormValues } from '../hooks/usePatternForm';
 import type { DesignFormValues } from '../hooks/useDesignForm';
 import type { GradeFormValues } from '../hooks/useGradeForm';
+import type { ModelFormValues } from '../hooks/useModelForm';
 import {
     MOCK_ITEM_GROUPS, MOCK_BRANDS, MOCK_PATTERNS, MOCK_DESIGNS, MOCK_GRADES,
     MOCK_MODELS, MOCK_SIZES, MOCK_COLORS, MOCK_LOCATIONS, MOCK_SHELVES, MOCK_LOT_NUMBERS
@@ -380,9 +381,9 @@ export const GradeService = createInventoryService<Grade, GradeFormValues>({
 });
 
 // Model Service
-export const ModelService = createInventoryService<Model, any>({
+export const ModelService = createInventoryService<Model, ModelFormValues>({
     entityName: 'Model',
-    apiPath: '/models',
+    apiPath: '/item-class',
     idField: 'model_id',
     mockData: MOCK_MODELS,
     mapToEntity: (data, id, now) => ({
@@ -394,6 +395,22 @@ export const ModelService = createInventoryService<Model, any>({
         is_active: data.isActive,
         created_at: now,
         updated_at: now,
+    }),
+    mapFromApi: (item: any): Model => ({
+        id: item.item_class_id,
+        model_id: item.item_class_id,
+        code: item.item_class_code,
+        name_th: item.item_class_name,
+        name_en: item.item_class_nameeng || '',
+        is_active: item.is_active,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+    }),
+    mapToApi: (data: ModelFormValues) => ({
+        item_class_code: data.code?.trim(),
+        item_class_name: data.nameTh?.trim(),
+        item_class_nameeng: data.nameEn?.trim() || '',
+        is_active: data.isActive,
     }),
 });
 
