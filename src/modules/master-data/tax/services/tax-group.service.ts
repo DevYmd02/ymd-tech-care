@@ -81,7 +81,7 @@ export const TaxGroupService = {
             });
         }
         try {
-            return await api.put<TaxGroup>(`/tax-group/${id}`, data);
+            return await api.patch<TaxGroup>(`/tax-group/${id}`, data);
         } catch (error) {
             logger.error('[TaxGroupService] updateTaxGroup error:', error);
             throw error;
