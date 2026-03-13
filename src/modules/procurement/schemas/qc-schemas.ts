@@ -120,6 +120,9 @@ export const QCListItemSchema = QCHeaderSchema.extend({
   vendor_count: z.number().nonnegative().optional().default(0),
   lowest_price: z.number().nonnegative().optional().default(0),
   lowest_bidder_name: z.string().optional().default('-'),
+  vendor_name: z.string().optional(), // 🎯 New API Mapping
+  vq_total_amount: z.union([z.string(), z.number()]).optional(), // 🎯 New API Mapping
+  vq_header_id: z.coerce.number().optional(), // 🎯 Required for Smart Status Logic
   winning_vendor_id: z.coerce.number().optional(),
   subject: z.string().optional(),
 });
@@ -141,8 +144,8 @@ export const CreateQCFormSchema = QCHeaderSchema.extend({
  */
 export const CreateQCSchema = z.object({
   rfq_id: z.coerce.number(),
-  pr_id: z.coerce.number(),
-  department_id: z.coerce.number(),
+  pr_id: z.coerce.number().nullable().optional(),
+  department_id: z.coerce.number().nullable().optional(),
   created_by: z.coerce.number(),
   winning_vq_id: z.coerce.number(),
 });

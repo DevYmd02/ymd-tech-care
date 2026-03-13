@@ -129,23 +129,27 @@ export default function POListPage() {
         }),
         columnHelper.accessor('qc_no', {
             id: 'ref_docs',
-            header: 'เอกสารอ้างอิง',
+            header: () => <div className="text-left whitespace-nowrap">เอกสารอ้างอิง</div>,
             cell: (info) => {
                 const item = info.row.original;
+                // Smart Fallback Mapping for PR/RFQ/QC
+                const prDisplay = item.pr_no || (item.pr_id ? `PR ID: ${item.pr_id}` : null);
+                const qcDisplay = item.qc_no || (item.qc_id ? `QC ID: ${item.qc_id}` : null);
+                
                 return (
                     <div className="flex flex-col whitespace-nowrap">
                         <span
                             className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline cursor-pointer leading-tight"
-                            title={`QC: ${item.qc_no || '-'}`}
+                            title={`QC: ${qcDisplay || '-'}`}
                         >
-                            {item.qc_no || '-'}
+                            {qcDisplay || '-'}
                         </span>
-                        {item.pr_no && (
+                        {prDisplay && (
                             <span
                                 className="text-[10px] text-slate-500 mt-0.5"
-                                title={`PR: ${item.pr_no}`}
+                                title={`PR: ${prDisplay}`}
                             >
-                                Ref: {item.pr_no}
+                                Ref: {prDisplay}
                             </span>
                         )}
                     </div>
@@ -156,11 +160,18 @@ export default function POListPage() {
         }),
         columnHelper.accessor('vendor_name', {
             header: 'ชื่อผู้ขาย',
-            cell: (info) => (
-                <div className="truncate font-medium text-slate-700 dark:text-gray-200 text-left max-w-[120px] lg:max-w-[180px]" title={info.getValue() || '-'}>
-                    {info.getValue() || '-'}
-                </div>
-            ),
+            cell: (info) => {
+                const item = info.row.original;
+                // Smart Fallback Mapping for Vendor
+                // @ts-expect-error - handled dynamic mapping from API
+                const vendorDisplayName = item.vendor?.vendor_name || item.vendor_name || (item.vendor_id ? `Vendor ID: ${item.vendor_id}` : '-');
+                
+                return (
+                    <div className="truncate font-medium text-slate-700 dark:text-gray-200 text-left max-w-[120px] lg:max-w-[180px]" title={vendorDisplayName}>
+                        {vendorDisplayName}
+                    </div>
+                );
+            },
             size: 200,
             enableSorting: false,
         }),
@@ -176,23 +187,35 @@ export default function POListPage() {
             enableSorting: false,
         }),
         columnHelper.accessor('item_count', {
-            header: () => <div className="text-center w-full whitespace-nowrap">รายการ</div>,
-            cell: (info) => (
-                <div className="text-center text-gray-600 dark:text-gray-300 w-full text-xs">
-                    {info.getValue()}
-                </div>
-            ),
+            header: () => <div className="text-right w-full whitespace-nowrap">รายการ</div>,
+            cell: (info) => {
+                const item = info.row.original;
+                // Safe Array Access
+                // @ts-expect-error - handle dynamic mapping
+                const count = item.item_count || item.po_lines?.length;
+                return (
+                    <div className="text-right text-gray-600 dark:text-gray-300 w-full text-xs font-medium">
+                        {count !== undefined ? `${count} รายการ` : '-'}
+                    </div>
+                );
+            },
             size: 70,
             enableSorting: false,
         }),
         columnHelper.accessor('total_amount', {
             header: () => <div className="text-right w-full whitespace-nowrap">ยอดรวม (บาท)</div>,
-            cell: (info) => (
-                <div className="text-right font-bold text-gray-800 dark:text-white whitespace-nowrap w-full text-xs">
-                    {info.getValue()?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                </div>
-            ),
-            size: 120,
+            cell: (info) => {
+                const item = info.row.original;
+                // Strict Number Formatting - Using base_total_amount as priority
+                // @ts-expect-error - handle string to number conversion from API
+                const val = Number(item.base_total_amount || item.total_amount || 0);
+                return (
+                    <div className="text-right font-bold text-gray-800 dark:text-white whitespace-nowrap w-full text-xs">
+                        {new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val)}
+                    </div>
+                );
+            },
+            size: 130,
             enableSorting: true,
         }),
         columnHelper.display({
@@ -271,10 +294,16 @@ export default function POListPage() {
                 );
             },
             footer: () => {
-                 const total = (data?.data || []).reduce((sum, item) => sum + item.total_amount, 0) || 0;
+                 // Safe Math calculation - base_total_amount might be a string
+                 const total = (data?.data || []).reduce((sum, item) => {
+                     // @ts-expect-error - string to number coercion
+                     const amount = Number(item.base_total_amount || item.total_amount || 0);
+                     return sum + amount;
+                 }, 0);
+                 
                  return (
                      <div className="text-right font-bold text-sm text-emerald-600 dark:text-emerald-400 whitespace-nowrap pr-2">
-                         {total.toLocaleString('en-US', { minimumFractionDigits: 2 })} บาท
+                         {new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2 }).format(total)} บาท
                      </div>
                  );
             },

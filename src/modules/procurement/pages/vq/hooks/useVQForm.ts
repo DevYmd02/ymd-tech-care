@@ -15,7 +15,7 @@ const formatDateForInputHelper = (dateStr: string | Date | null | undefined): st
 };
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
-import type { VQListItem, VQStatus, QuotationLine } from '@/modules/procurement/types/vq-types';
+import type { VQListItem, VQStatus, QuotationLine, QuotationHeader } from '@/modules/procurement/types/vq-types';
 import { useVQMasterData } from './useVQMasterData';
 
 export interface ExtendedRFQHeader extends RFQHeader {
@@ -75,7 +75,7 @@ interface RawVQLine {
     line_no?: number | string | null;
 }
 
-interface RawVQResponse extends Omit<Partial<VQListItem>, 'vq_lines'> {
+interface RawVQResponse extends Omit<Partial<QuotationHeader>, 'vq_lines' | 'lines'> {
     vq_lines?: RawVQLine[];
     vqLines?: RawVQLine[]; // 💧 @Agent_View_Hydrator: CamelCase support
     lines?: RawVQLine[];

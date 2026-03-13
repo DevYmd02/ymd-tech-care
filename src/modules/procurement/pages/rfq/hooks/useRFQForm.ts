@@ -478,6 +478,13 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                 payload.rfqVendors = selectedVendors;
             }
 
+            // 🕵️‍♂️ @Agent_Source_Auditor: Verify pr_id Persistence
+            logger.debug('[useRFQForm] RFQ Payload Audit:', {
+                pr_id: payload.pr_id,
+                has_pr_id: !!payload.pr_id,
+                rfq_no_placeholder: payload.rfq_date // tracing timestamp
+            });
+
             if (editId) {
                 await RFQService.update(editId, payload);
                 toast('บันทึกการแก้ไข RFQ สำเร็จ', 'success');

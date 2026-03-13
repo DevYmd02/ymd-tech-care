@@ -103,6 +103,15 @@ export interface PRLine {
   tax_amount?: string | number;
   tax_rate?: string | number;
   required_receipt_type?: string;
+  tax_code_id?: number;
+  unit_price?: number;
+  // Nested Objects (Hydration)
+  item?: {
+    item_id: number;
+    item_code: string;
+    item_name: string;
+    description?: string;
+  };
 }
 
 // ====================================================================================

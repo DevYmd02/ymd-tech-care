@@ -14,18 +14,26 @@ export const useQCForm = (onSuccess?: () => void, onClose?: () => void) => {
     pr_id: number;
     department_id: number;
     winning_vq_id: number;
+    created_by?: number;
   }) => {
     // 1. Guard & Validation (Zero-Any, Pure Object)
-    if (!data.rfq_id || !data.pr_id || !data.department_id || !data.winning_vq_id) {
-      toast.error('ข้อมูลไม่ครบถ้วน: กรุณาระบุ RFQ, PR, แผนก และผู้ชนะประมูล');
+    if (!data.rfq_id || !data.winning_vq_id) {
+      toast.error('ข้อมูลไม่ครบถ้วน: กรุณาระบุ RFQ และผู้ชนะประมูล');
+      return;
+    }
+
+    // 🛡️ @Agent_Integrity_Guard: Strict Multi-Layer Validation
+    if (!data.pr_id || Number(data.pr_id) === 0) {
+      logger.error('[useQCForm] Integrity Breach: Attempted to save QC with pr_id: 0', data);
+      toast.error('ข้อมูล PR ไม่สมบูรณ์: ไม่พบรหัส PR ต้นทางจาก RFQ นี้ (pr_id must not be 0)');
       return;
     }
 
     const payload: CreateQCPayload = {
       rfq_id: Number(data.rfq_id),
-      pr_id: Number(data.pr_id),
-      department_id: Number(data.department_id),
-      created_by: Number(user?.id || 1), // Fallback if user session is incomplete
+      pr_id: data.pr_id ? Number(data.pr_id) : 0, // Rule: pr_id must be a number (0 is safer than null)
+      department_id: data.department_id ? Number(data.department_id) : Number(user?.employee?.department_id || 1),
+      created_by: Number(data.created_by || user?.employee_id || 1),
       winning_vq_id: Number(data.winning_vq_id),
     };
 

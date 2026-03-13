@@ -7,43 +7,20 @@
  *  Business logic extracted to usePOForm hook.
  */
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useWatch, FormProvider, Controller } from 'react-hook-form';
 import type { Control } from 'react-hook-form';
-import { FileText, Plus, Trash2, Search, Save, X as XIcon } from 'lucide-react';
+import { FileText, Plus, Trash2, Search, Save, X as XIcon, Loader2 } from 'lucide-react';
 import { WindowFormLayout } from '@ui';
 import { CustomDateInput } from '@/shared/components/forms/CustomDateInput';
 import { VendorSearchModal } from '@/modules/master-data/vendor/components/selector/VendorSearchModal';
 import { ProductSearchModal } from '@/modules/procurement/pages/pr/components/ProductSearchModal';
+import { PRSearchModal } from './PRSearchModal';
 import type { POFormData } from '@/modules/procurement/schemas/po-schemas';
 import { calculatePricingSummary } from '@/modules/procurement/utils/pricing.utils';
 import { usePOForm } from '../hooks';
 
-// ====================================================================================
-// STATIC OPTIONS  (branch & warehouse until master-data APIs are wired)
-// ====================================================================================
-
-const BRANCH_OPTIONS = [
-    { value: '1', label: 'สำนักงานใหญ่ (HQ)' },
-    { value: '2', label: 'สาขา สีลม' },
-    { value: '3', label: 'สาขา อโศก' },
-    { value: '4', label: 'สาขา ลาดพร้าว' },
-];
-
-const WAREHOUSE_OPTIONS = [
-    { value: 'wh-001', label: 'คลังสินค้าหลัก (Main Warehouse)' },
-    { value: 'wh-002', label: 'คลังสินค้าย่อย (Sub Warehouse)' },
-    { value: 'wh-003', label: 'คลังสินค้าชั่วคราว (Temp)' },
-];
-
-const CURRENCY_OPTIONS = [
-    { value: 'THB', label: 'THB - บาท' },
-    { value: 'USD', label: 'USD - ดอลลาร์สหรัฐ' },
-    { value: 'EUR', label: 'EUR - ยูโร' },
-    { value: 'JPY', label: 'JPY - เยน' },
-    { value: 'SGD', label: 'SGD - ดอลลาร์สิงคโปร์' },
-    { value: 'CNY', label: 'CNY - หยวน' },
-];
+// Mock constants removed. Data is now fetched via hooks in usePOForm.
 
 // ====================================================================================
 // STYLE CONSTANTS  (Match VQ pattern, blue accent for PO module)
@@ -64,9 +41,9 @@ const s = {
 // ====================================================================================
 
 const RowTotal = ({ control, index }: { control: Control<POFormData>; index: number }) => {
-    const qty   = useWatch({ control, name: `lines.${index}.qty_ordered` }) ?? 0;
-    const price = useWatch({ control, name: `lines.${index}.unit_price` }) ?? 0;
-    const disc  = useWatch({ control, name: `lines.${index}.discount_amount` }) ?? 0;
+    const qty   = useWatch({ control, name: `po_lines.${index}.qty_ordered` }) ?? 0;
+    const price = useWatch({ control, name: `po_lines.${index}.unit_price` }) ?? 0;
+    const disc  = useWatch({ control, name: `po_lines.${index}.discount_amount` }) ?? 0;
     const total = qty * price - disc;
     return <>{total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>;
 };
@@ -76,15 +53,15 @@ const RowTotal = ({ control, index }: { control: Control<POFormData>; index: num
 // ====================================================================================
 
 const POSummaryPanel = ({ control }: { control: Control<POFormData> }) => {
-    const lines = useWatch({ control, name: 'lines' });
+    const poLines = useWatch({ control, name: 'po_lines' });
     const { beforeTax, taxAmount, totalAmount } = useMemo(() => {
-        const items = (lines ?? []).map(l => ({
+        const items = (poLines ?? []).map(l => ({
             qty:        Number(l?.qty_ordered),
             unit_price: Number(l?.unit_price),
             discount:   Number(l?.discount_amount),
         }));
         return calculatePricingSummary(items, 7, false);
-    }, [lines]);
+    }, [poLines]);
 
     return (
         <div className="w-80 space-y-3 bg-white dark:bg-slate-800 p-4 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm">
@@ -139,14 +116,14 @@ export default function POFormModal({
     isViewMode = false,
 }: POFormModalProps) {
 
-    // ── Hook (All Business Logic) ─────────────────────────────────────────────
+    const [isPRModalOpen, setIsPRModalOpen] = useState(false);
     const {
         formMethods,
         control,
         register,
         handleSubmit,
         errors,
-        fields,
+        fields, // This is from useFieldArray, which uses 'po_lines'
         remove,
         setValue,
         watchVendorName,
@@ -158,17 +135,24 @@ export default function POFormModal({
         onSubmit,
         isVendorModalOpen,
         setIsVendorModalOpen,
-        
         isProductModalOpen,
         setIsProductModalOpen,
-        searchTerm,
-        setSearchTerm,
-        showAllItems,
-        setShowAllItems,
-        products,
-        isSearchingProducts,
+        isHydrating,
+        // Data
+        branches,
+        isLoadingBranches,
+        warehouses,
+        isLoadingWarehouses,
+        taxCodes,
+        isLoadingTaxCodes,
+        units,
+        isLoadingUnits,
+        currencies,
+        isLoadingCurrencies,
         handleOpenProductSearch,
         handleSelectProduct,
+        handleSelectPR,
+        isInherited,
     } = usePOForm({ isOpen, onClose, onSuccess, poId, initialValues, isViewMode });
 
     if (!isOpen) return null;
@@ -184,17 +168,21 @@ export default function POFormModal({
                 onSelect={handleVendorSelect}
             />
 
+            {/* ── PR Search Modal ─────────────────────────────────────────── */}
+            <PRSearchModal
+                isOpen={isPRModalOpen}
+                onClose={() => setIsPRModalOpen(false)}
+                onSelect={(pr) => {
+                    handleSelectPR(pr);
+                    setIsPRModalOpen(false);
+                }}
+            />
+
             {/* ── Product Search Modal ─────────────────────────────────────── */}
             <ProductSearchModal
                 isOpen={isProductModalOpen}
                 onClose={() => setIsProductModalOpen(false)}
-                searchTerm={searchTerm}
-                setSearchTerm={setSearchTerm}
-                isSearchingProducts={isSearchingProducts}
-                products={products}
                 selectProduct={handleSelectProduct}
-                showAllItems={showAllItems}
-                setShowAllItems={setShowAllItems}
             />
 
             <WindowFormLayout
@@ -220,9 +208,11 @@ export default function POFormModal({
                             <button
                                 type="button"
                                 onClick={handleSubmit(onSubmit)}
-                                className="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md text-sm font-medium shadow-sm transition-colors flex items-center gap-2"
+                                disabled={isHydrating}
+                                className="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md text-sm font-medium shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                <Save size={14} /> บันทึก
+                                {isHydrating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save size={14} />} 
+                                {isHydrating ? 'กำลังประมวลผล...' : 'บันทึก'}
                             </button>
                         )}
                     </div>
@@ -271,8 +261,14 @@ export default function POFormModal({
                                     <div className="flex gap-2">
                                         <input {...register('pr_no')} className={s.inputRO} readOnly placeholder="PR2024-xxx" />
                                         {!isView && (
-                                            <button type="button" title="ค้นหา PR" className={s.searchBtn} onClick={() => window.alert('PR Search — coming soon')}>
-                                                <Search size={14} />
+                                            <button 
+                                                type="button" 
+                                                title="ค้นหา PR" 
+                                                className={s.searchBtn} 
+                                                onClick={() => setIsPRModalOpen(true)}
+                                                disabled={isHydrating}
+                                            >
+                                                {isHydrating ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
                                             </button>
                                         )}
                                         {watchPrNo && !isView && (
@@ -292,7 +288,13 @@ export default function POFormModal({
                                     <div className="flex gap-2">
                                         <input value={watchVendorName ?? ''} readOnly className={`flex-1 ${s.inputRO}`} placeholder="-- เลือกผู้ขาย --" />
                                         {!isView && (
-                                            <button type="button" onClick={() => setIsVendorModalOpen(true)} className={s.searchBtn}>
+                                            <button 
+                                                type="button" 
+                                                onClick={() => setIsVendorModalOpen(true)} 
+                                                className={s.searchBtn}
+                                                disabled={isInherited}
+                                                title={isInherited ? "ไม่สามารถเปลี่ยนผู้ขายได้เนื่องจากสืบทอดมาจากใบเสนอราคา" : "เลือกผู้ขาย"}
+                                            >
                                                 <Search size={14} /> เลือก
                                             </button>
                                         )}
@@ -301,17 +303,17 @@ export default function POFormModal({
                                 </div>
                                 <div>
                                     <label className={s.label}>สาขา <span className="text-red-500">*</span></label>
-                                    <select {...register('branch_id')} className={`${s.select} ${errors.branch_id ? 'border-red-500' : ''}`} disabled={isView}>
-                                        <option value="">— เลือกสาขา —</option>
-                                        {BRANCH_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                                    <select {...register('branch_id', { valueAsNumber: true })} className={`${s.select} ${errors.branch_id ? 'border-red-500' : ''}`} disabled={isView || isLoadingBranches}>
+                                        <option value="">{isLoadingBranches ? 'กำลังโหลด...' : '— เลือกสาขา —'}</option>
+                                        {branches.map((o) => <option key={o.branch_id} value={o.branch_id}>{o.branch_name}</option>)}
                                     </select>
                                     {errors.branch_id && <p className={s.error}>{errors.branch_id.message}</p>}
                                 </div>
                                 <div>
                                     <label className={s.label}>คลังสินค้าปลายทาง <span className="text-red-500">*</span></label>
-                                    <select {...register('ship_to_warehouse_id')} className={`${s.select} ${errors.ship_to_warehouse_id ? 'border-red-500' : ''}`} disabled={isView}>
-                                        <option value="">— เลือกคลังสินค้า —</option>
-                                        {WAREHOUSE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                                    <select {...register('ship_to_warehouse_id', { valueAsNumber: true })} className={`${s.select} ${errors.ship_to_warehouse_id ? 'border-red-500' : ''}`} disabled={isView || isLoadingWarehouses}>
+                                        <option value="">{isLoadingWarehouses ? 'กำลังโหลด...' : '— เลือกคลังสินค้า —'}</option>
+                                        {warehouses.map((o) => <option key={o.warehouse_id} value={o.warehouse_id}>{o.warehouse_name}</option>)}
                                     </select>
                                     {errors.ship_to_warehouse_id && <p className={s.error}>{errors.ship_to_warehouse_id.message}</p>}
                                 </div>
@@ -338,12 +340,12 @@ export default function POFormModal({
                                     </div>
                                 </div>
                                 <div>
-                                    <label className={s.label}>รหัสภาษี (Header)</label>
-                                    <select {...register('tax_code_id', { valueAsNumber: true })} className={s.select} disabled={isView}>
-                                        <option value="">— เลือกภาษี —</option>
-                                        <option value="2">VAT 7% (ซื้อ)</option>
-                                        <option value="3">EXEMPT (ยกเว้น)</option>
+                                    <label className={s.label}>รหัสภาษี (Header) <span className="text-red-500">*</span></label>
+                                    <select {...register('tax_code_id', { valueAsNumber: true })} className={`${s.select} ${errors.tax_code_id ? 'border-red-500' : ''}`} disabled={isView || isLoadingTaxCodes}>
+                                        <option value="">{isLoadingTaxCodes ? 'กำลังโหลด...' : '— เลือกภาษี —'}</option>
+                                        {taxCodes.map((o) => <option key={o.tax_code_id} value={o.tax_code_id}>{o.tax_code} ({o.tax_rate}%)</option>)}
                                     </select>
+                                    {errors.tax_code_id && <p className={s.error}>{errors.tax_code_id.message}</p>}
                                 </div>
                             </div>
 
@@ -383,15 +385,16 @@ export default function POFormModal({
                                     </div>
                                     <div>
                                         <label className={s.label}>รหัสสกุลเงิน <span className="text-red-500">*</span></label>
-                                        <select {...register('currency_code')} className={s.select} disabled={isView}>
-                                            {CURRENCY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                                        <select {...register('currency_code')} className={s.select} disabled={isView || isLoadingCurrencies}>
+                                            <option value="">{isLoadingCurrencies ? 'โหลด...' : 'เลือก'}</option>
+                                            {currencies.map((o) => <option key={o.currency_code} value={o.currency_code}>{o.currency_code} - {o.name_en}</option>)}
                                         </select>
                                     </div>
                                     <div>
                                         <label className={s.label}>ไปที่สกุลเงิน (Target)</label>
-                                        <select {...register('target_currency')} className={s.select} disabled={isView}>
-                                            <option value="">เลือกสกุลเงิน</option>
-                                            {CURRENCY_OPTIONS.filter(o => o.value !== watchCurrencyCode).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                                        <select {...register('target_currency')} className={s.select} disabled={isView || isLoadingCurrencies}>
+                                            <option value="">{isLoadingCurrencies ? 'โหลด...' : 'เลือกสกุลเงิน'}</option>
+                                            {currencies.filter((o) => o.currency_code !== watchCurrencyCode).map((o) => <option key={o.currency_code} value={o.currency_code}>{o.currency_code} - {o.name_en}</option>)}
                                         </select>
                                     </div>
                                     <div>
@@ -434,10 +437,10 @@ export default function POFormModal({
                                         <tr>
                                             <th className="px-2 py-2 text-center w-12 border-r border-slate-200 dark:border-slate-800">ลำดับ</th>
                                             <th className="px-3 py-2 text-left w-56 border-r border-slate-200 dark:border-slate-800 font-medium">
-                                                สินค้า/บริการ <br />
+                                                รหัสสินค้า <br />
                                             </th>
                                             <th className="px-3 py-2 text-left w-64 border-r border-slate-200 dark:border-slate-800 font-medium whitespace-nowrap">
-                                                รายละเอียด<br />
+                                                ชื่อสินค้า/บริการ<br />
                                             </th>
                                             <th className="px-2 py-2 text-center w-24 border-r border-slate-200 dark:border-slate-800 font-medium">
                                                 จำนวนสั่ง<br />
@@ -480,14 +483,14 @@ export default function POFormModal({
                                                 <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
                                                     <div className="flex gap-1.5 items-stretch">
                                                         <input
-                                                            {...register(`lines.${idx}.item_name`)}
+                                                            {...register(`po_lines.${idx}.item_code`)}
                                                             className={`${s.inputRO} flex-1 !h-9 text-[13px] shadow-sm`}
-                                                            placeholder="-- ค้นหาสินค้า --"
+                                                            placeholder="ค้นหารหัส..."
                                                             readOnly
                                                         />
                                                         {/* Hidden fields needed for form submission */}
-                                                        <input type="hidden" {...register(`lines.${idx}.item_id`)} />
-                                                        <input type="hidden" {...register(`lines.${idx}.item_code`)} />
+                                                        <input type="hidden" {...register(`po_lines.${idx}.item_id`)} />
+                                                        <input type="hidden" {...register(`po_lines.${idx}.item_name`)} />
                                                         {!isView && (
                                                             <button
                                                                 type="button"
@@ -504,7 +507,7 @@ export default function POFormModal({
                                                 </td>
                                                 <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
                                                     <input
-                                                        {...register(`lines.${idx}.description`)}
+                                                        {...register(`po_lines.${idx}.description`)}
                                                         className={`${s.input} !h-9 text-[13px] border-slate-300 shadow-sm`}
                                                         placeholder="รายละเอียดเพิ่มเติม"
                                                         readOnly={isView}
@@ -513,7 +516,7 @@ export default function POFormModal({
                                                 <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
                                                     <input
                                                         type="number" step="any"
-                                                        {...register(`lines.${idx}.qty_ordered`, { valueAsNumber: true })}
+                                                        {...register(`po_lines.${idx}.qty_ordered`, { valueAsNumber: true })}
                                                         className={`${s.input} !h-9 text-center text-[13px] border-slate-300 shadow-sm`}
                                                         placeholder="0.000"
                                                         readOnly={isView}
@@ -521,20 +524,18 @@ export default function POFormModal({
                                                 </td>
                                                 <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
                                                     <select
-                                                        {...register(`lines.${idx}.uom_id`)}
+                                                        {...register(`po_lines.${idx}.uom_id`, { valueAsNumber: true })}
                                                         className={`${s.select} !h-9 text-center px-1 text-[13px] border-slate-300 shadow-sm`}
-                                                        disabled={isView}
+                                                        disabled={isView || isLoadingUnits}
                                                     >
-                                                        <option value="PC">PC</option>
-                                                        <option value="PCS">PCS</option>
-                                                        <option value="BOX">BOX</option>
-                                                        <option value="KG">KG</option>
+                                                        <option value="">{isLoadingUnits ? 'โหลด...' : 'หน่วย'}</option>
+                                                        {units.map((u) => <option key={u.uom_id || u.unit_id} value={u.uom_id || u.unit_id}>{u.uom_name || u.unit_name}</option>)}
                                                     </select>
                                                 </td>
                                                 <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
                                                     <input
                                                         type="number" step="any"
-                                                        {...register(`lines.${idx}.unit_price`, { valueAsNumber: true })}
+                                                        {...register(`po_lines.${idx}.unit_price`, { valueAsNumber: true })}
                                                         className={`${s.input} !h-9 text-right text-[13px] border-slate-300 shadow-sm`}
                                                         placeholder="0.0000"
                                                         readOnly={isView}
@@ -543,7 +544,7 @@ export default function POFormModal({
                                                 <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
                                                     <input
                                                         type="number" step="any"
-                                                        {...register(`lines.${idx}.discount_amount`, { valueAsNumber: true })}
+                                                        {...register(`po_lines.${idx}.discount_amount`, { valueAsNumber: true })}
                                                         className={`${s.input} !h-9 text-right text-[13px] border-slate-300 shadow-sm`}
                                                         placeholder="0.00"
                                                         readOnly={isView}
@@ -554,7 +555,7 @@ export default function POFormModal({
                                                 </td>
                                                 <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
                                                     <select
-                                                        {...register(`lines.${idx}.receipt_type`)}
+                                                        {...register(`po_lines.${idx}.receipt_type`)}
                                                         className={`${s.select} !h-9 text-center px-1 text-[13px] border-slate-300 shadow-sm bg-white dark:bg-slate-800`}
                                                         disabled={isView}
                                                     >
@@ -591,9 +592,9 @@ export default function POFormModal({
                             </div>
 
                             {/* Items error */}
-                            {errors.lines && (
+                            {errors.po_lines && (
                                 <p className="px-2 pt-2 text-red-500 text-sm">
-                                    {errors.lines.root?.message ?? errors.lines.message}
+                                    {errors.po_lines.root?.message ?? errors.po_lines.message}
                                 </p>
                             )}
                         </div>

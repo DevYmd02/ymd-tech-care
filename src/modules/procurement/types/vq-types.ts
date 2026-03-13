@@ -35,7 +35,7 @@ export interface QuotationHeader {
     rfq_vendor_id?: number | null;      // Relation ID
 
     // Nested Objects (Anticipating JOINs)
-    vendor?: { vendor_id: number; vendor_name: string; vendor_code?: string };
+    vendor?: { vendor_id: number; vendor_name: string; vendor_code?: string; vendor_name_th?: string; name_th?: string };
     rfq?: { rfq_id: number; rfq_no: string };
     pr?: { pr_id: number; pr_no: string };
     
@@ -91,7 +91,9 @@ export interface QuotationHeader {
     vendor_code?: string;
     rfq_no?: string;                    
     pr_no?: string;                     
-    vq_lines?: QuotationLine[];            
+    vq_lines?: QuotationLine[];  
+    /** Fallback for internal mapping or legacy endpoints */
+    lines?: QuotationLine[];          
 }
 
 // ====================================================================================
@@ -114,6 +116,7 @@ export interface QuotationLine {
     discount_expression?: string;
     discount_amount?: number;           // NUMERIC(18,2)
     tax_code?: string;                  // VARCHAR(20)
+    tax_code_id?: number;               // INTEGER
     net_amount: number;                 // Required
     no_quote?: boolean;
     reference_price?: number;           // Reference budget from RFQ/PR
@@ -123,6 +126,13 @@ export interface QuotationLine {
     uom?: string;                       // Utility field for RFQ-to-VQ mapping
     status?: string;                    // Utility field for mixed mapping
     line_no?: number;                   // INTEGER (Backend mandatory)
+    // Nested Objects (Hydration)
+    item?: {
+      item_id: number;
+      item_code: string;
+      item_name: string;
+      description?: string;
+    };
 }
 
 // ====================================================================================

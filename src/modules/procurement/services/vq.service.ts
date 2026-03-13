@@ -49,7 +49,19 @@ export const VQService = {
 
   getVQsByRfqId: async (rfqId: number): Promise<VQListResponse> => {
     logger.info(`[VQService] Fetching VQs for RFQ ID: ${rfqId}`);
-    return await api.get<VQListResponse>(ENDPOINTS.list, { params: { rfq_id: rfqId } });
+    const response = await api.get<VQListResponse | VQListItem[]>(ENDPOINTS.list, { params: { rfq_id: rfqId } });
+    
+    // Safely extract array and wrap in VQListResponse (No pagination)
+    const rawData = response;
+    const arrayData = Array.isArray(rawData) ? rawData : (rawData?.data || []);
+    
+    return { 
+      data: arrayData,
+      total: arrayData.length,
+      page: 1,
+      limit: arrayData.length,
+      totalPages: 1
+    } as VQListResponse;
   },
 
   getWaitingForRFQ: async (params?: { page?: number; limit?: number }): Promise<VQPendingQueueResponse> => {
