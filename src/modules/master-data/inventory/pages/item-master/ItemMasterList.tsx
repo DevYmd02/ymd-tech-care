@@ -194,19 +194,19 @@ export default function ItemMasterList() {
             size: 200,
         },
         {
-            accessorKey: 'item_category_code',
+            accessorKey: 'item_category_name',
             header: 'หมวดหมู่',
             cell: ({ getValue }) => <span className="text-gray-700 dark:text-gray-300">{getValue() as string}</span>,
             size: 150,
         },
         {
-            accessorKey: 'item_brand_code',
+            accessorKey: 'item_brand_name',
             header: 'ยี่ห้อ',
             cell: ({ getValue }) => <span className="text-gray-700 dark:text-gray-300">{getValue() as string || '-'}</span>,
             size: 150,
         },
         {
-            accessorKey: 'item_type_code',
+            accessorKey: 'item_type_name',
             header: 'ประเภท',
             cell: ({ getValue }) => (
                 <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600">
@@ -216,7 +216,7 @@ export default function ItemMasterList() {
             size: 100,
         },
         {
-            accessorKey: 'base_uom_id',
+            accessorKey: 'base_uom_name',
             header: 'หน่วยนับ (ID)',
             cell: ({ getValue }) => <span className="text-gray-600 dark:text-gray-300">{getValue() as string}</span>,
             size: 100,

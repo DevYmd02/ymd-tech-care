@@ -61,24 +61,25 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                     <label className="block text-xs text-gray-700 dark:text-gray-400 mb-0.5">ประเภทสินค้า (Item Type)</label>
                     <div className="flex gap-2">
                         <select
-                            value={formData.item_type_code}
-                            onChange={(e) => {
-                                const code = e.target.value;
-                                const selected = itemTypes.find(t => t.item_type_code === code);
-                                onChange('item_type_code', code);
-                                onChange('item_type_id' as any, selected ? selected.item_type_id ?? 0 : 0);
+                             value={formData.item_type_id || ''}
+    onChange={(e) => {
+        const id = Number(e.target.value);                                
+        const selected = itemTypes.find(t => t.item_type_id === id);
+
+        onChange('item_type_id' as any, selected ? selected.item_type_id : 0);
+        onChange('item_type_name' as any, selected ? selected.item_type_name : '');
                             }}
                             className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
                         >
                             <option value="">-- เลือก --</option>
                             {itemTypes.map(t => (
-                                <option key={t.item_type_id} value={t.item_type_code}>{t.item_type_code}</option>
+                                <option key={t.item_type_id} value={t.item_type_id}>{t.item_type_code}</option>
                             ))}
                         </select>
                         <input
                             type="text"
                             readOnly
-                            value={getItemName(formData.item_type_code, itemTypes, 'item_type_code', 'item_type_name')}
+                            value={getItemName(formData.item_type_id || 0, itemTypes, 'item_type_id', 'item_type_name')}
                             className="w-[65%] h-8 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 text-xs text-gray-500 dark:text-gray-400 cursor-not-allowed outline-none"
                         />
                     </div>
@@ -88,8 +89,13 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                     <label className="block text-xs text-gray-700 dark:text-gray-400 mb-0.5">หมวดสินค้า</label>
                     <div className="flex gap-2">
                         <select
-                            value={formData.category_id}
-                            onChange={(e) => onChange('category_id', Number(e.target.value))}
+                            value={formData.item_category_id}
+                            onChange={(e) => {
+                                const id = Number(e.target.value);
+                                const selected = categories.find(c => c.category_id === id);
+                                onChange('item_category_id' as any, id);
+                                onChange('item_category_code' as any, selected ? selected.category_code : '');
+                            }}
                             className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
                         >
                             <option value="">-- เลือก --</option>
@@ -100,7 +106,7 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                         <input
                             type="text"
                             readOnly
-                            value={getItemName(formData.category_id, categories, 'category_id', 'category_name')}
+                            value={getItemName(formData.item_category_id || 0, categories, 'category_id', 'category_name')}
                             className="w-[65%] h-8 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 text-xs text-gray-500 dark:text-gray-400 cursor-not-allowed outline-none"
                         />
                     </div>
@@ -110,8 +116,13 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                     <label className="block text-xs text-gray-700 dark:text-gray-400 mb-0.5">กลุ่มสินค้า (Good Group)</label>
                     <div className="flex gap-2">
                         <select
-                            value={formData.good_class_id}
-                            onChange={(e) => onChange('good_class_id', e.target.value)}
+                            value={formData.item_group_id}
+                            onChange={(e) => {
+                                const id = Number(e.target.value);
+                                const selected = itemGroups.find(g => g.item_group_id === id);
+                                onChange('item_group_id' as any, id);
+                                onChange('item_group_code' as any, selected ? selected.item_group_code : '');
+                            }}
                             className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
                         >
                             <option value="">-- เลือก --</option>
@@ -120,7 +131,7 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                         <input
                             type="text"
                             readOnly
-                            value={getItemName(formData.good_class_id, itemGroups, 'item_group_id', 'item_group_name')}
+                            value={getItemName(formData.item_group_id || 0, itemGroups, 'item_group_id', 'item_group_name')}
                             className="w-[65%] h-8 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 text-xs text-gray-500 dark:text-gray-400 cursor-not-allowed outline-none"
                         />
                     </div>
@@ -130,17 +141,22 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                     <label className="block text-xs text-gray-700 dark:text-gray-400 mb-0.5">ยี่ห้อสินค้า (Brand)</label>
                     <div className="flex gap-2">
                         <select
-                            value={formData.good_brand_id}
-                            onChange={(e) => onChange('good_brand_id', e.target.value)}
+                            value={formData.item_brand_id}
+                            onChange={(e) => {
+                                const id = Number(e.target.value);
+                                const selected = itemBrands.find(b => b.item_brand_id === id);
+                                onChange('item_brand_id' as any, id);
+                                onChange('item_brand_code' as any, selected ? selected.item_brand_code : '');
+                            }}
                             className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
                         >
                             <option value="">-- เลือก --</option>
-                            {itemBrands.map(o => (<option key={o.item_brand_id} value={o.item_brand_id}>{o.item_brand_name}</option>))}
+                            {itemBrands.map(o => (<option key={o.item_brand_id} value={o.item_brand_id}>{o.item_brand_code}</option>))}
                         </select>
                         <input
                             type="text"
                             readOnly
-                            value={getItemName(formData.good_brand_id, itemBrands, 'item_brand_id', 'item_brand_name')}
+                            value={getItemName(formData.item_brand_id || 0, itemBrands, 'item_brand_id', 'item_brand_name')}
                             className="w-[65%] h-8 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 text-xs text-gray-500 dark:text-gray-400 cursor-not-allowed outline-none"
                         />
                     </div>
@@ -150,17 +166,22 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                     <label className="block text-xs text-gray-700 dark:text-gray-400 mb-0.5">รูปแบบ (Pattern)</label>
                     <div className="flex gap-2">
                         <select
-                            value={formData.good_pattern_id}
-                            onChange={(e) => onChange('good_pattern_id', e.target.value)}
+                            value={formData.item_pattern_id}
+                            onChange={(e) => {
+                                const id = Number(e.target.value);
+                                const selected = itemPatterns.find(p => p.item_pattern_id === id);
+                                onChange('item_pattern_id' as any, id);
+                                onChange('item_pattern_code' as any, selected ? selected.item_pattern_code : '');
+                            }}
                             className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
                         >
                             <option value="">-- เลือก --</option>
-                            {itemPatterns.map(o => <option key={o.item_pattern_id} value={o.item_pattern_id}>{o.item_pattern_name}</option>)}
+                            {itemPatterns.map(o => <option key={o.item_pattern_id} value={o.item_pattern_id}>{o.item_pattern_code}</option>)}
                         </select>
                         <input
                             type="text"
                             readOnly
-                            value={getItemName(formData.good_pattern_id, itemPatterns, 'item_pattern_id', 'item_pattern_name')}
+                            value={getItemName(formData.item_pattern_id || 0, itemPatterns, 'item_pattern_id', 'item_pattern_name')}
                             className="w-[65%] h-8 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 text-xs text-gray-500 dark:text-gray-400 cursor-not-allowed outline-none"
                         />
                     </div>
@@ -170,17 +191,22 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                     <label className="block text-xs text-gray-700 dark:text-gray-400 mb-0.5">การออกแบบ (Design)</label>
                     <div className="flex gap-2">
                         <select
-                            value={formData.good_design_id}
-                            onChange={(e) => onChange('good_design_id', e.target.value)}
+                            value={formData.item_design_id}
+                            onChange={(e) => {
+                                const id = Number(e.target.value);
+                                const selected = itemDesigns.find(d => d.item_design_id === id);
+                                onChange('item_design_id' as any, id);
+                                onChange('item_design_code' as any, selected ? selected.item_design_code : '');
+                            }}
                             className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
                         >
                             <option value="">-- เลือก --</option>
-                            {itemDesigns.map(o => (<option key={o.item_design_id} value={o.item_design_id}>{o.item_design_name}</option>))}
+                            {itemDesigns.map(o => (<option key={o.item_design_id} value={o.item_design_id}>{o.item_design_code}</option>))}
                         </select>
                         <input
                             type="text"
                             readOnly
-                            value={getItemName(formData.good_design_id, itemDesigns, 'item_design_id', 'item_design_name')}
+                            value={getItemName(formData.item_design_id || 0, itemDesigns, 'item_design_id', 'item_design_name')}
                             className="w-[65%] h-8 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 text-xs text-gray-500 dark:text-gray-400 cursor-not-allowed outline-none"
                         />
                     </div>
@@ -190,17 +216,22 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                     <label className="block text-xs text-gray-700 dark:text-gray-400 mb-0.5">เกรด (Grade)</label>
                     <div className="flex gap-2">
                         <select
-                            value={formData.good_grade_id || ''}
-                            onChange={(e) => onChange('good_grade_id', e.target.value)}
+                            value={formData.item_grade_id || ''}
+                            onChange={(e) => {
+                                const id = Number(e.target.value);
+                                const selected = itemGrades.find(g => g.item_grade_id === id);
+                                onChange('item_grade_id' as any, id);
+                                onChange('item_grade_code' as any, selected ? selected.item_grade_code : '');
+                            }}
                             className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
                         >
                             <option value="">-- เลือก --</option>
-                            {itemGrades.map(o => <option key={o.item_grade_id} value={o.item_grade_id}>{o.item_grade_name}</option>)}
+                            {itemGrades.map(o => <option key={o.item_grade_id} value={o.item_grade_id}>{o.item_grade_code}</option>)}
                         </select>
                         <input
                             type="text"
                             readOnly
-                            value={getItemName(formData.good_grade_id, itemGrades || [], 'item_grade_id', 'item_grade_name')}
+                            value={getItemName(formData.item_grade_id || 0, itemGrades || [], 'item_grade_id', 'item_grade_name')}
                             className="w-[65%] h-8 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 text-xs text-gray-500 dark:text-gray-400 cursor-not-allowed outline-none"
                         />
                     </div>
@@ -210,17 +241,22 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                     <label className="block text-xs text-gray-700 dark:text-gray-400 mb-0.5">รุ่น (Model)</label>
                     <div className="flex gap-2">
                         <select
-                            value={formData.good_model_id || ''}
-                            onChange={(e) => onChange('good_model_id', e.target.value)}
+                            value={formData.item_class_id || ''}
+                            onChange={(e) => {
+                                const id = Number(e.target.value);
+                                const selected = itemClasses.find(c => c.item_class_id === id);
+                                onChange('item_class_id' as any, id);
+                                onChange('item_class_code' as any, selected ? selected.item_class_code : '');
+                            }}
                             className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
                         >
                             <option value="">-- เลือก --</option>
-                            {itemClasses.map(o => <option key={o.item_class_id} value={o.item_class_id}>{o.item_class_name}</option>)}
+                            {itemClasses.map(o => <option key={o.item_class_id} value={o.item_class_id}>{o.item_class_code}</option>)}
                         </select>
                         <input
                             type="text"
                             readOnly
-                            value={getItemName(formData.good_model_id || '', itemClasses || [], 'item_class_id', 'item_class_name')}
+                            value={getItemName(formData.item_class_id || 0, itemClasses || [], 'item_class_id', 'item_class_name')}
                             className="w-[65%] h-8 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 text-xs text-gray-500 dark:text-gray-400 cursor-not-allowed outline-none"
                         />
                     </div>
@@ -230,17 +266,22 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                     <label className="block text-xs text-gray-700 dark:text-gray-400 mb-0.5">ขนาด (Size)</label>
                     <div className="flex gap-2">
                         <select
-                            value={formData.good_size_id}
-                            onChange={(e) => onChange('good_size_id', e.target.value)}
+                            value={formData.item_size_id}
+                            onChange={(e) => {
+                                const id = Number(e.target.value);
+                                const selected = itemSizes.find(s => s.item_size_id === id);
+                                onChange('item_size_id' as any, id);
+                                onChange('item_size_code' as any, selected ? selected.item_size_code : '');
+                            }}
                             className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
                         >
                             <option value="">-- เลือก --</option>
-                            {itemSizes.map(o => <option key={o.item_size_id} value={o.item_size_id}>{o.item_size_name}</option>)}
+                            {itemSizes.map(o => <option key={o.item_size_id} value={o.item_size_id}>{o.item_size_code}</option>)}
                         </select>
                         <input
                             type="text"
                             readOnly
-                            value={getItemName(formData.good_size_id, itemSizes || [], 'item_size_id', 'item_size_name')}
+                            value={getItemName(formData.item_size_id || 0, itemSizes || [], 'item_size_id', 'item_size_name')}
                             className="w-[65%] h-8 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 text-xs text-gray-500 dark:text-gray-400 cursor-not-allowed outline-none"
                         />
                     </div>
@@ -250,17 +291,22 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                     <label className="block text-xs text-gray-700 dark:text-gray-400 mb-0.5">สี (Color)</label>
                     <div className="flex gap-2">
                         <select
-                            value={formData.good_color_id || ''}
-                            onChange={(e) => onChange('good_color_id', e.target.value)}
+                            value={formData.item_color_id || ''}
+                            onChange={(e) => {
+                                const id = Number(e.target.value);
+                                const selected = itemColors.find(c => c.item_color_id === id);
+                                onChange('item_color_id' as any, id);
+                                onChange('item_color_code' as any, selected ? selected.item_color_code : '');
+                            }}
                             className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
                         >
                             <option value="">-- เลือก --</option>
-                            {itemColors.map(o => <option key={o.item_color_id} value={o.item_color_id}>{o.item_color_name}</option>)}
+                            {itemColors.map(o => <option key={o.item_color_id} value={o.item_color_id}>{o.item_color_code}</option>)}
                         </select>
                         <input
                             type="text"
                             readOnly
-                            value={getItemName(formData.good_color_id || '', itemColors || [], 'item_color_id', 'item_color_name')}
+                            value={getItemName(formData.item_color_id || 0, itemColors || [], 'item_color_id', 'item_color_name')}
                             className="w-[65%] h-8 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 text-xs text-gray-500 dark:text-gray-400 cursor-not-allowed outline-none"
                         />
                     </div>

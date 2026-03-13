@@ -29,11 +29,11 @@ export const ItemFinancials: React.FC<ItemFinancialsProps> = ({
                     <div>
                         <label className="block text-xs text-gray-700 dark:text-gray-400 mb-0.5">ประเภทภาษี (Tax Type)</label>
                         <select 
-                            value={formData.default_tax_code || ''} 
+                            value={formData.tax_code_id || ''} 
                             onChange={(e) => {
-                                const code = e.target.value;
-                                onChange('default_tax_code', code);
-                                const selectedTax = taxCodes.find(t => t.tax_code === code);
+                                const id = Number(e.target.value);
+                                onChange('tax_code_id', id);
+                                const selectedTax = taxCodes.find(t => t.tax_code_id === id);
                                 if (selectedTax) {
                                     onChange('tax_rate', selectedTax.tax_rate);
                                 }
@@ -42,7 +42,7 @@ export const ItemFinancials: React.FC<ItemFinancialsProps> = ({
                         >
                             <option value="">-- เลือก --</option>
                             {taxCodes.map(t => (
-                                <option key={t.tax_code_id} value={t.tax_code}>{t.tax_code} - {t.tax_name}</option>
+                                <option key={t.tax_code_id} value={t.tax_code_id}>{t.tax_code} - {t.tax_name}</option>
                             ))}
                         </select>
                     </div>
@@ -61,34 +61,21 @@ export const ItemFinancials: React.FC<ItemFinancialsProps> = ({
                     <label className="block text-xs text-gray-700 dark:text-gray-400 mb-0.5">กำหนดจำนวน (Amount)</label>
                     <input 
                         type="number" 
-                        value={formData.std_amount || ''} 
-                        onChange={(e) => onChange('std_amount', e.target.value === '' ? 0 : parseFloat(e.target.value))} 
+                        value={formData.standard_cost || ''} 
+                        onChange={(e) => onChange('standard_cost', e.target.value === '' ? 0 : parseFloat(e.target.value))} 
                         onFocus={(e) => e.target.select()}
                         className="w-full h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-purple-500 outline-none text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                 </div>
 
                 <div>
-                    <label className="block text-xs text-gray-700 dark:text-gray-400 mb-0.5">ส่วนลดสินค้า (Discount)</label>
+                    <label className="block text-xs text-gray-700 dark:text-gray-400 mb-0.5">บาร์โค้ด (Barcode)</label>
                     <input 
                         type="text" 
-                        value={formData.discount_amount || ''} 
-                        onChange={(e) => onChange('discount_amount', e.target.value)} 
+                        value={formData.barcode_default || ''} 
+                        onChange={(e) => onChange('barcode_default', e.target.value)} 
                         className="w-full h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-purple-500 outline-none text-right"
                     />
-                </div>
-
-                <div className="flex items-center gap-2 pt-2">
-                    <input 
-                        type="checkbox" 
-                        id="has_barcode"
-                        checked={formData.has_barcode || false} 
-                        onChange={(e) => onChange('has_barcode', e.target.checked)} 
-                        className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 dark:focus:ring-purple-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 cursor-pointer"
-                    />
-                    <label htmlFor="has_barcode" className="text-xs font-medium text-gray-900 dark:text-gray-300 select-none cursor-pointer">
-                        ใช้งานระบบบาร์โค้ด (Enable Barcode System)
-                    </label>
                 </div>
             </div>
         </div>

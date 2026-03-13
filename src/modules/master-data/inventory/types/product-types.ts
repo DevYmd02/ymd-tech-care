@@ -553,34 +553,53 @@ export interface ItemMaster extends BaseMasterData {
 }
 
 export interface ItemMasterFormData {
+    item_id: number;
     item_code: string;
     item_name: string;
-    item_name_en: string;
-    marketing_name: string;
-    billing_name: string;
-    category_id: number;
-    good_class_id: string;
-    good_brand_id: string;
-    good_pattern_id: string;
-    good_design_id: string;
-    good_size_id: string;
-    good_model_id?: string;
-    good_grade_id?: string;
-    good_color_id?: string;
-    base_uom_id: number;
-    item_type_code: string;
-    costing_method?: string;
-    default_tax_code: string;
-    tax_rate?: number;
+    item_name_en?: string;
+    marketing_name?: string;
+    billing_name?: string;
+    description?: string;
+    warehouse?: string;
+    location?: string;
+    standard_cost?: number;
     barcode?: string;
+    category_id?: number;
+    category_name: string;
+    item_type_id?: number;
+    item_type_code?: string;
+    item_type_name?: string;
+    unit_id?: number;
+    unit_name: string;
+    purchasing_unit_id?: number;
+    purchasing_unit_name?: string;
+    sales_unit_id?: number;
+    sales_unit_name?: string;
+    tax_code?: string;
     is_active: boolean;
-    is_on_hold?: boolean;
-    nature_id?: string;
-    product_subtype_id?: string;
-    commission_type?: string;
-    std_amount?: number;
-    discount_amount?: string;
-    is_buddy?: boolean;
+    costing_method: string;
+    default_tax_code: string;
+    item_group_id?: number;
+    item_category_id?: number;
+    base_uom_id?: number;
+    purchase_uom_id?: number;
+    sale_uom_id?: number;
+    tax_code_id?: number;
+    barcode_default?: string;
+    is_batch_control?: boolean;
+    is_expiry_control?: boolean;
+    is_serial_control?: boolean;
+    shelf_life_days?: number;
+    default_issue_policy?: string;
+    lot_tracking_level?: string;
+    serial_tracking_level?: string;
+    item_brand_id?: number;
+    item_pattern_id?: number;
+    item_design_id?: number;
+    item_class_id?: number;
+    item_size_id?: number;
+    item_color_id?: number;
+    item_grade_id?: number;
 }
 
 export interface ItemListItem {
@@ -615,33 +634,32 @@ export interface ItemListItem {
 }
 
 export const initialItemMasterFormData: ItemMasterFormData = {
-    item_code: '',
-    item_name: '',
-    item_name_en: '',
-    marketing_name: '',
-    billing_name: '',
-    category_id: 0,
-    good_class_id: '',
-    good_brand_id: '',
-    good_pattern_id: '',
-    good_design_id: '',
-    good_size_id: '',
-    good_model_id: '',
-    good_grade_id: '',
-    good_color_id: '',
-    base_uom_id: 0,
-    item_type_code: '',
-    costing_method: '',
-    default_tax_code: 'VAT7',
-    barcode: '',
-    is_active: true,
-    is_on_hold: false,
-    nature_id: '',
-    product_subtype_id: '',
-    commission_type: '',
-    std_amount: 0,
-    discount_amount: '',
-    is_buddy: false,
+item_id: 0,
+item_code: '',
+item_name: '',
+item_name_en: '',
+marketing_name: '',
+billing_name: '',
+description: '',
+warehouse: '',
+location: '',
+standard_cost: 0,
+barcode: '',
+category_id: 0,
+category_name: '',
+item_type_id: 0,
+item_type_code: '',
+item_type_name: '',
+unit_id: 0,
+unit_name: '',
+purchasing_unit_id: 0,
+purchasing_unit_name: '',
+sales_unit_id: 0,
+sales_unit_name: '',
+tax_code: '',
+is_active: true,
+costing_method: '',
+default_tax_code: '',
 };
 
 // ====================================================================================

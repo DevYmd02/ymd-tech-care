@@ -8,7 +8,6 @@ import { logger } from '@/shared/utils/logger';
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
 import { ProductCategoryService } from '@/modules/master-data/inventory/services/product-category.service';
-import { ITEM_TAX_CODES } from '@/modules/master-data/inventory/constants/itemConstants';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import type { ItemListItem } from '@/modules/master-data/types/master-data-types';
 
@@ -18,29 +17,56 @@ export const itemMasterSchema = z.object({
     item_name_en: z.string().optional().default(''),
     marketing_name: z.string().optional().default(''),
     billing_name: z.string().optional().default(''),
-    category_id: z.coerce.number().optional().default(0),
-    good_class_id: z.string().optional().default(''),
-    good_brand_id: z.string().optional().default(''),
-    good_pattern_id: z.string().optional().default(''),
-    good_design_id: z.string().optional().default(''),
-    good_size_id: z.string().optional().default(''),
-    good_model_id: z.string().optional().default(''),
-    good_grade_id: z.string().optional().default(''),
-    good_color_id: z.string().optional().default(''),
+
+    // UOMs
     base_uom_id: z.coerce.number().min(1, 'กรุณากรอกหน่วยนับหลัก'),
-    item_type_code: z.string().optional().default('FG'),
-    costing_method: z.string().optional().default('FIFO'),
-    default_tax_code: z.string().optional().default('VAT7'),
-    tax_rate: z.coerce.number().default(7),
-    has_barcode: z.boolean().default(false),
+    purchase_uom_id: z.coerce.number().optional(),
+    sale_uom_id: z.coerce.number().optional(),
+
+    // Tax
+    tax_code_id: z.coerce.number().optional(),
+    tax_rate: z.coerce.number().optional().default(7), // Used for UI calculation, not sent
+
+    // Attributes
+    item_type_id: z.coerce.number().optional(),
+    item_type_code: z.string().optional(),
+    item_category_id: z.coerce.number().optional(),
+    item_category_code: z.string().optional(),
+    item_brand_id: z.coerce.number().optional(),
+    item_brand_code: z.string().optional(),
+    item_pattern_id: z.coerce.number().optional(),
+    item_pattern_code: z.string().optional(),
+    item_design_id: z.coerce.number().optional(),
+    item_design_code: z.string().optional(),
+    item_class_id: z.coerce.number().optional(), // Model
+    item_class_code: z.string().optional(),
+    item_size_id: z.coerce.number().optional(),
+    item_size_code: z.string().optional(),
+    item_group_id: z.coerce.number().optional(), // Good Group
+    item_group_code: z.string().optional(),
+    item_grade_id: z.coerce.number().optional(),
+    item_grade_code: z.string().optional(),
+    item_color_id: z.coerce.number().optional(),
+    item_color_code: z.string().optional(),
+
+    // Stock Policy
+    default_issue_policy: z.string().optional().default('FEFO'),
+    lot_tracking_level: z.string().optional().default('REQUIRED'),
+    serial_tracking_level: z.string().optional().default('NONE'),
+    shelf_life_days: z.coerce.number().optional().default(0),
+
+    // Other fields
+    barcode_default: z.string().optional().default(''),
     is_active: z.boolean().default(true),
-    is_on_hold: z.boolean().default(false),
-    nature_id: z.string().optional().default('LOT'),
-    product_subtype_id: z.string().optional().default('NORMAL'),
-    commission_type: z.string().optional().default('NONE'),
-    std_amount: z.coerce.number().default(0),
+    
+    is_batch_control: z.boolean().default(false),
+    is_expiry_control: z.boolean().default(false),
+    is_serial_control: z.boolean().default(false),
+
+    standard_cost: z.coerce.number().default(0),
     discount_amount: z.string().optional().default(''),
     is_buddy: z.boolean().default(false),
+    costing_method: z.string().optional().default('FIFO'),
 });
 
 export type ItemFormData = z.infer<typeof itemMasterSchema>;
@@ -53,29 +79,48 @@ const initialFormData: ItemFormData = {
     item_name_en: '',
     marketing_name: '',
     billing_name: '',
-    category_id: 0,
-    good_class_id: '',
-    good_brand_id: '',
-    good_pattern_id: '',
-    good_design_id: '',
-    good_size_id: '',
-    good_model_id: '',
-    good_grade_id: '',
-    good_color_id: '',
     base_uom_id: 0,
-    item_type_code: 'FG',
-    costing_method: 'FIFO',
-    default_tax_code: 'VAT7',
+    purchase_uom_id: 0,
+    sale_uom_id: 0,
+    tax_code_id: 0,
     tax_rate: 7,
-    has_barcode: false,
+    item_type_id: 0,
+    item_type_code: '',
+    item_category_id: 0,
+    item_category_code: '',
+    item_brand_id: 0,
+    item_brand_code: '',
+    item_pattern_id: 0,
+    item_pattern_code: '',
+    item_design_id: 0,
+    item_design_code: '',
+    item_class_id: 0,
+    item_class_code: '',
+    item_size_id: 0,
+    item_size_code: '',
+    item_group_id: 0,
+    item_group_code: '',
+    item_grade_id: 0,
+    item_grade_code: '',
+    item_color_id: 0,
+    item_color_code: '',
+    default_issue_policy: 'FEFO',
+    lot_tracking_level: 'REQUIRED',
+    serial_tracking_level: 'NONE',
+    shelf_life_days: 0,
+    barcode_default: '',
     is_active: true,
-    is_on_hold: false,
-    nature_id: 'LOT',
-    product_subtype_id: 'NORMAL',
-    commission_type: 'NONE',
-    std_amount: 0,
+    
+    is_batch_control: false,
+    is_expiry_control: false,
+    is_serial_control: false,
+
+    standard_cost: 0,
     discount_amount: '',
     is_buddy: false,
+    costing_method: 'FIFO',
+
+    
 };
 
 export function useItemForm(editId: number | null, onSuccess?: () => void) {
@@ -126,35 +171,51 @@ export function useItemForm(editId: number | null, onSuccess?: () => void) {
     // Hydrate form
     useEffect(() => {
         if (existingItem) {
+            const item = existingItem as any; // Cast to access new fields
             reset({
-                item_code: existingItem.item_code,
-                item_name: existingItem.item_name,
-                item_name_en: existingItem.item_name_en || '',
-                marketing_name: existingItem.marketing_name || '',
-                billing_name: existingItem.billing_name || '',
-                category_id: existingItem.category_id || 0, 
-                base_uom_id: existingItem.unit_id || 0,
-                item_type_code: existingItem.item_type_code || 'FG',
-                product_subtype_id: 'NORMAL',
-                costing_method: 'FIFO',
-                commission_type: 'NONE',
-                nature_id: 'LOT',
-                is_active: existingItem.is_active,
-                std_amount: existingItem.standard_cost || 0,
-                good_brand_id: '',
-                good_class_id: '',
-                good_pattern_id: '',
-                good_design_id: '',
-                good_grade_id: '',
-                good_model_id: '',
-                good_size_id: '',
-                good_color_id: '',
-                default_tax_code: 'VAT7',
-                tax_rate: 7,
-                has_barcode: false, 
-                discount_amount: '',
-                is_buddy: false,
-                is_on_hold: false
+                item_code: item.item_code,
+                item_name: item.item_name,
+                item_name_en: item.item_name_en || '',
+                marketing_name: item.marketing_name || '',
+                billing_name: item.billing_name || '',
+                base_uom_id: item.base_uom_id || item.unit_id || 0,
+                purchase_uom_id: item.purchase_uom_id || item.purchasing_unit_id || 0,
+                sale_uom_id: item.sale_uom_id || item.sales_unit_id || 0,
+                tax_code_id: item.tax_code_id || 0,
+                tax_rate: item.tax_rate || 7,
+                item_type_id: item.item_type_id || 0,
+                item_type_code: item.item_type_code || '',
+                item_category_id: item.item_category_id || item.category_id || 0,
+                item_category_code: item.item_category_code || '',
+                item_brand_id: item.item_brand_id || 0,
+                item_brand_code: item.item_brand_code || '',
+                item_pattern_id: item.item_pattern_id || 0,
+                item_pattern_code: item.item_pattern_code || '',
+                item_design_id: item.item_design_id || 0,
+                item_design_code: item.item_design_code || '',
+                item_class_id: item.item_class_id || 0,
+                item_class_code: item.item_class_code || '',
+                item_size_id: item.item_size_id || 0,
+                item_size_code: item.item_size_code || '',
+                item_group_id: item.item_group_id || 0,
+                item_group_code: item.item_group_code || '',
+                item_grade_id: item.item_grade_id || 0,
+                item_grade_code: item.item_grade_code || '',
+                item_color_id: item.item_color_id || 0,
+                item_color_code: item.item_color_code || '',
+                default_issue_policy: item.default_issue_policy || 'FEFO',
+                lot_tracking_level: item.lot_tracking_level || 'REQUIRED',
+                serial_tracking_level: item.serial_tracking_level || 'NONE',
+                shelf_life_days: item.shelf_life_days || 0,
+                is_active: item.is_active,
+                standard_cost: item.standard_cost || 0,
+                barcode_default: item.barcode_default || '',
+                discount_amount: item.discount_amount || '',
+                is_buddy: item.is_buddy || false,
+                is_batch_control: item.is_batch_control || false,
+                is_expiry_control: item.is_expiry_control || false,
+                is_serial_control: item.is_serial_control || false,
+                costing_method: item.costing_method || 'FIFO',
             });
         }
     }, [existingItem, reset]);
@@ -162,8 +223,8 @@ export function useItemForm(editId: number | null, onSuccess?: () => void) {
     const saveMutation = useMutation({
         mutationFn: (data: ItemFormData) => {
             return editId 
-                ? ItemMasterService.update(editId, data)
-                : ItemMasterService.create(data);
+                ? ItemMasterService.update(editId, data as any)
+                : ItemMasterService.create(data as any);
         },
         onSuccess: async (success) => {
             if (success) {
@@ -196,7 +257,7 @@ export function useItemForm(editId: number | null, onSuccess?: () => void) {
     const handleInputChange: ItemFormChangeHandler = useCallback((field, value) => {
         const path = field as Path<ItemFormData>;
         
-        if (field === 'tax_rate' || field === 'std_amount') {
+        if (field === 'tax_rate' || field === 'standard_cost') {
             const numVal = typeof value === 'number' ? value : Number(value);
             setValue(path, numVal as PathValue<ItemFormData, typeof path>, { shouldDirty: true, shouldValidate: true });
         } else if (typeof value === 'boolean') {
@@ -204,16 +265,10 @@ export function useItemForm(editId: number | null, onSuccess?: () => void) {
         } else {
             setValue(path, String(value) as PathValue<ItemFormData, typeof path>, { shouldDirty: true, shouldValidate: true });
         }
-
-        if (field === 'default_tax_code' && typeof value === 'string') {
-            const selectedTax = ITEM_TAX_CODES.find(t => t.code === value);
-            if (selectedTax) {
-                setValue('tax_rate', selectedTax.rate);
-            }
-        }
     }, [setValue]);
 
     const handleSave = rhfHandleSubmit((data) => {
+        console.log('Data being sent to API:', data);
         saveMutation.mutate(data);
     });
 
