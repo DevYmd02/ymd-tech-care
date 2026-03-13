@@ -73,7 +73,26 @@ export interface PRHeader {
   // Relations (populated by API)
   lines?: PRLine[];
   approval_tasks?: ApprovalTask[];
+
+  // ── Extended Fields for Auto-Hydration (QC/VQ) ──
+  rfq_id?: number;
+  qc_id?: number;
+  winning_vq_id?: number;
+  winning_vq?: {
+    vendor_id: number;
+    payment_term_days?: number;
+    credit_days?: number;
+    tax_code_id?: number;
+  };
+  qcHeaders?: Array<{
+    qc_id: number;
+    winning_vq_id?: number;
+    qc_no?: string;
+  }>;
 }
+
+/** PRHeaderExtended - PR Header with QC/VQ metadata for hydration */
+export type PRHeaderExtended = PRHeader;
 
 // ====================================================================================
 // PR LINE - ตาม pr_line table
@@ -99,7 +118,7 @@ export interface PRLine {
   remark?: string;                  // TEXT - หมายเหตุ
   line_discount_raw?: string;       // Postman: line_discount_raw
   line_net_amount?: string | number; // Added: Backend returns this as the line total
-  line_amount?: string | number;
+  line_total?: string | number;
   tax_amount?: string | number;
   tax_rate?: string | number;
   required_receipt_type?: string;
@@ -111,8 +130,17 @@ export interface PRLine {
     item_code: string;
     item_name: string;
     description?: string;
+    uom_id?: number;
+  };
+  // ── Extended Fields for Auto-Hydration ──
+  winning_vq_line?: {
+    unit_price: number;
+    discount_amount: number;
   };
 }
+
+/** PRLineExtended - PR Line with VQ metadata for hydration */
+export type PRLineExtended = PRLine;
 
 // ====================================================================================
 // APPROVAL TASK - สำหรับ Approval Workflow

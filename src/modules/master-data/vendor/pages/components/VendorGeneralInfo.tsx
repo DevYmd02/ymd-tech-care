@@ -1,16 +1,26 @@
 import React from 'react';
 import { Building2 } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
-import { VENDOR_TYPES, BUSINESS_CATEGORIES, CURRENCIES } from '@/modules/master-data/vendor/constants/vendorConstants';
+import { CURRENCIES } from '@/modules/master-data/vendor/constants/vendorConstants';
 import type { VendorFormData } from '@/modules/master-data/vendor/types/vendor-types';
 
 interface VendorGeneralInfoProps {
     formData: Partial<VendorFormData>;
     onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void;
     errors: { [key: string]: string };
+    vendorTypeOptions?: { label: string, value: number }[];
+    vendorGroupOptions?: { label: string, value: number }[];
+    isLoading?: boolean;
 }
 
-export const VendorGeneralInfo: React.FC<VendorGeneralInfoProps> = ({ formData = {}, onChange, errors }) => {
+export const VendorGeneralInfo: React.FC<VendorGeneralInfoProps> = ({ 
+    formData = {}, 
+    onChange, 
+    errors, 
+    vendorTypeOptions = [], 
+    vendorGroupOptions = [], 
+    isLoading 
+}) => {
     return (
         <section>
             <div className="flex items-center gap-2 mb-4 text-blue-600 dark:text-blue-400">
@@ -65,8 +75,8 @@ export const VendorGeneralInfo: React.FC<VendorGeneralInfoProps> = ({ formData =
                             className={`${styles.inputSelect} ${errors.vendorTypeId ? 'border-red-500 focus:ring-red-500' : ''}`}
                             required
                         >
-                            <option value="" disabled>เลือกประเภทเจ้าหนี้</option>
-                            {VENDOR_TYPES.map(type => (
+                            <option value="" disabled>{isLoading ? 'กำลังโหลด...' : 'เลือกประเภทเจ้าหนี้'}</option>
+                            {vendorTypeOptions.map(type => (
                                 <option key={type.value} value={type.value}>{type.label}</option>
                             ))}
                         </select>
@@ -84,8 +94,8 @@ export const VendorGeneralInfo: React.FC<VendorGeneralInfoProps> = ({ formData =
                         className={`${styles.inputSelect} ${errors.vendorGroupId ? 'border-red-500 focus:ring-red-500' : ''}`}
                         required
                     >
-                        <option value="" disabled>เลือกหมวดหมู่</option>
-                        {BUSINESS_CATEGORIES.map(cat => (
+                        <option value="" disabled>{isLoading ? 'กำลังโหลด...' : 'เลือกหมวดหมู่'}</option>
+                        {vendorGroupOptions.map(cat => (
                             <option key={cat.value} value={cat.value}>{cat.label}</option>
                         ))}
                     </select>

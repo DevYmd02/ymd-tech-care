@@ -19,7 +19,17 @@ export const VendorTypeService = {
             return localVendorTypes;
         }
         try {
-            return await api.get<ListResponse<VendorTypeMaster>>('/vendor-types');
+            const response = await api.get<ListResponse<VendorTypeMaster> | VendorTypeMaster[]>('/vendor-type');
+            
+            // If response is an array (directly from API), wrap it
+            if (Array.isArray(response)) {
+                return {
+                    items: response,
+                    total: response.length
+                };
+            }
+            
+            return response || { items: [], total: 0 };
         } catch (error) {
             logger.error('[VendorTypeService] getAll error:', error);
             return { items: [], total: 0 };
@@ -39,7 +49,7 @@ export const VendorTypeService = {
             return null;
         }
         try {
-            return await api.get<VendorTypeMaster>(`/vendor-types/${id}`);
+            return await api.get<VendorTypeMaster>(`/vendor-type/${id}`);
         } catch (error) {
             logger.error('[VendorTypeService] getById error:', error);
             return null;
@@ -60,7 +70,7 @@ export const VendorTypeService = {
                 code: data.typeCode.toUpperCase(),
                 vendor_type_name: data.typeName,
                 name_th: data.typeName,
-                vendor_type_name_en: data.typeNameEn,
+                vendor_type_nameeng: data.typeNameEn,
                 is_active: data.isActive,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
@@ -70,7 +80,7 @@ export const VendorTypeService = {
             return { success: true, data: newVendorType };
         }
         try {
-            const response = await api.post<VendorTypeMaster>('/vendor-types', data);
+            const response = await api.post<VendorTypeMaster>('/vendor-type', data);
             return { success: true, data: response };
         } catch (error) {
             logger.error('[VendorTypeService] create error:', error);
@@ -91,7 +101,7 @@ export const VendorTypeService = {
                     code: data.typeCode.toUpperCase(),
                     vendor_type_name: data.typeName,
                     name_th: data.typeName,
-                    vendor_type_name_en: data.typeNameEn,
+                    vendor_type_nameeng: data.typeNameEn,
                     is_active: data.isActive,
                     updated_at: new Date().toISOString(),
                 };
@@ -100,7 +110,7 @@ export const VendorTypeService = {
             return { success: false, message: 'ไม่พบประเภทเจ้าหนี้' };
         }
         try {
-            const response = await api.put<VendorTypeMaster>(`/vendor-types/${id}`, data);
+            const response = await api.put<VendorTypeMaster>(`/vendor-type/${id}`, data);
             return { success: true, data: response };
         } catch (error) {
             logger.error('[VendorTypeService] update error:', error);
@@ -122,7 +132,7 @@ export const VendorTypeService = {
             return { success: false, message: 'ไม่พบประเภทเจ้าหนี้' };
         }
         try {
-            await api.delete<SuccessResponse>(`/vendor-types/${id}`);
+            await api.delete<SuccessResponse>(`/vendor-type/${id}`);
             return { success: true };
         } catch (error) {
             logger.error('[VendorTypeService] delete error:', error);

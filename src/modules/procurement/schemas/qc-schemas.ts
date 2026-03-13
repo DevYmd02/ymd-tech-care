@@ -179,3 +179,28 @@ export type QCListItem = z.infer<typeof QCListItemSchema>;
 export type QCFormData = z.infer<typeof CreateQCFormSchema>;
 export type QCCreateData = CreateQCPayload; // Service create now uses the 5-field payload
 export type CreateQCFormSchemaType = z.infer<typeof CreateQCFormSchema>;
+
+// ====================================================================================
+// 7. PR-Centric "Ready for PO" Types (Postman Response Mapping)
+// ====================================================================================
+
+export interface IReadyForPOPR {
+  pr_id: number;
+  pr_no: string;
+  base_currency_code: string;
+  pr_base_total_amount: number;
+  requester_name: string;
+  preferred_vendor?: {
+    vendor_id: number;
+    vendor_name: string;
+  } | null;
+  qcHeaders?: {
+    qc_id: number;
+    qc_no: string;
+    pr_id: number;
+    winning_vq_id: number;
+    winning_vendor_id?: number;
+    status: string;
+    created_at: string;
+  }[] | null;
+}

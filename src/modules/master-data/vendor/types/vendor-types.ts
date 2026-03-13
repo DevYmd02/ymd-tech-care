@@ -706,7 +706,8 @@ export interface VendorTypeMaster extends Omit<IBaseMaster, 'id'> {
     vendor_type_id: number;
     vendor_type_code: string;
     vendor_type_name: string;
-    vendor_type_name_en?: string;
+    vendor_type_nameeng?: string;
+    description?: string;
 }
 
 /**
@@ -731,7 +732,7 @@ export interface VendorGroupMaster extends Omit<IBaseMaster, 'id'> {
     vendor_group_id: number;
     vendor_group_code: string;
     vendor_group_name: string;
-    vendor_group_name_en?: string;
+    vendor_group_nameeng?: string;
 }
 
 /**
