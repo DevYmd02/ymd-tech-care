@@ -17,14 +17,14 @@ interface ItemStockDetailsProps {
     formData: ItemFormData;
     onChange: ItemFormChangeHandler;
     errors: FieldErrors<ItemFormData>;
-    units?: UnitListItem[];
+    uom?: UnitListItem[];
 }
 
 export const ItemStockDetails: React.FC<ItemStockDetailsProps> = ({
     formData,
     onChange,
     errors,
-    units = []
+    uom = []
 }) => {
     return (
         <div className="lg:col-span-4 space-y-2">
@@ -45,8 +45,8 @@ export const ItemStockDetails: React.FC<ItemStockDetailsProps> = ({
                         } rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-emerald-500 outline-none`}
                     >
                         <option value="">-- เลือก --</option>
-                        {units.map(u => (
-                            <option key={u.unit_id} value={u.unit_id}>{u.unit_name} ({u.unit_code})</option>
+                        {uom.map(u => (
+                            <option key={u.uom_id} value={u.uom_id}>{u.uom_name} ({u.uom_code})</option>
                         ))}
                     </select>
                 </div>

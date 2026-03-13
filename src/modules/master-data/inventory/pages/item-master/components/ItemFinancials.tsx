@@ -1,6 +1,7 @@
 import React from 'react';
 import type { ItemFormData, ItemFormChangeHandler } from '../hooks/useItemForm';
-import { ITEM_TAX_CODES } from '@/modules/master-data/inventory/constants/itemConstants';
+
+import type { TaxCodeListItem } from '@/modules/master-data/types/master-data-types';
 
 /**
  * @interface ItemFinancialsProps
@@ -9,11 +10,13 @@ import { ITEM_TAX_CODES } from '@/modules/master-data/inventory/constants/itemCo
 interface ItemFinancialsProps {
     formData: ItemFormData;
     onChange: ItemFormChangeHandler;
+    taxCodes?: TaxCodeListItem[];
 }
 
 export const ItemFinancials: React.FC<ItemFinancialsProps> = ({
     formData,
-    onChange
+    onChange,
+    taxCodes = [],
 }) => {
     return (
         <div className="lg:col-span-4 space-y-2">
@@ -26,12 +29,20 @@ export const ItemFinancials: React.FC<ItemFinancialsProps> = ({
                     <div>
                         <label className="block text-xs text-gray-700 dark:text-gray-400 mb-0.5">ประเภทภาษี (Tax Type)</label>
                         <select 
-                            value={formData.default_tax_code} 
-                            onChange={(e) => onChange('default_tax_code', e.target.value)} 
+                            value={formData.default_tax_code || ''} 
+                            onChange={(e) => {
+                                const code = e.target.value;
+                                onChange('default_tax_code', code);
+                                const selectedTax = taxCodes.find(t => t.tax_code === code);
+                                if (selectedTax) {
+                                    onChange('tax_rate', selectedTax.tax_rate);
+                                }
+                            }} 
                             className="w-full h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-purple-500 outline-none"
                         >
-                            {ITEM_TAX_CODES.map(t => (
-                                <option key={t.id} value={t.code}>{t.name}</option>
+                            <option value="">-- เลือก --</option>
+                            {taxCodes.map(t => (
+                                <option key={t.tax_code_id} value={t.tax_code}>{t.tax_code} - {t.tax_name}</option>
                             ))}
                         </select>
                     </div>
@@ -83,4 +94,3 @@ export const ItemFinancials: React.FC<ItemFinancialsProps> = ({
         </div>
     );
 };
-

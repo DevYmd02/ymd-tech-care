@@ -7,6 +7,7 @@ import { ItemAttributes } from './components/ItemAttributes';
 import { ItemStockDetails } from './components/ItemStockDetails';
 import { ItemFinancials } from './components/ItemFinancials';
 import { ItemStatusControl } from './components/ItemStatusControl';
+import { useMasterData } from './hooks/useMasterData';
 
 interface ItemMasterFormModalProps {
     isOpen: boolean;
@@ -28,12 +29,26 @@ export function ItemMasterFormModal({ isOpen, onClose, editId, onSuccess }: Item
         handleInputChange,
         handleSave,
         clearForm,
-        units,
         categories
     } = useItemForm(editId ?? null, () => {
         if (onSuccess) onSuccess();
         onClose();
     });
+
+    // Fetch Master Data
+    const { 
+        itemTypes, 
+        itemGroups, 
+        itemBrands, 
+        itemPatterns, 
+        itemDesigns,
+        itemGrades,
+        itemClasses,
+        itemSizes,
+        itemColors,
+        uom,
+        taxCodes
+    } = useMasterData(isOpen);
 
     // Handle strict form reset on close to prevent data bleed
     // This implements the "Vendor Rule" for API-Readiness
@@ -90,6 +105,15 @@ export function ItemMasterFormModal({ isOpen, onClose, editId, onSuccess }: Item
                             formData={formData} 
                             onChange={handleInputChange} 
                             categories={categories}
+                            itemTypes={itemTypes}
+                            itemGroups={itemGroups}
+                            itemBrands={itemBrands}
+                            itemPatterns={itemPatterns}
+                            itemDesigns={itemDesigns}
+                            itemGrades={itemGrades}
+                            itemClasses={itemClasses}
+                            itemSizes={itemSizes}
+                            itemColors={itemColors}
                         />
                     </div>
 
@@ -99,7 +123,7 @@ export function ItemMasterFormModal({ isOpen, onClose, editId, onSuccess }: Item
                             formData={formData} 
                             onChange={handleInputChange}
                             errors={errors}
-                            units={units}
+                            uom={uom}
                         />
                     </div>
 
@@ -108,6 +132,7 @@ export function ItemMasterFormModal({ isOpen, onClose, editId, onSuccess }: Item
                         <ItemFinancials 
                             formData={formData} 
                             onChange={handleInputChange} 
+                            taxCodes={taxCodes}
                         />
                         
                         <ItemStatusControl 
@@ -120,5 +145,3 @@ export function ItemMasterFormModal({ isOpen, onClose, editId, onSuccess }: Item
         </DialogFormLayout>
     );
 }
-
-

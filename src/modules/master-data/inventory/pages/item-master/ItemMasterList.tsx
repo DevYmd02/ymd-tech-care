@@ -78,47 +78,23 @@ export default function ItemMasterList() {
 
     // ==================== DATA FETCHING ====================
     const { data: response, isLoading } = useQuery({
-        queryKey: ['items', filters],
+        queryKey: ['items', filters, sortConfig],
         queryFn: async () => {
-            const result = await ItemMasterService.getAll();
-            let items = result.items || [];
+            const apiParams = {
+                page: filters.page,
+                limit: filters.limit,
+                item_code: filters.search,     // Map search input to item_code
+                item_name: filters.search2,    // Map search2 input to item_name
+                status: filters.status === 'ALL' ? undefined : filters.status,
+                sort_by: sortConfig?.key,
+                sort_direction: sortConfig?.direction
+            };
             
-            // Client-side filtering (mocking server behavior)
-            if (filters.status !== 'ALL') {
-                items = items.filter(u => filters.status === 'ACTIVE' ? u.is_active : !u.is_active);
-            }
-            if (filters.search) {
-                const term = filters.search.toLowerCase();
-                items = items.filter(u => u.item_code.toLowerCase().includes(term));
-            }
-             if (filters.search2) {
-                const term = filters.search2.toLowerCase();
-                items = items.filter(u => 
-                    u.item_name.toLowerCase().includes(term) || 
-                    (u.item_name_en && u.item_name_en.toLowerCase().includes(term))
-                );
-            }
-            
-            // Sorting
-            if (sortConfig) {
-                items.sort((a, b) => {
-                    const fieldValA = a[sortConfig.key as keyof ItemListItem];
-                    const fieldValB = b[sortConfig.key as keyof ItemListItem];
-                    
-                    const valA = fieldValA !== undefined && fieldValA !== null ? String(fieldValA) : '';
-                    const valB = fieldValB !== undefined && fieldValB !== null ? String(fieldValB) : '';
-                    
-                    return sortConfig.direction === 'asc' 
-                        ? valA.localeCompare(valB, 'th') 
-                        : valB.localeCompare(valA, 'th');
-                });
-            }
-
-            const total = items.length;
-            const start = (filters.page - 1) * filters.limit;
-            const paginatedItems = items.slice(start, start + filters.limit);
-
-            return { items: paginatedItems, total };
+            const result = await ItemMasterService.getAll(apiParams);
+            return { 
+                items: result.items || [], 
+                total: result.total || 0 
+            };
         },
         refetchOnMount: true,
         refetchOnWindowFocus: false,
@@ -218,9 +194,15 @@ export default function ItemMasterList() {
             size: 200,
         },
         {
-            accessorKey: 'category_name',
+            accessorKey: 'item_category_code',
             header: 'หมวดหมู่',
             cell: ({ getValue }) => <span className="text-gray-700 dark:text-gray-300">{getValue() as string}</span>,
+            size: 150,
+        },
+        {
+            accessorKey: 'item_brand_code',
+            header: 'ยี่ห้อ',
+            cell: ({ getValue }) => <span className="text-gray-700 dark:text-gray-300">{getValue() as string || '-'}</span>,
             size: 150,
         },
         {
@@ -234,8 +216,8 @@ export default function ItemMasterList() {
             size: 100,
         },
         {
-            accessorKey: 'unit_name',
-            header: 'หน่วยนับ',
+            accessorKey: 'base_uom_id',
+            header: 'หน่วยนับ (ID)',
             cell: ({ getValue }) => <span className="text-gray-600 dark:text-gray-300">{getValue() as string}</span>,
             size: 100,
         },
@@ -342,6 +324,3 @@ export default function ItemMasterList() {
         </div>
     );
 }
-
-
-
