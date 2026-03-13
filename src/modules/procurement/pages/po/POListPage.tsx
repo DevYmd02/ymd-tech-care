@@ -31,6 +31,8 @@ export default function POListPage() {
     const createFromQC = searchParams.get('createFromQC') === 'true';
     const vendorIdParam = searchParams.get('vendorId');
     const qcIdParam = searchParams.get('sourceQcId');
+    const prIdParam = searchParams.get('sourcePrId');
+    const winningVqIdParam = searchParams.get('winningVqId');
     const remarksParam = searchParams.get('remarks');
 
     const initialCreateValues = useMemo<Partial<POFormData> | undefined>(() => {
@@ -38,15 +40,17 @@ export default function POListPage() {
             return {
                 vendor_id: vendorIdParam ? Number(vendorIdParam) : undefined,
                 qc_id: qcIdParam ? Number(qcIdParam) : undefined,
+                pr_id: prIdParam ? Number(prIdParam) : undefined,
+                winning_vq_id: winningVqIdParam ? Number(winningVqIdParam) : undefined,
                 remarks: remarksParam || undefined,
-                lines: [],
+                po_lines: [],
             };
         }
         if (vendorIdParam) {
             return { vendor_id: Number(vendorIdParam) };
         }
         return undefined;
-    }, [createFromQC, vendorIdParam, qcIdParam, remarksParam]);
+    }, [createFromQC, vendorIdParam, qcIdParam, prIdParam, winningVqIdParam, remarksParam]);
 
     const handleCloseCreateModal = () => {
         setSearchParams(prev => {
@@ -56,6 +60,8 @@ export default function POListPage() {
             newParams.delete('vendorId');
             newParams.delete('qcNo');
             newParams.delete('sourceQcId');
+            newParams.delete('winningVqId');
+            newParams.delete('sourcePrId');
             newParams.delete('remarks');
             return newParams;
         });
@@ -419,7 +425,7 @@ export default function POListPage() {
                             }}
                             sortConfig={sortConfig}
                             onSortChange={handleSortChange}
-                            rowIdField="po_id"
+                            rowIdField="po_header_id"
                             className="h-full"
                             showFooter={true}
                         />
@@ -433,7 +439,7 @@ export default function POListPage() {
                     >
                         {data?.data.map((item) => (
                             <MobileListCard
-                                key={item.po_id}
+                                key={item.po_header_id || item.po_id}
                                 title={item.po_no}
                                 subtitle={formatThaiDate(item.po_date)}
                                 statusBadge={<POStatusBadge status={item.status} />}
@@ -516,13 +522,15 @@ export default function POListPage() {
             <DocumentSourceSelectorModal
                 isOpen={isCreateInterceptorOpen}
                 onClose={() => handleCloseCreateModal()}
-                onSelectSource={(sourceType: 'QC' | 'BLANK', qcId?: number, vendorId?: number) => {
-                    if (sourceType === 'QC' && qcId) {
+                onSelectSource={(sourceType: 'QC' | 'BLANK', prId?: number, qcId?: number, vendorId?: number, winningVqId?: number) => {
+                    if (sourceType === 'QC' && (prId || qcId)) {
                         setSearchParams({ 
                             mode: 'create', 
                             createFromQC: 'true', 
-                            sourceQcId: String(qcId),
-                            ...(vendorId ? { vendorId: String(vendorId) } : {})
+                            ...(prId ? { sourcePrId: String(prId) } : {}),
+                            ...(qcId ? { sourceQcId: String(qcId) } : {}),
+                            ...(vendorId ? { vendorId: String(vendorId) } : {}),
+                            ...(winningVqId ? { winningVqId: String(winningVqId) } : {})
                         });
                     } else {
                         setSearchParams({ mode: 'create' });

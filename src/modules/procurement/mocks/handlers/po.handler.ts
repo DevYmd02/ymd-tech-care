@@ -37,11 +37,12 @@ export const setupPOHandlers = (mock: MockAdapter) => {
         const params = config.params || {};
         const sanitizedData = MOCK_POS.map(po => ({
             ...po,
-            po_id:     sanitizeId(po.po_id),
-            pr_id:     sanitizeId(po.pr_id),
-            qc_id:     sanitizeId(po.qc_id),
-            vendor_id: sanitizeId(po.vendor_id),
-            branch_id: sanitizeId(po.branch_id),
+            po_id:        sanitizeId(po.po_id),
+            po_header_id: sanitizeId(po.po_header_id),
+            pr_id:        sanitizeId(po.pr_id),
+            qc_id:        sanitizeId(po.qc_id),
+            vendor_id:    sanitizeId(po.vendor_id),
+            branch_id:    sanitizeId(po.branch_id),
         }));
 
         const result = applyMockFilters(sanitizedData, params, {
@@ -63,11 +64,12 @@ export const setupPOHandlers = (mock: MockAdapter) => {
             const poWithLines = found as POWithLines;
             const sanitized = {
                 ...found,
-                po_id:     sanitizeId(found.po_id),
-                pr_id:     sanitizeId(found.pr_id),
-                qc_id:     sanitizeId(found.qc_id),
-                vendor_id: sanitizeId(found.vendor_id),
-                branch_id: sanitizeId(found.branch_id),
+                po_id:        sanitizeId(found.po_id),
+                po_header_id: sanitizeId(found.po_header_id),
+                pr_id:        sanitizeId(found.pr_id),
+                qc_id:        sanitizeId(found.qc_id),
+                vendor_id:    sanitizeId(found.vendor_id),
+                branch_id:    sanitizeId(found.branch_id),
                 lines: (poWithLines.lines || []).map((line: POLine) => ({
                     ...line,
                     po_line_id: sanitizeId(line.po_line_id),
@@ -90,8 +92,10 @@ export const setupPOHandlers = (mock: MockAdapter) => {
             return [400, { message: 'qc_id and vendor_id are required to create a PO', success: false }];
         }
 
+        const newPOId = Date.now();
         const newPO: POListItem = {
-            po_id:            Date.now(),
+            po_id:            newPOId,
+            po_header_id:     newPOId,
             po_no:            generateNextPONumber(),
             po_date:          body.po_date || new Date().toISOString().split('T')[0],
             pr_id:            sanitizeId(body.pr_id || ''),

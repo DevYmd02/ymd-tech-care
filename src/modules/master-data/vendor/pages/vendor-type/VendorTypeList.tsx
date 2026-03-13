@@ -170,7 +170,7 @@ export default function VendorTypeList() {
             header: 'ชื่อประเภทเจ้าหนี้ (ไทย)',
         },
         {
-            accessorKey: 'vendor_type_name_en',
+            accessorKey: 'vendor_type_nameeng',
             header: 'ชื่อประเภทเจ้าหนี้ (EN)',
             cell: ({ getValue }) => <span className="text-gray-600">{getValue() as string || '-'}</span>,
         },

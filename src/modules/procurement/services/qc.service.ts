@@ -1,6 +1,6 @@
 import api from '@/core/api/api';
 import { USE_MOCK } from '@/core/api/api';
-import type { QCListParams, QCListResponse, CreateQCPayload, SubmitQCWinnerData } from '@/modules/procurement/schemas/qc-schemas';
+import type { QCListParams, QCListResponse, CreateQCPayload, SubmitQCWinnerData, IReadyForPOPR } from '@/modules/procurement/schemas/qc-schemas';
 import type { QCListItem } from '@/modules/procurement/schemas/qc-schemas';
 import { logger } from '@/shared/utils/logger';
 import type { SuccessResponse } from '@/shared/types/api-response.types';
@@ -72,9 +72,9 @@ export const QCService = {
     return await api.get<QCListItem>(ENDPOINTS.detail(id));
   },
 
-  getReadyForPO: async (): Promise<QCListResponse> => {
-    logger.info('[QCService] Fetching QCs ready for PO creation');
-    return await api.get<QCListResponse>('/qc/ready-for-po');
+  getReadyForPO: async (): Promise<IReadyForPOPR[]> => {
+    logger.info('[QCService] Fetching PRs waiting for QC (Ready for PO)');
+    return await api.get<IReadyForPOPR[]>('/po/pr/waiting-for-qc');
   },
 
   create: async (data: CreateQCPayload): Promise<{ qc_id: number }> => {

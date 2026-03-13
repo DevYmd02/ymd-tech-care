@@ -3,19 +3,6 @@
  * @description Centralized constants for Vendor Master Data
  */
 
-export const VENDOR_TYPES = [
-    { label: 'ผู้จัดจำหน่าย (Distributor)', value: '1' },
-    { label: 'บุคคลธรรมดา (Individual)', value: '2' },
-    { label: 'หน่วยงานราชการ (Government)', value: '3' },
-];
-
-export const BUSINESS_CATEGORIES = [
-    { label: 'อุปกรณ์ไอที', value: '1' },
-    { label: 'อุปกรณ์สำนักงาน', value: '2' },
-    { label: 'บริการ', value: '3' },
-    { label: 'รับเหมาก่อสร้าง', value: '4' },
-];
-
 export const CURRENCIES = [
     { label: 'THB - บาท', value: '1' },
     { label: 'USD - ดอลลาร์สหรัฐ', value: '2' },

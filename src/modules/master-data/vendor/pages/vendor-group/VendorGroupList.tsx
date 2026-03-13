@@ -167,7 +167,7 @@ export default function VendorGroupList() {
             header: 'ชื่อกลุ่มเจ้าหนี้ (ไทย)',
         },
         {
-            accessorKey: 'vendor_group_name_en',
+            accessorKey: 'vendor_group_nameeng',
             header: 'ชื่อกลุ่มเจ้าหนี้ (EN)',
             cell: ({ getValue }) => <span className="text-gray-600">{getValue() as string || '-'}</span>,
         },

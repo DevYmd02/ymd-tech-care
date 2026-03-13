@@ -2,7 +2,7 @@ import type { POListItem } from '@/modules/procurement/schemas/po-schemas';
 
 const _mockPOs: POListItem[] = [
     {
-        po_id: 1, po_no: 'PO-202602-0001', po_date: '2026-02-20',
+        po_id: 1, po_header_id: 1, po_no: 'PO-202602-0001', po_date: '2026-02-20',
         pr_id: 12, pr_no: 'PR-202602-0012',
         qc_id: 7, qc_no: 'QC-202602-0007',
         vendor_id: 5, vendor_name: 'Smart Tech Co., Ltd.',
@@ -13,7 +13,7 @@ const _mockPOs: POListItem[] = [
         remarks: 'สั่งซื้อตาม QC-202602-0007 — Smart Tech ชนะการประมูล'
     },
     {
-        po_id: 2, po_no: 'PO-202602-0002', po_date: '2026-02-12',
+        po_id: 2, po_header_id: 2, po_no: 'PO-202602-0002', po_date: '2026-02-12',
         pr_id: 5, pr_no: 'PR-202602-0005',
         qc_id: 6, qc_no: 'QC-202602-0006',
         vendor_id: 7, vendor_name: 'Global Oil Co., Ltd.',
@@ -24,7 +24,7 @@ const _mockPOs: POListItem[] = [
         remarks: 'สั่งซื้อน้ำมันอุตสาหกรรม — รออนุมัติจากผู้จัดการ'
     },
     {
-        po_id: 3, po_no: 'PO-202602-0003', po_date: '2026-02-10',
+        po_id: 3, po_header_id: 3, po_no: 'PO-202602-0003', po_date: '2026-02-10',
         pr_id: 8, pr_no: 'PR-202602-0008',
         qc_id: 8, qc_no: 'QC-202602-0008',
         vendor_id: 3, vendor_name: 'OfficeMate Corporation',
@@ -35,7 +35,7 @@ const _mockPOs: POListItem[] = [
         remarks: 'อุปกรณ์สำนักงาน — อนุมัติแล้ว รอออก PO'
     },
     {
-        po_id: 4, po_no: 'PO-202601-0004', po_date: '2026-01-28',
+        po_id: 4, po_header_id: 4, po_no: 'PO-202601-0004', po_date: '2026-01-28',
         pr_id: 3, pr_no: 'PR-202601-0003',
         qc_id: 5, qc_no: 'QC-202601-0005',
         vendor_id: 1, vendor_name: 'IT Supply Co., Ltd.',
@@ -46,7 +46,7 @@ const _mockPOs: POListItem[] = [
         remarks: 'อุปกรณ์ IT — รับของครบแล้ว ปิดงานเรียบร้อย'
     },
     {
-        po_id: 5, po_no: 'PO-202601-0005', po_date: '2026-01-15',
+        po_id: 5, po_header_id: 5, po_no: 'PO-202601-0005', po_date: '2026-01-15',
         pr_id: 2, pr_no: 'PR-202601-0002',
         qc_id: 4, qc_no: 'QC-202601-0004',
         vendor_id: 9, vendor_name: 'BuildMate Supplies',
@@ -57,7 +57,7 @@ const _mockPOs: POListItem[] = [
         remarks: 'ยกเลิกเนื่องจากผู้ขายไม่สามารถส่งของในกำหนดได้'
     },
     {
-        po_id: 6, po_no: 'PO-202602-0006', po_date: '2026-02-25',
+        po_id: 6, po_header_id: 6, po_no: 'PO-202602-0006', po_date: '2026-02-25',
         pr_id: 15, pr_no: 'PR-202602-0015',
         qc_id: 10, qc_no: 'QC-202602-0010',
         vendor_id: 4, vendor_name: 'Premium Hardware Co.',
@@ -80,7 +80,7 @@ const _mockPOs: POListItem[] = [
         ]
     },
     {
-        po_id: 7, po_no: 'PO-202603-0009', po_date: '2026-03-01',
+        po_id: 7, po_header_id: 7, po_no: 'PO-202603-0009', po_date: '2026-03-01',
         pr_id: 11, pr_no: 'PR-202603-0011',
         qc_id: 12, qc_no: 'QC-202603-0012',
         vendor_id: 2, vendor_name: 'Metro Systems Corp.',

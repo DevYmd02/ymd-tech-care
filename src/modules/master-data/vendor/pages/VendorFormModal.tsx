@@ -61,7 +61,10 @@ export function VendorFormModal(props: VendorFormModalProps) {
         handleSameAsRegisteredChange,
         handleCreditLimitChange,
         handleSubmit,
-        clearForm
+        clearForm,
+        vendorTypeOptions,
+        vendorGroupOptions,
+        isLoadingMasterData
     } = useVendorForm({ ...props, toast });
 
     const handleClose = () => {
@@ -123,6 +126,9 @@ export function VendorFormModal(props: VendorFormModalProps) {
                     formData={formData} 
                     onChange={handleChange} 
                     errors={errors}
+                    vendorTypeOptions={vendorTypeOptions}
+                    vendorGroupOptions={vendorGroupOptions}
+                    isLoading={isLoadingMasterData}
                 />
 
                 <VendorContactInfo 

@@ -22,6 +22,7 @@ import type { POStatus } from '@/modules/procurement/schemas/po-schemas';
  */
 export interface POHeader {
     po_id: number;                  // INTEGER @id
+    po_header_id: number;           // Aligned with API PK
     po_no: string;                  // varchar(30)
     po_date: string;                // date
     pr_id: number;                  // INTEGER
@@ -63,16 +64,18 @@ export interface POHeader {
  * Table: po_line
  */
 export interface POLine {
+    id?: number;                    // Dual Mapping (synced with item_id)
+    code?: string;                  // Dual Mapping (synced with item_code)
     po_line_id?: number;            // INTEGER @id
     po_id?: number;                 // INTEGER (FK)
-    line_no: number;                // New field
-    pr_line_id?: number | null;     // INTEGER (FK)
-    item_id?: number;               // INTEGER (FK)
+    line_no: number;
+    pr_line_id?: number | null;
+    item_id: number;                // REQUIRED for PO Line
     item_code?: string;             // Display
     item_name?: string;             // Display
     
     status: string;                 // e.g., 'OPEN'
-    description?: string;           // text
+    description: string;           // text (REQUIRED for Consistency)
     
     qty: number;                    // Aligned with backend 'qty'
     qty_ordered?: number;           // Legacy UI field
@@ -151,7 +154,7 @@ export interface CreatePOLineItem {
 }
 
 export interface CreatePOPayload {
-    rfq_id: number | null;
+    rfq_id?: number;
     vendor_id: number;
     branch_id: number;
     warehouse_id: number;
@@ -164,7 +167,7 @@ export interface CreatePOPayload {
     status: string;
     created_at: string;
     created_by: number;
-    winning_vq_id: number | null;
+    winning_vq_id?: number;
     po_lines: POLine[];
 
     // Legacy/Fallback for UI

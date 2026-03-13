@@ -76,7 +76,7 @@ export function VendorTypeFormModal({ isOpen, onClose, editId, onSuccess }: Prop
                         reset({
                             typeCode: existing.vendor_type_code,
                             typeName: existing.vendor_type_name,
-                            typeNameEn: existing.vendor_type_name_en || '',
+                            typeNameEn: existing.vendor_type_nameeng || '',
                             isActive: existing.is_active
                         });
                     }
