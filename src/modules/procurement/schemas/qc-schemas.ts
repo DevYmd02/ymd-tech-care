@@ -120,22 +120,38 @@ export const QCListItemSchema = QCHeaderSchema.extend({
   vendor_count: z.number().nonnegative().optional().default(0),
   lowest_price: z.number().nonnegative().optional().default(0),
   lowest_bidder_name: z.string().optional().default('-'),
+  vendor_name: z.string().optional(), // 🎯 New API Mapping
+  vq_total_amount: z.union([z.string(), z.number()]).optional(), // 🎯 New API Mapping
+  vq_header_id: z.coerce.number().optional(), // 🎯 Required for Smart Status Logic
   winning_vendor_id: z.coerce.number().optional(),
   subject: z.string().optional(),
 });
 
 /**
- * CreateQCSchema
- * Payload for creation/update including items.
+ * CreateQCFormSchema
+ * Used for UI State in QCFormModal.tsx (contains extra display fields)
  */
-export const CreateQCSchema = QCHeaderSchema.extend({
+export const CreateQCFormSchema = QCHeaderSchema.extend({
   items: z.array(QCMatrixRowSchema).optional(),
   remark: z.string().optional(),
   rfq_no: z.string().optional(),
   pr_no: z.string().optional(),
 });
 
-export type CreateQCCreateData = z.infer<typeof CreateQCSchema>;
+/**
+ * CreateQCSchema
+ * 5-Field Pure Payload for QC Creation (Strictly for API)
+ */
+export const CreateQCSchema = z.object({
+  rfq_id: z.coerce.number(),
+  pr_id: z.coerce.number().nullable().optional(),
+  department_id: z.coerce.number().nullable().optional(),
+  created_by: z.coerce.number(),
+  winning_vq_id: z.coerce.number(),
+});
+
+export type CreateQCPayload = z.infer<typeof CreateQCSchema>;
+export type CreateQCFormData = z.infer<typeof CreateQCFormSchema>;
 
 // ====================================================================================
 // 5. Submit Winner Schema
@@ -160,5 +176,6 @@ export type QCMatrixVendorCell = z.infer<typeof QCMatrixVendorCellSchema>;
 export type QCMatrixRow = z.infer<typeof QCMatrixRowSchema>;
 export type QCHeader = z.infer<typeof QCHeaderSchema>;
 export type QCListItem = z.infer<typeof QCListItemSchema>;
-export type QCFormData = z.infer<typeof CreateQCSchema>;
-export type QCCreateData = QCFormData;
+export type QCFormData = z.infer<typeof CreateQCFormSchema>;
+export type QCCreateData = CreateQCPayload; // Service create now uses the 5-field payload
+export type CreateQCFormSchemaType = z.infer<typeof CreateQCFormSchema>;

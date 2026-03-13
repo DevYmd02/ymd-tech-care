@@ -101,7 +101,6 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ branches, onOpenPR
                         </button>
                     </div>
                     {errors.pr_no && <p className={errorMsgClass}>{errors.pr_no.message}</p>}
-                    <p className={hintStyle}>อ้างถึง pr_header.pr_id (PR ต้นทาง)</p>
                 </div>
             </div>
 
@@ -137,7 +136,6 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ branches, onOpenPR
                         ))}
                     </select>
                     {errors.branch_id && <p className={errorMsgClass}>{errors.branch_id.message}</p>}
-                    <p className={hintStyle}>อ้างถึง branch_id (FK)</p>
                 </div>
                 <div>
                     <label className={labelStyle}>ผู้สร้าง RFQ</label>
@@ -148,14 +146,13 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ branches, onOpenPR
                         className={`${inputStyle} bg-gray-200 dark:bg-gray-700`}
                         disabled={isLocked}
                     />
-                    <p className={hintStyle}>อ้างถึง user_id (FK)</p>
                 </div>
             </div>
 
-            {/* Row 3: กำหนดส่งใบเสนอราคา, สถานที่รับของ */}
+            {/* Row 3: วันครบกำหนดส่งใบเสนอราคา, สถานที่รับของ */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div>
-                    <label className={labelStyle}>กำหนดส่งใบเสนอราคา <span className="text-red-500">*</span></label>
+                    <label className={labelStyle}>วันครบกำหนดใบเสนอราคา <span className="text-red-500">*</span></label>
                     <Controller
                         name="quotation_due_date"
                         render={({ field: { value, onChange, onBlur, ref } }) => (
@@ -183,7 +180,6 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ branches, onOpenPR
                         )}
                     />
                     {errors.quotation_due_date && <p className={errorMsgClass}>{errors.quotation_due_date.message}</p>}
-                    <p className={hintStyle}>วันหมดอายุการเสนอราคา (quotation_due_date)</p>
                 </div>
                 <div className="md:col-span-2">
                     <label className={labelStyle}>สถานที่รับของ</label>
@@ -194,7 +190,6 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ branches, onOpenPR
                         className={inputStyle}
                         disabled={isLocked}
                     />
-                    <p className={hintStyle}>รายละเอียดสถานที่ (receive_location)</p>
                 </div>
             </div>
 
@@ -209,7 +204,6 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ branches, onOpenPR
                         className={inputStyle}
                         disabled={isLocked}
                     />
-                    <p className={hintStyle}>แนวทางเงื่อนไขที่ต้องการ (payment_term_hint)</p>
                 </div>
                 <div>
                     <label className={labelStyle}>เงื่อนไขส่งมอบ (Incoterm)</label>
@@ -220,7 +214,6 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ branches, onOpenPR
                         className={inputStyle}
                         disabled={isLocked}
                     />
-                    <p className={hintStyle}>เงื่อนไขส่งมอบ (incoterm)</p>
                 </div>
                 <div>
                     <label className={labelStyle}>หมายเหตุเพิ่มเติม</label>

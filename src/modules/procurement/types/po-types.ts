@@ -63,27 +63,31 @@ export interface POHeader {
  * Table: po_line
  */
 export interface POLine {
-    po_line_id: number;             // INTEGER @id
-    po_id: number;                  // INTEGER (FK)
-    pr_line_id?: number;            // INTEGER (FK) - มาจาก PR Line ใด
+    po_line_id?: number;            // INTEGER @id
+    po_id?: number;                 // INTEGER (FK)
+    line_no: number;                // New field
+    pr_line_id?: number | null;     // INTEGER (FK)
     item_id?: number;               // INTEGER (FK)
     item_code?: string;             // Display
     item_name?: string;             // Display
     
+    status: string;                 // e.g., 'OPEN'
     description?: string;           // text
     
-    qty_ordered: number;            // numeric(18,3)
-    qty_received: number;           // numeric(18,3)
+    qty: number;                    // Aligned with backend 'qty'
+    qty_ordered?: number;           // Legacy UI field
+    qty_received?: number;          // numeric(18,3)
     
     uom_id: number;                 // INTEGER
     uom_name?: string;              // Display
     
     unit_price: number;             // numeric(18,4)
-    discount_amount: number;        // numeric(18,2)
-    tax_code?: string;              // varchar(20)
-    line_total: number;             // numeric(18,2)
+    discount_expression: string;    // New field
+    discount_amount?: number;       // numeric(18,2)
+    tax_code_id?: number;           // INTEGER
+    line_total?: number;            // numeric(18,2)
     
-    required_receipt_type: 'GOODS' | 'SERVICE'; // varchar(20)
+    required_receipt_type: 'FULL' | 'PARTIAL'; // varchar(20)
 }
 
 // ====================================================================================
@@ -141,47 +145,67 @@ export interface CreatePOLineItem {
     uom_id: number;
     unit_price: number;
     discount_amount?: number;
-    tax_code?: string;
+    tax_code_id?: number;
     line_total?: number;
     receipt_type: 'GOODS' | 'SERVICE';
 }
 
 export interface CreatePOPayload {
-    // Source document linkage
+    rfq_id: number | null;
+    vendor_id: number;
+    branch_id: number;
+    warehouse_id: number;
+    base_currency_code: string;
+    quote_currency_code: string;
+    exchange_rate: number;
+    exchange_rate_date: string;
+    tax_code_id: number;
+    discount_expression: string;
+    status: string;
+    created_at: string;
+    created_by: number;
+    winning_vq_id: number | null;
+    po_lines: POLine[];
+
+    // Legacy/Fallback for UI
     qc_id?:  number;
     qc_no?:  string;
     pr_id?:  number;
     pr_no?:  string;
-
-    vendor_id:    number;
     vendor_name?: string;
-
-    order_date:         string;
+    order_date?:        string;
     delivery_date?:     string;
     payment_term_days?: number;
-
     currency_code?: string;
-    exchange_rate?: number;
     total_amount?:  number;
-
-    items: CreatePOLineItem[];
-
+    items?: CreatePOLineItem[]; 
     remarks?: string;
 }
 
 export interface POFormData {
-    vendor_id?: number;
-    po_no?: string; // Should be added if not present
-    po_date?: string;
+    po_no?: string;
+    rfq_id?: number;
+    winning_vq_id?: number;
+    qc_id?: number;
+    qc_no?: string;
+    pr_id?: number;
+    pr_no?: string;
+    po_date: string;
+    vendor_id: number;
+    vendor_name?: string;
+    branch_id: number;
+    ship_to_warehouse_id: number;
+    tax_code_id: number;
+    is_multicurrency: boolean;
+    currency_code: string;
+    base_currency_code: string;
+    quote_currency_code: string;
+    target_currency?: string;
+    exchange_rate_date?: string;
+    exchange_rate: number;
+    payment_term_days: number;
     delivery_date?: string;
-    payment_term_days?: number;
     remarks?: string;
-    items?: POLineItemInput[]; 
-    tax_rate?: number;
-    is_vat_included?: boolean; // Add if missing from interface but present in form
-    
-    // Multicurrency
-    isMulticurrency?: boolean;
-    currency?: string;
-    exchange_rate?: number;
+    discount_expression: string;
+    lines: POLine[];
 }

@@ -59,6 +59,8 @@ export interface SearchModalProps<T> {
     emptyText?: string;
     /** Loading state */
     isLoading?: boolean;
+    /** Optional callback for external search handling (Server-side) */
+    onSearchChange?: (term: string) => void;
 }
 
 // ====================================================================================
@@ -80,6 +82,7 @@ export function SearchModal<T>({
     getKey,
     emptyText = 'ไม่พบข้อมูลที่ค้นหา',
     isLoading = false,
+    onSearchChange
 }: SearchModalProps<T>) {
     // State สำหรับเก็บคำค้นหา
     const [searchTerm, setSearchTerm] = useState('');
@@ -155,7 +158,11 @@ export function SearchModal<T>({
                         placeholder={searchPlaceholder}
                         className={`w-full h-10 px-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 ${colorClasses.ring} text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500`}
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            setSearchTerm(val);
+                            onSearchChange?.(val);
+                        }}
                         autoFocus
                     />
                 </div>

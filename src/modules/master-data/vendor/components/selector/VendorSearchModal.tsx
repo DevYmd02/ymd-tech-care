@@ -30,6 +30,7 @@ export type Vendor = VendorSearchItem;
 const transformVendor = (v: VendorListItem): VendorSearchItem => ({
     vendor_id: v.vendor_id,
     code: v.vendor_code,
+    vendor_code: v.vendor_code,
     name: v.vendor_name,
     name_en: v.vendor_name_en,
     address: v.address_line1 || '-',
@@ -57,6 +58,8 @@ export interface VendorSearchModalBaseProps {
     isLoading?: boolean;
     /** Custom title */
     title?: string;
+    /** IDs of vendors to exclude from selection (already selected) */
+    excludeIds?: number[];
 }
 
 /** Props for VendorSearchModal - Smart Wrapper */
@@ -64,6 +67,8 @@ interface VendorSearchModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSelect: (vendor: VendorSearchItem) => void;
+    /** IDs of vendors to exclude from selection (already selected) */
+    excludeIds?: number[];
 }
 
 // ====================================================================================
@@ -77,6 +82,7 @@ export const VendorSearchModalBase: React.FC<VendorSearchModalBaseProps> = ({
     data,
     isLoading = false,
     title = 'ค้นหาผู้ขาย - Find Vendor',
+    excludeIds = [],
 }) => {
     // Filter states
     const [searchCode, setSearchCode] = useState('');
@@ -213,7 +219,9 @@ export const VendorSearchModalBase: React.FC<VendorSearchModalBaseProps> = ({
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                                 {filteredData.length > 0 ? (
                                     filteredData.map((vendor) => {
-                                        const isSelectable = vendor.status === 'ACTIVE';
+                                        const isExcluded = excludeIds?.includes(Number(vendor.vendor_id));
+                                        const isSelectable = vendor.status === 'ACTIVE' && !isExcluded;
+                                        
                                         return (
                                             <tr 
                                                 key={vendor.code} 
@@ -223,15 +231,17 @@ export const VendorSearchModalBase: React.FC<VendorSearchModalBaseProps> = ({
                                                     <button
                                                         onClick={() => handleSelect(vendor)}
                                                         disabled={!isSelectable}
-                                                        title={!isSelectable ? `ไม่สามารถเลือกได้ (${vendor.status})` : 'เลือกผู้ขาย'}
+                                                        title={isExcluded ? 'ผู้ขายรายนี้ถูกเลือกแล้ว' : (!isSelectable ? `ไม่สามารถเลือกได้ (${vendor.status})` : 'เลือกผู้ขาย')}
                                                         className={`px-3 py-1.5 text-xs font-bold rounded shadow-sm transition-colors flex items-center gap-1 mx-auto ${
                                                             isSelectable 
                                                             ? 'bg-purple-600 hover:bg-purple-700 text-white' 
-                                                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                            : isExcluded 
+                                                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-300'
+                                                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                                         }`}
                                                     >
-                                                        <Check size={14} />
-                                                        เลือก
+                                                        {isExcluded ? <Check size={14} className="text-green-500" /> : <Check size={14} />}
+                                                        {isExcluded ? 'เลือกแล้ว' : 'เลือก'}
                                                     </button>
                                                 </td>
                                                 <td className="px-4 py-3">

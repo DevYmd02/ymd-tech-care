@@ -1,23 +1,44 @@
 import api from '@/core/api/api';
 import { USE_MOCK } from '@/core/api/api';
-import type { QCListParams, QCListResponse, QCCreateData, SubmitQCWinnerData } from '@/modules/procurement/schemas/qc-schemas';
+import type { QCListParams, QCListResponse, CreateQCPayload, SubmitQCWinnerData } from '@/modules/procurement/schemas/qc-schemas';
 import type { QCListItem } from '@/modules/procurement/schemas/qc-schemas';
 import { logger } from '@/shared/utils/logger';
 import type { SuccessResponse } from '@/shared/types/api-response.types';
 import { applyClientFilters, applyClientPagination, extractArrayFromResponse } from '@/shared/utils/clientFilterUtils';
 
 const ENDPOINTS = {
-  list:    '/qc',
-  create:  '/qc',
+  list:    '/qc/qc-all',
+  create:  '/qc/create',
   detail:  (id: number) => `/qc/${id}`,
   compare: (id: number) => `/qc/compare/${id}`,
   cancel:  (id: number) => `/qc/cancel/${id}`,
 };
 
+/**
+ * 🧹 Helper to clean params before API call
+ * Removes undefined, null, and empty strings
+ * Uses 'object' to accommodate interfaces like QCListParams without index signatures
+ */
+export const cleanParams = (params: object = {}): Record<string, string | number | boolean> => {
+  const entries = Object.entries(params);
+  const filtered = entries.filter(([, value]) => value !== undefined && value !== null && value !== '');
+  
+  const cleaned = Object.fromEntries(filtered) as Record<string, string | number | boolean>;
+
+  // Ensure defaults for pagination
+  if (!cleaned.page) cleaned.page = 1;
+  if (!cleaned.limit) cleaned.limit = 20;
+
+  return cleaned;
+};
+
 export const QCService = {
   getList: async (params?: QCListParams): Promise<QCListResponse> => {
     logger.info('[QCService] Fetching QC List', params);
-    const response = await api.get<QCListResponse>(ENDPOINTS.list, { params });
+    
+    // 🧹 Clean Parameters to prevent "undefined" in URL
+    const cleanedParams = cleanParams(params || {});
+    const response = await api.get<QCListResponse>(ENDPOINTS.list, { params: cleanedParams });
 
     // 🎯 HYBRID FALLBACK: Apply Client-Side Filtering when using Real API
     if (!USE_MOCK && params) {
@@ -56,8 +77,8 @@ export const QCService = {
     return await api.get<QCListResponse>('/qc/ready-for-po');
   },
 
-  create: async (data: QCCreateData): Promise<{ qc_id: number }> => {
-    logger.info('[QCService] Creating QC');
+  create: async (data: CreateQCPayload): Promise<{ qc_id: number }> => {
+    logger.info('[QCService] Creating QC with 5-field payload', data);
     return await api.post<{ qc_id: number }>(ENDPOINTS.create, data);
   },
 
@@ -77,5 +98,5 @@ export const QCService = {
   },
 };
 
-export type { QCListParams, QCListResponse, QCCreateData };
+export type { QCListParams, QCListResponse, CreateQCPayload as QCCreateData };
 

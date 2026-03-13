@@ -466,13 +466,24 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                 rfqLines: cleanLines,
             };
 
-            const selectedVendors = stagedPayload.vendors
-                .filter(v => v.vendor_id)
-                .map(v => ({ vendor_id: Number(v.vendor_id), status: 'WAITING' }));
+            const selectedVendors = Array.from(
+                new Map(
+                    stagedPayload.vendors
+                        .filter(v => v.vendor_id)
+                        .map(v => [Number(v.vendor_id), { vendor_id: Number(v.vendor_id), status: 'WAITING' }])
+                ).values()
+            );
                 
             if (selectedVendors.length > 0) {
                 payload.rfqVendors = selectedVendors;
             }
+
+            // 🕵️‍♂️ @Agent_Source_Auditor: Verify pr_id Persistence
+            logger.debug('[useRFQForm] RFQ Payload Audit:', {
+                pr_id: payload.pr_id,
+                has_pr_id: !!payload.pr_id,
+                rfq_no_placeholder: payload.rfq_date // tracing timestamp
+            });
 
             if (editId) {
                 await RFQService.update(editId, payload);
