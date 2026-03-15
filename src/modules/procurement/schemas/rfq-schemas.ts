@@ -108,6 +108,15 @@ export const RFQFormSchema = z.object({
 
     // Optional — vendors can be added after initial save
     vendors: z.array(RFQVendorSchema).optional().default([]),
+}).refine((data) => {
+    if (!data.vendors || data.vendors.length <= 1) return true;
+    const vendorIds = data.vendors
+        .map(v => v.vendor_id)
+        .filter((id): id is number => id !== undefined);
+    return new Set(vendorIds).size === vendorIds.length;
+}, {
+    message: "ไม่สามารถเลือกผู้ขายซ้ำกันได้",
+    path: ["vendors"],
 });
 
 // ====================================================================================

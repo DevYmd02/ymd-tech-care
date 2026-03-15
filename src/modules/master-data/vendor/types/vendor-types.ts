@@ -238,6 +238,7 @@ export interface VendorDropdownItem {
 export interface VendorSearchItem {
     vendor_id: number;
     code: string;
+    vendor_code?: string;
     name: string;
     name_en?: string;
     address?: string;
@@ -705,7 +706,8 @@ export interface VendorTypeMaster extends Omit<IBaseMaster, 'id'> {
     vendor_type_id: number;
     vendor_type_code: string;
     vendor_type_name: string;
-    vendor_type_name_en?: string;
+    vendor_type_nameeng?: string;
+    description?: string;
 }
 
 /**
@@ -730,7 +732,7 @@ export interface VendorGroupMaster extends Omit<IBaseMaster, 'id'> {
     vendor_group_id: number;
     vendor_group_code: string;
     vendor_group_name: string;
-    vendor_group_name_en?: string;
+    vendor_group_nameeng?: string;
 }
 
 /**

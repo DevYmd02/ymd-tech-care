@@ -62,6 +62,18 @@ export interface QCListResponse {
   totalPages: number;
 }
 
+/**
+ * CreateQCPayload — 5-Field Pure Payload for QC Creation
+ * Strictly aligned with Backend API requirements.
+ */
+export interface CreateQCPayload {
+  rfq_id: number;
+  pr_id: number;
+  department_id: number;
+  created_by: number;
+  winning_vq_id: number;
+}
+
 export interface QCCreateData {
   pr_no?: string;
   rfq_no?: string;

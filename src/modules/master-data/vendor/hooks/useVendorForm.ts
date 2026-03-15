@@ -3,7 +3,9 @@ import { useForm, useWatch, type Path, type SubmitHandler, type FieldErrors, typ
 import { zodResolver } from '@hookform/resolvers/zod';
 import { VendorService } from '../services/vendor.service';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
+import { VendorTypeService } from '../services/vendor-type.service';
+import { VendorGroupService } from '../services/vendor-group.service';
 import type { 
     VendorFormData,
     VendorBankAccount,
@@ -66,6 +68,33 @@ export function useVendorForm({
     const { confirm } = useConfirmation();
     const queryClient = useQueryClient();
 
+    // Fetch Master Data
+    const { data: vendorTypesData, isLoading: isLoadingVT } = useQuery({
+        queryKey: ['vendor-types'],
+        queryFn: () => VendorTypeService.getAll(),
+        staleTime: 1000 * 60 * 5 // 5 minutes cache
+    });
+
+    const { data: vendorGroupsData, isLoading: isLoadingVG } = useQuery({
+        queryKey: ['vendor-groups'],
+        queryFn: () => VendorGroupService.getAll(),
+        staleTime: 1000 * 60 * 5 // 5 minutes cache
+    });
+
+    const vendorTypeOptions = vendorTypesData?.items.map(item => ({
+        label: item.vendor_type_nameeng 
+               ? `${item.vendor_type_name} (${item.vendor_type_nameeng})` 
+               : item.vendor_type_name,
+        value: item.vendor_type_id
+    })) || [];
+
+    const vendorGroupOptions = vendorGroupsData?.items.map(item => ({
+        label: item.vendor_group_name,
+        value: item.vendor_group_id
+    })) || [];
+
+    const isLoadingMasterData = isLoadingVT || isLoadingVG;
+
     // Fetch/Reset data when modal opens
     useEffect(() => {
         if (isOpen && !prevIsOpenRef.current) {
@@ -114,8 +143,13 @@ export function useVendorForm({
             checked = (e.target as HTMLInputElement).checked;
         }
 
-        let finalValue: string | boolean = value;
+        let finalValue: string | boolean | number = value;
         
+        // ID Number conversion (Zod expects number)
+        if (['vendorTypeId', 'vendorGroupId', 'currencyId'].includes(name)) {
+            finalValue = Number(value);
+        }
+
         // Input Masking Logic
         if (['phone', 'mobile', 'taxId', 'postalCode'].includes(name)) {
             finalValue = value.replace(/[^0-9]/g, '');
@@ -453,6 +487,11 @@ export function useVendorForm({
         handleSameAsRegisteredChange,
         handleCreditLimitChange,
         handleSubmit: handleFormSubmit,
-        clearForm
+        clearForm,
+        
+        // Master Data
+        vendorTypeOptions,
+        vendorGroupOptions,
+        isLoadingMasterData
     };
 }

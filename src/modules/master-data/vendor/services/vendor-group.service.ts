@@ -16,12 +16,20 @@ export const VendorGroupService = {
     getAll: async (): Promise<ListResponse<VendorGroupMaster>> => {
         if (USE_MOCK) {
             logger.info('🎭 [Mock Mode] Serving Vendor Groups');
-            // Simulate API returning ListResponse
             return localVendorGroups; 
         }
         try {
-            // API Interceptor unwraps { success: true, data: ListResponse } -> returns ListResponse
-            return await api.get<ListResponse<VendorGroupMaster>>('/vendor-groups');
+            const response = await api.get<ListResponse<VendorGroupMaster> | VendorGroupMaster[]>('/vendor-group');
+            
+            // Handle raw array response or wrapped ListResponse
+            if (Array.isArray(response)) {
+                return {
+                    items: response,
+                    total: response.length
+                };
+            }
+            
+            return response || { items: [], total: 0 };
         } catch (error) {
             logger.error('[VendorGroupService] getAll error:', error);
             return { items: [], total: 0 };
@@ -42,7 +50,7 @@ export const VendorGroupService = {
         }
         try {
             // API Interceptor unwraps { success: true, data: VendorGroupMaster } -> returns VendorGroupMaster
-            return await api.get<VendorGroupMaster>(`/vendor-groups/${id}`);
+            return await api.get<VendorGroupMaster>(`/vendor-group/${id}`);
         } catch (error) {
             logger.error('[VendorGroupService] getById error:', error);
             return null;
@@ -63,7 +71,7 @@ export const VendorGroupService = {
                 code: data.groupCode.toUpperCase(),
                 vendor_group_name: data.groupName,
                 name_th: data.groupName,
-                vendor_group_name_en: data.groupNameEn,
+                vendor_group_nameeng: data.groupNameEn,
                 is_active: data.isActive,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
@@ -74,7 +82,7 @@ export const VendorGroupService = {
         }
         try {
             // API Interceptor unwraps { success: true, data: VendorGroupMaster } -> returns VendorGroupMaster
-            const response = await api.post<VendorGroupMaster>('/vendor-groups', data);
+            const response = await api.post<VendorGroupMaster>('/vendor-group', data);
             return { success: true, data: response };
         } catch (error) {
             logger.error('[VendorGroupService] create error:', error);
@@ -95,7 +103,7 @@ export const VendorGroupService = {
                     code: data.groupCode.toUpperCase(),
                     vendor_group_name: data.groupName,
                     name_th: data.groupName,
-                    vendor_group_name_en: data.groupNameEn,
+                    vendor_group_nameeng: data.groupNameEn,
                     is_active: data.isActive,
                     updated_at: new Date().toISOString(),
                 };
@@ -105,7 +113,7 @@ export const VendorGroupService = {
         }
         try {
             // API Interceptor unwraps { success: true, data: VendorGroupMaster } -> returns VendorGroupMaster
-            const response = await api.put<VendorGroupMaster>(`/vendor-groups/${id}`, data);
+            const response = await api.put<VendorGroupMaster>(`/vendor-group/${id}`, data);
             return { success: true, data: response };
         } catch (error) {
             logger.error('[VendorGroupService] update error:', error);
@@ -127,7 +135,7 @@ export const VendorGroupService = {
             return { success: false, message: 'ไม่พบกลุ่มเจ้าหนี้' };
         }
         try {
-            await api.delete<SuccessResponse>(`/vendor-groups/${id}`);
+            await api.delete<SuccessResponse>(`/vendor-group/${id}`);
             return { success: true };
         } catch (error) {
             logger.error('[VendorGroupService] delete error:', error);

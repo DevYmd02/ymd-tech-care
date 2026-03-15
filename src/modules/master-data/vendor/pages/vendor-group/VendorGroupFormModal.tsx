@@ -76,7 +76,7 @@ export function VendorGroupFormModal({ isOpen, onClose, editId, onSuccess }: Pro
                         reset({
                             groupCode: existing.vendor_group_code,
                             groupName: existing.vendor_group_name,
-                            groupNameEn: existing.vendor_group_name_en || '',
+                            groupNameEn: existing.vendor_group_nameeng || '',
                             isActive: existing.is_active
                         });
                     }

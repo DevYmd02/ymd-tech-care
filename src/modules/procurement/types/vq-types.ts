@@ -35,7 +35,7 @@ export interface QuotationHeader {
     rfq_vendor_id?: number | null;      // Relation ID
 
     // Nested Objects (Anticipating JOINs)
-    vendor?: { vendor_id: number; vendor_name: string; vendor_code?: string };
+    vendor?: { vendor_id: number; vendor_name: string; vendor_code?: string; vendor_name_th?: string; name_th?: string };
     rfq?: { rfq_id: number; rfq_no: string };
     pr?: { pr_id: number; pr_no: string };
     
@@ -83,7 +83,7 @@ export interface QuotationHeader {
     contact_person?: string;
     contact_email?: string;
     contact_phone?: string;
-    discount_raw?: string;
+    discount_expression?: string;
     qc_id?: number;
 
     // UI Layout Helpers / Legacy Fallbacks
@@ -91,7 +91,9 @@ export interface QuotationHeader {
     vendor_code?: string;
     rfq_no?: string;                    
     pr_no?: string;                     
-    lines?: QuotationLine[];            
+    vq_lines?: QuotationLine[];  
+    /** Fallback for internal mapping or legacy endpoints */
+    lines?: QuotationLine[];          
 }
 
 // ====================================================================================
@@ -103,6 +105,7 @@ export interface QuotationLine {
     quotation_line_id?: number;         // INTEGER
     quotation_id?: number;              // INTEGER
     pr_line_id?: number;                // INTEGER
+    rfq_line_id?: number;               // INTEGER (Reference to specific RFQ line)
     item_id?: number;                   // INTEGER
     item_code: string;                  // Required
     item_name: string;                  // Required
@@ -110,14 +113,26 @@ export interface QuotationLine {
     uom_id?: number;                    // INTEGER
     uom_name?: string;                  // Display
     unit_price?: number;                // NUMERIC(18,4)
+    discount_expression?: string;
     discount_amount?: number;           // NUMERIC(18,2)
     tax_code?: string;                  // VARCHAR(20)
+    tax_code_id?: number;               // INTEGER
     net_amount: number;                 // Required
     no_quote?: boolean;
     reference_price?: number;           // Reference budget from RFQ/PR
     remark?: string;
     warehouse?: string;
     location?: string;
+    uom?: string;                       // Utility field for RFQ-to-VQ mapping
+    status?: string;                    // Utility field for mixed mapping
+    line_no?: number;                   // INTEGER (Backend mandatory)
+    // Nested Objects (Hydration)
+    item?: {
+      item_id: number;
+      item_code: string;
+      item_name: string;
+      description?: string;
+    };
 }
 
 // ====================================================================================
@@ -156,4 +171,34 @@ export interface VQListResponse {
   totalPages: number;
 }
 
-export type VQCreateData = Partial<VQListItem> & { lines?: Partial<QuotationLine>[] };
+export type VQCreateData = Partial<VQListItem> & { vq_lines?: Partial<QuotationLine>[] };
+
+// ====================================================================================
+// PENDING QUEUES (Waiting for RFQ / Waiting for VQ)
+// ====================================================================================
+
+/** 
+ * Item representing a vendor waiting for an RFQ or a VQ response. 
+ * Data is pre-joined from the backend (no micro-components needed).
+ */
+export interface VQPendingQueueItem {
+    rfq_vendor_id: number;
+    pr_id: number;
+    pr_no: string;
+    rfq_id: number;
+    rfq_no: string;
+    vendor_id: number;
+    vendor_code: string;
+    vendor_name: string;
+    status: string;
+    created_at: string;
+    vq_no?: string;                     // Added for filtering logic
+    vq_header_id?: number;              // Added for navigation/linkage
+}
+
+export interface VQPendingQueueResponse {
+    data: VQPendingQueueItem[];
+    page: number;
+    pageSize: number;
+    total: number;
+}

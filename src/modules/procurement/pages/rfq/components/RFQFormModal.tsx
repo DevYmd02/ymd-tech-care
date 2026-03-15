@@ -180,6 +180,7 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
                 isOpen={isVendorModalOpen}
                 onClose={() => setIsVendorModalOpen(false)}
                 onSelect={handleVendorSelect}
+                excludeIds={formData.vendors?.map(v => Number(v.vendor_id)).filter(id => !isNaN(id))}
             />
 
             {/* PR Selection Modal */}

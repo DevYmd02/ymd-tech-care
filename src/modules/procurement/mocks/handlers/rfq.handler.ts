@@ -116,7 +116,7 @@ export const setupRFQHandlers = (mock: MockAdapter) => {
                     isMulticurrency: false,
                     exchange_rate: 1,
                     status: 'PENDING',
-                    lines: rfqLines.map(rl => ({
+                    vq_lines: rfqLines.map(rl => ({
                         item_code: rl.item_code,
                         item_name: rl.item_name,
                         qty: rl.qty,

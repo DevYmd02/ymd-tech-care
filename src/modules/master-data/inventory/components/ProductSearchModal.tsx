@@ -9,36 +9,40 @@
 
 import React from 'react';
 import { SearchModal, type ColumnDef } from '@ui';
-import api from '@/core/api/api';
-import type { ProductLookup } from '@/modules/master-data/inventory/mocks/products';
+import type { ItemListItem } from '@/modules/master-data/inventory/types/product-types';
+import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
+import { useQuery } from '@tanstack/react-query';
+import { useDebounce } from '@/shared/hooks/useDebounce';
 
-// Re-export Product type for consumers
-export type Product = ProductLookup;
+// Re-export type for consumers
+export type Product = ItemListItem;
 
 // ====================================================================================
 // COLUMN CONFIGURATION (Shared)
 // ====================================================================================
 
-const productColumns: ColumnDef<ProductLookup>[] = [
+const productColumns: ColumnDef<ItemListItem>[] = [
     { key: 'action', header: 'เลือก', width: '100px', align: 'center' },
     {
-        key: 'item_code', header: 'รหัสสินค้า', width: '120px', render: (p: ProductLookup) => (
+        key: 'item_code', header: 'รหัสสินค้า', width: '120px', render: (p: ItemListItem) => (
             <span className="text-sm font-bold text-gray-800 dark:text-gray-200">{p.item_code}</span>
         )
     },
     {
-        key: 'item_name', header: 'ชื่อสินค้า', width: '1fr', render: (p: ProductLookup) => (
+        key: 'item_name', header: 'ชื่อสินค้า', width: '1fr', render: (p: ItemListItem) => (
             <span className="text-sm text-gray-700 dark:text-gray-300">{p.item_name}</span>
         )
     },
     {
-        key: 'unit', header: 'หน่วย', width: '120px', render: (p: ProductLookup) => (
-            <span className="text-xs text-gray-600 dark:text-gray-400">{p.unit}</span>
+        key: 'unit_name', header: 'หน่วย', width: '120px', render: (p: ItemListItem) => (
+            <span className="text-xs text-gray-600 dark:text-gray-400">{p.unit_name}</span>
         )
     },
     {
-        key: 'unit_price', header: 'ราคา/หน่วย', width: '140px', align: 'right', render: (p: ProductLookup) => (
-            <span className="text-xs text-gray-500 dark:text-gray-400">{p.unit_price.toLocaleString()}</span>
+        key: 'standard_cost', header: 'ราคามาตรฐาน', width: '140px', align: 'right', render: (p: ItemListItem) => (
+            <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">
+                {(Number(p.standard_cost) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </span>
         )
     },
 ];
@@ -51,9 +55,9 @@ const productColumns: ColumnDef<ProductLookup>[] = [
 export interface ProductSearchModalBaseProps {
     isOpen: boolean;
     onClose: () => void;
-    onSelect: (product: ProductLookup) => void;
+    onSelect: (product: ItemListItem) => void;
     /** Product data to display - passed from parent */
-    data: ProductLookup[];
+    data: ItemListItem[];
     /** Custom title */
     title?: string;
     /** Custom subtitle */
@@ -62,6 +66,8 @@ export interface ProductSearchModalBaseProps {
     emptyText?: string;
     /** Loading state */
     isLoading?: boolean;
+    /** Callback for search term change (Server-side) */
+    onSearchChange?: (term: string) => void;
 }
 
 /**
@@ -88,11 +94,12 @@ export const ProductSearchModalBase: React.FC<ProductSearchModalBaseProps> = ({
     data,
     title = 'ค้นหาสินค้า',
     subtitle = 'กรอกข้อมูลเพื่อค้นหาสินค้าในระบบ',
-    emptyText = 'ไม่พบสินค้าที่ค้นหา',
-    isLoading = false
+    emptyText = 'ไม่พบสินค้าในระบบ',
+    isLoading = false,
+    onSearchChange
 }) => {
     return (
-        <SearchModal<ProductLookup>
+        <SearchModal<ItemListItem>
             isOpen={isOpen}
             onClose={onClose}
             onSelect={onSelect}
@@ -103,13 +110,14 @@ export const ProductSearchModalBase: React.FC<ProductSearchModalBaseProps> = ({
             accentColor="blue"
             data={data}
             columns={productColumns}
-            filterFn={(p: ProductLookup, term: string) =>
+            filterFn={(p: ItemListItem, term: string) =>
                 p.item_code.toLowerCase().includes(term) ||
                 p.item_name.toLowerCase().includes(term)
             }
-            getKey={(p: ProductLookup) => p.item_code}
+            getKey={(p: ItemListItem) => p.item_id || p.item_code}
             emptyText={emptyText}
             isLoading={isLoading}
+            onSearchChange={onSearchChange}
         />
     );
 };
@@ -122,59 +130,27 @@ export const ProductSearchModalBase: React.FC<ProductSearchModalBaseProps> = ({
 interface ProductSearchModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSelect: (product: ProductLookup) => void;
+    onSelect: (product: ItemListItem) => void;
 }
 
 /**
- * ProductSearchModal - Smart Component (Uses MOCK_PRODUCTS)
+ * ProductSearchModal - Smart Component (Uses ItemMasterService + React Query)
  * 
- * @description Wrapper ที่ใช้ MOCK_PRODUCTS (จะไม่รั่วใน production เพราะ tree-shaking)
- * @usage ใช้เมื่อต้องการให้ component ใช้ mock data เอง (backward compatible)
- * 
- * @example
- * ```tsx
- * <ProductSearchModal 
- *   isOpen={open} 
- *   onClose={close} 
- *   onSelect={handleSelect}
- * />
- * ```
+ * @description ดึงข้อมูลสินค้าจาก ItemMasterService พร้อมระบบ Debounced Search
+ * @usage เชื่อมต่อ API จริง 100% ตามนโยบาย Zero-Any
  */
 export const ProductSearchModal: React.FC<ProductSearchModalProps> = ({ isOpen, onClose, onSelect }) => {
-    const [products, setProducts] = React.useState<ProductLookup[]>([]);
-    const [isLoading, setIsLoading] = React.useState(false);
+    const [searchTerm, setSearchTerm] = React.useState('');
+    const debouncedSearch = useDebounce(searchTerm, 500);
 
-    React.useEffect(() => {
-        if (!isOpen) return;
+    const { data: response, isLoading } = useQuery({
+        queryKey: ['items-lookup', debouncedSearch],
+        queryFn: () => ItemMasterService.getAll({ q: debouncedSearch, limit: 20 }),
+        enabled: isOpen,
+        staleTime: 1000 * 60 * 5, // 5 minutes cache
+    });
 
-        let isMounted = true;
-        const fetchProducts = async () => {
-            setIsLoading(true);
-            try {
-                // In a real scenario, we'd have a ProductService.
-                // For now, since we want to remove direct mock imports from UI,
-                // we'll assume the central interceptor handles '/products'
-                const response = await api.get<{ items: ProductLookup[] }>('/products');
-                if (isMounted) {
-                    setProducts(response.items || []);
-                }
-            } catch (error) {
-                console.error('[ProductSearchModal] Error fetching products:', error);
-                if (isMounted) {
-                    setProducts([]);
-                }
-            } finally {
-                if (isMounted) {
-                    setIsLoading(false);
-                }
-            }
-        };
-
-        fetchProducts();
-        return () => {
-            isMounted = false;
-        };
-    }, [isOpen]);
+    const products = response?.items || [];
 
     return (
         <ProductSearchModalBase
@@ -183,6 +159,7 @@ export const ProductSearchModal: React.FC<ProductSearchModalProps> = ({ isOpen, 
             onSelect={onSelect}
             data={products}
             isLoading={isLoading}
+            onSearchChange={setSearchTerm}
         />
     );
 };

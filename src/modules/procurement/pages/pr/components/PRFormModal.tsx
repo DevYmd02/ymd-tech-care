@@ -31,12 +31,11 @@ interface Props {
 
 export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, readOnly: readOnlyProp = false }) => {
   const {
-    isEditMode, lines, isProductModalOpen, setIsProductModalOpen, searchTerm, setSearchTerm,
+    isEditMode, lines, isProductModalOpen, setIsProductModalOpen,
     isWarehouseModalOpen, setIsWarehouseModalOpen,
     isLocationModalOpen, setIsLocationModalOpen, activeWarehouseId,
-    showAllItems, setShowAllItems,
     isSubmitting, isActionLoading,
-    products, costCenters, projects, purchaseTaxOptions, currencies, isSearchingProducts,
+    costCenters, projects, purchaseTaxOptions, currencies,
     addLine, removeLine, clearLine, updateLine, handleClearLines,
     openProductSearch, openWarehouseSearch, openLocationSearch, selectProduct, selectWarehouse, selectLocation, handleVendorSelect, onSubmit, handleApprove,
     handleVoid,
@@ -140,13 +139,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
           <ProductSearchModal 
             isOpen={isProductModalOpen}
             onClose={() => setIsProductModalOpen(false)}
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            isSearchingProducts={isSearchingProducts}
-            products={products}
             selectProduct={selectProduct}
-            showAllItems={showAllItems}
-            setShowAllItems={setShowAllItems}
           />
           <WarehouseSearchModal
             isOpen={isWarehouseModalOpen}

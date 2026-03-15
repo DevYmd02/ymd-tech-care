@@ -5,6 +5,7 @@ import type {
   PRListResponse,
   ConvertPRRequest,
   PRHeader,
+  PRHeaderExtended,
   CreatePRPayload,
   PRStatus,
 } from '@/modules/procurement/types';
@@ -86,7 +87,7 @@ export const PRService = {
     return applyClientPagination<PRHeader>(allItems, page, limit);
   },
 
-  getDetail: async (id: number): Promise<PRHeader> => {
+  getDetail: async (id: number): Promise<PRHeaderExtended> => {
     logger.info(`[PRService] Fetching PR Detail: ${id}`);
     const response = await api.get<unknown>(ENDPOINTS.detail(id));
     
@@ -98,7 +99,7 @@ export const PRService = {
 
     // ─── Shape 1: Already unwrapped by interceptor → { pr_id, pr_no, ... } ─────
     if (raw && 'pr_id' in raw) {
-      const result = raw as unknown as PRHeader;
+      const result = raw as unknown as PRHeaderExtended;
       logger.debug('[PRService.getDetail] Shape 1 (direct): pr_no=', result.pr_no, 'lines=', result.lines?.length ?? 0);
       return result;
     }
@@ -107,7 +108,7 @@ export const PRService = {
     if (raw && 'data' in raw && raw.data && typeof raw.data === 'object') {
       const inner = raw.data as Record<string, unknown>;
       if ('pr_id' in inner) {
-        const result = inner as unknown as PRHeader;
+        const result = inner as unknown as PRHeaderExtended;
         logger.debug('[PRService.getDetail] Shape 2 (data envelope): pr_no=', result.pr_no, 'lines=', result.lines?.length ?? 0);
         return result;
       }
@@ -116,7 +117,7 @@ export const PRService = {
       if ('data' in inner && inner.data && typeof inner.data === 'object') {
         const deepInner = inner.data as Record<string, unknown>;
         if ('pr_id' in deepInner) {
-          const result = deepInner as unknown as PRHeader;
+          const result = deepInner as unknown as PRHeaderExtended;
           logger.debug('[PRService.getDetail] Shape 3 (double envelope): pr_no=', result.pr_no, 'lines=', result.lines?.length ?? 0);
           return result;
         }
@@ -132,7 +133,7 @@ export const PRService = {
           ...header,
           // Merge lines from the top-level `lines` key into the PRHeader
           lines: Array.isArray(raw.lines) ? raw.lines : [],
-        } as unknown as PRHeader;
+        } as unknown as PRHeaderExtended;
         logger.debug('[PRService.getDetail] Shape 4 (header+lines): pr_no=', result.pr_no, 'lines=', result.lines?.length ?? 0);
         return result;
       }
@@ -140,7 +141,7 @@ export const PRService = {
 
     // ─── Fallback: Return as-is and let TS handle it ─────────────────────────────
     logger.warn('[PRService.getDetail] Could not determine response shape — using raw as PRHeader');
-    return raw as unknown as PRHeader;
+    return raw as unknown as PRHeaderExtended;
   },
 
 

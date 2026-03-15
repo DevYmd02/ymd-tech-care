@@ -210,7 +210,7 @@ export default function RFQListPage() {
         }),
         columnHelper.display({
             id: 'purpose',
-            header: 'เรื่อง/วัตถุประสงค์',
+            header: 'หมายเหตุ',
             cell: ({ row }) => {
                 const item = row.original;
                 // API list endpoint ไม่ส่ง `purpose` มาโดยตรง — fallback ไปใช้บรรทัดแรกของ remarks
