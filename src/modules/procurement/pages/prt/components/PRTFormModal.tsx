@@ -264,6 +264,7 @@ export default function PRTFormModal({ isOpen, onClose, onSuccess, initialValues
                                 <input 
                                     type="date"
                                     {...register('prt_date')}
+                                    onClick={(e) => { if ('showPicker' in HTMLInputElement.prototype) e.currentTarget.showPicker(); }}
                                     className="w-full h-9 px-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded focus:border-blue-500 outline-none text-sm text-gray-900 dark:text-white"
                                 />
                             </div>
@@ -360,6 +361,7 @@ export default function PRTFormModal({ isOpen, onClose, onSuccess, initialValues
                                         <input
                                             type="date"
                                             {...register('rate_date')}
+                                            onClick={(e) => { if ('showPicker' in HTMLInputElement.prototype) e.currentTarget.showPicker(); }}
                                             className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                                         />
                                     </div>

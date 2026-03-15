@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useForm, useFieldArray, useWatch, type Resolver, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { QuotationHeaderSchema, type QuotationFormData, type QuotationLineFormData } from '@/modules/procurement/schemas/vq-schemas';
@@ -444,30 +444,37 @@ export const useVQForm = (
   const handleFormError = (errors: FieldErrors<QuotationFormData>) => {
     logger.error('Form Validation Errors:', errors);
     
-    // Extract all error messages
-    const messages: string[] = [];
-    
-    const extractMessages = (obj: unknown) => {
-      if (!obj || typeof obj !== 'object') return;
-      
-      const errorObj = obj as { message?: string };
-      if (errorObj.message) {
-        messages.push(errorObj.message);
-      } else {
-        Object.values(obj as Record<string, unknown>).forEach(val => extractMessages(val));
+    // Helper สำหรับดึง message จาก Object ลึกๆ
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const extractErrorMessages = (errs: any): string[] => {
+      let messages: string[] = [];
+      for (const key in errs) {
+        const error = errs[key];
+        if (error?.message && typeof error.message === 'string') {
+          // 🛡️ ระบบกรองคำภาษาอังกฤษที่อาจหลุดมา
+          let msg = error.message;
+          const lowerMsg = msg.toLowerCase();
+          if (lowerMsg.includes('invalid input') || lowerMsg.includes('expected number') || lowerMsg.includes('received string') || lowerMsg.includes('received nan')) {
+            msg = 'กรุณาระบุข้อมูลให้ถูกต้อง';
+          }
+          messages.push(msg);
+        } else if (typeof error === 'object' && error !== null) {
+          messages = messages.concat(extractErrorMessages(error));
+        }
       }
+      return Array.from(new Set(messages));
     };
+
+    const errorMessages = extractErrorMessages(errors);
     
-    extractMessages(errors);
-    
-    // 🛡️ Anti-Spam: Unique and limit to 3
-    const uniqueMessages = Array.from(new Set(messages)).slice(0, 3);
-    
-    if (uniqueMessages.length > 0) {
-      uniqueMessages.forEach((msg) => {
-        // Use a unique ID based on message to prevent identical duplicates stacking
-        toast(msg, 'error');
-      });
+    if (errorMessages.length > 0) {
+      const ErrorToastUI = () => React.createElement('div', { className: 'flex flex-col gap-1' },
+        React.createElement('span', { className: 'font-semibold text-sm' }, 'ตรวจสอบข้อมูลไม่ผ่าน:'),
+        React.createElement('ul', { className: 'list-disc pl-4 text-xs' },
+          errorMessages.map((msg: string, i: number) => React.createElement('li', { key: i }, msg))
+        )
+      );
+      toast(React.createElement(ErrorToastUI), 'error');
     } else {
       toast('กรุณาตรวจสอบข้อมูลให้ถูกต้อง', 'error');
     }
@@ -730,6 +737,7 @@ export const useVQForm = (
     currencyOptions,
     isMasterLoading,
     vqStatus,
-    isDataLoading
+    isDataLoading,
+    handleFormError
   };
 };

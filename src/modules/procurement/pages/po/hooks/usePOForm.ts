@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import type { Resolver, SubmitHandler, FieldErrors } from 'react-hook-form';
@@ -17,7 +17,7 @@ import { MasterDataService } from '@/modules/master-data/services/master-data.se
 import { TaxCodeService } from '@/modules/master-data/tax/services/tax-code.service';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
 import { logger } from '@/shared/utils/logger';
-import toast from 'react-hot-toast';
+import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { extractErrorMessage } from '@/core/api/api';
 
 // ====================================================================================
@@ -45,6 +45,7 @@ export const usePOForm = ({
     isViewMode = false,
 }: UsePOFormOptions) => {
     const queryClient = useQueryClient();
+    const { toast } = useToast();
 
     // ── UI state ──────────────────────────────────────────────────────────────
     const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
@@ -249,7 +250,6 @@ export const usePOForm = ({
         setValue('is_multicurrency', false);
         setValue('currency_code', 'THB');
 
-        const loadingToast = toast.loading('กำลังเชื่อมโยงข้อมูล...');
         setIsHydrating(true);
         try {
             // 1. Parallel Fetch PR & VQ (if QC)
@@ -262,7 +262,7 @@ export const usePOForm = ({
                     winningVQ = rawVQ as IHydrationVQHeader;
                 } catch (vqError) {
                     logger.error('[usePOForm] Failed to fetch VQ details for QC flow', vqError);
-                    toast.error('ไม่สามารถดึงข้อมูลราคาจากใบเสนอราคาได้ กรุณาระบุราคาด้วยตนเอง');
+                    toast('ไม่สามารถดึงข้อมูลราคาจากใบเสนอราคาได้ กรุณาระบุราคาด้วยตนเอง', 'error');
                 }
             }
             
@@ -440,14 +440,14 @@ export const usePOForm = ({
                 }, 100);
             }
             
-            toast.success(`เชื่อมโยงข้อมูลจาก ${fullPR.pr_no} สำเร็จ`, { id: loadingToast });
+            toast(`เชื่อมโยงข้อมูลจาก ${fullPR.pr_no} สำเร็จ`, 'success');
         } catch (error) {
             logger.error('[usePOForm] handleSelectReferenceDoc error:', error);
-            toast.error('ไม่สามารถดึงข้อมูลเอกสารต้นทางได้', { id: loadingToast });
+            toast('ไม่สามารถดึงข้อมูลเอกสารต้นทางได้', 'error');
         } finally {
             setIsHydrating(false);
         }
-    }, [setValue, getValues, replace, trigger]);
+    }, [setValue, getValues, replace, trigger, toast]);
 
     const handleSelectPR = useCallback((pr: PRHeader) => {
         handleSelectReferenceDoc(pr.pr_id, 'PR');
@@ -627,8 +627,17 @@ export const usePOForm = ({
                 return obj;
             };
 
-            const finalizedPayload = cleanPayload(fullPayload) as CreatePOPayload;
-            logger.info("FINAL_PO_PAYLOAD (Cleaned):", finalizedPayload);
+            const baseCleanedPayload = cleanPayload(fullPayload) as Record<string, unknown>;
+
+            // MANUAL NULL OVERRIDE (Forcing validation agreement for backend)
+            // TODO: Inform Backend Developer to change validation rule for 'qc_id' to be 'nullable' or 'optional' when creating a PO directly from a PR.
+            const finalizedPayload = {
+                ...baseCleanedPayload,
+                qc_id: pendingPayload.qc_id ? Number(pendingPayload.qc_id) : null,
+                pr_id: pendingPayload.pr_id ? Number(pendingPayload.pr_id) : null,
+            } as unknown as CreatePOPayload;
+
+            logger.info("FINAL_PO_PAYLOAD (Cleaned + Null Override):", finalizedPayload);
 
             // 🛡️ Pre-flight validation
             CreatePOSchema.parse(finalizedPayload);
@@ -636,7 +645,7 @@ export const usePOForm = ({
             await POService.create(finalizedPayload as unknown as CreatePOPayload);
 
             queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
-            toast.success('บันทึกใบสั่งซื้อสำเร็จ');
+            toast('บันทึกใบสั่งซื้อสำเร็จ', 'success');
 
             setIsConfirmModalOpen(false);
             if (onSuccess) onSuccess();
@@ -644,13 +653,17 @@ export const usePOForm = ({
         } catch (error: unknown) {
             logger.error('[usePOForm] handleConfirmSave error:', error);
             const errMsg = extractErrorMessage(error);
-            toast.error(errMsg);
+            toast(errMsg, 'error');
         } finally {
             setIsSubmitting(false);
         }
     };
 
     const onSubmit: SubmitHandler<POFormData> = (data) => {
+        if (!data.vendor_id || Number(data.vendor_id) <= 0) {
+            toast('กรุณาระบุผู้จัดจำหน่าย (Vendor) ก่อนบันทึกใบสั่งซื้อ', 'error');
+            return;
+        }
         setPendingPayload(data);
         setIsConfirmModalOpen(true);
     };
@@ -658,24 +671,40 @@ export const usePOForm = ({
     const onInvalidSubmit = (errors: FieldErrors<POFormData>) => {
         logger.error("Form Validation Errors:", errors);
 
-        // 1. Priority: Check Line Items (Table)
-        if (errors.po_lines) {
-            toast.error("กรุณาตรวจสอบรายการสินค้า (ไฮไลท์สีแดง)");
-            return;
-        }
-
-        // 2. Specific field error (filter out technical junk like "NaN")
-        const firstError = Object.values(errors)[0];
-        if (firstError && typeof firstError === 'object' && 'message' in firstError && typeof firstError.message === 'string') {
-            const msg = firstError.message;
-            if (!msg.includes("NaN")) {
-                toast.error(`ข้อผิดพลาด: ${msg}`);
-                return;
+        // Helper สำหรับดึง message จาก Object ลึกๆ
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const extractErrorMessages = (errs: any): string[] => {
+            let messages: string[] = [];
+            for (const key in errs) {
+                const error = errs[key];
+                if (error?.message && typeof error.message === 'string') {
+                    // 🛡️ ระบบกรองคำภาษาอังกฤษที่อาจหลุดมา
+                    let msg = error.message;
+                    const lowerMsg = msg.toLowerCase();
+                    if (lowerMsg.includes('invalid input') || lowerMsg.includes('expected number') || lowerMsg.includes('received string') || lowerMsg.includes('received nan')) {
+                        msg = 'กรุณาระบุข้อมูลให้ถูกต้อง';
+                    }
+                    messages.push(msg);
+                } else if (typeof error === 'object' && error !== null) {
+                    messages = messages.concat(extractErrorMessages(error));
+                }
             }
-        }
+            return Array.from(new Set(messages));
+        };
 
-        // 3. Fallback generic message
-        toast.error("กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน");
+        const errorMessages = extractErrorMessages(errors);
+
+        if (errorMessages.length > 0) {
+            const ErrorToastUI = () => React.createElement('div', { className: 'flex flex-col gap-1' },
+                React.createElement('span', { className: 'font-semibold text-sm' }, 'ตรวจสอบข้อมูลไม่ผ่าน:'),
+                React.createElement('ul', { className: 'list-disc pl-4 text-xs' },
+                    errorMessages.map((msg: string, i: number) => React.createElement('li', { key: i }, msg))
+                )
+            );
+            toast(React.createElement(ErrorToastUI), 'error');
+        } else {
+            toast("กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน", 'error');
+        }
     };
 
     return {

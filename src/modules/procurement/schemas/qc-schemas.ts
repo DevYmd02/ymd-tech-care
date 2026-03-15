@@ -140,17 +140,26 @@ export const CreateQCFormSchema = QCHeaderSchema.extend({
 
 /**
  * CreateQCSchema
- * 5-Field Pure Payload for QC Creation (Strictly for API)
+ * 3-Field validation for QC Form State (aligned with API standard)
  */
 export const CreateQCSchema = z.object({
-  rfq_id: z.coerce.number(),
-  pr_id: z.coerce.number().nullable().optional(),
-  department_id: z.coerce.number().nullable().optional(),
-  created_by: z.coerce.number(),
-  winning_vq_id: z.coerce.number(),
+  rfq_id: z.number(),
+  winning_vq_id: z.number().min(1, "กรุณาเลือกผู้ชนะการเสนอราคา"),
+  remark: z.string().optional(),
+  pr_id: z.number().nullable().optional(),
+  department_id: z.number().nullable().optional(),
+  created_by: z.number().nullable().optional(),
 });
 
-export type CreateQCPayload = z.infer<typeof CreateQCSchema>;
+export type CreateQCFormValues = z.infer<typeof CreateQCSchema>;
+
+// API Payload (Supports extra injected context)
+export interface CreateQCPayload extends CreateQCFormValues {
+  pr_id?: number | null;
+  department_id?: number | null;
+  created_by?: number | null;
+}
+
 export type CreateQCFormData = z.infer<typeof CreateQCFormSchema>;
 
 // ====================================================================================

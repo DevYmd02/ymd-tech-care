@@ -72,6 +72,7 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ branches, onOpenPR
                                     onBlur={onBlur}
                                     ref={ref}
                                     disabled={isLocked}
+                                    onClick={(e) => { if ('showPicker' in HTMLInputElement.prototype) e.currentTarget.showPicker(); }}
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                 />
                                 <Calendar size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 pointer-events-none" />
@@ -173,6 +174,7 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ branches, onOpenPR
                                     onBlur={onBlur}
                                     ref={ref}
                                     disabled={isLocked}
+                                    onClick={(e) => { if ('showPicker' in HTMLInputElement.prototype) e.currentTarget.showPicker(); }}
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                 />
                                 <Calendar size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 pointer-events-none" />
@@ -266,6 +268,7 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ branches, onOpenPR
                                             onBlur={onBlur}
                                             ref={ref}
                                             disabled={!formData.isMulticurrency || isLocked}
+                                            onClick={(e) => { if ('showPicker' in HTMLInputElement.prototype) e.currentTarget.showPicker(); }}
                                             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                         />
                                         <Calendar size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 pointer-events-none" />

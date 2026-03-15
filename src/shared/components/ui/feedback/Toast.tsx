@@ -10,7 +10,7 @@ import { AlertCircle, X, CheckCircle, Info } from 'lucide-react';
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
 interface ToastContextType {
-  toast: (message: string, type?: ToastType, title?: string) => void;
+  toast: (message: string | React.ReactNode, type?: ToastType, title?: string) => void;
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -21,7 +21,7 @@ export const ToastContext = createContext<ToastContextType | undefined>(undefine
 // ====================================================================================
 
 interface ToastProps {
-  message: string;
+  message: string | React.ReactNode;
   onClose: () => void;
   type?: ToastType;
   isVisible?: boolean;
@@ -70,7 +70,7 @@ export const Toast: React.FC<ToastProps> = ({ message, onClose, type = 'error', 
        </div>
        <div className="flex-1 pt-1">
           <h4 className="font-bold text-gray-900 dark:text-gray-100 text-sm leading-tight">{displayTitle}</h4>
-          <p className="text-gray-600 dark:text-gray-400 text-xs mt-1 whitespace-pre-line">{message}</p>
+          <div className="text-gray-600 dark:text-gray-400 text-xs mt-1 whitespace-pre-line">{message}</div>
        </div>
        <button 
          onClick={onClose} 
@@ -88,12 +88,12 @@ export const Toast: React.FC<ToastProps> = ({ message, onClose, type = 'error', 
 // ====================================================================================
 
 export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState<string | React.ReactNode>('');
   const [type, setType] = useState<ToastType>('error');
   const [title, setTitle] = useState<string | undefined>(undefined);
   const [isVisible, setIsVisible] = useState(false);
 
-  const toast = useCallback((msg: string, t: ToastType = 'error', customTitle?: string) => {
+  const toast = useCallback((msg: string | React.ReactNode, t: ToastType = 'error', customTitle?: string) => {
     setMessage(msg);
     setType(t);
     setTitle(customTitle);

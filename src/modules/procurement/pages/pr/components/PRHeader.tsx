@@ -115,6 +115,7 @@ export const PRHeader: React.FC<Props> = ({ costCenters, projects, onVendorSelec
                   onBlur={onBlur}
                   ref={ref}
                   disabled={readOnly}
+                  onClick={(e) => { if ('showPicker' in HTMLInputElement.prototype) e.currentTarget.showPicker(); }}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   style={{ colorScheme: 'dark' }}
                 />
@@ -153,6 +154,7 @@ export const PRHeader: React.FC<Props> = ({ costCenters, projects, onVendorSelec
                   onBlur={onBlur}
                   ref={ref}
                   disabled={readOnly}
+                  onClick={(e) => { if ('showPicker' in HTMLInputElement.prototype) e.currentTarget.showPicker(); }}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   style={{ colorScheme: 'dark' }}
                 />

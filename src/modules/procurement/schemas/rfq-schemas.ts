@@ -14,11 +14,11 @@ export type RFQVendorStatusType = z.infer<typeof RFQVendorStatusEnum>;
 // SHARED MESSAGE CONSTANTS (Mirrors qt-schemas.ts style)
 // ====================================================================================
 const MESSAGES = {
-    REQUIRED: 'Required',
-    POSITIVE_NUMBER: 'Must be positive',
-    NON_NEGATIVE: 'Cannot be negative',
-    INVALID_EMAIL: 'Invalid email format',
-    AT_LEAST_ONE_ITEM: 'At least one item is required',
+    REQUIRED: 'กรุณากรอกข้อมูลที่จำเป็น',
+    POSITIVE_NUMBER: 'ต้องมากกว่า 0',
+    NON_NEGATIVE: 'ต้องไม่ติดลบ',
+    INVALID_EMAIL: 'รูปแบบอีเมลไม่ถูกต้อง',
+    AT_LEAST_ONE_ITEM: 'กรุณาเพิ่มสินค้าอย่างน้อย 1 รายการ',
 };
 
 // ====================================================================================
@@ -72,7 +72,7 @@ export const RFQFormSchema = z.object({
     // ✅ Required by UI (red asterisk)
     rfq_date: z.string().min(1, MESSAGES.REQUIRED),
     status: RFQStatusEnum,
-    branch_id: z.number().int().min(1, 'กรุณาเลือกสาขา (Required)'),
+    branch_id: z.coerce.number({ message: 'กรุณาเลือกสาขา' }).int().min(1, 'กรุณาเลือกสาขา'),
     quotation_due_date: z.string().min(1, MESSAGES.REQUIRED),
 
     // Optional — PR reference (can create blank RFQ without PR)
