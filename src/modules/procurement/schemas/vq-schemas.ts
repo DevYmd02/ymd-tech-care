@@ -57,8 +57,8 @@ export const QuotationLineSchema = z.object({
 
 export const QuotationHeaderSchema = z.object({
   quotation_no: z.string().optional(),
-  quotation_date: z.string().min(1, 'Date is required'),
-  vendor_id: z.coerce.number().min(1, 'Vendor is required'),
+  quotation_date: z.string().min(1, 'กรุณาระบุวันที่ใบเสนอราคา'),
+  vendor_id: z.coerce.number({ message: 'กรุณาระบุผู้จัดจำหน่าย' }).min(1, 'กรุณาระบุผู้จัดจำหน่าย'),
   vendor_code: z.string().optional(),
   vendor_name: z.string().optional(),
   contact_person: z.string().optional(),
@@ -67,17 +67,17 @@ export const QuotationHeaderSchema = z.object({
   qc_id: z.coerce.number().optional(), // FK to Comparison
   rfq_id: z.coerce.number().optional(), // FK to Request For Quotation
   pr_id: z.coerce.number().optional(), // FK to Purchase Request
-  rfq_no: z.string().optional(), // Human-readable Ref RFQ
-  currency: z.string().min(1, 'Currency is required'),
+  rfq_no: z.string().min(1, 'กรุณาเลือกเลขที่ RFQ'), // Human-readable Ref RFQ
+  currency: z.string().min(1, 'กรุณาระบุสกุลเงิน'),
   isMulticurrency: z.boolean().optional(),
   exchange_rate_date: z.string().optional(),
   target_currency: z.string().optional(),
-  exchange_rate: z.coerce.number().min(0.0001, 'Exchange rate must be positive').optional(),
+  exchange_rate: z.coerce.number({ message: 'อัตราแลกเปลี่ยนต้องมากกว่า 0' }).min(0.0001, 'อัตราแลกเปลี่ยนต้องมากกว่า 0').optional(),
   payment_term_days: z.coerce.number().min(0).optional(),
   payment_terms: z.string().optional(),
   delivery_days: z.coerce.number().min(0).optional(),
   lead_time_days: z.coerce.number().min(0).optional(),
-  valid_until: z.string().min(1, 'Valid until date is required'),
+  valid_until: z.string().min(1, 'กรุณาระบุวันที่สิ้นสุด'),
   remark: z.string().optional(),
   discount_expression: z.string().optional(),
   tax_code_id: z.coerce.number().min(1, 'กรุณาเลือกภาษี'),

@@ -28,7 +28,7 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
   const { toast } = useToast();
   // -- Custom Hook --
   const { 
-    formMethods, totals, handleSave, updateLineCalculation, 
+    formMethods, totals, handleSave, handleFormError, updateLineCalculation, 
     handleSelectRFQ, handleClearRFQ, handleClearVendor,
     createEmptyLine,
     purchaseTaxOptions,
@@ -153,12 +153,12 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
               {!forceViewMode && (
                   <button 
                       type="button" 
-                      onClick={() => {
+                      onClick={formMethods.handleSubmit(() => {
                         console.log('💾 Triggering Confirmation for VQ...');
                         setShowConfirm(true);
-                      }}
-                      disabled={isDataLoading}
-                      className={`px-6 py-2 rounded-md text-sm font-medium shadow-sm transition-colors ${isDataLoading ? 'bg-gray-400 text-gray-200 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                      }, handleFormError)}
+                      disabled={isDataLoading || formMethods.formState.isSubmitting}
+                      className={`px-6 py-2 rounded-md text-sm font-medium shadow-sm transition-colors ${(isDataLoading || formMethods.formState.isSubmitting) ? 'bg-gray-400 text-gray-200 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
                   >
                       บันทึก
                   </button>
@@ -256,6 +256,7 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
             confirmText="บันทึก"
             cancelText="ยกเลิก"
             variant="info"
+            isLoading={formMethods.formState.isSubmitting}
         />
       </WindowFormLayout>
     </FormProvider>

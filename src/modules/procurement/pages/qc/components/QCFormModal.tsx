@@ -7,6 +7,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { FormProvider } from 'react-hook-form';
 import { AlertCircle, FileText, Search, Scale, CheckSquare, Square, Trophy, CheckCircle2, Circle, X, ShoppingBag } from 'lucide-react';
 import { WindowFormLayout } from '@ui';
 
@@ -22,7 +23,7 @@ import { RFQSelectionModal } from './RFQSelectionModal';
 import { useQCForm } from '../hooks/useQCForm';
 import { useConfirmation } from '@/shared/hooks';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
-import toast from 'react-hot-toast';
+import { useToast } from '@/shared/components/ui/feedback/Toast';
 
 interface QCFormModalProps {
   isOpen: boolean;
@@ -58,27 +59,31 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
 }) => {
   // Auth Context
   const { user } = useAuth();
+  const { toast } = useToast();
 
-  // Form State
+  // Form Hook
+  const { methods, onSubmit, onInvalid, isSubmitting: isFormSubmitting } = useQCForm(onSuccess, onClose);
+  const { setValue, watch } = methods;
+
+  // Watch Form Values
+  const rfqId = watch('rfq_id');
+  const winnerVQId = watch('winning_vq_id');
+
+  // Custom Payload Context Watches
+  const prId = watch('pr_id');
+  const departmentId = watch('department_id');
+
+  // Display States (UI only)
   const [qcNo, setQCNo] = useState('');
-  const [prId, setPRId] = useState<number | null>(null);
   const [prNo, setPRNo] = useState('');
-  const [rfqId, setRFQId] = useState<number | null>(null);
   const [rfqNo, setRFQNo] = useState('');
   const [qcDate, setQCDate] = useState(getTodayFormatted());
-  
-  // Real-time Auth Synced States
   const [createdBy, setCreatedBy] = useState('');
   const [department, setDepartment] = useState('');
-  const [employeeId, setEmployeeId] = useState<number | null>(null);
-  const [departmentId, setDepartmentId] = useState<number | null>(null);
 
   const [isRFQSelectorOpen, setIsRFQSelectorOpen] = useState(false);
   const [isPRSelectorOpen, setIsPRSelectorOpen] = useState(false);
-
-  // Reorder state declarations to fix "used before declaration" errors
   const [selectedVQIds, setSelectedVQIds] = useState<number[]>([]);
-  const [winnerVQId, setWinnerVQId] = useState<number | null>(null);
 
   // Fetch Existing QC Data if mode is edit/view
   const { data: qcData } = useQuery({
@@ -105,11 +110,12 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
     if (qcData && (mode === 'view' || mode === 'edit')) {
       setQCNo(qcData.qc_no || '');
       setPRNo(qcData.pr_no || '');
-      setPRId(qcData.pr_id || null);
+      setValue('pr_id', qcData.pr_id || null);
       setRFQNo(qcData.rfq_no || '');
-      setRFQId(qcData.rfq_id || null);
+
+      setValue('rfq_id', qcData.rfq_id || 0);
       setQCDate(qcData.comparison_date ? new Date(qcData.comparison_date).toLocaleDateString('en-GB') : getTodayFormatted());
-      setWinnerVQId(qcData.winning_vq_id || null);
+      setValue('winning_vq_id', qcData.winning_vq_id || 0);
       
       if (qcData.winning_vq_id) {
         setSelectedVQIds([qcData.winning_vq_id]);
@@ -120,10 +126,9 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
       setQCNo(initialData.qc_no || '');
       setPRNo(initialData.pr_no || '');
       setRFQNo(initialData.rfq_no || '');
-      // Note: mapping other fields from QCListItem to match expected types if needed
-      setWinnerVQId(initialData.vq_header_id || null);
+      setValue('winning_vq_id', initialData.vq_header_id || 0);
     }
-  }, [qcData, initialData, mode]);
+  }, [qcData, initialData, mode, setValue]);
 
   const { data: prList } = useQuery({
     queryKey: ['prs-lookup'],
@@ -134,8 +139,8 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
   // Data Integrity Bridge: Clear selected VQs and winner if RFQ No changes
   useEffect(() => {
     setSelectedVQIds([]);
-    setWinnerVQId(null);
-  }, [rfqNo]);
+    setValue('winning_vq_id', 0, { shouldValidate: true });
+  }, [rfqNo, setValue]);
 
   // Note: Data Integrity Bridge #2 (belonging check) is now naturally handled 
   // by RFQSelectionModal's filtering and the clear-on-change effect in handleSelectPR.
@@ -170,18 +175,19 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
       const actualRfq = (rfqDetail as SafeRfqPayload)?.data || (rfqDetail as RFQDetailResponse);
       
       const recoveredPrId = actualRfq.pr_id;
-      const recoveredPrNo = actualRfq.pr_no || actualRfq.ref_pr_no;
+      const recoveredPrNo = actualRfq.pr_no || actualRfq.ref_pr_no || '';
 
       if (recoveredPrId && (prId === null || prId === 0)) {
         console.log("QC_RECOVERY_SYNC:", { pr_id: recoveredPrId });
-        setPRId(Number(recoveredPrId));
+        setValue('pr_id', Number(recoveredPrId));
+
         
         if (!prNo || prNo === 'อ้างอิงจาก RFQ' || prNo === '-') {
           setPRNo(recoveredPrNo || `PR-ID: ${recoveredPrId}`);
         }
       }
     }
-  }, [rfqDetail, rfqId, prId, prNo]);
+  }, [rfqDetail, rfqId, prId, prNo, setValue]);
 
   // 🗺️ VENDOR MAP: Deep data recovery for vendor names
   const rfqVendorMap = useMemo(() => {
@@ -264,16 +270,24 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
   }, [availableVQs, selectedVQIds]);
 
   const toggleVQSelection = (vId: number) => {
-    setSelectedVQIds((prev) =>
-      prev.includes(vId) ? prev.filter((id) => id !== vId) : [...prev, vId]
-    );
+    setSelectedVQIds((prev) => {
+      const isSelected = prev.includes(vId);
+      if (isSelected) {
+        return prev.filter((id) => id !== vId);
+      } else {
+        if (prev.length >= 3) {
+          toast('เลือกเปรียบเทียบได้สูงสุด 3 รายการเท่านั้น', 'warning');
+          return prev;
+        }
+        return [...prev, vId];
+      }
+    });
+
     // If we deselect the current winner, clear the winner
     if (winnerVQId === vId) {
-      setWinnerVQId(null);
+       setValue('winning_vq_id', 0, { shouldValidate: true });
     }
   };
-
-  const { isSubmitting, handleSaveQC } = useQCForm(onSuccess, onClose);
 
   // Reset form when modal opens/closes
   useEffect(() => {
@@ -281,12 +295,13 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
       // Strict Reset on Close to prevent data bleeding
       setQCNo('');
       setPRNo('');
-      setPRId(null);
+      setValue('pr_id', null);
       setRFQNo('');
-      setRFQId(null);
+
+      setValue('rfq_id', 0);
       setQCDate(getTodayFormatted());
       setSelectedVQIds([]);
-      setWinnerVQId(null);
+      setValue('winning_vq_id', 0);
       setCreatedBy('');
       setDepartment('');
       return;
@@ -295,22 +310,24 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
     if (mode === 'create') {
       setQCNo(generateQCNumber());
       setPRNo(initialPRNo || '');
-      setPRId(null);
+      setValue('pr_id', null);
       setRFQNo(initialRFQNo || '');
-      setRFQId(null);
+
+      setValue('rfq_id', 0);
       setQCDate(getTodayFormatted());
       setSelectedVQIds([]);
-      setWinnerVQId(null);
+      setValue('winning_vq_id', 0);
       
       // Load Auth Context data
       if (user?.employee) {
         setCreatedBy(user.employee.employee_fullname);
-        setEmployeeId(user.employee_id);
-        setDepartmentId(user.employee.department_id);
+        setValue('created_by', user.employee_id);
+        setValue('department_id', user.employee.department_id);
         setDepartment('ฝ่ายที่เกี่ยวข้อง (กำลังระบุ...)');
       }
+
     }
-  }, [isOpen, mode, initialPRNo, initialRFQNo, user]);
+  }, [isOpen, mode, initialPRNo, initialRFQNo, user, setValue]);
 
   // Auto-select all recorded VQs when the RFQ changes (Create/Edit mode)
   useEffect(() => {
@@ -318,17 +335,23 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
     
     const safeVqList = vqList?.data || [];
     if (rfqId && safeVqList.length > 0) {
-      const allFetchedVQs = safeVqList
-        .map((vq: VQListItem) => vq.vq_header_id || vq.quotation_id!);
-      if (allFetchedVQs.length > 0) {
-        setSelectedVQIds(allFetchedVQs);
+      // 🛡️ Anti-Bias Guard: Auto-select only if <= 3 items
+      if (safeVqList.length <= 3) {
+        const allFetchedVQs = safeVqList
+          .map((vq: VQListItem) => vq.vq_header_id || vq.quotation_id!);
+        if (allFetchedVQs.length > 0) {
+          setSelectedVQIds(allFetchedVQs);
+        }
+      } else {
+        // > 3 items: Do not auto-select, force user to pick
+        setSelectedVQIds([]);
       }
     }
   }, [rfqId, vqList?.data, mode]);
 
   const handleSelectRFQ = (rfq: RFQHeader) => {
     setRFQNo(rfq.rfq_no);
-    setRFQId(rfq.rfq_id);
+    setValue('rfq_id', rfq.rfq_id, { shouldValidate: true });
     
     // 🔄 Reverse Sync: Fill PR & Department from RFQ (The absolute source of truth)
     const parentPrNo = rfq.ref_pr_no || rfq.pr_no || '';
@@ -339,52 +362,54 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
     if (parentPrNo) {
         setPRNo(parentPrNo);
     } else {
-        setPRNo('อ้างอิงจาก RFQ'); // More descriptive than '-'
+        setPRNo('อ้างอิงจาก RFQ');
     }
-    setPRId(parentPrId ? Number(parentPrId) : null);
+    setValue('pr_id', parentPrId ? Number(parentPrId) : null);
 
     // Sync Department if available
     if (parentDeptId) {
-        setDepartmentId(Number(parentDeptId));
-        // Reset department name to trigger re-fetch if needed or clear stale name
+        setValue('department_id', Number(parentDeptId));
         setDepartment('กำลังดึงข้อมูลแผนก...');
     }
 
+
     setIsRFQSelectorOpen(false);
     setSelectedVQIds([]);
-    setWinnerVQId(null);
-    toast.success(`เลือก RFQ ${rfq.rfq_no} และดึงข้อมูล PR สำเร็จ`);
+    setValue('winning_vq_id', 0);
+    toast(`เลือก RFQ ${rfq.rfq_no} และดึงข้อมูล PR สำเร็จ`, 'success');
   };
+
 
   const handleSelectPR = (pr: PRHeader) => {
     if (pr.pr_no !== prNo) {
         setPRNo(pr.pr_no);
-        setPRId(pr.pr_id);
-        // Cascading Clear: If PR changes, clear RFQ and VQs
+        setValue('pr_id', pr.pr_id);
         setRFQNo('');
-        setRFQId(null);
+
+        setValue('rfq_id', 0);
         setSelectedVQIds([]);
-        setWinnerVQId(null);
+        setValue('winning_vq_id', 0);
     }
     setIsPRSelectorOpen(false);
   };
 
   const handleClearPR = () => {
     setPRNo('');
-    setPRId(null);
-    // CASCADING CLEAR: Must also clear RFQ because it depends on PR
+    setValue('pr_id', null);
     setRFQNo('');
-    setRFQId(null);
+
+    setValue('rfq_id', 0);
     setSelectedVQIds([]);
-    setWinnerVQId(null);
+    setValue('winning_vq_id', 0);
   };
 
   const handleClearRFQ = () => {
     setRFQNo('');
-    setRFQId(null);
+    setValue('rfq_id', 0);
     setSelectedVQIds([]);
-    setWinnerVQId(null);
+    setValue('winning_vq_id', 0);
   };
+
 
   // Compute lowest Grand Total for highlighting
   const minGrandTotal = useMemo(() => {
@@ -399,22 +424,21 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
   // with sensible defaults so Zod does not reject the payload.
   const handleSave = async () => {
     if (!winnerVQId) {
-      toast.error('กรุณาเลือกผู้เสนอราคาที่ชนะก่อนบันทึก');
+      toast('กรุณาเลือกผู้เสนอราคาที่ชนะก่อนบันทึก', 'error');
       return;
     }
 
     const winnerVQ = selectedVQs.find((vq: VQListItem) => (vq.vq_header_id || vq.quotation_id) === winnerVQId);
     if (!winnerVQ) {
-      toast.error('ไม่พบข้อมูลผู้เสนอราคาที่เลือก');
+      toast('ไม่พบข้อมูลผู้เสนอราคาที่เลือก', 'error');
       return;
     }
 
     if (!rfqId) {
-      toast.error('ไม่พบรหัส RFQ กรุณาเลือก RFQ อีกครั้ง');
+      toast('ไม่พบรหัส RFQ กรุณาเลือก RFQ อีกครั้ง', 'error');
       return;
     }
 
-    // 🎨 UI Fix: Find winner name for confirmation modal
     const winner = availableVQs.find(v => (v.vq_header_id || v.quotation_id) === winnerVQId);
     const winnerDisplayName = winner ? getVendorDisplayName(winner) : `ใบเสนอราคาเลขที่ ${winnerVQId}`;
 
@@ -428,15 +452,11 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
 
     if (!isConfirmed) return;
 
-    // Call the purified hook logic
-    await handleSaveQC({
-      rfq_id: rfqId,
-      pr_id: prId || 0, // Force number, fallback to 0 per Zero-Tolerance
-      department_id: departmentId || user?.employee?.department_id || 1, // Fallback to User's Dept if missing
-      winning_vq_id: winnerVQId,
-      created_by: employeeId || Number(user?.employee_id || 1),
-    });
+    // Trigger Form Submission via React Hook Form
+    // This will validate and then call the onSubmit from useQCForm
+    methods.handleSubmit(onSubmit, onInvalid)();
   };
+
 
   // Styles
   const inputClass =
@@ -444,7 +464,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
   const labelClass = 'block text-sm font-medium text-blue-700 dark:text-blue-400 mb-1';
 
   return (
-    <>
+    <FormProvider {...methods}>
       <WindowFormLayout
         isOpen={isOpen}
         onClose={onClose}
@@ -460,7 +480,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              disabled={isSubmitting}
+              disabled={isFormSubmitting}
               className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md text-sm font-medium transition-colors disabled:opacity-50"
             >
               {mode === 'view' ? 'ปิด' : 'ยกเลิก'}
@@ -469,7 +489,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
               <button
                 type="button"
                 onClick={handleSave}
-                disabled={isSubmitting || !winnerVQId}
+                disabled={isFormSubmitting || !winnerVQId}
                 className="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md text-sm font-medium shadow-sm transition-colors disabled:opacity-50"
               >
                 บันทึก
@@ -478,6 +498,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
           </div>
         }
       >
+
         <div className="flex-1 overflow-auto bg-gray-100 dark:bg-gray-800 p-4 space-y-4">
           
           {/* 🏆 Section: Winner Highlight (View mode only) */}
@@ -659,6 +680,17 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
                   className={`${inputClass} bg-gray-50`}
                 />
               </div>
+              {/* หมายเหตุ (Remark) */}
+              <div className="md:col-span-3">
+                <label className={labelClass}>หมายเหตุ (Remark)</label>
+                <textarea
+                  {...methods.register('remark')}
+                  placeholder="ระบุหมายเหตุเพิ่มเติม (ถ้ามี)..."
+                  disabled={mode === 'view'}
+                  rows={2}
+                  className={`${inputClass} h-auto py-2 resize-none`}
+                />
+              </div>
             </div>
           </div>
 
@@ -669,7 +701,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
                 <h3 className="font-bold">เลือกใบเสนอราคาเพื่อเปรียบเทียบ</h3>
               </div>
 
-              {availableVQs.length > 0 && mode !== 'view' && (
+              {availableVQs.length > 0 && availableVQs.length <= 3 && mode !== 'view' && (
                 <div className="flex gap-2">
                   <button
                     type="button"
@@ -681,11 +713,12 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
                   <span className="text-gray-300">|</span>
                   <button
                     type="button"
-                    onClick={() => { setSelectedVQIds([]); setWinnerVQId(null); }}
+                    onClick={() => { setSelectedVQIds([]); setValue('winning_vq_id', 0, { shouldValidate: true }); }}
                     className="text-xs text-gray-500 hover:underline font-medium"
                   >
                     ไม่เลือกเลย
                   </button>
+
                 </div>
               )}
             </div>
@@ -711,12 +744,18 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
                 {availableVQs.map((vq: VQListItem) => {
                   const vId = (vq.vq_header_id || vq.quotation_id!) as number;
                   const isSelected = selectedVQIds.includes(vId);
+                  const isDisabled = !isSelected && selectedVQIds.length >= 3;
+
                   return (
                     <div
                       key={vId}
-                      onClick={() => mode !== 'view' && toggleVQSelection(vId)}
+                      onClick={() => {
+                        if (mode !== 'view' && !isDisabled) {
+                          toggleVQSelection(vId);
+                        }
+                      }}
                       className={`p-3 rounded-lg border transition-all flex items-start gap-3 ${
-                        mode !== 'view' ? 'cursor-pointer' : 'cursor-default'
+                        mode !== 'view' && !isDisabled ? 'cursor-pointer' : isDisabled ? 'cursor-not-allowed opacity-50 grayscale' : 'cursor-default'
                       } ${
                         isSelected
                           ? 'bg-blue-50 border-blue-500 dark:bg-blue-900/20 dark:border-blue-500'
@@ -824,7 +863,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
                       {mode !== 'view' ? (
                         <button
                           type="button"
-                          onClick={() => setWinnerVQId(winnerVQId === vId ? null : vId)}
+                          onClick={() => setValue('winning_vq_id', winnerVQId === vId ? 0 : vId, { shouldValidate: true })}
                           className={`w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold transition-all ${
                             isWinner
                               ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm'
@@ -844,6 +883,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
                           )}
                         </button>
                       ) : (
+
                         isWinner && (
                           <div className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
                             <Trophy size={16} />
@@ -963,8 +1003,9 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
           { label: 'วัตถุประสงค์', key: 'purpose', className: 'flex-1' },
         ]}
       />
-    </>
+    </FormProvider>
   );
 };
 
 export default QCFormModal;
+

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { MasterDataService } from '@/modules/master-data';
@@ -400,11 +400,42 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
     };
 
     const handleInvalid = useCallback(() => {
-        // 🔍 DIAGNOSTIC: Log exact validation errors to DevTools console
         const currentErrors = methods.formState.errors;
-        console.error('[RFQ Validation] ❌ Zod Errors — field breakdown:', currentErrors);
-        console.error('[RFQ Validation] 📋 Current form values:', methods.getValues());
-        toast('กรุณากรอกข้อมูลให้ครบถ้วนและถูกต้อง (ตรวจสอบฟิลด์สีแดง)', 'error');
+        
+        // Helper สำหรับดึง message จาก Object ลึกๆ
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const extractErrorMessages = (errors: any): string[] => {
+            let messages: string[] = [];
+            for (const key in errors) {
+                const error = errors[key];
+                if (error?.message && typeof error.message === 'string') {
+                    // 🛡️ ระบบกรองคำภาษาอังกฤษที่อาจหลุดมา
+                    let msg = error.message;
+                    const lowerMsg = msg.toLowerCase();
+                    if (lowerMsg.includes('invalid input') || lowerMsg.includes('expected number') || lowerMsg.includes('received string') || lowerMsg.includes('received nan')) {
+                        msg = 'กรุณาระบุข้อมูลให้ถูกต้อง';
+                    }
+                    messages.push(msg);
+                } else if (typeof error === 'object' && error !== null) {
+                    messages = messages.concat(extractErrorMessages(error));
+                }
+            }
+            return Array.from(new Set(messages));
+        };
+
+        const errorMessages = extractErrorMessages(currentErrors);
+
+        if (errorMessages.length > 0) {
+            const ErrorToastUI = () => React.createElement('div', { className: 'flex flex-col gap-1' },
+                React.createElement('span', { className: 'font-semibold text-sm' }, 'ตรวจสอบข้อมูลไม่ผ่าน:'),
+                React.createElement('ul', { className: 'list-disc pl-4 text-xs' },
+                    errorMessages.map((msg: string, i: number) => React.createElement('li', { key: i }, msg))
+                )
+            );
+            toast(React.createElement(ErrorToastUI), 'error');
+        } else {
+            toast('กรุณาตรวจสอบข้อมูลที่ไฮไลท์สีแดงให้ครบถ้วน', 'error');
+        }
     }, [toast, methods]);
 
     const handleCancelConfirm = useCallback(() => {

@@ -17,8 +17,8 @@ import { WindowFormLayout } from '@/shared/components/ui/layout/WindowFormLayout
 import { CustomDateInput } from '@/shared/components/forms/CustomDateInput';
 import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal';
 import { VendorSearchModal } from '@/modules/master-data/vendor/components/selector/VendorSearchModal';
-import { ProductSearchModal } from '@/modules/master-data/inventory/components/ProductSearchModal';
-import { DocumentSourceSelectorModal } from './DocumentSourceSelectorModal';
+import { ProductSearchModal } from './ProductSearchModal';
+import { PRSearchModal } from './PRSearchModal';
 import { calculatePricingSummary } from '@/modules/procurement/utils/pricing.utils';
 
 import type { POFormData, POLine } from '@/modules/procurement/schemas/po-schemas';
@@ -169,7 +169,13 @@ export default function POFormModal({
         isLoadingUnits,
     } = usePOForm({ isOpen, onClose, onSuccess, poId, initialValues, isViewMode });
 
-    const [itemSearchConfig, setItemSearchConfig] = useState({ isOpen: false, index: -1 });
+    const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+    const [activeSearchIndex, setActiveSearchIndex] = useState<number | null>(null);
+
+    const handleOpenProductSearch = (index: number) => {
+        setActiveSearchIndex(index);
+        setIsProductModalOpen(true);
+    };
 
     if (!isOpen) return null;
 
@@ -178,32 +184,9 @@ export default function POFormModal({
     return (
         <FormProvider {...formMethods}>
             {/* 🔍 Search Modals */}
-            <DocumentSourceSelectorModal
-                isOpen={isPRModalOpen}
-                onClose={() => setIsPRModalOpen(false)}
-                onSelectSource={(sourceType, prId, qcId, vendorId, winningVqId) => {
-                    if (prId) {
-                        const type = sourceType === 'QC' ? 'QC' : 'PR';
-                        handleSelectReferenceDoc(prId, type, qcId, vendorId, winningVqId);
-                    }
-                    setIsPRModalOpen(false);
-                }}
-            />
+            {/* Modals moved inside WindowFormLayout for correct Portal Stacking context */}
 
-            <VendorSearchModal
-                isOpen={isVendorModalOpen}
-                onClose={() => setIsVendorModalOpen(false)}
-                onSelect={handleVendorSelect}
-            />
-
-            <ProductSearchModal
-                isOpen={itemSearchConfig.isOpen}
-                onClose={() => setItemSearchConfig({ ...itemSearchConfig, isOpen: false })}
-                onSelect={(product) => {
-                    handleSelectItemMaster(itemSearchConfig.index, product);
-                    setItemSearchConfig({ ...itemSearchConfig, isOpen: false });
-                }}
-            />
+            {/* Modal mounted at the bottom of JSX to prevent z-index/overflow issues */}
 
             <WindowFormLayout
                 isOpen={isOpen}
@@ -228,11 +211,11 @@ export default function POFormModal({
                             <button
                                 type="button"
                                 onClick={handleSubmit(onSubmit, onInvalidSubmit)}
-                                disabled={isHydrating}
+                                disabled={isHydrating || isSubmitting}
                                 className="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md text-sm font-medium shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {isHydrating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save size={14} />} 
-                                {isHydrating ? 'กำลังประมวลผล...' : 'บันทึก'}
+                                {(isHydrating || isSubmitting) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save size={14} />} 
+                                {(isHydrating || isSubmitting) ? 'กำลังประมวลผล...' : 'บันทึก'}
                             </button>
                         )}
                     </div>
@@ -502,10 +485,10 @@ export default function POFormModal({
                                             <tr key={field.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                                                 <td className="px-3 py-2 text-center text-[13px] text-gray-600 font-medium border-r border-gray-200 dark:border-gray-700">{idx + 1}</td>
                                                 <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
-                                                    <div className="flex gap-1.5 items-stretch">
+                                                    <div className="relative w-full flex items-center">
                                                         <input
                                                             value={field.code || field.item_code || ''}
-                                                            className={`${ui.inputRO} flex-1 !h-9 text-[13px] shadow-sm`}
+                                                            className="w-full pr-10 border rounded px-3 !h-9 text-[13px] bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
                                                             placeholder="ค้นหารหัส..."
                                                             readOnly
                                                         />
@@ -517,13 +500,15 @@ export default function POFormModal({
                                                         {!isView && (
                                                             <button
                                                                 type="button"
-                                                                className="px-2.5 bg-slate-50 border border-slate-300 rounded hover:bg-slate-100 shadow-sm shrink-0 transition-colors"
+                                                                className="absolute right-1.5 z-10 p-1 text-gray-500 hover:text-blue-600 hover:bg-gray-100 rounded-md cursor-pointer transition-colors"
                                                                 title="ค้นหาสินค้า"
-                                                                onClick={() => {
-                                                                    setItemSearchConfig({ isOpen: true, index: idx });
+                                                                onClick={(e) => {
+                                                                    e.preventDefault();
+                                                                    e.stopPropagation();
+                                                                    handleOpenProductSearch(idx);
                                                                 }}
                                                             >
-                                                                <Search size={15} className="text-slate-600" />
+                                                                <Search size={16} className="pointer-events-none" />
                                                             </button>
                                                         )}
                                                     </div>
@@ -630,21 +615,50 @@ export default function POFormModal({
                             <POSummaryPanel control={control} />
                         </div>
                     </div>
+
+                    {/* ── Modals Inside WindowFormLayout for Portal Stacking ── */}
+                    <PRSearchModal
+                        isOpen={isPRModalOpen}
+                        onClose={() => setIsPRModalOpen(false)}
+                        onSelect={(pr) => {
+                            const id = pr.id || pr.pr_id;
+                            if (id) {
+                                handleSelectReferenceDoc(id, 'PR');
+                            }
+                            setIsPRModalOpen(false);
+                        }}
+                    />
+
+                    <VendorSearchModal
+                        isOpen={isVendorModalOpen}
+                        onClose={() => setIsVendorModalOpen(false)}
+                        onSelect={handleVendorSelect}
+                    />
+
+                    <ConfirmationModal
+                        isOpen={isConfirmModalOpen}
+                        onClose={() => setIsConfirmModalOpen(false)}
+                        onConfirm={handleConfirmSave}
+                        title="ยืนยันการบันทึกใบสั่งซื้อ"
+                        description="คุณต้องการบันทึกข้อมูลใบสั่งซื้อนี้ใช่หรือไม่? เมื่อบันทึกแล้วระบบจะสร้างเลขที่เอกสารอัตโนมัติ"
+                        confirmText="ยืนยันบันทึก"
+                        cancelText="ยกเลิก"
+                        variant="info"
+                        isLoading={isSubmitting}
+                    />
+
+                    <ProductSearchModal
+                        isOpen={isProductModalOpen}
+                        onClose={() => setIsProductModalOpen(false)}
+                        onSelect={(product) => {
+                            if (activeSearchIndex !== null) {
+                                handleSelectItemMaster(activeSearchIndex, product);
+                            }
+                            setIsProductModalOpen(false);
+                        }}
+                    />
                 </div>
             </WindowFormLayout>
-
-            {/* ── Confirmation Modal ────────────────────────────────────────── */}
-            <ConfirmationModal
-                isOpen={isConfirmModalOpen}
-                onClose={() => setIsConfirmModalOpen(false)}
-                onConfirm={handleConfirmSave}
-                title="ยืนยันการบันทึกใบสั่งซื้อ"
-                description="คุณต้องการบันทึกข้อมูลใบสั่งซื้อนี้ใช่หรือไม่? เมื่อบันทึกแล้วระบบจะสร้างเลขที่เอกสารอัตโนมัติ"
-                confirmText="ยืนยันบันทึก"
-                cancelText="ยกเลิก"
-                variant="info"
-                isLoading={isSubmitting}
-            />
         </FormProvider>
     );
 }
