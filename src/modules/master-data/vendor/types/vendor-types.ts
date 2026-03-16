@@ -125,7 +125,9 @@ export interface VendorMaster {
     vendor_code: string;
     vendor_name: string;
     vendor_name_en?: string;
+    vendor_nameeng?: string;
     tax_id?: string;
+    vat_registration_no?: string;
     vendor_type: VendorType;
     status: VendorStatus;
     
@@ -158,6 +160,8 @@ export interface VendorMaster {
     credit_limit?: number;
     currency_code?: string;
     vat_registered?: boolean;
+    is_vat_registered?: boolean;
+    is_subject_to_wht?: boolean;
     
     // Flags
     is_blocked: boolean;
@@ -194,6 +198,7 @@ export interface VendorListItem {
     vendor_code: string;
     vendor_name: string;
     vendor_name_en?: string;
+    vendor_nameeng?: string;
     tax_id?: string;
     vendor_type: VendorType;
     status: VendorStatus;
@@ -277,6 +282,7 @@ export interface VendorCreateRequest {
     vendor_code?: string;
     vendor_name: string;
     vendor_name_en?: string;
+    vendor_nameeng?: string;
     tax_id?: string;
     vendor_type?: VendorType; // Backend uses vendor_type_id instead
     
@@ -381,6 +387,7 @@ export function toVendorCreateRequest(form: VendorFormData): VendorCreateRequest
         vendor_code: form.vendorCode || undefined,
         vendor_name: form.vendorNameTh,
         vendor_name_en: form.vendorNameEn,
+        vendor_nameeng: form.vendorNameEn,
         tax_id: form.taxId || undefined,
         vendor_type_id: Number(form.vendorTypeId),
         vendor_group_id: Number(form.vendorGroupId),
@@ -601,8 +608,8 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
         vendorCodeSearch: '',
         vendorName: vendor.vendor_name,
         vendorNameTh: vendor.vendor_name,
-        vendorNameEn: vendor.vendor_name_en || '',
-        taxId: vendor.tax_id || '',
+        vendorNameEn: vendor.vendor_nameeng || vendor.vendor_name_en || '',
+        taxId: vendor.vat_registration_no || vendor.tax_id || '',
         vendorType: vendor.vendor_type,
         vendorTypeId: Number(vendor.vendor_type_id) || 1,
         vendorGroupId: Number(vendor.vendor_group_id) || 1,
@@ -610,8 +617,8 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
         businessCategory: '',
         branchName: 'สำนักงานใหญ่',
         currency: vendor.currency_code || 'THB',
-        vatRegistered: vendor.vat_registered || false,
-        whtRegistered: false,
+        vatRegistered: vendor.is_vat_registered ?? vendor.vat_registered ?? false,
+        whtRegistered: vendor.is_subject_to_wht ?? false,
         addresses: formAddresses,
         sameAsRegistered,
         contactName: formContacts.find(c => c.isMain)?.name || vendorAny.contactName || vendorAny.contactPerson || vendorAny.primaryContact || registeredAddress.contactPerson || '',
@@ -744,4 +751,3 @@ export interface VendorGroupFormData {
     groupNameEn: string;
     isActive: boolean;
 }
-

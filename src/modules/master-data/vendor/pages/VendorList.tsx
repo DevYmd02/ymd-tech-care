@@ -5,19 +5,11 @@
  */
 
 import { useState, useMemo, useCallback } from 'react';
-import { Database, Edit2, Power, MoreHorizontal } from 'lucide-react';
+import { Database, Edit2, Power } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
 import { VendorFormModal } from './VendorFormModal';
 import { ActiveStatusBadge } from '@ui';
-import { 
-    DropdownMenu, 
-    DropdownMenuContent, 
-    DropdownMenuItem, 
-    DropdownMenuLabel, 
-    DropdownMenuSeparator, 
-    DropdownMenuTrigger 
-} from '@ui';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';
 import { useTableFilters } from '@/shared/hooks';
@@ -293,35 +285,34 @@ export default function VendorList() {
         },
         {
             id: 'actions',
-            header: () => <div className="text-center w-full">จัดการ</div>,
-            size: 80,
+            header: 'จัดการ',
+            size: 100,
             cell: ({ row }) => (
-                <div className="flex justify-center">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500">
-                            <MoreHorizontal size={18} className="text-gray-500" />
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuLabel>การจัดการ</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => handleEdit(row.original.vendor_id)}>
-                                <Edit2 className="mr-2 h-4 w-4" />
-                                <span>แก้ไขข้อมูล</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            
-                            {row.original.is_active ? (
-                                <DropdownMenuItem onClick={() => handleStatusChange(row.original.vendor_id, row.original.vendor_code, false)}>
-                                    <Power className="mr-2 h-4 w-4 text-gray-500" />
-                                    <span>ระงับใช้งาน</span>
-                                </DropdownMenuItem>
-                            ) : (
-                                <DropdownMenuItem onClick={() => handleStatusChange(row.original.vendor_id, row.original.vendor_code, true)}>
-                                    <Power className="mr-2 h-4 w-4 text-green-600" />
-                                    <span>กลับมาใช้งาน</span>
-                                </DropdownMenuItem>
-                            )}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                <div className="flex items-center gap-2">
+                    <button 
+                        onClick={() => handleEdit(row.original.vendor_id)}
+                        className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                        title="แก้ไข"
+                    >
+                        <Edit2 size={18} />
+                    </button>
+                    {row.original.is_active ? (
+                        <button 
+                            onClick={() => handleStatusChange(row.original.vendor_id, row.original.vendor_code, false)}
+                            className="p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                            title="ระงับใช้งาน"
+                        >
+                            <Power size={18} />
+                        </button>
+                    ) : (
+                        <button 
+                            onClick={() => handleStatusChange(row.original.vendor_id, row.original.vendor_code, true)}
+                            className="p-1.5 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors"
+                            title="กลับมาใช้งาน"
+                        >
+                            <Power size={18} />
+                        </button>
+                    )}
                 </div>
             ),
         },
@@ -338,7 +329,7 @@ export default function VendorList() {
                         <Database className="text-blue-600" />
                         ข้อมูลเจ้าหนี้ (Vendor Master)
                     </h1>
-                    <p className="text-gray-500 dark:text-gray-400 mt-1">
+                    <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">
                         จัดการข้อมูลผู้ขายและคู่ค้าทั้งหมด
                     </p>
                 </div>
@@ -357,17 +348,16 @@ export default function VendorList() {
                     onCreate={handleCreateNew}
                     createLabel="เพิ่มเจ้าหนี้ใหม่"
                     accentColor="indigo"
-                    columns={{ sm: 1, md: 5, lg: 5, xl: 5 }}
-                    actionColSpan={{ sm: 'full', md: 2, lg: 2, xl: 2 }}
-                    actionAlign="end"
                 />
             </div>
 
             {/* Data Table Section */}
             <div className="flex flex-col gap-4">
-                <h2 className="text-gray-700 dark:text-gray-300 font-medium">
-                    พบข้อมูล {response?.total || 0} รายการ
-                </h2>
+                <div className="flex justify-between items-center">
+                    <h2 className="text-gray-700 dark:text-gray-300 font-medium">
+                        พบข้อมูล {response?.total || 0} รายการ
+                    </h2>
+                </div>
 
                 <SmartTable
                     data={response?.items || []}
@@ -383,7 +373,7 @@ export default function VendorList() {
                     sortConfig={sortConfig}
                     onSortChange={handleSortChange}
                     rowIdField="vendor_id"
-                    className="shadow-sm border border-gray-200 dark:border-gray-700"
+                    className="shadow-sm"
                 />
             </div>
 

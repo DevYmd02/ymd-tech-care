@@ -160,7 +160,6 @@ export default function POFormModal({
         watchVendorName,
         watchPrNo,
         watchCurrencyCode,
-        watchIsMulticurrency,
         handleSelectReferenceDoc,
         handleVendorSelect,
         handleAddLine,
@@ -410,28 +409,8 @@ export default function POFormModal({
                                 </div>
                             </div>
 
-                            {/* ── Row 4: Multicurrency Toggle (full-width) ── */}
-                            <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-lg">
-                                <input
-                                    type="checkbox"
-                                    id="is_multicurrency"
-                                    {...register('is_multicurrency')}
-                                    disabled={isView}
-                                    className="w-4 h-4 text-blue-600 rounded cursor-pointer accent-blue-600"
-                                />
-                                <label htmlFor="is_multicurrency" className="text-sm font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none">
-                                    ระบุสกุลเงินต่างประเทศ (Multicurrency)
-                                </label>
-                                {!watchIsMulticurrency && (
-                                    <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">
-                                        สกุลเงินปัจจุบัน: <strong className="text-gray-600 dark:text-gray-300">THB - บาท</strong>
-                                    </span>
-                                )}
-                            </div>
-
-                            {/* ── Row 5: Multicurrency Detail Fields (conditional) ── */}
-                            {watchIsMulticurrency && (
-                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-700/50 rounded-lg">
+                            {/* ── Row 4: Currency Detail Fields (Always visible) ── */}
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-lg">
                                     <div>
                                         <label className={ui.label}>วันที่อัตราแลกเปลี่ยน</label>
                                         <div className="h-8">
@@ -464,8 +443,7 @@ export default function POFormModal({
                                             className={`${ui.input} text-right`} disabled={isView} placeholder="1" />
                                         {errors.exchange_rate && <p className={ui.error}>{errors.exchange_rate.message}</p>}
                                     </div>
-                                </div>
-                            )}
+                            </div>
                         </div>
                     </div>
 
@@ -698,10 +676,6 @@ export default function POFormModal({
                         onConfirm={handleConfirmSave}
                         title="ยืนยันการบันทึกใบสั่งซื้อ"
                         description="คุณต้องการบันทึกข้อมูลใบสั่งซื้อนี้ใช่หรือไม่? เมื่อบันทึกแล้วระบบจะสร้างเลขที่เอกสารอัตโนมัติ"
-                        confirmText="ยืนยันบันทึก"
-                        cancelText="ยกเลิก"
-                        variant="info"
-                        isLoading={isSubmitting}
                     />
 
                     <ProductSearchModal

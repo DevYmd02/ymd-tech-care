@@ -14,6 +14,7 @@ import { StatusCheckbox } from '@ui';
 
 
 interface Props {
+  prId?: number;
   costCenters: CostCenter[];
   projects: Project[];
   onVendorSelect: (vendor: VendorSelection | null) => void;
@@ -22,7 +23,7 @@ interface Props {
   readOnly?: boolean;
 }
 
-export const PRHeader: React.FC<Props> = ({ costCenters, projects, onVendorSelect, isEditMode, onVoid, readOnly = false }) => {
+export const PRHeader: React.FC<Props> = ({ prId, costCenters, projects, onVendorSelect, isEditMode, onVoid, readOnly = false }) => {
   const { register, watch, control, formState: { errors } } = useFormContext<PRFormData>();
   // Watch for vendor values to display in the selector
   const preferredVendorId = watch("preferred_vendor_id");
@@ -78,7 +79,9 @@ export const PRHeader: React.FC<Props> = ({ costCenters, projects, onVendorSelec
       <div className="grid grid-cols-12 gap-x-4 gap-y-2">
         {/* Row 1: เลขที่เอกสาร, วันที่ขอซื้อ, วันที่ต้องการใช้, สกุลเงิน */}
         <div className="col-span-12 md:col-span-3">
-          <label className={labelClass}>เลขที่เอกสาร</label>
+          <label className={labelClass}>
+            เลขที่เอกสาร {(prId || (watch as any)('id') || (watch as any)('pr_id')) ? <span className="text-gray-500 font-normal ml-1 text-[10px]">(ID: {prId || (watch as any)('id') || (watch as any)('pr_id')})</span> : ''}
+          </label>
           <div className="relative">
             <input 
               {...register("pr_no")} 
