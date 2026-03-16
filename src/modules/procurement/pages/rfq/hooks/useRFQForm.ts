@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, type FieldErrors } from 'react-hook-form';
+import { useAuth } from '@/core/auth/contexts/AuthContext';
+
 import { zodResolver } from '@hookform/resolvers/zod';
 import { MasterDataService } from '@/modules/master-data';
 import type { BranchListItem, ItemListItem, UnitListItem } from '@/modules/master-data/types/master-data-types';
@@ -113,6 +115,7 @@ export const mapPRToRFQFormData = (
 };
 
 export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRHeader | null, onSuccess?: () => void, editId?: number | null) => {
+    const { user } = useAuth();
     const { toast } = useToast();
     const [isSaving, setIsSaving] = useState(false);
     const [isLoadingEdit, setIsLoadingEdit] = useState(false);
@@ -216,6 +219,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                     vendor_code: v.vendor_code || '',
                     vendor_name: v.vendor_name || '',
                     vendor_name_display: v.vendor_code ? `${v.vendor_code} - ${v.vendor_name}` : v.vendor_name || '',
+                    status: v.status,
                     is_existing: true,
                 }));
 
@@ -247,9 +251,15 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                     }
                 }
 
+                const creatorName = rfq.requested_by_user 
+                    ? `${rfq.requested_by_user.employee_firstname_th} ${rfq.requested_by_user.employee_lastname_th}`
+                    : (rfq.requested_by || '');
+
                 reset({
                     ...getRFQDefaultFormValues(),
                     rfq_no: rfq.rfq_no,
+                    requested_by: creatorName,
+                    requested_by_user_id: rfq.requested_by_user?.employee_id || rfq.created_by_user_id || undefined,
                     rfq_date: rfq.rfq_date?.split('T')[0] || new Date().toLocaleDateString('en-CA'),
                     pr_id: rfq.pr_id || null,
                     pr_no: fetchedPrNo,
@@ -322,6 +332,19 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
 
         hydrateFromPR();
     }, [isOpen, editId, initialPR, items, units, reset, getValues, toast]);
+
+    // ========================================================================
+    // MAGIC AUTO-FILL: Current User Creator
+    // ========================================================================
+    useEffect(() => {
+        if (!isOpen || editId) return;
+        if (user?.employee?.employee_fullname) {
+            setValue('requested_by', user.employee.employee_fullname);
+            if (user.employee_id) {
+                setValue('requested_by_user_id', user.employee_id);
+            }
+        }
+    }, [isOpen, editId, user, setValue]);
 
     // ========================================================================
     // MAGIC AUTO-FILL: Manual PR Selection Handler
@@ -399,8 +422,8 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         setIsConfirmOpen(true);
     };
 
-    const handleInvalid = useCallback(() => {
-        const currentErrors = methods.formState.errors;
+    const handleInvalid = useCallback((currentErrors: FieldErrors<RFQFormValues>) => {
+
         
         // Helper สำหรับดึง message จาก Object ลึกๆ
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -433,10 +456,10 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                 )
             );
             toast(React.createElement(ErrorToastUI), 'error');
-        } else {
-            toast('กรุณาตรวจสอบข้อมูลที่ไฮไลท์สีแดงให้ครบถ้วน', 'error');
+        // } else {
+        //     toast('กรุณาตรวจสอบข้อมูลที่ไฮไลท์สีแดงให้ครบถ้วน', 'error');
         }
-    }, [toast, methods]);
+    }, [toast]);
 
     const handleCancelConfirm = useCallback(() => {
         setIsConfirmOpen(false);

@@ -222,8 +222,8 @@ export default function TaxCodeList() {
         },
         {
             accessorKey: 'tax_rate',
-            header: () => <div className="text-right w-full">อัตราภาษี (%)</div>,
-            cell: ({ getValue }) => <div className="text-right">{getValue() as number} %</div>,
+            header: () => <div className="text-center w-full">อัตราภาษี (%)</div>,
+            cell: ({ getValue }) => <div className="text-center">{getValue() as number} %</div>,
             size: 120,
         },
         {

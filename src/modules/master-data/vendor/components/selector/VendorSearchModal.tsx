@@ -218,13 +218,13 @@ export const VendorSearchModalBase: React.FC<VendorSearchModalBaseProps> = ({
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                                 {filteredData.length > 0 ? (
-                                    filteredData.map((vendor) => {
+                                    filteredData.map((vendor , index) => {
                                         const isExcluded = excludeIds?.includes(Number(vendor.vendor_id));
                                         const isSelectable = vendor.status === 'ACTIVE' && !isExcluded;
                                         
                                         return (
                                             <tr 
-                                                key={vendor.code} 
+                                                key={`${vendor.vendor_id || vendor.code}-${index}`} 
                                                 className={`transition-colors group ${!isSelectable ? 'bg-gray-50 dark:bg-gray-800/50 opacity-60' : 'hover:bg-purple-50 dark:hover:bg-gray-700/50'}`}
                                             >
                                                 <td className="px-4 py-3 text-center">
@@ -310,7 +310,7 @@ export const VendorSearchModalBase: React.FC<VendorSearchModalBaseProps> = ({
  * @description Wrapper ที่ fetch data แล้วส่งต่อให้ VendorSearchModalBase
  * @usage ใช้เมื่อต้องการให้ component จัดการ fetch เอง (backward compatible)
  */
-export const VendorSearchModal: React.FC<VendorSearchModalProps> = ({ isOpen, onClose, onSelect }) => {
+export const VendorSearchModal: React.FC<VendorSearchModalProps> = ({ isOpen, onClose, onSelect, excludeIds = [] }) => {
     const [vendors, setVendors] = useState<VendorSearchItem[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -358,6 +358,7 @@ export const VendorSearchModal: React.FC<VendorSearchModalProps> = ({ isOpen, on
             onSelect={onSelect}
             data={vendors}
             isLoading={isLoading}
+            excludeIds={excludeIds}
         />
     );
 };

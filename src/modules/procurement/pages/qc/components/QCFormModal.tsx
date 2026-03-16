@@ -517,7 +517,8 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
                   </div>
                   <div>
                     <h2 className="text-sm font-bold text-amber-800 dark:text-amber-500 uppercase tracking-widest mb-1">
-                      {qcData?.winning_vq_id ? 'ผู้ชนะการเสนอราคา (Winner Selected)' : 'ยังไม่มีการเลือกผู้ชนะ'}
+                      {qcData?.winning_vq_id ? 'ผู้ชนะการเสนอราคา (Winner Selected)' 
+                      : 'ยังไม่มีการเลือกผู้ชนะ'}
                     </h2>
                     {qcData?.winning_vq_id || initialData?.vq_header_id || winnerVQId ? (
                       <>

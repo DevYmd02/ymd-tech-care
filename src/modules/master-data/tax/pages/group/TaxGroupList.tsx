@@ -107,7 +107,7 @@ export default function TaxGroupList() {
         { id: 'sequence', header: 'ลำดับ', accessorFn: (_, index) => (filters.page - 1) * filters.limit + index + 1, size: 60 },
         { accessorKey: 'tax_group_code', header: 'รหัสกลุ่มภาษี', cell: ({ row }) => <span className="font-medium text-blue-600 cursor-pointer hover:underline" onClick={() => handleEdit(row.original)}>{row.getValue('tax_group_code') as string}</span> },
         { accessorKey: 'tax_type', header: 'ประเภทภาษี' },
-        { accessorKey: 'tax_rate', header: 'อัตราภาษี (%)', cell: ({ getValue }) => <div className="text-right pr-4">{getValue() as string}</div> },
+        { accessorKey: 'tax_rate', header: () => <div className="text-center w-full">อัตราภาษี (%)</div>, cell: ({ getValue }) => <div className="text-center">{getValue() as string}</div> },
         { accessorKey: 'is_active', header: 'สถานะ', cell: ({ getValue }) => <ActiveStatusBadge isActive={getValue() as boolean} />, size: 100 },
         { id: 'actions', header: 'จัดการ', size: 100, cell: ({ row }) => (<div className="flex items-center gap-2"><button onClick={() => handleEdit(row.original)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg" title="แก้ไข"><Edit2 size={18} /></button><button onClick={() => handleDelete(row.original.tax_group_id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg" title="ลบ"><Trash2 size={18} /></button></div>) },
     ], [filters.page, filters.limit, handleEdit, handleDelete]);

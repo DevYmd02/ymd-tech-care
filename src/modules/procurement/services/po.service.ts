@@ -32,9 +32,15 @@ export const POService = {
         logger.info('[POService] Fetching PO List', params);
         const response = await api.get<POListResponse>(ENDPOINTS.list, { params });
 
+        // 🎯 DATA NORMALIZATION: Guarantee po_id is set inside mapped UI item
+        const rawItems = extractArrayFromResponse<POListItem>(response);
+        const allItems = rawItems.map(item => ({
+            ...item,
+            po_id: item.po_id ?? (item as unknown as { po_header_id?: number }).po_header_id as number
+        }));
+
         // 🎯 HYBRID FALLBACK: Apply Client-Side Filtering when using Real API
         if (!USE_MOCK && params) {
-            const allItems = extractArrayFromResponse<POListItem>(response);
             const filterParams: Record<string, string | number | boolean | undefined | null> = {};
             if (params.po_no) filterParams.po_no = params.po_no;
             if (params.pr_no) filterParams.pr_no = params.pr_no;
@@ -52,8 +58,6 @@ export const POService = {
             });
         }
 
-        // 🎯 HYBRID PAGINATION: Always apply client-side slicing even for mock responses
-        const allItems = extractArrayFromResponse<POListItem>(response);
         const page = params?.page || 1;
         const limit = params?.limit || 20;
         return applyClientPagination<POListItem>(allItems, page, limit);
@@ -61,7 +65,11 @@ export const POService = {
 
     getById: async (id: number): Promise<POListItem> => {
         logger.info(`[POService] Fetching PO Detail: ${id}`);
-        return await api.get<POListItem>(ENDPOINTS.detail(id));
+        const res = await api.get<POListItem>(ENDPOINTS.detail(id));
+        return {
+            ...res,
+            po_id: res.po_id ?? (res as unknown as { po_header_id?: number }).po_header_id as number
+        };
     },
 
     /**

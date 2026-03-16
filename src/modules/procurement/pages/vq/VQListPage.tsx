@@ -15,38 +15,20 @@ import { PageListLayout, SmartTable, VQStatusBadge, FilterField, MobileListCard,
 
 import { useTableFilters } from '@/shared/hooks';
 import type { ColumnDef } from '@tanstack/react-table';
-import { createColumnHelper } from '@tanstack/react-table';
 
 // Services & Types
 import { VQService, type VQListParams } from '@/modules/procurement/services/vq.service';
 import { RFQService } from '@/modules/procurement/services/rfq.service';
-import { PRService } from '@/modules/procurement/services/pr.service';
-import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
+
 import type { VQListItem, VQStatus, RFQHeader, VQPendingQueueItem } from '@/modules/procurement/types';
 import { VQFormModal, VQVendorTrackingModal } from './components';
 import { logger } from '@/shared/utils/logger';
 
-// ====================================================================================
-// STATUS OPTIONS & MAPPINGS
-// ====================================================================================
+import { getColumns, getPendingColumns } from './components/VQColumns';
+import { RFQNoDisplay, PRNoDisplay } from './components/VQColumnComponents';
+import { useVendorsBatchQuery } from './hooks/useVendorsBatchQuery';
+import { VQ_STATUS_MAP, RFQ_VENDOR_STATUS_MAP } from './constants/vq.constants';
 
-// 1. VQ Statuses (สำหรับ Tab 1)
-const VQ_STATUS_MAP: Record<string, { label: string; color: string }> = {
-    ALL: { label: 'ทั้งหมด', color: 'default' },
-    DRAFT: { label: 'แบบร่าง', color: 'neutral' },
-    RECORDED: { label: 'บันทึกราคาแล้ว', color: 'success' },
-    DECLINED: { label: 'ผู้ขายปฏิเสธ', color: 'error' },
-    EXPIRED: { label: 'หมดอายุ', color: 'warning' },
-    CANCELLED: { label: 'ยกเลิก', color: 'error' },
-};
-
-// 2. RFQ Vendor Statuses (สำหรับ Tab 2 และ 3)
-const RFQ_VENDOR_STATUS_MAP: Record<string, { label: string; color: string }> = {
-    ALL: { label: 'ทั้งหมด', color: 'default' },
-    NEW: { label: 'รอส่งอีเมล', color: 'default' },
-    WAITING: { label: 'รอคิวส่ง', color: 'processing' },
-    SENT: { label: 'ส่ง RFQ แล้ว', color: 'warning' },
-};
 
 // ====================================================================================
 // FILTER CONFIG
@@ -59,38 +41,8 @@ const RFQ_VENDOR_STATUS_MAP: Record<string, { label: string; color: string }> = 
 // MICRO-COMPONENTS FOR DATA HYDRATION
 // ====================================================================================
 
-const VendorNameDisplay = ({ vendorId }: { vendorId: number }) => {
-    const { data: vendor, isLoading } = useQuery({
-        queryKey: ['vendor', vendorId],
-        queryFn: () => VendorService.getById(vendorId),
-        enabled: !!vendorId,
-        staleTime: 5 * 60 * 1000,
-    });
-    if (isLoading) return <span className="text-gray-400 font-normal italic">กำลังโหลด...</span>;
-    return <span>{vendor?.vendor_name || `รออัปเดตชื่อผู้ขาย (ID: ${vendorId})`}</span>;
-};
+// VendorNameDisplay removed (N+1 optimized)
 
-const RFQNoDisplay = ({ rfqId }: { rfqId: number }) => {
-    const { data: rfq, isLoading } = useQuery({
-        queryKey: ['rfq', rfqId],
-        queryFn: () => RFQService.getById(rfqId),
-        enabled: !!rfqId,
-        staleTime: 5 * 60 * 1000,
-    });
-    if (isLoading) return <span className="text-gray-400 font-normal italic">กำลังโหลด...</span>;
-    return <span>{rfq?.rfq_no || `รออัปเดตเลข RFQ (ID: ${rfqId})`}</span>;
-};
-
-const PRNoDisplay = ({ prId }: { prId: number }) => {
-    const { data: pr, isLoading } = useQuery({
-        queryKey: ['pr', prId],
-        queryFn: () => PRService.getDetail(prId),
-        enabled: !!prId,
-        staleTime: 5 * 60 * 1000,
-    });
-    if (isLoading) return <span className="text-gray-400 font-normal italic">กำลังโหลด...</span>;
-    return <span>{pr?.pr_no || `PR ID: ${prId}`}</span>;
-};
 
 // ====================================================================================
 // MAIN COMPONENT
@@ -145,12 +97,10 @@ export default function VQListPage() {
             if (rfqId) {
                 // Fetch RFQ Detail to get items for hydration
                 RFQService.getById(Number(rfqId)).then((rfqData: RFQHeader) => {
-                    // Type-safe access for hybrid fields
-                    const rawRfq = rfqData as unknown as Record<string, unknown>;
                     const header = { 
                         ...rfqData,
-                        vendor_id: vendorId ? Number(vendorId) : (rawRfq.vendor_id as number | undefined),
-                        rfq_vendor_id: rfqVendorId ? Number(rfqVendorId) : (rawRfq.rfq_vendor_id as number | undefined)
+                        vendor_id: vendorId ? Number(vendorId) : rfqData.vendor_id,
+                        rfq_vendor_id: rfqVendorId ? Number(rfqVendorId) : rfqData.rfq_vendor_id
                     } as RFQHeader;
                     
                     setInitialRFQForCreate(header);
@@ -261,17 +211,17 @@ export default function VQListPage() {
         setSelectedVqId(null);
     }, [refetch, refetchWaitingVq, refetchWaitingRfq, selectedRfqId, queryClient]);
 
-    const handleOpenView = (vqId: number) => {
+    const handleOpenView = useCallback((vqId: number) => {
         setSelectedVqId(vqId);
         setIsViewMode(true);
         setIsVqModalOpen(true);
-    };
+    }, [])
 
-    const handleOpenEdit = (vqId: number) => {
+    const handleOpenEdit = useCallback((vqId: number) => {
         setSelectedVqId(vqId);
         setIsViewMode(false);
         setIsVqModalOpen(true);
-    };
+    }, [])
 
     const handleOpenCreate = () => {
         setSelectedVqId(null);
@@ -280,7 +230,7 @@ export default function VQListPage() {
         setIsVqModalOpen(true);
     };
 
-    const handleOpenTracking = (rfqId: number | null | undefined, rfqNo: string | null | undefined) => {
+    const handleOpenTracking = useCallback((rfqId: number | null | undefined, rfqNo: string | null | undefined) => {
         if (!rfqId) {
             logger.warn('[VQListPage] Cannot open tracking: rfq_id is missing');
             return;
@@ -288,7 +238,7 @@ export default function VQListPage() {
         setSelectedRfqId(rfqId);
         setSelectedRfqNo(rfqNo || '');
         setIsTrackingOpen(true);
-    };
+    }, [])
 
     const handleCloseModal = () => {
         setIsVqModalOpen(false);
@@ -296,324 +246,75 @@ export default function VQListPage() {
         setInitialRFQForCreate(null);
     };
 
-    // Columns Definition
-    const columnHelper = createColumnHelper<VQListItem>();
+    // ==========================================================================
+    // CLIENT SIDE FILTERS (Business Pipeline Flow)
+    // ==========================================================================
 
-    const columns = useMemo(() => [
-        columnHelper.display({
-            id: 'index',
-            header: () => <div className="text-center w-full">ลำดับ</div>,
-            cell: (info) => <div className="text-center">{info.row.index + 1 + (filters.page - 1) * filters.limit}</div>,
-            footer: () => <div className="absolute left-4 top-1/2 -translate-y-1/2 whitespace-nowrap font-bold text-sm text-gray-700 dark:text-gray-200">ยอดรวมทั้งหมด :</div>,
-            size: 60,
-            enableSorting: false,
-        }),
-        columnHelper.accessor('vq_no', {
-            header: 'เลขที่ VQ',
-            cell: (info) => {
-                const item = info.row.original;
-                const vqNo = info.getValue() || item.quotation_no;
-                
-                return vqNo ? (
-                    <span className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline cursor-pointer block" title={vqNo}>
-                        {vqNo}
-                    </span>
-                ) : (
-                    <span className="text-gray-400 dark:text-gray-600 font-medium">-</span>
-                );
-            },
-            size: 140,
-            enableSorting: true,
-        }),
-        columnHelper.accessor('quotation_date', {
-            header: () => <div className="text-center w-full">วันที่เอกสาร</div>,
-            cell: (info) => (
-                <div className="text-center text-gray-600 dark:text-gray-300 whitespace-nowrap font-medium">
-                    {formatThaiDate(info.getValue())}
-                </div>
-            ),
-            size: 110,
-            enableSorting: true,
-        }),
-        columnHelper.accessor('vendor_name', {
-            header: 'ผู้ขาย',
-            cell: (info) => {
-                const item = info.row.original;
-                const vendorText = info.getValue() || item.vendor?.vendor_name;
+    // 1. Tab 1: ใบเสนอราคาทั้งหมด (Completed VQ)
+    // completedVqList removed (visibleVendorIds now uses data?.data directly)
 
-                return (
-                    <div className="flex flex-col min-w-0">
-                        <span className="text-gray-900 dark:text-gray-100 font-medium truncate" title={vendorText as string | undefined}>
-                            {vendorText || (item.vendor_id ? <VendorNameDisplay vendorId={item.vendor_id} /> : '-')}
-                        </span>
-                        <div className="text-[10px] text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                            เครดิต {item.payment_term_days || '-'} วัน | Lead {item.lead_time_days || '-'} วัน
-                        </div>
-                    </div>
-                );
-            },
-            size: 180,
-            enableSorting: false,
-        }),
-        columnHelper.accessor('rfq_no', {
-            header: 'เอกสารอ้างอิง',
-            cell: (info) => {
-                const item = info.row.original;
-                const rfqText = info.getValue() || item.rfq?.rfq_no;
-                const rfqDisplay = rfqText || (item.rfq_id ? <RFQNoDisplay rfqId={item.rfq_id} /> : '-');
-                
-                const prText = item.pr_no || item.pr?.pr_no;
-                const prDisplay = prText || (item.pr_id ? <PRNoDisplay prId={item.pr_id} /> : null);
-                
-                return (
-                    <div className="flex flex-col py-1 min-w-0">
-                        <button 
-                            onClick={() => handleOpenTracking(item.rfq_id, rfqText as string | undefined)}
-                            className="text-purple-600 dark:text-purple-400 font-semibold hover:underline cursor-pointer leading-tight truncate text-left w-fit" 
-                            title={rfqText ? `คลิกเพื่อดูภาพรวมการตอบกลับของกลุ่ม RFQ: ${rfqText}` : undefined}
-                        >
-                            {rfqDisplay}
-                        </button>
-                        {prDisplay && (
-                            <span className="text-[10px] text-gray-400 dark:text-gray-500 truncate leading-tight mt-1">
-                                Ref: {prDisplay}
-                            </span>
-                        )}
-                    </div>
-                );
-            },
-            size: 140,
-            enableSorting: false,
-        }),
-        columnHelper.accessor('base_total_amount', {
-            header: () => <div className="text-right w-full">ยอดสุทธิ</div>,
-            cell: (info) => {
-                const item = info.row.original;
-                const amount = info.getValue();
-                const isRecorded = item.status === 'RECORDED';
-                
-                return (
-                    <div className={`text-right font-bold whitespace-nowrap ${isRecorded ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-700 dark:text-gray-200'}`}>
-                        {amount
-                            ? Number(amount).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                            : '-'
-                        }
-                    </div>
-                );
-            },
-            size: 120,
-            enableSorting: true,
-        }),
-        columnHelper.accessor('quotation_expiry_date', {
-            header: () => <div className="text-center w-full">วันหมดเขต</div>,
-            cell: (info) => (
-                <div className="text-center text-[12.5px] text-gray-500 dark:text-gray-400 font-medium">
-                    {info.getValue() ? formatThaiDate(info.getValue() as string) : '-'}
-                </div>
-            ),
-            size: 110,
-            enableSorting: true,
-        }),
-        columnHelper.accessor('status', {
-            header: () => <div className="text-center w-full">สถานะ</div>,
-            cell: (info) => (
-                <div className="flex justify-center">
-                    <VQStatusBadge status={info.getValue()} />
-                </div>
-            ),
-            size: 100,
-            enableSorting: false,
-        }),
-        columnHelper.display({
-            id: 'actions',
-            header: () => <div className="text-center w-full">จัดการ</div>,
-            cell: ({ row }) => {
-                const item = row.original;
-                // Simplified Action Logic Rules (PENDING -> RECORDED):
-                // 1. Record Price is ONLY for PENDING records without a VQ number yet.
-                const canRecord = item.status === 'PENDING' && !item.quotation_no;
-                
-                // 2. Edit and View logic:
-                // - RECORDED or CANCELLED are read-only (View only)
-                // - DRAFT or partials with VQ no. (if any) can be edited
-                const isRecorded = item.status === 'RECORDED';
-                const isCancelled = item.status === 'CANCELLED';
-                const hasVqDocument = !!item.quotation_no || isRecorded || item.status === 'DRAFT';
+    // 2. Tab 2: รอผู้ขายตอบกลับ (VQ)
+    const waitingVendorVqList = useMemo(() => {
+        return (waitingVqData?.data ?? []).filter(item => (!item.vq_no && item.status === 'SENT') || (!!item.vq_no && item.status === 'DRAFT'));
+    }, [waitingVqData?.data]);
 
-                const canEdit = hasVqDocument && !isCancelled && !isRecorded;
-                const canView = hasVqDocument || isCancelled;
-                
-                // If nothing can be done, render a dash
-                if (!canRecord && !canEdit && !canView) {
-                    return <div className="flex justify-center text-gray-400 font-bold">-</div>;
-                }
-
-                return (
-                    <div className="flex flex-row items-center justify-center gap-2 whitespace-nowrap">
-                        {/* View — PR pattern eye */}
-                        {canView && (
-                            <button 
-                                onClick={() => handleOpenView(item.vq_header_id)}
-                                className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-all"
-                                title="ดูรายละเอียด"
-                            >
-                                <Eye size={16} />
-                            </button>
-                        )}
-
-                        {/* Edit — amber transparent-border compact (PR pattern) */}
-                        {canEdit && (
-                            <button 
-                                onClick={() => handleOpenEdit(item.vq_header_id)}
-                                className="flex items-center gap-1 pl-1.5 pr-2 py-1 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded shadow-sm border border-transparent hover:border-amber-200 dark:hover:border-amber-800 transition-all whitespace-nowrap"
-                                title="แก้ไข"
-                            >
-                                <Edit size={14} />
-                                <span className="text-[10px] font-bold">แก้ไข</span>
-                            </button>
-                        )}
-
-                        {/* บันทึกราคา — blue solid (create-next-doc style, matching สร้าง RFQ) */}
-                        {canRecord && (
-                            <button 
-                                onClick={() => handleOpenEdit(item.vq_header_id)}
-                                className="flex items-center gap-1 pl-1.5 pr-2 py-1 ml-1 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap"
-                                title="บันทึกราคา"
-                            >
-                                <Edit size={12} />
-                                <span>บันทึกราคา</span>
-                            </button>
-                        )}
-                    </div>
-                );
-            },
-            footer: () => {
-                 return (
-                     <div className="text-right font-bold text-base text-emerald-600 dark:text-emerald-400 whitespace-nowrap pr-2">
-                         {totalAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท
-                     </div>
-                 );
-            },
-            size: 140,
-            enableSorting: false,
-        }),
-    ], [columnHelper, filters.page, filters.limit, totalAmount]);
+    // 3. Tab 3: รอดำเนินการ (RFQ)
+    const pendingRfqList = useMemo(() => {
+        return (waitingRfqData?.data ?? []).filter(item => !item.vq_no && ['NEW', 'WAITING', 'DRAFT'].includes(item.status));
+    }, [waitingRfqData?.data]);
 
     // ==========================================================================
-    // COLUMNS DEFINITION: Pending Queues
+    // 📊 BATCH FETCHING & COLUMNS (N+1 Optimized)
     // ==========================================================================
-    // Ensure this helper stays stable outside the callback or just add it to the deps.
-    const pendingColumnHelper = useMemo(() => createColumnHelper<VQPendingQueueItem>(), []);
+    
+    // 1. Extract IDs from active lists for current view mode (Strict No Over-fetching)
+    const visibleVendorIds = useMemo(() => {
+        const list = activeTab === 'ALL' 
+            ? (data?.data ?? []) 
+            : activeTab === 'WAITING_VQ' 
+                ? waitingVendorVqList 
+                : pendingRfqList;
+        return Array.from(new Set(list.map((item: VQListItem | VQPendingQueueItem) => item.vendor_id).filter(Boolean))) as number[];
+    }, [activeTab, data?.data, waitingVendorVqList, pendingRfqList]);
 
-    const getPendingColumns = useCallback((tab: 'WAITING_VQ' | 'WAITING_RFQ') => [
-        pendingColumnHelper.display({
-            id: 'index',
-            header: () => <div className="text-center w-full">ลำดับ</div>,
-            cell: (info) => <div className="text-center">{info.row.index + 1 + (filters.page - 1) * filters.limit}</div>,
-            size: 60,
-            enableSorting: false,
-        }),
-        pendingColumnHelper.accessor('created_at', {
-            header: () => <div className="text-center w-full">วันที่สร้าง</div>,
-            cell: (info) => (
-                <div className="text-center text-gray-600 dark:text-gray-300 font-medium whitespace-nowrap">
-                    {formatThaiDate(info.getValue())}
-                </div>
-            ),
-            size: 110,
-        }),
-        pendingColumnHelper.accessor('vendor_name', {
-            header: 'ผู้ขาย',
-            cell: (info) => (
-                <div className="text-gray-900 dark:text-gray-100 font-medium truncate" title={info.getValue()}>
-                    {info.getValue() || '-'}
-                </div>
-            ),
-            size: 180,
-        }),
-        pendingColumnHelper.accessor('rfq_no', {
-            header: 'เอกสารอ้างอิง',
-            cell: (info) => {
-                const item = info.row.original;
-                return (
-                    <div className="flex flex-col py-1 min-w-0">
-                        <span className="text-purple-600 dark:text-purple-400 font-semibold leading-tight truncate">
-                            {item.rfq_no || '-'}
-                        </span>
-                        {item.pr_no && (
-                            <span className="text-[10px] text-gray-400 dark:text-gray-500 truncate leading-tight mt-1">
-                                Ref: {item.pr_no}
-                            </span>
-                        )}
-                    </div>
-                );
-            },
-            size: 140,
-        }),
-        pendingColumnHelper.accessor('status', {
-            header: () => <div className="text-center w-full">สถานะ</div>,
-            cell: (info) => {
-                const status = info.getValue() as string;
-                const mapped = RFQ_VENDOR_STATUS_MAP[status] || { label: status, color: 'default' };
-                
-                let colorClass = "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700";
-                if (mapped.color === 'processing') colorClass = "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/40 dark:text-blue-400 dark:border-blue-800";
-                if (mapped.color === 'warning') colorClass = "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/40 dark:text-amber-400 dark:border-amber-800";
-                if (mapped.color === 'error') colorClass = "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/40 dark:text-red-400 dark:border-red-800";
-                if (mapped.color === 'success') colorClass = "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-400 dark:border-emerald-800";
+    // 2. Fetch Batch
+    const { vendorMap } = useVendorsBatchQuery(visibleVendorIds);
 
-                return (
-                    <div className="flex justify-center">
-                        <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold border whitespace-nowrap ${colorClass}`}>
-                            {mapped.label}
-                        </span>
-                    </div>
-                );
-            },
-            size: 100,
-        }),
-        pendingColumnHelper.display({
-            id: 'actions',
-            header: () => <div className="text-center w-full">จัดการ</div>,
-            cell: ({ row }) => {
-                const item = row.original;
-                if (tab === 'WAITING_VQ') {
-                    return (
-                        <div className="flex justify-center">
-                            <button 
-                                onClick={() => {
-                                        // Refactor: Open modal directly via state, avoid URL param pollution
-                                        const rfqInit: Partial<RFQHeader> = {
-                                            rfq_id: item.rfq_id,
-                                            rfq_no: item.rfq_no,
-                                        };
-                                        
-                                        setInitialRFQForCreate({ 
-                                            ...rfqInit, 
-                                            vendor_id: item.vendor_id, 
-                                            rfq_vendor_id: item.rfq_vendor_id 
-                                        } as RFQHeader);
-                                        
-                                        setSelectedVqId(null);
-                                        setIsViewMode(false);
-                                        setIsVqModalOpen(true);
-                                }}
-                                className="flex items-center gap-1 pl-1.5 pr-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap"
-                            >
-                                <Plus size={12} strokeWidth={2.5} />
-                                <span>สร้างใบเสนอราคา</span>
-                            </button>
-                        </div>
-                    );
-                }
-                return <div className="text-center text-gray-400 font-bold">-</div>;
-            },
-            size: 140,
-        }),
-    ], [filters.page, filters.limit, setInitialRFQForCreate, setIsVqModalOpen, setSelectedVqId, setIsViewMode, pendingColumnHelper]);
+    // 3. Memoize Columns
+    const columns = useMemo(() => getColumns({
+        vendorMap,
+        filters: { page: filters.page, limit: filters.limit },
+        totalAmount,
+        handleOpenView,
+        handleOpenEdit,
+        handleOpenTracking
+    }), [vendorMap, filters.page, filters.limit, totalAmount, handleOpenView, handleOpenEdit, handleOpenTracking]);
 
-    const pendingVqColumns = useMemo(() => getPendingColumns('WAITING_VQ'), [getPendingColumns]);
-    const pendingRfqColumns = useMemo(() => getPendingColumns('WAITING_RFQ'), [getPendingColumns]);
+    const pendingVqColumns = useMemo(() => getPendingColumns('WAITING_VQ', {
+        vendorMap,
+        filters: { page: filters.page, limit: filters.limit },
+        totalAmount: 0,
+        handleOpenView: () => {},
+        handleOpenEdit: () => {},
+        handleOpenTracking: () => {},
+        setInitialRFQForCreate,
+        setIsVqModalOpen,
+        setSelectedVqId,
+        setIsViewMode
+    }), [filters.page, filters.limit, setInitialRFQForCreate, setIsVqModalOpen, setSelectedVqId, setIsViewMode, vendorMap]);
+
+    const pendingRfqColumns = useMemo(() => getPendingColumns('WAITING_RFQ', {
+        vendorMap,
+        filters: { page: filters.page, limit: filters.limit },
+        totalAmount: 0,
+        handleOpenView: () => {},
+        handleOpenEdit: () => {},
+        handleOpenTracking: () => {},
+        setInitialRFQForCreate,
+        setIsVqModalOpen,
+        setSelectedVqId,
+        setIsViewMode
+    }), [filters.page, filters.limit, setInitialRFQForCreate, setIsVqModalOpen, setSelectedVqId, setIsViewMode, vendorMap]);
 
 
 
@@ -860,7 +561,7 @@ export default function VQListPage() {
                             pagination={data?.total ? { page: filters.page, total: data.total, limit: filters.limit, onPageChange: handlePageChange } : undefined}
                         >
                             {(data?.data ?? []).map((item) => {
-                            const vendorDisplay = item.vendor_name || item.vendor?.vendor_name || (item.vendor_id ? <VendorNameDisplay vendorId={item.vendor_id} /> : '-');
+                            const vendorDisplay = item.vendor_name || item.vendor?.vendor_name || (item.vendor_id ? (vendorMap[item.vendor_id] || '-') : '-');
                             
                             const rfqDisplay = item.rfq_no || item.rfq?.rfq_no || (item.rfq_id ? <RFQNoDisplay rfqId={item.rfq_id} /> : '-');
                             

@@ -1,5 +1,4 @@
-import api from '@/core/api/api';
-import type { Currency, ExchangeRateType, ExchangeRate } from '@currency/types/currency-types';
+import type { ExchangeRateType, ExchangeRate, CurrencyApiItem, CurrencyMappedItem, CurrencyApiRequest, CurrencyCreateRequest, CurrencyFormValues } from '@currency/types/currency-types';
 import { logger } from '@/shared/utils/logger';
 
 export interface BaseResponse<T> {
@@ -9,27 +8,48 @@ export interface BaseResponse<T> {
     limit: number;
 }
 
+import api from '@/core/api/api';
+
 // 🔄 Helper function: Map from API to UI (Standardized like item-group)
-function mapCurrencyFromApi(item: any): any {
+function mapCurrencyFromApi(item: CurrencyApiItem): CurrencyMappedItem {
+    const isAct = item.is_active !== undefined ? item.is_active : item.status === 'ACTIVE';
     return {
         id: item.currency_id,
         currency_id: item.currency_id,
         code: item.currency_code,
+        currency_code: item.currency_code, // alias for backward-comp
         name_th: item.currency_name,
+        currency_name: item.currency_name, // alias for backward-comp
+        name_en: item.currency_nameeng || item.currency_code, // alias for backward-comp
         exchange_rate: Number(item.exchange_rate || 0),
-        is_active: item.is_active !== undefined ? item.is_active : item.status === 'ACTIVE',
-        status: item.status || (item.is_active ? 'ACTIVE' : 'INACTIVE'),
+        is_active: isAct,
+        status: item.status || (isAct ? 'ACTIVE' : 'INACTIVE'),
+        created_at: '', // Default to meet BaseMasterData
+        updated_at: ''  // Default to meet BaseMasterData
     };
 }
 
 // 🔄 Helper function: Map from UI to API
-function mapCurrencyToApi(data: any): any {
+function mapCurrencyToApi(data: CurrencyMappedItem | CurrencyFormValues | CurrencyCreateRequest): CurrencyApiRequest {
+    const isForm = 'currencyCode' in data;
+    const isCreateRequest = 'code' in data && 'name_th' in data;
+    
+    if (isCreateRequest) {
+        return {
+            currency_code: data.code,
+            currency_name: data.name_th,
+            currency_nameeng: data.code, // Default to code for create requests
+            exchange_rate: Number(data.exchange_rate || 0),
+            is_active: data.is_active
+        };
+    }
+    
     return {
-        currency_code: data.code || data.currency_code,
-        currency_name: data.name_th || data.nameTh || data.currency_name,
-        currency_nameeng: data.code || data.currency_code, // เพิ่มตามที่ Backend ต้องการ (ใช้ค่า code เป็นค่าเริ่มต้น)
-        exchange_rate: Number(data.exchange_rate || data.exchangeRate || 0), // ส่งเป็น Number
-        is_active: Boolean(data.is_active ?? data.isActive ?? (data.status === 'ACTIVE')) // ส่งเป็น Boolean
+        currency_code: isForm ? (data as CurrencyFormValues).currencyCode : (data as CurrencyMappedItem).code || '',
+        currency_name: isForm ? (data as CurrencyFormValues).nameTh : (data as CurrencyMappedItem).name_th || '',
+        currency_nameeng: isForm ? (data as CurrencyFormValues).nameEn : (data as CurrencyMappedItem).code || '', 
+        exchange_rate: isForm ? 0 : Number((data as CurrencyMappedItem).exchange_rate || 0), 
+        is_active: isForm ? (data as CurrencyFormValues).isActive : (data as CurrencyMappedItem).is_active
     };
 }
 
@@ -37,9 +57,9 @@ export const CurrencyService = {
     // ==========================================
     // 🏦 Currency (Standardized for generic UI)
     // ==========================================
-    getAll: async (): Promise<BaseResponse<any>> => {
+    getAll: async (): Promise<BaseResponse<CurrencyMappedItem>> => {
         try {
-            const res = await api.get<any>('/currency', { timeout: 30000 });
+            const res = await api.get<CurrencyApiItem[] | { data: CurrencyApiItem[] }>('/currency', { timeout: 30000 });
             const resData = res;
             const rawItems = Array.isArray(resData) ? resData : (resData?.data || []);
             
@@ -52,10 +72,10 @@ export const CurrencyService = {
         }
     },
 
-    getById: async (id: string | number): Promise<any | null> => {
+    getById: async (id: string | number): Promise<CurrencyMappedItem | null> => {
         try {
-            const res = await api.get<any>(`/currency/${id}`);
-            const rawItem = res?.data || res;
+            const res = await api.get<CurrencyApiItem>(`/currency/${id}`);
+            const rawItem = res && 'currency_id' in res ? res : null;
             return rawItem ? mapCurrencyFromApi(rawItem) : null;
         } catch (error) {
             logger.error('[CurrencyService] getById error:', error);
@@ -63,28 +83,30 @@ export const CurrencyService = {
         }
     },
 
-    create: async (data: any): Promise<{ success: boolean; data?: any; message?: string }> => {
+    create: async (data: CurrencyCreateRequest | CurrencyFormValues): Promise<{ success: boolean; data?: CurrencyApiItem; message?: string }> => {
         try {
             const payload = mapCurrencyToApi(data);
             // 📝 ส่งเป็น Object ไปยัง /currency (เอา Array ออก)
-            const response = await api.post('/currency', payload);
+            const response = await api.post<CurrencyApiItem>('/currency', payload);
             return { success: true, data: response };
-        } catch (error: any) {
+        } catch (error: unknown) {
             logger.error('[CurrencyService] create error:', error);
-            const msg = error?.response?.data?.message || 'เกิดข้อผิดพลาดในการสร้างข้อมูล';
+            const err = error as { response?: { data?: { message?: string } } };
+            const msg = err.response?.data?.message || 'เกิดข้อผิดพลาดในการสร้างข้อมูล';
             return { success: false, message: msg };
         }
     },
 
-    update: async (id: string | number, data: any): Promise<{ success: boolean; data?: any; message?: string }> => {
+    update: async (id: string | number, data: CurrencyCreateRequest | CurrencyFormValues): Promise<{ success: boolean; data?: CurrencyApiItem; message?: string }> => {
         try {
             const payload = mapCurrencyToApi(data);
             // 📝 ใช้ PUT ไปยัง /currency/:id สำหรับการอัปเดตเป็น Object (เอา Array ออก)
-            const response = await api.put(`/currency/${id}`, payload);
+            const response = await api.put<CurrencyApiItem>(`/currency/${id}`, payload);
             return { success: true, data: response };
-        } catch (error: any) {
+        } catch (error: unknown) {
             logger.error('[CurrencyService] update error:', error);
-            const msg = error?.response?.data?.message || 'เกิดข้อผิดพลาดในการแก้ไขข้อมูล';
+            const err = error as { response?: { data?: { message?: string } } };
+            const msg = err.response?.data?.message || 'เกิดข้อผิดพลาดในการแก้ไขข้อมูล';
             return { success: false, message: msg };
         }
     },
@@ -93,9 +115,10 @@ export const CurrencyService = {
         try {
             await api.delete(`/currency/${id}`);
             return { success: true };
-        } catch (error: any) {
+        } catch (error: unknown) {
             logger.error('[CurrencyService] delete error:', error);
-            const msg = error?.response?.data?.message || 'เกิดข้อผิดพลาดในการลบข้อมูล';
+            const err = error as { response?: { data?: { message?: string } } };
+            const msg = err.response?.data?.message || 'เกิดข้อผิดพลาดในการลบข้อมูล';
             return { success: false, message: msg };
         }
     },
@@ -103,8 +126,8 @@ export const CurrencyService = {
     // 🔗 Legacy aliases to prevent breaking existing components that rely on the old method names
     getCurrencies: function() { return this.getAll(); },
     getCurrencyById: function(id: string) { return this.getById(id); },
-    createCurrency: function(data: any) { return this.create(data); },
-    updateCurrency: function(id: string, data: any) { return this.update(id, data); },
+    createCurrency: function(data: CurrencyFormValues) { return this.create(data); },
+    updateCurrency: function(id: string, data: CurrencyFormValues) { return this.update(id, data); },
     deleteCurrency: function(id: string) { return this.delete(id); },
 
     // Exchange Rate Types
