@@ -21,6 +21,7 @@ function mapVendorToApi(data: any): any {
     const payload: any = {
         vendor_code: data.vendor_code || data.vendorCode || '',
         vendor_name: data.vendor_name || data.vendorNameTh || '',
+        vendor_nameeng: data.vendor_nameeng || data.vendor_name_en || data.vendorNameEn || '',
         vat_registration_no: data.vat_registration_no || data.tax_id || data.taxId || '',
         is_vat_registered: Boolean(data.is_vat_registered ?? data.vatRegistered ?? false),
         payment_term_days: Number(data.payment_term_days || data.paymentTerms || 0),
