@@ -58,6 +58,15 @@ export const CustomDateInput: React.FC<CustomDateInputProps> = ({
         disabled={disabled}
         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
         style={{ colorScheme: 'dark' }}
+        onClick={(e) => {
+          if ('showPicker' in HTMLInputElement.prototype) {
+            try {
+              e.currentTarget.showPicker();
+            } catch (err) {
+              void err;
+            }
+          }
+        }}
       />
       
       {/* 3. Icon */}

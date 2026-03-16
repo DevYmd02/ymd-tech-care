@@ -63,6 +63,7 @@ export interface PRHeader {
   warehouse_id?: number;            // INTEGER
 
   // ── Data Hydration Fields (Fallback keys the backend may return) ──
+  id?: number;                      // Fallback ID from some API responses
   employee_name?: string;           // Possible JOIN from employee table
   department_id?: string | number;  // FK → department (for fallback display)
   dept_name?: string;               // Alternative key for department name

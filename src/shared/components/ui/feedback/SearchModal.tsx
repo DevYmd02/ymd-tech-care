@@ -218,7 +218,10 @@ export function SearchModal<T>({
                                     // Custom render function
                                     if (col.render) {
                                         return (
-                                            <div key={String(col.key)} className={col.align === 'center' ? 'text-center' : ''}>
+                                            <div 
+                                                key={String(col.key)} 
+                                                className={col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : ''}
+                                            >
                                                 {col.render(item)}
                                             </div>
                                         );
@@ -228,7 +231,7 @@ export function SearchModal<T>({
                                     return (
                                         <div
                                             key={String(col.key)}
-                                            className={`text-sm text-gray-800 dark:text-gray-200 ${col.align === 'center' ? 'text-center' : ''}`}
+                                            className={`text-sm text-gray-800 dark:text-gray-200 ${col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : ''}`}
                                         >
                                             {col.key !== 'action' ? String(item[col.key] ?? '') : ''}
                                         </div>

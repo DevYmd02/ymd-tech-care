@@ -149,6 +149,7 @@ export function ProjectFormModal({
                         <input 
                             {...register('start_date')}
                             type="date"
+                            onClick={(e) => { if ('showPicker' in HTMLInputElement.prototype) e.currentTarget.showPicker(); }}
                             className={`w-full h-9 bg-white dark:bg-gray-700 border ${errors.start_date ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-lg px-3 text-sm focus:ring-1 focus:ring-blue-500 outline-none`}
                         />
                         {errors.start_date && <p className="text-[10px] text-red-500 mt-1">{errors.start_date.message}</p>}
@@ -161,6 +162,7 @@ export function ProjectFormModal({
                         <input 
                             {...register('end_date')}
                             type="date"
+                            onClick={(e) => { if ('showPicker' in HTMLInputElement.prototype) e.currentTarget.showPicker(); }}
                             className={`w-full h-9 bg-white dark:bg-gray-700 border ${errors.end_date ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-lg px-3 text-sm focus:ring-1 focus:ring-blue-500 outline-none`}
                         />
                         {errors.end_date && <p className="text-[10px] text-red-500 mt-1">{errors.end_date.message}</p>}

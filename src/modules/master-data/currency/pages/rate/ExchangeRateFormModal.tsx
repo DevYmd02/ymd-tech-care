@@ -235,6 +235,7 @@ export function ExchangeRateFormModal({ isOpen, onClose, editId, onSuccess }: Pr
                     <input
                         {...register('rateDate')}
                         type="date"
+                        onClick={(e) => { if ('showPicker' in HTMLInputElement.prototype) e.currentTarget.showPicker(); }}
                         className={`${styles.input} ${errors.rateDate ? 'border-red-500 focus:ring-red-200' : ''}`}
                     />
                     {errors.rateDate && <p className="text-red-500 text-xs mt-1">{errors.rateDate.message}</p>}
