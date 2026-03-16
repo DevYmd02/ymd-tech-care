@@ -5,7 +5,6 @@ import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { ActiveStatusBadge } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
-import type { Currency } from '@currency/types/currency-types';
 import { CurrencyService } from '@/modules/master-data/currency/services/currency.service';
 import { logger } from '@/shared/utils/logger';
 import { CurrencyFormModal } from './CurrencyCodeFormModal';
@@ -14,7 +13,7 @@ import { useConfirmation } from '@/shared/hooks/useConfirmation';
 export default function CurrencyCodeList() {
     const { filters, setFilters, resetFilters } = useTableFilters();
     const { confirm } = useConfirmation();
-    const [data, setData] = useState<Currency[]>([]);
+    const [data, setData] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editId, setEditId] = useState<string | null>(null);
@@ -22,7 +21,7 @@ export default function CurrencyCodeList() {
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
-            const response = await CurrencyService.getCurrencies();
+            const response = await CurrencyService.getAll();
             setData(response.items);
         } catch (error) {
             logger.error('[CurrencyCodeList] Fetch error:', error);
@@ -53,8 +52,8 @@ export default function CurrencyCodeList() {
         });
 
         if (isConfirmed) {
-            const success = await CurrencyService.deleteCurrency(id);
-            if (success) {
+            const res = await CurrencyService.delete(id);
+            if (res.success) {
                 fetchData();
             } else {
                 alert('เกิดข้อผิดพลาดในการลบข้อมูล');
@@ -66,11 +65,11 @@ export default function CurrencyCodeList() {
         { name: 'search', label: 'ค้นหา', type: 'text', placeholder: 'กรอกรหัสหรือชื่อสกุลเงิน' },
     ], []);
 
-    const columns = useMemo<ColumnDef<Currency>[]>(() => [
+    const columns = useMemo<ColumnDef<any>[]>(() => [
         { id: 'sequence', header: 'ลำดับ', accessorFn: (_, index) => index + 1, size: 60 },
-        { accessorKey: 'currency_code', header: 'รหัสสกุลเงิน', cell: ({ getValue }) => <span className="font-medium text-blue-600">{getValue() as string}</span>, size: 120 },
-        { accessorKey: 'name_th', header: 'ชื่อสกุลเงิน', size: 200 },
-        { accessorKey: 'name_en', header: 'ชื่อสกุลเงิน (EN)', size: 200 },
+        { accessorKey: 'code', header: 'รหัสสกุลเงิน', cell: ({ getValue }) => <span className="font-medium text-blue-600">{getValue() as string}</span>, size: 120 },
+        { accessorKey: 'name_th', header: 'ชื่อสกุลเงิน', size: 250 },
+        { accessorKey: 'exchange_rate', header: 'อัตราแลกเปลี่ยน', size: 150 },
         { accessorKey: 'is_active', header: 'สถานะ', cell: ({ getValue }) => <ActiveStatusBadge isActive={(getValue() as boolean) ?? true} />, size: 100 },
         {
             id: 'actions',
@@ -79,14 +78,14 @@ export default function CurrencyCodeList() {
             cell: ({ row }) => (
                 <div className="flex items-center gap-2">
                     <button
-                        onClick={() => handleEdit(row.original.currency_id)}
+                        onClick={() => handleEdit(row.original.id)}
                         className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                         title="แก้ไข"
                     >
                         <Edit2 size={18} />
                     </button>
                     <button
-                        onClick={() => handleDelete(row.original.currency_id, row.original.currency_code)}
+                        onClick={() => handleDelete(row.original.id, row.original.code)}
                         className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                         title="ลบ"
                     >
@@ -133,7 +132,7 @@ export default function CurrencyCodeList() {
                     data={data || []}
                     columns={columns}
                     isLoading={isLoading}
-                    rowIdField="currency_id"
+                    rowIdField="id"
                     pagination={{
                         pageIndex: 1,
                         pageSize: 10,
@@ -153,6 +152,3 @@ export default function CurrencyCodeList() {
         </div>
     );
 }
-
-
-

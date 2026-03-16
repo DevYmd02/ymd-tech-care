@@ -1,0 +1,153 @@
+[33m5755d99[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature/item-type[m[33m)[m warehouse Shelf
+[33m10d958c[m item-color
+[33m1837929[m item-size
+[33ma26d246[m item-model AS item-class
+[33mfa71298[m item-grade
+[33m7a1e1dd[m[33m ([m[1;31morigin/feature/item-type[m[33m)[m item-design
+[33mdae0bbc[m item-pattern
+[33m20b6fc6[m item-band
+[33mdfbb3f0[m item-category
+[33me3fdc27[m item-category
+[33md2b3365[m item-gruop
+[33m3cd8c92[m[33m ([m[1;32mmain[m[33m)[m resolve merge conflict
+[33m5dadb0a[m edit item-type by game
+[33m5f666d3[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Merge pull request #53 from DevYmd02/feature/full-migration-pr-form-ui
+[33m90efb4c[m Updated
+[33m73789a3[m Updated
+[33me494434[m[33m ([m[1;31morigin/feature/full-migration-pr-form-ui[m[33m)[m Fix Status Action
+[33mfa1ecbf[m Merge pull request #52 from DevYmd02/feature/full-migration-pr-form-ui
+[33m7466ce0[m Merge pull request #51 from DevYmd02/feature/full-migration-pr-form-ui
+[33m5e68352[m Update PR -> RFQ
+[33m0c60715[m Fixed PRCreatePayload
+[33mff06742[m Updated
+[33ma63595d[m Updated PO
+[33m04b5ee7[m Merge pull request #50 from DevYmd02/feature/full-migration-pr-form-ui
+[33m44be012[m fix(procurement): resolve datalink flows, sync PR/PO/QC states and implement items inheritance UI hook natively in POModal
+[33mc513a55[m Merge pull request #49 from DevYmd02/feature/full-migration-pr-form-ui
+[33m88708ad[m Fix + Add QC Status
+[33me601ffc[m Fix VQ Status
+[33m52055d0[m Add Logic VQ Status
+[33m6b5264d[m Merge pull request #48 from DevYmd02/feature/full-migration-pr-form-ui
+[33m2ec5217[m Updated
+[33mb955b8f[m Merge pull request #47 from DevYmd02/feature/full-migration-pr-form-ui
+[33mbb15c4d[m Add-on Logic MultiEmailnput.tsx
+[33m23f511f[m Updated + Fixed QT to VQ
+[33m4036dd2[m Merge pull request #46 from DevYmd02/feature/full-migration-pr-form-ui
+[33mb705c4a[m Merge pull request #45 from DevYmd02/feature/full-migration-pr-form-ui
+[33mc696cf5[m Updated
+[33mf12273f[m Merge pull request #44 from DevYmd02/feature/full-migration-pr-form-ui
+[33mc3ec203[m Add warehouse + location button in PRFormModal
+[33m776ccc8[m Test API PR Module
+[33mb232d36[m Merge pull request #43 from DevYmd02/feature/full-migration-pr-form-ui
+[33me289332[m Fixed Status RFQ to QT
+[33m0282168[m Add Logic Login
+[33maba381b[m Merge pull request #42 from DevYmd02/feature/full-migration-pr-form-ui
+[33m9e9b8d5[m Add RFQ Status
+[33m77288df[m Merge pull request #41 from DevYmd02/feature/full-migration-pr-form-ui
+[33m6eead53[m Add RFQSendConfirmModal
+[33ma459015[m Updated
+[33maa3d636[m Merge pull request #40 from DevYmd02/feature/full-migration-pr-form-ui
+[33m8755545[m Update Loading PRACtion
+[33m6bf0cc2[m Updated
+[33m4488873[m Fixed RFQVendorSelection Back
+[33m2e79db0[m Fixed Status ON HOLD
+[33m9514a31[m Updated
+[33m64a7d41[m Merge pull request #39 from DevYmd02/feature/full-migration-pr-form-ui
+[33md0ed36b[m Add MasterData Customer
+[33medd3fcc[m Merge pull request #38 from DevYmd02/feature/full-migration-pr-form-ui
+[33m446ff8e[m Merge pull request #37 from DevYmd02/feature/full-migration-pr-form-ui
+[33md89fa47[m Move Mocks
+[33m949c6ff[m Fixed Type PR
+[33m4a296a7[m Updated
+[33mb42c82a[m Updated
+[33m9343a7e[m Fixed Bug PRFormModal
+[33mc48286e[m Update UI
+[33mbc6748c[m Update UI
+[33mdc2680c[m Merge pull request #36 from DevYmd02/feature/full-migration-pr-form-ui
+[33m45463bc[m Update
+[33m1fd1cc3[m Updated
+[33mda49aba[m Merge pull request #35 from DevYmd02/feature/full-migration-pr-form-ui
+[33m1968830[m Updated
+[33m6e51c30[m Fixed UI PRFormModal
+[33m370d7b1[m Merge pull request #34 from DevYmd02/feature/full-migration-pr-form-ui
+[33m8efd381[m Fixed status VendorMaster
+[33m161c157[m Merge pull request #33 from DevYmd02/feature/full-migration-pr-form-ui
+[33me7d101e[m Merge pull request #32 from DevYmd02/feature/full-migration-pr-form-ui
+[33mfef0026[m Fixed ItemMaster + VendorMaster in PRFormModal
+[33mb1cf096[m Add COMPLETED Status PR -> RFQ at PRLIstPage.tsx
+[33me1b2d33[m Merge pull request #31 from DevYmd02/feature/full-migration-pr-form-ui
+[33m1ef37a9[m ADD PRT Module
+[33me11aacf[m Add POApproval
+[33m5c85831[m Merge pull request #30 from DevYmd02/feature/full-migration-pr-form-ui
+[33mfc8f681[m Add Button GRN Linked
+[33m1e0cbff[m chore: remove stats.html from version control and ignore it
+[33m656a536[m Merge pull request #29 from DevYmd02/feature/full-migration-pr-form-ui
+[33md1d1b23[m Merge branch 'feature/full-migration-pr-form-ui' of https://github.com/DevYmd02/ymd-tech-care into feature/full-migration-pr-form-ui
+[33m3a51cfd[m Merge pull request #28 from DevYmd02/feature/full-migration-pr-form-ui
+[33md0149e3[m stat.html ignore
+[33m157d3fd[m Merge branch 'feature/full-migration-pr-form-ui' of https://github.com/DevYmd02/ymd-tech-care into feature/full-migration-pr-form-ui
+[33md603066[m Fixed UI ItemMaster
+[33m78d0450[m Merge pull request #25 from DevYmd02/feature/full-migration-pr-form-ui
+[33ma69c342[m Merge pull request #24 from DevYmd02/main
+[33mc5b534b[m Merge pull request #23 from DevYmd02/feature/full-migration-pr-form-ui
+[33m748fbf9[m Merge pull request #22 from DevYmd02/main
+[33m8e2d396[m Updated
+[33mc97e045[m Merge pull request #21 from DevYmd02/feature/full-migration-pr-form-ui
+[33m21db35f[m Update UI
+[33m3369afb[m Updated
+[33m9e52d3d[m Merge pull request #20 from DevYmd02/feature/full-migration-pr-form-ui
+[33m920ebf6[m Add mockAdapter.ts
+[33mb77b363[m updated
+[33mc08d04b[m Fixed UI PRFormModal
+[33m524c881[m Merge pull request #19 from DevYmd02/feature/full-migration-pr-form-ui
+[33m120c4b1[m Add Master Data Currency
+[33mbbc9867[m Push Lastest
+[33me69c9dc[m Merge pull request #18 from DevYmd02/feature/full-migration-pr-form-ui
+[33m833848c[m Updated UI
+[33mcd55bfc[m Updated
+[33m001c931[m Refactor Service try not any, unknown
+[33mb414d87[m Add Sub-MasterData : Company, Vendor, Inventory
+[33m7734c9b[m Updated Refactor Module
+[33mafe3bdf[m Updated
+[33med9d9a3[m Updated
+[33m8f392ea[m Updated
+[33md640c31[m Refactor Services + API
+[33m20b6de0[m Merge pull request #17 from DevYmd02/feature/full-migration-pr-form-ui
+[33m922420d[m Updated API END-POINT ItemMaster
+[33m835bb4c[m Updated
+[33m791c355[m Add + Create POFormModal
+[33mb2a5cd7[m Fixed UI ItemMasterFormModal
+[33mff997d1[m Updated
+[33m25acd2f[m Fixed: useQuery + Reload
+[33m1182c9b[m Fix ItemMaster UI
+[33m9a49bc0[m Add + Updated : Auth API
+[33m656f028[m Add Employees + API
+[33m11bc174[m Updated + Fix + API vendor
+[33mf95391d[m Merge pull request #16 from DevYmd02/feature/full-migration-pr-form-ui
+[33m7a74f71[m Fixed UI RQFFormModal
+[33ma9dbfd8[m Merge pull request #15 from DevYmd02/feature/full-migration-pr-form-ui
+[33m0605cbc[m Fixed + Add Logic UX/UI PR
+[33mb5dd53a[m Merge pull request #14 from DevYmd02/feature/full-migration-pr-form-ui
+[33mb408c27[m Merge pull request #13 from DevYmd02/feature/full-migration-pr-form-ui
+[33m714d27b[m Updated UI
+[33m826ab35[m Updated
+[33m423aa1e[m Fixed + Updated VendorFormModal + VendorTypes + MasterDataDashboard
+[33mdf81c14[m Merge pull request #12 from DevYmd02/feature/full-migration-pr-form-ui
+[33m365b166[m Update
+[33m4fd1a08[m Create PO Module
+[33ma72cb8e[m Merge pull request #11 from DevYmd02/feature/full-migration-pr-form-ui
+[33mb5fb64f[m Fix vite.config
+[33m86df44d[m Fixed : UI VendorFormModal & VendorForm
+[33m8a48bec[m Updated
+[33m0eedde2[m Merge pull request #10 from DevYmd02/feature/full-migration-pr-form-ui
+[33mfa2154f[m Merge pull request #9 from DevYmd02/feature/full-migration-pr-form-ui
+[33m094e7f7[m Fixed : UI + VendorSearchModal
+[33md2aff13[m Fixed : UI ListPage
+[33m8adcb8e[m Updated + Fix + Duplicate
+[33mc4f3101[m Fixed : API + Updated UI PR + RQF + QT
+[33m1fe6f1f[m Add qc + qt & Updated UI
+[33m40fd01f[m Merge pull request #8 from DevYmd02/feature/full-migration-pr-form-ui
+[33m1af63ae[m Updated UI
+[33m201f69a[m Updated
+[33m1bb0bb7[m Updated
+[33mda2805b[m Updated UI PR + R

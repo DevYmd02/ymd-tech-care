@@ -21,6 +21,16 @@ import type {
     IBaseMaster // Import IBaseMaster
 } from '../types/inventory-master.types';
 import type { ListResponse } from '@/shared/types/common-api.types';
+import type { ItemGroupFormValues } from '../hooks/useItemGroupForm';
+import type { BrandFormValues } from '../hooks/useBrandForm';
+import type { PatternFormValues } from '../hooks/usePatternForm';
+import type { DesignFormValues } from '../hooks/useDesignForm';
+import type { GradeFormValues } from '../hooks/useGradeForm';
+import type { ModelFormValues } from '../hooks/useModelForm';
+import type { SizeFormValues } from '../hooks/useSizeForm';
+import type { ColorFormValues } from '../hooks/useColorForm';
+import type { ShelfFormValues } from '../hooks/useShelfForm';
+import type { LocationFormValues } from '../hooks/useLocationForm';
 import {
     MOCK_ITEM_GROUPS, MOCK_BRANDS, MOCK_PATTERNS, MOCK_DESIGNS, MOCK_GRADES,
     MOCK_MODELS, MOCK_SIZES, MOCK_COLORS, MOCK_LOCATIONS, MOCK_SHELVES, MOCK_LOT_NUMBERS
@@ -30,25 +40,18 @@ import {
 // GENERIC SERVICE FACTORY
 // ====================================================================================
 
-// Base form interface that all form data types must satisfy
-interface BaseFormData {
-    code: string;
-    nameTh: string;
-    nameEn?: string;
-    isActive: boolean;
-    hexCode?: string; // For IColorFormData
-}
-
-interface ServiceConfig<T> {
+interface ServiceConfig<T, F = any> {
     entityName: string;
     apiPath: string;
     idField: string;
     mockData: T[];
-    mapToEntity: (data: BaseFormData, id: number, now: string) => T;
+    mapToEntity: (data: F, id: number, now: string) => T;
+    mapFromApi?: (apiItem: any) => T;
+    mapToApi?: (formData: F) => any;
 }
 
-function createInventoryService<T extends IBaseMaster>(
-    config: ServiceConfig<T>
+function createInventoryService<T extends IBaseMaster, F = any>(
+    config: ServiceConfig<T, F>
 ) {
     let localData: T[] = [...config.mockData];
 
@@ -64,8 +67,19 @@ function createInventoryService<T extends IBaseMaster>(
                 };
             }
             try {
-                // Strict: Trust ApiClient to return ListResponse<T>
-                return await api.get<ListResponse<T>>(config.apiPath);
+                const response = await api.get<any>(config.apiPath);
+                const rawItems = Array.isArray(response) ? response : (response.items || response.data || []);
+
+                const items = config.mapFromApi
+                    ? rawItems.map(config.mapFromApi)
+                    : rawItems;
+
+                return {
+                    items,
+                    total: response.total ?? items.length,
+                    page: response.page ?? 1,
+                    limit: response.limit ?? 10,
+                };
             } catch (error) {
                 logger.error(`[${config.entityName}Service] getAll error:`, error);
                 return { items: [], total: 0 };
@@ -82,14 +96,17 @@ function createInventoryService<T extends IBaseMaster>(
                 return null;
             }
             try {
-                return await api.get<T>(`${config.apiPath}/${id}`);
+                const response = await api.get<any>(`${config.apiPath}/${id}`);
+                if (!response) return null;
+                const rawItem = response.data || response;
+                return config.mapFromApi ? config.mapFromApi(rawItem) : rawItem;
             } catch (error) {
                 logger.error(`[${config.entityName}Service] getById error:`, error);
                 return null;
             }
         },
 
-        create: async (data: BaseFormData): Promise<{ success: boolean; data?: T; message?: string }> => {
+        create: async (data: F): Promise<{ success: boolean; data?: T; message?: string }> => {
             if (USE_MOCK) {
                 logger.info(`🎭 [Mock Mode] Creating ${config.entityName}`, data);
                 const newId = Date.now();
@@ -102,15 +119,20 @@ function createInventoryService<T extends IBaseMaster>(
                 return { success: true, data: mockItem };
             }
             try {
-                const response = await api.post<T>(config.apiPath, data);
-                return { success: true, data: response };
-            } catch (error) {
+              const payload = config.mapToApi ? config.mapToApi(data) : data;
+              const response = await api.post<any>(config.apiPath, payload);
+              const isSuccess = response?.success ?? true; // Assume success if not specified
+              const rawData = response?.data || response;
+              const resultData = config.mapFromApi && rawData ? config.mapFromApi(rawData) : rawData;
+              return { success: isSuccess, data: resultData as T, message: response?.message };
+            } catch (error: any) {
                 logger.error(`[${config.entityName}Service] create error:`, error);
-                return { success: false, message: `เกิดข้อผิดพลาดในการสร้าง${config.entityName}` };
+                const backendMsg = error?.response?.data?.message || error?.response?.data?.error || error.message;
+                return { success: false, message: backendMsg || `เกิดข้อผิดพลาดในการสร้าง ${config.entityName}` };
             }
         },
 
-        update: async (id: number, data: BaseFormData): Promise<{ success: boolean; data?: T; message?: string }> => {
+        update: async (id: number, data: F): Promise<{ success: boolean; data?: T; message?: string }> => {
             if (USE_MOCK) {
                 const index = localData.findIndex(i => i.id === id);
                 if (index !== -1) {
@@ -131,11 +153,16 @@ function createInventoryService<T extends IBaseMaster>(
                 return { success: false, message: `ไม่พบ${config.entityName}` };
             }
             try {
-                const response = await api.put<T>(`${config.apiPath}/${id}`, data);
-                return { success: true, data: response };
-            } catch (error) {
+              const payload = config.mapToApi ? config.mapToApi(data) : data;
+              const response = await api.patch<any>(`${config.apiPath}/${id}`, payload);
+              const isSuccess = response?.success ?? true; // Assume success if not specified
+              const rawData = response?.data || response;
+              const resultData = config.mapFromApi && rawData ? config.mapFromApi(rawData) : rawData;
+              return { success: isSuccess, data: resultData as T, message: response?.message };
+            } catch (error: any) {
                 logger.error(`[${config.entityName}Service] update error:`, error);
-                return { success: false, message: `เกิดข้อผิดพลาดในการอัปเดต${config.entityName}` };
+                const backendMsg = error?.response?.data?.message || error?.response?.data?.error || error.message;
+                return { success: false, message: backendMsg || `เกิดข้อผิดพลาดในการอัปเดต ${config.entityName}` };
             }
         },
 
@@ -151,9 +178,10 @@ function createInventoryService<T extends IBaseMaster>(
             try {
                 await api.delete<T>(`${config.apiPath}/${id}`);
                 return { success: true };
-            } catch (error) {
+            } catch (error: any) {
                 logger.error(`[${config.entityName}Service] delete error:`, error);
-                return { success: false, message: `เกิดข้อผิดพลาดในการลบ${config.entityName}` };
+                const backendMsg = error?.response?.data?.message || error.message;
+                return { success: false, message: backendMsg || `เกิดข้อผิดพลาดในการลบ${config.entityName}` };
             }
         },
     };
@@ -164,16 +192,16 @@ function createInventoryService<T extends IBaseMaster>(
 // ====================================================================================
 
 // Type aliases for better readability
-type ItemGroupService = ReturnType<typeof createInventoryService<ItemGroup>>;
+type ItemGroupService = ReturnType<typeof createInventoryService<ItemGroup, ItemGroupFormValues>>;
 type BrandService = ReturnType<typeof createInventoryService<Brand>>;
 type PatternService = ReturnType<typeof createInventoryService<Pattern>>;
-type DesignService = ReturnType<typeof createInventoryService<Design>>;
-type GradeService = ReturnType<typeof createInventoryService<Grade>>;
+type DesignService = ReturnType<typeof createInventoryService<Design, DesignFormValues>>;
+type GradeService = ReturnType<typeof createInventoryService<Grade, GradeFormValues>>;
 type ModelService = ReturnType<typeof createInventoryService<Model>>;
-type SizeService = ReturnType<typeof createInventoryService<Size>>;
-type ColorService = ReturnType<typeof createInventoryService<Color>>;
-type LocationService = ReturnType<typeof createInventoryService<Location>>;
-type ShelfService = ReturnType<typeof createInventoryService<Shelf>>;
+type SizeService = ReturnType<typeof createInventoryService<Size, SizeFormValues>>;
+type ColorService = ReturnType<typeof createInventoryService<Color, ColorFormValues>>;
+type LocationService = ReturnType<typeof createInventoryService<Location, LocationFormValues>>;
+type ShelfService = ReturnType<typeof createInventoryService<Shelf, ShelfFormValues>>;
 type LotNoService = ReturnType<typeof createInventoryService<LotNo>>;
 
 // Suppress unused type warnings by exporting type union
@@ -187,9 +215,9 @@ export type InventoryFormDataType =
     ModelFormData | SizeFormData | ColorFormData | LocationFormData | ShelfFormData | LotNoFormData;
 
 // Item Group Service
-export const ItemGroupService = createInventoryService<ItemGroup>({
+export const ItemGroupService = createInventoryService<ItemGroup, ItemGroupFormValues>({
     entityName: 'ItemGroup',
-    apiPath: '/item-groups',
+    apiPath: '/item-group',
     idField: 'item_group_id',
     mockData: MOCK_ITEM_GROUPS,
     mapToEntity: (data, id, now) => ({
@@ -202,12 +230,28 @@ export const ItemGroupService = createInventoryService<ItemGroup>({
         created_at: now,
         updated_at: now,
     }),
+    mapFromApi: (item: any): ItemGroup => ({
+        id: item.item_group_id,
+        item_group_id: item.item_group_id,
+        code: item.item_group_code,
+        name_th: item.item_group_name,
+        name_en: item.item_group_nameeng || '',
+        is_active: item.is_active,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+    }),
+    mapToApi: (data: ItemGroupFormValues) => ({
+        item_group_code: data.code,
+        item_group_name: data.nameTh,
+        item_group_nameeng: data.nameEn,
+        is_active: data.isActive,
+    }),
 });
 
 // Brand Service
-export const BrandService = createInventoryService<Brand>({
+export const BrandService = createInventoryService<Brand, BrandFormValues>({
     entityName: 'Brand',
-    apiPath: '/brands',
+    apiPath: '/item-brand',
     idField: 'brand_id',
     mockData: MOCK_BRANDS,
     mapToEntity: (data, id, now) => ({
@@ -220,12 +264,28 @@ export const BrandService = createInventoryService<Brand>({
         created_at: now,
         updated_at: now,
     }),
+    mapFromApi: (item: any): Brand => ({
+        id: item.item_brand_id,
+        brand_id: item.item_brand_id,
+        code: item.item_brand_code,
+        name_th: item.item_brand_name,
+        name_en: item.item_brand_nameeng || '',
+        is_active: item.is_active,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+    }),
+    mapToApi: (data: BrandFormValues) => ({
+        item_brand_code: data.code?.trim(),
+        item_brand_name: data.nameTh?.trim(),
+        item_brand_nameeng: data.nameEn?.trim() || '',
+        is_active: data.isActive,
+    }),
 });
 
 // Pattern Service
-export const PatternService = createInventoryService<Pattern>({
+export const PatternService = createInventoryService<Pattern, PatternFormValues>({
     entityName: 'Pattern',
-    apiPath: '/patterns',
+    apiPath: '/item-pattern',
     idField: 'pattern_id',
     mockData: MOCK_PATTERNS,
     mapToEntity: (data, id, now) => ({
@@ -238,12 +298,28 @@ export const PatternService = createInventoryService<Pattern>({
         created_at: now,
         updated_at: now,
     }),
+    mapFromApi: (item: any): Pattern => ({
+        id: item.item_pattern_id,
+        pattern_id: item.item_pattern_id,
+        code: item.item_pattern_code,
+        name_th: item.item_pattern_name,
+        name_en: item.item_pattern_nameeng || '',
+        is_active: item.is_active,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+    }),
+    mapToApi: (data: PatternFormValues) => ({
+        item_pattern_code: data.code?.trim(),
+        item_pattern_name: data.nameTh?.trim(),
+        item_pattern_nameeng: data.nameEn?.trim() || '',
+        is_active: data.isActive,
+    }),
 });
 
 // Design Service
-export const DesignService = createInventoryService<Design>({
+export const DesignService = createInventoryService<Design, DesignFormValues>({
     entityName: 'Design',
-    apiPath: '/designs',
+    apiPath: '/item-design',
     idField: 'design_id',
     mockData: MOCK_DESIGNS,
     mapToEntity: (data, id, now) => ({
@@ -256,12 +332,28 @@ export const DesignService = createInventoryService<Design>({
         created_at: now,
         updated_at: now,
     }),
+    mapFromApi: (item: any): Design => ({
+        id: item.item_design_id,
+        design_id: item.item_design_id,
+        code: item.item_design_code,
+        name_th: item.item_design_name,
+        name_en: item.item_design_nameeng || '',
+        is_active: item.is_active,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+    }),
+    mapToApi: (data: DesignFormValues) => ({
+        item_design_code: data.code?.trim(),
+        item_design_name: data.nameTh?.trim(),
+        item_design_nameeng: data.nameEn?.trim() || '',
+        is_active: data.isActive,
+    }),
 });
 
 // Grade Service
-export const GradeService = createInventoryService<Grade>({
+export const GradeService = createInventoryService<Grade, GradeFormValues>({
     entityName: 'Grade',
-    apiPath: '/grades',
+    apiPath: '/item-grade',
     idField: 'grade_id',
     mockData: MOCK_GRADES,
     mapToEntity: (data, id, now) => ({
@@ -274,12 +366,28 @@ export const GradeService = createInventoryService<Grade>({
         created_at: now,
         updated_at: now,
     }),
+    mapFromApi: (item: any): Grade => ({
+        id: item.item_grade_id,
+        grade_id: item.item_grade_id,
+        code: item.item_grade_code,
+        name_th: item.item_grade_name,
+        name_en: item.item_grade_nameeng || '',
+        is_active: item.is_active,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+    }),
+    mapToApi: (data: GradeFormValues) => ({
+        item_grade_code: data.code?.trim(),
+        item_grade_name: data.nameTh?.trim(),
+        item_grade_nameeng: data.nameEn?.trim() || '',
+        is_active: data.isActive,
+    }),
 });
 
 // Model Service
-export const ModelService = createInventoryService<Model>({
+export const ModelService = createInventoryService<Model, ModelFormValues>({
     entityName: 'Model',
-    apiPath: '/models',
+    apiPath: '/item-class',
     idField: 'model_id',
     mockData: MOCK_MODELS,
     mapToEntity: (data, id, now) => ({
@@ -292,12 +400,28 @@ export const ModelService = createInventoryService<Model>({
         created_at: now,
         updated_at: now,
     }),
+    mapFromApi: (item: any): Model => ({
+        id: item.item_class_id,
+        model_id: item.item_class_id,
+        code: item.item_class_code,
+        name_th: item.item_class_name,
+        name_en: item.item_class_nameeng || '',
+        is_active: item.is_active,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+    }),
+    mapToApi: (data: ModelFormValues) => ({
+        item_class_code: data.code?.trim(),
+        item_class_name: data.nameTh?.trim(),
+        item_class_nameeng: data.nameEn?.trim() || '',
+        is_active: data.isActive,
+    }),
 });
 
 // Size Service
-export const SizeService = createInventoryService<Size>({
+export const SizeService = createInventoryService<Size, SizeFormValues>({
     entityName: 'Size',
-    apiPath: '/sizes',
+    apiPath: '/item-size',
     idField: 'size_id',
     mockData: MOCK_SIZES,
     mapToEntity: (data, id, now) => ({
@@ -310,12 +434,28 @@ export const SizeService = createInventoryService<Size>({
         created_at: now,
         updated_at: now,
     }),
+    mapFromApi: (item: any): Size => ({
+        id: item.item_size_id,
+        size_id: item.item_size_id,
+        code: item.item_size_code,
+        name_th: item.item_size_name,
+        name_en: item.item_size_nameeng || '',
+        is_active: item.is_active,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+    }),
+    mapToApi: (data: SizeFormValues) => ({
+        item_size_code: data.code?.trim(),
+        item_size_name: data.nameTh?.trim(),
+        item_size_nameeng: data.nameEn?.trim() || '',
+        is_active: data.isActive,
+    }),
 });
 
 // Color Service (with hex_code support)
-export const ColorService = createInventoryService<Color>({
+export const ColorService = createInventoryService<Color, ColorFormValues>({
     entityName: 'Color',
-    apiPath: '/colors',
+    apiPath: '/item-color',
     idField: 'color_id',
     mockData: MOCK_COLORS,
     mapToEntity: (data, id, now) => ({
@@ -327,14 +467,29 @@ export const ColorService = createInventoryService<Color>({
         is_active: data.isActive,
         created_at: now,
         updated_at: now,
-        hex_code: data.hexCode
+    }),
+    mapFromApi: (item: any): Color => ({
+        id: item.item_color_id,
+        color_id: item.item_color_id,
+        code: item.item_color_code,
+        name_th: item.item_color_name,
+        name_en: item.item_color_nameeng || '',
+        is_active: item.is_active,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+    }),
+    mapToApi: (data: ColorFormValues) => ({
+        item_color_code: data.code?.trim(),
+        item_color_name: data.nameTh?.trim(),
+        item_color_nameeng: data.nameEn?.trim() || '',
+        is_active: data.isActive,
     }),
 });
 
 // Location Service
-export const LocationService = createInventoryService<Location>({
+export const LocationService = createInventoryService<Location, LocationFormValues>({
     entityName: 'Location',
-    apiPath: '/locations',
+    apiPath: '/location',
     idField: 'location_id',
     mockData: MOCK_LOCATIONS,
     mapToEntity: (data, id, now) => ({
@@ -347,12 +502,28 @@ export const LocationService = createInventoryService<Location>({
         created_at: now,
         updated_at: now,
     }),
+    mapFromApi: (item: any): Location => ({
+        id: item.location_id,
+        location_id: item.location_id,
+        code: item.location_code,
+        name_th: item.location_name,
+        name_en: item.location_nameeng || '',
+        is_active: item.is_active,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+    }),
+    mapToApi: (data: LocationFormValues) => ({
+        location_code: data.code?.trim(),
+        location_name: data.nameTh?.trim(),
+        location_nameeng: data.nameEn?.trim() || null,
+        is_active: data.isActive,
+    }),
 });
 
 // Shelf Service
-export const ShelfService = createInventoryService<Shelf>({
+export const ShelfService = createInventoryService<Shelf, ShelfFormValues>({
     entityName: 'Shelf',
-    apiPath: '/shelves',
+    apiPath: '/shelf',
     idField: 'shelf_id',
     mockData: MOCK_SHELVES,
     mapToEntity: (data, id, now) => ({
@@ -365,10 +536,26 @@ export const ShelfService = createInventoryService<Shelf>({
         created_at: now,
         updated_at: now,
     }),
+    mapFromApi: (item: any): Shelf => ({
+        id: item.shelf_id,
+        shelf_id: item.shelf_id,
+        code: item.shelf_code,
+        name_th: item.shelf_name,
+        name_en: item.shelf_nameeng || '',
+        is_active: item.is_active,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+    }),
+    mapToApi: (data: ShelfFormValues) => ({
+        shelf_code: data.code?.trim(),
+        shelf_name: data.nameTh?.trim(),
+        shelf_nameeng: data.nameEn?.trim() || null,
+        is_active: data.isActive,
+    }),
 });
 
 // Lot No Service
-export const LotNoService = createInventoryService<LotNo>({
+export const LotNoService = createInventoryService<LotNo, any>({
     entityName: 'LotNo',
     apiPath: '/lot-numbers',
     idField: 'lot_no_id',

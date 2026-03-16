@@ -5,12 +5,11 @@
  */
 
 import { useState, useMemo, useCallback } from 'react';
-import { Database, Edit2, Power, MoreHorizontal, PauseCircle, Ban } from 'lucide-react';
+import { Database, Edit2, Power, MoreHorizontal } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
-import type { VendorStatus, VendorListItem } from '@/modules/master-data/vendor/types/vendor-types';
 import { VendorFormModal } from './VendorFormModal';
-import { VendorStatusBadge } from '../components/VendorStatusBadge';
+import { ActiveStatusBadge } from '@ui';
 import { 
     DropdownMenu, 
     DropdownMenuContent, 
@@ -32,29 +31,15 @@ import { useConfirmation } from '@/shared/hooks/useConfirmation';
 const STATUS_OPTIONS = [
     { value: 'ALL', label: 'สถานะทั้งหมด' },
     { value: 'ACTIVE', label: 'ใช้งาน' },
-    { value: 'INACTIVE', label: 'ไม่ใช้งาน' },
-    { value: 'SUSPENDED', label: 'ระงับชั่วคราว' },
-    { value: 'BLACKLISTED', label: 'บัญชีดำ' },
+    { value: 'INACTIVE', label: 'ไม่ใช้งาน' }
 ];
 
 const STATUS_CONFIG: Record<string, { label: string, title: string, description: string, variant: 'warning' | 'danger' | 'info' | 'success' }> = {
     'INACTIVE': { 
-        label: 'เลิกใช้งาน', 
-        title: 'ยืนยันการเลิกใช้งาน', 
-        description: 'ต้องการเลิกใช้งานผู้ขาย {code} ใช่หรือไม่? (ข้อมูลจะยังอยู่ในระบบ)',
+        label: 'ระงับใช้งาน', 
+        title: 'ยืนยันการระงับใช้งาน', 
+        description: 'ต้องการระงับใช้งานผู้ขาย {code} ใช่หรือไม่? (ข้อมูลจะยังอยู่ในระบบ)',
         variant: 'warning'
-    },
-    'SUSPENDED': { 
-        label: 'ระงับชั่วคราว', 
-        title: 'ยืนยันการระงับชั่วคราว', 
-        description: 'ต้องการระงับการทำรายการกับผู้ขาย {code} ชั่วคราวใช่หรือไม่?',
-        variant: 'warning'
-    },
-    'BLACKLISTED': { 
-        label: 'บัญชีดำ', 
-        title: 'ยืนยันการขึ้นบัญชีดำ', 
-        description: 'ต้องการขึ้นบัญชีดำผู้ขาย {code} ใช่หรือไม่? การดำเนินการนี้จะส่งผลต่อการทำรายการในอนาคต',
-        variant: 'danger'
     },
     'ACTIVE': { 
         label: 'กลับมาใช้งาน', 
@@ -73,7 +58,7 @@ export default function VendorList() {
         resetFilters,
         handleSortChange,
         sortConfig 
-    } = useTableFilters<VendorStatus>({
+    } = useTableFilters({
         defaultLimit: 10,
         customParamKeys: {
             search: 'q',
@@ -119,22 +104,23 @@ export default function VendorList() {
             
             // Client-side filtering (mocking server behavior if needed)
             if (filters.status && filters.status !== 'ALL') {
-                items = items.filter(v => v.status === filters.status);
+                const isActiveFilter = filters.status === 'ACTIVE';
+                items = items.filter(v => v.is_active === isActiveFilter);
             }
             if (filters.search) {
                 const term = filters.search.toLowerCase();
                 items = items.filter(v => 
-                    v.vendor_code.toLowerCase().includes(term) ||
-                    v.vendor_name.toLowerCase().includes(term) ||
-                    (v.tax_id && v.tax_id.toLowerCase().includes(term))
+                    (v.vendor_code || '').toLowerCase().includes(term) ||
+                    (v.vendor_name || '').toLowerCase().includes(term) ||
+                    (v.vat_registration_no && v.vat_registration_no.toLowerCase().includes(term))
                 );
             }
             
             // Sorting
             if (sortConfig) {
                 items.sort((a, b) => {
-                    const fieldValA = a[sortConfig.key as keyof VendorListItem];
-                    const fieldValB = b[sortConfig.key as keyof VendorListItem];
+                    const fieldValA = a[sortConfig.key];
+                    const fieldValB = b[sortConfig.key];
                     
                     const valA = fieldValA !== undefined && fieldValA !== null ? String(fieldValA) : '';
                     const valB = fieldValB !== undefined && fieldValB !== null ? String(fieldValB) : '';
@@ -178,22 +164,22 @@ export default function VendorList() {
     }, [queryClient]);
 
     const statusMutation = useMutation({
-        mutationFn: ({ id, newStatus }: { id: number, code: string, newStatus: VendorStatus }) => 
-            VendorService.updateStatus(id, newStatus),
-        onMutate: async ({ id, newStatus }) => {
+        mutationFn: ({ id, is_active }: { id: number, code: string, is_active: boolean }) => 
+            VendorService.update(id, { is_active } as any), // Use general update method
+        onMutate: async ({ id, is_active }) => {
             // Cancel any outgoing refetches
             await queryClient.cancelQueries({ queryKey: ['vendors'] });
 
             // Snapshot the previous value
-            const previousVendors = queryClient.getQueryData<{ items: VendorListItem[], total: number }>(['vendors', filters]);
+            const previousVendors = queryClient.getQueryData<{ items: any[], total: number }>(['vendors', filters]);
 
             // Optimistically update
-            queryClient.setQueryData<{ items: VendorListItem[], total: number }>(['vendors', filters], (old) => {
+            queryClient.setQueryData<{ items: any[], total: number }>(['vendors', filters], (old) => {
                 if (!old || !old.items) return old;
                 return {
                     ...old,
-                    items: old.items.map((item: VendorListItem) => 
-                        item.vendor_id === id ? { ...item, status: newStatus } : item
+                    items: old.items.map((item: any) => 
+                        item.vendor_id === id ? { ...item, is_active: is_active } : item
                     )
                 };
             });
@@ -214,9 +200,9 @@ export default function VendorList() {
                 hideCancel: true
             });
         },
-        onSuccess: async (result, { newStatus }) => {
+        onSuccess: async (result, { is_active }) => {
             if (result.success) {
-                const config = STATUS_CONFIG[newStatus as keyof typeof STATUS_CONFIG];
+                const config = STATUS_CONFIG[is_active ? 'ACTIVE' : 'INACTIVE'];
                 await confirm({
                     title: 'ดำเนินการสำเร็จ',
                     description: `เปลี่ยนสถานะเป็น '${config.label}' เรียบร้อยแล้ว`,
@@ -234,8 +220,8 @@ export default function VendorList() {
         },
     });
 
-    const handleStatusChange = useCallback(async (id: number, code: string, newStatus: VendorStatus) => {
-        const config = STATUS_CONFIG[newStatus];
+    const handleStatusChange = useCallback(async (id: number, code: string, is_active: boolean) => {
+        const config = STATUS_CONFIG[is_active ? 'ACTIVE' : 'INACTIVE'];
         if (!config) return;
 
         const isConfirmed = await confirm({
@@ -247,12 +233,12 @@ export default function VendorList() {
         });
 
         if (isConfirmed) {
-            statusMutation.mutate({ id, code, newStatus });
+            statusMutation.mutate({ id, code, is_active });
         }
     }, [confirm, statusMutation]);
 
     // ==================== TABLE COLUMNS ====================
-    const columns = useMemo<ColumnDef<VendorListItem>[]>(() => [
+    const columns = useMemo<ColumnDef<any>[]>(() => [
         {
             id: 'sequence',
             header: 'ลำดับ',
@@ -278,13 +264,13 @@ export default function VendorList() {
             cell: ({ row }) => (
                 <div>
                     <div className="text-sm font-medium text-gray-900 dark:text-white">{row.original.vendor_name}</div>
-                    <div className="text-xs text-gray-500">{row.original.vendor_name_en}</div>
+                    {row.original.email && <div className="text-xs text-gray-500">{row.original.email}</div>}
                 </div>
             ),
             size: 250,
         },
         {
-            accessorKey: 'tax_id',
+            accessorKey: 'vat_registration_no',
             header: 'เลขผู้เสียภาษี',
             cell: ({ getValue }) => <span className="text-gray-500 dark:text-gray-400">{getValue() as string || '-'}</span>,
             size: 150,
@@ -296,11 +282,11 @@ export default function VendorList() {
             size: 150,
         },
         {
-            accessorKey: 'status',
+            accessorKey: 'is_active',
             header: () => <div className="text-center w-full">สถานะ</div>,
             cell: ({ getValue }) => (
                 <div className="flex justify-center">
-                    <VendorStatusBadge status={getValue() as VendorStatus} />
+                    <ActiveStatusBadge isActive={getValue() as boolean} />
                 </div>
             ),
             size: 120,
@@ -323,28 +309,13 @@ export default function VendorList() {
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             
-                            {row.original.status === 'ACTIVE' && (
-                                <>
-                                    <DropdownMenuItem onClick={() => handleStatusChange(row.original.vendor_id, row.original.vendor_code, 'INACTIVE')}>
-                                        <Power className="mr-2 h-4 w-4 text-gray-500" />
-                                        <span>เลิกใช้งาน</span>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleStatusChange(row.original.vendor_id, row.original.vendor_code, 'SUSPENDED')}>
-                                        <PauseCircle className="mr-2 h-4 w-4 text-orange-500" />
-                                        <span>ระงับชั่วคราว</span>
-                                    </DropdownMenuItem>
-                                </>
-                            )}
-
-                            {row.original.status !== 'BLACKLISTED' && (
-                                <DropdownMenuItem onClick={() => handleStatusChange(row.original.vendor_id, row.original.vendor_code, 'BLACKLISTED')} className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/20">
-                                    <Ban className="mr-2 h-4 w-4" />
-                                    <span>บัญชีดำ</span>
+                            {row.original.is_active ? (
+                                <DropdownMenuItem onClick={() => handleStatusChange(row.original.vendor_id, row.original.vendor_code, false)}>
+                                    <Power className="mr-2 h-4 w-4 text-gray-500" />
+                                    <span>ระงับใช้งาน</span>
                                 </DropdownMenuItem>
-                            )}
-
-                            {row.original.status !== 'ACTIVE' && (
-                                <DropdownMenuItem onClick={() => handleStatusChange(row.original.vendor_id, row.original.vendor_code, 'ACTIVE')}>
+                            ) : (
+                                <DropdownMenuItem onClick={() => handleStatusChange(row.original.vendor_id, row.original.vendor_code, true)}>
                                     <Power className="mr-2 h-4 w-4 text-green-600" />
                                     <span>กลับมาใช้งาน</span>
                                 </DropdownMenuItem>
@@ -427,7 +398,3 @@ export default function VendorList() {
         </div>
     );
 }
-
-
-
-

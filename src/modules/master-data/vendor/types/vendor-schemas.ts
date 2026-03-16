@@ -55,7 +55,7 @@ export const VendorSchema = z.object({
     vendorNameTh: z.string().min(1, 'กรุณากรอกชื่อเจ้าหนี้ (ไทย)'),
     vendorNameEn: z.string(),
     
-    vendorType: z.enum(['COMPANY', 'INDIVIDUAL', 'GOVERNMENT']),
+    vendorType: z.enum(['COMPANY', 'INDIVIDUAL', 'GOVERNMENT']).optional(),
     
     // ID Number
     vendorTypeId: z.number().min(1, 'กรุณาเลือกประเภทเจ้าหนี้'),
@@ -95,8 +95,8 @@ export const VendorSchema = z.object({
     remarks: z.string(),
     
     // Status
-    onHold: z.boolean(),
-    blocked: z.boolean(),
+    onHold: z.boolean().optional(),
+    blocked: z.boolean().optional(),
     inactive: z.boolean()
 });
 

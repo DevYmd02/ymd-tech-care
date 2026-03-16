@@ -25,7 +25,7 @@ const initialFormData: ItemTypeFormData = {
     is_active: true,
 };
 
-export function useItemTypeForm(editId: string | null, initialData?: ItemTypeListItem | null, onSuccess?: () => void) {
+export function useItemTypeForm(editId: number | null, initialData?: ItemTypeListItem | null, onSuccess?: () => void) {
     const { confirm } = useConfirmation();
     const queryClient = useQueryClient();
 
@@ -61,7 +61,14 @@ export function useItemTypeForm(editId: string | null, initialData?: ItemTypeLis
         },
         onSuccess: async (res: { success: boolean, message?: string }) => {
             if (res.success) {
-                await confirm({ title: 'บันทึกสำเร็จ!', description: 'ข้อมูลประเภทสินค้าถูกบันทึกเรียบร้อยแล้ว', confirmText: 'ตกลง', variant: 'success', hideCancel: true });
+                await confirm({ 
+                    title: 'บันทึกสำเร็จ!', 
+                    description: 'ข้อมูลประเภทสินค้าถูกบันทึกเรียบร้อยแล้ว', 
+                    confirmText: 'ตกลง', 
+                    variant: 'success', 
+                    hideCancel: true 
+                });
+
                 queryClient.invalidateQueries({ queryKey: ['item-types'] });
                 if (onSuccess) onSuccess();
             } else {

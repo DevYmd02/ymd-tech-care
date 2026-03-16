@@ -1,7 +1,6 @@
 import React from 'react';
 import { Building2 } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
-import { CURRENCIES } from '@/modules/master-data/vendor/constants/vendorConstants';
 import type { VendorFormData } from '@/modules/master-data/vendor/types/vendor-types';
 
 interface VendorGeneralInfoProps {
@@ -10,6 +9,7 @@ interface VendorGeneralInfoProps {
     errors: { [key: string]: string };
     vendorTypeOptions?: { label: string, value: number }[];
     vendorGroupOptions?: { label: string, value: number }[];
+    currencyOptions?: { label: string, value: number | string }[];
     isLoading?: boolean;
 }
 
@@ -19,6 +19,7 @@ export const VendorGeneralInfo: React.FC<VendorGeneralInfoProps> = ({
     errors, 
     vendorTypeOptions = [], 
     vendorGroupOptions = [], 
+    currencyOptions = [],
     isLoading 
 }) => {
     return (
@@ -37,8 +38,7 @@ export const VendorGeneralInfo: React.FC<VendorGeneralInfoProps> = ({
                         value={formData.vendorCode} 
                         onChange={onChange} 
                         className={styles.input} 
-                        placeholder="Auto Generated" 
-                        disabled={true}
+                        placeholder="กรอกรหัสเจ้าหนี้" 
                     />
                 </div>
                 <div className="space-y-1">
@@ -67,39 +67,39 @@ export const VendorGeneralInfo: React.FC<VendorGeneralInfoProps> = ({
                         />
                     </div>
                     <div className="space-y-1">
-                        <label className={styles.label}>ประเภทเจ้าหนี้ <span className="text-red-500">*</span></label>
+                        <label className={styles.label}>กลุ่มเจ้าหนี้ <span className="text-red-500">*</span></label>
                         <select 
-                            name="vendorTypeId" 
-                            value={formData.vendorTypeId} 
+                            name="vendorGroupId" 
+                            value={formData.vendorGroupId || ""} 
                             onChange={onChange} 
-                            className={`${styles.inputSelect} ${errors.vendorTypeId ? 'border-red-500 focus:ring-red-500' : ''}`}
+                            className={`${styles.inputSelect} ${errors.vendorGroupId ? 'border-red-500 focus:ring-red-500' : ''}`}
                             required
                         >
-                            <option value="" disabled>{isLoading ? 'กำลังโหลด...' : 'เลือกประเภทเจ้าหนี้'}</option>
-                            {vendorTypeOptions.map(type => (
-                                <option key={type.value} value={type.value}>{type.label}</option>
+                            <option value="" disabled>{isLoading ? 'กำลังโหลด...' : 'เลือกกลุ่มเจ้าหนี้'}</option>
+                            {vendorGroupOptions.map(grp => (
+                                <option key={grp.value} value={grp.value}>{grp.label}</option>
                             ))}
                         </select>
-                        {errors.vendorTypeId && <p className="text-red-500 text-xs mt-1">{errors.vendorTypeId}</p>}
+                        {errors.vendorGroupId && <p className="text-red-500 text-xs mt-1">{errors.vendorGroupId}</p>}
                     </div>
                 </div>
 
-                {/* Business Category & Tax ID */}
+                {/* Vendor Type (หมวดหมู่ธุรกิจ) & Tax ID */}
                 <div className="space-y-1">
                     <label className={styles.label}>หมวดหมู่ธุรกิจ <span className="text-red-500">*</span></label>
                     <select 
-                        name="vendorGroupId" 
-                        value={formData.vendorGroupId} 
+                        name="vendorTypeId" 
+                        value={formData.vendorTypeId || ""} 
                         onChange={onChange} 
-                        className={`${styles.inputSelect} ${errors.vendorGroupId ? 'border-red-500 focus:ring-red-500' : ''}`}
+                        className={`${styles.inputSelect} ${errors.vendorTypeId ? 'border-red-500 focus:ring-red-500' : ''}`}
                         required
                     >
-                        <option value="" disabled>{isLoading ? 'กำลังโหลด...' : 'เลือกหมวดหมู่'}</option>
-                        {vendorGroupOptions.map(cat => (
-                            <option key={cat.value} value={cat.value}>{cat.label}</option>
+                        <option value="" disabled>{isLoading ? 'กำลังโหลด...' : 'เลือกหมวดหมู่ธุรกิจ'}</option>
+                        {vendorTypeOptions.map(type => (
+                            <option key={type.value} value={type.value}>{type.label}</option>
                         ))}
                     </select>
-                    {errors.vendorGroupId && <p className="text-red-500 text-xs mt-1">{errors.vendorGroupId}</p>}
+                    {errors.vendorTypeId && <p className="text-red-500 text-xs mt-1">{errors.vendorTypeId}</p>}
                 </div>
                 <div className="space-y-1">
                     <label className={styles.label}>เลขประจำตัวผู้เสียภาษี <span className="text-red-500">*</span></label>
@@ -137,11 +137,12 @@ export const VendorGeneralInfo: React.FC<VendorGeneralInfoProps> = ({
                     <label className={styles.label}>สกุลเงิน</label>
                     <select 
                         name="currencyId" 
-                        value={formData.currencyId} 
+                        value={formData.currencyId || ""} 
                         onChange={onChange} 
                         className={styles.inputSelect}
                     >
-                        {CURRENCIES.map(curr => (
+                        <option value="" disabled>{isLoading ? 'กำลังโหลด...' : 'เลือกสกุลเงิน'}</option>
+                        {currencyOptions.map(curr => (
                             <option key={curr.value} value={curr.value}>{curr.label}</option>
                         ))}
                     </select>

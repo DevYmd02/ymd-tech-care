@@ -1,120 +1,138 @@
-import { useState, useEffect } from 'react';
-import { Tag, Search, Save, RotateCcw } from 'lucide-react';
+import { Tag, Save, X, RotateCcw } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
-import { logger } from '@/shared/utils/logger';
-import { mockProductCategories } from '@/modules/master-data/mocks/masterDataMocks';
-import type { ProductCategoryFormData } from '@/modules/master-data/types/master-data-types';
-import { initialProductCategoryFormData } from '@/modules/master-data/types/master-data-types';
 import { DialogFormLayout } from '@ui';
+import { useCategoryForm } from '../../hooks/useCategoryForm';
+import type { ProductCategoryListItem } from '@/modules/master-data/types/master-data-types';
 
-interface Props { 
-    isOpen: boolean; 
-    onClose: () => void; 
+interface Props {
+    isOpen: boolean;
+    onClose: () => void;
     editId?: number | null;
+    initialData?: ProductCategoryListItem | null;
     onSuccess?: () => void;
 }
 
-export function ProductCategoryFormModal({ isOpen, onClose, editId, onSuccess }: Props) {
-    const [formData, setFormData] = useState<ProductCategoryFormData>(initialProductCategoryFormData);
-    const [isSearching, setIsSearching] = useState(false);
+export function ProductCategoryFormModal({ isOpen, onClose, editId, initialData, onSuccess }: Props) {
+    const {
+        register,
+        errors,
+        isSaving,
+        handleSave,
+        clearForm
+    } = useCategoryForm(editId || null, initialData, onSuccess);
 
-    useEffect(() => {
-        if (isOpen) {
-            if (editId) {
-                const existing = mockProductCategories.find(c => c.category_id === editId);
-                if (existing) {
-                    setFormData({
-                        categoryCode: existing.category_code,
-                        categoryCodeSearch: existing.category_code,
-                        categoryName: existing.category_name,
-                        categoryNameEn: existing.category_name_en || '',
-                        isActive: existing.is_active,
-                    });
-                }
-            } else {
-                setFormData(initialProductCategoryFormData);
-            }
-        }
-    }, [isOpen, editId]);
-
-    const handleInputChange = (field: keyof ProductCategoryFormData, value: string | boolean) => {
-        setFormData(prev => ({ ...prev, [field]: value }));
-    };
-
-    const handleSearch = () => {
-        if (!formData.categoryCodeSearch.trim()) return;
-        setIsSearching(true);
-        setTimeout(() => {
-            const found = mockProductCategories.find(c => c.category_code.toLowerCase() === formData.categoryCodeSearch.toLowerCase());
-            if (found) {
-                setFormData({
-                    categoryCode: found.category_code,
-                    categoryCodeSearch: found.category_code,
-                    categoryName: found.category_name,
-                    categoryNameEn: found.category_name_en || '',
-                    isActive: found.is_active,
-                });
-            } else { alert('ไม่พบรหัสหมวดสินค้าที่ค้นหา'); }
-            setIsSearching(false);
-        }, 300);
-    };
-
-    const handleSave = () => {
-        if (!formData.categoryCode.trim() || !formData.categoryName.trim()) { alert('กรุณากรอกข้อมูลให้ครบถ้วน'); return; }
-        logger.log('Save category:', formData);
-        alert(editId ? 'บันทึกการแก้ไขสำเร็จ' : 'เพิ่มหมวดสินค้าใหม่สำเร็จ');
-        if (onSuccess) onSuccess();
+    const handleClose = () => {
+        clearForm();
         onClose();
     };
 
-    const handleReset = () => { setFormData(initialProductCategoryFormData); };
+    const TitleIcon = <Tag size={24} className="text-white" />;
 
-    const Footer = (
-        <div className="flex justify-end gap-3">
-            <button onClick={handleReset} className={`${styles.btnSecondary} flex items-center gap-2`}><RotateCcw size={18} />ล้างข้อมูล</button>
-            <button onClick={handleSave} className={`${styles.btnPrimary} flex items-center gap-2`}><Save size={18} />บันทึก</button>
+    const FormFooter = (
+        <div className="flex justify-end gap-3 p-4">
+            <button
+                type="button"
+                onClick={clearForm}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg flex items-center gap-2 transition-colors border border-gray-300"
+            >
+                <RotateCcw size={18} />
+                ล้างฟอร์ม
+            </button>
+            <button
+                type="button"
+                onClick={handleClose}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg flex items-center gap-2 transition-colors border border-gray-300"
+            >
+                <X size={18} />
+                ยกเลิก
+            </button>
+            <button
+                type="button"
+                onClick={handleSave}
+                disabled={isSaving}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50"
+            >
+                <Save size={18} />
+                {isSaving ? 'กำลังบันทึก...' : 'บันทึก'}
+            </button>
         </div>
     );
 
     return (
         <DialogFormLayout
             isOpen={isOpen}
-            onClose={onClose}
-            title="กำหนดรหัสหมวดสินค้า"
-            titleIcon={<Tag size={24} />}
-            footer={Footer}
-            isLoading={isSearching}
+            onClose={handleClose}
+            title={editId ? 'แก้ไขข้อมูลหมวดสินค้า' : 'เพิ่มหมวดสินค้าใหม่'}
+            titleIcon={TitleIcon}
+            footer={FormFooter}
         >
-            <div className="space-y-6">
-                <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div><label className={styles.label}>รหัสหมวดสินค้า</label><input type="text" value={formData.categoryCodeSearch} readOnly className={`${styles.input} bg-gray-100 dark:bg-gray-600`} /></div>
-                        <div><label className={styles.label}>ชื่อหมวด</label><input type="text" value={formData.categoryName} readOnly className={`${styles.input} bg-gray-100 dark:bg-gray-600`} /></div>
+            <div className="p-6 space-y-6">
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Category Code */}
+                    <div>
+                        <label className={styles.label}>
+                            รหัสหมวดสินค้า <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            {...register('category_code')}
+                            type="text"
+                            placeholder="กรอกรหัสหมวดสินค้า"
+                            className={`${styles.input} ${errors.category_code ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        />
+                        {errors.category_code && (
+                            <p className="text-red-500 text-xs mt-1">{errors.category_code.message}</p>
+                        )}
                     </div>
-                </div>
 
-                <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className={styles.label}>รหัสหมวดสินค้า</label>
-                            <div className="flex gap-2">
-                                <input type="text" value={formData.categoryCodeSearch} onChange={(e) => handleInputChange('categoryCodeSearch', e.target.value)} className={styles.input} />
-                                <button onClick={handleSearch} disabled={isSearching} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"><Search size={18} /></button>
-                            </div>
-                        </div>
-                        <div className="flex items-end pb-2">
-                            <label className="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" checked={formData.isActive} onChange={(e) => handleInputChange('isActive', e.target.checked)} className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-                                <span className="text-gray-700 dark:text-gray-300 font-medium">ใช้งานอยู่</span>
+                    {/* Status */}
+                    <div className="flex items-end pb-2">
+                        <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700 w-full">
+                            <input
+                                {...register('is_active')}
+                                type="checkbox"
+                                id="category_is_active"
+                                className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                            />
+                            <label htmlFor="category_is_active" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                                สถานะใช้งาน (Active)
                             </label>
                         </div>
                     </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div><label className={styles.label}>ชื่อหมวด</label><input type="text" value={formData.categoryName} onChange={(e) => handleInputChange('categoryName', e.target.value)} className={styles.input} /></div>
-                        <div><label className={styles.label}>ชื่อหมวด (EN)</label><input type="text" value={formData.categoryNameEn} onChange={(e) => handleInputChange('categoryNameEn', e.target.value)} className={styles.input} /></div>
-                    </div>
                 </div>
+
+                {/* Category Name (Thai) */}
+                <div>
+                    <label className={styles.label}>
+                        ชื่อหมวดสินค้า (ภาษาไทย) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        {...register('category_name')}
+                        type="text"
+                        placeholder="กรอกชื่อหมวดสินค้า"
+                        className={`${styles.input} ${errors.category_name ? 'border-red-500 focus:ring-red-200' : ''}`}
+                    />
+                    {errors.category_name && (
+                        <p className="text-red-500 text-xs mt-1">{errors.category_name.message}</p>
+                    )}
+                </div>
+
+                {/* Category Name (English) */}
+                <div>
+                    <label className={styles.label}>
+                        ชื่อหมวดสินค้า (ภาษาอังกฤษ)
+                    </label>
+                    <input
+                        {...register('category_name_en')}
+                        type="text"
+                        placeholder="Category Name (English)"
+                        className={styles.input}
+                    />
+                    {errors.category_name_en && (
+                        <p className="text-red-500 text-xs mt-1">{errors.category_name_en.message}</p>
+                    )}
+                </div>
+
             </div>
         </DialogFormLayout>
     );

@@ -20,7 +20,7 @@ const STATUS_OPTIONS = [
     { value: 'ACTIVE', label: 'ใช้งาน' },
     { value: 'INACTIVE', label: 'ไม่ใช้งาน' },
 ];
-
+ 
 export default function ProductCategoryList() {
     // ==================== STATE & FILTERS ====================
     const { 
@@ -41,6 +41,7 @@ export default function ProductCategoryList() {
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
+    const [editingData, setEditingData] = useState<ProductCategoryListItem | null>(null);
 
     // ==================== FILTER CONFIG ====================
     const filterConfig: FilterFieldConfig<Extract<keyof typeof filters, string>>[] = useMemo(() => [
@@ -113,13 +114,15 @@ export default function ProductCategoryList() {
     // ==================== HANDLERS ====================
     const handleCreateNew = () => {
         setEditingId(null);
+        setEditingData(null);
         setIsModalOpen(true);
     };
 
-    const handleEdit = (id: number) => {
-        setEditingId(id);
+    const handleEdit = useCallback((item: ProductCategoryListItem) => {
+        setEditingId(item.id);
+        setEditingData(item);
         setIsModalOpen(true);
-    };
+    }, []);
 
     const handleDelete = useCallback(async (id: number) => {
         if (confirm('คุณต้องการลบข้อมูลหมวดสินค้านี้หรือไม่?')) {
@@ -131,6 +134,7 @@ export default function ProductCategoryList() {
     const handleModalClose = () => {
         setIsModalOpen(false);
         setEditingId(null);
+        setEditingData(null);
     };
 
     // ==================== TABLE COLUMNS ====================
@@ -147,7 +151,7 @@ export default function ProductCategoryList() {
             cell: ({ getValue, row }) => (
                 <span 
                     className="font-medium text-blue-600 cursor-pointer hover:underline"
-                    onClick={() => handleEdit(row.original.id)}
+                    onClick={() => handleEdit(row.original)}
                 >
                     {getValue() as string}
                 </span>
@@ -180,7 +184,7 @@ export default function ProductCategoryList() {
             cell: ({ row }) => (
                 <div className="flex items-center justify-center gap-2">
                     <button 
-                        onClick={() => handleEdit(row.original.id)}
+                        onClick={() => handleEdit(row.original)}
                         className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                         title="แก้ไข"
                     >
@@ -196,7 +200,7 @@ export default function ProductCategoryList() {
                 </div>
             ),
         },
-    ], [filters.page, filters.limit, handleDelete]);
+    ], [filters.page, filters.limit, handleEdit, handleDelete]);
 
     // ==================== RENDER ====================
     return (
@@ -261,11 +265,9 @@ export default function ProductCategoryList() {
                 isOpen={isModalOpen} 
                 onClose={handleModalClose}
                 editId={editingId}
+                initialData={editingData}
                 onSuccess={refetch}
             />
         </div>
     );
 }
-
-
-
