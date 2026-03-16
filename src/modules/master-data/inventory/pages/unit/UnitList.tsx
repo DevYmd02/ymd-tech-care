@@ -284,7 +284,7 @@ export default function UnitList() {
                 onClose={handleModalClose}
                 editId={editingId}
                 initialData={editingData}
-                onSuccess={refetch}
+                onSuccess={() => { refetch(); handleModalClose(); }}
             />
         </div>
     );

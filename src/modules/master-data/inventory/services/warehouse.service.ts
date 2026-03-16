@@ -69,7 +69,8 @@ export const WarehouseService = {
         return { success: true, message: 'Created mock successfully' };
     }
     try {
-        return await api.post<SuccessResponse>('/warehouse', data);
+        await api.post('/warehouse', data);
+        return { success: true };
     } catch (error) {
         logger.error('[WarehouseService] create error:', error);
         return { success: false, message: 'Failed to create warehouse' };
@@ -82,7 +83,8 @@ export const WarehouseService = {
         return { success: true, message: 'Updated mock successfully' };
     }
     try {
-        return await api.put<SuccessResponse>(`/warehouse/${data.warehouse_id}`, data);
+        await api.patch(`/warehouse/${data.warehouse_id}`, data);
+        return { success: true };
     } catch (error) {
         logger.error('[WarehouseService] update error:', error);
         return { success: false, message: 'Failed to update warehouse' };

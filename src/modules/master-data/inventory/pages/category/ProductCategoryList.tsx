@@ -266,7 +266,7 @@ export default function ProductCategoryList() {
                 onClose={handleModalClose}
                 editId={editingId}
                 initialData={editingData}
-                onSuccess={refetch}
+                onSuccess={() => { refetch(); handleModalClose(); }}
             />
         </div>
     );

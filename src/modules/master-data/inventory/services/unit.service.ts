@@ -17,12 +17,9 @@ interface UomResponse {
 }
 
  
-// ✅ This is the wrapper for mutation responses
-interface UomMutationSuccessResponse {
-    success: true;
-    data: UomResponse;
-    message: string;
-}
+ 
+ 
+
  
 // ✅ type-safe ไม่ใช้ any
 function mapUomToUnit(item: UomResponse): UnitListItem {
@@ -64,7 +61,7 @@ export const UnitService = {
         if (USE_MOCK) return mockUnits.find(u => u.unit_id === id) ?? null;
         try {
             // ✅ รองรับ response ที่อาจจะถูก wrap ด้วย { data: ... } หรือส่งมาตรงๆ
-            const response = await api.get<any>(`/uom/${id}`);
+            const response = await api.get<{ success?: boolean; data?: UomResponse } & Partial<UomResponse>>(`/uom/${id}`);
 
             // Handle wrapped response { success: true, data: {...} }
             if (response?.success && response?.data) {
@@ -77,7 +74,14 @@ export const UnitService = {
             }
 
             if (response?.uom_id) {
-                return mapUomToUnit(response);
+                return mapUomToUnit({
+                    uom_id: response.uom_id,
+                    uom_code: response.uom_code ?? '',
+                    uom_name: response.uom_name ?? '',
+                    uom_nameeng: response.uom_nameeng,
+                    is_active: response.is_active ?? true,
+                    created_at: response.created_at ?? ''
+                });
             }
 
             return null;
@@ -96,11 +100,11 @@ export const UnitService = {
                 is_active: data.is_active,
             };
             // The API client returns the full response object, not an unwrapped one.
-            const response = await api.post<UomMutationSuccessResponse>('/uom', payload);
+            const response = await api.post<UomResponse>('/uom', payload);
             return {
-                success: response.success,
-                data: response.data ? mapUomToUnit(response.data) : undefined,
-                message: response.message,
+                success: true,
+                data: mapUomToUnit(response),
+                message: 'สร้างหน่วยนับสำเร็จ',
             };
         } catch (error) {
             logger.error('[UnitService] create error:', error);
