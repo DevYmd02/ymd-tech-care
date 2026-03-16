@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import type { RFQLine, VQListItem } from '@/modules/procurement/types';
+import type { RFQLine, VQListItem, QuotationLine } from '@/modules/procurement/types';
 import type { ProductLookup } from '@/modules/master-data/inventory/mocks/products';
 
 export interface MatrixVendorCell {
@@ -48,7 +48,7 @@ export function useQCMatrix(
       };
 
       selectedVQs.forEach(vq => {
-        const vqLine = vq.lines?.find(l => l.item_code === rfqLine.item_code);
+        const vqLine = vq.vq_lines?.find(l => l.item_code === rfqLine.item_code);
         row.vendors[(vq.quotation_id || vq.vq_header_id) as number] = {
           unit_price: vqLine?.unit_price || 0,
           total_price: vqLine?.net_amount || 0,
@@ -84,7 +84,7 @@ export function useQCMatrix(
         if (!vq) return prev;
 
         rfqLines.forEach(rfqLine => {
-          const vqLine = vq.lines?.find(l => l.item_code === rfqLine.item_code);
+          const vqLine = vq.vq_lines?.find(l => l.item_code === rfqLine.item_code);
           // Rule: mark as winner UNLESS the item has is_no_quote === true
           if (vqLine && !vqLine.no_quote) {
             if (newWinningMap[rfqLine.item_code] !== vq_id) {
@@ -112,7 +112,7 @@ export function useQCMatrix(
     const vq = selectedVQs.find(v => (v.quotation_id || v.vq_header_id) === vq_id);
     if (!vq) return 0;
     return rfqLines.reduce((sum, rfqLine) => {
-       const vqLine = vq.lines?.find(l => l.item_code === rfqLine.item_code);
+       const vqLine = vq.vq_lines?.find(l => l.item_code === rfqLine.item_code);
        if (vqLine && !vqLine.no_quote) {
           return sum + (vqLine.net_amount || 0);
        }
@@ -126,7 +126,7 @@ export function useQCMatrix(
         const vq_id = rfqLine.item_code ? winningMap[rfqLine.item_code] : undefined;
         if (vq_id) {
             const vq = selectedVQs.find(v => (v.quotation_id || v.vq_header_id) === vq_id);
-            const vqLine = vq?.lines?.find(l => l.item_code === rfqLine.item_code);
+            const vqLine = vq?.vq_lines?.find((l: QuotationLine) => l.item_code === rfqLine.item_code);
             if (vqLine && !vqLine.no_quote) {
                 total += (vqLine.net_amount || 0);
             }
@@ -143,7 +143,7 @@ export function useQCMatrix(
       let total_biddable_items = 0;
 
       rfqLines.forEach(rfqLine => {
-        const vqLine = vq.lines?.find(l => l.item_code === rfqLine.item_code);
+        const vqLine = vq.vq_lines?.find(l => l.item_code === rfqLine.item_code);
         if (vqLine && !vqLine.no_quote) {
            total_biddable_items++;
            if (winningMap[rfqLine.item_code] === (vq.quotation_id || vq.vq_header_id)) {

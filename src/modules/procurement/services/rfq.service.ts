@@ -1,10 +1,9 @@
 import api from '@/core/api/api';
-import { USE_MOCK } from '@/core/api/api';
 import type { RFQHeader, RFQListResponse, RFQFilterCriteria, RFQDetailResponse, SendRFQToVendorPayload } from '@/modules/procurement/types';
 import { logger } from '@/shared/utils/logger';
 import type { SuccessResponse } from '@/shared/types/api-response.types';
 import { extractErrorMessage } from '@/core/api/api';
-import { applyClientFilters, applyClientPagination, extractArrayFromResponse } from '@/shared/utils/clientFilterUtils';
+import { extractArrayFromResponse } from '@/shared/utils/clientFilterUtils';
 
 const ENDPOINTS = {
   list: '/rfq',
@@ -84,36 +83,44 @@ export interface RFQCreateDTO {
   cost_center_id?: number;
 }
 
+/**
+ * 🧹 Helper to clean params before API call
+ * Removes undefined, null, and empty strings
+ */
+export const cleanParams = (params: object = {}): Record<string, string | number | boolean> => {
+  const entries = Object.entries(params);
+  const filtered = entries.filter(([, value]) => value !== undefined && value !== null && value !== '');
+  
+  const cleaned = Object.fromEntries(filtered) as Record<string, string | number | boolean>;
+
+  // Ensure defaults for pagination
+  if (!cleaned.page) cleaned.page = 1;
+  if (!cleaned.limit) cleaned.limit = 20;
+
+  return cleaned;
+};
+
 export const RFQService = {
   getList: async (params?: RFQFilterCriteria): Promise<RFQListResponse> => {
     logger.info('[RFQService] Fetching RFQ List', params);
-    const response = await api.get<RFQListResponse>(ENDPOINTS.list, { params });
 
-    // 🎯 HYBRID FALLBACK: Apply Client-Side Filtering when using Real API
-    if (!USE_MOCK && params) {
-      const allItems = extractArrayFromResponse<RFQHeader>(response);
-      const filterParams: Record<string, string | number | boolean | undefined | null> = {};
-      if (params.rfq_no) filterParams.rfq_no = params.rfq_no;
-      if (params.creator_name) filterParams.creator_name = params.creator_name;
-      if (params.ref_pr_no) filterParams.ref_pr_no = params.ref_pr_no;
-      if (params.status && params.status !== 'ALL') filterParams.status = params.status;
-      if (params.date_from) filterParams.date_from = params.date_from;
-      if (params.date_to) filterParams.date_to = params.date_to;
-      if (params.page) filterParams.page = params.page;
-      if (params.limit) filterParams.limit = params.limit;
-      if (params.sort) filterParams.sort = params.sort;
+    // 🧹 Clean Parameters to prevent "undefined" in URL
+    const cleanedParams = cleanParams(params || {});
+    const res = await api.get<RFQListResponse & { pageSize?: number }>(ENDPOINTS.list, { params: cleanedParams });
 
-      return applyClientFilters<RFQHeader>(allItems, filterParams, {
-        searchableFields: ['rfq_no', 'creator_name', 'ref_pr_no'],
-        dateField: 'rfq_date',
-      });
-    }
+    // 🎯 Trusting Backend + Normalizing for UI (The Pipeline Fix)
+    // The backend returns { data: [...], total: 8, page: 1, pageSize: 20 }
+    const items = extractArrayFromResponse<RFQHeader>(res);
+    const total = typeof res?.total === 'number' ? res.total : items.length;
+    const limit = res?.limit || res?.pageSize || Number(cleanedParams.limit) || 20;
 
-    // 🎯 HYBRID PAGINATION: Always apply client-side slicing even for mock responses
-    const allItems = extractArrayFromResponse<RFQHeader>(response);
-    const page = params?.page || 1;
-    const limit = params?.limit || 20;
-    return applyClientPagination<RFQHeader>(allItems, page, limit);
+    return {
+      data: items,
+      total: total,
+      page: res?.page || Number(cleanedParams.page) || 1,
+      limit: limit,
+      totalPages: res?.totalPages || Math.ceil(total / limit) || 1
+    };
   },
 
   getById: async (id: number): Promise<RFQDetailResponse> => {

@@ -1,6 +1,6 @@
 /**
  * @file ProductSearchModal.tsx
- * @description Modal สำหรับค้นหาและเลือกสินค้า (Product)
+ * @description Modal สำหรับค้นหาและเลือกสินค้า (Product) - Local copy for PO Form
  * 
  * @refactored 2026-01-22: Decoupled mock data from UI
  * - ProductSearchModalBase: Pure/Dumb component ที่รับ data ผ่าน props
@@ -51,42 +51,18 @@ const productColumns: ColumnDef<ItemListItem>[] = [
 // BASE COMPONENT - Pure/Dumb Component (Receives data via props)
 // ====================================================================================
 
-/** Props for ProductSearchModalBase - Dumb Component */
 export interface ProductSearchModalBaseProps {
     isOpen: boolean;
     onClose: () => void;
     onSelect: (product: ItemListItem) => void;
-    /** Product data to display - passed from parent */
     data: ItemListItem[];
-    /** Custom title */
     title?: string;
-    /** Custom subtitle */
     subtitle?: string;
-    /** Custom empty text */
     emptyText?: string;
-    /** Loading state */
     isLoading?: boolean;
-    /** Callback for search term change (Server-side) */
     onSearchChange?: (term: string) => void;
 }
 
-/**
- * ProductSearchModalBase - Pure/Dumb Component
- * 
- * @description รับ data ผ่าน props ไม่ fetch เอง - สามารถ reuse ได้ง่าย
- * @usage ใช้เมื่อต้องการควบคุม data source เอง
- * 
- * @example
- * ```tsx
- * const myProducts = [...];
- * <ProductSearchModalBase 
- *   isOpen={open} 
- *   onClose={close} 
- *   onSelect={handleSelect}
- *   data={myProducts}
- * />
- * ```
- */
 export const ProductSearchModalBase: React.FC<ProductSearchModalBaseProps> = ({
     isOpen,
     onClose,
@@ -123,22 +99,15 @@ export const ProductSearchModalBase: React.FC<ProductSearchModalBaseProps> = ({
 };
 
 // ====================================================================================
-// SMART WRAPPER - Uses MOCK_PRODUCTS (Backward Compatible)
+// SMART WRAPPER
 // ====================================================================================
 
-/** Props for ProductSearchModal - Smart Wrapper */
 interface ProductSearchModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSelect: (product: ItemListItem) => void;
 }
 
-/**
- * ProductSearchModal - Smart Component (Uses ItemMasterService + React Query)
- * 
- * @description ดึงข้อมูลสินค้าจาก ItemMasterService พร้อมระบบ Debounced Search
- * @usage เชื่อมต่อ API จริง 100% ตามนโยบาย Zero-Any
- */
 export const ProductSearchModal: React.FC<ProductSearchModalProps> = ({ isOpen, onClose, onSelect }) => {
     const [searchTerm, setSearchTerm] = React.useState('');
     const debouncedSearch = useDebounce(searchTerm, 500);
@@ -147,7 +116,7 @@ export const ProductSearchModal: React.FC<ProductSearchModalProps> = ({ isOpen, 
         queryKey: ['items-lookup', debouncedSearch],
         queryFn: () => ItemMasterService.getAll({ q: debouncedSearch, limit: 20 }),
         enabled: isOpen,
-        staleTime: 1000 * 60 * 5, // 5 minutes cache
+        staleTime: 1000 * 60 * 5,
     });
 
     const products = response?.items || [];

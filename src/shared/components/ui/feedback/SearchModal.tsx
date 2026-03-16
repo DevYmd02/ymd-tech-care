@@ -59,6 +59,8 @@ export interface SearchModalProps<T> {
     emptyText?: string;
     /** Loading state */
     isLoading?: boolean;
+    /** Optional callback for external search handling (Server-side) */
+    onSearchChange?: (term: string) => void;
 }
 
 // ====================================================================================
@@ -80,6 +82,7 @@ export function SearchModal<T>({
     getKey,
     emptyText = 'ไม่พบข้อมูลที่ค้นหา',
     isLoading = false,
+    onSearchChange
 }: SearchModalProps<T>) {
     // State สำหรับเก็บคำค้นหา
     const [searchTerm, setSearchTerm] = useState('');
@@ -155,7 +158,11 @@ export function SearchModal<T>({
                         placeholder={searchPlaceholder}
                         className={`w-full h-10 px-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 ${colorClasses.ring} text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500`}
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            setSearchTerm(val);
+                            onSearchChange?.(val);
+                        }}
                         autoFocus
                     />
                 </div>
@@ -211,7 +218,10 @@ export function SearchModal<T>({
                                     // Custom render function
                                     if (col.render) {
                                         return (
-                                            <div key={String(col.key)} className={col.align === 'center' ? 'text-center' : ''}>
+                                            <div 
+                                                key={String(col.key)} 
+                                                className={col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : ''}
+                                            >
                                                 {col.render(item)}
                                             </div>
                                         );
@@ -221,7 +231,7 @@ export function SearchModal<T>({
                                     return (
                                         <div
                                             key={String(col.key)}
-                                            className={`text-sm text-gray-800 dark:text-gray-200 ${col.align === 'center' ? 'text-center' : ''}`}
+                                            className={`text-sm text-gray-800 dark:text-gray-200 ${col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : ''}`}
                                         >
                                             {col.key !== 'action' ? String(item[col.key] ?? '') : ''}
                                         </div>

@@ -12,7 +12,7 @@ const VendorAddressSchema = z.object({
     district: z.string().min(1, 'กรุณากรอกอำเภอ/เขต'),
     province: z.string().min(1, 'กรุณากรอกจังหวัด'),
     postalCode: z.string().length(5, 'รหัสไปรษณีย์ต้องมี 5 หลัก').regex(/^\d+$/, 'กรอกได้เฉพาะตัวเลข'),
-    country: z.string().min(1, 'กรุณากรอกประเทศ'),
+    country: z.string().optional(),
     isMain: z.boolean(),
     addressType: z.enum(['REGISTERED', 'CONTACT', 'BILLING', 'SHIPPING']).optional(),
     

@@ -48,8 +48,7 @@ export interface PaginatedResponse<T> {
  * @param options  - Configuration: searchable fields, date field
  * @returns        - A paginated response matching the ListResponse shape
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic record access required for dynamic filtering
-export const applyClientFilters = <T>(
+export const applyClientFilters = <T extends object>(
   data: T[],
   params: Record<string, FilterValue>,
   options: ClientFilterOptions<T> = {}
@@ -60,7 +59,7 @@ export const applyClientFilters = <T>(
   if (typeof params.q === 'string' && params.q.trim() !== '' && options.searchableFields) {
     const q = params.q.toLowerCase();
     processed = processed.filter(item => {
-      const record = item as Record<string, unknown>;
+      const record = item as Record<string, string | number | boolean | null | undefined>;
       return options.searchableFields?.some(field => {
         const val = record[field as string];
         return String(val ?? '').toLowerCase().includes(q);
@@ -78,7 +77,7 @@ export const applyClientFilters = <T>(
     if (filterValue === undefined || filterValue === null || filterValue === '' || filterValue === 'ALL') return;
 
     processed = processed.filter(item => {
-      const record = item as Record<string, unknown>;
+      const record = item as Record<string, string | number | boolean | null | undefined>;
       if (!(key in record)) return true;
 
       const itemValue = record[key];
@@ -102,7 +101,7 @@ export const applyClientFilters = <T>(
     const to = dateToStr ? new Date(dateToStr).getTime() : Infinity;
 
     processed = processed.filter(item => {
-      const record = item as Record<string, unknown>;
+      const record = item as Record<string, string | number | boolean | null | undefined>;
       const fieldVal = record[options.dateField as string];
       const dateStr = String(fieldVal);
       const dateVal = new Date(dateStr).getTime();
@@ -114,8 +113,8 @@ export const applyClientFilters = <T>(
   if (typeof params.sort === 'string' && params.sort.trim() !== '') {
     const [key, direction] = params.sort.split(':');
     processed.sort((a, b) => {
-      const recA = a as Record<string, unknown>;
-      const recB = b as Record<string, unknown>;
+      const recA = a as Record<string, string | number | boolean | null | undefined>;
+      const recB = b as Record<string, string | number | boolean | null | undefined>;
       const valA = recA[key] as FilterValue;
       const valB = recB[key] as FilterValue;
 
@@ -153,15 +152,15 @@ export const applyClientFilters = <T>(
  * Safely extracts an array of items from various API response shapes.
  * Handles: raw array, { data: [...] }, { items: [...] }, or nested structures.
  */
-export const extractArrayFromResponse = <T>(response: unknown): T[] => {
+export const extractArrayFromResponse = <T>(response: object | null | undefined): T[] => {
   if (Array.isArray(response)) {
     return response as T[];
   }
 
   if (response && typeof response === 'object') {
-    const obj = response as Record<string, unknown>;
-    if (Array.isArray(obj.data)) return obj.data as T[];
-    if (Array.isArray(obj.items)) return obj.items as T[];
+    const obj = response as Record<string, T[]>;
+    if (Array.isArray(obj.data)) return obj.data;
+    if (Array.isArray(obj.items)) return obj.items;
   }
 
   return [];

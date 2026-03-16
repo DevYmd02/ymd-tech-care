@@ -1,8 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Check, FileText } from 'lucide-react';
+import { Search, Check, FileText, Loader2 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { RFQService } from '@/modules/procurement/services/rfq.service';
+import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
 import type { RFQHeader } from '@/modules/procurement/types';
-import { MOCK_RFQS } from '@/modules/procurement/mocks/data/rfqData';
 import { ModalLayout } from '@/shared/components/ui/layout/ModalLayout';
+import { useDebounce } from '@/shared/hooks/useDebounce';
+import { formatThaiDate } from '@/shared/utils/dateUtils';
 
 interface RFQSelectorModalProps {
     isOpen: boolean;
@@ -10,17 +14,47 @@ interface RFQSelectorModalProps {
     onSelect: (rfq: RFQHeader) => void;
 }
 
+const VendorNameDisplay = ({ vendorId }: { vendorId: number }) => {
+    const { data: vendor, isLoading } = useQuery({
+        queryKey: ['vendor', vendorId],
+        queryFn: () => VendorService.getById(vendorId),
+        enabled: !!vendorId,
+        staleTime: 5 * 60 * 1000,
+    });
+    if (isLoading) return <span className="text-gray-400 font-normal italic">กำลังโหลด...</span>;
+    return <span>{vendor?.vendor_name || '-'}</span>;
+};
+
 export const RFQSelectorModal: React.FC<RFQSelectorModalProps> = ({ isOpen, onClose, onSelect }) => {
     const [searchTerm, setSearchTerm] = useState('');
+    const debouncedSearch = useDebounce(searchTerm, 500);
 
-    const filteredRFQs = useMemo(() => {
-        return MOCK_RFQS.filter(rfq => {
-            const matchesSearch = rfq.rfq_no.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                 (rfq.vendor_name && rfq.vendor_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                                 (rfq.purpose && rfq.purpose.toLowerCase().includes(searchTerm.toLowerCase()));
-            return matchesSearch;
+    // 📡 @Agent_API_Infector: Fetch real RFQ data (Fetching more but filtering visually for VQ safety if needed)
+    const { data: rfqResponse, isLoading } = useQuery({
+        queryKey: ['rfqs-selector', debouncedSearch],
+        queryFn: () => RFQService.getList({ 
+            keyword: debouncedSearch, 
+            status: 'ALL', 
+            limit: 100 
+        }),
+        enabled: isOpen,
+    });
+
+    // 📡 @Agent_UI_Hydrator: Match the Status Logic of the main List Page
+    // We show RFQs that are either explicitly SENT or have all vendors sent (X/Y logic)
+    const rfqs: RFQHeader[] = useMemo(() => {
+        // useQuery data is Typed as RFQListResponse | undefined
+        const rawItems = rfqResponse?.data; 
+        if (!Array.isArray(rawItems)) return [];
+        
+        return rawItems.filter((rfq: RFQHeader) => {
+            const sentCount = rfq.vendor_sent ?? rfq.sent_vendors_count ?? 0;
+            const total = rfq.vendor_total ?? rfq.vendor_count ?? 0;
+            const isFullySent = total > 0 && sentCount === total;
+            
+            return rfq.status === 'SENT' || isFullySent;
         });
-    }, [searchTerm]);
+    }, [rfqResponse]);
 
     return (
         <ModalLayout
@@ -32,7 +66,7 @@ export const RFQSelectorModal: React.FC<RFQSelectorModalProps> = ({ isOpen, onCl
             headerColor="bg-indigo-600"
         >
             <div className="flex flex-col h-full bg-gray-50/30 dark:bg-transparent">
-                {/* Search */}
+                {/* 🔍 @Agent_Search_Operator: Server-side Search */}
                 <div className="relative mb-4">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                     <input
@@ -42,10 +76,15 @@ export const RFQSelectorModal: React.FC<RFQSelectorModalProps> = ({ isOpen, onCl
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white transition-all shadow-sm"
                     />
+                    {isLoading && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-indigo-500">
+                            <Loader2 size={18} className="animate-spin" />
+                        </div>
+                    )}
                 </div>
 
-                {/* Table */}
-                <div className="flex-1 overflow-auto border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 shadow-sm">
+                {/* 🎨 @Agent_UI_Hydrator: Real-Time Table Hydration */}
+                <div className="flex-1 overflow-auto border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 shadow-sm relative min-h-[300px]">
                     <table className="w-full text-sm text-left">
                         <thead className="text-xs text-gray-500 uppercase bg-gray-50 dark:bg-gray-800 dark:text-gray-400 sticky top-0 z-20 border-b border-gray-200 dark:border-gray-700 shadow-sm">
                             <tr>
@@ -57,23 +96,41 @@ export const RFQSelectorModal: React.FC<RFQSelectorModalProps> = ({ isOpen, onCl
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                            {filteredRFQs.length > 0 ? (
-                                filteredRFQs.map((rfq) => (
+                            {isLoading ? (
+                                // Full-body loader for first load or search transition
+                                <tr>
+                                    <td colSpan={5} className="py-20 text-center">
+                                        <div className="flex flex-col items-center justify-center text-gray-400">
+                                            <Loader2 size={40} className="animate-spin mb-4 opacity-20" />
+                                            <p className="animate-pulse">กำลังดึงข้อมูล RFQ ล่าสุด...</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : rfqs.length > 0 ? (
+                                rfqs.map((rfq) => (
                                     <tr key={rfq.rfq_id} className="hover:bg-indigo-50/50 dark:hover:bg-gray-700/50 transition-colors">
                                         <td className="px-5 py-3 font-medium text-indigo-700 dark:text-indigo-400 whitespace-nowrap">{rfq.rfq_no}</td>
-                                        <td className="px-5 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">{rfq.rfq_date?.split('T')[0]}</td>
+                                        <td className="px-5 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">
+                                            {rfq.rfq_date ? formatThaiDate(rfq.rfq_date) : '-'}
+                                        </td>
                                         <td className="px-5 py-3 text-gray-600 dark:text-gray-300 max-w-[150px] truncate">
-                                            {rfq.vendor_name || '-'}
+                                            {/* @Agent_UI_Hydrator: Mapping vendor name via lookup */}
+                                            {rfq.rfqVendors && rfq.rfqVendors.length > 0 && rfq.rfqVendors[0]?.vendor_id ? (
+                                                <VendorNameDisplay vendorId={Number(rfq.rfqVendors[0].vendor_id)} />
+                                            ) : (
+                                                rfq.vendor_name || '-'
+                                            )}
                                         </td>
                                         <td className="px-5 py-3 text-gray-500 dark:text-gray-400">
-                                            <div className="truncate max-w-[200px]" title={rfq.purpose}>
-                                                {rfq.purpose || '-'}
+                                            <div className="truncate max-w-[200px]" title={rfq.remarks || rfq.purpose}>
+                                                {rfq.remarks || rfq.purpose || '-'}
                                             </div>
                                         </td>
                                         <td className="px-5 py-3 text-center">
                                             <button
                                                 type="button"
                                                 onClick={() => {
+                                                    // 🔄 @Agent_Selection_Handler: Send full RFQ object
                                                     onSelect(rfq);
                                                     setSearchTerm('');
                                                 }}

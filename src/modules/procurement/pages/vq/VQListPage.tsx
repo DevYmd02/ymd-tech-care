@@ -22,22 +22,31 @@ import { VQService, type VQListParams } from '@/modules/procurement/services/vq.
 import { RFQService } from '@/modules/procurement/services/rfq.service';
 import { PRService } from '@/modules/procurement/services/pr.service';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
-import type { VQListItem, VQStatus, RFQHeader } from '@/modules/procurement/types';
+import type { VQListItem, VQStatus, RFQHeader, VQPendingQueueItem } from '@/modules/procurement/types';
 import { VQFormModal, VQVendorTrackingModal } from './components';
 import { logger } from '@/shared/utils/logger';
 
 // ====================================================================================
-// STATUS OPTIONS
+// STATUS OPTIONS & MAPPINGS
 // ====================================================================================
 
-const VQ_STATUS_OPTIONS = [
-    { value: 'ALL', label: 'ทั้งหมด' },
-    { value: 'PENDING', label: 'รอผู้ขายตอบกลับ' },
-    { value: 'RECORDED', label: 'บันทึกแล้ว' },
-    { value: 'DECLINED', label: 'ผู้ขายปฏิเสธ' },
-    { value: 'EXPIRED', label: 'หมดอายุ' },
-    { value: 'CANCELLED', label: 'ยกเลิก' },
-];
+// 1. VQ Statuses (สำหรับ Tab 1)
+const VQ_STATUS_MAP: Record<string, { label: string; color: string }> = {
+    ALL: { label: 'ทั้งหมด', color: 'default' },
+    DRAFT: { label: 'แบบร่าง', color: 'neutral' },
+    RECORDED: { label: 'บันทึกราคาแล้ว', color: 'success' },
+    DECLINED: { label: 'ผู้ขายปฏิเสธ', color: 'error' },
+    EXPIRED: { label: 'หมดอายุ', color: 'warning' },
+    CANCELLED: { label: 'ยกเลิก', color: 'error' },
+};
+
+// 2. RFQ Vendor Statuses (สำหรับ Tab 2 และ 3)
+const RFQ_VENDOR_STATUS_MAP: Record<string, { label: string; color: string }> = {
+    ALL: { label: 'ทั้งหมด', color: 'default' },
+    NEW: { label: 'รอส่งอีเมล', color: 'default' },
+    WAITING: { label: 'รอคิวส่ง', color: 'processing' },
+    SENT: { label: 'ส่ง RFQ แล้ว', color: 'warning' },
+};
 
 // ====================================================================================
 // FILTER CONFIG
@@ -105,16 +114,13 @@ export default function VQListPage() {
         }
     });
 
-    // Modal States
-    const [modalConfig, setModalConfig] = useState<{
-        isOpen: boolean;
-        isViewMode: boolean;
-        vqId: number | null;
-    }>({
-        isOpen: false,
-        isViewMode: false,
-        vqId: null
-    });
+    // Modal States (Consolidated)
+    const [isVqModalOpen, setIsVqModalOpen] = useState(false);
+    const [selectedVqId, setSelectedVqId] = useState<number | null>(null);
+    const [isViewMode, setIsViewMode] = useState(false);
+    const [initialRFQForCreate, setInitialRFQForCreate] = useState<RFQHeader | null>(null);
+
+    const [activeTab, setActiveTab] = useState<'ALL' | 'WAITING_VQ' | 'WAITING_RFQ'>('ALL');
 
     const [isTrackingOpen, setIsTrackingOpen] = useState(false);
     const [selectedRfqId, setSelectedRfqId] = useState<number | null>(null);
@@ -122,7 +128,6 @@ export default function VQListPage() {
 
     // Auto-inject rfq_no from URL into search3 filter (runs once on mount or when param changes)
     const hasInjected = useRef(false);
-    const [initialRFQForCreate, setInitialRFQForCreate] = useState<RFQHeader | null>(null);
 
     useEffect(() => {
         if (rfqNoFilter && !hasInjected.current) {
@@ -130,40 +135,52 @@ export default function VQListPage() {
             hasInjected.current = true;
         }
 
-        // --- Handle Auto-Open for Creation ---
+        // --- Handle Auto-Open for Creation via URL Params ---
         const shouldCreate = searchParams.get('create') === 'true';
         const rfqId = searchParams.get('rfq_id');
         const vendorId = searchParams.get('vendor_id');
+        const rfqVendorId = searchParams.get('rfq_vendor_id');
 
-        if (shouldCreate && !modalConfig.isOpen) {
+        if (shouldCreate && !isVqModalOpen) {
             if (rfqId) {
-                // Fetch RFQ Detail to get items
+                // Fetch RFQ Detail to get items for hydration
                 RFQService.getById(Number(rfqId)).then((rfqData: RFQHeader) => {
-                    // Create a modified header if vendorId is provided
-                    const header = { ...rfqData } as RFQHeader & { vendor_id?: number };
-                    if (vendorId) {
-                        header.vendor_id = Number(vendorId); 
-                    }
-                    setInitialRFQForCreate(header as RFQHeader);
-                    setModalConfig({ isOpen: true, isViewMode: false, vqId: null });
+                    // Type-safe access for hybrid fields
+                    const rawRfq = rfqData as unknown as Record<string, unknown>;
+                    const header = { 
+                        ...rfqData,
+                        vendor_id: vendorId ? Number(vendorId) : (rawRfq.vendor_id as number | undefined),
+                        rfq_vendor_id: rfqVendorId ? Number(rfqVendorId) : (rawRfq.rfq_vendor_id as number | undefined)
+                    } as RFQHeader;
+                    
+                    setInitialRFQForCreate(header);
+                    setSelectedVqId(null);
+                    setIsViewMode(false);
+                    setIsVqModalOpen(true);
                 }).catch((err: Error) => {
                     logger.error('[VQListPage] Failed to fetch RFQ for auto-creation:', err);
-                    setModalConfig({ isOpen: true, isViewMode: false, vqId: null }); // Open anyway, just empty
+                    // Open anyway, fallback to empty/manual
+                    setSelectedVqId(null);
+                    setIsViewMode(false);
+                    setIsVqModalOpen(true);
                 });
             } else {
-                setModalConfig({ isOpen: true, isViewMode: false, vqId: null });
+                setSelectedVqId(null);
+                setIsViewMode(false);
+                setIsVqModalOpen(true);
             }
             
-            // Clear the creation params from URL to prevent reopening on refresh
+            // ✅ Clean URL immediately after state hydration to prevent redundant triggers
             setSearchParams((prev) => {
                 const next = new URLSearchParams(prev);
                 next.delete('create');
                 next.delete('rfq_id');
                 next.delete('vendor_id');
+                next.delete('rfq_vendor_id');
                 return next;
             }, { replace: true });
         }
-    }, [rfqNoFilter, setFilters, searchParams, modalConfig.isOpen, setSearchParams]);
+    }, [rfqNoFilter, setFilters, searchParams, isVqModalOpen, setSearchParams, setInitialRFQForCreate]);
 
     // Clear the URL filter (React Router — no hard refresh)
     const handleClearRfqFilter = useCallback(() => {
@@ -197,37 +214,70 @@ export default function VQListPage() {
         placeholderData: keepPreviousData,
     });
 
+    const { data: waitingVqData, isLoading: isWaitingVqLoading, refetch: refetchWaitingVq } = useQuery({
+        queryKey: ['waiting-for-vq-vendor', filters.page, filters.limit],
+        queryFn: () => VQService.getWaitingForVQ({ page: filters.page, limit: filters.limit }),
+        enabled: activeTab === 'WAITING_VQ' || true,
+        staleTime: 1 * 60 * 1000,
+    });
+
+    const { data: waitingRfqData, isLoading: isWaitingRfqLoading, refetch: refetchWaitingRfq } = useQuery({
+        queryKey: ['waiting-for-rfq-vendor', filters.page, filters.limit],
+        queryFn: () => VQService.getWaitingForRFQ({ page: filters.page, limit: filters.limit }),
+        enabled: activeTab === 'WAITING_RFQ' || true,
+        staleTime: 1 * 60 * 1000,
+    });
+
     // ==========================================================================
     // DATA HYDRATION: Master Data for Lookups
     // ==========================================================================
     
     // Removed previous bulk hydration and lookup maps to use Micro-Components pattern.
 
+    const totalAmount = useMemo(() => {
+        return (data?.data ?? []).reduce((sum, item) => {
+            // Include both DRAFT and RECORDED in total calculation
+            if (!['RECORDED', 'DRAFT'].includes(item.status)) return sum;
+            const amount = Number(item.base_total_amount);
+            return isNaN(amount) ? sum : sum + amount;
+        }, 0);
+    }, [data?.data]);
+
     const handleVqSuccess = useCallback(() => {
-        // 1. Refresh main VQ List
+        // 1. Refresh main list and pending queues
         refetch();
+        refetchWaitingVq();
+        refetchWaitingRfq();
+        queryClient.invalidateQueries({ queryKey: ['waiting-for-vq-vendor'] });
+        queryClient.invalidateQueries({ queryKey: ['waiting-for-rfq-vendor'] });
         
-        // 2. Refresh RFQ Tracking Dashboard if open
+        // 2. Refresh RFQ Tracking if open
         if (selectedRfqId) {
             queryClient.invalidateQueries({ queryKey: ['rfq-vendors', selectedRfqId] });
         }
 
-        // 3. Close the View Modal
-        setModalConfig(prev => ({ ...prev, vqId: null, isOpen: false }));
-    }, [refetch, selectedRfqId, queryClient]);
-
-    // handleFilterChange is provided by useTableFilters directly — no local wrapper needed
+        // 3. Reset Modal State
+        setIsVqModalOpen(false);
+        setSelectedVqId(null);
+    }, [refetch, refetchWaitingVq, refetchWaitingRfq, selectedRfqId, queryClient]);
 
     const handleOpenView = (vqId: number) => {
-        setModalConfig({ isOpen: true, isViewMode: true, vqId });
+        setSelectedVqId(vqId);
+        setIsViewMode(true);
+        setIsVqModalOpen(true);
     };
 
     const handleOpenEdit = (vqId: number) => {
-        setModalConfig({ isOpen: true, isViewMode: false, vqId });
+        setSelectedVqId(vqId);
+        setIsViewMode(false);
+        setIsVqModalOpen(true);
     };
 
     const handleOpenCreate = () => {
-        setModalConfig({ isOpen: true, isViewMode: false, vqId: null });
+        setSelectedVqId(null);
+        setInitialRFQForCreate(null);
+        setIsViewMode(false);
+        setIsVqModalOpen(true);
     };
 
     const handleOpenTracking = (rfqId: number | null | undefined, rfqNo: string | null | undefined) => {
@@ -241,7 +291,8 @@ export default function VQListPage() {
     };
 
     const handleCloseModal = () => {
-        setModalConfig({ isOpen: false, isViewMode: false, vqId: null });
+        setIsVqModalOpen(false);
+        setSelectedVqId(null);
         setInitialRFQForCreate(null);
     };
 
@@ -437,21 +488,132 @@ export default function VQListPage() {
                 );
             },
             footer: () => {
-                 // Only sum RECORDED amounts for the grand total
-                 const total = (data?.data ?? []).reduce((sum, item) => {
-                    const amount = item.base_total_amount;
-                    return item.status === 'RECORDED' && amount ? sum + Number(amount) : sum;
-                 }, 0);
                  return (
                      <div className="text-right font-bold text-base text-emerald-600 dark:text-emerald-400 whitespace-nowrap pr-2">
-                         {total.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท
+                         {totalAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท
                      </div>
                  );
             },
             size: 140,
             enableSorting: false,
         }),
-    ], [columnHelper, filters.page, filters.limit, data?.data]);
+    ], [columnHelper, filters.page, filters.limit, totalAmount]);
+
+    // ==========================================================================
+    // COLUMNS DEFINITION: Pending Queues
+    // ==========================================================================
+    // Ensure this helper stays stable outside the callback or just add it to the deps.
+    const pendingColumnHelper = useMemo(() => createColumnHelper<VQPendingQueueItem>(), []);
+
+    const getPendingColumns = useCallback((tab: 'WAITING_VQ' | 'WAITING_RFQ') => [
+        pendingColumnHelper.display({
+            id: 'index',
+            header: () => <div className="text-center w-full">ลำดับ</div>,
+            cell: (info) => <div className="text-center">{info.row.index + 1 + (filters.page - 1) * filters.limit}</div>,
+            size: 60,
+            enableSorting: false,
+        }),
+        pendingColumnHelper.accessor('created_at', {
+            header: () => <div className="text-center w-full">วันที่สร้าง</div>,
+            cell: (info) => (
+                <div className="text-center text-gray-600 dark:text-gray-300 font-medium whitespace-nowrap">
+                    {formatThaiDate(info.getValue())}
+                </div>
+            ),
+            size: 110,
+        }),
+        pendingColumnHelper.accessor('vendor_name', {
+            header: 'ผู้ขาย',
+            cell: (info) => (
+                <div className="text-gray-900 dark:text-gray-100 font-medium truncate" title={info.getValue()}>
+                    {info.getValue() || '-'}
+                </div>
+            ),
+            size: 180,
+        }),
+        pendingColumnHelper.accessor('rfq_no', {
+            header: 'เอกสารอ้างอิง',
+            cell: (info) => {
+                const item = info.row.original;
+                return (
+                    <div className="flex flex-col py-1 min-w-0">
+                        <span className="text-purple-600 dark:text-purple-400 font-semibold leading-tight truncate">
+                            {item.rfq_no || '-'}
+                        </span>
+                        {item.pr_no && (
+                            <span className="text-[10px] text-gray-400 dark:text-gray-500 truncate leading-tight mt-1">
+                                Ref: {item.pr_no}
+                            </span>
+                        )}
+                    </div>
+                );
+            },
+            size: 140,
+        }),
+        pendingColumnHelper.accessor('status', {
+            header: () => <div className="text-center w-full">สถานะ</div>,
+            cell: (info) => {
+                const status = info.getValue() as string;
+                const mapped = RFQ_VENDOR_STATUS_MAP[status] || { label: status, color: 'default' };
+                
+                let colorClass = "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700";
+                if (mapped.color === 'processing') colorClass = "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/40 dark:text-blue-400 dark:border-blue-800";
+                if (mapped.color === 'warning') colorClass = "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/40 dark:text-amber-400 dark:border-amber-800";
+                if (mapped.color === 'error') colorClass = "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/40 dark:text-red-400 dark:border-red-800";
+                if (mapped.color === 'success') colorClass = "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-400 dark:border-emerald-800";
+
+                return (
+                    <div className="flex justify-center">
+                        <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold border whitespace-nowrap ${colorClass}`}>
+                            {mapped.label}
+                        </span>
+                    </div>
+                );
+            },
+            size: 100,
+        }),
+        pendingColumnHelper.display({
+            id: 'actions',
+            header: () => <div className="text-center w-full">จัดการ</div>,
+            cell: ({ row }) => {
+                const item = row.original;
+                if (tab === 'WAITING_VQ') {
+                    return (
+                        <div className="flex justify-center">
+                            <button 
+                                onClick={() => {
+                                        // Refactor: Open modal directly via state, avoid URL param pollution
+                                        const rfqInit: Partial<RFQHeader> = {
+                                            rfq_id: item.rfq_id,
+                                            rfq_no: item.rfq_no,
+                                        };
+                                        
+                                        setInitialRFQForCreate({ 
+                                            ...rfqInit, 
+                                            vendor_id: item.vendor_id, 
+                                            rfq_vendor_id: item.rfq_vendor_id 
+                                        } as RFQHeader);
+                                        
+                                        setSelectedVqId(null);
+                                        setIsViewMode(false);
+                                        setIsVqModalOpen(true);
+                                }}
+                                className="flex items-center gap-1 pl-1.5 pr-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap"
+                            >
+                                <Plus size={12} strokeWidth={2.5} />
+                                <span>สร้างใบเสนอราคา</span>
+                            </button>
+                        </div>
+                    );
+                }
+                return <div className="text-center text-gray-400 font-bold">-</div>;
+            },
+            size: 140,
+        }),
+    ], [filters.page, filters.limit, setInitialRFQForCreate, setIsVqModalOpen, setSelectedVqId, setIsViewMode, pendingColumnHelper]);
+
+    const pendingVqColumns = useMemo(() => getPendingColumns('WAITING_VQ'), [getPendingColumns]);
+    const pendingRfqColumns = useMemo(() => getPendingColumns('WAITING_RFQ'), [getPendingColumns]);
 
 
 
@@ -504,10 +666,17 @@ export default function VQListPage() {
                                 <FilterField
                                     label="สถานะ"
                                     type="select"
-                                    options={VQ_STATUS_OPTIONS}
+                                    options={
+                                        activeTab === 'ALL'
+                                            ? Object.entries(VQ_STATUS_MAP).map(([val, {label}]) => ({ value: val, label }))
+                                            : activeTab === 'WAITING_RFQ'
+                                                ? Object.entries(RFQ_VENDOR_STATUS_MAP).filter(([val]) => val === 'ALL' || val === 'NEW' || val === 'WAITING').map(([val, {label}]) => ({ value: val, label }))
+                                                : [{ value: 'ALL', label: 'ทั้งหมด (ส่ง RFQ แล้ว)' }] // for WAITING_VQ it is implicitly SENT status
+                                    }
                                     value={localFilters.status || ''}
                                     onChange={(val) => handleFilterChange('status', val)}
                                     accentColor="blue"
+                                    disabled={activeTab === 'WAITING_VQ'}
                                 />
                                 <FilterField
                                     label="วันที่เริ่มต้น"
@@ -531,7 +700,7 @@ export default function VQListPage() {
                                 <button
                                     type="button"
                                     onClick={resetFilters}
-                                    className="h-10 px-6 flex items-center justify-center text-base font-medium rounded-md transition-colors bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 dark:bg-white dark:text-slate-900 dark:border-transparent dark:hover:bg-slate-200"
+                                    className="h-10 px-6 flex items-center justify-center text-base font-medium rounded-md transition-colors bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 dark:bg-white dark:text-slate-900 dark:border-transparent dark:hover:bg-slate-200 whitespace-nowrap"
                                 >
                                     ล้างค่า
                                 </button>
@@ -539,7 +708,7 @@ export default function VQListPage() {
                                 {/* 2. ค้นหา (Search) */}
                                 <button
                                     type="submit"
-                                    className="h-10 px-6 flex items-center justify-center gap-2 text-base font-medium rounded-md transition-colors bg-blue-600 text-white hover:bg-blue-700"
+                                    className="h-10 px-6 flex items-center justify-center gap-2 text-base font-medium rounded-md transition-colors bg-blue-600 text-white hover:bg-blue-700 whitespace-nowrap"
                                 >
                                     <Search className="w-4 h-4" /> ค้นหา
                                 </button>
@@ -558,8 +727,52 @@ export default function VQListPage() {
                 }
             >
                 <div className="h-full flex flex-col">
+                    {/* ===== Tabs Header ===== */}
+                    <div className="flex space-x-1 border-b border-gray-200 dark:border-gray-700 mb-4 px-2">
+                        <button
+                            onClick={() => { setActiveTab('ALL'); resetFilters(); }}
+                            className={`flex items-center gap-2 py-2.5 px-4 text-sm font-medium border-b-2 transition-colors ${
+                                activeTab === 'ALL'
+                                    ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                            }`}
+                        >
+                            ใบเสนอราคาทั้งหมด
+                        </button>
+                        <button
+                            onClick={() => { setActiveTab('WAITING_VQ'); resetFilters(); }}
+                            className={`flex justify-between items-center py-2.5 px-4 text-sm font-medium border-b-2 transition-colors ${
+                                activeTab === 'WAITING_VQ'
+                                    ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                            }`}
+                        >
+                            รอผู้ขายตอบกลับ (VQ) 
+                            {waitingVqData && waitingVqData.total > 0 && (
+                                <span className="inline-flex items-center justify-center w-5 h-5 ml-2 text-[10px] font-bold text-white bg-red-500 rounded-full">
+                                    {waitingVqData.total}
+                                </span>
+                            )}
+                        </button>
+                        <button
+                            onClick={() => { setActiveTab('WAITING_RFQ'); resetFilters(); }}
+                            className={`flex justify-between items-center py-2.5 px-4 text-sm font-medium border-b-2 transition-colors ${
+                                activeTab === 'WAITING_RFQ'
+                                    ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                            }`}
+                        >
+                            รอดำเนินการ (RFQ)
+                            {waitingRfqData && waitingRfqData.total > 0 && (
+                                <span className="inline-flex items-center justify-center w-5 h-5 ml-2 text-[10px] font-bold text-gray-600 bg-gray-200 dark:text-gray-300 dark:bg-gray-700 rounded-full">
+                                    {waitingRfqData.total}
+                                </span>
+                            )}
+                        </button>
+                    </div>
+
                     {/* ===== Active Filter Banner (shows only when filtered via URL param) ===== */}
-                    {rfqNoFilter && (
+                    {activeTab === 'ALL' && rfqNoFilter && (
                         <div className="flex items-center justify-between gap-3 px-4 py-2.5 mb-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-lg">
                             <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300">
                                 <Filter size={15} className="text-blue-500 shrink-0" />
@@ -580,32 +793,73 @@ export default function VQListPage() {
 
                     {/* Desktop View: Table */}
                     <div className="hidden md:block flex-1 overflow-hidden">
-                        <SmartTable
-                            data={data?.data ?? []}
-                            columns={columns as ColumnDef<VQListItem>[]}
-                            isLoading={isLoading}
-                            pagination={{
-                                pageIndex: filters.page,
-                                pageSize: filters.limit,
-                                totalCount: data?.total ?? 0,
-                                onPageChange: handlePageChange,
-                                onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 })
-                            }}
-                            sortConfig={sortConfig}
-                            onSortChange={handleSortChange}
-                            rowIdField="vq_header_id"
-                            className="flex-1"
-                            showFooter={true}
-                        />
+                        {activeTab === 'ALL' && (
+                            <SmartTable
+                                data={data?.data ?? []}
+                                columns={columns as ColumnDef<VQListItem>[]}
+                                isLoading={isLoading}
+                                pagination={{
+                                    pageIndex: filters.page,
+                                    pageSize: filters.limit,
+                                    totalCount: data?.total ?? 0,
+                                    onPageChange: handlePageChange,
+                                    onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 })
+                                }}
+                                sortConfig={sortConfig}
+                                onSortChange={handleSortChange}
+                                rowIdField="vq_header_id"
+                                className="flex-1"
+                                showFooter={true}
+                            />
+                        )}
+                        {activeTab === 'WAITING_VQ' && (
+                            <SmartTable
+                                // 🔥 TODO: Move filter logic to backend API (Pass status or has_vq flag)
+                                // Only show RFQs that have been SENT to vendors
+                                data={(waitingVqData?.data ?? []).filter(item => item.status === 'SENT')}
+                                columns={pendingVqColumns as ColumnDef<VQPendingQueueItem>[]}
+                                isLoading={isWaitingVqLoading}
+                                pagination={{
+                                    pageIndex: filters.page,
+                                    pageSize: filters.limit,
+                                    totalCount: waitingVqData?.total ?? 0,
+                                    onPageChange: handlePageChange,
+                                    onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 })
+                                }}
+                                rowIdField="rfq_vendor_id"
+                                className="flex-1"
+                                showFooter={false}
+                            />
+                        )}
+                        {activeTab === 'WAITING_RFQ' && (
+                            <SmartTable
+                                // 🔥 TODO: Move filter logic to backend API (Pass status or has_vq flag)
+                                // RFQ Tab should only show items that haven't been sent or recorded yet.
+                                data={(waitingRfqData?.data ?? []).filter(item => !item.vq_no && item.status !== 'SENT' && item.status !== 'COMPLETED')}
+                                columns={pendingRfqColumns as ColumnDef<VQPendingQueueItem>[]}
+                                isLoading={isWaitingRfqLoading}
+                                pagination={{
+                                    pageIndex: filters.page,
+                                    pageSize: filters.limit,
+                                    totalCount: waitingRfqData?.total ?? 0,
+                                    onPageChange: handlePageChange,
+                                    onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 })
+                                }}
+                                rowIdField="rfq_vendor_id"
+                                className="flex-1"
+                                showFooter={false}
+                            />
+                        )}
                     </div>
 
                     {/* Mobile View: Cards (shared MobileListContainer + MobileListCard) */}
-                    <MobileListContainer
-                        isLoading={isLoading}
-                        isEmpty={!data?.data?.length}
-                        pagination={data?.total ? { page: filters.page, total: data.total, limit: filters.limit, onPageChange: handlePageChange } : undefined}
-                    >
-                        {(data?.data ?? []).map((item) => {
+                    {activeTab === 'ALL' && (
+                        <MobileListContainer
+                            isLoading={isLoading}
+                            isEmpty={!data?.data?.length}
+                            pagination={data?.total ? { page: filters.page, total: data.total, limit: filters.limit, onPageChange: handlePageChange } : undefined}
+                        >
+                            {(data?.data ?? []).map((item) => {
                             const vendorDisplay = item.vendor_name || item.vendor?.vendor_name || (item.vendor_id ? <VendorNameDisplay vendorId={item.vendor_id} /> : '-');
                             
                             const rfqDisplay = item.rfq_no || item.rfq?.rfq_no || (item.rfq_id ? <RFQNoDisplay rfqId={item.rfq_id} /> : '-');
@@ -665,20 +919,82 @@ export default function VQListPage() {
                                 />
                             );
                         })}
-                    </MobileListContainer>
+                        </MobileListContainer>
+                    )}
+                    {(activeTab === 'WAITING_VQ' || activeTab === 'WAITING_RFQ') && (() => {
+                        const targetData = activeTab === 'WAITING_VQ' ? waitingVqData : waitingRfqData;
+                        const targetLoading = activeTab === 'WAITING_VQ' ? isWaitingVqLoading : isWaitingRfqLoading;
+                        
+                        // 🔥 Frontend Filter (Temporary)
+                        const filteredData = (targetData?.data ?? []).filter(item => {
+                            if (activeTab === 'WAITING_VQ') return item.status === 'SENT';
+                            return !item.vq_no && item.status !== 'SENT' && item.status !== 'COMPLETED';
+                        });
+
+                        return (
+                            <MobileListContainer
+                                isLoading={targetLoading}
+                                isEmpty={!filteredData.length}
+                                pagination={targetData?.total ? { page: filters.page, total: targetData.total, limit: filters.limit, onPageChange: handlePageChange } : undefined}
+                            >
+                                {filteredData.map((item) => (
+                                    <MobileListCard
+                                        key={item.rfq_vendor_id}
+                                        title={<span className="text-gray-400 dark:text-slate-500 italic text-base">รอดำเนินการ</span>}
+                                        subtitle={formatThaiDate(item.created_at)}
+                                        statusBadge={
+                                            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200 whitespace-nowrap">
+                                                {item.status}
+                                            </span>
+                                        }
+                                        details={[
+                                            { label: 'ผู้ขาย:', value: item.vendor_name || '-' },
+                                            { label: 'RFQ อ้างอิง:', value: <span className="font-semibold text-purple-600 dark:text-purple-400">{item.rfq_no || '-'}</span> },
+                                            { label: 'PR อ้างอิง:', value: item.pr_no || '-' },
+                                        ]}
+                                        actions={
+                                            activeTab === 'WAITING_VQ' && (
+                                                <button
+                                                    onClick={() => {
+                                                        const rfqInit: Partial<RFQHeader> = {
+                                                            rfq_id: item.rfq_id,
+                                                            rfq_no: item.rfq_no,
+                                                        };
+                                                        
+                                                        setInitialRFQForCreate({ 
+                                                            ...rfqInit, 
+                                                            vendor_id: item.vendor_id, 
+                                                            rfq_vendor_id: item.rfq_vendor_id 
+                                                        } as RFQHeader);
+                                                        
+                                                        setSelectedVqId(null);
+                                                        setIsViewMode(false);
+                                                        setIsVqModalOpen(true);
+                                                    }}
+                                                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1 mt-2 shadow-sm"
+                                                >
+                                                    <Plus size={14} strokeWidth={2.5} /> สร้างใบเสนอราคา
+                                                </button>
+                                            )
+                                        }
+                                    />
+                                ))}
+                            </MobileListContainer>
+                        );
+                    })()}
                 </div>
 
             </PageListLayout>
 
-             {/* Modals - Only mount when open */}
-            {modalConfig.isOpen && (
+             {/* Modals - Only mount when open and positioned outside layout */}
+            {isVqModalOpen && (
                 <VQFormModal 
-                    isOpen={modalConfig.isOpen}
+                    isOpen={isVqModalOpen}
                     onClose={handleCloseModal}
                     onSuccess={handleVqSuccess}
                     initialRFQ={initialRFQForCreate}
-                    vqId={modalConfig.vqId}
-                    isViewMode={modalConfig.isViewMode}
+                    vqId={selectedVqId}
+                    isViewMode={isViewMode}
                 />
             )}
 

@@ -119,7 +119,7 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
                             <button
                                 type="button"
                                 onClick={onRequestSave}
-                                disabled={isSaving}
+                                disabled={isSaving || methods.formState.isSubmitting}
                                 className={`px-6 py-2 text-white rounded-md text-sm font-medium shadow-sm transition-colors disabled:opacity-50 ${isInviteMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-teal-600 hover:bg-teal-700'}`}
                             >
                                 {isInviteMode ? 'บันทึกผู้ขายที่ส่งเพิ่ม' : 'บันทึก'}
@@ -180,6 +180,7 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
                 isOpen={isVendorModalOpen}
                 onClose={() => setIsVendorModalOpen(false)}
                 onSelect={handleVendorSelect}
+                excludeIds={formData.vendors?.map(v => Number(v.vendor_id)).filter(id => !isNaN(id))}
             />
 
             {/* PR Selection Modal */}

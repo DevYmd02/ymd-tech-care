@@ -21,7 +21,6 @@ import { usePRMasterData, type MappedOption } from './usePRMasterData';
 import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
 import type { WarehouseListItem } from '@/modules/master-data/types/master-data-types';
 import { usePRActions } from './usePRActions';
-import { useDebounce } from '@/shared/hooks/useDebounce';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { usePRCalculations } from './usePRCalculations';
@@ -56,8 +55,6 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
     masterItems,
     masterUnits,
     isLoading: isMasterDataLoading,
-    searchProducts,
-    isSearchingProducts 
   } = usePRMasterData();
 
 
@@ -119,8 +116,6 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
   const prevCurrencyTypeId = useRef<string | undefined>(getPRDefaultFormValues(user).pr_quote_currency_code);
 
   const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showAllItems, setShowAllItems] = useState(false);
 
   const formMethods = useForm<PRFormData>({
     defaultValues: getPRDefaultFormValues(user),
@@ -520,7 +515,6 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
 
   const openProductSearch = (index: number) => {
     setActiveRowIndex(index);
-    setSearchTerm('');
     setIsProductModalOpen(true);
   };
   
@@ -594,16 +588,6 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
     }
     setIsProductModalOpen(false);
   };
-
-  const debouncedSearchTerm = useDebounce(searchTerm, 500);  // V-01: Bumped from 300ms for scalability
-  const selectedVendorId = watch('preferred_vendor_id');
-
-  useEffect(() => {
-    if (isProductModalOpen) {
-      // If showAllItems is true, we pass undefined to bypass the vendor filter in the backend mock
-      searchProducts(debouncedSearchTerm, showAllItems ? undefined : selectedVendorId);
-    }
-  }, [debouncedSearchTerm, selectedVendorId, isProductModalOpen, searchProducts, showAllItems]);
 
    useEffect(() => {
       if (isMasterDataLoading || !user?.employee?.branch_id || warehouses.length === 0) return;
@@ -933,12 +917,11 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
 
   return {
     isEditMode, lines, activeTab, setActiveTab,
-    isProductModalOpen, setIsProductModalOpen, searchTerm, setSearchTerm,
+    isProductModalOpen, setIsProductModalOpen,
     isWarehouseModalOpen, setIsWarehouseModalOpen,
     isLocationModalOpen, setIsLocationModalOpen, activeWarehouseId,
-    showAllItems, setShowAllItems,
     handleSubmit, setValue, watch, isSubmitting, isActionLoading, errors, handleFormError,
-    products, costCenters, projects, purchaseTaxOptions, currencies, isSearchingProducts,
+    products, costCenters, projects, purchaseTaxOptions, currencies,
     addLine, removeLine, clearLine, updateLine, handleClearLines,
     openProductSearch, openWarehouseSearch, openLocationSearch, selectProduct, selectWarehouse, selectLocation, handleVendorSelect, onSubmit, handleDelete, handleApprove,
     handleVoid, control, reset, formMethods, user, isApproving,
