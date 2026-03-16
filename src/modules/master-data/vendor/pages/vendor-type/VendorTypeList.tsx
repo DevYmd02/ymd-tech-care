@@ -40,12 +40,7 @@ export default function VendorTypeList() {
         setFilters, 
         handlePageChange,
         resetFilters
-    } = useTableFilters({
-        customParamKeys: {
-          search: 'type_code',
-          search2: 'type_name'
-        }
-    });
+    } = useTableFilters();
 
     const [allVendorTypes, setAllVendorTypes] = useState<VendorTypeMaster[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -56,15 +51,9 @@ export default function VendorTypeList() {
     const filterConfig: FilterFieldConfig<keyof typeof filters>[] = useMemo(() => [
         { 
             name: 'search', 
-            label: 'รหัสประเภทเจ้าหนี้', 
+            label: 'ค้นหา', 
             type: 'text', 
-            placeholder: 'กรอกรหัสประเภทเจ้าหนี้' 
-        },
-        { 
-            name: 'search2', 
-            label: 'ชื่อประเภทเจ้าหนี้', 
-            type: 'text', 
-            placeholder: 'กรอกชื่อประเภทเจ้าหนี้' 
+            placeholder: 'กรอกรหัสหรือชื่อประเภทเจ้าหนี้' 
         },
         { 
             name: 'status', 
@@ -96,22 +85,20 @@ export default function VendorTypeList() {
         let result = [...allVendorTypes];
 
         // Filter by Status
-        if (filters.status !== 'ALL') {
+        if (filters.status && filters.status !== 'ALL') {
             result = result.filter(vt => 
                 filters.status === 'ACTIVE' ? vt.is_active : !vt.is_active
             );
         }
 
-        // Filter by Code
+        // Filter by Search (Code or Name)
         if (filters.search) {
             const term = filters.search.toLowerCase();
-            result = result.filter(vt => vt.vendor_type_code.toLowerCase().includes(term));
-        }
-
-        // Filter by Name
-        if (filters.search2) {
-            const term = filters.search2.toLowerCase();
-            result = result.filter(vt => vt.vendor_type_name.toLowerCase().includes(term));
+            result = result.filter(vt => 
+                vt.vendor_type_code.toLowerCase().includes(term) ||
+                vt.vendor_type_name.toLowerCase().includes(term) ||
+                (vt.vendor_type_nameeng?.toLowerCase() || '').includes(term)
+            );
         }
 
         // Sort by Created Date Desc
@@ -270,6 +257,3 @@ export default function VendorTypeList() {
         </div>
     );
 }
-
-
-

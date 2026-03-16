@@ -64,6 +64,7 @@ export function VendorFormModal(props: VendorFormModalProps) {
         clearForm,
         vendorTypeOptions,
         vendorGroupOptions,
+        currencyOptions,
         isLoadingMasterData
     } = useVendorForm({ ...props, toast });
 
@@ -128,6 +129,7 @@ export function VendorFormModal(props: VendorFormModalProps) {
                     errors={errors}
                     vendorTypeOptions={vendorTypeOptions}
                     vendorGroupOptions={vendorGroupOptions}
+                    currencyOptions={currencyOptions}
                     isLoading={isLoadingMasterData}
                 />
 
@@ -179,4 +181,3 @@ export function VendorFormModal(props: VendorFormModalProps) {
         </DialogFormLayout>
     );
 }
-

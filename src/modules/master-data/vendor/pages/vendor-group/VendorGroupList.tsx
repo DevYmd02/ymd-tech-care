@@ -40,9 +40,7 @@ export default function VendorGroupList() {
         setFilters, 
         handlePageChange,
         resetFilters
-    } = useTableFilters({ 
-        customParamKeys: { search: 'code', search2: 'name' } 
-    });
+    } = useTableFilters();
 
     const [allVendorGroups, setAllVendorGroups] = useState<VendorGroupMaster[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -53,15 +51,9 @@ export default function VendorGroupList() {
     const filterConfig: FilterFieldConfig<keyof typeof filters>[] = useMemo(() => [
         { 
             name: 'search', 
-            label: 'รหัสกลุ่มเจ้าหนี้', 
+            label: 'ค้นหา', 
             type: 'text', 
-            placeholder: 'กรอกรหัสกลุ่มเจ้าหนี้' 
-        },
-        { 
-            name: 'search2', 
-            label: 'ชื่อกลุ่มเจ้าหนี้', 
-            type: 'text', 
-            placeholder: 'กรอกชื่อกลุ่มเจ้าหนี้' 
+            placeholder: 'กรอกรหัสหรือชื่อกลุ่มเจ้าหนี้' 
         },
         { 
             name: 'status', 
@@ -93,22 +85,20 @@ export default function VendorGroupList() {
         let result = [...allVendorGroups];
 
         // Filter by Status
-        if (filters.status !== 'ALL') {
+        if (filters.status && filters.status !== 'ALL') {
             result = result.filter(vg => 
                 filters.status === 'ACTIVE' ? vg.is_active : !vg.is_active
             );
         }
 
-        // Filter by Code
+        // Filter by Search
         if (filters.search) {
             const term = filters.search.toLowerCase();
-            result = result.filter(vg => vg.vendor_group_code.toLowerCase().includes(term));
-        }
-
-        // Filter by Name
-        if (filters.search2) {
-            const term = filters.search2.toLowerCase();
-            result = result.filter(vg => vg.vendor_group_name.toLowerCase().includes(term));
+            result = result.filter(vg => 
+                vg.vendor_group_code.toLowerCase().includes(term) ||
+                vg.vendor_group_name.toLowerCase().includes(term) ||
+                (vg.vendor_group_nameeng?.toLowerCase() || '').includes(term)
+            );
         }
 
         // Sort by Created Date Desc
@@ -267,6 +257,3 @@ export default function VendorGroupList() {
         </div>
     );
 }
-
-
-

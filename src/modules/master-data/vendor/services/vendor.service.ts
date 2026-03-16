@@ -3,7 +3,6 @@ import type {
   VendorMaster,
   VendorListItem,
   VendorListResponse,
-  VendorCreateRequest,
   VendorResponse,
   VendorDropdownItem,
   VendorStatus,
@@ -16,6 +15,99 @@ import type { SuccessResponse } from '@/shared/types/api-response.types';
 
 // Local in-memory store for mocks (persists during session)
 let localVendorData: VendorMaster[] = [...MOCK_VENDORS];
+
+// 🔄 Helper function: Format payload to match the new backend JSON specification
+function mapVendorToApi(data: any): any {
+    const payload: any = {
+        vendor_code: data.vendor_code || data.vendorCode || '',
+        vendor_name: data.vendor_name || data.vendorNameTh || '',
+        vat_registration_no: data.vat_registration_no || data.tax_id || data.taxId || '',
+        is_vat_registered: Boolean(data.is_vat_registered ?? data.vatRegistered ?? false),
+        payment_term_days: Number(data.payment_term_days || data.paymentTerms || 0),
+        phone: data.phone || '',
+        email: data.email || '',
+        is_subject_to_wht: Boolean(data.is_subject_to_wht ?? data.whtRegistered ?? false),
+        is_active: data.is_active !== undefined ? Boolean(data.is_active) : true,
+
+        vendor_type_id: Number(data.vendor_type_id || data.vendorTypeId) || null,
+        vendor_group_id: Number(data.vendor_group_id || data.vendorGroupId) || null,
+        currency_id: Number(data.currency_id || data.currencyId) || null,
+    };
+
+    // Filter and Map Addresses (กรองเอาเฉพาะอันที่กรอกข้อมูลมาจริงๆ)
+    const rawAddresses = data.addresses || [];
+    payload.addresses = rawAddresses
+        .filter((a: any) => (a.address || '').trim() !== '')
+        .map((a: any, i: number) => ({
+            address: a.address || '',
+            sub_district: a.sub_district || a.subDistrict || '',
+            province: a.province || '',
+            district: a.district || '',
+            postal_code: String(a.postal_code || a.postalCode || ''),
+            is_default: Boolean(a.is_default ?? a.isMain ?? (i === 0)),
+            address_type: a.address_type || a.addressType || (i === 0 ? 'REGISTERED' : 'CONTACT'),
+            country: a.country || 'Thailand',
+            contact_person: a.contact_person || a.contactPerson || '',
+            phone: a.phone || '',
+            phone_extension: a.phone_extension || a.phoneExtension || '',
+            email: a.email || '',
+            is_active: Boolean(a.is_active ?? true)
+        }));
+
+    // Map Contacts (Handles both API mapped format or Frontend mapped format)
+    const contacts = [];
+    if (data.contacts && data.contacts.length > 0) {
+        contacts.push(...data.contacts.map((c: any) => ({
+            contact_name: c.contact_name || c.name || '',
+            email: c.email || '',
+            phone: c.phone || '',
+            mobile: c.mobile || '',
+            position: c.position || '',
+            is_primary: Boolean(c.is_primary ?? c.isMain ?? false)
+        })));
+    } else {
+        if ((data.contactName || '').trim() !== '') {
+            contacts.push({
+                contact_name: data.contactName,
+                email: data.email || '',
+                phone: data.phone || '',
+                mobile: data.mobile || '',
+                position: '',
+                is_primary: true
+            });
+        }
+        if (data.additionalContacts) {
+            contacts.push(...data.additionalContacts
+                .filter((c: any) => (c.name || '').trim() !== '')
+                .map((c: any) => ({
+                    contact_name: c.name || '',
+                    email: c.email || '',
+                    phone: c.phone || '',
+                    mobile: c.mobile || '',
+                    position: c.position || '',
+                    is_primary: Boolean(c.isMain ?? false)
+                }))
+            );
+        }
+    }
+    payload.contacts = contacts.filter((c: any) => c.contact_name);
+
+    // Map Bank Accounts
+    const banks = data.bank_accounts || data.bankAccounts || [];
+    payload.bank_accounts = banks
+        .filter((b: any) => (b.bank_name || b.bankName || b.account_no || b.accountNumber))
+        .map((b: any, i: number) => ({
+            bank_name: b.bank_name || b.bankName || '',
+            bank_branch: b.bank_branch || b.branchName || '',
+            account_no: b.account_no || b.accountNumber || '',
+            account_name: b.account_name || b.accountName || '',
+            account_type: b.account_type || b.accountType || 'SAVING',
+            swift_code: b.swift_code || b.swiftCode || '',
+            is_default: Boolean(b.is_default ?? b.isMain ?? (i === 0))
+        }));
+
+    return payload;
+}
 
 // Define Union Type for Legacy and Standard Responses - REMOVED (Trust Interceptor)
 
@@ -102,7 +194,7 @@ export const VendorService = {
     }
   },
 
-  create: async (data: VendorCreateRequest): Promise<VendorResponse> => {
+  create: async (data: any): Promise<VendorResponse> => {
     if (USE_MOCK) {
         logger.info('🎭 [Mock Mode] Creating Vendor', data);
         
@@ -125,7 +217,7 @@ export const VendorService = {
             
             // Map Relations
             // Map Relations
-            addresses: data.addresses.map((a, i) => ({
+            addresses: data.addresses.map((a: any, i: number) => ({
                 vendor_address_id: Math.floor(Math.random() * 10000),
                 vendor_id: newId,
                 address_type: a.address_type || (i === 0 ? 'REGISTERED' : 'CONTACT'),
@@ -142,7 +234,7 @@ export const VendorService = {
                 is_active: true
             })),
             
-            contacts: data.contacts.map((c) => ({
+            contacts: data.contacts.map((c: any) => ({
                 contact_id: Math.floor(Math.random() * 10000),
                 vendor_id: newId,
                 contact_name: c.contact_name || '',
@@ -153,7 +245,7 @@ export const VendorService = {
                 is_primary: c.is_primary || false
             })),
 
-            bank_accounts: data.bank_accounts.map((b) => ({
+            bank_accounts: data.bank_accounts.map((b: any) => ({
                 bank_account_id: Math.floor(Math.random() * 10000),
                 vendor_id: newId,
                 bank_name: b.bank_name || '',
@@ -184,16 +276,19 @@ export const VendorService = {
     }
 
     try {
-      return await api.post<VendorResponse>('/vendors', data);
-    } catch (error) {
+      // Map to exact payload needed by the new backend structure
+      const payload = mapVendorToApi(data);
+      const response = await api.post<any>('/vendors', payload);
+      return { success: true, data: response } as any;
+    } catch (error: any) {
       logger.error('[VendorService] create error:', error);
-      let message = 'เกิดข้อผิดพลาดในการสร้าง Vendor';
-      if (error instanceof Error) message = error.message;
-      return { success: false, message };
+      const msg = error?.response?.data?.message || error?.response?.data?.error || error?.message || 'เกิดข้อผิดพลาดในการสร้าง Vendor';
+      const finalMsg = Array.isArray(msg) ? msg.join(', ') : msg;
+      return { success: false, message: finalMsg };
     }
   },
 
-  update: async (vendorId: number, data: Partial<VendorCreateRequest>): Promise<VendorResponse> => {
+  update: async (vendorId: number, data: any): Promise<VendorResponse> => {
     if (USE_MOCK) {
         const index = localVendorData.findIndex(v => v.vendor_id === vendorId);
         if (index !== -1) {
@@ -210,10 +305,16 @@ export const VendorService = {
     }
 
     try {
-      return await api.put<VendorResponse>(`/vendors/${vendorId}`, data);
-    } catch (error) {
+      // Only transform if it's a full update payload, ignore if it's a simple status toggle
+      const isFullUpdate = data.vendor_name || data.vendorNameTh || data.vendor_code || data.vendorCode;
+      const payload = isFullUpdate ? mapVendorToApi(data) : data;
+      const response = await api.patch<any>(`/vendors/${vendorId}`, payload);
+      return { success: true, data: response } as any;
+    } catch (error: any) {
       logger.error('[VendorService] update error:', error);
-      return { success: false, message: 'เกิดข้อผิดพลาดในการอัปเดต Vendor' };
+      const msg = error?.response?.data?.message || error?.response?.data?.error || error?.message || 'เกิดข้อผิดพลาดในการอัปเดต Vendor';
+      const finalMsg = Array.isArray(msg) ? msg.join(', ') : msg;
+      return { success: false, message: finalMsg };
     }
   },
 
@@ -253,7 +354,8 @@ export const VendorService = {
         }
     }
     try {
-      return await api.post<VendorResponse>(`/vendors/${vendorId}/block`, { remark });
+      const response = await api.post<any>(`/vendors/${vendorId}/block`, { remark });
+      return { success: true, data: response } as any;
     } catch (error) {
       logger.error('[VendorService] block error:', error);
       return { success: false, message: 'เกิดข้อผิดพลาดในการ Block Vendor' };
@@ -262,7 +364,8 @@ export const VendorService = {
 
   unblock: async (vendorId: number): Promise<VendorResponse> => {
     try {
-      return await api.post<VendorResponse>(`/vendors/${vendorId}/unblock`);
+      const response = await api.post<any>(`/vendors/${vendorId}/unblock`);
+      return { success: true, data: response } as any;
     } catch (error) {
       logger.error('[VendorService] unblock error:', error);
       return { success: false, message: 'เกิดข้อผิดพลาดในการ Unblock Vendor' };
@@ -271,7 +374,8 @@ export const VendorService = {
 
   setOnHold: async (vendorId: number, onHold: boolean): Promise<VendorResponse> => {
     try {
-      return await api.post<VendorResponse>(`/vendors/${vendorId}/hold`, { on_hold: onHold });
+      const response = await api.post<any>(`/vendors/${vendorId}/hold`, { on_hold: onHold });
+      return { success: true, data: response } as any;
     } catch (error) {
       logger.error('[VendorService] setOnHold error:', error);
       return { success: false, message: 'เกิดข้อผิดพลาดในการเปลี่ยนสถานะ Hold' };
@@ -288,7 +392,8 @@ export const VendorService = {
         return { success: false, message: 'Vendor not found' };
     }
     try {
-        return await api.patch<VendorResponse>(`/vendors/${vendorId}/status`, { status });
+        const response = await api.patch<any>(`/vendors/${vendorId}/status`, { status });
+        return { success: true, data: response } as any;
     } catch (error) {
         logger.error('[VendorService] updateStatus error:', error);
         return { success: false, message: 'เกิดข้อผิดพลาดในการเปลี่ยนสถานะ' };

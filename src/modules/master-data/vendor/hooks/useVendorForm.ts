@@ -6,6 +6,7 @@ import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { VendorTypeService } from '../services/vendor-type.service';
 import { VendorGroupService } from '../services/vendor-group.service';
+import { CurrencyService } from '@/modules/master-data/currency/services/currency.service';
 import type { 
     VendorFormData,
     VendorBankAccount,
@@ -15,8 +16,7 @@ import type {
 } from '../types/vendor-types';
 import { 
     initialVendorFormData, 
-    toVendorFormData as mapToFormData, 
-    toVendorCreateRequest,
+    toVendorFormData as mapToFormData
 } from '../types/vendor-types';
 import { logger } from '@/shared/utils/logger';
 import { VendorSchema, type VendorSchemaType } from '../types/vendor-schemas';
@@ -81,6 +81,12 @@ export function useVendorForm({
         staleTime: 1000 * 60 * 5 // 5 minutes cache
     });
 
+    const { data: currenciesData, isLoading: isLoadingCurrency } = useQuery({
+        queryKey: ['currencies'],
+        queryFn: () => CurrencyService.getAll(),
+        staleTime: 1000 * 60 * 5
+    });
+
     const vendorTypeOptions = vendorTypesData?.items.map(item => ({
         label: item.vendor_type_nameeng 
                ? `${item.vendor_type_name} (${item.vendor_type_nameeng})` 
@@ -93,7 +99,12 @@ export function useVendorForm({
         value: item.vendor_group_id
     })) || [];
 
-    const isLoadingMasterData = isLoadingVT || isLoadingVG;
+    const currencyOptions = currenciesData?.items.map((item: any) => ({
+        label: `${item.code} - ${item.name_th}`,
+        value: item.id
+    })) || [];
+
+    const isLoadingMasterData = isLoadingVT || isLoadingVG || isLoadingCurrency;
 
     // Fetch/Reset data when modal opens
     useEffect(() => {
@@ -332,14 +343,13 @@ export function useVendorForm({
         if (!isConfirmed) return;
 
         try {
-            const request = toVendorCreateRequest(data);
             const targetId = vendorId || initialData?.vendor_id;
 
             let response;
             if (targetId) {
-                response = await VendorService.update(targetId, request);
+                response = await VendorService.update(targetId, data);
             } else {
-                response = await VendorService.create(request);
+                response = await VendorService.create(data);
             }
 
             if (response.success) {
@@ -356,7 +366,8 @@ export function useVendorForm({
                 onSuccess?.();
                 onClose();
             } else {
-                throw new Error(response.message || 'บันทึกไม่สำเร็จ');
+                const errorMsg = Array.isArray(response.message) ? response.message.join(', ') : (response.message || 'บันทึกไม่สำเร็จ');
+                throw new Error(errorMsg);
             }
 
         } catch (error: unknown) {
@@ -492,6 +503,7 @@ export function useVendorForm({
         // Master Data
         vendorTypeOptions,
         vendorGroupOptions,
+        currencyOptions,
         isLoadingMasterData
     };
 }

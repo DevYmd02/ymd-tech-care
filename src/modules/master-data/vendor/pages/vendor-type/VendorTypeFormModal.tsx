@@ -8,7 +8,7 @@ import { useEffect } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Tag, Save, X } from 'lucide-react';
+import { Tag, Save, X, RotateCcw } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
 import { logger } from '@/shared/utils/logger';
@@ -19,15 +19,17 @@ import { VendorTypeService } from '@/modules/master-data/vendor/services/vendor-
 // ====================================================================================
 
 const vendorTypeSchema = z.object({
-    typeCode: z.string()
+    vendor_type_code: z.string()
         .min(1, 'กรุณากรอกรหัสประเภทเจ้าหนี้')
         .max(20, 'รหัสประเภทเจ้าหนี้ต้องไม่เกิน 20 ตัวอักษร'),
-    typeName: z.string()
+    vendor_type_name: z.string()
         .min(1, 'กรุณากรอกชื่อประเภทเจ้าหนี้ (ไทย)')
         .max(200, 'ชื่อประเภทเจ้าหนี้ต้องไม่เกิน 200 ตัวอักษร'),
-    typeNameEn: z.string()
-        .max(200, 'ชื่อประเภทเจ้าหนี้ (Eng) ต้องไม่เกิน 200 ตัวอักษร'),
-    isActive: z.boolean(),
+    vendor_type_nameeng: z.string()
+        .max(200, 'ชื่อประเภทเจ้าหนี้ (Eng) ต้องไม่เกิน 200 ตัวอักษร')
+        .optional()
+        .or(z.literal('')),
+    is_active: z.boolean(),
 });
 
 type VendorTypeFormValues = z.infer<typeof vendorTypeSchema>;
@@ -58,14 +60,23 @@ export function VendorTypeFormModal({ isOpen, onClose, editId, onSuccess }: Prop
     } = useForm<VendorTypeFormValues>({
         resolver: zodResolver(vendorTypeSchema),
         defaultValues: {
-            typeCode: '',
-            typeName: '',
-            typeNameEn: '',
-            isActive: true
+            vendor_type_code: '',
+            vendor_type_name: '',
+            vendor_type_nameeng: '',
+            is_active: true
         }
     });
 
-    const isActive = useWatch({ control, name: 'isActive' });
+    const isActive = useWatch({ control, name: 'is_active' });
+
+    const clearForm = () => {
+        reset({
+            vendor_type_code: '',
+            vendor_type_name: '',
+            vendor_type_nameeng: '',
+            is_active: true
+        });
+    };
 
     // Reset/Load Data
     useEffect(() => {
@@ -74,31 +85,33 @@ export function VendorTypeFormModal({ isOpen, onClose, editId, onSuccess }: Prop
                 VendorTypeService.getById(editId).then(existing => {
                     if (existing) {
                         reset({
-                            typeCode: existing.vendor_type_code,
-                            typeName: existing.vendor_type_name,
-                            typeNameEn: existing.vendor_type_nameeng || '',
-                            isActive: existing.is_active
+                            vendor_type_code: existing.vendor_type_code || '',
+                            vendor_type_name: existing.vendor_type_name || '',
+                            vendor_type_nameeng: existing.vendor_type_nameeng || '',
+                            is_active: existing.is_active ?? true
                         });
                     }
                 });
             } else {
-                reset({
-                    typeCode: '',
-                    typeName: '',
-                    typeNameEn: '',
-                    isActive: true
-                });
+                clearForm();
             }
         }
     }, [isOpen, editId, reset]);
 
     const onSubmit = async (data: VendorTypeFormValues) => {
         try {
+            const payload = {
+                vendor_type_code: data.vendor_type_code,
+                vendor_type_name: data.vendor_type_name,
+                vendor_type_nameeng: data.vendor_type_nameeng || '',
+                is_active: data.is_active
+            };
+
             let result;
             if (editId) {
-                result = await VendorTypeService.update(editId, data);
+                result = await VendorTypeService.update(editId, payload as any);
             } else {
-                result = await VendorTypeService.create(data);
+                result = await VendorTypeService.create(payload as any);
             }
 
             if (result.success) {
@@ -124,6 +137,14 @@ export function VendorTypeFormModal({ isOpen, onClose, editId, onSuccess }: Prop
         <div className="flex justify-end gap-3 p-4">
             <button
                 type="button"
+                onClick={clearForm}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg flex items-center gap-2 transition-colors border border-gray-300"
+            >
+                <RotateCcw size={18} />
+                ล้างฟอร์ม
+            </button>
+            <button
+                type="button"
                 onClick={onClose}
                 className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg flex items-center gap-2 transition-colors border border-gray-300"
             >
@@ -143,85 +164,124 @@ export function VendorTypeFormModal({ isOpen, onClose, editId, onSuccess }: Prop
     );
 
     return (
-        <DialogFormLayout
-            isOpen={isOpen}
-            onClose={onClose}
-            title={editId ? 'แก้ไขข้อมูลประเภทเจ้าหนี้' : 'เพิ่มประเภทเจ้าหนี้ใหม่'}
-            titleIcon={TitleIcon}
-            footer={FormFooter}
-        >
-            <div className="p-6 space-y-6">
-                
-                {/* Type Code */}
+    <DialogFormLayout
+        isOpen={isOpen}
+        onClose={onClose}
+        title={editId ? 'แก้ไขประเภทเจ้าหนี้' : 'เพิ่มประเภทเจ้าหนี้'}
+        titleIcon={TitleIcon}
+        footer={FormFooter}
+    >
+        <div className="p-6 space-y-6">
+
+            {/* Section Header */}
+            <div className="border-b pb-2">
+                <h3 className="text-sm font-semibold text-gray-700">
+                    ข้อมูลประเภทเจ้าหนี้
+                </h3>
+            </div>
+
+            {/* Form Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                {/* Vendor Type Code */}
                 <div>
                     <label className={styles.label}>
                         รหัสประเภทเจ้าหนี้ <span className="text-red-500">*</span>
                     </label>
+
                     <input
-                        {...register('typeCode')}
+                        {...register('vendor_type_code')}
                         type="text"
-                        placeholder="กรอกรหัสประเภทเจ้าหนี้ (เช่น MFG, DIS)"
-                        className={`${styles.input} ${errors.typeCode ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        placeholder="เช่น MFG / DIS"
+                        className={`${styles.input} ${
+                            errors.vendor_type_code
+                                ? 'border-red-500 focus:ring-red-200'
+                                : ''
+                        }`}
                     />
-                    {errors.typeCode ? (
-                        <p className="text-red-500 text-xs mt-1">{errors.typeCode.message}</p>
+
+                    {errors.vendor_type_code ? (
+                        <p className="text-red-500 text-xs mt-1">
+                            {errors.vendor_type_code.message}
+                        </p>
                     ) : (
-                        <p className="text-gray-400 text-xs mt-1">varchar(20), UNIQUE - ต้องไม่ซ้ำ</p>
+                        <p className="text-gray-400 text-xs mt-1">
+                            varchar(20) - ต้องไม่ซ้ำ
+                        </p>
                     )}
                 </div>
 
-                {/* Type Name (Thai) */}
+                {/* Vendor Type Name TH */}
                 <div>
                     <label className={styles.label}>
                         ชื่อประเภทเจ้าหนี้ (ไทย) <span className="text-red-500">*</span>
                     </label>
+
                     <input
-                        {...register('typeName')}
+                        {...register('vendor_type_name')}
                         type="text"
-                        placeholder="กรอกชื่อประเภทเจ้าหนี้ (ไทย)"
-                        className={`${styles.input} ${errors.typeName ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        placeholder="ชื่อประเภทเจ้าหนี้"
+                        className={`${styles.input} ${
+                            errors.vendor_type_name
+                                ? 'border-red-500 focus:ring-red-200'
+                                : ''
+                        }`}
                     />
-                    {errors.typeName ? (
-                        <p className="text-red-500 text-xs mt-1">{errors.typeName.message}</p>
-                    ) : (
-                        <p className="text-gray-400 text-xs mt-1">varchar(200)</p>
+
+                    {errors.vendor_type_name && (
+                        <p className="text-red-500 text-xs mt-1">
+                            {errors.vendor_type_name.message}
+                        </p>
                     )}
                 </div>
 
-                {/* Type Name (English) */}
+                {/* Vendor Type Name ENG */}
                 <div>
                     <label className={styles.label}>
-                        ชื่อประเภทเจ้าหนี้ (EN)
+                        ชื่อประเภทเจ้าหนี้ (English)
                     </label>
+
                     <input
-                        {...register('typeNameEn')}
+                        {...register('vendor_type_nameeng')}
                         type="text"
-                        placeholder="กรอกชื่อประเภทเจ้าหนี้ (English)"
-                        className={`${styles.input} ${errors.typeNameEn ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        placeholder="Vendor Type Name"
+                        className={`${styles.input} ${
+                            errors.vendor_type_nameeng
+                                ? 'border-red-500 focus:ring-red-200'
+                                : ''
+                        }`}
                     />
-                    {errors.typeNameEn ? (
-                        <p className="text-red-500 text-xs mt-1">{errors.typeNameEn.message}</p>
-                    ) : (
-                        <p className="text-gray-400 text-xs mt-1">varchar(200)</p>
+
+                    {errors.vendor_type_nameeng && (
+                        <p className="text-red-500 text-xs mt-1">
+                            {errors.vendor_type_nameeng.message}
+                        </p>
                     )}
                 </div>
 
-                {/* Status - Dropdown Select */}
+                {/* Status */}
                 <div>
                     <label className={styles.label}>
-                        สถานะ <span className="text-red-500">*</span>
+                        สถานะ
                     </label>
-                    <select
-                        className={`${styles.input} cursor-pointer`}
-                        value={isActive ? 'true' : 'false'}
-                        onChange={(e) => setValue('isActive', e.target.value === 'true')}
-                    >
-                        <option value="true">ใช้งาน (Active)</option>
-                        <option value="false">ไม่ใช้งาน (Inactive)</option>
-                    </select>
+
+                    <div className="flex items-center gap-3 mt-2">
+                        <input
+                            type="checkbox"
+                            checked={isActive}
+                            onChange={(e) =>
+                                setValue('is_active', e.target.checked)
+                            }
+                            className="toggle toggle-primary"
+                        />
+
+                        <span className="text-sm text-gray-600">
+                            {isActive ? 'Active' : 'Inactive'}
+                        </span>
+                    </div>
                 </div>
             </div>
-        </DialogFormLayout>
-    );
+        </div>
+    </DialogFormLayout>
+);
 }
-

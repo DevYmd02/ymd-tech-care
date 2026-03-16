@@ -8,7 +8,7 @@ import { useEffect } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Users, Save, X } from 'lucide-react';
+import { Users, Save, X, RotateCcw } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
 import { logger } from '@/shared/utils/logger';
@@ -19,15 +19,17 @@ import { VendorGroupService } from '@/modules/master-data/vendor/services/vendor
 // ====================================================================================
 
 const vendorGroupSchema = z.object({
-    groupCode: z.string()
+    vendor_group_code: z.string()
         .min(1, 'กรุณากรอกรหัสกลุ่มเจ้าหนี้')
         .max(20, 'รหัสกลุ่มเจ้าหนี้ต้องไม่เกิน 20 ตัวอักษร'),
-    groupName: z.string()
+    vendor_group_name: z.string()
         .min(1, 'กรุณากรอกชื่อกลุ่มเจ้าหนี้ (ไทย)')
         .max(200, 'ชื่อกลุ่มเจ้าหนี้ต้องไม่เกิน 200 ตัวอักษร'),
-    groupNameEn: z.string()
-        .max(200, 'ชื่อกลุ่มเจ้าหนี้ (Eng) ต้องไม่เกิน 200 ตัวอักษร'),
-    isActive: z.boolean(),
+    vendor_group_nameeng: z.string()
+        .max(200, 'ชื่อกลุ่มเจ้าหนี้ (Eng) ต้องไม่เกิน 200 ตัวอักษร')
+        .optional()
+        .or(z.literal('')),
+    is_active: z.boolean(),
 });
 
 type VendorGroupFormValues = z.infer<typeof vendorGroupSchema>;
@@ -58,14 +60,23 @@ export function VendorGroupFormModal({ isOpen, onClose, editId, onSuccess }: Pro
     } = useForm<VendorGroupFormValues>({
         resolver: zodResolver(vendorGroupSchema),
         defaultValues: {
-            groupCode: '',
-            groupName: '',
-            groupNameEn: '',
-            isActive: true
+            vendor_group_code: '',
+            vendor_group_name: '',
+            vendor_group_nameeng: '',
+            is_active: true
         }
     });
 
-    const isActive = useWatch({ control, name: 'isActive' });
+    const isActive = useWatch({ control, name: 'is_active' });
+
+    const clearForm = () => {
+        reset({
+            vendor_group_code: '',
+            vendor_group_name: '',
+            vendor_group_nameeng: '',
+            is_active: true
+        });
+    };
 
     // Reset/Load Data
     useEffect(() => {
@@ -74,31 +85,33 @@ export function VendorGroupFormModal({ isOpen, onClose, editId, onSuccess }: Pro
                 VendorGroupService.getById(editId).then(existing => {
                     if (existing) {
                         reset({
-                            groupCode: existing.vendor_group_code,
-                            groupName: existing.vendor_group_name,
-                            groupNameEn: existing.vendor_group_nameeng || '',
-                            isActive: existing.is_active
+                            vendor_group_code: existing.vendor_group_code || '',
+                            vendor_group_name: existing.vendor_group_name || '',
+                            vendor_group_nameeng: existing.vendor_group_nameeng || '',
+                            is_active: existing.is_active ?? true
                         });
                     }
                 });
             } else {
-                reset({
-                    groupCode: '',
-                    groupName: '',
-                    groupNameEn: '',
-                    isActive: true
-                });
+                clearForm();
             }
         }
     }, [isOpen, editId, reset]);
 
     const onSubmit = async (data: VendorGroupFormValues) => {
         try {
+            const payload = {
+                vendor_group_code: data.vendor_group_code,
+                vendor_group_name: data.vendor_group_name,
+                vendor_group_nameeng: data.vendor_group_nameeng || '',
+                is_active: data.is_active
+            };
+
             let result;
             if (editId) {
-                result = await VendorGroupService.update(editId, data);
+                result = await VendorGroupService.update(editId, payload as any);
             } else {
-                result = await VendorGroupService.create(data);
+                result = await VendorGroupService.create(payload as any);
             }
 
             if (result.success) {
@@ -124,6 +137,14 @@ export function VendorGroupFormModal({ isOpen, onClose, editId, onSuccess }: Pro
         <div className="flex justify-end gap-3 p-4">
             <button
                 type="button"
+                onClick={clearForm}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg flex items-center gap-2 transition-colors border border-gray-300"
+            >
+                <RotateCcw size={18} />
+                ล้างฟอร์ม
+            </button>
+            <button
+                type="button"
                 onClick={onClose}
                 className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg flex items-center gap-2 transition-colors border border-gray-300"
             >
@@ -142,86 +163,126 @@ export function VendorGroupFormModal({ isOpen, onClose, editId, onSuccess }: Pro
         </div>
     );
 
-    return (
-        <DialogFormLayout
-            isOpen={isOpen}
-            onClose={onClose}
-            title={editId ? 'แก้ไขข้อมูลกลุ่มเจ้าหนี้' : 'เพิ่มกลุ่มเจ้าหนี้ใหม่'}
-            titleIcon={TitleIcon}
-            footer={FormFooter}
-        >
-            <div className="p-6 space-y-6">
-                
+   return (
+    <DialogFormLayout
+        isOpen={isOpen}
+        onClose={onClose}
+        title={editId ? 'แก้ไขกลุ่มเจ้าหนี้' : 'เพิ่มกลุ่มเจ้าหนี้'}
+        titleIcon={TitleIcon}
+        footer={FormFooter}
+    >
+        <div className="p-6 space-y-6">
+
+            {/* Section Header */}
+            <div className="border-b pb-2">
+                <h3 className="text-sm font-semibold text-gray-700">
+                    ข้อมูลกลุ่มเจ้าหนี้
+                </h3>
+            </div>
+
+            {/* Form Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
                 {/* Group Code */}
                 <div>
                     <label className={styles.label}>
                         รหัสกลุ่มเจ้าหนี้ <span className="text-red-500">*</span>
                     </label>
+
                     <input
-                        {...register('groupCode')}
+                        {...register('vendor_group_code')}
                         type="text"
-                        placeholder="กรอกรหัสกลุ่มเจ้าหนี้ (เช่น FUR, STA)"
-                        className={`${styles.input} ${errors.groupCode ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        placeholder="เช่น FUR / STA"
+                        className={`${styles.input} ${
+                            errors.vendor_group_code
+                                ? 'border-red-500 focus:ring-red-200'
+                                : ''
+                        }`}
                     />
-                    {errors.groupCode ? (
-                        <p className="text-red-500 text-xs mt-1">{errors.groupCode.message}</p>
+
+                    {errors.vendor_group_code ? (
+                        <p className="text-red-500 text-xs mt-1">
+                            {errors.vendor_group_code.message}
+                        </p>
                     ) : (
-                        <p className="text-gray-400 text-xs mt-1">varchar(20), UNIQUE - ต้องไม่ซ้ำ</p>
+                        <p className="text-gray-400 text-xs mt-1">
+                            varchar(20) - ต้องไม่ซ้ำ
+                        </p>
                     )}
                 </div>
 
-                {/* Group Name (Thai) */}
+                {/* Group Name Thai */}
                 <div>
                     <label className={styles.label}>
                         ชื่อกลุ่มเจ้าหนี้ (ไทย) <span className="text-red-500">*</span>
                     </label>
+
                     <input
-                        {...register('groupName')}
+                        {...register('vendor_group_name')}
                         type="text"
-                        placeholder="กรอกชื่อกลุ่มเจ้าหนี้ (ไทย)"
-                        className={`${styles.input} ${errors.groupName ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        placeholder="ชื่อกลุ่มเจ้าหนี้"
+                        className={`${styles.input} ${
+                            errors.vendor_group_name
+                                ? 'border-red-500 focus:ring-red-200'
+                                : ''
+                        }`}
                     />
-                    {errors.groupName ? (
-                        <p className="text-red-500 text-xs mt-1">{errors.groupName.message}</p>
-                    ) : (
-                        <p className="text-gray-400 text-xs mt-1">varchar(200)</p>
+
+                    {errors.vendor_group_name && (
+                        <p className="text-red-500 text-xs mt-1">
+                            {errors.vendor_group_name.message}
+                        </p>
                     )}
                 </div>
 
-                {/* Group Name (English) */}
+                {/* Group Name English */}
                 <div>
                     <label className={styles.label}>
-                        ชื่อกลุ่มเจ้าหนี้ (EN)
+                        ชื่อกลุ่มเจ้าหนี้ (English)
                     </label>
+
                     <input
-                        {...register('groupNameEn')}
+                        {...register('vendor_group_nameeng')}
                         type="text"
-                        placeholder="กรอกชื่อกลุ่มเจ้าหนี้ (English)"
-                        className={`${styles.input} ${errors.groupNameEn ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        placeholder="Vendor Group Name"
+                        className={`${styles.input} ${
+                            errors.vendor_group_nameeng
+                                ? 'border-red-500 focus:ring-red-200'
+                                : ''
+                        }`}
                     />
-                    {errors.groupNameEn ? (
-                        <p className="text-red-500 text-xs mt-1">{errors.groupNameEn.message}</p>
-                    ) : (
-                        <p className="text-gray-400 text-xs mt-1">varchar(200)</p>
+
+                    {errors.vendor_group_nameeng && (
+                        <p className="text-red-500 text-xs mt-1">
+                            {errors.vendor_group_nameeng.message}
+                        </p>
                     )}
                 </div>
 
-                {/* Status - Dropdown Select */}
+                {/* Status */}
                 <div>
                     <label className={styles.label}>
-                        สถานะ <span className="text-red-500">*</span>
+                        สถานะ
                     </label>
-                    <select
-                        className={`${styles.input} cursor-pointer`}
-                        value={isActive ? 'true' : 'false'}
-                        onChange={(e) => setValue('isActive', e.target.value === 'true')}
-                    >
-                        <option value="true">ใช้งาน (Active)</option>
-                        <option value="false">ไม่ใช้งาน (Inactive)</option>
-                    </select>
+
+                    <div className="flex items-center gap-3 mt-2">
+                        <input
+                            type="checkbox"
+                            checked={isActive}
+                            onChange={(e) =>
+                                setValue('is_active', e.target.checked)
+                            }
+                            className="toggle toggle-primary"
+                        />
+
+                        <span className="text-sm text-gray-600">
+                            {isActive ? 'Active' : 'Inactive'}
+                        </span>
+                    </div>
                 </div>
+
             </div>
-        </DialogFormLayout>
-    );
+        </div>
+    </DialogFormLayout>
+);
 }
-
