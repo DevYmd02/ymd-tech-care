@@ -1,5 +1,5 @@
 import api from '@/core/api/api';
-import type { Currency, ExchangeRateType, ExchangeRate } from '@currency/types/currency-types';
+import type { ExchangeRateType, ExchangeRate } from '@currency/types/currency-types';
 import { logger } from '@/shared/utils/logger';
 
 export interface BaseResponse<T> {

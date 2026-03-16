@@ -7,14 +7,12 @@ import { PRFormLines } from './PRFormLines';
 import { PRFormSummary } from './PRFormSummary';
 import { ProductSearchModal } from './ProductSearchModal';
 import { WindowFormLayout } from '@ui';
-import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWrapper';
 import { SharedRemarksTab } from '@/shared/components/forms/SharedRemarksTab';
 import { usePRForm } from '@/modules/procurement/pages/pr/hooks';
 import { RejectReasonModal } from '@/modules/procurement/shared/components/RejectReasonModal';
 import { WarehouseSearchModal } from '@/modules/procurement/shared/components/WarehouseSearchModal';
 import { LocationSearchModal } from '@/modules/procurement/shared/components/LocationSearchModal';
 import type { PRFormData } from '@/modules/procurement/schemas/pr-schemas';
-import type { Currency } from '@/modules/master-data/types/master-data-types';
 
 const SHIPPING_OPTIONS = [
   { label: 'รถยนต์', value: 'Car' },
@@ -60,10 +58,50 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
   // Tabs state
   const [activeTab, setActiveTab] = useState('detail');
 
+  // Safely extract currencies array in case it's wrapped in a pagination object { items: [...] }
+  const currencyList = Array.isArray(currencies) ? currencies : ((currencies as any)?.items || []);
+
   const cardClass = 'bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-sm overflow-hidden';
 
   const handleSubmitWrapper: SubmitHandler<PRFormData> = async (data) => {
-    return onSubmit(data);
+    // 🔄 Map format to exactly match the Backend JSON specification
+    const payload = {
+        branch_id: Number((data as any).branch_id) || 1,
+        pr_tax_code_id: Number(data.pr_tax_code_id) || null,
+        requester_user_id: user?.id || user?.employee?.employee_id || 2,
+        pr_date: data.pr_date,
+        need_by_date: data.need_by_date,
+        status: data.is_on_hold === 'Y' ? 'DRAFT' : 'PENDING',
+        remark: data.remark || "",
+        payment_term_days: Number(data.credit_days) || 30,
+        delivery_date: data.delivery_date || data.need_by_date,
+        credit_days: Number(data.credit_days) || 30,
+        vendor_quote_no: data.vendor_quote_no || "",
+        shipping_method: data.shipping_method || "",
+        requester_name: data.requester_name || "",
+        pr_exchange_rate_date: data.pr_exchange_rate_date || data.pr_date,
+        pr_base_currency_code: data.pr_base_currency_code || "THB",
+        pr_quote_currency_code: data.pr_quote_currency_code || "THB",
+        pr_exchange_rate: Number(data.pr_exchange_rate) || 1,
+        pr_discount_raw: data.pr_discount_raw || "0",
+        project_id: Number(data.project_id) || null,
+        cost_center_id: Number(data.cost_center_id) || null,
+        version: Number((data as any).version) || 1,
+        lines: (data.lines || []).map((line: any, index: number) => ({
+            line_no: index + 1,
+            item_id: Number(line.item_id) || null,
+            description: line.item_name || line.description || "",
+            warehouse_id: Number(line.warehouse_id) || null,
+            location: line.location || "",
+            qty: Number(line.qty) || 0,
+            uom_id: Number(line.uom_id) || 1,
+            est_unit_price: Number(line.est_unit_price) || 0,
+            required_receipt_type: line.required_receipt_type || "FULL",
+            line_discount_raw: line.line_discount_raw || "0"
+        }))
+    };
+
+    return onSubmit(payload as any);
   };
 
   // Date Formatting Helpers
@@ -156,6 +194,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
           <div className="flex-1 overflow-auto bg-gray-100 dark:bg-gray-800 p-1.5 space-y-1">
             <div className={cardClass}>
                 <PRHeader 
+                    prId={id}
                     costCenters={costCenters}
                     projects={projects}
                     onVendorSelect={handleVendorSelect}
@@ -237,8 +276,8 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
                 </div>
             </div>
 
-            {/* Multicurrency Toggle Section */}
-            <MulticurrencyWrapper control={control} name="isMulticurrency" disabled={readOnly}>
+            {/* Currency & Exchange Rate Section (Always visible) */}
+            <div className={`${cardClass} p-3`}>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
                     <div>
                         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">วันที่อัตราแลกเปลี่ยน</label>
@@ -278,38 +317,61 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
                     </div>
                     <div>
                         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">รหัสสกุลเงิน</label>
-                        <select 
-                            {...register('pr_base_currency_code')}
-                            disabled={readOnly}
-                            className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                        >
-                            <option value="">เลือกสกุลเงิน</option>
-                            {currencies?.map((c: Currency) => (
-                              <option key={c.currency_id} value={c.currency_code}>{c.currency_code} - {c.name_th}</option>
-                            ))}
-                        </select>
+                        <Controller
+                            name="pr_base_currency_code"
+                            control={control}
+                            render={({ field }) => (
+                                <select 
+                                    {...field}
+                                    value={field.value || 'THB'}
+                                    disabled={readOnly}
+                                    className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="">เลือกสกุลเงิน</option>
+                                    {currencyList.map((c: any) => (
+                                      <option key={c.id || c.currency_id} value={c.code || c.currency_code}>{c.code || c.currency_code} - {c.name_th}</option>
+                                    ))}
+                                </select>
+                            )}
+                        />
                     </div>
                     <div>
                         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">ไปยังสกุลเงิน (Target)</label>
-                        <select 
-                            {...register('pr_quote_currency_code')}
-                            disabled={readOnly}
-                            className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                        >
-                            <option value="">เลือกสกุลเงิน</option>
-                            {currencies?.map((c: Currency) => (
-                              <option key={c.currency_id} value={c.currency_code}>{c.currency_code} - {c.name_th}</option>
-                            ))}
-                        </select>
+                        <Controller
+                            name="pr_quote_currency_code"
+                            control={control}
+                            render={({ field }) => (
+                                <select 
+                                    {...field}
+                                    value={field.value || 'THB'}
+                                    disabled={readOnly}
+                                    className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="">เลือกสกุลเงิน</option>
+                                    {currencyList.map((c: any) => (
+                                      <option key={c.id || c.currency_id} value={c.code || c.currency_code}>{c.code || c.currency_code} - {c.name_th}</option>
+                                    ))}
+                                </select>
+                            )}
+                        />
                     </div>
                     <div>
                         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">อัตราแลกเปลี่ยน</label>
-                        <input 
-                            type="number"
-                            step="0.0001"
-                            {...register('pr_exchange_rate', { valueAsNumber: true })}
-                            disabled={readOnly || watch('pr_base_currency_code') === 'THB'}
-                            className={`w-full h-9 px-3 text-sm text-right border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition-colors ${watch('pr_base_currency_code') === 'THB' || readOnly ? 'bg-gray-50 dark:bg-gray-800/50 italic text-gray-500' : 'bg-white dark:bg-gray-800 font-semibold'}`}
+                        <Controller
+                            name="pr_exchange_rate"
+                            control={control}
+                            render={({ field: { value, onChange, onBlur, ref } }) => (
+                                <input 
+                                    ref={ref}
+                                    type="number"
+                                    step="0.0001"
+                                    value={value ?? 1}
+                                    onChange={onChange}
+                                    onBlur={onBlur}
+                                    readOnly={readOnly || watch('pr_base_currency_code') === 'THB'}
+                                    className={`w-full h-9 px-3 text-sm text-right border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition-colors ${watch('pr_base_currency_code') === 'THB' || readOnly ? 'bg-gray-50 dark:bg-gray-800/50 italic text-gray-500' : 'bg-white dark:bg-gray-800 font-semibold'}`}
+                                />
+                            )}
                         />
                         {watch('pr_base_currency_code') && watch('pr_base_currency_code') !== 'THB' && (
                         <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 text-right font-medium">
@@ -318,7 +380,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
                         )}
                     </div>
                 </div>
-            </MulticurrencyWrapper>
+            </div>
 
             <PRFormLines 
                 lines={lines}

@@ -8,7 +8,7 @@ import {
   getInitialLines
 } from '@/modules/procurement/schemas/pr-schemas';
 import type { PRFormData, PRLineFormData } from '@/modules/procurement/schemas/pr-schemas';
-import type { CreatePRPayload, VendorSelection, PRLine } from '@/modules/procurement/types/pr-types';
+import type { VendorSelection, PRLine } from '@/modules/procurement/types/pr-types';
 import { PRService } from '@/modules/procurement/services/pr.service';
 import { extractErrorMessage } from '@/core/api/api';
 import { fetchExchangeRate } from '@/modules/master-data/currency/services/mockExchangeRateService';
@@ -266,8 +266,9 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
               }
 
               // ── Robust Hydration — Use fallbacks for inconsistent API naming ─────────────
-              const formData: PRFormData = {
+              const formData: any = {
                 ...pr,
+                version: (pr as any).version ?? 1,
                 pr_no: pr.pr_no || 'DRAFT-TEMP',
 
                 // 1. Cost Center / Department Fallback
@@ -651,7 +652,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
         }
         
         const isOnHold = data.is_on_hold === 'Y' || data.is_on_hold === true;
-        const targetStatus = isOnHold ? 'DRAFT' : 'PENDING';
+        const targetStatus = data.status || (isOnHold ? 'DRAFT' : 'PENDING');
 
         // ═══════════════════════════════════════════════════════════════════════
         // 🔧 POSTMAN-SYNCED GOLDEN PAYLOAD — Mirrors production DB structure
@@ -681,7 +682,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
         // ═══════════════════════════════════════════════════════════════════════
         // POSTMAN-SYNCED PAYLOAD — Every key matches the Postman golden response
         // ═══════════════════════════════════════════════════════════════════════
-        const payload: CreatePRPayload = {
+        const payload: any = {
           // ── HEADER (Aligned with Postman) ──
           ...(data.pr_no && data.pr_no !== '(auto-generated)' && !data.pr_no.startsWith('DRAFT-TEMP') && { pr_no: data.pr_no }),
           pr_date: data.pr_date,
@@ -709,6 +710,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
           // 🎯 FIX 2: Explicitly inject the requester_name for backend processing
           requester_name: data.requester_name || "",
           pr_tax_code_id: Number(data.pr_tax_code_id || 2),
+          version: Number((data as any).version) || 1,
           
           delivery_date: data.delivery_date || data.need_by_date || data.pr_date,
 
@@ -743,7 +745,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
         // Instead of 'delete' logic which is prone to accidental stripping,
         // we rebuild the object with ONLY what the backend explicitly expects.
         // ═══════════════════════════════════════════════════════════════════════
-        const wirePayload: CreatePRPayload = {
+        const wirePayload: any = {
           // ── HEADER ──
           ...(payload.pr_no && { pr_no: payload.pr_no }),
           pr_date: payload.pr_date,
@@ -756,6 +758,8 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
           pr_tax_code_id: payload.pr_tax_code_id,
           remark: payload.remark,
           status: payload.status,
+          // 🎯 FIX: Send version only when updating an existing document
+          ...(isEditMode && { version: payload.version }),
           
           // ── CURRENCY & TERMS ──
           pr_base_currency_code: payload.pr_base_currency_code,
@@ -764,16 +768,16 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
           pr_exchange_rate_date: payload.pr_exchange_rate_date,
           pr_discount_raw: payload.pr_discount_raw,
           payment_term_days: payload.payment_term_days,
-          credit_days: payload.credit_days,
           vendor_quote_no: payload.vendor_quote_no,
           shipping_method: payload.shipping_method,
           
-          // ── HYDRATION HELPERS ──
+          // ── RE-ADDED FIELDS (As per Frontend Requirement) ──
+          credit_days: payload.credit_days,
           delivery_date: payload.delivery_date,
           requester_name: payload.requester_name,
           
           // ── LINES (Whitelist-only Re-mapping) ──
-          lines: payload.lines.map((line, index) => ({
+          lines: payload.lines.map((line: any, index: number) => ({
             line_no: index + 1,
             item_id: line.item_id,
             description: line.description,
@@ -807,7 +811,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
           project_id: `${payload.project_id} (${typeof payload.project_id})`,
           pr_discount_raw: payload.pr_discount_raw,
           line_count: payload.lines.length,
-          lines_detail: payload.lines.map((l, idx) => ({
+          lines_detail: payload.lines.map((l: any, idx: number) => ({
             line_index: idx + 1,
             item_id: `${l.item_id} (${typeof l.item_id})`,
             qty: `${l.qty} (${typeof l.qty})`,

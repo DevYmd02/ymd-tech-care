@@ -5,10 +5,13 @@ import type { BaseMasterData } from '@/shared/types/common-master.types';
  * Currency - กำหนดรหัสสกุลเงิน
  */
 export interface Currency extends BaseMasterData {
+    id?: string | number; // Added for standardized UI
     currency_id: string; // uuid
+    code?: string; // Standardized
     currency_code: string; // e.g., USD, THB
     name_th: string;
     name_en: string; // Primary screenshot requires EN name
+    exchange_rate?: number; // Added for PR & Standardized UI
     is_active: boolean;
 }
 
