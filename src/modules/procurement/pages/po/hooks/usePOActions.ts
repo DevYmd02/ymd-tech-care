@@ -19,9 +19,10 @@ export const usePOActions = () => {
      * Shows confirm dialog, calls POService.issue(), then auto-refreshes list.
      */
     const handleIssuePO = useCallback((item: POListItem) => {
+        const amount = Number(item.total_amount ?? (item as unknown as { base_total_amount?: number }).base_total_amount ?? 0);
         confirm({
             title:       'ยืนยันการออกใบสั่งซื้อ',
-            description: `คุณต้องการออกใบสั่งซื้อเลขที่ ${item.po_no} ใช่หรือไม่?\nยอดรวม: ${item.total_amount?.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท`,
+            description: `คุณต้องการออกใบสั่งซื้อเลขที่ ${item.po_no} ใช่หรือไม่?\nยอดรวม: ${amount.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ${item.currency_code || 'THB'}`,
             confirmText: 'ออก PO',
             cancelText:  'ยกเลิก',
             variant:     'info',
@@ -51,14 +52,15 @@ export const usePOActions = () => {
      * GOLD PATTERN: Close-First, Empty Body, Dynamic Modal
      */
     const handleDirectSubmit = useCallback((item: POListItem) => {
-        const formattedAmount = item.total_amount?.toLocaleString('th-TH', { 
+        const amount = Number(item.total_amount ?? (item as unknown as { base_total_amount?: number }).base_total_amount ?? 0);
+        const formattedAmount = amount.toLocaleString('th-TH', { 
             minimumFractionDigits: 2, 
             maximumFractionDigits: 2 
         });
 
         return confirm({
             title:       'ยืนยันการส่งอนุมัติ',
-            description: `คุณต้องการส่งเอกสาร ${item.po_no} เพื่อขออนุมัติใช่หรือไม่?\nยอดรวม: ${formattedAmount} บาท`,
+            description: `คุณต้องการส่งเอกสาร ${item.po_no} เพื่อขออนุมัติใช่หรือไม่?\nยอดรวม: ${formattedAmount} ${item.currency_code || 'THB'}`,
             confirmText: 'ส่งอนุมัติ',
             cancelText:  'ยกเลิก',
             variant:     'info',

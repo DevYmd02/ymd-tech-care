@@ -138,25 +138,28 @@ export default function POListPage() {
             header: () => <div className="text-left whitespace-nowrap">เอกสารอ้างอิง</div>,
             cell: (info) => {
                 const item = info.row.original;
-                // Smart Fallback Mapping for PR/RFQ/QC
-                const prDisplay = item.pr_no || (item.pr_id ? `PR ID: ${item.pr_id}` : null);
-                const qcDisplay = item.qc_no || (item.qc_id ? `QC ID: ${item.qc_id}` : null);
+                const prDisplay = item.pr_no || (item.pr_id ? `ID: ${item.pr_id}` : null);
+                const qcDisplay = item.qc_no || (item.qc_id ? `ID: ${item.qc_id}` : null);
                 
                 return (
                     <div className="flex flex-col whitespace-nowrap">
-                        <span
-                            className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline cursor-pointer leading-tight"
-                            title={`QC: ${qcDisplay || '-'}`}
-                        >
-                            {qcDisplay || '-'}
-                        </span>
-                        {prDisplay && (
-                            <span
-                                className="text-[10px] text-slate-500 mt-0.5"
-                                title={`PR: ${prDisplay}`}
-                            >
-                                Ref: {prDisplay}
+                        {qcDisplay ? (
+                            <>
+                                <span className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline cursor-pointer leading-tight">
+                                    QC: {qcDisplay}
+                                </span>
+                                {prDisplay && (
+                                    <span className="text-[10px] text-slate-500 mt-0.5">
+                                        PR: {prDisplay}
+                                    </span>
+                                )}
+                            </>
+                        ) : prDisplay ? (
+                            <span className="font-semibold text-slate-700 dark:text-gray-200 leading-tight">
+                                PR: {prDisplay}
                             </span>
+                        ) : (
+                            <span className="text-gray-400">-</span>
                         )}
                     </div>
                 );
@@ -189,7 +192,7 @@ export default function POListPage() {
                     <POStatusBadge status={info.getValue()} className="whitespace-nowrap scale-[0.9]" />
                 </div>
             ),
-            size: 100,
+            size: 80,
             enableSorting: false,
         }),
         columnHelper.accessor('item_count', {
@@ -205,7 +208,7 @@ export default function POListPage() {
                     </div>
                 );
             },
-            size: 70,
+            size: 60,
             enableSorting: false,
         }),
         columnHelper.accessor('total_amount', {
@@ -449,8 +452,16 @@ export default function POListPage() {
                                         label: 'เอกสารอ้างอิง:',
                                         value: (
                                             <div className="flex flex-col items-end">
-                                                <span className="font-semibold text-blue-600 dark:text-blue-400">{item.qc_no || '-'}</span>
-                                                {item.pr_no && <span className="text-xs text-slate-500">{item.pr_no}</span>}
+                                                {item.qc_no ? (
+                                                    <>
+                                                        <span className="font-semibold text-blue-600 dark:text-blue-400">QC: {item.qc_no}</span>
+                                                        {item.pr_no && <span className="text-xs text-slate-500">PR: {item.pr_no}</span>}
+                                                    </>
+                                                ) : item.pr_no ? (
+                                                    <span className="font-semibold text-slate-700 dark:text-gray-200">PR: {item.pr_no}</span>
+                                                ) : (
+                                                    <span className="text-gray-400">-</span>
+                                                )}
                                             </div>
                                         ),
                                     },

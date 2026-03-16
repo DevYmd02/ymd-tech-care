@@ -180,37 +180,38 @@ export default function ItemMasterList() {
                     {getValue() as string}
                 </span>
             ),
-            size: 150,
+            size: 160,
         },
         {
             accessorKey: 'item_name',
             header: 'ชื่อสินค้า (ไทย)',
+            cell: ({ getValue }) => <span className="truncate block max-w-[180px]" title={getValue() as string}>{getValue() as string}</span>,
             size: 200,
         },
         {
             accessorKey: 'item_name_en',
             header: 'ชื่อสินค้า (Eng)',
-            cell: ({ getValue }) => <span className="text-gray-500">{getValue() as string || '-'}</span>,
+            cell: ({ getValue }) => <span className="truncate block max-w-[180px] text-gray-500" title={getValue() as string || '-'}>{getValue() as string || '-'}</span>,
             size: 200,
         },
         {
             accessorKey: 'item_category_name',
             header: 'หมวดหมู่',
-            cell: ({ getValue }) => <span className="text-gray-700 dark:text-gray-300">{getValue() as string}</span>,
-            size: 150,
+            cell: ({ row }) => <span className="text-gray-700 dark:text-gray-300">{row.original.item_category_name || '-'}</span>,
+            size: 160,
         },
         {
             accessorKey: 'item_brand_name',
             header: 'ยี่ห้อ',
-            cell: ({ getValue }) => <span className="text-gray-700 dark:text-gray-300">{getValue() as string || '-'}</span>,
-            size: 150,
+            cell: ({ row }) => <span className="text-gray-700 dark:text-gray-300">{row.original.item_brand_name || '-'}</span>,
+            size: 160,
         },
         {
             accessorKey: 'item_type_name',
             header: 'ประเภท',
-            cell: ({ getValue }) => (
+            cell: ({ row }) => (
                 <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600">
-                    {getValue() as string || '-'}
+                    {row.original.item_type_name || '-'}
                 </span>
             ),
             size: 100,
@@ -218,7 +219,7 @@ export default function ItemMasterList() {
         {
             accessorKey: 'base_uom_name',
             header: 'หน่วยนับ (ID)',
-            cell: ({ getValue }) => <span className="text-gray-600 dark:text-gray-300">{getValue() as string}</span>,
+            cell: ({ row }) => <span className="text-gray-600 dark:text-gray-300">{row.original.base_uom_name || '-'}</span>,
             size: 100,
         },
         {

@@ -19,7 +19,7 @@ import type { VQListItem, VQStatus, QuotationLine, QuotationHeader } from '@/mod
 import { useVQMasterData } from './useVQMasterData';
 
 export interface ExtendedRFQHeader extends RFQHeader {
-    vendor_id?: number;
+    vendor_id?: number | null;
     vendor_name?: string | null;
     isMulticurrency?: boolean;
 }
@@ -117,6 +117,16 @@ export const useVQForm = (
   // Watch for isMulticurrency changes to auto-reset
   const isMulticurrency = useWatch({ control, name: 'isMulticurrency' });
   const watchCurrency = useWatch({ control, name: 'currency' });
+
+  // 💱 Auto-toggle Multicurrency based on Currency Selection
+  useEffect(() => {
+    if (watchCurrency && watchCurrency !== 'THB') {
+      setValue('isMulticurrency', true);
+    } else {
+      setValue('isMulticurrency', false);
+      setValue('exchange_rate', 1);
+    }
+  }, [watchCurrency, setValue]);
 
   useEffect(() => {
     if (!isMulticurrency) {
@@ -326,10 +336,10 @@ export const useVQForm = (
                 contact_person: '', 
                 contact_phone: '',
                 contact_email: '',
-                currency: fullRFQ.rfq_base_currency_code || 'THB',
-                isMulticurrency: Boolean(fullRFQ.rfq_base_currency_code && fullRFQ.rfq_base_currency_code !== 'THB'),
+                currency: fullRFQ.rfq_quote_currency_code || 'THB',
+                isMulticurrency: Boolean(fullRFQ.rfq_quote_currency_code && fullRFQ.rfq_quote_currency_code !== 'THB'),
                 exchange_rate_date: formatDateForInputHelper(fullRFQ.rfq_exchange_rate_date),
-                target_currency: fullRFQ.rfq_quote_currency_code || '',
+                target_currency: fullRFQ.rfq_base_currency_code || 'THB',
                 exchange_rate: Number(fullRFQ.rfq_exchange_rate) || 1,
                 vq_lines: mappedLines,
                 payment_term_days: 0,

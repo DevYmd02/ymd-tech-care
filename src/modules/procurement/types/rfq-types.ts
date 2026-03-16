@@ -78,6 +78,8 @@ export interface RFQHeader {
         employee_lastname_th: string;
     } | null;
 
+    requested_by?: string; // Add for creator name string
+
     // Form-related fields
     rfq_base_currency_code?: string;      // สกุลเงินฐาน (THB)
     rfq_quote_currency_code?: string;     // สกุลเงินที่ขอราคา (USD, etc.)
@@ -87,6 +89,8 @@ export interface RFQHeader {
     payment_term_hint?: string;          // เงื่อนไขการชำระ (hint)
     incoterm?: string;                  // เงื่อนไขส่งมอบ (FOB, CIF, EXW, etc.)
     remarks?: string;                   // หมายเหตุเพิ่มเติม
+    vendor_id?: number | null;           // 🔗 Added for downstream view hydration (VQ linking)
+    rfq_vendor_id?: number | null;       // 🔗 Added for downstream view hydration (VQ linking)
 }
 
 // ====================================================================================

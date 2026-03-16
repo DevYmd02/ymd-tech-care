@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { Save } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
-import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
+import type { TaxCode, TaxGroup } from '@/modules/master-data/tax/types/tax-types';
 import { TaxCodeService } from '@/modules/master-data/tax/services/tax-code.service';
 import { TaxGroupService } from '@/modules/master-data/tax/services/tax-group.service';
 import { DialogFormLayout } from '@ui';
@@ -16,16 +16,13 @@ interface TaxCodeFormModalProps {
     onSuccess: () => void;
 }
 
-// Locally extend types to handle properties that are missing in the base types
-type ExtendedTaxCode = TaxCode & {
-    tax_group_id?: number | null;
-    description?: string;
-};
+
 
 export function TaxCodeFormModal({ isOpen, onClose, taxId, onSuccess }: TaxCodeFormModalProps) {
     const isEdit = !!taxId;
     const [isLoading, setIsLoading] = useState(false);
-    const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<ExtendedTaxCode>();
+    const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<TaxCode>();
+    const currentTaxType = watch('tax_type');
 
     const { data: taxGroupsResponse, isLoading: isLoadingTaxGroups } = useQuery({
         queryKey: ['tax-groups-for-select'],
@@ -39,7 +36,7 @@ export function TaxCodeFormModal({ isOpen, onClose, taxId, onSuccess }: TaxCodeF
         if (isOpen) {
             if (taxId) {
                 setIsLoading(true);
-                TaxCodeService.getTaxCodeById(taxId).then((data: any) => {
+                TaxCodeService.getTaxCodeById(taxId).then((data) => {
                     if (data) {
                         setValue('tax_code', data.tax_code);
                         setValue('tax_name', data.tax_name);
@@ -60,18 +57,18 @@ export function TaxCodeFormModal({ isOpen, onClose, taxId, onSuccess }: TaxCodeF
                     tax_group_id: undefined,
                     tax_rate: 0,
                     is_active: true
-                } as ExtendedTaxCode);
+                } as TaxCode);
             }
         }
     }, [isOpen, taxId, setValue, reset]);
 
-    const onSubmit = async (data: ExtendedTaxCode) => {
+    const onSubmit = async (data: TaxCode) => {
         setIsLoading(true);
         try {
             if (isEdit && taxId) {
-                await TaxCodeService.updateTaxCode(taxId, data as any);
+                await TaxCodeService.updateTaxCode(taxId, data);
             } else {
-                await TaxCodeService.createTaxCode(data as any);
+                await TaxCodeService.createTaxCode(data);
             }
             onSuccess();
             onClose();
@@ -157,7 +154,7 @@ export function TaxCodeFormModal({ isOpen, onClose, taxId, onSuccess }: TaxCodeF
                             disabled={isLoadingTaxGroups}
                         >
                             <option value="">-- ไม่ระบุ --</option>
-                            {taxGroups.map((group: any) => (
+                            {taxGroups.map((group: TaxGroup) => (
                                 <option key={group.tax_group_id} value={group.tax_group_id}>
                                     {group.tax_group_name || group.tax_group_code}
                                 </option>
@@ -184,6 +181,10 @@ export function TaxCodeFormModal({ isOpen, onClose, taxId, onSuccess }: TaxCodeF
                             <option value="PURCHASE">ภาษีซื้อ</option>
                             <option value="EXEMPT">ยกเว้น</option>
                             <option value="NONE">ไม่คิดอะไร</option>
+                            {/* Render custom value if it doesn't match standard options */}
+                            {currentTaxType && !['SALES', 'PURCHASE', 'EXEMPT', 'NONE'].includes(currentTaxType) && (
+                                <option value={currentTaxType}>{currentTaxType}</option>
+                            )}
                         </select>
                     </div>
 

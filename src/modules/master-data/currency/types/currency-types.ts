@@ -31,6 +31,56 @@ export const currencySchema = z.object({
 export type CurrencyFormValues = z.infer<typeof currencySchema>;
 
 /**
+ * CurrencyApiItem - Raw Backend Response
+ */
+export interface CurrencyApiItem {
+    currency_id: string;
+    currency_code: string;
+    currency_name: string;
+    currency_nameeng?: string;
+    exchange_rate?: number;
+    is_active?: boolean;
+    status?: string;
+}
+
+/**
+ * CurrencyMappedItem - Formatted UI Object
+ */
+export interface CurrencyMappedItem extends BaseMasterData {
+    id: string;
+    currency_id: string;
+    code: string;
+    currency_code: string; // alias for backward-comp
+    name_th: string;
+    currency_name: string; // alias for backward-comp
+    name_en: string; // alias for backward-comp
+    exchange_rate: number;
+    is_active: boolean;
+    status: string;
+}
+
+/**
+ * CurrencyApiRequest - Creation/Update Payload
+ */
+export interface CurrencyApiRequest {
+    currency_code: string;
+    currency_name: string;
+    currency_nameeng: string;
+    exchange_rate: number;
+    is_active: boolean;
+}
+
+/**
+ * CurrencyCreateRequest - Input from some snake_case forms
+ */
+export interface CurrencyCreateRequest {
+    code: string;
+    name_th: string;
+    exchange_rate: string | number;
+    is_active: boolean;
+}
+
+/**
  * ExchangeRateType - กำหนดรหัสประเภทอัตราแลกเปลี่ยน
  */
 export interface ExchangeRateType extends BaseMasterData {
