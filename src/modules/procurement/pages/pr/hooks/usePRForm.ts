@@ -705,11 +705,11 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
           credit_days: Number(data.credit_days || 30),
           vendor_quote_no: data.vendor_quote_no || '',
           shipping_method: data.shipping_method || '',
-          // 🎯 FIX 1: Map purpose to remark (Fallback to data.remark if purpose is empty)
-          remark: data.purpose || data.remark || '',
+          // 🎯 FIX 1: Combine purpose and remark so no data is lost
+          remark: [data.purpose, data.remark].filter(Boolean).join('\n') || '',
           // 🎯 FIX 2: Explicitly inject the requester_name for backend processing
           requester_name: data.requester_name || "",
-          pr_tax_code_id: Number(data.pr_tax_code_id || 2),
+          pr_tax_code_id: data.pr_tax_code_id ? Number(data.pr_tax_code_id) : null,
           version: Number((data as any).version) || 1,
           
           delivery_date: data.delivery_date || data.need_by_date || data.pr_date,
@@ -729,6 +729,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
             uom_id: Number(line.uom_id),
             required_receipt_type: line.required_receipt_type || "FULL",
             line_discount_raw: String(line.line_discount_raw || '0'),
+            remark: line.remark || "",
           })),
         };
 
@@ -780,7 +781,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
           lines: payload.lines.map((line: any, index: number) => ({
             line_no: index + 1,
             item_id: line.item_id,
-            description: line.description,
+            description: line.remark ? `${line.description} (หมายเหตุ: ${line.remark})` : line.description,
             warehouse_id: line.warehouse_id,
             location: line.location,
             qty: Number(Number(line.qty || 0).toFixed(4)),

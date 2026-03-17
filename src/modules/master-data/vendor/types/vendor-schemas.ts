@@ -97,7 +97,8 @@ export const VendorSchema = z.object({
     // Status
     onHold: z.boolean().optional(),
     blocked: z.boolean().optional(),
-    inactive: z.boolean()
+    inactive: z.boolean(),
+    is_active: z.boolean().optional()
 });
 
 export type VendorSchemaType = z.infer<typeof VendorSchema>;

@@ -67,12 +67,13 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
     // 🔄 Map format to exactly match the Backend JSON specification
     const payload = {
         branch_id: Number((data as any).branch_id) || 1,
-        pr_tax_code_id: Number(data.pr_tax_code_id) || null,
+        pr_tax_code_id: data.pr_tax_code_id ? Number(data.pr_tax_code_id) : null,
         requester_user_id: user?.id || user?.employee?.employee_id || 2,
         pr_date: data.pr_date,
         need_by_date: data.need_by_date,
         status: data.is_on_hold === 'Y' ? 'DRAFT' : 'PENDING',
         remark: data.remark || "",
+        purpose: data.purpose || "",
         payment_term_days: Number(data.credit_days) || 30,
         delivery_date: data.delivery_date || data.need_by_date,
         credit_days: Number(data.credit_days) || 30,
@@ -97,7 +98,8 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
             uom_id: Number(line.uom_id) || 1,
             est_unit_price: Number(line.est_unit_price) || 0,
             required_receipt_type: line.required_receipt_type || "FULL",
-            line_discount_raw: line.line_discount_raw || "0"
+            line_discount_raw: line.line_discount_raw || "0",
+            remark: line.remark || ""
         }))
     };
 

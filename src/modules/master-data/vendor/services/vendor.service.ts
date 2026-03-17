@@ -26,6 +26,7 @@ function mapVendorToApi(data: any): any {
         is_vat_registered: Boolean(data.is_vat_registered ?? data.vatRegistered ?? false),
         payment_term_days: Number(data.payment_term_days || data.paymentTerms || 0),
         phone: data.phone || '',
+        phone_extension: data.mobile || data.phone_extension || '',
         email: data.email || '',
         is_subject_to_wht: Boolean(data.is_subject_to_wht ?? data.whtRegistered ?? false),
         is_active: data.is_active !== undefined ? Boolean(data.is_active) : true,
@@ -261,6 +262,7 @@ export const VendorService = {
             // Flat fields
             address_line1: data.addresses[0]?.address,
             phone: data.phone,
+            phone_extension: data.phone_extension || data.mobile,
             email: data.email,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),

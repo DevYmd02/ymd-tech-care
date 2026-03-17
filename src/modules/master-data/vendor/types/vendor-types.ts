@@ -146,14 +146,17 @@ export interface VendorMaster {
 
     // Deprecated flat fields (kept optional)
     address_line1?: string;
+    sub_district?: string;
     district?: string;
     province?: string;
     postal_code?: string;
     country?: string;
     phone?: string;
+    phone_extension?: string;
     email?: string;
     website?: string;
     remarks?: string;
+    is_active?: boolean;
     
     // Payment Info
     payment_term_days?: number;
@@ -166,7 +169,6 @@ export interface VendorMaster {
     // Flags
     is_blocked: boolean;
     is_on_hold: boolean;
-    is_active?: boolean;
     
     // Audit
     created_at: string;
@@ -299,6 +301,7 @@ export interface VendorCreateRequest {
 
     // Flat fields (kept for backward compatibility or direct binding)
     phone?: string;
+    phone_extension?: string;
     email?: string;
     website?: string;
     remarks?: string;
@@ -328,6 +331,7 @@ export function toVendorCreateRequest(form: VendorFormData): VendorCreateRequest
     const addresses: Partial<VendorAddress>[] = form.addresses.map(addr => ({
         address_type: addr.addressType || 'REGISTERED', 
         address: addr.address || "",
+        sub_district: addr.subDistrict || "",
         district: addr.district || "",
         province: addr.province || "",
         postal_code: addr.postalCode || "",
@@ -396,6 +400,7 @@ export function toVendorCreateRequest(form: VendorFormData): VendorCreateRequest
         contacts: contacts,
         bank_accounts: bank_accounts,
         phone: form.phone || undefined,
+        phone_extension: form.mobile || undefined,
         email: form.email || undefined,
         payment_term_days,
     };
@@ -464,7 +469,7 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
             registeredAddress = {
                 id: Number(regAddr.vendor_address_id) || 1,
                 address: regAddr.address || '',
-                subDistrict: '',
+                subDistrict: regAddr.sub_district || '',
                 district: regAddr.district || '',
                 province: regAddr.province || '',
                 postalCode: regAddr.postal_code || '',
@@ -480,7 +485,7 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
             registeredAddress = {
                 id: Number(firstAddr.vendor_address_id) || 1,
                 address: firstAddr.address || '',
-                subDistrict: '',
+                subDistrict: firstAddr.sub_district || '',
                 district: firstAddr.district || '',
                 province: firstAddr.province || '',
                 postalCode: firstAddr.postal_code || '',
@@ -499,7 +504,7 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
             contactAddress = {
                 id: Number(contAddr.vendor_address_id) || 2,
                 address: contAddr.address || '',
-                subDistrict: '',
+                subDistrict: contAddr.sub_district || '',
                 district: contAddr.district || '',
                 province: contAddr.province || '',
                 postalCode: contAddr.postal_code || '',
@@ -515,7 +520,7 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
             contactAddress = {
                 id: Number(secondAddr.vendor_address_id) || 2,
                 address: secondAddr.address || '',
-                subDistrict: '',
+                subDistrict: secondAddr.sub_district || '',
                 district: secondAddr.district || '',
                 province: secondAddr.province || '',
                 postalCode: secondAddr.postal_code || '',
@@ -538,7 +543,7 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
         registeredAddress = {
             id: 1,
             address: vendor.address_line1 || '',
-            subDistrict: '',
+            subDistrict: vendor.sub_district || '',
             district: vendor.district || '',
             province: vendor.province || '',
             postalCode: vendor.postal_code || '',
@@ -623,7 +628,7 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
         sameAsRegistered,
         contactName: formContacts.find(c => c.isMain)?.name || vendorAny.contactName || vendorAny.contactPerson || vendorAny.primaryContact || registeredAddress.contactPerson || '',
         phone: vendor.phone || '',
-        mobile: vendorAny.mobile || vendorAny.phoneNumber || '',
+        mobile: vendor.phone_extension || vendorAny.mobile || vendorAny.phoneNumber || '',
         email: vendor.email || '',
         website: vendor.website || '',
         paymentTerms: `${vendor.payment_term_days ? 'Net ' + vendor.payment_term_days + ' Days' : 'Net 30 Days'}`,
@@ -634,6 +639,7 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
         onHold: vendor.is_on_hold,
         blocked: vendor.is_blocked,
         inactive: vendor.status === 'INACTIVE',
+        is_active: vendor.is_active ?? vendor.status !== 'INACTIVE',
     };
 }
 
@@ -699,6 +705,7 @@ export const initialVendorFormData: VendorFormData = {
     onHold: false,
     blocked: false,
     inactive: false,
+    is_active: true,
 };
 
 // ====================================================================================

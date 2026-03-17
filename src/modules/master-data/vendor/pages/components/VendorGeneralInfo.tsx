@@ -170,6 +170,16 @@ export const VendorGeneralInfo: React.FC<VendorGeneralInfoProps> = ({
                         />
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">มีการหัก ณ ที่จ่าย (WHT)</span>
                     </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                        <input 
+                            type="checkbox" 
+                            name="is_active"
+                            checked={formData.is_active ?? true}
+                            onChange={onChange}
+                            className="w-4 h-4 text-green-600 rounded border-gray-300 focus:ring-green-500"
+                        />
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">สถานะการใช้งาน (Active)</span>
+                    </label>
                 </div>
             </div>
         </section>
