@@ -81,6 +81,7 @@ const baseFormSchema = z.object({
   pr_sub_total: z.number().optional(),
   pr_discount_amount: z.number().optional(),
   pr_tax_amount: z.number().optional(),
+  version: z.coerce.number().optional(),
 });
 
 export const getInitialLines = () => Array(5).fill(null).map(() => createEmptyPRLine());
@@ -219,5 +220,6 @@ export const getPRDefaultFormValues = (user?: { id?: string | number; username?:
     pr_sub_total: 0,
     pr_discount_amount: 0,
     pr_tax_amount: 0,
+    version: undefined,
   };
 };

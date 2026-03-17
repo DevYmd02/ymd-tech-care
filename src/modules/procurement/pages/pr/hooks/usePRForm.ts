@@ -8,7 +8,7 @@ import {
   getInitialLines
 } from '@/modules/procurement/schemas/pr-schemas';
 import type { PRFormData, PRLineFormData } from '@/modules/procurement/schemas/pr-schemas';
-import type { VendorSelection, PRLine } from '@/modules/procurement/types/pr-types';
+import type { VendorSelection, PRLine, CreatePRPayload } from '@/modules/procurement/types/pr-types';
 import { PRService } from '@/modules/procurement/services/pr.service';
 import { extractErrorMessage } from '@/core/api/api';
 import { fetchExchangeRate } from '@/modules/master-data/currency/services/mockExchangeRateService';
@@ -266,9 +266,9 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
               }
 
               // ── Robust Hydration — Use fallbacks for inconsistent API naming ─────────────
-              const formData: any = {
+              const formData: Partial<PRFormData> = {
                 ...pr,
-                version: (pr as any).version ?? 1,
+                version: pr.version ?? 1,
                 pr_no: pr.pr_no || 'DRAFT-TEMP',
 
                 // 1. Cost Center / Department Fallback
@@ -684,7 +684,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
         // ═══════════════════════════════════════════════════════════════════════
         // POSTMAN-SYNCED PAYLOAD — Every key matches the Postman golden response
         // ═══════════════════════════════════════════════════════════════════════
-        const payload: any = {
+        const payload: CreatePRPayload = {
           // ── HEADER (Aligned with Postman) ──
           ...(data.pr_no && data.pr_no !== '(auto-generated)' && !data.pr_no.startsWith('DRAFT-TEMP') && { pr_no: data.pr_no }),
           pr_date: data.pr_date,
@@ -712,7 +712,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
           // 🎯 FIX 2: Explicitly inject the requester_name for backend processing
           requester_name: data.requester_name || "",
           pr_tax_code_id: data.pr_tax_code_id ? Number(data.pr_tax_code_id) : null,
-          version: Number((data as any).version) || 1,
+          version: Number(data.version) || 1,
           
           delivery_date: data.delivery_date || data.need_by_date || data.pr_date,
 
@@ -748,7 +748,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
         // Instead of 'delete' logic which is prone to accidental stripping,
         // we rebuild the object with ONLY what the backend explicitly expects.
         // ═══════════════════════════════════════════════════════════════════════
-        const wirePayload: any = {
+        const wirePayload: CreatePRPayload = {
           // ── HEADER ──
           ...(payload.pr_no && { pr_no: payload.pr_no }),
           pr_date: payload.pr_date,
@@ -780,7 +780,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
           requester_name: payload.requester_name,
           
           // ── LINES (Whitelist-only Re-mapping) ──
-          lines: payload.lines.map((line: any, index: number) => ({
+          lines: payload.lines.map((line, index: number) => ({
             line_no: index + 1,
             item_id: line.item_id,
             description: line.remark ? `${line.description} (หมายเหตุ: ${line.remark})` : line.description,
@@ -814,7 +814,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
           project_id: `${payload.project_id} (${typeof payload.project_id})`,
           pr_discount_raw: payload.pr_discount_raw,
           line_count: payload.lines.length,
-          lines_detail: payload.lines.map((l: any, idx: number) => ({
+          lines_detail: payload.lines.map((l, idx: number) => ({
             line_index: idx + 1,
             item_id: `${l.item_id} (${typeof l.item_id})`,
             qty: `${l.qty} (${typeof l.qty})`,
