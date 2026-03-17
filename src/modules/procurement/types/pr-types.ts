@@ -46,6 +46,7 @@ export interface PRHeader {
   cancelflag?: 'Y' | 'N';           // CHAR(1) - Void/Cancel Flag
   created_by_user_id: number;       // INTEGER
   updated_by_user_id: number;       // INTEGER
+  version?: number;                 // INTEGER - Optmistic Concurrency Tracking
   
   // New Fields (Info Bar & Remark & Vendor)
   delivery_date?: string;           // DATE - วันที่กำหนดส่ง
@@ -280,6 +281,7 @@ export interface CreatePRPayload {
     pr_tax_code_id?: number;        // INTEGER
     remark?: string;                // Free text (optional)
     status: PRStatus;                 // "PENDING" | "DRAFT" (Literal union)
+    version?: number;               // Optmistic Concurrency Tracking
 
     // ── Currency & Exchange Rate (Postman-aligned) ──
     pr_base_currency_code: string;  // VARCHAR(3) — e.g. "THB"

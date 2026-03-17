@@ -45,7 +45,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
     handleReject, submitReject, closeRejectModal, isRejectReasonOpen, isRejecting
   } = usePRForm({ isOpen, onClose, id, onSuccess });
 
-  const { register, control, watch, formState: { errors } } = formMethods;
+  const { register, control, watch, getValues, formState: { errors } } = formMethods;
 
   // V-04: Force readOnly if status is not DRAFT (prevent editing APPROVED/PENDING PRs)
   const currentStatus = watch('status');
@@ -87,7 +87,8 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
         pr_discount_raw: data.pr_discount_raw || "0",
         project_id: Number(data.project_id) || null,
         cost_center_id: Number(data.cost_center_id) || null,
-        version: Number((data as any).version) || 1,
+        // 🎯 FIX: Fetch raw version directly from form state to bypass Zod stripping
+        version: Number(getValues('version' as any)) || Number((data as any).version) || 1,
         lines: (data.lines || []).map((line: any, index: number) => ({
             line_no: index + 1,
             item_id: Number(line.item_id) || null,
@@ -176,6 +177,9 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
     >
       <FormProvider {...formMethods}>
           
+          {/* 🎯 Hidden input for optimistic concurrency version tracking */}
+          <input type="hidden" {...register('version' as any)} />
+
           <ProductSearchModal 
             isOpen={isProductModalOpen}
             onClose={() => setIsProductModalOpen(false)}

@@ -41,7 +41,8 @@ const KNOWN_DTO_FIELDS = new Set([
   'pr_exchange_rate', 'pr_exchange_rate_date',
   'pr_discount_raw', 'payment_term_days', 'credit_days',
   'vendor_quote_no', 'shipping_method', 'lines',
-  'requester_name', 'delivery_date',  // Data Hydration: explicitly sent for List Page visibility
+  'requester_name', 'delivery_date',  
+  'version' // 🎯 Backend expects version for Optimistic Concurrency Control
 ]);
 
 // NOTE: 'remark' is NOT allowed on lines per backend DTO (whitelist: true + forbidNonWhitelisted: true)
