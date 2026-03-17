@@ -59,7 +59,7 @@ export interface PRHeader {
   vendor_name?: string;             // VARCHAR(200)
   department_name?: string;         // Added for List Page display
   created_by_name?: string;         // Added for List Page display
-  pr_tax_code_id?: number;          // INTEGER
+  pr_tax_code_id?: number | null;          // INTEGER
   pr_tax_rate?: number;             // snapshot
   warehouse_id?: number;            // INTEGER
 
@@ -278,7 +278,7 @@ export interface CreatePRPayload {
     project_id?: number;            // INTEGER
     cost_center_id?: number;        // INTEGER (Added for persistence)
     preferred_vendor_id?: number;   // INTEGER (Added for persistence)
-    pr_tax_code_id?: number;        // INTEGER
+    pr_tax_code_id?: number | null;        // INTEGER
     remark?: string;                // Free text (optional)
     status: PRStatus;                 // "PENDING" | "DRAFT" (Literal union)
     version?: number;               // Optmistic Concurrency Tracking

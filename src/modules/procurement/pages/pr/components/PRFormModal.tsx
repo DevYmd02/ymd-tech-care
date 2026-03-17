@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FormProvider, Controller } from 'react-hook-form';
-import type { SubmitHandler } from 'react-hook-form';
+
 import { FileText, Printer, Copy, CheckCircle, XCircle, Loader2, Calendar } from 'lucide-react';
 import { PRHeader } from './PRHeader';
 import { PRFormLines } from './PRFormLines';
@@ -12,7 +12,7 @@ import { usePRForm } from '@/modules/procurement/pages/pr/hooks';
 import { RejectReasonModal } from '@/modules/procurement/shared/components/RejectReasonModal';
 import { WarehouseSearchModal } from '@/modules/procurement/shared/components/WarehouseSearchModal';
 import { LocationSearchModal } from '@/modules/procurement/shared/components/LocationSearchModal';
-import type { PRFormData } from '@/modules/procurement/schemas/pr-schemas';
+
 
 const SHIPPING_OPTIONS = [
   { label: 'รถยนต์', value: 'Car' },
@@ -45,7 +45,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
     handleReject, submitReject, closeRejectModal, isRejectReasonOpen, isRejecting
   } = usePRForm({ isOpen, onClose, id, onSuccess });
 
-  const { register, control, watch, getValues, formState: { errors } } = formMethods;
+  const { register, control, watch, formState: { errors } } = formMethods;
 
   // V-04: Force readOnly if status is not DRAFT (prevent editing APPROVED/PENDING PRs)
   const currentStatus = watch('status');
@@ -58,54 +58,9 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
   // Tabs state
   const [activeTab, setActiveTab] = useState('detail');
 
-  // Safely extract currencies array in case it's wrapped in a pagination object { items: [...] }
-  const currencyList = Array.isArray(currencies) ? currencies : ((currencies as any)?.items || []);
-
   const cardClass = 'bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-sm overflow-hidden';
 
-  const handleSubmitWrapper: SubmitHandler<PRFormData> = async (data) => {
-    // 🔄 Map format to exactly match the Backend JSON specification
-    const payload = {
-        branch_id: Number((data as any).branch_id) || 1,
-        pr_tax_code_id: data.pr_tax_code_id ? Number(data.pr_tax_code_id) : null,
-        requester_user_id: user?.id || user?.employee?.employee_id || 2,
-        pr_date: data.pr_date,
-        need_by_date: data.need_by_date,
-        status: data.is_on_hold === 'Y' ? 'DRAFT' : 'PENDING',
-        remark: data.remark || "",
-        purpose: data.purpose || "",
-        payment_term_days: Number(data.credit_days) || 30,
-        delivery_date: data.delivery_date || data.need_by_date,
-        credit_days: Number(data.credit_days) || 30,
-        vendor_quote_no: data.vendor_quote_no || "",
-        shipping_method: data.shipping_method || "",
-        requester_name: data.requester_name || "",
-        pr_exchange_rate_date: data.pr_exchange_rate_date || data.pr_date,
-        pr_base_currency_code: data.pr_base_currency_code || "THB",
-        pr_quote_currency_code: data.pr_quote_currency_code || "THB",
-        pr_exchange_rate: Number(data.pr_exchange_rate) || 1,
-        pr_discount_raw: data.pr_discount_raw || "0",
-        project_id: Number(data.project_id) || null,
-        cost_center_id: Number(data.cost_center_id) || null,
-        // 🎯 FIX: Fetch raw version directly from form state to bypass Zod stripping
-        version: Number(getValues('version' as any)) || Number((data as any).version) || 1,
-        lines: (data.lines || []).map((line: any, index: number) => ({
-            line_no: index + 1,
-            item_id: Number(line.item_id) || null,
-            description: line.item_name || line.description || "",
-            warehouse_id: Number(line.warehouse_id) || null,
-            location: line.location || "",
-            qty: Number(line.qty) || 0,
-            uom_id: Number(line.uom_id) || 1,
-            est_unit_price: Number(line.est_unit_price) || 0,
-            required_receipt_type: line.required_receipt_type || "FULL",
-            line_discount_raw: line.line_discount_raw || "0",
-            remark: line.remark || ""
-        }))
-    };
 
-    return onSubmit(payload as any);
-  };
 
   // Date Formatting Helpers
   const formatDisplayDate = (val?: string) => {
@@ -163,7 +118,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
                 {canSaveDraft && (
                     <button 
                       type="button" 
-                      onClick={handleSubmit(handleSubmitWrapper, handleFormError)} 
+                      onClick={handleSubmit(onSubmit, handleFormError)} 
                       disabled={isSubmitting || isActionLoading} 
                       className="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md text-sm font-medium flex items-center justify-center gap-2"
                     >
@@ -178,7 +133,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
       <FormProvider {...formMethods}>
           
           {/* 🎯 Hidden input for optimistic concurrency version tracking */}
-          <input type="hidden" {...register('version' as any)} />
+          <input type="hidden" {...register('version')} />
 
           <ProductSearchModal 
             isOpen={isProductModalOpen}
@@ -334,8 +289,8 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
                                     className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                                 >
                                     <option value="">เลือกสกุลเงิน</option>
-                                    {currencyList.map((c: any) => (
-                                      <option key={c.id || c.currency_id} value={c.code || c.currency_code}>{c.code || c.currency_code} - {c.name_th}</option>
+                                    {currencies.map((c) => (
+                                      <option key={c.currency_id} value={c.currency_code}>{c.currency_code} - {c.name_th}</option>
                                     ))}
                                 </select>
                             )}
@@ -354,8 +309,8 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
                                     className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                                 >
                                     <option value="">เลือกสกุลเงิน</option>
-                                    {currencyList.map((c: any) => (
-                                      <option key={c.id || c.currency_id} value={c.code || c.currency_code}>{c.code || c.currency_code} - {c.name_th}</option>
+                                    {currencies.map((c) => (
+                                      <option key={c.currency_id} value={c.currency_code}>{c.currency_code} - {c.name_th}</option>
                                     ))}
                                 </select>
                             )}
