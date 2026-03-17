@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useForm, useFieldArray, useWatch, type Resolver, type FieldErrors } from 'react-hook-form';
+import { useAuth } from '@/core/auth/contexts/AuthContext';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { QuotationHeaderSchema, type QuotationFormData, type QuotationLineFormData } from '@/modules/procurement/schemas/vq-schemas';
 import { VQService, type VQCreateData } from '@/modules/procurement/services/vq.service';
@@ -80,6 +81,8 @@ interface RawVQResponse extends Omit<Partial<QuotationHeader>, 'vq_lines' | 'lin
     vqLines?: RawVQLine[]; // 💧 @Agent_View_Hydrator: CamelCase support
     lines?: RawVQLine[];
     items?: RawVQLine[];
+    created_by?: number;
+    created_by_name?: string;
 }
 
 export const useVQForm = (
@@ -91,9 +94,12 @@ export const useVQForm = (
   isViewMode?: boolean
 ) => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const showAlert = useCallback((message: string) => toast(message, 'error'), [toast]);
   const { confirm } = useConfirmation();
   const { purchaseTaxOptions, currencyOptions, isLoading: isMasterLoading } = useVQMasterData();
+
+  const [availableVendors, setAvailableVendors] = useState<any[]>([]);
 
   const formMethods = useForm<QuotationFormData>({
     resolver: zodResolver(QuotationHeaderSchema) as Resolver<QuotationFormData>,
@@ -104,7 +110,8 @@ export const useVQForm = (
       currency: 'THB',
       exchange_rate: 1,
       tax_code_id: 0,
-      discount_expression: '0'
+      discount_expression: '0',
+      created_by_name: user?.employee?.employee_fullname || user?.username || ''
     }
   });
 
@@ -257,6 +264,8 @@ export const useVQForm = (
                 discount_expression: String(data.discount_expression || '0'),
                 tax_code_id: Number(data.tax_code_id || 0),
                 status: data.status || 'DRAFT',
+                created_by: data.created_by ? Number(data.created_by) : undefined,
+                created_by_name: data.created_by_name || '',
                 vq_lines: mappedLines
             };
 
@@ -351,7 +360,8 @@ export const useVQForm = (
                 valid_until: formatDateForInputHelper(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
                 discount_expression: '0',
                 tax_code_id: 0,
-                status: 'DRAFT' as VQStatus
+                status: 'DRAFT' as VQStatus,
+                created_by_name: user?.employee?.employee_fullname || user?.username || ''
             };
 
             reset(rfqData as QuotationFormData);
@@ -379,12 +389,13 @@ export const useVQForm = (
           rfq_id: 0,
           valid_until: formatDateForInputHelper(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
           discount_expression: '0',
-          status: 'DRAFT'
+          status: 'DRAFT',
+          created_by_name: user?.employee?.employee_fullname || user?.username || ''
         });
         setDbTotals(null);
       }
     }
-  }, [isOpen, initialRFQ, vqId, reset, getValues, replace, setValue]);
+  }, [isOpen, initialRFQ, vqId, reset, getValues, replace, setValue, user]);
 
 
   // Calculations
@@ -525,7 +536,7 @@ export const useVQForm = (
       discount_expression: String(data.discount_expression || "0"),
       
       // 👤 @Agent_Auth_Injector
-      created_by: 1, 
+      created_by: vqId ? (getValues('created_by') ? Number(getValues('created_by')) : undefined) : (user?.id ? Number(user.id) : undefined), 
 
       // 🛡️ @Agent_Ultimate_Purifier: STRICT DTO MAPPING (Lines)
       vq_lines: data.vq_lines
@@ -613,81 +624,99 @@ export const useVQForm = (
     setValue(`vq_lines.${index}.net_amount`, Number(net.toFixed(2)) || 0);
   };
 
+  const handleSelectRFQVendor = async (vendorId: number) => {
+    try {
+      const vendorDetails = await VendorService.getById(vendorId);
+      setValue('vendor_id', vendorId, { shouldValidate: true });
+      setValue('vendor_code', vendorDetails?.vendor_code || '', { shouldValidate: true });
+      setValue('vendor_name', vendorDetails?.vendor_name || '', { shouldValidate: true });
+      setValue('contact_person', vendorDetails?.contacts?.[0]?.contact_name || '', { shouldValidate: true });
+      setValue('contact_phone', vendorDetails?.phone || '', { shouldValidate: true });
+      setValue('contact_email', vendorDetails?.email || '', { shouldValidate: true });
+      if (vendorDetails?.payment_term_days) {
+        setValue('payment_term_days', Number(vendorDetails.payment_term_days), { shouldValidate: true });
+        setValue('payment_terms', `${vendorDetails.payment_term_days} วัน`, { shouldValidate: true });
+      }
+    } catch (err) {
+      logger.error('[useVQForm] Failed to fetch vendor details:', err);
+      toast('ไม่สามารถดึงข้อมูลรายละเอียดผู้ขายได้', 'error');
+    }
+  };
+
   const handleSelectRFQ = async (rfq: RFQHeader) => {
     toast('กำลังดึงข้อมูลใบขอราคาสินค้า...', 'info');
     try {
-      const fullRFQ: RFQDetailResponse = await RFQService.getById(rfq.rfq_id);
-      
-      // Magic Auto-Fill Logic (Refined Mapping 2.0)
+      // 1. Clear Stale Vendor Data immediately
+      handleClearVendor();
+
+      // 2. Fetch concurrently using Promise.all
+      const [existingVQs, fullRFQ] = await Promise.all([
+        VQService.getVQsByRfqId(rfq.rfq_id),
+        RFQService.getById(rfq.rfq_id)
+      ]);
+
+      const existingVendorIds = (existingVQs?.data || []).map((v: any) => v.vendor_id);
+      const allVendors = fullRFQ.vendors || fullRFQ.rfqVendors || [];
+
+      // 3. Filter Vendors
+      const filteredVendors = allVendors.filter((v: any) => !existingVendorIds.includes(v.vendor_id));
+
+      // 4. Dead-end UX Check
+      if (filteredVendors.length === 0) {
+        toast('RFQ นี้ได้รับการตอบกลับจากผู้ขายครบถ้วนแล้ว', 'error');
+        // Clear RFQ fields to prevent stuck state
+        setValue('rfq_id', 0, { shouldValidate: true });
+        setValue('rfq_no', '', { shouldValidate: true });
+        return false;
+      }
+
+      setAvailableVendors(filteredVendors);
+
+      // 5. Normal processing (setting RFQ lines)
       const apiLines: RFQLine[] = fullRFQ.rfqLines || fullRFQ.lines || [];
       const mappedLines: QuotationLineFormData[] = apiLines.map((line: RFQLine) => ({
           ...createEmptyLine(),
           item_id: Number(line.item_id) || 0,
-          // 💧 @Agent_UI_Hydrator: Ultimate strict type-safe fallback for item display
           item_code: String(line.item_code || line.itemCode || line.product_code || line.item?.item_code || line.product?.product_code || ''),
           item_name: String(line.item_name || line.itemName || line.product_name || line.item?.item_name || line.product?.product_name || line.description || ''),
-          qty: Number(line.qty) || 1, // Forced coercion from API string to number
-          uom_id: Number(line.uom_id) || 0, // Must be Number for dropdown binding
+          qty: Number(line.qty) || 1,
+          uom_id: Number(line.uom_id) || 0,
           uom_name: String(line.uom || ''), 
-          unit_price: 0, // STRICT: Force 0 to require user input
+          unit_price: 0,
           discount_expression: '',
           discount_amount: 0,
           net_amount: 0,
           no_quote: false,
           reference_price: Number(line.est_unit_price) || 0,
-          // 🔗 @Agent_Mapping_Fixer: Explicit lineage linkage (PR -> RFQ -> VQ)
           pr_line_id: line.pr_line_id ? Number(line.pr_line_id) : 0,
           rfq_line_id: line.rfq_line_id ? Number(line.rfq_line_id) : 0,
           status: 'OPEN',
           remark: String(line.description || '')
       }));
 
-      // 🧪 @Agent_UI_Verifier: Log mapped lines for UI verification
-      console.log("💧 Mapped Lines for UI Display:", mappedLines);
-
-      logger.info('Mapped lines for UI:', mappedLines);
-
-      // Find primary vendor and fetch full details if possible
-      const primaryVendor = fullRFQ.vendors?.[0] || fullRFQ.rfqVendors?.[0];
-      let vendorDetails = null;
-      if (primaryVendor?.vendor_id) {
-          try {
-              vendorDetails = await VendorService.getById(primaryVendor.vendor_id);
-          } catch (err) {
-              logger.error('[useVQForm] Failed to fetch vendor details:', err);
-          }
-      }
-
-      const vendor_id = Number(primaryVendor?.vendor_id || 0);
-      const vendor_code = vendorDetails?.vendor_code || primaryVendor?.vendor_code || '';
-      const vendor_name = vendorDetails?.vendor_name || primaryVendor?.vendor_name || '';
-
-      // Update Header Fields individually to respect the "replace() only" rule for lines
+      // Update Header Fields
       setValue('rfq_id', Number(fullRFQ.rfq_id), { shouldValidate: true });
       setValue('rfq_no', fullRFQ.rfq_no || '', { shouldValidate: true });
       setValue('pr_id', fullRFQ.pr_id ? Number(fullRFQ.pr_id) : 0, { shouldValidate: true });
       setValue('qc_id', 0, { shouldValidate: true });
-      setValue('vendor_id', vendor_id, { shouldValidate: true });
-      setValue('vendor_code', vendor_code, { shouldValidate: true });
-      setValue('vendor_name', vendor_name, { shouldValidate: true });
-      setValue('contact_person', vendorDetails?.contacts?.[0]?.contact_name || '', { shouldValidate: true });
-      setValue('contact_phone', vendorDetails?.phone || '', { shouldValidate: true });
-      setValue('contact_email', vendorDetails?.email || '', { shouldValidate: true });
+      
       setValue('currency', fullRFQ.rfq_base_currency_code || 'THB', { shouldValidate: true });
       setValue('isMulticurrency', Boolean(fullRFQ.rfq_base_currency_code && fullRFQ.rfq_base_currency_code !== 'THB'), { shouldValidate: true });
       setValue('exchange_rate', Number(fullRFQ.rfq_exchange_rate) || 1, { shouldValidate: true });
       setValue('exchange_rate_date', fullRFQ.rfq_exchange_rate_date || '', { shouldValidate: true });
       setValue('target_currency', fullRFQ.rfq_quote_currency_code || '', { shouldValidate: true });
-      setValue('payment_terms', vendorDetails?.payment_term_days ? `${vendorDetails.payment_term_days} วัน` : fullRFQ.payment_term_hint || '', { shouldValidate: true });
       setValue('remark', fullRFQ.remarks || '', { shouldValidate: true });
 
-      // Inject lines directly through replace() as per strict rule
+      // Inject lines
       replace(mappedLines.length > 0 ? mappedLines : []);
 
-      // 🍞 @Expert_Touch: Re-validate lines to clear "At least one item is required" errors
-      setTimeout(() => trigger('vq_lines'), 0);
+      // 6. Auto-Fill Vendor Logic if exactly 1
+      if (filteredVendors.length === 1) {
+          const singleVendor = filteredVendors[0];
+          await handleSelectRFQVendor(singleVendor.vendor_id);
+      }
 
-      // Return RFQ No so the component can control the Toast after closing the modal
+      setTimeout(() => trigger('vq_lines'), 0);
       return fullRFQ.rfq_no;
     } catch (error: unknown) {
        logger.error('[useVQForm] Failed to fill from RFQ:', error);
@@ -710,6 +739,9 @@ export const useVQForm = (
         setValue('rfq_id', 0, { shouldValidate: true });
         setValue('rfq_no', '', { shouldValidate: true });
         
+        // Clear local RFQ vendors state
+        setAvailableVendors([]);
+
         // 2. Clear Vendor Info (Deep Clean)
         handleClearVendor();
 
@@ -741,6 +773,9 @@ export const useVQForm = (
     handleSelectRFQ,
     handleClearRFQ,
     handleClearVendor,
+    availableVendors,
+    setAvailableVendors,
+    handleSelectRFQVendor,
     vatRate: totals.taxRate,
     createEmptyLine,
     purchaseTaxOptions,

@@ -49,7 +49,7 @@ export const VQFormHeader: React.FC<VQFormHeaderProps> = ({
                 </div>
 
                 {/* Row 1: Document Info */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                     <div>
                         <label className="text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-1 block">เลขที่ใบเสนอราคา</label>
                         <input type="text" {...register('quotation_no')} className="w-full h-8 px-3 text-sm bg-gray-100/70 dark:bg-gray-800/70 text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg cursor-not-allowed font-medium disabled:opacity-70 disabled:cursor-not-allowed" readOnly disabled={forceViewMode} />
@@ -90,6 +90,10 @@ export const VQFormHeader: React.FC<VQFormHeaderProps> = ({
                             />
                         </div>
                         {errors.valid_until && <p className="text-red-500 text-[10px] mt-0.5 font-medium">{errors.valid_until.message}</p>}
+                    </div>
+                    <div>
+                        <label className="text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-1 block">ผู้จัดทำ</label>
+                        <input type="text" {...register('created_by_name')} className="w-full h-8 px-3 text-sm bg-gray-100/70 dark:bg-gray-800/70 text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg cursor-not-allowed font-medium disabled:opacity-70 disabled:cursor-not-allowed" readOnly disabled={forceViewMode} />
                     </div>
                 </div>
 
@@ -152,7 +156,7 @@ export const VQFormHeader: React.FC<VQFormHeaderProps> = ({
                             <button 
                                 type="button" 
                                 onClick={onOpenVendorModal}
-                                disabled={forceViewMode || !!watchRfqNo}
+                                disabled={forceViewMode}
                                 className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors shrink-0 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
                             >
                                 <Search size={14} /> เลือก

@@ -138,7 +138,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         defaultValues: {
             ...getRFQDefaultFormValues(),
             requested_by: user?.employee?.employee_fullname || '',
-            requested_by_user_id: user?.id || 1,
+            requested_by_user_id: user?.id || undefined,
         },
         mode: 'onBlur',
     });
@@ -569,14 +569,13 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
             const selectedVendors = Array.from(
                 new Map(
                     stagedPayload.vendors
-                        .filter(v => v.vendor_id && (!editId || !v.is_existing))
+                        .filter(v => v.vendor_id)
                         .map(v => [Number(v.vendor_id), { vendor_id: Number(v.vendor_id) }])
                 ).values()
             );
                 
-            if (selectedVendors.length > 0) {
-                payload.rfqVendors = selectedVendors;
-            }
+            // Always set rfqVendors so deletions (including clearing the list) propagate to backend
+            payload.rfqVendors = selectedVendors;
 
             // 🕵️‍♂️ @Agent_Source_Auditor: Verify pr_id Persistence
             logger.debug('[useRFQForm] RFQ Payload Audit:', {

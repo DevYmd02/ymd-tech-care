@@ -8,6 +8,7 @@ import { VendorSearchModal } from '@/modules/master-data/vendor/components/selec
 import { ProductSearchModal, type Product } from '@/modules/master-data/inventory/components/ProductSearchModal';
 import { useVQForm } from '../hooks/useVQForm';
 import { RFQSelectorModal } from './RFQSelectorModal';
+import { RFQVendorSelectorModal } from './RFQVendorSelectorModal';
 import { SharedRemarksTab } from '@/shared/components/forms/SharedRemarksTab';
 import { VQFormHeader } from './VQFormHeader';
 import { VQFormLines } from './VQFormLines';
@@ -35,7 +36,9 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
     currencyOptions,
     isMasterLoading,
     vqStatus,
-    isDataLoading
+    isDataLoading,
+    availableVendors,
+    handleSelectRFQVendor
   } = useVQForm(isOpen, onClose, initialRFQ, onSuccess, vqId);
 
   const {
@@ -55,6 +58,7 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
   const [units, setUnits] = useState<UnitListItem[]>([]);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
+  const [isRFQVendorModalOpen, setIsRFQVendorModalOpen] = useState(false);
   const [isRFQModalOpen, setIsRFQModalOpen] = useState(false);
   const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState('detail');
@@ -187,12 +191,18 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
                 setValue('vendor_id', Number(vendor.vendor_id), { shouldValidate: true });
                 setValue('vendor_code', vendor.vendor_code || '', { shouldValidate: true });
                 setValue('vendor_name', vendor.name, { shouldValidate: true });
-                // contact_person omitted as it's not in VendorSearchItem
                 setValue('contact_phone', vendor.phone || '', { shouldValidate: true });
                 setValue('contact_email', vendor.email || '', { shouldValidate: true });
                 setValue('payment_terms', vendor.payment_term_days ? `${vendor.payment_term_days} วัน` : '', { shouldValidate: true });
                 setIsVendorModalOpen(false);
             }}
+        />
+
+        <RFQVendorSelectorModal 
+            isOpen={isRFQVendorModalOpen}
+            onClose={() => setIsRFQVendorModalOpen(false)}
+            vendors={availableVendors || []}
+            onSelect={handleSelectRFQVendor}
         />
 
         <RFQSelectorModal 
@@ -215,7 +225,14 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
                 watchRfqNo={watchRfqNo || ''}
                 watchCurrency={watchCurrency || 'THB'}
                 watchExchangeRate={watchExchangeRate || 1}
-                onOpenVendorModal={() => !forceViewMode && setIsVendorModalOpen(true)}
+                onOpenVendorModal={() => {
+                    if (forceViewMode) return;
+                    if (watchRfqNo) {
+                        setIsRFQVendorModalOpen(true);
+                    } else {
+                        setIsVendorModalOpen(true);
+                    }
+                }}
                 onClearVendor={handleClearVendor}
                 onOpenRFQModal={() => !forceViewMode && setIsRFQModalOpen(true)}
                 onClearRFQ={handleClearRFQ}

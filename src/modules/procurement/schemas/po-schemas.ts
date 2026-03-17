@@ -253,6 +253,8 @@ export const POFormSchema = z.object({
     delivery_date:      z.string().min(1, 'กรุณาระบุกำหนดส่งของ'),
     remarks:  z.string().optional(),
     discount_expression: z.string().default('0'),
+    created_by: optionalIdSchema,
+    created_by_name: z.string().optional(),
     po_lines: z.array(POLineSchema).min(1, 'ต้องมีรายการสินค้าอย่างน้อย 1 รายการ'),
 });
 

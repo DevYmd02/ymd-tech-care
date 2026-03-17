@@ -355,8 +355,8 @@ export default function POFormModal({
                                 </div>
                             </div>
 
-                            {/* ── Row 3: เครดิตเทอม | กำหนดส่งของ | -- ช่องว่าง -- ── */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {/* ── Row 3: เครดิตเทอม | กำหนดส่งของ | ประเภทภาษี | ผู้จัดทำ ── */}
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                 <div>
                                     <label className={ui.label}>เครดิตเทอม (วัน)</label>
                                     <input type="number" {...register('payment_term_days', { valueAsNumber: true })}
@@ -406,6 +406,10 @@ export default function POFormModal({
                                         />
                                     </div>
                                     {errors.tax_code_id && <p className={ui.error}>{errors.tax_code_id.message}</p>}
+                                </div>
+                                <div>
+                                    <label className={ui.label}>ผู้จัดทำ</label>
+                                    <input {...register('created_by_name')} className={ui.inputRO} readOnly placeholder="-" />
                                 </div>
                             </div>
 
