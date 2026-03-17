@@ -167,7 +167,7 @@ export default function ItemMasterList() {
             id: 'sequence',
             header: 'ลำดับ',
             accessorFn: (_, index) => (filters.page - 1) * filters.limit + index + 1,
-            size: 60,
+            size: 50,
         },
         {
             accessorKey: 'item_code',
@@ -180,46 +180,45 @@ export default function ItemMasterList() {
                     {getValue() as string}
                 </span>
             ),
-            size: 150,
+            size: 120,
         },
         {
             accessorKey: 'item_name',
             header: 'ชื่อสินค้า (ไทย)',
-            size: 200,
+            cell: ({ getValue }) => <span className="truncate block w-full" title={getValue() as string}>{getValue() as string}</span>,
         },
         {
             accessorKey: 'item_name_en',
             header: 'ชื่อสินค้า (Eng)',
-            cell: ({ getValue }) => <span className="text-gray-500">{getValue() as string || '-'}</span>,
-            size: 200,
+            cell: ({ getValue }) => <span className="truncate block w-full text-gray-500" title={getValue() as string || '-'}>{getValue() as string || '-'}</span>,
         },
         {
             accessorKey: 'item_category_name',
             header: 'หมวดหมู่',
-            cell: ({ getValue }) => <span className="text-gray-700 dark:text-gray-300">{getValue() as string}</span>,
-            size: 150,
+            cell: ({ row }) => <span className="text-gray-700 dark:text-gray-300">{row.original.item_category_name || '-'}</span>,
+            size: 120,
         },
         {
             accessorKey: 'item_brand_name',
             header: 'ยี่ห้อ',
-            cell: ({ getValue }) => <span className="text-gray-700 dark:text-gray-300">{getValue() as string || '-'}</span>,
-            size: 150,
+            cell: ({ row }) => <span className="text-gray-700 dark:text-gray-300">{row.original.item_brand_name || '-'}</span>,
+            size: 120,
         },
         {
             accessorKey: 'item_type_name',
             header: 'ประเภท',
-            cell: ({ getValue }) => (
+            cell: ({ row }) => (
                 <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600">
-                    {getValue() as string || '-'}
+                    {row.original.item_type_name || '-'}
                 </span>
             ),
-            size: 100,
+            size: 80,
         },
         {
             accessorKey: 'base_uom_name',
             header: 'หน่วยนับ (ID)',
-            cell: ({ getValue }) => <span className="text-gray-600 dark:text-gray-300">{getValue() as string}</span>,
-            size: 100,
+            cell: ({ row }) => <span className="text-gray-600 dark:text-gray-300">{row.original.base_uom_name || '-'}</span>,
+            size: 80,
         },
         {
             accessorKey: 'is_active',
@@ -229,12 +228,12 @@ export default function ItemMasterList() {
                     <ActiveStatusBadge isActive={getValue() as boolean} />
                 </div>
             ),
-            size: 100,
+            size: 80,
         },
         {
             id: 'actions',
             header: () => <div className="text-center w-full">จัดการ</div>,
-            size: 100,
+            size: 80,
             cell: ({ row }) => (
                 <div className="flex items-center justify-center gap-2">
                     <button 

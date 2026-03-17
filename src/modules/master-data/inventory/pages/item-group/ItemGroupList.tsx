@@ -155,7 +155,7 @@ export default function ItemGroupList() {
                     className="shadow-sm"
                 />
             </div>
-            <ItemGroupFormModal isOpen={isModalOpen} onClose={handleModalClose} editId={editingId} initialData={editingData} onSuccess={refetch} />
+            <ItemGroupFormModal isOpen={isModalOpen} onClose={handleModalClose} editId={editingId} initialData={editingData} onSuccess={() => { refetch(); handleModalClose(); }} />
         </div>
     );
 }

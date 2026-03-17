@@ -7,7 +7,9 @@ import { useState, useMemo, useCallback } from 'react';
 import { Warehouse, Edit2, Trash2 } from 'lucide-react';
 import { WarehouseFormModal } from './WarehouseFormModal';
 import { WarehouseService } from '@/modules/master-data/inventory/services/warehouse.service';
-import type { WarehouseListItem } from '@/modules/master-data/types/master-data-types';
+import type { WarehouseListItem, WarehouseMaster, BranchListItem } from '@/modules/master-data/types/master-data-types';
+import { BranchService } from '@/modules/master-data/company/services/branch.service';
+import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import { ActiveStatusBadge } from '@ui';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';
@@ -41,6 +43,8 @@ export default function WarehouseList() {
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
+    const [editingData, setEditingData] = useState<WarehouseMaster | null>(null);
+    const { confirm } = useConfirmation();
 
     // ==================== FILTER CONFIG ====================
     const filterConfig: FilterFieldConfig<Extract<keyof typeof filters, string>>[] = useMemo(() => [
@@ -66,8 +70,22 @@ export default function WarehouseList() {
     const { data: response, isLoading } = useQuery({
         queryKey: ['warehouses', filters],
         queryFn: async () => {
-            const result = await WarehouseService.getAll();
-            let items = result.items || [];
+            const [warehousesRes, branchesRes] = await Promise.all([
+                WarehouseService.getAll(),
+                BranchService.getList({ page: 1, limit: 1000 })
+            ]);
+            
+            let items = warehousesRes.items || [];
+            const branches = Array.isArray(branchesRes) ? branchesRes : (branchesRes?.items || []);
+
+            // Map branch name
+            items = items.map(w => {
+                const branch = branches.find((b: BranchListItem) => b.branch_id === w.branch_id);
+                return {
+                    ...w,
+                    branch_name: branch ? branch.branch_name : '-'
+                };
+            });
             
             // Client-side filtering
             if (filters.status !== 'ALL') {
@@ -118,20 +136,41 @@ export default function WarehouseList() {
         setIsModalOpen(true);
     };
 
-    const handleEdit = (id: number) => {
-        setEditingId(id);
+    const handleEdit = (item: WarehouseListItem) => {
+        setEditingId(item.id);
+        
+        const masterData: WarehouseMaster = {
+            id: item.id,
+            warehouse_id: item.warehouse_id,
+            warehouse_code: item.warehouse_code,
+            warehouse_name: item.warehouse_name,
+            branch_id: item.branch_id,
+            address: item.address,
+            is_active: item.is_active,
+        } as WarehouseMaster;
+
+        setEditingData(masterData);
         setIsModalOpen(true);
     };
 
-    const handleDelete = useCallback((id: number) => {
-        if (confirm('คุณต้องการลบข้อมูลคลังสินค้านี้หรือไม่?')) {
+    const handleDelete = useCallback(async (id: number) => {
+        const isConfirmed = await confirm({
+            title: 'ยืนยันการลบข้อมูล',
+            description: 'คุณต้องการลบข้อมูลคลังสินค้านี้หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้',
+            confirmText: 'ลบ',
+            cancelText: 'ยกเลิก',
+            variant: 'danger'
+        });
+        
+        if (isConfirmed) {
             deleteMutation.mutate(id);
         }
-    }, [deleteMutation]);
+    }, [confirm, deleteMutation]);
 
     const handleModalClose = () => {
         setIsModalOpen(false);
         setEditingId(null);
+        setEditingData(null);
     };
 
     // ==================== TABLE COLUMNS ====================
@@ -148,7 +187,7 @@ export default function WarehouseList() {
             cell: ({ getValue, row }) => (
                 <span 
                     className="font-medium text-blue-600 cursor-pointer hover:underline"
-                    onClick={() => handleEdit(row.original.id)}
+                    onClick={() => handleEdit(row.original)}
                 >
                     {getValue() as string}
                 </span>
@@ -182,7 +221,7 @@ export default function WarehouseList() {
             cell: ({ row }) => (
                 <div className="flex items-center justify-center gap-2">
                     <button 
-                        onClick={() => handleEdit(row.original.id)}
+                        onClick={() => handleEdit(row.original)}
                         className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                         title="แก้ไข"
                     >
@@ -263,6 +302,8 @@ export default function WarehouseList() {
                 isOpen={isModalOpen} 
                 onClose={handleModalClose}
                 editId={editingId}
+                initialData={editingData}
+                onSuccess={() => { handleModalClose(); queryClient.invalidateQueries({ queryKey: ['warehouses'] }); }}
             />
         </div>
     );

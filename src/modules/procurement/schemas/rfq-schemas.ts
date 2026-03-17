@@ -14,7 +14,7 @@ export type RFQVendorStatusType = z.infer<typeof RFQVendorStatusEnum>;
 // SHARED MESSAGE CONSTANTS (Mirrors qt-schemas.ts style)
 // ====================================================================================
 const MESSAGES = {
-    REQUIRED: 'กรุณากรอกข้อมูลที่จำเป็น',
+    REQUIRED: 'กรุณาระบุข้อมูล',
     POSITIVE_NUMBER: 'ต้องมากกว่า 0',
     NON_NEGATIVE: 'ต้องไม่ติดลบ',
     INVALID_EMAIL: 'รูปแบบอีเมลไม่ถูกต้อง',

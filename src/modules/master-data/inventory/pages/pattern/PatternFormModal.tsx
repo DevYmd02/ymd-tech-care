@@ -65,15 +65,15 @@ export function PatternFormModal({ isOpen, onClose, editId, initialData, onSucce
         <DialogFormLayout
             isOpen={isOpen}
             onClose={handleClose}
-            title={editId ? 'แก้ไขข้อมูลลวดลาย' : 'เพิ่มลวดลายใหม่'}
+            title={editId ? 'แก้ไขข้อมูลรูปแบบ' : 'เพิ่มรูปแบบใหม่'}
             titleIcon={TitleIcon}
             footer={FormFooter}
         >
             <div className="p-6 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label className={styles.label}>รหัสลวดลาย <span className="text-red-500">*</span></label>
-                        <input {...register('code')} type="text" placeholder="กรอกรหัสลวดลาย" className={`${styles.input} ${errors.code ? 'border-red-500' : ''}`} />
+                        <label className={styles.label}>รหัสรูปแบบ <span className="text-red-500">*</span></label>
+                        <input {...register('code')} type="text" placeholder="กรอกรหัสรูปแบบ" className={`${styles.input} ${errors.code ? 'border-red-500' : ''}`} />
                         {errors.code && <p className="text-red-500 text-xs mt-1">{errors.code.message}</p>}
                     </div>
                     <div className="flex items-end pb-2">
@@ -84,13 +84,13 @@ export function PatternFormModal({ isOpen, onClose, editId, initialData, onSucce
                     </div>
                 </div>
                 <div>
-                    <label className={styles.label}>ชื่อลวดลาย (ไทย) <span className="text-red-500">*</span></label>
-                    <input {...register('nameTh')} type="text" placeholder="กรอกชื่อลวดลาย (ไทย)" className={`${styles.input} ${errors.nameTh ? 'border-red-500' : ''}`} />
+                    <label className={styles.label}>ชื่อรูปแบบ (ไทย) <span className="text-red-500">*</span></label>
+                    <input {...register('nameTh')} type="text" placeholder="กรอกชื่อรูปแบบ (ไทย)" className={`${styles.input} ${errors.nameTh ? 'border-red-500' : ''}`} />
                     {errors.nameTh && <p className="text-red-500 text-xs mt-1">{errors.nameTh.message}</p>}
                 </div>
                 <div>
-                    <label className={styles.label}>ชื่อลวดลาย (EN)</label>
-                    <input {...register('nameEn')} type="text" placeholder="กรอกชื่อลวดลาย (English)" className={`${styles.input} ${errors.nameEn ? 'border-red-500' : ''}`} />
+                    <label className={styles.label}>ชื่อรูปแบบ (EN)</label>
+                    <input {...register('nameEn')} type="text" placeholder="กรอกชื่อรูปแบบ (English)" className={`${styles.input} ${errors.nameEn ? 'border-red-500' : ''}`} />
                     {errors.nameEn && <p className="text-red-500 text-xs mt-1">{errors.nameEn.message}</p>}
                 </div>
             </div>

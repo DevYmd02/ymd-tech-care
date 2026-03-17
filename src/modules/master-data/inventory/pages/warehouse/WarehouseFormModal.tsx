@@ -128,10 +128,10 @@ export function WarehouseFormModal({ isOpen, onClose, editId, initialData, onSuc
                             {...register('branch_id')}
                             className={`${styles.input} ${errors.branch_id ? 'border-red-500 focus:ring-red-200' : ''}`}
                         >
-                            <option value="">-- เลือกสาขา --</option>
+                            <option value="0">-- เลือกสาขา --</option>
                             {branches.map(branch => (
                                 <option key={branch.branch_id} value={branch.branch_id}>
-                                    {branch.branch_code} - {branch.branch_name}
+                                    {branch.branch_name}
                                 </option>
                             ))}
                         </select>

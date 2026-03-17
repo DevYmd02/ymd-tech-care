@@ -7,7 +7,7 @@ import { WarehouseService } from '../services/warehouse.service';
 import { BranchService } from '@/modules/master-data/company/services/branch.service';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import { logger } from '@/shared/utils/logger';
-import type { WarehouseMaster } from '@/modules/master-data/types/master-data-types';
+import type { WarehouseMaster, WarehouseCreateRequest } from '@/modules/master-data/types/master-data-types';
 
 export const warehouseSchema = z.object({
     warehouse_code: z.string().min(1, 'กรุณากรอกรหัสคลังสินค้า').max(20, 'รหัสคลังสินค้าต้องไม่เกิน 20 ตัวอักษร'),
@@ -66,7 +66,7 @@ export function useWarehouseForm(editId: number | null, initialData?: WarehouseM
             reset({
                 warehouse_code: initialData.warehouse_code,
                 warehouse_name: initialData.warehouse_name,
-                branch_id: initialData.branch_id || (branches.length > 0 ? branches[0].branch_id : 0),
+                branch_id: initialData.branch_id || 0,
                 address: initialData.address || '',
                 is_active: initialData.is_active ?? true,
             });
@@ -75,9 +75,11 @@ export function useWarehouseForm(editId: number | null, initialData?: WarehouseM
 
     const saveMutation = useMutation({
         mutationFn: (data: WarehouseFormData) => {
+            const payload: Partial<WarehouseFormData> = { ...data };
+            delete payload.is_active;
             return editId 
-                ? WarehouseService.update({ warehouse_id: editId, ...data })
-                : WarehouseService.create(data);
+                ? WarehouseService.update({ warehouse_id: editId, ...(payload as WarehouseCreateRequest) })
+                : WarehouseService.create(payload as WarehouseCreateRequest);
         },
         onSuccess: async (res) => {
             if (res.success) {

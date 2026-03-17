@@ -129,9 +129,9 @@ export default function PatternList() {
         <div className="p-6 space-y-6">
             <div>
                 <h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                    <Grid3X3 className="text-blue-600" /> กำหนดลวดลาย (Pattern)
+                    <Grid3X3 className="text-blue-600" /> กำหนดรูปแบบ (Pattern)
                 </h1>
-                <p className="text-gray-500 mt-1 text-sm">จัดการข้อมูลลวดลายในระบบ</p>
+                <p className="text-gray-500 mt-1 text-sm">จัดการข้อมูลรูปแบบในระบบ</p>
             </div>
             <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700"><FilterFormBuilder config={filterConfig} filters={filters} onFilterChange={(name: string, value: string) => setFilters({ [name]: value })} onSearch={() => handlePageChange(1)} onReset={resetFilters} onCreate={handleCreateNew} createLabel="เพิ่มรูปแบบใหม่" accentColor="indigo" /></div>
             <div className="flex flex-col gap-4">
@@ -153,7 +153,7 @@ export default function PatternList() {
                     className="shadow-sm"
                 />
             </div>
-            <PatternFormModal isOpen={isModalOpen} onClose={handleModalClose} editId={editingId} initialData={editingData} onSuccess={refetch} />
+            <PatternFormModal isOpen={isModalOpen} onClose={handleModalClose} editId={editingId} initialData={editingData} onSuccess={() => { refetch(); handleModalClose(); }} />
         </div>
     );
 }

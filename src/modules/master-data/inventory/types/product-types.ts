@@ -13,7 +13,7 @@ export interface ProductCategoryMaster extends BaseMasterData {
     category_id: number;
     category_code: string;
     category_name: string;
-    category_nameeng?: string;
+    category_name_en?: string;
 }
 
 export interface ProductCategoryFormData {
@@ -29,7 +29,7 @@ export interface ProductCategoryListItem {
     category_id: number;
     category_code: string;
     category_name: string;
-    category_nameeng: string;
+    category_name_en: string;
     is_active: boolean;
     created_at: string;
     [key: string]: string | number | boolean;
@@ -46,7 +46,7 @@ export const initialProductCategoryFormData: ProductCategoryFormData = {
 export interface ProductCategoryCreateRequest {
     category_code: string;
     category_name: string;
-    category_nameeng?: string;
+    category_name_en?: string;
     is_active?: boolean;
 }
 
@@ -550,10 +550,47 @@ export interface ItemMaster extends BaseMasterData {
     sales_unit_name?: string;
     tax_code?: string;
     is_active: boolean;
+    is_on_hold?: boolean;
+    is_buddy?: boolean;
+    
+    // 📝 Additional fields for full detail or form hydration
+    base_uom_id?: number;
+    purchase_uom_id?: number;
+    sale_uom_id?: number;
+    tax_code_id?: number;
+    tax_rate?: number;
+    is_batch_control?: boolean;
+    is_expiry_control?: boolean;
+    is_serial_control?: boolean;
+    shelf_life_days?: number;
+    default_issue_policy?: string;
+    lot_tracking_level?: string;
+    serial_tracking_level?: string;
+    costing_method?: string;
+    discount_amount?: string;
+    barcode_default?: string;
+    item_brand_id?: number;
+    item_brand_code?: string;
+    item_pattern_id?: number;
+    item_pattern_code?: string;
+    item_design_id?: number;
+    item_design_code?: string;
+    item_class_id?: number;
+    item_class_code?: string;
+    item_size_id?: number;
+    item_size_code?: string;
+    item_color_id?: number;
+    item_color_code?: string;
+    item_group_id?: number;
+    item_group_code?: string;
+    item_grade_id?: number;
+    item_grade_code?: string;
+    item_category_id?: number;
+    item_category_code?: string;
 }
 
 export interface ItemMasterFormData {
-    item_id: number;
+    item_id?: number;
     item_code: string;
     item_name: string;
     item_name_en?: string;
@@ -565,24 +602,25 @@ export interface ItemMasterFormData {
     standard_cost?: number;
     barcode?: string;
     category_id?: number;
-    category_name: string;
+    category_name?: string;
     item_type_id?: number;
     item_type_code?: string;
     item_type_name?: string;
     unit_id?: number;
-    unit_name: string;
+    unit_name?: string;
     purchasing_unit_id?: number;
     purchasing_unit_name?: string;
     sales_unit_id?: number;
     sales_unit_name?: string;
     tax_code?: string;
     is_active: boolean;
-    costing_method: string;
-    default_tax_code: string;
+    costing_method?: string;
+    default_tax_code?: string;
+
+    // 📝 Additional form inputs
     item_group_id?: number;
     item_category_id?: number;
     base_uom_id?: number;
-    purchase_uom_id?: number;
     sale_uom_id?: number;
     tax_code_id?: number;
     barcode_default?: string;
@@ -600,6 +638,8 @@ export interface ItemMasterFormData {
     item_size_id?: number;
     item_color_id?: number;
     item_grade_id?: number;
+    is_buddy?: boolean;
+    is_on_hold?: boolean;
 }
 
 export interface ItemListItem {
@@ -631,6 +671,19 @@ export interface ItemListItem {
     purchasing_unit_name?: string;
     purchasing_conversion_factor?: number;  // conversion_factor for purchasing unit
     stock_qty?: number; // Mock field for PR Product Search Modal
+
+    // 📝 Dynamic Response Fields for Master Data Lists
+    base_uom_name?: string;
+    item_category_name?: string;
+    item_brand_name?: string;
+    item_type_name?: string;
+    item_group_name?: string;
+    item_class_name?: string;
+    item_grade_name?: string;
+    item_size_name?: string;
+    item_color_name?: string;
+    item_pattern_name?: string;
+    sale_uom_name?: string;
 }
 
 export const initialItemMasterFormData: ItemMasterFormData = {

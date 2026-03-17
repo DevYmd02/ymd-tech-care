@@ -4,7 +4,8 @@
 import { useState, useCallback, useMemo } from 'react';
 import { Edit2, Trash2, MapPin } from 'lucide-react';
 import { LocationFormModal } from './LocationFormModal';
-import { LocationService } from '@/modules/master-data/inventory/services/inventory-master.service';
+import { LocationService, ShelfService } from '@/modules/master-data/inventory/services/inventory-master.service';
+import { WarehouseService } from '@/modules/master-data/inventory/services/warehouse.service';
 import type { Location } from '@/modules/master-data/inventory/types/inventory-master.types';
 import { ActiveStatusBadge } from '@ui';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
@@ -38,8 +39,25 @@ export default function LocationList() {
     const { data: response, isLoading, refetch } = useQuery({
         queryKey: ['locations', filters],
         queryFn: async () => {
-            const response = await LocationService.getAll();
+            const [response, whRes, shelfRes] = await Promise.all([
+                LocationService.getAll(),
+                WarehouseService.getAll(),
+                ShelfService.getAll()
+            ]);
             let items = response.items || [];
+            const warehouses = whRes.items || [];
+            const shelves = shelfRes.items || [];
+
+            // Map warehouse_name and shelf_name
+            items = items.map(item => {
+                const wh = warehouses.find(w => w.id === item.warehouse_id);
+                const sh = shelves.find(s => s.id === item.shelf_id);
+                return {
+                    ...item,
+                    warehouse_name: wh ? wh.warehouse_name : '-',
+                    shelf_name: sh ? sh.name_th : '-'
+                };
+            });
 
             if (filters.status !== 'ALL') {
                 items = items.filter(item => filters.status === 'ACTIVE' ? item.is_active : !item.is_active);
@@ -102,6 +120,8 @@ export default function LocationList() {
         { id: 'sequence', header: 'ลำดับ', accessorFn: (_, index) => (filters.page - 1) * filters.limit + index + 1, size: 60 },
         { accessorKey: 'code', header: 'รหัส', cell: ({ row }) => <span className="font-medium text-blue-600 cursor-pointer hover:underline" onClick={() => handleEdit(row.original)}>{row.getValue('code') as string}</span> },
         { accessorKey: 'name_th', header: 'ชื่อ (ไทย)' },
+        { accessorKey: 'warehouse_name', header: 'คลังสินค้า', cell: ({ getValue }) => <span className="font-medium text-purple-600 dark:text-purple-400">{getValue() as string}</span> },
+        { accessorKey: 'shelf_name', header: 'ชั้นวางสินค้า', cell: ({ getValue }) => <span className="font-medium text-blue-600 dark:text-blue-400">{getValue() as string}</span> },
         { accessorKey: 'name_en', header: 'ชื่อ (EN)', cell: ({ getValue }) => <span className="text-gray-600">{getValue() as string || '-'}</span> },
         { accessorKey: 'is_active', header: 'สถานะ', cell: ({ getValue }) => <ActiveStatusBadge isActive={getValue() as boolean} />, size: 100 },
         { id: 'actions', header: 'จัดการ', size: 100, cell: ({ row }) => (<div className="flex items-center gap-2"><button onClick={() => handleEdit(row.original)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg" title="แก้ไข"><Edit2 size={18} /></button><button onClick={() => handleDelete(row.original.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg" title="ลบ"><Trash2 size={18} /></button></div>) },
@@ -112,7 +132,7 @@ export default function LocationList() {
             <div><h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2"><MapPin className="text-blue-600" /> กำหนดสถานที่จัดเก็บ (Location Master)</h1><p className="text-gray-500 mt-1 text-sm">จัดการข้อมูลสถานที่จัดเก็บ</p></div>
             <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700"><FilterFormBuilder config={filterConfig} filters={filters} onFilterChange={(name: string, value: string) => setFilters({ [name]: value })} onSearch={() => handlePageChange(1)} onReset={resetFilters} onCreate={handleCreateNew} createLabel="เพิ่มสถานที่ใหม่" accentColor="indigo" /></div>
             <div className="flex flex-col gap-4"><h2 className="text-gray-700 font-medium">พบข้อมูล {response?.total || 0} รายการ</h2><SmartTable data={response?.items || []} columns={columns} isLoading={isLoading} pagination={{ pageIndex: filters.page, pageSize: filters.limit, totalCount: response?.total || 0, onPageChange: handlePageChange, onPageSizeChange: (size) => setFilters({ limit: size, page: 1 }) }} sortConfig={sortConfig} onSortChange={handleSortChange} rowIdField="id" className="shadow-sm" /></div>
-            <LocationFormModal isOpen={isModalOpen} onClose={handleModalClose} editId={editingId} initialData={editingData} onSuccess={refetch} />
+            <LocationFormModal isOpen={isModalOpen} onClose={handleModalClose} editId={editingId} initialData={editingData} onSuccess={() => { refetch(); handleModalClose(); }} />
         </div>
     );
 }

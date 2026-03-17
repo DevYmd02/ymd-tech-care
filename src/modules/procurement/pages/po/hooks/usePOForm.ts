@@ -4,8 +4,7 @@ import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import type { Resolver, SubmitHandler, FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { POService } from '@/modules/procurement/services'; // Keep POService from its original path
-import { VQService } from '@/modules/procurement/services'; // Keep VQService from its original path
+import { POService, VQService, QCService } from '@/modules/procurement/services';
 import { POFormSchema, CreatePOSchema, type POFormData, type POLine, type ItemSelectorResult } from '@/modules/procurement/schemas/po-schemas'; 
 import type { IHydrationPRLine, IHydrationVQLine, IHydrationVQHeader } from '@/modules/procurement/schemas/po-schemas'; 
 import type { CreatePOPayload } from '@/modules/procurement/types/po-types';
@@ -112,7 +111,7 @@ export const usePOForm = ({
     const watchIsMulticurrency = useWatch({ control, name: 'is_multicurrency' });
 
     // ── VQ Inheritance Query (read-only cross-module lookup) ──────────────────
-    const { data: inheritedVQ } = useQuery({
+    const { data: inheritedQC } = useQuery({
         queryKey: ['inherit-vq', initialValues?.rfq_id, initialValues?.winning_vq_id, initialValues?.vendor_id],
         queryFn: async () => {
             if ((!initialValues?.rfq_id && !initialValues?.winning_vq_id) || !initialValues?.vendor_id) return null;
@@ -141,8 +140,8 @@ export const usePOForm = ({
                 initialPOLines = initialValues.po_lines as POFormData['po_lines'];
             } 
             // Phase 2: Derive from RFQ/VQ inheritance
-            else if (inheritedVQ && (inheritedVQ.vq_lines || inheritedVQ.lines)) {
-                const sourceLines = (inheritedVQ.vq_lines || inheritedVQ.lines) as QuotationLine[];
+            else if (inheritedQC && (inheritedQC.vq_lines || inheritedQC.lines)) {
+                const sourceLines = (inheritedQC.vq_lines || inheritedQC.lines) as QuotationLine[];
                 initialPOLines = sourceLines.map((l: QuotationLine, idx: number) => ({
                     line_no:         idx + 1,
                     item_id:         Number(l.item_id || 0),
@@ -157,7 +156,7 @@ export const usePOForm = ({
                     unit_price:      Number(l.unit_price) || 0,
                     discount_amount: Number(l.discount_amount) || 0,
                     discount_expression: String(l.discount_expression || '0'),
-                    tax_code_id:     l.tax_code_id || (inheritedVQ as QuotationHeader).tax_code_id || undefined,
+                    tax_code_id:     l.tax_code_id || (inheritedQC as QuotationHeader).tax_code_id || undefined,
                     required_receipt_type: 'FULL',
                     receipt_type:    'GOODS' as const,
                     line_total:      Number(l.net_amount) || 0,
@@ -190,30 +189,32 @@ export const usePOForm = ({
             reset({
                 po_no:                initialValues?.po_no                ?? undefined,
                 po_date:              initialValues?.po_date              ?? new Date().toISOString().split('T')[0],
-                rfq_id:               initialValues?.rfq_id               ?? inheritedVQ?.rfq_id ?? undefined,
-                winning_vq_id:        initialValues?.winning_vq_id        ?? inheritedVQ?.vq_header_id ?? inheritedVQ?.quotation_id ?? undefined,
-                pr_id:                inheritedVQ?.pr_id                  || initialValues?.pr_id || undefined,
-                pr_no:                inheritedVQ?.pr_no                  || initialValues?.pr_no || undefined,
+                rfq_id:               initialValues?.rfq_id               ?? inheritedQC?.rfq_id ?? undefined,
+                winning_vq_id:        initialValues?.winning_vq_id        ?? inheritedQC?.vq_header_id ?? inheritedQC?.quotation_id ?? undefined,
+                pr_id:                inheritedQC?.pr_id                  || initialValues?.pr_id || undefined,
+                pr_no:                inheritedQC?.pr_no                  || initialValues?.pr_no || undefined,
+                qc_id:                initialValues?.qc_id                ?? undefined,
+                qc_no:                initialValues?.qc_no                ?? undefined,
                 vendor_id:            initialValues?.vendor_id            ?? undefined,
                 vendor_name:          initialValues?.vendor_name          ?? undefined,
                 branch_id:            initialValues?.branch_id            ?? undefined,
                 ship_to_warehouse_id: initialValues?.ship_to_warehouse_id ?? undefined,
                 is_multicurrency:     false,
-                currency_code:        (inheritedVQ?.base_currency_code || inheritedVQ?.currency || initialValues?.currency_code) ?? 'THB',
-                base_currency_code:   inheritedVQ?.base_currency_code || 'THB',
-                quote_currency_code:  inheritedVQ?.quote_currency_code || inheritedVQ?.currency || 'THB',
+                currency_code:        (inheritedQC?.base_currency_code || inheritedQC?.currency || initialValues?.currency_code) ?? 'THB',
+                base_currency_code:   inheritedQC?.base_currency_code || 'THB',
+                quote_currency_code:  inheritedQC?.quote_currency_code || inheritedQC?.currency || 'THB',
                 target_currency:      undefined,
                 exchange_rate_date:   new Date().toISOString().split('T')[0],
-                exchange_rate:        Number(inheritedVQ?.exchange_rate || initialValues?.exchange_rate || 1),
-                payment_term_days:    Number(inheritedVQ?.payment_term_days || initialValues?.payment_term_days || 30),
+                exchange_rate:        Number(inheritedQC?.exchange_rate || initialValues?.exchange_rate || 1),
+                payment_term_days:    Number(inheritedQC?.payment_term_days || initialValues?.payment_term_days || 30),
                 delivery_date:        initialValues?.delivery_date ?? '',
                 remarks:              initialValues?.remarks ?? '',
                 discount_expression:  initialValues?.discount_expression ?? '0',
-                tax_code_id:          initialValues?.tax_code_id ?? inheritedVQ?.tax_code_id ?? undefined,
+                tax_code_id:          initialValues?.tax_code_id ?? inheritedQC?.tax_code_id ?? undefined,
                 po_lines:             initialPOLines,
             });
         }
-    }, [isOpen, initialValues, reset, inheritedVQ]);
+    }, [isOpen, initialValues, reset, inheritedQC]);
     
 
     // ── Enforce THB when Multicurrency is OFF ─────────────────────────────────
@@ -263,6 +264,15 @@ export const usePOForm = ({
                 } catch (vqError) {
                     logger.error('[usePOForm] Failed to fetch VQ details for QC flow', vqError);
                     toast('ไม่สามารถดึงข้อมูลราคาจากใบเสนอราคาได้ กรุณาระบุราคาด้วยตนเอง', 'error');
+                }
+
+                if (qcId) {
+                    try {
+                        const fullQC = await QCService.getById(Number(qcId));
+                        setValue('qc_no', fullQC.qc_no);
+                    } catch (qcError) {
+                        logger.error('[usePOForm] Failed to fetch QC details', qcError);
+                    }
                 }
             }
             

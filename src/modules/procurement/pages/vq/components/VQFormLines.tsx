@@ -32,6 +32,7 @@ export const VQFormLines: React.FC<VQFormLinesProps> = ({
     totals
 }) => {
     const { register, control, formState: { errors } } = useFormContext<QuotationFormData>();
+    const [isTotalExpanded, setIsTotalExpanded] = React.useState(false);
     
     // @Agent_Payload_Interceptor - Mapping form array
     const { fields, append, remove, insert } = useFieldArray({
@@ -42,6 +43,9 @@ export const VQFormLines: React.FC<VQFormLinesProps> = ({
     const watchVqLinesRaw = useWatch({ control, name: 'vq_lines' });
     const watchVqLines = useMemo(() => watchVqLinesRaw || [], [watchVqLinesRaw]);
     const watchedLines = watchVqLines; // Alias for consistent naming
+
+    const watchExchangeRate = useWatch({ control, name: 'exchange_rate' }) || 1;
+    const watchCurrency = useWatch({ control, name: 'currency' }) || 'THB';
     
     const {
         subtotal,
@@ -50,6 +54,8 @@ export const VQFormLines: React.FC<VQFormLinesProps> = ({
         grandTotal,
         totalLineDiscount
     } = totals;
+
+    const grandTotalTHB = useMemo(() => grandTotal * (Number(watchExchangeRate) || 1), [grandTotal, watchExchangeRate]);
 
     const inputReadonlyClass = 'h-7 px-2 text-right bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded text-gray-900 dark:text-white';
     const labelClass = 'text-gray-600 dark:text-gray-400 min-w-16';
@@ -99,9 +105,8 @@ export const VQFormLines: React.FC<VQFormLinesProps> = ({
                                 ) : (
                                     fields.map((field: FieldArrayWithId<QuotationFormData, "vq_lines", "id">, index: number) => {
                                         const isNoQuote = watchVqLines[index]?.no_quote;
-                                        // 🔓 @Agent_Row_Liberator: Identify manual entries
                                         const isManualRow = !field.pr_line_id && !field.rfq_line_id;
-                                        const isItemLocked = isLineReadonly && !isManualRow;
+                                        const isItemLocked = forceViewMode || (isLineReadonly && !isManualRow);
 
                                         return (
                                             <tr key={field.id} className={`border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors group ${isNoQuote ? 'bg-amber-50 dark:bg-amber-950/10' : ''}`}>
@@ -293,18 +298,20 @@ export const VQFormLines: React.FC<VQFormLinesProps> = ({
                         </table>
                     </div>
 
-                    <div className="bg-slate-100 dark:bg-slate-800/20 border-t border-gray-300 dark:border-slate-800 p-4">
-                        <button
-                            type="button"
-                            onClick={() => append(createEmptyLine())}
-                            className="flex items-center gap-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
-                        >
-                            <div className="bg-indigo-100 dark:bg-indigo-900/40 p-1 rounded">
-                                <Plus size={16} />
-                            </div>
-                            เพิ่มรายการสินค้า (Add Row)
-                        </button>
-                    </div>
+                    {!forceViewMode && (
+                        <div className="bg-slate-100 dark:bg-slate-800/20 border-t border-gray-300 dark:border-slate-800 p-4">
+                            <button
+                                type="button"
+                                onClick={() => append(createEmptyLine())}
+                                className="flex items-center gap-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
+                            >
+                                <div className="bg-indigo-100 dark:bg-indigo-900/40 p-1 rounded">
+                                    <Plus size={16} />
+                                </div>
+                                เพิ่มรายการสินค้า (Add Row)
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -408,13 +415,42 @@ export const VQFormLines: React.FC<VQFormLinesProps> = ({
                                  </div>
 
                                 {/* รวมทั้งสิ้น (Grand Total) */}
-                                <div className="flex justify-between items-center pt-2 border-t border-gray-300 dark:border-gray-600">
-                                    <span className="font-bold text-gray-700 dark:text-gray-300">รวมทั้งสิ้น (Grand Total)</span>
-                                    <input 
-                                        value={(Number(grandTotal || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })} 
-                                        readOnly 
-                                        className="w-36 h-8 px-2 text-right font-bold bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-400 dark:border-yellow-600 rounded text-blue-600 dark:text-yellow-200 text-lg shadow-inner" 
-                                    />
+                                <div className="flex flex-col pt-2 border-t border-gray-300 dark:border-gray-600">
+                                    <div className="flex justify-between items-center">
+                                        <div 
+                                            className={`flex items-center gap-1 ${watchCurrency !== 'THB' ? 'cursor-pointer select-none group' : ''}`} 
+                                            onClick={() => watchCurrency !== 'THB' && setIsTotalExpanded(!isTotalExpanded)}
+                                        >
+                                            <span className="font-bold text-gray-700 dark:text-gray-300">รวมทั้งสิ้น (Grand Total)</span>
+                                            {watchCurrency !== 'THB' && (
+                                                <svg className={`w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-transform ${isTotalExpanded ? 'transform rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <input 
+                                                value={(Number(watchCurrency === 'THB' ? grandTotal : grandTotalTHB)).toLocaleString(undefined, { minimumFractionDigits: 2 })} 
+                                                readOnly 
+                                                className="w-36 h-8 px-2 text-right font-bold bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-400 dark:border-yellow-600 rounded text-blue-600 dark:text-yellow-200 text-lg shadow-inner" 
+                                            />
+                                            {watchCurrency !== 'THB' && <span className="text-xs font-bold text-gray-500 dark:text-gray-400 ml-1">THB</span>}
+                                        </div>
+                                    </div>
+
+                                    {/* Expandable Breakdown for Multicurrency */}
+                                    {isTotalExpanded && watchCurrency !== 'THB' && (
+                                        <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-800/30 border border-gray-200 dark:border-gray-700 rounded-md text-xs space-y-1.5 animate-in slide-in-from-top-1 duration-200 shadow-inner">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-gray-500 dark:text-gray-400">ยอดรวม ({watchCurrency}):</span>
+                                                <span className="font-semibold text-gray-800 dark:text-gray-200">{(Number(grandTotal || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center border-t border-gray-100 dark:border-gray-800 pt-1">
+                                                <span className="text-gray-500 dark:text-gray-400">อัตราแลกเปลี่ยน:</span>
+                                                <span className="font-medium text-gray-800 dark:text-gray-200">{(Number(watchExchangeRate) || 1).toLocaleString(undefined, { minimumFractionDigits: 4 })}</span>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

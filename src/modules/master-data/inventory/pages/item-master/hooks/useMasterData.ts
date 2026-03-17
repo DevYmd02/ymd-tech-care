@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import api from '@/core/api/api';
 import type { 
     ItemTypeListItem, 
     ItemGroupListItem, 
@@ -17,9 +18,9 @@ export function useMasterData(enabled: boolean = true) {
     const { data: itemTypes = [] } = useQuery({
         queryKey: ['master-item-types'],
         queryFn: async () => {
-            const response = await fetch('http://localhost:3000/api/item-type');
-            const data = await response.json();
-            return (data.items || data || []) as ItemTypeListItem[]; 
+            const response = await api.get<unknown>('/item-type');
+            const data = response as { items?: ItemTypeListItem[]; data?: ItemTypeListItem[] } | ItemTypeListItem[];
+            return Array.isArray(data) ? data : data.items || data.data || [];
         },
         enabled
     });
@@ -27,9 +28,9 @@ export function useMasterData(enabled: boolean = true) {
     const { data: itemGroups = [] } = useQuery({
         queryKey: ['master-item-groups'],
         queryFn: async () => {
-            const response = await fetch('http://localhost:3000/api/item-group');
-            const data = await response.json();
-            return (data.items || data || []) as ItemGroupListItem[]; 
+            const response = await api.get<unknown>('/item-group');
+            const data = response as { items?: ItemGroupListItem[]; data?: ItemGroupListItem[] } | ItemGroupListItem[];
+            return Array.isArray(data) ? data : data.items || data.data || [];
         },
         enabled
     });
@@ -37,9 +38,9 @@ export function useMasterData(enabled: boolean = true) {
     const { data: itemBrands = [] } = useQuery({
         queryKey: ['master-item-brands'],
         queryFn: async () => {
-            const response = await fetch('http://localhost:3000/api/item-brand');
-            const data = await response.json();
-            return (data.items || data || []) as ItemBrandListItem[];
+            const response = await api.get<unknown>('/item-brand');
+            const data = response as { items?: ItemBrandListItem[]; data?: ItemBrandListItem[] } | ItemBrandListItem[];
+            return Array.isArray(data) ? data : data.items || data.data || [];
         },
         enabled
     });
@@ -47,9 +48,9 @@ export function useMasterData(enabled: boolean = true) {
     const { data: itemPatterns = [] } = useQuery({
         queryKey: ['master-item-patterns'],
         queryFn: async () => {
-            const response = await fetch('http://localhost:3000/api/item-pattern');
-            const data = await response.json();
-            return (data.items || data || []) as ItemPatternListItem[];
+            const response = await api.get<unknown>('/item-pattern');
+            const data = response as { items?: ItemPatternListItem[]; data?: ItemPatternListItem[] } | ItemPatternListItem[];
+            return Array.isArray(data) ? data : data.items || data.data || [];
         },
         enabled
     });
@@ -57,9 +58,9 @@ export function useMasterData(enabled: boolean = true) {
     const { data: itemDesigns = [] } = useQuery({
         queryKey: ['master-item-designs'],
         queryFn: async () => {
-            const response = await fetch('http://localhost:3000/api/item-design');
-            const data = await response.json();
-            return (data.items || data || []) as ItemDesignListItem[];
+            const response = await api.get<unknown>('/item-design');
+            const data = response as { items?: ItemDesignListItem[]; data?: ItemDesignListItem[] } | ItemDesignListItem[];
+            return Array.isArray(data) ? data : data.items || data.data || [];
         },
         enabled
     });
@@ -67,9 +68,9 @@ export function useMasterData(enabled: boolean = true) {
     const { data: itemGrades = [] } = useQuery({
         queryKey: ['master-item-grades'],
         queryFn: async () => {
-            const response = await fetch('http://localhost:3000/api/item-grade');
-            const data = await response.json();
-            return (data.items || data || []) as ItemGradeListItem[];
+            const response = await api.get<unknown>('/item-grade');
+            const data = response as { items?: ItemGradeListItem[]; data?: ItemGradeListItem[] } | ItemGradeListItem[];
+            return Array.isArray(data) ? data : data.items || data.data || [];
         },
         enabled
     });
@@ -77,9 +78,9 @@ export function useMasterData(enabled: boolean = true) {
     const { data: itemClasses = [] } = useQuery({
         queryKey: ['master-item-classes'],
         queryFn: async () => {
-            const response = await fetch('http://localhost:3000/api/item-class');
-            const data = await response.json();
-            return (data.items || data || []) as ItemClassListItem[];
+            const response = await api.get<unknown>('/item-class');
+            const data = response as { items?: ItemClassListItem[]; data?: ItemClassListItem[] } | ItemClassListItem[];
+            return Array.isArray(data) ? data : data.items || data.data || [];
         },
         enabled
     });
@@ -87,9 +88,9 @@ export function useMasterData(enabled: boolean = true) {
     const { data: itemSizes = [] } = useQuery({
         queryKey: ['master-item-sizes'],
         queryFn: async () => {
-            const response = await fetch('http://localhost:3000/api/item-size');
-            const data = await response.json();
-            return (data.items || data || []) as ItemSizeListItem[];
+            const response = await api.get<unknown>('/item-size');
+            const data = response as { items?: ItemSizeListItem[]; data?: ItemSizeListItem[] } | ItemSizeListItem[];
+            return Array.isArray(data) ? data : data.items || data.data || [];
         },
         enabled
     });
@@ -97,20 +98,19 @@ export function useMasterData(enabled: boolean = true) {
     const { data: itemColors = [] } = useQuery({
         queryKey: ['master-item-colors'],
         queryFn: async () => {
-            const response = await fetch('http://localhost:3000/api/item-color');
-            const data = await response.json();
-            return (data.items || data || []) as ItemColorListItem[];
+            const response = await api.get<unknown>('/item-color');
+            const data = response as { items?: ItemColorListItem[]; data?: ItemColorListItem[] } | ItemColorListItem[];
+            return Array.isArray(data) ? data : data.items || data.data || [];
         },
         enabled
     });
 
-    
     const { data: uom = [] } = useQuery({
         queryKey: ['uom'],
         queryFn: async () => {
-            const res = await fetch('http://localhost:3000/api/uom');
-            const data = await res.json();
-            return (data.items || data || []) as UnitListItem[];
+            const response = await api.get<unknown>('/uom');
+            const data = response as { items?: UnitListItem[]; data?: UnitListItem[] } | UnitListItem[];
+            return Array.isArray(data) ? data : data.items || data.data || [];
         },
         enabled
     });
@@ -118,9 +118,9 @@ export function useMasterData(enabled: boolean = true) {
     const { data: taxCodes = [] } = useQuery({
         queryKey: ['tax-codes'],
         queryFn: async () => {
-            const res = await fetch('http://localhost:3000/api/tax-code');
-            const data = await res.json();
-            return (data.items || data || []) as TaxCodeListItem[];
+            const response = await api.get<unknown>('/tax-code');
+            const data = response as { items?: TaxCodeListItem[]; data?: TaxCodeListItem[] } | TaxCodeListItem[];
+            return Array.isArray(data) ? data : data.items || data.data || [];
         },
         enabled
     });

@@ -153,7 +153,7 @@ export default function ModelList() {
                     className="shadow-sm"
                 />
             </div>
-            <ModelFormModal isOpen={isModalOpen} onClose={handleModalClose} editId={editingId} initialData={editingData} onSuccess={refetch} />
+            <ModelFormModal isOpen={isModalOpen} onClose={handleModalClose} editId={editingId} initialData={editingData} onSuccess={() => { refetch(); handleModalClose(); }} />
         </div>
     );
 }

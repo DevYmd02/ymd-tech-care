@@ -48,6 +48,11 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
     const { watch, setValue } = methods;
     const formData = watch(); // Watch all for UI reactivity in modal wrapper
 
+    // Setup safe sent list mapping
+    const vendorsSentList = (trackingVendors || []).filter(
+        v => v.sent_date || v.status === 'SENT' || v.status === 'RESPONDED'
+    );
+
     const cardClass = 'bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden shadow-sm';
 
     // Auto-scroll to first error (Blueprint Standard)
@@ -151,17 +156,20 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
 
                     {/* Vendor Logic Restored */}
                     <div className={cardClass}>
-                        {(!!formData.status && formData.status !== 'DRAFT' && !isInviteMode) ? (
-                            <VendorDispatchTable vendors={trackingVendors} />
-                        ) : (
-                            <RFQVendorSelection  
-                                onAdd={handleAddVendor}
-                                onRemove={handleRemoveVendor}
-                                handleOpenVendorModal={handleOpenVendorModal}
-                                isViewMode={readOnly}
-                                isInviteMode={isInviteMode}
-                            />
+                        {/* 1. Dispatch Summary Section (Only shows in View Mode if emails were sent) */}
+                        {readOnly && vendorsSentList.length > 0 && (
+                            <div className="mb-6">
+                                <VendorDispatchTable vendors={vendorsSentList} />
+                            </div>
                         )}
+
+                        {/* 2. Standard Vendor List (ALWAYS visible) */}
+                        <RFQVendorSelection  
+                            onAdd={handleAddVendor}
+                            onRemove={handleRemoveVendor}
+                            handleOpenVendorModal={handleOpenVendorModal}
+                            isViewMode={readOnly}
+                        />
                     </div>
 
                     <SharedRemarksTab

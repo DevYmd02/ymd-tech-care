@@ -19,7 +19,7 @@ import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal'
 import { VendorSearchModal } from '@/modules/master-data/vendor/components/selector/VendorSearchModal';
 import { ProductSearchModal } from './ProductSearchModal';
 import { PRSearchModal } from './PRSearchModal';
-import { calculatePricingSummary } from '@/modules/procurement/utils/pricing.utils';
+import { calculatePricingSummary, parseDiscountAmount } from '@/modules/procurement/utils/pricing.utils';
 
 import type { POFormData, POLine } from '@/modules/procurement/schemas/po-schemas';
 import { usePOForm } from '../hooks/usePOForm';
@@ -29,6 +29,7 @@ import type {
     UnitListItem,
     Currency
 } from '@/modules/master-data/types/master-data-types';
+import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
 
 
 // Mock constants removed. Data is now fetched via hooks in usePOForm.
@@ -55,7 +56,8 @@ const ui = {
 const RowTotal = ({ control, index }: { control: Control<POFormData>; index: number }) => {
     const qty   = useWatch({ control, name: `po_lines.${index}.qty_ordered` }) ?? 0;
     const price = useWatch({ control, name: `po_lines.${index}.unit_price` }) ?? 0;
-    const disc  = useWatch({ control, name: `po_lines.${index}.discount_amount` }) ?? 0;
+    const expr  = useWatch({ control, name: `po_lines.${index}.discount_expression` }) ?? '0';
+    const disc  = parseDiscountAmount(expr, qty * price);
     const total = qty * price - disc;
     return <>{total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>;
 };
@@ -64,16 +66,32 @@ const RowTotal = ({ control, index }: { control: Control<POFormData>; index: num
 // SUB-COMPONENT: Summary Panel
 // ====================================================================================
 
-const POSummaryPanel = ({ control }: { control: Control<POFormData> }) => {
+const POSummaryPanel = ({ control, taxCodes }: { control: Control<POFormData>; taxCodes: TaxCode[] }) => {
     const poLines = useWatch({ control, name: 'po_lines' });
-    const { beforeTax, taxAmount, totalAmount } = useMemo(() => {
-        const items = (poLines ?? []).map((l: POLine) => ({
-            qty:        Number(l.qty_ordered || l.qty),
-            unit_price: Number(l.unit_price),
-            discount:   Number(l.discount_amount || 0),
-        }));
-        return calculatePricingSummary(items, 7, false);
-    }, [poLines]);
+    const taxCodeId = useWatch({ control, name: 'tax_code_id' });
+
+    const { beforeTax, taxAmount, totalAmount, taxRate } = useMemo(() => {
+        const items = (poLines ?? []).map((l: POLine) => {
+            const qty = Number(l.qty_ordered ?? l.qty ?? 0);
+            const price = Number(l.unit_price ?? 0);
+            const disc = parseDiscountAmount(l.discount_expression ?? '0', qty * price);
+            return {
+                qty,
+                unit_price: price,
+                discount: disc,
+            };
+        });
+
+        // Safe Math: Find tax rate with default 0 fallback
+        const selectedTax = taxCodes.find(t => Number(t.tax_code_id) === Number(taxCodeId));
+        const taxRate = selectedTax ? Number(selectedTax.tax_rate) : 0;
+
+        const summary = calculatePricingSummary(items, taxRate, false);
+        return {
+            ...summary,
+            taxRate
+        };
+    }, [poLines, taxCodeId, taxCodes]);
 
     return (
         <div className="w-80 space-y-3 bg-white dark:bg-slate-800 p-4 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm">
@@ -84,7 +102,9 @@ const POSummaryPanel = ({ control }: { control: Control<POFormData> }) => {
                 </span>
             </div>
             <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-slate-400">ภาษีมูลค่าเพิ่ม 7%</span>
+                <span className="text-gray-600 dark:text-slate-400">
+                    ภาษีมูลค่าเพิ่ม {taxRate ? `(${taxRate}%)` : ''}
+                </span>
                 <span className="font-medium text-gray-900 dark:text-white">
                     {taxAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </span>
@@ -166,7 +186,12 @@ export default function POFormModal({
         isSubmitting,
         units,
         isLoadingUnits,
+        taxCodes,
+        isLoadingTaxCodes,
     } = usePOForm({ isOpen, onClose, onSuccess, poId, initialValues, isViewMode });
+
+    const watchQcNo = useWatch({ control, name: 'qc_no' });
+    const { getValues } = formMethods;
 
     const [isProductModalOpen, setIsProductModalOpen] = useState(false);
     const [activeSearchIndex, setActiveSearchIndex] = useState<number | null>(null);
@@ -234,7 +259,7 @@ export default function POFormModal({
                             </div>
 
                             {/* ── Row 1: เลขที่ PO | วันที่ PO | อ้างอิง PR/QC ── */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                 <div>
                                     <label className={ui.label}>เลขที่ PO </label>
                                     <input {...register('po_no')} className={ui.inputRO} readOnly placeholder="ระบบจะสร้างอัตโนมัติ" />
@@ -280,6 +305,15 @@ export default function POFormModal({
                                             </button>
                                         )}
                                     </div>
+                                </div>
+                                <div>
+                                    <label className={ui.label}>อ้างอิง QC </label>
+                                    <input 
+                                        value={watchQcNo || (getValues('pr_id') ? "ไม่ได้ผ่าน QC" : "-")} 
+                                        className={ui.inputRO} 
+                                        readOnly 
+                                        placeholder="-" 
+                                    />
                                 </div>
                             </div>
 
@@ -348,7 +382,30 @@ export default function POFormModal({
                                     {errors.delivery_date && <p className={ui.error}>{errors.delivery_date.message}</p>}
                                 </div>
                                 <div>
-                                    {/* Tax code removed from header as requested */}
+                                    <label className={ui.label}>ประเภทภาษี</label>
+                                    <div className="h-8">
+                                        <Controller
+                                            name="tax_code_id"
+                                            control={control}
+                                            render={({ field }) => (
+                                                <select
+                                                    {...field}
+                                                    value={field.value || ''}
+                                                    onChange={(e) => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))}
+                                                    className={`${ui.select} ${errors.tax_code_id ? 'border-red-500' : ''}`}
+                                                    disabled={isView || isLoadingTaxCodes}
+                                                >
+                                                    <option value="">{isLoadingTaxCodes ? 'กำลังโหลด...' : '— เลือกประเภทภาษี —'}</option>
+                                                    {taxCodes.map((o: TaxCode) => (
+                                                        <option key={o.tax_code_id} value={o.tax_code_id}>
+                                                            {o.tax_name} ({o.tax_rate}%)
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            )}
+                                        />
+                                    </div>
+                                    {errors.tax_code_id && <p className={ui.error}>{errors.tax_code_id.message}</p>}
                                 </div>
                             </div>
 
@@ -532,10 +589,10 @@ export default function POFormModal({
                                                 </td>
                                                 <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
                                                     <input
-                                                        type="number" step="any"
-                                                        {...register(`po_lines.${idx}.discount_amount`, { valueAsNumber: true })}
+                                                        type="text"
+                                                        {...register(`po_lines.${idx}.discount_expression`)}
                                                         className={`${ui.input} !h-9 text-right text-[13px] border-slate-300 shadow-sm`}
-                                                        placeholder="0.00"
+                                                        placeholder="0 หรือ 5%"
                                                         readOnly={isView}
                                                     />
                                                 </td>
@@ -590,7 +647,7 @@ export default function POFormModal({
 
                         {/* Summary Footer */}
                         <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-6 flex justify-end">
-                            <POSummaryPanel control={control} />
+                            <POSummaryPanel control={control} taxCodes={taxCodes} />
                         </div>
                     </div>
 

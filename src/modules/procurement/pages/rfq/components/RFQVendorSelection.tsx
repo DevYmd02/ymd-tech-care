@@ -8,7 +8,6 @@ interface RFQVendorSelectionProps {
     onRemove: (index: number) => void;
     handleOpenVendorModal: (index: number) => void;
     isViewMode?: boolean;
-    isInviteMode?: boolean;
 }
 
 export const RFQVendorSelection: React.FC<RFQVendorSelectionProps> = ({ 
@@ -16,7 +15,6 @@ export const RFQVendorSelection: React.FC<RFQVendorSelectionProps> = ({
     onRemove, 
     handleOpenVendorModal,
     isViewMode = false,
-    isInviteMode = false
 }) => {
     const { watch } = useFormContext<RFQFormValues>();
     const vendors = watch('vendors') || [];
@@ -61,7 +59,7 @@ export const RFQVendorSelection: React.FC<RFQVendorSelectionProps> = ({
                     /* Vendor List */
                     <>
                         {vendors.map((vendor, index: number) => {
-                            const isRowLocked = isViewMode || (isInviteMode && vendor.is_existing);
+                            const isRowLocked = isViewMode || vendor.status === 'SENT' || vendor.status === 'RESPONDED';
                             return (
                                 <div key={index} className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 relative group">
                                     <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">

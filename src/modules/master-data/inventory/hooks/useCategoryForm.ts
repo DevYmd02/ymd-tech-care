@@ -45,7 +45,7 @@ export function useCategoryForm(editId: number | null, initialData?: ProductCate
             reset({
                 category_code: initialData.category_code || '',
                 category_name: initialData.category_name || '',
-                category_name_en: initialData.category_name_en || '',
+                category_name_en: String(initialData.category_name_en || ''),
                 is_active: initialData.is_active ?? true,
             });
         } else {

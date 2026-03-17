@@ -2,8 +2,9 @@ import { useCallback, useEffect } from 'react';
 import { z } from 'zod';
 import { useForm, type SubmitHandler, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { LocationService } from '../services/inventory-master.service';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { LocationService, ShelfService } from '../services/inventory-master.service';
+import { WarehouseService } from '@/modules/master-data/inventory/services/warehouse.service';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import { logger } from '@/shared/utils/logger';
 import type { Location } from '@/modules/master-data/inventory/types/inventory-master.types';
@@ -14,6 +15,8 @@ export const locationSchema = z.object({
     nameTh: z.string().min(1, 'กรุณากรอกชื่อสถานที่ (ไทย)').max(200, 'ชื่อต้องไม่เกิน 200 ตัวอักษร'),
     nameEn: z.string().max(200, 'ชื่อ (EN) ต้องไม่เกิน 200 ตัวอักษร').optional(),
     isActive: z.boolean(),
+    warehouseId: z.coerce.number().min(1, 'กรุณาเลือกคลังสินค้า'),
+    shelfId: z.coerce.number().min(1, 'กรุณาเลือกชั้นวาง'),
 });
 
 export type LocationFormValues = z.infer<typeof locationSchema>;
@@ -23,6 +26,8 @@ const initialFormData: LocationFormValues = {
     nameTh: '',
     nameEn: '',
     isActive: true,
+    warehouseId: 0,
+    shelfId: 0,
 };
 
 export function useLocationForm(editId: number | null, initialData?: Location | null, onSuccess?: () => void) {
@@ -39,6 +44,25 @@ export function useLocationForm(editId: number | null, initialData?: Location | 
         defaultValues: initialFormData
     });
 
+    const { data: warehouseData, isLoading: isLoadingWarehouse } = useQuery({
+        queryKey: ['warehouses-lookup'],
+        queryFn: async () => {
+            const res = await WarehouseService.getAll();
+            return res.items || [];
+        }
+    });
+
+    const { data: shelfData, isLoading: isLoadingShelf } = useQuery({
+        queryKey: ['shelves-lookup'],
+        queryFn: async () => {
+            const res = await ShelfService.getAll();
+            return res.items || [];
+        }
+    });
+
+    const warehouses = warehouseData || [];
+    const shelves = shelfData || [];
+
     useEffect(() => {
         if (initialData) {
             reset({
@@ -46,6 +70,8 @@ export function useLocationForm(editId: number | null, initialData?: Location | 
                 nameTh: initialData.name_th || '',
                 nameEn: initialData.name_en || '',
                 isActive: initialData.is_active ?? true,
+                warehouseId: initialData.warehouse_id || 0,
+                shelfId: initialData.shelf_id || 0,
             });
         } else {
             reset(initialFormData);
@@ -81,6 +107,10 @@ export function useLocationForm(editId: number | null, initialData?: Location | 
         errors,
         isSaving: saveMutation.isPending,
         handleSave: rhfHandleSubmit(handleSave),
-        clearForm
+        clearForm,
+        warehouses,
+        isLoadingWarehouse,
+        shelves,
+        isLoadingShelf
     };
 }

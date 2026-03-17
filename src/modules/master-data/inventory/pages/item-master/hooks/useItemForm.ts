@@ -9,7 +9,7 @@ import { ItemMasterService } from '@/modules/master-data/inventory/services/item
 import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
 import { ProductCategoryService } from '@/modules/master-data/inventory/services/product-category.service';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
-import type { ItemListItem } from '@/modules/master-data/types/master-data-types';
+import type { ItemMaster, ItemMasterFormData } from '@/modules/master-data/types/master-data-types';
 
 export const itemMasterSchema = z.object({
     item_code: z.string().min(1, 'กรุณากรอกรหัสสินค้า'),
@@ -66,6 +66,7 @@ export const itemMasterSchema = z.object({
     standard_cost: z.coerce.number().default(0),
     discount_amount: z.string().optional().default(''),
     is_buddy: z.boolean().default(false),
+    is_on_hold: z.boolean().default(false),
     costing_method: z.string().optional().default('FIFO'),
 });
 
@@ -118,6 +119,7 @@ const initialFormData: ItemFormData = {
     standard_cost: 0,
     discount_amount: '',
     is_buddy: false,
+    is_on_hold: false,
     costing_method: 'FIFO',
 
     
@@ -162,7 +164,7 @@ export function useItemForm(editId: number | null, onSuccess?: () => void) {
     });
 
     // Fetch data if editing
-    const { data: existingItem, isLoading } = useQuery<ItemListItem | null>({
+    const { data: existingItem, isLoading } = useQuery<ItemMaster | null>({
         queryKey: ['item-detail', editId],
         queryFn: () => ItemMasterService.getById(editId!),
         enabled: !!editId,
@@ -171,7 +173,7 @@ export function useItemForm(editId: number | null, onSuccess?: () => void) {
     // Hydrate form
     useEffect(() => {
         if (existingItem) {
-            const item = existingItem as any; // Cast to access new fields
+            const item = existingItem;
             reset({
                 item_code: item.item_code,
                 item_name: item.item_name,
@@ -212,6 +214,7 @@ export function useItemForm(editId: number | null, onSuccess?: () => void) {
                 barcode_default: item.barcode_default || '',
                 discount_amount: item.discount_amount || '',
                 is_buddy: item.is_buddy || false,
+                is_on_hold: item.is_on_hold || false,
                 is_batch_control: item.is_batch_control || false,
                 is_expiry_control: item.is_expiry_control || false,
                 is_serial_control: item.is_serial_control || false,
@@ -223,8 +226,8 @@ export function useItemForm(editId: number | null, onSuccess?: () => void) {
     const saveMutation = useMutation({
         mutationFn: (data: ItemFormData) => {
             return editId 
-                ? ItemMasterService.update(editId, data as any)
-                : ItemMasterService.create(data as any);
+                ? ItemMasterService.update(editId, data as ItemMasterFormData)
+                : ItemMasterService.create(data as ItemMasterFormData);
         },
         onSuccess: async (success) => {
             if (success) {

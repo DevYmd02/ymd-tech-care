@@ -5,6 +5,7 @@ export interface TaxCode {
     tax_name: string;
     tax_type: 'SALES' | 'PURCHASE' | 'EXEMPT' | 'NONE' | string; // ภาษีขาย, ภาษีซื้อ, ยกเว้น, ไม่คิดอะไร
     tax_rate: number | string;
+    tax_group_id?: number | null;
     description?: string;
     is_active: boolean;
     created_at: string;
@@ -14,8 +15,9 @@ export interface TaxCode {
 }
 
 export interface TaxGroup {
-    tax_group_id: string;
+    tax_group_id: number | string;
     tax_group_code: string;
+    tax_group_name?: string;
     description?: string;
     tax_type: 'TAX_CODE' | 'LUMP_SUM' | 'NONE'; // รหัสภาษี, เหมาภาษี, ไม่คิดอะไร
     tax_rate: number;

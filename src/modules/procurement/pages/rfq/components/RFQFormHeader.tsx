@@ -142,10 +142,9 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ branches, onOpenPR
                     <label className={labelStyle}>ผู้สร้าง RFQ</label>
                     <input
                         type="text"
-                        value="ระบบจะกรอกอัตโนมัติ"
+                        {...register('requested_by')}
                         readOnly
-                        className={`${inputStyle} bg-gray-200 dark:bg-gray-700`}
-                        disabled={isLocked}
+                        className={`${inputStyle} bg-gray-200 dark:bg-gray-700 font-medium text-gray-700 dark:text-gray-300`}
                     />
                 </div>
             </div>

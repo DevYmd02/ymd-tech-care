@@ -102,10 +102,12 @@ export interface ColorFormData extends IBaseFormData {
 export interface Location extends IBaseMaster {
     location_id: number;
     warehouse_id?: number; // Reference to warehouse
+    shelf_id?: number; // Reference to shelf
 }
 
 export interface LocationFormData extends IBaseFormData {
     warehouseId?: number;
+    shelfId?: number;
 }
 
 // ====================================================================================

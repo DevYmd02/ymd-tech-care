@@ -51,6 +51,30 @@ const RFQ_STATUS_OPTIONS = [
 // ];
 
 // ====================================================================================
+// HELPERS
+// ====================================================================================
+
+const getDynamicStatus = (item: RFQHeader) => {
+    // 1. Respect terminal statuses FIRST
+    if (['CLOSED', 'CANCELLED'].includes(item.status)) {
+        return item.status;
+    }
+    
+    const sentCount = item.vendor_sent ?? item.sent_vendors_count ?? 0;
+    const total = item.vendor_total ?? item.vendor_count ?? 0;
+    
+    // 2. Apply dynamic logic for DRAFT vs SENT
+    if (total > 0 && sentCount === total) {
+        return 'SENT';
+    }
+    if (total > 0 && sentCount > 0 && sentCount < total) {
+        return 'DRAFT';
+    }
+    
+    return item.status; // Fallback
+};
+
+// ====================================================================================
 // MAIN COMPONENT
 // ====================================================================================
 
@@ -121,9 +145,6 @@ export default function RFQListPage() {
         setIsModalOpen(true);
     }, []);
 
-    const handleAddMoreVendors = useCallback((item: RFQHeader) => {
-        setSendingRFQ(item);
-    }, []);
 
     const handleCloseModal = () => {
         setIsModalOpen(false);
@@ -302,19 +323,7 @@ export default function RFQListPage() {
             cell: (info) => {
                 const item = info.row.original;
                 
-                let dynamicStatus = info.getValue() as string;
-                
-                // Override status dynamically based on X/Y logic from backend
-                const sentCount = item.vendor_sent ?? 0;
-                const total = item.vendor_total ?? 0;
-                
-                if (total > 0 && sentCount === total) {
-                    dynamicStatus = 'SENT';
-                } else if (total > 0 && sentCount > 0 && sentCount < total) {
-                    // Partially sent can still show DRAFT or maybe a new "PARTIAL" if we had one
-                    // but according to prompt: SENT if sent===total, else DRAFT
-                    dynamicStatus = 'DRAFT';
-                }
+                const dynamicStatus = getDynamicStatus(item);
 
                 return (
                     <div className="flex justify-center items-center h-full py-2">
@@ -335,7 +344,11 @@ export default function RFQListPage() {
             header: () => <div className="flex justify-center items-center w-full h-full">จัดการ</div>,
             cell: ({ row }) => {
                 const item = row.original;
-
+                // const dynamicStatus = getDynamicStatus(item); // Unused for actions but available if needed
+                const sentCount = item.vendor_sent ?? item.sent_vendors_count ?? 0;
+                const total = item.vendor_total ?? item.vendor_count ?? 0;
+                const isTerminal = ['CLOSED', 'CANCELLED', 'COMPLETED'].includes(item.status);
+                
                 return (
                     <div className="flex flex-row items-center justify-center gap-2 w-full h-full py-1 whitespace-nowrap">
                         
@@ -348,41 +361,28 @@ export default function RFQListPage() {
                             <Eye size={16} />
                         </button>
                         
-                        {item.status !== 'CLOSED' && item.status !== 'CANCELLED' && (
+                        {!isTerminal && (
                             <>
-                                {/* DRAFT: [แก้ไข] + [ส่ง RFQ] */}
-                                {item.status === 'DRAFT' && (
-                                    <>
-                                        <button 
-                                            className="flex items-center gap-1 pl-1.5 pr-2 py-1 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded shadow-sm border border-transparent hover:border-amber-200 dark:hover:border-amber-800 transition-all whitespace-nowrap"
-                                            title="แก้ไข"
-                                            onClick={() => handleEdit(item)}
-                                        >
-                                            <Edit size={14} />
-                                            <span className="text-[10px] font-bold">แก้ไข</span>
-                                        </button>
-                                        <button 
-                                            className="flex items-center gap-1 pl-1.5 pr-2 py-1 ml-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap"
-                                            title="ส่ง RFQ"
-                                            onClick={() => handleSendRFQ(item)}
-                                        >
-                                            <Send size={12} /> ส่ง RFQ
-                                        </button>
-                                    </>
-                                )}
+                                {/* Always show Edit for active statuses */}
+                                <button 
+                                    className="flex items-center gap-1 pl-1.5 pr-2 py-1 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded shadow-sm border border-transparent hover:border-amber-200 dark:hover:border-amber-800 transition-all whitespace-nowrap"
+                                    title="แก้ไข"
+                                    onClick={() => handleEdit(item)}
+                                >
+                                    <Edit size={14} />
+                                    <span className="text-[10px] font-bold">แก้ไข</span>
+                                </button>
                                 
-                                {/* SENT: [ส่งเพิ่ม] */}
-                                {item.status === 'SENT' && (
+                                {/* Send More / Send RFQ: Show only if remaining vendors exist */}
+                                {sentCount < total && (
                                     <button 
-                                        className="flex items-center gap-1 pl-1.5 pr-2 py-1 ml-1 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap"
-                                        title="ส่งเพิ่ม"
-                                        onClick={() => handleAddMoreVendors(item)}
+                                        className="flex items-center gap-1 pl-1.5 pr-2 py-1 ml-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap"
+                                        title={sentCount === 0 ? "ส่ง RFQ" : "ส่งเพิ่ม"}
+                                        onClick={() => handleSendRFQ(item)}
                                     >
-                                        <Send size={12} /> ส่งเพิ่ม
+                                        <Send size={12} /> {sentCount === 0 ? "ส่ง RFQ" : "ส่งเพิ่ม"}
                                     </button>
                                 )}
-
-                                {/* IN_PROGRESS: (ไม่มี action พิเศษเพราะย้ายไป QT) */}
                             </>
                         )}
                     </div>
@@ -391,7 +391,7 @@ export default function RFQListPage() {
             size: 220, 
             enableSorting: false,
         }),
-    ], [columnHelper, filters.page, filters.limit, handleView, handleEdit, handleSendRFQ, handleAddMoreVendors]);
+    ], [columnHelper, filters.page, filters.limit, handleView, handleEdit, handleSendRFQ]);
 
     // ====================================================================================
     // RENDER
@@ -516,12 +516,17 @@ export default function RFQListPage() {
                     >
                         {data?.data.map((item) => {
                             const prNumber = item.ref_pr_no || item.pr_no || item.pr?.pr_no;
+                            const dynamicStatus = getDynamicStatus(item);
+                            const sentCount = item.vendor_sent ?? item.sent_vendors_count ?? 0;
+                            const total = item.vendor_total ?? item.vendor_count ?? 0;
+                            const isTerminal = ['CLOSED', 'CANCELLED', 'COMPLETED'].includes(item.status);
+                            
                             return (
                                 <MobileListCard
                                     key={item.rfq_id}
                                     title={item.rfq_no}
                                     subtitle={formatThaiDate(item.rfq_date)}
-                                    statusBadge={<RFQStatusBadge status={item.status} />}
+                                    statusBadge={<RFQStatusBadge status={dynamicStatus} />}
                                     details={[
                                         ...(prNumber ? [{ label: 'PR อ้างอิง:', value: <span className="font-medium text-blue-600 dark:text-blue-400">{prNumber}</span> }] : []),
                                         { label: 'ผู้สร้าง:', value: (() => {
@@ -550,7 +555,7 @@ export default function RFQListPage() {
                                             >
                                                 <Eye size={14} /> ดู
                                             </button>
-                                            {item.status === 'DRAFT' && (
+                                            {!isTerminal && (
                                                 <>
                                                     <button
                                                         onClick={() => handleEdit(item)}
@@ -558,21 +563,15 @@ export default function RFQListPage() {
                                                     >
                                                         <Edit size={14} /> แก้ไข
                                                     </button>
-                                                    <button
-                                                        onClick={() => handleSendRFQ(item)}
-                                                        className="flex-[2] bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
-                                                    >
-                                                        <Send size={14} /> ส่ง RFQ
-                                                    </button>
+                                                    {sentCount < total && (
+                                                        <button
+                                                            onClick={() => handleSendRFQ(item)}
+                                                            className="flex-[2] bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
+                                                        >
+                                                            <Send size={14} /> {sentCount === 0 ? "ส่ง RFQ" : "ส่งเพิ่ม"}
+                                                        </button>
+                                                    )}
                                                 </>
-                                            )}
-                                            {item.status === 'SENT' && (
-                                                <button
-                                                    onClick={() => handleAddMoreVendors(item)}
-                                                    className="flex-[2] bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
-                                                >
-                                                    <Send size={14} /> ส่งเพิ่ม
-                                                </button>
                                             )}
                                         </>
                                     }
