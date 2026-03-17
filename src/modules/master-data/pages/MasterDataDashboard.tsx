@@ -19,6 +19,8 @@ import {
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import { MasterDataService } from '@/modules/master-data';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
+import { CostCenterService } from '@/modules/master-data/accounting/services/cost-center.service';
+import { ProjectService } from '@/modules/master-data/project/services/project.service';
 
 // Import Form Modals
 import { VendorFormModal } from '@/modules/master-data/vendor/pages';
@@ -112,8 +114,8 @@ const DB_RELATIONS: Record<TabType, { dbTable: string; relations: string[]; fk: 
 export default function MasterDataDashboard() {
     const [searchParams, setSearchParams] = useSearchParams();
     
-    // Get initial tab from URL or default to 'vendor'
-    const initialTab = (searchParams.get('tab') as TabType) || 'vendor';
+    // Get initial tab from URL or default to 'cost-center'
+    const initialTab = (searchParams.get('tab') as TabType) || 'cost-center';
     const [activeTab, setActiveTab] = useState<TabType>(initialTab);
     
     // Modal & UI states
@@ -147,12 +149,12 @@ export default function MasterDataDashboard() {
 
     // Master Data Menu Configuration
     const MASTER_DATA_MENU = [
+        { id: 'cost-center', label: 'Cost Center', labelEn: 'ศูนย์ต้นทุน', icon: DollarSign, dbRelation: DB_RELATIONS['cost-center'] },
+        { id: 'project', label: 'Project', labelEn: 'โครงการ', icon: FolderKanban, dbRelation: DB_RELATIONS['project'] },
         { id: 'vendor', label: 'Vendor', labelEn: 'ผู้ขาย', icon: Users, dbRelation: DB_RELATIONS['vendor'] },
         { id: 'item', label: 'Item', labelEn: 'สินค้า', icon: Package, dbRelation: DB_RELATIONS['item'] },
         { id: 'branch', label: 'Branch', labelEn: 'สาขา', icon: Building2, dbRelation: DB_RELATIONS['branch'] },
         { id: 'warehouse', label: 'Warehouse', labelEn: 'คลัง', icon: WarehouseIcon, dbRelation: DB_RELATIONS['warehouse'] },
-        { id: 'cost-center', label: 'Cost Center', labelEn: 'ศูนย์ต้นทุน', icon: DollarSign, dbRelation: DB_RELATIONS['cost-center'] },
-        { id: 'project', label: 'Project', labelEn: 'โครงการ', icon: FolderKanban, dbRelation: DB_RELATIONS['project'] },
         { id: 'unit', label: 'Unit', labelEn: 'หน่วยนับ', icon: Ruler, dbRelation: DB_RELATIONS['unit'] },
         { id: 'category', label: 'Category', labelEn: 'หมวดหมู่', icon: Tag, dbRelation: DB_RELATIONS['category'] },
     ] as const;
@@ -411,6 +413,20 @@ export default function MasterDataDashboard() {
                 } else {
                     alert('เกิดข้อผิดพลาดในการลบข้อมูล');
                 }
+            } else if (activeTab === 'cost-center') {
+                const result = await CostCenterService.delete(id);
+                if (!result.success) {
+                    alert(result.message || 'เกิดข้อผิดพลาดในการลบข้อมูล');
+                    return;
+                }
+                fetchData();
+            } else if (activeTab === 'project') {
+                const result = await ProjectService.delete(id);
+                if (!result.success) {
+                    alert(result.message || 'เกิดข้อผิดพลาดในการลบข้อมูล');
+                    return;
+                }
+                fetchData();
             } else {
                 fetchData();
             }
@@ -594,7 +610,7 @@ export default function MasterDataDashboard() {
                         expandedId={expandedId}
                         toggleExpand={toggleExpand}
                         handleEdit={handleEdit}
-                        handleStatusToggle={handleStatusToggle}
+                        handleDelete={handleDelete}
                         dbRelation={currentTab}
                     />
                 ) : activeTab === 'project' ? (
@@ -603,7 +619,7 @@ export default function MasterDataDashboard() {
                         expandedId={expandedId}
                         toggleExpand={toggleExpand}
                         handleEdit={handleEdit}
-                        handleStatusToggle={handleStatusToggle}
+                        handleDelete={handleDelete}
                         dbRelation={currentTab}
                     />
                 ) : activeTab === 'unit' ? (
@@ -716,6 +732,7 @@ export default function MasterDataDashboard() {
                 onClose={handleModalClose} 
                 editId={editingId}
                 initialData={editingId ? costCenters.find(c => c.cost_center_id === editingId) : null}
+                onSuccess={fetchData}
             />
 
             <ProjectFormModal 

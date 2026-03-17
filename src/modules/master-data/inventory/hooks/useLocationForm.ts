@@ -11,8 +11,8 @@ import type { Location } from '@/modules/master-data/inventory/types/inventory-m
 
 // Zod schema for form validation
 export const locationSchema = z.object({
-    code: z.string().min(1, 'กรุณากรอกรหัสสถานที่').max(20, 'รหัสต้องไม่เกิน 20 ตัวอักษร'),
-    nameTh: z.string().min(1, 'กรุณากรอกชื่อสถานที่ (ไทย)').max(200, 'ชื่อต้องไม่เกิน 200 ตัวอักษร'),
+    code: z.string().min(1, 'กรุณากรอกรหัสที่จัดเก็บ').max(20, 'รหัสต้องไม่เกิน 20 ตัวอักษร'),
+    nameTh: z.string().min(1, 'กรุณากรอกชื่อที่จัดเก็บ (ไทย)').max(200, 'ชื่อต้องไม่เกิน 200 ตัวอักษร'),
     nameEn: z.string().max(200, 'ชื่อ (EN) ต้องไม่เกิน 200 ตัวอักษร').optional(),
     isActive: z.boolean(),
     warehouseId: z.coerce.number().min(1, 'กรุณาเลือกคลังสินค้า'),
