@@ -11,7 +11,6 @@ import type { PRFormData, PRLineFormData } from '@/modules/procurement/schemas/p
 import type { VendorSelection, PRLine, CreatePRPayload } from '@/modules/procurement/types/pr-types';
 import { PRService } from '@/modules/procurement/services/pr.service';
 import { extractErrorMessage } from '@/core/api/api';
-import { fetchExchangeRate } from '@/modules/master-data/currency/services/mockExchangeRateService';
 import { logger } from '@/shared/utils/logger';
 import type { ItemListItem } from '@/modules/master-data/types/master-data-types';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
@@ -19,7 +18,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
 import { usePRMasterData, type MappedOption } from './usePRMasterData';
 import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
-import type { WarehouseListItem } from '@/modules/master-data/types/master-data-types';
+import type { WarehouseListItem, Currency } from '@/modules/master-data/types/master-data-types';
 import { usePRActions } from './usePRActions';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
@@ -345,33 +344,38 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
     if (!sourceCurrencyCode) return;
     if (sourceCurrencyCode === targetCurrencyCode) {
       setValue('pr_exchange_rate', 1, { shouldDirty: false });
-      // Removed auto-set of isMulticurrency to allow manual toggle control
       prevCurrencyId.current = sourceCurrencyCode;
       prevCurrencyTypeId.current = targetCurrencyCode;
       return;
     }
+
     const isSourceChanged = prevCurrencyId.current !== sourceCurrencyCode;
     const isTargetChanged = prevCurrencyTypeId.current !== targetCurrencyCode;
-    const fetchRate = async () => {
-      if (isSourceChanged && (targetCurrencyCode === prevCurrencyId.current || !targetCurrencyCode)) {
-        setValue('pr_quote_currency_code', 'THB');
+
+    if (isSourceChanged && (targetCurrencyCode === prevCurrencyId.current || !targetCurrencyCode)) {
+      setValue('pr_quote_currency_code', 'THB');
+    }
+
+    const { isDirty } = getFieldState('pr_exchange_rate');
+    if (isSourceChanged || isTargetChanged || !isDirty) {
+      const finalTarget = (isSourceChanged && !targetCurrencyCode) ? 'THB' : targetCurrencyCode;
+      
+      const sourceObj = currencies.find((c: Currency) => c.currency_code === sourceCurrencyCode);
+      const targetObj = currencies.find((c: Currency) => c.currency_code === (finalTarget || 'THB'));
+
+      const fromRate = sourceObj?.exchange_rate || 1;
+      const toRate = targetObj?.exchange_rate || 1;
+
+      const calculatedRate = fromRate / toRate;
+
+      if (calculatedRate !== undefined && !isNaN(calculatedRate)) {
+        setValue('pr_exchange_rate', Number(calculatedRate.toFixed(6)), { shouldValidate: true, shouldDirty: false });
       }
-      const { isDirty } = getFieldState('pr_exchange_rate');
-      if (isSourceChanged || isTargetChanged || !isDirty) {
-        try {
-          const finalTarget = (isSourceChanged && !targetCurrencyCode) ? 'THB' : targetCurrencyCode;
-          const rate = await fetchExchangeRate(sourceCurrencyCode, finalTarget);
-          setValue('pr_exchange_rate', rate, { shouldValidate: true, shouldDirty: false });
-          // Removed auto-set of isMulticurrency to allow manual toggle control
-        } catch (error) {
-          logger.error('Failed to fetch exchange rate:', error);
-        }
-      }
-    };
-    fetchRate();
+    }
+
     prevCurrencyId.current = sourceCurrencyCode;
     prevCurrencyTypeId.current = targetCurrencyCode;
-  }, [sourceCurrencyCode, targetCurrencyCode, setValue, getFieldState]);
+  }, [currencies, sourceCurrencyCode, targetCurrencyCode, setValue, getFieldState]);
 
   // Multicurrency Reset Logic
   const isMulticurrency = watch('isMulticurrency');

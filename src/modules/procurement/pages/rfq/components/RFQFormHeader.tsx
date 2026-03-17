@@ -2,17 +2,18 @@ import React from 'react';
 import { FileText, Calendar } from 'lucide-react';
 import { useFormContext, Controller } from 'react-hook-form';
 import type { RFQFormValues } from '@/modules/procurement/schemas/rfq-schemas';
-import type { BranchListItem } from '@/modules/master-data/types/master-data-types';
+import type { BranchListItem, Currency } from '@/modules/master-data/types/master-data-types';
 import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWrapper';
 
 interface RFQFormHeaderProps {
     branches: BranchListItem[];
+    currencies: Currency[];
     onOpenPRModal: () => void;
     readOnly?: boolean;
     isInviteMode?: boolean;
 }
 
-export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ branches, onOpenPRModal, readOnly, isInviteMode }) => {
+export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ branches, currencies, onOpenPRModal, readOnly, isInviteMode }) => {
     const { register, watch, setValue, formState: { errors } } = useFormContext<RFQFormValues>();
     
     const formData = watch();
@@ -107,21 +108,7 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ branches, onOpenPR
 
             {/* Row 2: สถานะ, สาขา, ผู้สร้าง */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div>
-                    <label className={labelStyle}>สถานะ <span className="text-red-500">*</span></label>
-                    <select
-                        {...register('status')}
-                        className={`${selectStyle} ${errors.status ? errorInputClass : ''}`}
-                        disabled={isLocked}
-                    >
-                        <option value="DRAFT">DRAFT - แบบร่าง</option>
-                        <option value="SENT">SENT - ส่งแล้ว</option>
-                        <option value="CLOSED">CLOSED - ปิดแล้ว</option>
-                        <option value="CANCELLED">CANCELLED - ยกเลิก</option>
-                    </select>
-                    {errors.status && <p className={errorMsgClass}>{errors.status.message}</p>}
-                    <p className={hintStyle}>สถานะ: DRAFT/SENT/CLOSED/CANCELLED</p>
-                </div>
+
                 <div>
                     <label className={labelStyle}>สาขาที่สร้าง RFQ <span className="text-red-500">*</span></label>
                     <select
@@ -129,7 +116,7 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ branches, onOpenPR
                         className={`${selectStyle} ${errors.branch_id ? errorInputClass : ''}`}
                         disabled={isLocked}
                     >
-                        <option value="">เลือกสาขา</option>
+                        <option value="0">-- เลือกสาขา --</option>
                         {branches.map(branch => (
                             <option key={branch.branch_id} value={branch.branch_id}>
                                 {branch.branch_name}
@@ -241,6 +228,11 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ branches, onOpenPR
                             setValue('rfq_base_currency_code', 'THB');
                             setValue('rfq_quote_currency_code', '');
                             setValue('rfq_exchange_rate', 1);
+                        } else {
+                            if (!formData.rfq_exchange_rate_date) {
+                                const today = new Date().toISOString().split('T')[0];
+                                setValue('rfq_exchange_rate_date', today, { shouldValidate: true, shouldDirty: true });
+                            }
                         }
                     }}
                 >
@@ -282,11 +274,12 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ branches, onOpenPR
                                 className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed disabled:bg-gray-50"
                                 disabled={!formData.isMulticurrency || isLocked}
                             >
-                                <option value="THB">THB - บาท</option>
-                                <option value="USD">USD - ดอลลาร์สหรัฐ</option>
-                                <option value="EUR">EUR - ยูโร</option>
-                                <option value="JPY">JPY - เยน</option>
-                                <option value="CNY">CNY - หยวน</option>
+                                <option value="">เลือกสกุลเงิน</option>
+                                {currencies.map((c) => (
+                                    <option key={c.currency_id} value={c.currency_code}>
+                                        {c.currency_code} - {c.name_th}
+                                    </option>
+                                ))}
                             </select>
                         </div>
                         <div>
@@ -297,11 +290,11 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ branches, onOpenPR
                                 disabled={!formData.isMulticurrency || isLocked}
                             >
                                 <option value="">เลือกสกุลเงิน</option>
-                                <option value="THB">THB - บาท</option>
-                                <option value="USD">USD - ดอลลาร์สหรัฐ</option>
-                                <option value="EUR">EUR - ยูโร</option>
-                                <option value="JPY">JPY - เยน</option>
-                                <option value="CNY">CNY - หยวน</option>
+                                {currencies.map((c) => (
+                                    <option key={c.currency_id} value={c.currency_code}>
+                                        {c.currency_code} - {c.name_th}
+                                    </option>
+                                ))}
                             </select>
                         </div>
                         <div>

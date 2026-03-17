@@ -426,7 +426,7 @@ export default function POFormModal({
                                     <div>
                                         <label className={ui.label}>รหัสสกุลเงิน <span className="text-red-500">*</span></label>
                                         <select {...register('currency_code')} className={ui.select} disabled={isView || isLoadingCurrencies}>
-                                            <option value="">{isLoadingCurrencies ? 'โหลด...' : 'เลือก'}</option>
+                                            <option value="">{isLoadingCurrencies ? 'โหลด...' : 'เลือกสกุลเงิน'}</option>
                                             {currencies.map((o: Currency) => <option key={o.currency_code} value={o.currency_code}>{o.currency_code} - {o.name_en}</option>)}
                                         </select>
                                     </div>
