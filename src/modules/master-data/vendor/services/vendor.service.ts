@@ -17,7 +17,7 @@ import type { SuccessResponse } from '@/shared/types/api-response.types';
 let localVendorData: VendorMaster[] = [...MOCK_VENDORS];
 
 // 🔄 Helper function: Format payload to match the new backend JSON specification
-function mapVendorToApi(data: any): any {
+function mapVendorToApi(data: any, isUpdate = false): any {
     const payload: any = {
         vendor_code: data.vendor_code || data.vendorCode || '',
         vendor_name: data.vendor_name || data.vendorNameTh || '',
@@ -40,21 +40,24 @@ function mapVendorToApi(data: any): any {
     const rawAddresses = data.addresses || [];
     payload.addresses = rawAddresses
         .filter((a: any) => (a.address || '').trim() !== '')
-        .map((a: any, i: number) => ({
-            address: a.address || '',
-            sub_district: a.sub_district || a.subDistrict || '',
-            province: a.province || '',
-            district: a.district || '',
-            postal_code: String(a.postal_code || a.postalCode || ''),
-            is_default: Boolean(a.is_default ?? a.isMain ?? (i === 0)),
-            address_type: a.address_type || a.addressType || (i === 0 ? 'REGISTERED' : 'CONTACT'),
-            country: a.country || 'Thailand',
-            contact_person: a.contact_person || a.contactPerson || '',
-            phone: a.phone || '',
-            phone_extension: a.phone_extension || a.phoneExtension || '',
-            email: a.email || '',
-            is_active: Boolean(a.is_active ?? true)
-        }));
+        .map((a: any, i: number) => {
+            const addrPayload: any = {
+                address: a.address || '',
+                sub_district: a.sub_district || a.subDistrict || '',
+                province: a.province || '',
+                district: a.district || '',
+                postal_code: String(a.postal_code || a.postalCode || ''),
+                is_default: Boolean(a.is_default ?? a.isMain ?? (i === 0)),
+                address_type: a.address_type || a.addressType || (i === 0 ? 'REGISTERED' : 'CONTACT'),
+                country: a.country || 'Thailand',
+                contact_person: a.contact_person || a.contactPerson || '',
+                phone: a.phone || '',
+                phone_extension: a.phone_extension || a.phoneExtension || '',
+                email: a.email || '',
+                is_active: Boolean(a.is_active ?? true)
+            };
+            return addrPayload;
+        });
 
     // Map Contacts (Handles both API mapped format or Frontend mapped format)
     const contacts = [];
@@ -280,7 +283,7 @@ export const VendorService = {
 
     try {
       // Map to exact payload needed by the new backend structure
-      const payload = mapVendorToApi(data);
+      const payload = mapVendorToApi(data, false); // false = โหมดสร้างใหม่
       const response = await api.post<any>('/vendors', payload);
       return { success: true, data: response } as any;
     } catch (error: any) {
@@ -310,7 +313,7 @@ export const VendorService = {
     try {
       // Only transform if it's a full update payload, ignore if it's a simple status toggle
       const isFullUpdate = data.vendor_name || data.vendorNameTh || data.vendor_code || data.vendorCode;
-      const payload = isFullUpdate ? mapVendorToApi(data) : data;
+      const payload = isFullUpdate ? mapVendorToApi(data, true) : data; // true = โหมดแก้ไข
       const response = await api.patch<any>(`/vendors/${vendorId}`, payload);
       return { success: true, data: response } as any;
     } catch (error: any) {
