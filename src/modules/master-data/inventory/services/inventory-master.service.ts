@@ -140,7 +140,7 @@ function createInventoryService<T extends IBaseMaster, F, A, O = Partial<A>>(
               const resultData = config.mapFromApi && rawData 
                   ? config.mapFromApi(rawData) 
                   : rawData as unknown as T;
-              return { success: isSuccess, data: resultData as T, message: typeof response === 'object' && 'message' in response ? response.message as string : undefined };
+              return { success: isSuccess, data: resultData as T, message: response && typeof response === 'object' && 'message' in response ? response.message as string : undefined };
             } catch (error) {
                 logger.error(`[${config.entityName}Service] create error:`, error);
                 const err = error as { response?: { data?: { message?: string, error?: string } }, message?: string };
@@ -184,7 +184,7 @@ function createInventoryService<T extends IBaseMaster, F, A, O = Partial<A>>(
               const resultData = config.mapFromApi && rawData 
                   ? config.mapFromApi(rawData) 
                   : rawData as unknown as T;
-              return { success: isSuccess, data: resultData as T, message: typeof response === 'object' && 'message' in response ? response.message as string : undefined };
+              return { success: isSuccess, data: resultData as T, message: response && typeof response === 'object' && 'message' in response ? response.message as string : undefined };
             } catch (error) {
                 logger.error(`[${config.entityName}Service] update error:`, error);
                 const err = error as { response?: { data?: { message?: string, error?: string } }, message?: string };
@@ -700,7 +700,6 @@ export const ShelfService = createInventoryService<Shelf, ShelfFormValues, Shelf
         shelf_code: data.code?.trim(),
         shelf_name: data.nameTh?.trim(),
         shelf_nameeng: data.nameEn?.trim() || undefined,
-        location_id: data.locationId,
         is_active: data.isActive,
     }),
 });
