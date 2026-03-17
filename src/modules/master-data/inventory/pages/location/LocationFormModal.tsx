@@ -69,7 +69,7 @@ export function LocationFormModal({ isOpen, onClose, editId, initialData, onSucc
         <DialogFormLayout
             isOpen={isOpen}
             onClose={handleClose}
-            title={editId ? 'แก้ไขข้อมูลสถานที่' : 'เพิ่มสถานที่ใหม่'}
+            title={editId ? 'แก้ไขข้อมูลที่จัดเก็บ' : 'เพิ่มที่จัดเก็บใหม่'}
             titleIcon={TitleIcon}
             footer={FormFooter}
         >
@@ -120,8 +120,8 @@ export function LocationFormModal({ isOpen, onClose, editId, initialData, onSucc
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label className={styles.label}>รหัสสถานที่ <span className="text-red-500">*</span></label>
-                        <input {...register('code')} type="text" placeholder="กรอกรหัสสถานที่" className={`${styles.input} ${errors.code ? 'border-red-500' : ''}`} />
+                        <label className={styles.label}>รหัสที่จัดเก็บ <span className="text-red-500">*</span></label>
+                        <input {...register('code')} type="text" placeholder="กรอกรหัสที่จัดเก็บ" className={`${styles.input} ${errors.code ? 'border-red-500' : ''}`} />
                         {errors.code && <p className="text-red-500 text-xs mt-1">{errors.code.message}</p>}
                     </div>
                     <div className="flex items-end pb-2">
@@ -132,13 +132,13 @@ export function LocationFormModal({ isOpen, onClose, editId, initialData, onSucc
                     </div>
                 </div>
                 <div>
-                    <label className={styles.label}>ชื่อสถานที่ (ไทย) <span className="text-red-500">*</span></label>
-                    <input {...register('nameTh')} type="text" placeholder="กรอกชื่อสถานที่ (ไทย)" className={`${styles.input} ${errors.nameTh ? 'border-red-500' : ''}`} />
+                    <label className={styles.label}>ชื่อที่จัดเก็บ(ไทย) <span className="text-red-500">*</span></label>
+                    <input {...register('nameTh')} type="text" placeholder="กรอกชื่อที่จัดเก็บ (ไทย)" className={`${styles.input} ${errors.nameTh ? 'border-red-500' : ''}`} />
                     {errors.nameTh && <p className="text-red-500 text-xs mt-1">{errors.nameTh.message}</p>}
                 </div>
                 <div>
-                    <label className={styles.label}>ชื่อสถานที่ (EN)</label>
-                    <input {...register('nameEn')} type="text" placeholder="กรอกชื่อสถานที่ (English)" className={`${styles.input} ${errors.nameEn ? 'border-red-500' : ''}`} />
+                    <label className={styles.label}>ชื่อที่จัดเก็บ (EN)</label>
+                    <input {...register('nameEn')} type="text" placeholder="กรอกชื่อที่จัดเก็บ (English)" className={`${styles.input} ${errors.nameEn ? 'border-red-500' : ''}`} />
                     {errors.nameEn && <p className="text-red-500 text-xs mt-1">{errors.nameEn.message}</p>}
                 </div>
             </div>
