@@ -19,17 +19,14 @@ export const VendorGroupService = {
             return localVendorGroups; 
         }
         try {
-            const response = await api.get<ListResponse<VendorGroupMaster> | VendorGroupMaster[]>('/vendor-group');
+            const response = await api.get<any>('/vendor-group');
             
-            // Handle raw array response or wrapped ListResponse
-            if (Array.isArray(response)) {
-                return {
-                    items: response,
-                    total: response.length
-                };
-            }
-            
-            return response || { items: [], total: 0 };
+            const rawData = response?.data || response;
+            const items = Array.isArray(rawData) ? rawData : (rawData?.items || []);
+            return {
+                items: items,
+                total: items.length
+            };
         } catch (error) {
             logger.error('[VendorGroupService] getAll error:', error);
             return { items: [], total: 0 };

@@ -87,17 +87,19 @@ export function useVendorForm({
         staleTime: 1000 * 60 * 5
     });
 
-    const vendorTypeOptions = vendorTypesData?.items.map(item => ({
+    const rawVendorTypes = Array.isArray(vendorTypesData) ? vendorTypesData : (vendorTypesData?.items || (vendorTypesData as any)?.data || []);
+    const vendorTypeOptions = rawVendorTypes.map((item: any) => ({
         label: item.vendor_type_nameeng 
                ? `${item.vendor_type_name} (${item.vendor_type_nameeng})` 
                : item.vendor_type_name,
-        value: item.vendor_type_id
-    })) || [];
+        value: item.vendor_type_id || item.id
+    }));
 
-    const vendorGroupOptions = vendorGroupsData?.items.map(item => ({
+    const rawVendorGroups = Array.isArray(vendorGroupsData) ? vendorGroupsData : (vendorGroupsData?.items || (vendorGroupsData as any)?.data || []);
+    const vendorGroupOptions = rawVendorGroups.map((item: any) => ({
         label: item.vendor_group_name,
-        value: item.vendor_group_id
-    })) || [];
+        value: item.vendor_group_id || item.id
+    }));
 
     const currencyOptions = currenciesData?.items.map((item: any) => ({
         label: `${item.code} - ${item.name_th}`,
