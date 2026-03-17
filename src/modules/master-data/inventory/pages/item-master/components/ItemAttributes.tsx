@@ -66,9 +66,8 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
         const id = Number(e.target.value);                                
         const selected = itemTypes.find(t => t.item_type_id === id);
 
-        onChange('item_type_id' as any, selected ? selected.item_type_id : 0);
-        onChange('item_type_name' as any, selected ? selected.item_type_name : '');
-                            }}
+        onChange('item_type_id', selected ? selected.item_type_id : 0);
+        }}
                             className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
                         >
                             <option value="">-- เลือก --</option>
@@ -93,8 +92,8 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                             onChange={(e) => {
                                 const id = Number(e.target.value);
                                 const selected = categories.find(c => c.category_id === id);
-                                onChange('item_category_id' as any, id);
-                                onChange('item_category_code' as any, selected ? selected.category_code : '');
+                                onChange('item_category_id', id);
+                                onChange('item_category_code', selected ? selected.category_code : '');
                             }}
                             className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
                         >
@@ -120,8 +119,8 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                             onChange={(e) => {
                                 const id = Number(e.target.value);
                                 const selected = itemGroups.find(g => g.item_group_id === id);
-                                onChange('item_group_id' as any, id);
-                                onChange('item_group_code' as any, selected ? selected.item_group_code : '');
+                                onChange('item_group_id', id);
+                                onChange('item_group_code', selected ? selected.item_group_code : '');
                             }}
                             className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
                         >
@@ -145,8 +144,8 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                             onChange={(e) => {
                                 const id = Number(e.target.value);
                                 const selected = itemBrands.find(b => b.item_brand_id === id);
-                                onChange('item_brand_id' as any, id);
-                                onChange('item_brand_code' as any, selected ? selected.item_brand_code : '');
+                                onChange('item_brand_id', id);
+                                onChange('item_brand_code', selected ? selected.item_brand_code : '');
                             }}
                             className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
                         >
@@ -170,8 +169,8 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                             onChange={(e) => {
                                 const id = Number(e.target.value);
                                 const selected = itemPatterns.find(p => p.item_pattern_id === id);
-                                onChange('item_pattern_id' as any, id);
-                                onChange('item_pattern_code' as any, selected ? selected.item_pattern_code : '');
+                                onChange('item_pattern_id', id);
+                                onChange('item_pattern_code', selected ? selected.item_pattern_code : '');
                             }}
                             className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
                         >
@@ -195,8 +194,8 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                             onChange={(e) => {
                                 const id = Number(e.target.value);
                                 const selected = itemDesigns.find(d => d.item_design_id === id);
-                                onChange('item_design_id' as any, id);
-                                onChange('item_design_code' as any, selected ? selected.item_design_code : '');
+                                onChange('item_design_id', id);
+                                onChange('item_design_code', selected ? selected.item_design_code : '');
                             }}
                             className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
                         >
@@ -220,8 +219,8 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                             onChange={(e) => {
                                 const id = Number(e.target.value);
                                 const selected = itemGrades.find(g => g.item_grade_id === id);
-                                onChange('item_grade_id' as any, id);
-                                onChange('item_grade_code' as any, selected ? selected.item_grade_code : '');
+                                onChange('item_grade_id', id);
+                                onChange('item_grade_code', selected ? selected.item_grade_code : '');
                             }}
                             className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
                         >
@@ -244,14 +243,14 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                             value={formData.item_class_id || ''}
                             onChange={(e) => {
                                 const id = Number(e.target.value);
-                                const selected = itemClasses.find(c => c.item_class_id === id);
-                                onChange('item_class_id' as any, id);
-                                onChange('item_class_code' as any, selected ? selected.item_class_code : '');
+                                const selected = itemClasses?.find(c => c.item_class_id === id);
+                                onChange('item_class_id', id);
+                                onChange('item_class_code', selected ? selected.item_class_code : '');
                             }}
                             className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
                         >
                             <option value="">-- เลือก --</option>
-                            {itemClasses.map(o => <option key={o.item_class_id} value={o.item_class_id}>{o.item_class_code}</option>)}
+                            {itemClasses?.map(o => <option key={o.item_class_id} value={o.item_class_id}>{o.item_class_code}</option>)}
                         </select>
                         <input
                             type="text"
@@ -270,8 +269,8 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                             onChange={(e) => {
                                 const id = Number(e.target.value);
                                 const selected = itemSizes.find(s => s.item_size_id === id);
-                                onChange('item_size_id' as any, id);
-                                onChange('item_size_code' as any, selected ? selected.item_size_code : '');
+                                onChange('item_size_id', id);
+                                onChange('item_size_code', selected ? selected.item_size_code : '');
                             }}
                             className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
                         >
@@ -295,8 +294,8 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                             onChange={(e) => {
                                 const id = Number(e.target.value);
                                 const selected = itemColors.find(c => c.item_color_id === id);
-                                onChange('item_color_id' as any, id);
-                                onChange('item_color_code' as any, selected ? selected.item_color_code : '');
+                                onChange('item_color_id', id);
+                                onChange('item_color_code', selected ? selected.item_color_code : '');
                             }}
                             className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
                         >

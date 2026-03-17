@@ -74,10 +74,16 @@ export const ITEM_COMMISSIONS = [
  */
 export const getItemName = (
     id: string | number, 
-    source: Array<Record<string, string | number | boolean>>, 
+    source: unknown[], 
     idField = 'id', 
     nameField = 'name'
 ): string => {
-    const found = source.find(item => String(item[idField]) === String(id));
-    return found ? String(found[nameField]) : '';
+    if (!Array.isArray(source)) return '';
+    const found = source.find(item => {
+        const obj = item as Record<string, unknown>;
+        return obj && typeof obj === 'object' && String(obj[idField]) === String(id);
+    });
+    if (!found) return '';
+    const obj = found as Record<string, unknown>;
+    return String(obj[nameField] || '');
 };

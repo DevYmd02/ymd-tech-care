@@ -153,7 +153,7 @@ export default function ShelfList() {
                     className="shadow-sm"
                 />
             </div>
-            <ShelfFormModal isOpen={isModalOpen} onClose={handleModalClose} editId={editingId} initialData={editingData} onSuccess={refetch} />
+            <ShelfFormModal isOpen={isModalOpen} onClose={handleModalClose} editId={editingId} initialData={editingData} onSuccess={() => { refetch(); handleModalClose(); }} />
         </div>
     );
 }

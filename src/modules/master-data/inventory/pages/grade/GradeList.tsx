@@ -175,7 +175,7 @@ export default function GradeList() {
                 />
             </div>
             {/* ส่ง initialData ไปยัง Modal */}
-            <GradeFormModal isOpen={isModalOpen} onClose={handleModalClose} editId={editingId} initialData={editingData} onSuccess={refetch} />
+            <GradeFormModal isOpen={isModalOpen} onClose={handleModalClose} editId={editingId} initialData={editingData} onSuccess={() => { refetch(); handleModalClose(); }} />
         </div>
     );
 }

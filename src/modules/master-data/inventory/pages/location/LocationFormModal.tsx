@@ -21,7 +21,11 @@ export function LocationFormModal({ isOpen, onClose, editId, initialData, onSucc
         errors,
         isSaving,
         handleSave,
-        clearForm
+        clearForm,
+        warehouses,
+        isLoadingWarehouse,
+        shelves,
+        isLoadingShelf
     } = useLocationForm(editId ?? null, initialData, onSuccess);
 
     const handleClose = () => {
@@ -70,6 +74,50 @@ export function LocationFormModal({ isOpen, onClose, editId, initialData, onSucc
             footer={FormFooter}
         >
             <div className="p-6 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className={styles.label}>คลังสินค้า <span className="text-red-500">*</span></label>
+                        <select 
+                            {...register('warehouseId')} 
+                            disabled={isLoadingWarehouse}
+                            className={`${styles.inputSelect || styles.input} ${errors.warehouseId ? 'border-red-500' : ''}`}
+                        >
+                            <option value="0">-- เลือกคลังสินค้า --</option>
+                            {isLoadingWarehouse ? (
+                                <option disabled>กำลังโหลดข้อมูล...</option>
+                            ) : (
+                                warehouses.map((wh) => (
+                                    <option key={wh.id} value={wh.id}>
+                                        {wh.warehouse_name}
+                                    </option>
+                                ))
+                            )}
+                        </select>
+                        {errors.warehouseId && <p className="text-red-500 text-xs mt-1">{errors.warehouseId.message}</p>}
+                    </div>
+
+                    <div>
+                        <label className={styles.label}>ชั้นวางสินค้า <span className="text-red-500">*</span></label>
+                        <select 
+                            {...register('shelfId')} 
+                            disabled={isLoadingShelf}
+                            className={`${styles.inputSelect || styles.input} ${errors.shelfId ? 'border-red-500' : ''}`}
+                        >
+                            <option value="0">-- เลือกชั้นวางสินค้า --</option>
+                            {isLoadingShelf ? (
+                                <option disabled>กำลังโหลดข้อมูล...</option>
+                            ) : (
+                                shelves.map((sh) => (
+                                    <option key={sh.id} value={sh.id}>
+                                        {sh.name_th}
+                                    </option>
+                                ))
+                            )}
+                        </select>
+                        {errors.shelfId && <p className="text-red-500 text-xs mt-1">{errors.shelfId.message}</p>}
+                    </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label className={styles.label}>รหัสสถานที่ <span className="text-red-500">*</span></label>

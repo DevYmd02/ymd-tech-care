@@ -10,8 +10,8 @@ import type { Pattern } from '@/modules/master-data/inventory/types/inventory-ma
 
 // Zod schema for form validation
 export const patternSchema = z.object({
-    code: z.string().min(1, 'กรุณากรอกรหัสลวดลาย').max(20, 'รหัสต้องไม่เกิน 20 ตัวอักษร'),
-    nameTh: z.string().min(1, 'กรุณากรอกชื่อลวดลาย (ไทย)').max(200, 'ชื่อต้องไม่เกิน 200 ตัวอักษร'),
+    code: z.string().min(1, 'กรุณากรอกรหัสรูปแบบ').max(20, 'รหัสต้องไม่เกิน 20 ตัวอักษร'),
+    nameTh: z.string().min(1, 'กรุณากรอกชื่อรูปแบบ (ไทย)').max(200, 'ชื่อต้องไม่เกิน 200 ตัวอักษร'),
     nameEn: z.string().max(200, 'ชื่อ (EN) ต้องไม่เกิน 200 ตัวอักษร').optional(),
     isActive: z.boolean(),
 });
@@ -60,7 +60,7 @@ export function usePatternForm(editId: number | null, initialData?: Pattern | nu
         },
         onSuccess: async (res) => {
             if (res.success) {
-                await confirm({ title: 'บันทึกสำเร็จ!', description: 'ข้อมูลลวดลายถูกบันทึกเรียบร้อยแล้ว', confirmText: 'ตกลง', variant: 'success', hideCancel: true });
+                await confirm({ title: 'บันทึกสำเร็จ!', description: 'ข้อมูลรูปแบบถูกบันทึกเรียบร้อยแล้ว', confirmText: 'ตกลง', variant: 'success', hideCancel: true });
                 queryClient.invalidateQueries({ queryKey: ['patterns'] });
                 if (onSuccess) onSuccess();
             } else {
