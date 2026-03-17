@@ -64,8 +64,8 @@ export const VQService = {
     } as VQListResponse;
   },
 
-  getWaitingForRFQ: async (params?: { page?: number; limit?: number }): Promise<VQPendingQueueResponse> => {
-    logger.info('[VQService] Fetching Waiting for RFQ list');
+  getWaitingForRFQ: async (params?: VQListParams): Promise<VQPendingQueueResponse> => {
+    logger.info('[VQService] Fetching Waiting for RFQ list', params);
     type ApiResponse = VQPendingQueueResponse | { data: VQPendingQueueResponse };
     const response = await api.get<ApiResponse>(ENDPOINTS.waitingForRfq, { params });
     
@@ -76,8 +76,8 @@ export const VQService = {
     return response as VQPendingQueueResponse;
   },
 
-  getWaitingForVQ: async (params?: { page?: number; limit?: number }): Promise<VQPendingQueueResponse> => {
-    logger.info('[VQService] Fetching Waiting for VQ list');
+  getWaitingForVQ: async (params?: VQListParams): Promise<VQPendingQueueResponse> => {
+    logger.info('[VQService] Fetching Waiting for VQ list', params);
     type ApiResponse = VQPendingQueueResponse | { data: VQPendingQueueResponse };
     const response = await api.get<ApiResponse>(ENDPOINTS.waitingForVq, { params });
     

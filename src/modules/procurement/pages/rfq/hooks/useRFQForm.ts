@@ -4,7 +4,7 @@ import { useAuth } from '@/core/auth/contexts/AuthContext';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { MasterDataService } from '@/modules/master-data';
-import type { BranchListItem, ItemListItem, UnitListItem } from '@/modules/master-data/types/master-data-types';
+import type { BranchListItem, ItemListItem, UnitListItem, Currency } from '@/modules/master-data/types/master-data-types';
 import type { VendorSearchItem } from '@/modules/master-data/vendor/types/vendor-types';
 import type { RFQVendor, RFQLine, RFQDetailResponse, RFQStatus } from '@/modules/procurement/types/rfq-types';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
@@ -14,6 +14,7 @@ import { PRService } from '@/modules/procurement/services/pr.service';
 import { RFQService, type RFQCreateDTO, type RFQLineDTO } from '@/modules/procurement/services/rfq.service';
 import { logger } from '@/shared/utils/logger';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
+import { useQuery } from '@tanstack/react-query';
 import { 
     RFQFormSchema, 
     type RFQFormValues, 
@@ -43,7 +44,7 @@ export const mapPRToRFQFormData = (
         branch_id: pr.branch_id,
         project_id: pr.project_id || null,
         purpose: pr.purpose || '',
-        cost_center_id: pr.cost_center_id ? Number(pr.cost_center_id) : undefined,
+        // cost_center_id: pr.cost_center_id ? Number(pr.cost_center_id) : undefined,
         pr_tax_code_id: pr.pr_tax_code_id || undefined,
         pr_tax_rate: pr.pr_tax_rate || undefined,
         
@@ -134,7 +135,11 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
     // 🏗️ React Hook Form Setup
     const methods = useForm<RFQFormValues>({
         resolver: zodResolver(RFQFormSchema) as Resolver<RFQFormValues>,
-        defaultValues: getRFQDefaultFormValues(),
+        defaultValues: {
+            ...getRFQDefaultFormValues(),
+            requested_by: user?.employee?.employee_fullname || '',
+            requested_by_user_id: user?.id || 1,
+        },
         mode: 'onBlur',
     });
 
@@ -145,7 +150,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         name: 'rfqLines',
     });
 
-    const { append: appendVendor, remove: removeVendor } = useFieldArray({
+    const { fields: vendorFields, append: appendVendor, remove: removeVendor, update: updateVendor } = useFieldArray({
         control,
         name: 'vendors',
     });
@@ -154,6 +159,39 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
     const [branches, setBranches] = useState<BranchListItem[]>([]);
     const [items, setItems] = useState<ItemListItem[]>([]);
     const [units, setUnits] = useState<UnitListItem[]>([]);
+
+    const { data: currencies } = useQuery({
+        queryKey: ['master-currencies'],
+        queryFn: MasterDataService.getCurrencies,
+        enabled: isOpen,
+    });
+
+    // Exchange Rate Sync logic
+    const sourceCurrency = methods.watch('rfq_base_currency_code');
+    const targetCurrency = methods.watch('rfq_quote_currency_code');
+
+    useEffect(() => {
+        if (!sourceCurrency) return;
+        
+        if (sourceCurrency === 'THB' || sourceCurrency === targetCurrency) {
+            setValue('rfq_exchange_rate', 1, { shouldDirty: false });
+            return;
+        }
+
+        const sourceObj = currencies?.find((c: Currency) => c.currency_code === sourceCurrency);
+        const targetObj = currencies?.find((c: Currency) => c.currency_code === targetCurrency);
+
+        const fromRate = sourceObj?.exchange_rate || 1;
+        const toRate = targetObj?.exchange_rate || (targetCurrency === 'THB' ? 1 : 1);
+
+        const calculatedRate = fromRate / toRate;
+        
+        if (calculatedRate !== undefined && !isNaN(calculatedRate)) {
+            setValue('rfq_exchange_rate', Number(calculatedRate.toFixed(6)), { shouldValidate: true });
+        }
+    }, [currencies, sourceCurrency, targetCurrency, setValue]);
+
+
 
     // PR Selection State
     const [isPRSelectionModalOpen, setIsPRSelectionModalOpen] = useState(false);
@@ -191,8 +229,13 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                 const rfq = await RFQService.getById(rfqId) as RFQDetailResponse;
                 if (!rfq) return;
 
-                const sourceVendors = rfq.rfqVendors || rfq.vendors || [];
-                const sourceLines = rfq.rfqLines || rfq.lines || [];
+                const allVendors = [
+                    ...(rfq.rfqVendors || []),
+                    ...(rfq.vendors || [])
+                ];
+                const uniqueVendors = Array.from(new Map(allVendors.map(v => [v.rfq_vendor_id, v])).values());
+                const sourceVendors = uniqueVendors;
+                const sourceLines = (rfq.rfqLines && rfq.rfqLines.length > 0) ? rfq.rfqLines : (rfq.lines || []);
 
                 // Hydrate vendor details if missing from backend (since standard backend list only has vendor_id)
                 const enhancedVendors = await Promise.all(sourceVendors.map(async (v) => {
@@ -299,7 +342,11 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         const hydrateFromPR = async () => {
             const pr_id = initialPR?.pr_id;
             if (!pr_id) {
-                reset(getRFQDefaultFormValues());
+                reset({
+                    ...getRFQDefaultFormValues(),
+                    requested_by: user?.employee?.employee_fullname || '',
+                    requested_by_user_id: user?.id || 1,
+                });
                 return;
             }
 
@@ -331,20 +378,9 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         };
 
         hydrateFromPR();
-    }, [isOpen, editId, initialPR, items, units, reset, getValues, toast]);
+    }, [isOpen, editId, initialPR, items, units, reset, getValues, toast, user]);
 
-    // ========================================================================
-    // MAGIC AUTO-FILL: Current User Creator
-    // ========================================================================
-    useEffect(() => {
-        if (!isOpen || editId) return;
-        if (user?.employee?.employee_fullname) {
-            setValue('requested_by', user.employee.employee_fullname);
-            if (user.employee_id) {
-                setValue('requested_by_user_id', user.employee_id);
-            }
-        }
-    }, [isOpen, editId, user, setValue]);
+
 
     // ========================================================================
     // MAGIC AUTO-FILL: Manual PR Selection Handler
@@ -423,8 +459,20 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
     };
 
     const handleInvalid = useCallback((currentErrors: FieldErrors<RFQFormValues>) => {
-
-        
+        // Auto-scroll to first error (Blueprint Standard)
+        const errorKeys = Object.keys(currentErrors);
+        if (errorKeys.length > 0) {
+            let firstErrorField = document.getElementById(errorKeys[0]);
+            if (!firstErrorField) {
+                firstErrorField = document.querySelector('.border-red-500');
+            }
+            if (firstErrorField) {
+                firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                if (firstErrorField instanceof HTMLInputElement || firstErrorField instanceof HTMLSelectElement || firstErrorField instanceof HTMLTextAreaElement) {
+                    try { firstErrorField.focus(); } catch { /* ignore */ }
+                }
+            }
+        }
         // Helper สำหรับดึง message จาก Object ลึกๆ
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const extractErrorMessages = (errors: any): string[] => {
@@ -515,16 +563,14 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
 
                 // Inherited PR Fields (Transactional Traceability)
                 pr_id: stagedPayload.pr_id ? Number(stagedPayload.pr_id) : undefined,
-                cost_center_id: stagedPayload.cost_center_id ? Number(stagedPayload.cost_center_id) : undefined,
-
                 rfqLines: cleanLines,
             };
 
             const selectedVendors = Array.from(
                 new Map(
                     stagedPayload.vendors
-                        .filter(v => v.vendor_id)
-                        .map(v => [Number(v.vendor_id), { vendor_id: Number(v.vendor_id), status: 'WAITING' }])
+                        .filter(v => v.vendor_id && (!editId || !v.is_existing))
+                        .map(v => [Number(v.vendor_id), { vendor_id: Number(v.vendor_id) }])
                 ).values()
             );
                 
@@ -581,7 +627,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
 
     const handleVendorSelect = (vendor: VendorSearchItem) => {
         const currentVendors = getValues('vendors');
-        const alreadyExists = currentVendors.some(v => v.vendor_id === vendor.vendor_id);
+        const alreadyExists = currentVendors.some(v => Number(v.vendor_id || 0) === Number(vendor.vendor_id));
         
         if (alreadyExists) {
             toast('ผู้ขายรายนี้อยู่ในรายการแล้ว', 'warning');
@@ -596,7 +642,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         };
 
         if (activeVendorIndex !== null) {
-            setValue(`vendors.${activeVendorIndex}`, newEntry);
+            updateVendor(activeVendorIndex, newEntry);
         } else {
             appendVendor(newEntry);
         }
@@ -613,6 +659,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         branches,
         items,
         units,
+        currencies: currencies || [],
         trackingVendors,
         errors,
         
@@ -639,5 +686,8 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         appendLine: () => appendLine(createEmptyRFQLine(lineFields.length + 1)),
         removeLine,
         handleResetLines,
+
+        // Expose vendors fields to prevent useFieldArray overlap sync bugs
+        vendors: vendorFields,
     };
 };

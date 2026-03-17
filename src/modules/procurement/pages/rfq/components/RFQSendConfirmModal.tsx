@@ -289,11 +289,16 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
                 const response = await RFQService.getById(rfq.rfq_id);
                 if (cancelled) return;
 
-                const sourceVendors = response.rfqVendors || response.vendors || [];
+                const allVendors = [
+                    ...(response.rfqVendors || []),
+                    ...(response.vendors || [])
+                ];
+                const uniqueVendors = Array.from(new Map(allVendors.map(v => [v.rfq_vendor_id, v])).values());
+                const sourceVendors = uniqueVendors;
                 
                 // HYDRATION: Fetch vendor identity details if missing from backend
                 const enhancedVendors = await Promise.all(sourceVendors.map(async (v) => {
-                    if (v.vendor_name && v.vendor_code) return v;
+                    if (v.vendor_name && v.vendor_code && v.email_sent_to) return v;
                     try {
                         const vendorDetail = await VendorService.getById(v.vendor_id);
                         if (vendorDetail) {
@@ -301,6 +306,7 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
                                 ...v,
                                 vendor_name: vendorDetail.vendor_name || v.vendor_name || '',
                                 vendor_code: vendorDetail.vendor_code || v.vendor_code || '',
+                                email_sent_to: v.email_sent_to || vendorDetail.email || null,
                             };
                         }
                     } catch {

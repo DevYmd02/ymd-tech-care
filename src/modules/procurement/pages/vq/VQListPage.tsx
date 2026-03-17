@@ -72,7 +72,16 @@ export default function VQListPage() {
     const [isViewMode, setIsViewMode] = useState(false);
     const [initialRFQForCreate, setInitialRFQForCreate] = useState<RFQHeader | null>(null);
 
-    const [activeTab, setActiveTab] = useState<'ALL' | 'WAITING_VQ' | 'WAITING_RFQ'>('ALL');
+    const activeTab = (searchParams.get('tab') as 'ALL' | 'WAITING_VQ' | 'WAITING_RFQ') || 'ALL';
+
+    const handleTabChange = useCallback((newTab: 'ALL' | 'WAITING_VQ' | 'WAITING_RFQ') => {
+        setSearchParams((prev) => {
+            const next = new URLSearchParams(prev);
+            next.set('tab', newTab);
+            next.set('page', '1'); // Reset page to 1 on tab switch
+            return next;
+        }, { replace: true });
+    }, [setSearchParams]);
 
     const [isTrackingOpen, setIsTrackingOpen] = useState(false);
     const [selectedRfqId, setSelectedRfqId] = useState<number | null>(null);
@@ -165,16 +174,16 @@ export default function VQListPage() {
     });
 
     const { data: waitingVqData, isLoading: isWaitingVqLoading, refetch: refetchWaitingVq } = useQuery({
-        queryKey: ['waiting-for-vq-vendor', filters.page, filters.limit],
-        queryFn: () => VQService.getWaitingForVQ({ page: filters.page, limit: filters.limit }),
-        enabled: activeTab === 'WAITING_VQ' || true,
+        queryKey: ['waiting-for-vq-vendor', apiFilters],
+        queryFn: () => VQService.getWaitingForVQ(apiFilters),
+        enabled: activeTab === 'WAITING_VQ',
         staleTime: 1 * 60 * 1000,
     });
 
     const { data: waitingRfqData, isLoading: isWaitingRfqLoading, refetch: refetchWaitingRfq } = useQuery({
-        queryKey: ['waiting-for-rfq-vendor', filters.page, filters.limit],
-        queryFn: () => VQService.getWaitingForRFQ({ page: filters.page, limit: filters.limit }),
-        enabled: activeTab === 'WAITING_RFQ' || true,
+        queryKey: ['waiting-for-rfq-vendor', apiFilters],
+        queryFn: () => VQService.getWaitingForRFQ(apiFilters),
+        enabled: activeTab === 'WAITING_RFQ',
         staleTime: 1 * 60 * 1000,
     });
 
@@ -247,23 +256,6 @@ export default function VQListPage() {
     };
 
     // ==========================================================================
-    // CLIENT SIDE FILTERS (Business Pipeline Flow)
-    // ==========================================================================
-
-    // 1. Tab 1: ใบเสนอราคาทั้งหมด (Completed VQ)
-    // completedVqList removed (visibleVendorIds now uses data?.data directly)
-
-    // 2. Tab 2: รอผู้ขายตอบกลับ (VQ)
-    const waitingVendorVqList = useMemo(() => {
-        return (waitingVqData?.data ?? []).filter(item => (!item.vq_no && item.status === 'SENT') || (!!item.vq_no && item.status === 'DRAFT'));
-    }, [waitingVqData?.data]);
-
-    // 3. Tab 3: รอดำเนินการ (RFQ)
-    const pendingRfqList = useMemo(() => {
-        return (waitingRfqData?.data ?? []).filter(item => !item.vq_no && ['NEW', 'WAITING', 'DRAFT'].includes(item.status));
-    }, [waitingRfqData?.data]);
-
-    // ==========================================================================
     // 📊 BATCH FETCHING & COLUMNS (N+1 Optimized)
     // ==========================================================================
     
@@ -272,10 +264,10 @@ export default function VQListPage() {
         const list = activeTab === 'ALL' 
             ? (data?.data ?? []) 
             : activeTab === 'WAITING_VQ' 
-                ? waitingVendorVqList 
-                : pendingRfqList;
+                ? (waitingVqData?.data ?? []) 
+                : (waitingRfqData?.data ?? []);
         return Array.from(new Set(list.map((item: VQListItem | VQPendingQueueItem) => item.vendor_id).filter(Boolean))) as number[];
-    }, [activeTab, data?.data, waitingVendorVqList, pendingRfqList]);
+    }, [activeTab, data?.data, waitingVqData?.data, waitingRfqData?.data]);
 
     // 2. Fetch Batch
     const { vendorMap } = useVendorsBatchQuery(visibleVendorIds);
@@ -431,7 +423,7 @@ export default function VQListPage() {
                     {/* ===== Tabs Header ===== */}
                     <div className="flex space-x-1 border-b border-gray-200 dark:border-gray-700 mb-4 px-2">
                         <button
-                            onClick={() => { setActiveTab('ALL'); resetFilters(); }}
+                            onClick={() => handleTabChange('ALL')}
                             className={`flex items-center gap-2 py-2.5 px-4 text-sm font-medium border-b-2 transition-colors ${
                                 activeTab === 'ALL'
                                     ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
@@ -441,7 +433,7 @@ export default function VQListPage() {
                             ใบเสนอราคาทั้งหมด
                         </button>
                         <button
-                            onClick={() => { setActiveTab('WAITING_VQ'); resetFilters(); }}
+                            onClick={() => handleTabChange('WAITING_VQ')}
                             className={`flex justify-between items-center py-2.5 px-4 text-sm font-medium border-b-2 transition-colors ${
                                 activeTab === 'WAITING_VQ'
                                     ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
@@ -456,7 +448,7 @@ export default function VQListPage() {
                             )}
                         </button>
                         <button
-                            onClick={() => { setActiveTab('WAITING_RFQ'); resetFilters(); }}
+                            onClick={() => handleTabChange('WAITING_RFQ')}
                             className={`flex justify-between items-center py-2.5 px-4 text-sm font-medium border-b-2 transition-colors ${
                                 activeTab === 'WAITING_RFQ'
                                     ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
@@ -517,7 +509,7 @@ export default function VQListPage() {
                             <SmartTable
                                 // 🔥 TODO: Move filter logic to backend API (Pass status or has_vq flag)
                                 // Only show RFQs that have been SENT to vendors
-                                data={(waitingVqData?.data ?? []).filter(item => item.status === 'SENT')}
+                                data={waitingVqData?.data ?? []}
                                 columns={pendingVqColumns as ColumnDef<VQPendingQueueItem>[]}
                                 isLoading={isWaitingVqLoading}
                                 pagination={{
@@ -536,7 +528,7 @@ export default function VQListPage() {
                             <SmartTable
                                 // 🔥 TODO: Move filter logic to backend API (Pass status or has_vq flag)
                                 // RFQ Tab should only show items that haven't been sent or recorded yet.
-                                data={(waitingRfqData?.data ?? []).filter(item => !item.vq_no && item.status !== 'SENT' && item.status !== 'COMPLETED')}
+                                data={waitingRfqData?.data ?? []}
                                 columns={pendingRfqColumns as ColumnDef<VQPendingQueueItem>[]}
                                 isLoading={isWaitingRfqLoading}
                                 pagination={{
@@ -626,11 +618,8 @@ export default function VQListPage() {
                         const targetData = activeTab === 'WAITING_VQ' ? waitingVqData : waitingRfqData;
                         const targetLoading = activeTab === 'WAITING_VQ' ? isWaitingVqLoading : isWaitingRfqLoading;
                         
-                        // 🔥 Frontend Filter (Temporary)
-                        const filteredData = (targetData?.data ?? []).filter(item => {
-                            if (activeTab === 'WAITING_VQ') return item.status === 'SENT';
-                            return !item.vq_no && item.status !== 'SENT' && item.status !== 'COMPLETED';
-                        });
+                                                // Server-side filtered data
+                        const filteredData = targetData?.data ?? [];
 
                         return (
                             <MobileListContainer

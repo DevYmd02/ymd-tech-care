@@ -124,10 +124,9 @@ export const VendorSearchModalBase: React.FC<VendorSearchModalBaseProps> = ({
         }
     }, [isOpen]);
 
-    // Handle selection with deep clone to prevent mutation
+    // Handle selection
     const handleSelect = useCallback((vendor: VendorSearchItem) => {
-        const clonedVendor = structuredClone(vendor);
-        onSelect(clonedVendor);
+        onSelect(vendor);
         onClose();
     }, [onSelect, onClose]);
 

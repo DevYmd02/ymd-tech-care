@@ -133,8 +133,9 @@ export const PRSourceSelectionModal: React.FC<PRSourceSelectionModalProps> = ({ 
                             {/* Data Rows */}
                             {!isLoading && !fetchError && filteredPRs.map((pr) => {
                                 const displayRemark = pr.remark || pr.purpose || '-';
-                                const displayTotal = pr.total_amount != null
-                                    ? Number(pr.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                                const amount = pr.total_amount != null ? pr.total_amount : pr.pr_base_total_amount;
+                                const displayTotal = amount != null && amount !== ''
+                                    ? Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                                     : '-';
                                 return (
                                     <tr key={pr.pr_id} className="hover:bg-teal-50/50 dark:hover:bg-gray-700/50 transition-colors">

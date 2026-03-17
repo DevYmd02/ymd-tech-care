@@ -25,7 +25,7 @@ export const PRLineSchema = z.object({
   needed_date: z.string().optional(),
   preferred_vendor_id: z.coerce.number().optional(),
   remark: z.string().optional(),
-  discount: z.coerce.number().max(99999, 'ค่าต้องไม่เกิน 99,999').optional(),
+  discount: z.coerce.number().max(99999, 'ส่วนลดต้องไม่เกิน 99,999').optional(),
   line_discount_raw: z.string().optional(),
   warehouse_id: z.coerce.number().optional(),
   warehouse_code: z.string().optional(),

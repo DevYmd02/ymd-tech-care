@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { FileText, Trash2, XCircle } from 'lucide-react';
 import { FormProvider } from 'react-hook-form';
 import { useRFQForm } from '@/modules/procurement/pages/rfq/hooks';
@@ -26,8 +25,8 @@ interface Props {
 
 export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, readOnly = false, isInviteMode = false }: Props) => {
     const {
-        methods, errors, isSaving, activeTab, setActiveTab, trackingVendors,
-        branches,
+        methods, isSaving, activeTab, setActiveTab, trackingVendors,
+        branches, currencies,
         
         onRequestSave, 
         isConfirmOpen, handleCancelConfirm, executeSave,
@@ -39,10 +38,8 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
         isVendorModalOpen, setIsVendorModalOpen,
         handleAddVendor, handleRemoveVendor,
         handleOpenVendorModal, handleVendorSelect,
+        vendors,
 
-        // Field Handlers
-        appendLine,
-        removeLine,
     } = useRFQForm(isOpen, onClose, initialPR, onSuccess, editId);
 
     const { watch, setValue } = methods;
@@ -54,27 +51,6 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
     );
 
     const cardClass = 'bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden shadow-sm';
-
-    // Auto-scroll to first error (Blueprint Standard)
-    useEffect(() => {
-        const errorKeys = Object.keys(errors);
-        if (errorKeys.length > 0 && !isSaving) {
-            // Priority 1: Direct ID match
-            let firstErrorField = document.getElementById(errorKeys[0]);
-            
-            // Priority 2: Any element with error class
-            if (!firstErrorField) {
-                firstErrorField = document.querySelector('.border-red-500');
-            }
-
-            if (firstErrorField) {
-                firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                if (firstErrorField instanceof HTMLInputElement || firstErrorField instanceof HTMLSelectElement || firstErrorField instanceof HTMLTextAreaElement) {
-                    firstErrorField.focus();
-                }
-            }
-        }
-    }, [errors, isSaving]);
 
     return (
         <WindowFormLayout
@@ -139,6 +115,7 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
                     <div className={cardClass}>
                         <RFQFormHeader 
                             branches={branches} 
+                            currencies={currencies}
                             onOpenPRModal={() => setIsPRSelectionModalOpen(true)}
                             readOnly={readOnly}
                             isInviteMode={isInviteMode}
@@ -147,8 +124,6 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
 
                     <div className={cardClass}>
                         <RFQFormLines 
-                            onAddLine={appendLine}
-                            onRemoveLine={removeLine}
                             readOnly={readOnly}
                             isInviteMode={isInviteMode}
                         />
@@ -165,6 +140,7 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
 
                         {/* 2. Standard Vendor List (ALWAYS visible) */}
                         <RFQVendorSelection  
+                            vendors={vendors}
                             onAdd={handleAddVendor}
                             onRemove={handleRemoveVendor}
                             handleOpenVendorModal={handleOpenVendorModal}

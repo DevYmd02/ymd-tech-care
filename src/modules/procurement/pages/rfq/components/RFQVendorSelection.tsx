@@ -1,9 +1,10 @@
 import React from 'react';
 import { Users, Search, Trash2, Plus } from 'lucide-react';
-import { useFormContext } from 'react-hook-form';
+import { type FieldArrayWithId } from 'react-hook-form';
 import type { RFQFormValues } from '@/modules/procurement/schemas/rfq-schemas';
 
 interface RFQVendorSelectionProps {
+    vendors: FieldArrayWithId<RFQFormValues, 'vendors', 'id'>[];
     onAdd: () => void;
     onRemove: (index: number) => void;
     handleOpenVendorModal: (index: number) => void;
@@ -11,13 +12,12 @@ interface RFQVendorSelectionProps {
 }
 
 export const RFQVendorSelection: React.FC<RFQVendorSelectionProps> = ({ 
+    vendors = [],
     onAdd, 
     onRemove, 
     handleOpenVendorModal,
     isViewMode = false,
 }) => {
-    const { watch } = useFormContext<RFQFormValues>();
-    const vendors = watch('vendors') || [];
 
     const labelStyle = "text-sm font-medium text-teal-700 dark:text-teal-300 mb-1 block";
     const inputStyle = "w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent dark:text-white transition-all";
@@ -61,7 +61,7 @@ export const RFQVendorSelection: React.FC<RFQVendorSelectionProps> = ({
                         {vendors.map((vendor, index: number) => {
                             const isRowLocked = isViewMode || vendor.status === 'SENT' || vendor.status === 'RESPONDED';
                             return (
-                                <div key={index} className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 relative group">
+                                <div key={vendor.id} className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 relative group">
                                     <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
                                         {/* Vendor Code */}
                                         <div className="md:col-span-4">

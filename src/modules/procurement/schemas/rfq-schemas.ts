@@ -29,7 +29,7 @@ export const RFQVendorSchema = z.object({
     vendor_code: z.string().optional().or(z.literal('')),
     vendor_name: z.string().optional().or(z.literal('')),
     vendor_name_display: z.string().optional().or(z.literal('')),
-    status: RFQVendorStatusEnum.optional(),
+    status: z.string().optional().nullable(),
     is_existing: z.boolean().optional(),
 });
 
@@ -99,7 +99,7 @@ export const RFQFormSchema = z.object({
     isMulticurrency: z.boolean().default(false),
 
     // V-07: Fields carried over from PR (use coerce to handle API returning strings like "7")
-    cost_center_id: z.coerce.number().optional(),
+    // cost_center_id: z.coerce.number().optional(),
     pr_tax_code_id: z.coerce.number().optional(),
     pr_tax_rate: z.coerce.number().min(0, MESSAGES.NON_NEGATIVE).optional(),
 
@@ -144,14 +144,14 @@ export const createEmptyRFQLine = (lineNo: number): RFQLineValues => ({
 });
 
 export const getRFQDefaultFormValues = (): RFQFormValues => ({
-    rfq_no: 'DRAFT',
+    rfq_no: '',
     rfq_date: new Date().toLocaleDateString('en-CA'),
     pr_id: null,
     pr_no: null,
     branch_id: 0,
     project_id: null,
     requested_by_user_id: 1,
-    requested_by: 'ระบบจะกรอกอัตโนมัติ',
+    requested_by: '',
     status: 'DRAFT',
     quotation_due_date: '',
     rfq_base_currency_code: 'THB',
@@ -164,6 +164,6 @@ export const getRFQDefaultFormValues = (): RFQFormValues => ({
     remarks: '',
     isMulticurrency: false,
     purpose: '',
-    rfqLines: Array.from({ length: 1 }, (_, i) => createEmptyRFQLine(i + 1)),
+    rfqLines: [],
     vendors: [],
 });
