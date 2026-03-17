@@ -81,12 +81,12 @@ export function ProjectFormModal({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-4">
                         <div>
-                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-400 mb-1">
+                            <label className="block text-xs font-medium text-gray-700 dark:text-white mb-1">
                                 รหัสโครงการ (Project Code) *
                             </label>
                             <input 
                                 {...register('project_code')}
-                                className={`w-full h-9 bg-white dark:bg-gray-700 border ${errors.project_code ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-lg px-3 text-sm focus:ring-1 focus:ring-blue-500 outline-none`}
+                                className={`w-full h-9 bg-white dark:bg-gray-700 dark:text-white border ${errors.project_code ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-lg px-3 text-sm focus:ring-1 focus:ring-blue-500 outline-none`}
                                 placeholder="เช่น PRJ-2024-001"
                                 disabled={!!editId}
                             />
@@ -94,12 +94,12 @@ export function ProjectFormModal({
                         </div>
 
                         <div>
-                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-400 mb-1">
+                            <label className="block text-xs font-medium text-gray-700 dark:text-white mb-1">
                                 ชื่อโครงการ (Project Name) *
                             </label>
                             <input 
                                 {...register('project_name')}
-                                className={`w-full h-9 bg-white dark:bg-gray-700 border ${errors.project_name ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-lg px-3 text-sm focus:ring-1 focus:ring-blue-500 outline-none`}
+                                className={`w-full h-9 bg-white dark:bg-gray-700 dark:text-white border ${errors.project_name ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-lg px-3 text-sm focus:ring-1 focus:ring-blue-500 outline-none`}
                                 placeholder="เช่น ปรับปรุงระบบ ERP Phase 1"
                             />
                             {errors.project_name && <p className="text-[10px] text-red-500 mt-1">{errors.project_name.message}</p>}
@@ -108,12 +108,12 @@ export function ProjectFormModal({
 
                     <div className="space-y-4">
                         <div>
-                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-400 mb-1">
+                            <label className="block text-xs font-medium text-gray-700 dark:text-white mb-1">
                                 ศูนย์ต้นทุน (Cost Center) *
                             </label>
                             <select 
                                 {...register('cost_center_id')}
-                                className={`w-full h-9 bg-white dark:bg-gray-700 border ${errors.cost_center_id ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-lg px-3 text-sm focus:ring-1 focus:ring-blue-500 outline-none`}
+                                className={`w-full h-9 bg-white dark:bg-gray-700 dark:text-white border ${errors.cost_center_id ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-lg px-3 text-sm focus:ring-1 focus:ring-blue-500 outline-none`}
                             >
                                 <option value="">-- เลือกศูนย์ต้นทุน --</option>
                                 {costCenters.map(cc => (
@@ -126,13 +126,13 @@ export function ProjectFormModal({
                         </div>
 
                         <div>
-                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-400 mb-1">
+                            <label className="block text-xs font-medium text-gray-700 dark:text-white mb-1">
                                 งบประมาณโครงการ (Budget)
                             </label>
                             <input 
                                 {...register('budget_amount', { valueAsNumber: true })}
                                 type="number"
-                                className={`w-full h-9 bg-white dark:bg-gray-700 border ${errors.budget_amount ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-lg px-3 text-sm focus:ring-1 focus:ring-blue-500 outline-none`}
+                                className={`w-full h-9 bg-white dark:bg-gray-700 dark:text-white border ${errors.budget_amount ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-lg px-3 text-sm focus:ring-1 focus:ring-blue-500 outline-none`}
                                 placeholder="0.00"
                             />
                             {errors.budget_amount && <p className="text-[10px] text-red-500 mt-1">{errors.budget_amount.message}</p>}
@@ -143,38 +143,38 @@ export function ProjectFormModal({
                 {/* section: Timeline & Status */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700">
                     <div>
-                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-400 mb-1">
+                        <label className="block text-xs font-medium text-gray-700 dark:text-white mb-1">
                             วันที่เริ่ม (Start Date) *
                         </label>
                         <input 
                             {...register('start_date')}
                             type="date"
                             onClick={(e) => { if ('showPicker' in HTMLInputElement.prototype) e.currentTarget.showPicker(); }}
-                            className={`w-full h-9 bg-white dark:bg-gray-700 border ${errors.start_date ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-lg px-3 text-sm focus:ring-1 focus:ring-blue-500 outline-none`}
+                            className={`w-full h-9 bg-white dark:bg-gray-700 dark:text-white border ${errors.start_date ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-lg px-3 text-sm focus:ring-1 focus:ring-blue-500 outline-none`}
                         />
                         {errors.start_date && <p className="text-[10px] text-red-500 mt-1">{errors.start_date.message}</p>}
                     </div>
 
                     <div>
-                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-400 mb-1">
+                        <label className="block text-xs font-medium text-gray-700 dark:text-white mb-1">
                             วันที่สิ้นสุด (End Date) *
                         </label>
                         <input 
                             {...register('end_date')}
                             type="date"
                             onClick={(e) => { if ('showPicker' in HTMLInputElement.prototype) e.currentTarget.showPicker(); }}
-                            className={`w-full h-9 bg-white dark:bg-gray-700 border ${errors.end_date ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-lg px-3 text-sm focus:ring-1 focus:ring-blue-500 outline-none`}
+                            className={`w-full h-9 bg-white dark:bg-gray-700 dark:text-white border ${errors.end_date ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-lg px-3 text-sm focus:ring-1 focus:ring-blue-500 outline-none`}
                         />
                         {errors.end_date && <p className="text-[10px] text-red-500 mt-1">{errors.end_date.message}</p>}
                     </div>
 
                     <div>
-                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-400 mb-1">
+                        <label className="block text-xs font-medium text-gray-700 dark:text-white mb-1">
                             สถานะโครงการ (Status)
                         </label>
                         <select 
                             {...register('status')}
-                            className="w-full h-9 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 text-sm focus:ring-1 focus:ring-blue-500 outline-none"
+                            className="w-full h-9 bg-white dark:bg-gray-700 dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg px-3 text-sm focus:ring-1 focus:ring-blue-500 outline-none"
                         >
                             <option value="ACTIVE">Active</option>
                             <option value="ON_HOLD">On Hold</option>
@@ -185,13 +185,13 @@ export function ProjectFormModal({
                 </div>
 
                 <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-400 mb-1">
+                    <label className="block text-xs font-medium text-gray-700 dark:text-white mb-1">
                         รายละเอียดโครงการ (Description)
                     </label>
                     <textarea 
                         {...register('description')}
                         rows={3}
-                        className="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none resize-none"
+                        className="w-full bg-white dark:bg-gray-700 dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none resize-none"
                         placeholder="รายละเอียดหรือวัตถุประสงค์ของโครงการ..."
                     />
                 </div>
@@ -203,7 +203,7 @@ export function ProjectFormModal({
                             {...register('is_active')}
                             className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                         />
-                        <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:dark:text-white transition-colors">
+                        <span className="text-sm text-gray-700 dark:text-white group-hover:dark:text-white transition-colors">
                             สถานะการใช้งาน (Active)
                         </span>
                     </label>

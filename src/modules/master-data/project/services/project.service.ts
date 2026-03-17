@@ -90,5 +90,23 @@ export const ProjectService = {
       logger.error('[ProjectService] toggleStatus error:', error);
       return { success: false, message: error instanceof Error ? error.message : 'Unknown error' };
     }
+  },
+
+  delete: async (id: number): Promise<{ success: boolean; message?: string }> => {
+    if (USE_MOCK) {
+       logger.info('[ProjectService] Mock Delete:', id);
+       const index = mockProjects.findIndex(p => p.project_id === id);
+       if (index !== -1) {
+           mockProjects.splice(index, 1);
+       }
+       return { success: true };
+    }
+    try {
+      await api.delete(`/project/${id}`);
+      return { success: true };
+    } catch (error) {
+      logger.error('[ProjectService] delete error:', error);
+      return { success: false, message: error instanceof Error ? error.message : 'Unknown error' };
+    }
   }
 };
