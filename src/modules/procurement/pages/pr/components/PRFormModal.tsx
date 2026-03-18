@@ -33,7 +33,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
     isWarehouseModalOpen, setIsWarehouseModalOpen,
     isLocationModalOpen, setIsLocationModalOpen, activeWarehouseId,
     isSubmitting, isActionLoading,
-    costCenters, projects, purchaseTaxOptions, currencies,
+    costCenters, projects, purchaseTaxOptions, currencies, masterUnits,
     addLine, removeLine, clearLine, updateLine, handleClearLines,
     openProductSearch, openWarehouseSearch, openLocationSearch, selectProduct, selectWarehouse, selectLocation, handleVendorSelect, onSubmit, handleApprove,
     handleVoid,
@@ -45,7 +45,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
     handleReject, submitReject, closeRejectModal, isRejectReasonOpen, isRejecting
   } = usePRForm({ isOpen, onClose, id, onSuccess });
 
-  const { register, control, watch, formState: { errors } } = formMethods;
+  const { register, control, watch, setValue, formState: { errors } } = formMethods;
 
   // V-04: Force readOnly if status is not DRAFT (prevent editing APPROVED/PENDING PRs)
   const currentStatus = watch('status');
@@ -165,27 +165,16 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
                 />
             </div>
 
-            <div className={cardClass}>
-                <div className="w-full overflow-x-auto border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900">
-                    <table className="w-full min-w-[800px] text-xs">
-                    <thead className="bg-blue-600 text-white font-medium">
-                        <tr>
-                        <th className="px-2 py-1.5 text-left border-r border-blue-500 w-48 font-semibold">วันที่กำหนดส่ง</th>
-                        <th className="px-2 py-1.5 text-left border-r border-blue-500 w-24 font-semibold">เครดิต (วัน)</th>
-                        <th className="px-2 py-1.5 text-left border-r border-blue-500 font-semibold">Vendor Quote No.</th>
-                        <th className="px-2 py-1.5 text-left border-r border-blue-500 font-semibold">ขนส่งโดย</th>
-                        <th className="px-2 py-1.5 text-left font-semibold">ผู้จัดทำ</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr className="bg-white dark:bg-gray-800">
-                        <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700">
-                          <Controller
-                            name="delivery_date"
+            <div className={`${cardClass} p-3`}>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+                    {/* Item 1: วันที่กำหนดส่ง */}
+                    <div>
+                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">วันที่กำหนดส่ง</label>
+                        <Controller
+                            name="delivery_date" // Wait, is it delivery_date or need_by_date? It was delivery_date in line 184
                             control={control}
                             render={({ field: { value, onChange, onBlur, ref } }) => (
                               <div className="relative w-full">
-                                {/* 1. Visible Text Input */}
                                 <input
                                   type="text"
                                   readOnly
@@ -193,10 +182,8 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
                                   value={formatDisplayDate(value)}
                                   disabled={readOnly}
                                   onClick={(e) => { try { (e.currentTarget.nextElementSibling as HTMLInputElement)?.showPicker() } catch (err) { void err; } }}
-                                  className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded pl-2 pr-6 py-0.5 focus:ring-1 focus:ring-blue-500 focus:outline-none cursor-pointer"
+                                  className="w-full h-9 pl-3 pr-8 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow cursor-pointer"
                                 />
-                                
-                                {/* 2. Hidden Native Input overlay for click/picker */}
                                 <input
                                   type="date"
                                   value={value || ''}
@@ -208,32 +195,94 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
                                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                   style={{ colorScheme: 'dark' }}
                                 />
-                                
-                                <Calendar size={12} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 pointer-events-none" />
+                                <Calendar size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 pointer-events-none" />
                               </div>
                             )}
                           />
-                        </td>
-                        <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700 text-center text-gray-900 dark:text-white">{watch('credit_days')}</td>
-                        <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700"><input {...register('vendor_quote_no')} disabled={readOnly} placeholder="Quote No" className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded px-2 py-0.5 focus:ring-1 focus:ring-blue-500 focus:outline-none" /></td>
-                        <td className="px-2 py-1 border-r border-gray-300 dark:border-gray-700">
-                            <select 
+                    </div>
+
+                    {/* Item 2: เครดิต (วัน) */}
+                    <div>
+                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">เครดิต (วัน)</label>
+                        <input 
+                            type="text"
+                            value={watch('credit_days') ?? 0}
+                            readOnly
+                            className="w-full h-9 px-3 text-sm bg-gray-50 dark:bg-gray-800/50 border border-gray-300 dark:border-gray-600 rounded text-gray-500 dark:text-gray-400 italic"
+                        />
+                    </div>
+
+                    {/* Item 3: Vendor Quote No */}
+                    <div>
+                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Vendor Quote No.</label>
+                        <input 
+                            {...register('vendor_quote_no')} 
+                            disabled={readOnly || !!watch('preferred_vendor_id')} 
+                            placeholder="Quote No" 
+                            className={`w-full h-9 px-3 text-sm border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-colors ${(readOnly || !!watch('preferred_vendor_id')) ? 'bg-gray-50 dark:bg-gray-800/50 italic text-gray-500 cursor-not-allowed' : 'bg-white dark:bg-gray-800'}`}
+                        />
+                    </div>
+
+                    {/* Item 4: ขนส่งโดย */}
+                    <div>
+                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">ขนส่งโดย</label>
+                        <select 
                             {...register('shipping_method')}
                             disabled={readOnly}
-                            className={`w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white border rounded px-2 py-0.5 focus:outline-none ${errors?.shipping_method ? 'border-red-500 ring-1 ring-red-500 focus:border-red-500' : 'border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500'}`}
-                            >
+                            className={`w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border rounded text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors?.shipping_method ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-300 dark:border-gray-600'}`}
+                        >
                             <option value="">เลือก</option>
                             {SHIPPING_OPTIONS.map((opt) => (
-                              <option key={opt.value} value={opt.value}>
-                                {opt.label}
-                              </option>
+                              <option key={opt.value} value={opt.value}>{opt.label}</option>
                             ))}
-                            </select>
-                        </td>
-                        <td className="px-2 py-1 text-gray-900 dark:text-white">{user?.employee?.employee_fullname || user?.username || 'N/A'}</td>
-                        </tr>
-                    </tbody>
-                    </table>
+                        </select>
+                    </div>
+
+                    {/* Item 5: ประเภทภาษี */}
+                    <div>
+                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">ประเภทภาษี</label>
+                        <Controller
+                            name="pr_tax_code_id"
+                            control={control}
+                            render={({ field }) => (
+                              <select
+                                {...field}
+                                value={field.value ? String(field.value) : ''}
+                                disabled={readOnly}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  const selected = purchaseTaxOptions.find(t => String(t.value) === val);
+                                  
+                                  // Type safety: cast to number or null
+                                  field.onChange(val ? Number(val) : null);
+                                  
+                                  // Snapshot Tax Rate with Explicit Trigger & Reactivity
+                                  const rate = selected?.original ? Number(selected.original.tax_rate) : 0;
+                                  setValue('pr_tax_rate', rate, { shouldValidate: true, shouldDirty: true });
+                                }}
+                                className={`w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 cursor-pointer ${readOnly ? 'bg-gray-50 dark:bg-gray-800/50 cursor-not-allowed' : ''}`}
+                              >
+                                <option value="">เลือกภาษี</option>
+                                {purchaseTaxOptions.map(tax => (
+                                  <option key={tax.value} value={tax.value}>
+                                    {tax.label}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
+                        />
+                    </div>
+
+                    {/* Item 6: ผู้จัดทำ */}
+                    <div>
+                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">ผู้จัดทำ</label>
+                        <input 
+                            type="text"
+                            value={user?.employee?.employee_fullname || user?.username || 'N/A'}
+                            readOnly
+                            className="w-full h-9 px-3 text-sm bg-gray-50 dark:bg-gray-800/50 border border-gray-300 dark:border-gray-600 rounded text-gray-500 dark:text-gray-400 italic"
+                        />
+                    </div>
                 </div>
             </div>
 
@@ -354,9 +403,10 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
                 openWarehouseSearch={openWarehouseSearch}
                 openLocationSearch={openLocationSearch}
                 readOnly={readOnly}
+                masterUnits={masterUnits}
             />
 
-            <PRFormSummary purchaseTaxOptions={purchaseTaxOptions} isViewMode={readOnly} />
+            <PRFormSummary isViewMode={readOnly} />
 
             <SharedRemarksTab
                 activeTab={activeTab}

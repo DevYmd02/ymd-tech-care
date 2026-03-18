@@ -9,16 +9,36 @@ interface LocationSearchModalProps {
   onSelect: (data: { location_id: number; location_name: string }) => void;
 }
 
-import { MOCK_LOCATIONS } from '@/modules/master-data/inventory/mocks/warehouseData';
+import { useQuery } from '@tanstack/react-query';
+import { LocationService } from '@/modules/master-data/inventory/services/inventory-master.service';
 
 export const LocationSearchModal: React.FC<LocationSearchModalProps> = ({ isOpen, onClose, warehouseId, onSelect }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Critical: Filter locations to only show those belonging to the selected warehouse
-  const filteredItems = MOCK_LOCATIONS.filter(loc => 
-    loc.warehouse_id === warehouseId &&
-    (loc.location_name.includes(searchTerm) || String(loc.location_id).includes(searchTerm))
-  );
+  // Fetch actual data using React Query with dependency
+  const { data: locationsData, isLoading } = useQuery({
+    queryKey: ['warehouse-locations', warehouseId],
+    queryFn: () => LocationService.getAll(warehouseId ? { warehouse_id: warehouseId } : undefined),
+    enabled: isOpen,
+    staleTime: 5 * 60 * 1000
+  });
+
+  const items = locationsData?.items || [];
+
+  // Case-Insensitive Filter (Rule 2 fix)
+  const filteredItems = items.filter(loc => {
+    // 🚩 Client-side filter safeguard if backend does not filter by warehouse_id
+    if (warehouseId && Number(loc.warehouse_id) !== Number(warehouseId)) {
+      return false;
+    }
+
+    const search = searchTerm.toLowerCase();
+    const name = (loc.name_th || '').toLowerCase();
+    const code = (loc.code || '').toLowerCase();
+    const idStr = String(loc.location_id);
+
+    return name.includes(search) || code.includes(search) || idStr.includes(search);
+  });
 
   return (
     <DialogFormLayout
@@ -30,7 +50,7 @@ export const LocationSearchModal: React.FC<LocationSearchModalProps> = ({ isOpen
     >
       <div className="p-1">
         <div className="mb-1">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ค้นหาที่เก็บ (แสดงเฉพาะที่อยู่ในคลัง {warehouseId || 'ที่เลือกเบื้องต้น'})</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ค้นหาที่เก็บ (แสดงเฉพาะที่อยู่ในคลัง {warehouseId || 'ทั้งหมด'})</label>
           <div className="relative">
             <input 
               value={searchTerm} 
@@ -55,14 +75,20 @@ export const LocationSearchModal: React.FC<LocationSearchModalProps> = ({ isOpen
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-900">
-              {filteredItems.length > 0 ? (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={3} className="px-3 py-8 text-center text-gray-500 dark:text-gray-400">
+                    กำลังโหลดข้อมูลสถานที่...
+                  </td>
+                </tr>
+              ) : filteredItems.length > 0 ? (
                 filteredItems.map((item) => (
                   <tr key={item.location_id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 transition-colors">
                     <td className="px-3 py-3 text-center">
                       <button 
                          type="button"
                         onClick={() => {
-                          onSelect(item);
+                          onSelect({ location_id: item.location_id, location_name: item.code || String(item.location_id) });
                           onClose();
                         }} 
                         className="px-3 py-1 bg-cyan-600 hover:bg-cyan-700 text-white rounded text-xs transition-colors shadow-sm"
@@ -70,8 +96,8 @@ export const LocationSearchModal: React.FC<LocationSearchModalProps> = ({ isOpen
                         เลือก
                       </button>
                     </td>
-                    <td className="px-3 py-3 font-medium text-gray-900 dark:text-cyan-100">{item.location_id}</td>
-                    <td className="px-3 py-3 text-gray-700 dark:text-gray-300">{item.location_name}</td>
+                    <td className="px-3 py-3 font-medium text-gray-900 dark:text-cyan-100">{item.code || '-'}</td>
+                    <td className="px-3 py-3 text-gray-700 dark:text-gray-300">{item.name_th}</td>
                   </tr>
                 ))
               ) : (
@@ -79,7 +105,7 @@ export const LocationSearchModal: React.FC<LocationSearchModalProps> = ({ isOpen
                   <td colSpan={3} className="px-3 py-8 text-center text-gray-500 dark:text-gray-400">
                     {warehouseId 
                         ? 'ไม่พบข้อมูลที่เก็บในคลังนี้' 
-                        : 'กรุณาเลือกคลังก่อนเพื่อแสดงข้อมูลที่เก็บ'}
+                        : 'ไม่พบข้อมูลที่เก็บในระบบ'}
                   </td>
                 </tr>
               )}

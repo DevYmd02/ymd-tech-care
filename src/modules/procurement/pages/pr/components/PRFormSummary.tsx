@@ -1,21 +1,18 @@
 import React from 'react';
-import { useFormContext, Controller, useWatch } from 'react-hook-form';
+import { useFormContext, useWatch } from 'react-hook-form';
 import { usePRCalculations } from '@/modules/procurement/pages/pr/hooks';
 import type { PRFormData, PRLineFormData } from '@/modules/procurement/schemas/pr-schemas';
-import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
-import type { MappedOption } from '@/modules/procurement/pages/pr/hooks';
 
 interface PRFormSummaryProps {
-    purchaseTaxOptions?: MappedOption<TaxCode>[];
     isViewMode?: boolean;
 }
 
-export const PRFormSummary: React.FC<PRFormSummaryProps> = ({ purchaseTaxOptions = [], isViewMode = false }) => {
-    const { setValue, control, register } = useFormContext<PRFormData>();
+export const PRFormSummary: React.FC<PRFormSummaryProps> = ({ isViewMode = false }) => {
+    const { control, register } = useFormContext<PRFormData>();
     
     // Use useWatch for reliable summary reactivity
     const lines = useWatch({ control, name: 'lines' }) as PRLineFormData[] | undefined;
-    const taxCodeId = useWatch({ control, name: 'pr_tax_code_id' });
+    const vatRate = Number(useWatch({ control, name: 'pr_tax_rate' }) ?? 0);
     const discountInput = useWatch({ control, name: 'pr_discount_raw' }) ?? '';
     
     const subTotalState = useWatch({ control, name: 'pr_sub_total' });
@@ -23,9 +20,7 @@ export const PRFormSummary: React.FC<PRFormSummaryProps> = ({ purchaseTaxOptions
     const taxAmountState = useWatch({ control, name: 'pr_tax_amount' });
     const grandTotalState = useWatch({ control, name: 'total_amount' });
 
-    // Derive VAT rate from selected tax code (instead of hardcoded 7)
-    const selectedTax = purchaseTaxOptions.find(t => String(t.value) === String(taxCodeId));
-    const vatRate = Number(selectedTax?.original?.tax_rate ?? 0);
+
 
     // Use calculation hook for line-level discount sum
     const {
@@ -88,54 +83,23 @@ export const PRFormSummary: React.FC<PRFormSummaryProps> = ({ purchaseTaxOptions
                   </div>
                 </div>
 
-                {/* ภาษี VAT — Connected to Tax Master Data */}
+                {/* ภาษี VAT */}
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-400">ภาษี VAT</span>
+                  <span className={labelClass}>ภาษี VAT</span>
                   <div className="flex items-center gap-1">
-                    <input 
-                      {...register('pr_tax_amount')}
-                      value={taxAmountState?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      readOnly 
-                      className={`w-20 ${inputReadonlyClass}`} 
-                    />
-                    {/* Tax Code Select — Purchase Context Only */}
-                    <Controller
-                      name="pr_tax_code_id"
-                      control={control}
-                      render={({ field }) => (
-                        <select
-                          {...field}
-                          value={field.value ? String(field.value) : ''}
-                          disabled={isViewMode}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            const selected = purchaseTaxOptions.find(t => String(t.value) === val);
-                            field.onChange(val);
-                            
-                            // Snapshot Tax Rate with Explicit Trigger
-                            if (selected?.original) {
-                              setValue('pr_tax_rate', Number(selected.original.tax_rate));
-                            } else {
-                              // CRITICAL: User unselected the tax. Wipe the rate to 0.
-                              setValue('pr_tax_rate', 0);
-                            }
-                          }}
-                          className={`h-7 px-1 text-xs bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 cursor-pointer min-w-[140px] ${isViewMode ? 'bg-gray-50 dark:bg-gray-800/50 cursor-not-allowed' : ''}`}
-                        >
-                          <option value="">เลือกภาษี</option>
-                          {purchaseTaxOptions.map(tax => (
-                            <option key={tax.value} value={tax.value}>
-                              {tax.label}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                    />
+                    <div className="relative flex items-center">
+                        <input 
+                          value={vatRate} 
+                          readOnly 
+                          className={`w-12 text-center ${inputReadonlyClass} pr-4`} 
+                        />
+                        <span className="absolute right-1.5 text-gray-400 dark:text-gray-500 text-[10px]">%</span>
+                    </div>
                     <span className="text-gray-400 dark:text-gray-500">-</span>
                     <input 
                       value={taxAmountState?.toLocaleString(undefined, { minimumFractionDigits: 2 })} 
                       readOnly 
-                      className={`w-24 ${inputReadonlyClass}`} 
+                      className={`w-28 ${inputReadonlyClass}`} 
                     />
                   </div>
                 </div>

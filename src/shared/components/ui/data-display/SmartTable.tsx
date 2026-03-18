@@ -130,9 +130,10 @@ export function SmartTable<TData>({
         <div className={`flex flex-col h-full ${styles.bg.surface} rounded-lg shadow-sm border ${styles.border.default} ${className}`}>
             {/* Table Container */}
             <div className="flex-1 overflow-auto relative">
-                <table 
-                    className="w-full text-left border-collapse table-fixed min-w-[900px] text-sm"
-                >
+                <div className="inline-block min-w-full align-middle">
+                    <table 
+                        className="w-full text-left border-collapse table-fixed min-w-[900px] text-sm"
+                    >
                     <thead className={`${styles.bg.header} ${styles.text.secondary} uppercase text-xs sticky top-0 z-10`}>
                         {table.getHeaderGroups().map(headerGroup => (
                             <tr key={headerGroup.id} className={`border-b ${styles.border.default}`}>
@@ -250,7 +251,8 @@ export function SmartTable<TData>({
                             ))}
                         </tfoot>
                     )}
-                </table>
+                    </table>
+                </div>
             </div>
 
             {/* Pagination Footer */}
