@@ -410,7 +410,13 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
     const handlePrintPreview = useCallback((e: React.MouseEvent, vendor: VendorDetailDisplay) => {
         e.stopPropagation();
         logger.info('Opening print preview for vendor:', vendor.vendor_code);
-        // TODO: Implement PDF generation/preview
+        
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+        if (vendor.rfq_vendor_id) {
+            window.open(`${apiUrl}/rfq/vendor/${vendor.rfq_vendor_id}/pdf`, '_blank');
+        } else {
+            logger.warn('[RFQSendConfirmModal] Missing rfq_vendor_id for print preview');
+        }
     }, []);
 
     const handleConfirm = () => {
