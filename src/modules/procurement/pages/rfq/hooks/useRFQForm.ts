@@ -131,6 +131,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
 
     // Vendor Tracking (for View Mode Only)
     const [trackingVendors, setTrackingVendors] = useState<Array<RFQVendor & { vendor_code?: string; vendor_name?: string }>>([]);
+    const [rfq, setRfq] = useState<RFQDetailResponse | null>(null);
 
     // 🏗️ React Hook Form Setup
     const methods = useForm<RFQFormValues>({
@@ -228,12 +229,18 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                 const rfqId = Number(editId);
                 const rfq = await RFQService.getById(rfqId) as RFQDetailResponse;
                 if (!rfq) return;
+                setRfq(rfq); // Save to state for executeSave fallback scope
 
                 const allVendors = [
                     ...(rfq.rfqVendors || []),
                     ...(rfq.vendors || [])
                 ];
-                const uniqueVendors = Array.from(new Map(allVendors.map(v => [v.rfq_vendor_id, v])).values());
+                const uniqueVendors = Array.from(
+                    new Map(allVendors.map(v => {
+                        const key = v.rfq_vendor_id ? `rfq_${v.rfq_vendor_id}` : `v_${v.vendor_id}`;
+                        return [key, v];
+                    })).values()
+                );
                 const sourceVendors = uniqueVendors;
                 const sourceLines = (rfq.rfqLines && rfq.rfqLines.length > 0) ? rfq.rfqLines : (rfq.lines || []);
 
@@ -528,6 +535,10 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                         qty: Number(line.qty),
                         uom_id: Number(line.uom_id || 1),
                     };
+                    // 💧 Preserve ID for edit updates to prevent duplicating lines
+                    if ((line as any).rfq_line_id) {
+                        dto.rfq_line_id = Number((line as any).rfq_line_id);
+                    }
                     // Optional fields — only add if present
                     if (line.item_id) dto.item_id = Number(line.item_id);
                     if (line.pr_line_id) dto.pr_line_id = Number(line.pr_line_id);
@@ -539,11 +550,26 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
 
             // 🎯 THE DOUBLE REQUESTER STRIKE: Backend demands BOTH fields simultaneously.
             const resolvedRequestedByUserId = editId 
-                ? (stagedPayload.requested_by_user_id ? Number(stagedPayload.requested_by_user_id) : undefined)
+                ? (stagedPayload.requested_by_user_id ? Number(stagedPayload.requested_by_user_id) 
+                  : (rfq?.created_by_user_id ? Number(rfq.created_by_user_id) 
+                  : ((rfq as any)?.requested_by_user_id ? Number((rfq as any).requested_by_user_id) 
+                  : (rfq?.requested_by_user?.employee_id ? Number(rfq.requested_by_user.employee_id) 
+                  : (user?.id ? Number(user.id) : undefined))))) // 🚨 Absolute Fallback to satisfy backend
                 : (user?.id ? Number(user.id) : undefined);
             const resolvedRequestedByName = editId 
-                ? (stagedPayload.requested_by ? String(stagedPayload.requested_by) : undefined)
+                ? (stagedPayload.requested_by ? String(stagedPayload.requested_by) : (rfq?.created_by_name || (rfq as any)?.requested_by || user?.employee?.employee_fullname || undefined))
                 : (user?.employee?.employee_fullname ? String(user.employee.employee_fullname) : undefined);
+
+            // 🔍 Debug Audit Log for backend updates
+            console.log('[executeSave] Fallback debug:', {
+                editId,
+                stagedPayload_id: stagedPayload.requested_by_user_id,
+                rfq_created_by: rfq?.created_by_user_id,
+                rfq_req_by_id: (rfq as any)?.requested_by_user_id,
+                rfq_req_by_user: rfq?.requested_by_user?.employee_id,
+                resolvedRequestedByUserId,
+                full_rfq_state: JSON.stringify(rfq || {})
+            });
 
             // ⚠️ BACKEND WHITELIST: Only send fields the API accepts.
             // `purpose` and `project_id` are rejected by the backend controller.
@@ -572,9 +598,12 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
 
             const selectedVendors = Array.from(
                 new Map(
-                    stagedPayload.vendors
+                    (stagedPayload.vendors || [])
                         .filter(v => v.vendor_id)
-                        .map(v => [Number(v.vendor_id), { vendor_id: Number(v.vendor_id) }])
+                        .map(v => [Number(v.vendor_id), { 
+                            vendor_id: Number(v.vendor_id),
+                            status: v.status || 'ACTIVE'
+                        }])
                 ).values()
             );
                 

@@ -293,7 +293,12 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
                     ...(response.rfqVendors || []),
                     ...(response.vendors || [])
                 ];
-                const uniqueVendors = Array.from(new Map(allVendors.map(v => [v.rfq_vendor_id, v])).values());
+                const uniqueVendors = Array.from(
+                    new Map(allVendors.map(v => {
+                        const key = v.rfq_vendor_id ? `rfq_${v.rfq_vendor_id}` : `v_${v.vendor_id}`;
+                        return [key, v];
+                    })).values()
+                );
                 const sourceVendors = uniqueVendors;
                 
                 // HYDRATION: Fetch vendor identity details if missing from backend
@@ -316,8 +321,8 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
                 }));
 
                 const vendorList: VendorDetailDisplay[] = enhancedVendors.map(v => ({
-                    rfq_vendor_id: v.rfq_vendor_id,
-                    vendor_id: v.vendor_id,
+                    rfq_vendor_id: Number(v.rfq_vendor_id || 0),
+                    vendor_id: Number(v.vendor_id),
                     vendor_name: v.vendor_name || '',
                     vendor_code: v.vendor_code || '',
                     email_sent_to: v.email_sent_to,
@@ -325,8 +330,28 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
                     sent_date: v.sent_date,
                 }));
 
+                // 🔍 Debug Audit Log for defaults
+                console.log('[RFQSendConfirmModal] fetch details:', {
+                    rfq_id: rfq.rfq_id,
+                    rfq_status: response.status,
+                    isDraftRFQ: String(response.status || '').toUpperCase() === 'DRAFT',
+                    vendors_mapped: vendorList.map(v => ({ id: v.vendor_id, status: v.status }))
+                });
+
                 setVendors(vendorList);
-                // Clean initial state — no vendors pre-selected; user must consciously choose
+                
+                // Pre-select only new vendors (DRAFT/PENDING/WAITING), but INCLUDE SENT if the RFQ itself is a DRAFT
+                const isDraftRFQ = String(response.status || rfq.status || '').toUpperCase() === 'DRAFT';
+                const initialSelected = vendorList
+                    .filter(v => {
+                        const status = String(v.status || '').toUpperCase();
+                        if (isDraftRFQ) {
+                            return ['DRAFT', 'PENDING', 'WAITING', 'SENT'].includes(status);
+                        }
+                        return ['DRAFT', 'PENDING', 'WAITING'].includes(status);
+                    })
+                    .map(v => v.vendor_id);
+                setSelectedVendorIds(initialSelected);
 
                 // Pre-fill To from vendor email, safe null guard
                 const initialConfig: Record<number, VendorEmailConfig> = {};
@@ -361,7 +386,7 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
     }, []);
 
     const handleSelectAllVendors = () => {
-        const interactive = vendors.filter(v => v.status === 'PENDING' || v.status === 'WAITING' || v.status === 'DRAFT');
+        const interactive = vendors.filter(v => ['DRAFT', 'PENDING', 'WAITING', 'SENT'].includes(String(v.status || '').toUpperCase()));
         const allSelected = interactive.every(v => selectedVendorIds.includes(v.vendor_id));
         if (allSelected) {
             setSelectedVendorIds(vendors.filter(v => v.status !== 'PENDING' && v.status !== 'WAITING' && v.status !== 'DRAFT').map(v => v.vendor_id));
@@ -388,9 +413,9 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
     }, []);
 
     const handleConfirm = () => {
-        // Collect selected vendors that are still interactive
+        // Collect selected vendors that are still interactive (including resendable)
         const targetVendors = vendors.filter(v => 
-            (v.status === 'PENDING' || v.status === 'WAITING' || v.status === 'DRAFT') && 
+            ['DRAFT', 'PENDING', 'WAITING', 'SENT'].includes(String(v.status || '').toUpperCase()) && 
             selectedVendorIds.includes(v.vendor_id)
         );
 
@@ -420,8 +445,8 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
     // ====================================================================================
 
     const hasVendors = vendors.length > 0;
-    const isAllSentMode = vendors.length > 0 && vendors.every(v => v.status !== 'PENDING' && v.status !== 'WAITING' && v.status !== 'DRAFT');
-    const newSelectedVendors = vendors.filter(v => (v.status === 'PENDING' || v.status === 'WAITING' || v.status === 'DRAFT') && selectedVendorIds.includes(v.vendor_id));
+    const isAllSentMode = vendors.length > 0 && vendors.every(v => !['DRAFT', 'PENDING', 'WAITING', 'SENT'].includes(String(v.status || '').toUpperCase()));
+    const newSelectedVendors = vendors.filter(v => ['DRAFT', 'PENDING', 'WAITING', 'SENT'].includes(String(v.status || '').toUpperCase()) && selectedVendorIds.includes(v.vendor_id));
 
     // Block confirm only if a selected vendor has email toggle ON and is missing a To address
     const hasEmptyToConfig = newSelectedVendors.some(v => {
@@ -517,7 +542,7 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
                                 <div className="flex flex-col gap-2">
                                     {vendors.map(vendor => {
                                         const isSelected = selectedVendorIds.includes(vendor.vendor_id);
-                                        const isLocked = vendor.status !== 'PENDING' && vendor.status !== 'WAITING' && vendor.status !== 'DRAFT';
+                                        const isLocked = !['DRAFT', 'PENDING', 'WAITING', 'SENT'].includes(String(vendor.status || '').toUpperCase());
                                         return (
                                             <VendorSmartCard
                                                 key={vendor.vendor_id}

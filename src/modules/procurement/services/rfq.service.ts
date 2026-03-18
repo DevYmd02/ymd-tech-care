@@ -35,6 +35,7 @@ const ENDPOINTS = {
  *  Forbidden (will cause 400): item_code, item_name, uom, est_unit_price
  */
 export interface RFQLineDTO {
+  rfq_line_id?: number;
   line_no: number;
   description: string;
   qty: number;
@@ -72,7 +73,7 @@ export interface RFQCreateDTO {
   rfq_exchange_rate_date: string;
   remarks: string;
   // 🚫 vendor_ids: REMOVED — backend rejects this property entirely
-  rfqVendors?: { vendor_id: number }[]; // newly supported direct binding
+  rfqVendors?: { vendor_id: number, status?: string }[]; // newly supported direct binding
   rfqLines: RFQLineDTO[];
   pr_id?: number;
   // ❌ project_id — backend rejects
