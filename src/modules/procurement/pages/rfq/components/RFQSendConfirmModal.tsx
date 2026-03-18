@@ -326,7 +326,11 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
                 }));
 
                 setVendors(vendorList);
-                // Clean initial state — no vendors pre-selected; user must consciously choose
+                // Pre-select only new vendors (DRAFT/PENDING/WAITING), leave SENT unchecked
+                const initialSelected = vendorList
+                    .filter(v => ['DRAFT', 'PENDING', 'WAITING'].includes(v.status))
+                    .map(v => v.vendor_id);
+                setSelectedVendorIds(initialSelected);
 
                 // Pre-fill To from vendor email, safe null guard
                 const initialConfig: Record<number, VendorEmailConfig> = {};
@@ -361,7 +365,7 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
     }, []);
 
     const handleSelectAllVendors = () => {
-        const interactive = vendors.filter(v => v.status === 'PENDING' || v.status === 'WAITING' || v.status === 'DRAFT');
+        const interactive = vendors.filter(v => ['DRAFT', 'PENDING', 'WAITING', 'SENT'].includes(v.status));
         const allSelected = interactive.every(v => selectedVendorIds.includes(v.vendor_id));
         if (allSelected) {
             setSelectedVendorIds(vendors.filter(v => v.status !== 'PENDING' && v.status !== 'WAITING' && v.status !== 'DRAFT').map(v => v.vendor_id));
@@ -388,9 +392,9 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
     }, []);
 
     const handleConfirm = () => {
-        // Collect selected vendors that are still interactive
+        // Collect selected vendors that are still interactive (including resendable)
         const targetVendors = vendors.filter(v => 
-            (v.status === 'PENDING' || v.status === 'WAITING' || v.status === 'DRAFT') && 
+            ['DRAFT', 'PENDING', 'WAITING', 'SENT'].includes(v.status) && 
             selectedVendorIds.includes(v.vendor_id)
         );
 
@@ -420,8 +424,8 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
     // ====================================================================================
 
     const hasVendors = vendors.length > 0;
-    const isAllSentMode = vendors.length > 0 && vendors.every(v => v.status !== 'PENDING' && v.status !== 'WAITING' && v.status !== 'DRAFT');
-    const newSelectedVendors = vendors.filter(v => (v.status === 'PENDING' || v.status === 'WAITING' || v.status === 'DRAFT') && selectedVendorIds.includes(v.vendor_id));
+    const isAllSentMode = vendors.length > 0 && vendors.every(v => !['DRAFT', 'PENDING', 'WAITING', 'SENT'].includes(v.status));
+    const newSelectedVendors = vendors.filter(v => ['DRAFT', 'PENDING', 'WAITING', 'SENT'].includes(v.status) && selectedVendorIds.includes(v.vendor_id));
 
     // Block confirm only if a selected vendor has email toggle ON and is missing a To address
     const hasEmptyToConfig = newSelectedVendors.some(v => {
@@ -517,7 +521,7 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
                                 <div className="flex flex-col gap-2">
                                     {vendors.map(vendor => {
                                         const isSelected = selectedVendorIds.includes(vendor.vendor_id);
-                                        const isLocked = vendor.status !== 'PENDING' && vendor.status !== 'WAITING' && vendor.status !== 'DRAFT';
+                                        const isLocked = !['DRAFT', 'PENDING', 'WAITING', 'SENT'].includes(vendor.status);
                                         return (
                                             <VendorSmartCard
                                                 key={vendor.vendor_id}

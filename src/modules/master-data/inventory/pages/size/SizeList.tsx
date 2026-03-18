@@ -153,7 +153,7 @@ export default function SizeList() {
                     className="shadow-sm"
                 />
             </div>
-            <SizeFormModal isOpen={isModalOpen} onClose={handleModalClose} editId={editingId} initialData={editingData} onSuccess={refetch} />
+            <SizeFormModal isOpen={isModalOpen} onClose={handleModalClose} editId={editingId} initialData={editingData} onSuccess={() => { refetch(); handleModalClose(); }} />
         </div>
     );
 }

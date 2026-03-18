@@ -131,6 +131,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
 
     // Vendor Tracking (for View Mode Only)
     const [trackingVendors, setTrackingVendors] = useState<Array<RFQVendor & { vendor_code?: string; vendor_name?: string }>>([]);
+    const [rfq, setRfq] = useState<RFQDetailResponse | null>(null);
 
     // 🏗️ React Hook Form Setup
     const methods = useForm<RFQFormValues>({
@@ -228,6 +229,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                 const rfqId = Number(editId);
                 const rfq = await RFQService.getById(rfqId) as RFQDetailResponse;
                 if (!rfq) return;
+                setRfq(rfq); // Save to state for executeSave fallback scope
 
                 const allVendors = [
                     ...(rfq.rfqVendors || []),
@@ -539,11 +541,23 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
 
             // 🎯 THE DOUBLE REQUESTER STRIKE: Backend demands BOTH fields simultaneously.
             const resolvedRequestedByUserId = editId 
-                ? (stagedPayload.requested_by_user_id ? Number(stagedPayload.requested_by_user_id) : undefined)
+                ? (stagedPayload.requested_by_user_id ? Number(stagedPayload.requested_by_user_id) 
+                  : (rfq?.created_by_user_id ? Number(rfq.created_by_user_id) 
+                  : (rfq?.requested_by_user?.employee_id ? Number(rfq.requested_by_user.employee_id) 
+                  : undefined)))
                 : (user?.id ? Number(user.id) : undefined);
             const resolvedRequestedByName = editId 
-                ? (stagedPayload.requested_by ? String(stagedPayload.requested_by) : undefined)
+                ? (stagedPayload.requested_by ? String(stagedPayload.requested_by) : (rfq?.created_by_name || rfq?.requested_by || undefined))
                 : (user?.employee?.employee_fullname ? String(user.employee.employee_fullname) : undefined);
+
+            // 🔍 Debug Audit Log for backend updates
+            console.log('[executeSave] Fallback debug:', {
+                editId,
+                stagedPayload_id: stagedPayload.requested_by_user_id,
+                rfq_created_by: rfq?.created_by_user_id,
+                rfq_req_by_user: rfq?.requested_by_user?.employee_id,
+                resolvedRequestedByUserId
+            });
 
             // ⚠️ BACKEND WHITELIST: Only send fields the API accepts.
             // `purpose` and `project_id` are rejected by the backend controller.

@@ -17,7 +17,7 @@ import type { SuccessResponse } from '@/shared/types/api-response.types';
 let localVendorData: VendorMaster[] = [...MOCK_VENDORS];
 
 // 🔄 Helper function: Format payload to match the new backend JSON specification
-function mapVendorToApi(data: any): any {
+function mapVendorToApi(data: any, isUpdate = false): any {
     const payload: any = {
         vendor_code: data.vendor_code || data.vendorCode || '',
         vendor_name: data.vendor_name || data.vendorNameTh || '',
@@ -283,7 +283,7 @@ export const VendorService = {
 
     try {
       // Map to exact payload needed by the new backend structure
-      const payload = mapVendorToApi(data); // โหมดสร้างใหม่
+      const payload = mapVendorToApi(data, false); // โหมดสร้างใหม่
       const response = await api.post<any>('/vendors', payload);
       return { success: true, data: response } as any;
     } catch (error: any) {
@@ -313,7 +313,7 @@ export const VendorService = {
     try {
       // Only transform if it's a full update payload, ignore if it's a simple status toggle
       const isFullUpdate = data.vendor_name || data.vendorNameTh || data.vendor_code || data.vendorCode;
-      const payload = isFullUpdate ? mapVendorToApi(data) : data; // โหมดแก้ไข
+      const payload = isFullUpdate ? mapVendorToApi(data, true) : data; // โหมดแก้ไข
       const response = await api.patch<any>(`/vendors/${vendorId}`, payload);
       return { success: true, data: response } as any;
     } catch (error: any) {
