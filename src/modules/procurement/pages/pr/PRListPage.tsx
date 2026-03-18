@@ -391,8 +391,6 @@ export default function PRListPage() {
                             onChange={(val: string) => handleFilterChange('search', val)}
                             placeholder="PR-xxx"
                             accentColor="blue"
-                            disabled={true}
-                            className="bg-gray-100 cursor-not-allowed text-gray-400"
                         />
                         <FilterField
                             label="ผู้ขอ"
