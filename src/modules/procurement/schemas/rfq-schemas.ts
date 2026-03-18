@@ -150,7 +150,7 @@ export const getRFQDefaultFormValues = (): RFQFormValues => ({
     pr_no: null,
     branch_id: 0,
     project_id: null,
-    requested_by_user_id: 1,
+    requested_by_user_id: undefined,
     requested_by: '',
     status: 'DRAFT',
     quotation_due_date: '',

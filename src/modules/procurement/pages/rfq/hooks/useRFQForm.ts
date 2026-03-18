@@ -538,8 +538,12 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                 });
 
             // 🎯 THE DOUBLE REQUESTER STRIKE: Backend demands BOTH fields simultaneously.
-            const resolvedRequestedByUserId = Number(stagedPayload.requested_by_user_id || 1);
-            const resolvedRequestedByName = String(stagedPayload.requested_by || 'System User');
+            const resolvedRequestedByUserId = editId 
+                ? (stagedPayload.requested_by_user_id ? Number(stagedPayload.requested_by_user_id) : undefined)
+                : (user?.id ? Number(user.id) : undefined);
+            const resolvedRequestedByName = editId 
+                ? (stagedPayload.requested_by ? String(stagedPayload.requested_by) : undefined)
+                : (user?.employee?.employee_fullname ? String(user.employee.employee_fullname) : undefined);
 
             // ⚠️ BACKEND WHITELIST: Only send fields the API accepts.
             // `purpose` and `project_id` are rejected by the backend controller.

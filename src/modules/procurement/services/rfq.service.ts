@@ -61,8 +61,8 @@ export interface RFQLineDTO {
  */
 export interface RFQCreateDTO {
   rfq_date: string;
-  requested_by_user_id: number;      // 🎯 Employee ID (NUMBER, non-empty)
-  requested_by: string;              // 🎯 Employee Name (STRING, non-empty)
+  requested_by_user_id?: number;     // 🎯 Employee ID (NUMBER, optional)
+  requested_by?: string;             // 🎯 Employee Name (STRING, optional)
   status: string;
   quotation_due_date: string;
   branch_id: number;
