@@ -10,6 +10,7 @@ import {
 import type { PRFormData, PRLineFormData } from '@/modules/procurement/schemas/pr-schemas';
 import type { VendorSelection, PRLine, CreatePRPayload } from '@/modules/procurement/types/pr-types';
 import { PRService } from '@/modules/procurement/services/pr.service';
+import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
 import { extractErrorMessage } from '@/core/api/api';
 import { logger } from '@/shared/utils/logger';
 import type { ItemListItem } from '@/modules/master-data/types/master-data-types';
@@ -300,6 +301,41 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
                 mappedLines.push(createEmptyPRLine());
               }
 
+               let vendorName = pr.vendor_name || pr.suggested_vendor || '';
+              let vendorId = pr.preferred_vendor_id ?? pr.vendor_id;
+              const vendorCodeFallback = pr.vendor_quote_no || '';
+
+              // 🔍 ABSOLUTE MASTER FALLBACK LOOKUP:
+              // Mirror PRListPage.tsx exactly by searching through complete vendor item list
+              if (!vendorName) {
+                try {
+                  const vendorListRes = await VendorService.getList();
+                  const vendorItems = vendorListRes.items || [];
+
+                  // 1. Try Lookup by ID
+                  if (vendorId) {
+                     const matched = vendorItems.find((v: any) => Number(v.vendor_id || v.id) === Number(vendorId));
+                     if (matched?.vendor_name) {
+                         vendorName = matched.vendor_name;
+                     }
+                  }
+
+                  // 2. Try Lookup by Code Fallback (Vendor Quote No)
+                  if (!vendorName && vendorCodeFallback) {
+                     const codeTrim = vendorCodeFallback.trim().toLowerCase();
+                     const matched = vendorItems.find((v: any) => 
+                        v.vendor_code && v.vendor_code.trim().toLowerCase() === codeTrim
+                     );
+                     if (matched) {
+                        vendorName = matched.vendor_name;
+                        vendorId = matched.vendor_id; // Upgrade missing ID holding form integrity
+                     }
+                  }
+                } catch (err) {
+                  logger.error('[usePRForm] Absolute fallback lookup failed:', err);
+                }
+              }
+
               // ── Robust Hydration — Use fallbacks for inconsistent API naming ─────────────
               const formData: Partial<PRFormData> = {
                 ...pr,
@@ -319,11 +355,8 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
                 purpose: (pr.purpose || pr.remark || '').trim(),
 
                 // 4. Vendor Fallback
-                preferred_vendor_id: (() => {
-                  const val = pr.preferred_vendor_id ?? pr.vendor_id;
-                  return val ? Number(val) : undefined;
-                })(),
-                vendor_name: pr.vendor_name || pr.suggested_vendor || '',
+                preferred_vendor_id: vendorId ? Number(vendorId) : undefined,
+                vendor_name: vendorName,
 
                 requester_user_id: pr.requester_user_id ? Number(pr.requester_user_id) : 1,
                 
