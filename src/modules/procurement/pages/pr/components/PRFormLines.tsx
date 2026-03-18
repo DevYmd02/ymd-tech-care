@@ -1,5 +1,5 @@
 import React from 'react';
-import { useFormContext } from 'react-hook-form';
+import { useFormContext, Controller } from 'react-hook-form';
 import { FileBox, Eraser, Plus, Trash2, Search, AlertTriangle } from 'lucide-react';
 import type { FieldArrayWithId } from 'react-hook-form';
 import type { PRFormData, PRLineFormData } from '@/modules/procurement/schemas/pr-schemas';
@@ -15,6 +15,7 @@ interface PRFormLinesProps {
     openWarehouseSearch: (index: number) => void;
     openLocationSearch: (index: number) => void;
     readOnly?: boolean;
+    masterUnits?: any[];
 }
 
 export const PRFormLines: React.FC<PRFormLinesProps> = React.memo(({
@@ -27,9 +28,10 @@ export const PRFormLines: React.FC<PRFormLinesProps> = React.memo(({
     openProductSearch,
     openWarehouseSearch,
     openLocationSearch,
-    readOnly = false
+    readOnly = false,
+    masterUnits = []
 }) => {
-    const { register, watch: watchForm } = useFormContext<PRFormData>();
+    const { register, watch: watchForm, control, setValue } = useFormContext<PRFormData>();
     const watchedLines = watchForm('lines');
     const headerVendorId = watchForm('preferred_vendor_id');
 
@@ -133,22 +135,53 @@ export const PRFormLines: React.FC<PRFormLinesProps> = React.memo(({
                                     <td className={tdBaseClass}>
                                         <button 
                                             type="button"
-                                            onClick={() => !readOnly && !line.item_id && openLocationSearch(index)}
-                                            className={`${line.item_id ? lockedInputClass : tableInputClass} w-full text-center flex items-center justify-center ${!readOnly && !line.item_id ? 'cursor-pointer hover:bg-white dark:hover:bg-gray-700' : ''}`}
-                                            disabled={readOnly || !!line.item_id}
-                                            title={line.item_id ? masterDataTooltip : 'คลิกเพื่อเลือกที่เก็บ'}
+                                            onClick={() => !readOnly && openLocationSearch(index)}
+                                            className={`${tableInputClass} w-full text-center flex items-center justify-center cursor-pointer hover:bg-white dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed`}
+                                            disabled={readOnly}
+                                            title="คลิกเพื่อเลือกที่เก็บ"
                                         >
-                                            <span className="truncate">{line.location || '-'}</span>
+                                            <span className="truncate">{line.location_name || line.location || '-'}</span>
                                         </button>
                                         <input type="hidden" {...register(`lines.${index}.location`)} />
+                                        <input type="hidden" {...register(`lines.${index}.location_name`)} />
                                     </td>
                                     
                                     <td className={tdBaseClass}>
-                                        <input 
-                                            {...register(`lines.${index}.uom`)} 
-                                            readOnly={!!line.item_id || readOnly}
-                                            className={`${line.item_id ? lockedInputClass : tableInputClass} text-center`} 
-                                            title={line.item_id ? masterDataTooltip : ''}
+                                        <Controller
+                                            name={`lines.${index}.uom_id`}
+                                            control={control}
+                                            render={({ field }) => {
+                                                // Dropdown must show ALL system units unconditionally for flexible select
+                                                const options = masterUnits.map((u: any) => ({ 
+                                                    id: Number(u.uom_id || u.unit_id), 
+                                                    name: u.uom_name || u.unit_name 
+                                                }));
+
+                                                // Fallback edit mode guard (Trap 1 style safety)
+                                                if (options.length === 0 && line.uom && line.uom_id) {
+                                                    options.push({ id: Number(line.uom_id), name: line.uom });
+                                                }
+
+                                                return (
+                                                    <select
+                                                        {...field}
+                                                        value={field.value || ''}
+                                                        disabled={readOnly}
+                                                        className={`${tableInputClass} text-center px-1`}
+                                                        onChange={(e) => {
+                                                            const selectedId = e.target.value ? Number(e.target.value) : undefined;
+                                                            field.onChange(selectedId);
+                                                            const selectedName = options.find((o: any) => Number(o.id) === selectedId)?.name || '';
+                                                            setValue(`lines.${index}.uom`, selectedName);
+                                                        }}
+                                                    >
+                                                        <option value="">- หน่วย -</option>
+                                                        {options.map((opt: any) => (
+                                                            <option key={`${opt.id}-${index}`} value={opt.id}>{opt.name}</option>
+                                                        ))}
+                                                    </select>
+                                                );
+                                            }}
                                         />
                                     </td>
                                     

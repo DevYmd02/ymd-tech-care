@@ -1,5 +1,6 @@
 import api from '@/core/api/api';
 import { USE_MOCK } from '@/core/api/api';
+import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
 import type {
   PRListParams,
   PRListResponse,
@@ -74,7 +75,53 @@ export const PRService = {
       if (params.sort) filterParams.sort = params.sort;
       if (params.q) filterParams.q = params.q;
 
-      return applyClientFilters<PRHeader>(allItems, filterParams, {
+      // 🎯 Client-Side Vendor Hydration for filtering
+      let hydratedItems = [...allItems];
+      if (params.vendor_code || params.vendor_name) {
+          try {
+              const vendorsRes = await VendorService.getList();
+              const vendorMap: Record<number, { vendor_code?: string; vendor_name?: string }> = {};
+              (vendorsRes.items || []).forEach((v: any) => {
+                  const id = v.vendor_id || v.id;
+                  if (id) {
+                      vendorMap[Number(id)] = {
+                          vendor_code: v.vendor_code,
+                          vendor_name: v.vendor_name
+                      };
+                  }
+              });
+
+              hydratedItems = allItems.map(item => {
+                  const vId = item.preferred_vendor_id || item.vendor_id;
+                  const vendorFromId = vId ? vendorMap[Number(vId)] : undefined;
+                  
+                  const vendorCode = vendorFromId?.vendor_code || item.vendor_quote_no || '';
+                  let vendorName = vendorFromId?.vendor_name || item.vendor_name || '';
+
+                  // Look up by vendorCode if name is missing
+                  if (!vendorName && vendorCode) {
+                      const foundVendor = Object.values(vendorMap).find((v: any) => v.vendor_code === vendorCode);
+                      if (foundVendor) {
+                          vendorName = foundVendor.vendor_name || '';
+                      }
+                  }
+
+                  return {
+                      ...item,
+                      vendor_code: vendorCode,
+                      vendor_name: vendorName
+                  };
+              });
+
+              if (params.vendor_code) filterParams.vendor_code = params.vendor_code;
+              if (params.vendor_name) filterParams.vendor_name = params.vendor_name;
+
+          } catch (err) {
+              logger.error('[PRService] Failed to hydrate vendors for filtering:', err);
+          }
+      }
+
+      return applyClientFilters<PRHeader>(hydratedItems, filterParams, {
         searchableFields: ['pr_no', 'requester_name', 'purpose'],
         dateField: 'pr_date',
       });

@@ -21,6 +21,7 @@ import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
 import type { WarehouseListItem, Currency } from '@/modules/master-data/types/master-data-types';
 import { usePRActions } from './usePRActions';
 import { useQueryClient } from '@tanstack/react-query';
+import { LocationService } from '@/modules/master-data/inventory/services/inventory-master.service';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { usePRCalculations } from './usePRCalculations';
 
@@ -115,6 +116,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
   const prevCurrencyTypeId = useRef<string | undefined>(getPRDefaultFormValues(user).pr_quote_currency_code);
 
   const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
+  const [activeWarehouseId, setActiveWarehouseId] = useState<number | null>(null);
 
   const formMethods = useForm<PRFormData>({
     defaultValues: getPRDefaultFormValues(user),
@@ -215,7 +217,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
 
   useEffect(() => {
     // Phase 1 & 2: Safe hydration ensures we only execute PR fetching and mapping WHEN master data is completely loaded
-    if (isOpen && !isMasterDataLoading && !prevIsOpenRef.current) {
+    if (isOpen && !isMasterDataLoading && warehouses.length > 0 && !prevIsOpenRef.current) {
       prevIsOpenRef.current = true; // Mark as executed for this opencycle so we don't re-fetch
 
       const timer = setTimeout(async () => {
@@ -224,10 +226,40 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
             setIsActionLoading(true);
             const pr = await PRService.getDetail(id);
             if (pr) {
+              // 1. Get unique warehouse IDs safely from line items
+              const uniqueWhIds = Array.from(new Set((pr.lines || []).map(l => l.warehouse_id).filter(Boolean)));
+              
+              // 2. Fetch locations for those warehouses in parallel safely
+              const locationMaps = await Promise.all(
+                uniqueWhIds.map(async (whId) => {
+                  try {
+                    const res = await LocationService.getAll({ warehouse_id: Number(whId) });
+                    return { whId: Number(whId), items: res?.items || [] };
+                  } catch (err) {
+                    logger.error(`[usePRForm] Failed to fetch locations for warehouse ${whId}:`, err);
+                    return { whId: Number(whId), items: [] };
+                  }
+                })
+              );
+
+              // 3. Flatten into lookup map [location_id] -> code/name
+              const locationLookup: Record<number, string> = {};
+              locationMaps.forEach(map => {
+                map.items.forEach(item => {
+                  locationLookup[item.location_id] = item.code || item.name_th;
+                });
+              });
+
               const mappedLines: PRLineFormData[] = (pr.lines || []).map((line: PRLine) => {
-                // Phase 3: The Safe Hydration Loop - Active lookup against loaded master array
                 const matchedItem = masterItems?.find(i => String(i.item_id) === String(line.item_id));
                 const matchedUnit = masterUnits?.find(u => String(u.uom_id || u.unit_id) === String(line.uom_id));
+
+                // 🎯 FIX: Hydrate Warehouse from Line instead of Header
+                const lineWhId = line.warehouse_id || pr.warehouse_id || 1;
+                const matchedWh = warehouses.find(w => String(w.value) === String(lineWhId));
+
+                // 🎯 FIX: Map Location Code/Name with lookup safety
+                const locName = locationLookup[Number(line.location)] || line.location || '';
 
                 return {
                   item_id: line.item_id ? Number(line.item_id) : undefined,
@@ -242,10 +274,14 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
                   needed_date: line.needed_date,
                   preferred_vendor_id: line.preferred_vendor_id ? Number(line.preferred_vendor_id) : undefined,
                   remark: line.remark,
-                  warehouse_id: pr.warehouse_id ? Number(pr.warehouse_id) : 1, 
-                  warehouse_code: warehouses.find(w => String(w.value) === String(pr.warehouse_id))?.original?.warehouse_code || '',
+                  warehouse_id: Number(lineWhId), 
+                  warehouse_code: matchedWh?.original?.warehouse_code || '',
                   location: line.location || '',
-                  // Calculate discount amount from raw string (same logic as updateLine)
+                  _base_uom_name: matchedItem?.uom_name || matchedItem?.unit_name || '',
+                  _base_uom_id: matchedItem?.uom_id || matchedItem?.unit_id ? Number(matchedItem.uom_id || matchedItem.unit_id) : undefined,
+                  _purchasing_uom_name: matchedItem?.purchasing_unit_name || '',
+                  _purchasing_uom_id: matchedItem?.purchasing_unit_id ? Number(matchedItem.purchasing_unit_id) : undefined,
+                  location_name: locName, 
                   discount: (() => {
                     const gross = (Number(line.qty) || 0) * (Number(line.est_unit_price) || 0);
                     const raw = line.line_discount_raw || '';
@@ -530,10 +566,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
 
   const openLocationSearch = (index: number) => {
     const currentWarehouse = formMethods.getValues(`lines.${index}.warehouse_id` as Path<PRFormData>);
-    if (!currentWarehouse) {
-      showAlert('กรุณาเลือกคลังก่อนเลือกที่เก็บ');
-      return;
-    }
+    setActiveWarehouseId(Number(currentWarehouse)); // Snapshot exact current value synchronously (No lag)
     setActiveRowIndex(index);
     setIsLocationModalOpen(true);
   };
@@ -543,6 +576,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
       setValue(`lines.${activeRowIndex}.warehouse_id` as Path<PRFormData>, data.warehouse_id as FieldPathValue<PRFormData, Path<PRFormData>>);
       setValue(`lines.${activeRowIndex}.warehouse_code` as Path<PRFormData>, data.warehouse_code as FieldPathValue<PRFormData, Path<PRFormData>>);
       setValue(`lines.${activeRowIndex}.location` as Path<PRFormData>, '' as FieldPathValue<PRFormData, Path<PRFormData>>);
+      setValue(`lines.${activeRowIndex}.location_name` as Path<PRFormData>, '' as FieldPathValue<PRFormData, Path<PRFormData>>); // Clear display name (Fix UI Bug)
       setIsWarehouseModalOpen(false);
     }
   };
@@ -551,6 +585,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
     if (activeRowIndex !== null) {
       // location field in schema is string, but data is number
       setValue(`lines.${activeRowIndex}.location` as Path<PRFormData>, String(data.location_id) as FieldPathValue<PRFormData, Path<PRFormData>>);
+      setValue(`lines.${activeRowIndex}.location_name` as Path<PRFormData>, data.location_name as FieldPathValue<PRFormData, Path<PRFormData>>);
       setIsLocationModalOpen(false);
     }
   };
@@ -575,10 +610,15 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
           // W-01: Map warehouse from master data
           warehouse_id: Number(product.warehouse_id || product.warehouse || 1),
           warehouse_code: warehouses.find(w => String(w.value) === String(product.warehouse_id || product.warehouse || 1))?.original?.warehouse_code || '',
-          location: product.location || 'A1',
+          location: product.location || '',
           // 🎯 THE CRITICAL FIX: Bind the UOM Data using backend-provided keys
           uom: product.uom_name || product.unit_name || 'ชิ้น',
           uom_id: Number(product.uom_id || product.unit_id || 1),
+          // Store valid units for this product so select list filters intelligently (Trap 2 fix)
+          _base_uom_name: product.uom_name || product.unit_name || '',
+          _base_uom_id: Number(product.uom_id || product.unit_id || 1),
+          _purchasing_uom_name: product.purchasing_unit_name || '',
+          _purchasing_uom_id: product.purchasing_unit_id ? Number(product.purchasing_unit_id) : undefined,
           est_unit_price: unitPrice,
           qty: 1,
           est_amount: unitPrice * 1,
@@ -729,7 +769,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
             item_id: Number(line.item_id),
             description: line.item_name || line.description || "No Description",
             warehouse_id: Number(line.warehouse_id || 1),
-            location: line.location || "A1", 
+            location: line.location || "", 
             qty: Number(line.qty),
             est_unit_price: Number(line.est_unit_price),
             uom_id: Number(line.uom_id),
@@ -742,7 +782,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
         // ─── DIAGNOSTIC: Log payload after mapping but before stripping
         logger.debug('🧪 [usePRForm] MAPPED PAYLOAD (Before Strip):', {
           vendor_quote_no: payload.vendor_quote_no,
-          preferred_vendor_id: payload.preferred_vendor_id,
+          // preferred_vendor_id: payload.preferred_vendor_id,
           cost_center_id: payload.cost_center_id,
         });
 
@@ -761,7 +801,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
           branch_id: payload.branch_id,
           project_id: payload.project_id,
           cost_center_id: payload.cost_center_id,
-          preferred_vendor_id: payload.preferred_vendor_id,
+          // preferred_vendor_id: payload.preferred_vendor_id,
           pr_tax_code_id: payload.pr_tax_code_id,
           remark: payload.remark,
           status: payload.status,
@@ -790,6 +830,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
             description: line.remark ? `${line.description} (หมายเหตุ: ${line.remark})` : line.description,
             warehouse_id: line.warehouse_id,
             location: line.location,
+            location_id: line.location ? Number(line.location) : undefined, // Safe placeholder for future Backend validation release
             qty: Number(Number(line.qty || 0).toFixed(4)),
             est_unit_price: Number(Number(line.est_unit_price || 0).toFixed(4)),
             uom_id: line.uom_id,
@@ -921,10 +962,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
     });
   };
 
-  // Derive currently active warehouse dynamically
-  const activeWarehouseId = activeRowIndex !== null 
-    ? watch(`lines.${activeRowIndex}.warehouse_id` as Path<PRFormData>) as number || null 
-    : null;
+  // activeWarehouseId and isLocationModalOpen are local states declared at top
 
   return {
     isEditMode, lines, activeTab, setActiveTab,
@@ -932,7 +970,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
     isWarehouseModalOpen, setIsWarehouseModalOpen,
     isLocationModalOpen, setIsLocationModalOpen, activeWarehouseId,
     handleSubmit, setValue, watch, isSubmitting, isActionLoading, errors, handleFormError,
-    products, costCenters, projects, purchaseTaxOptions, currencies,
+    products, costCenters, projects, purchaseTaxOptions, currencies, masterUnits,
     addLine, removeLine, clearLine, updateLine, handleClearLines,
     openProductSearch, openWarehouseSearch, openLocationSearch, selectProduct, selectWarehouse, selectLocation, handleVendorSelect, onSubmit, handleDelete, handleApprove,
     handleVoid, control, reset, formMethods, user, isApproving,

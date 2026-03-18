@@ -24,8 +24,8 @@ import { createColumnHelper } from '@tanstack/react-table';
 import { PRService, type PRListParams } from '@/modules/procurement/services/pr.service';
 import { logger } from '@/shared/utils/logger';
 import type { PRHeader, PRStatus } from '@/modules/procurement/types';
-import { DEPARTMENT_NAME_MAP } from '@/modules/procurement/shared/constants/procurement.constants';
-import { usePRMasterData } from '@/modules/procurement/pages/pr/hooks';
+
+import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
 
 // ====================================================================================
 // STATUS OPTIONS
@@ -53,23 +53,43 @@ const PR_STATUS_OPTIONS = [
 export default function PRListPage() {
     const queryClient = useQueryClient();
 
-    // Master Data for department name lookup
-    const { costCenters, isLoading: isMasterDataLoading } = usePRMasterData();
+
+
+    // Fetch Vendors for client-side lookup
+    const { data: vendorData } = useQuery({
+        queryKey: ['vendors'],
+        queryFn: () => VendorService.getList(),
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const vendorMap = useMemo(() => {
+        const map: Record<number, { vendor_code: string; vendor_name: string }> = {};
+        (vendorData?.items || []).forEach((v: any) => {
+            const id = v.vendor_id || v.id;
+            if (id) {
+                map[Number(id)] = {
+                    vendor_code: v.vendor_code || '',
+                    vendor_name: v.vendor_name || ''
+                };
+            }
+        });
+        return map;
+    }, [vendorData]);
     // URL-based Filter State (Explicit Search Pattern)
     const { filters, localFilters, handleFilterChange, handleApplyFilters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<PRStatus>({
         defaultStatus: 'ALL',
         customParamKeys: {
             search: 'pr_no',
-            search2: 'requester_name',
-            search3: 'department'
+            search2: 'vendor_code',
+            search3: 'vendor_name'
         }
     });
 
     // Convert to API filter format using APPLIED filters (from URL)
     const apiFilters: PRListParams = {
         pr_no: filters.search || undefined,
-        requester_name: filters.search2 || undefined,
-        department: filters.search3 || undefined,
+        vendor_code: filters.search2 || undefined,
+        vendor_name: filters.search3 || undefined,
         status: filters.status === 'ALL' ? undefined : filters.status,
         date_from: filters.dateFrom || undefined,
         date_to: filters.dateTo || undefined,
@@ -265,7 +285,7 @@ export default function PRListPage() {
             enableSorting: false,
         }),
         columnHelper.accessor('requester_name', {
-            header: 'ผู้ขอ / แผนก',
+            header: 'ผู้จัดทำ',
             cell: (info) => {
                 const row = info.row.original;
 
@@ -276,44 +296,58 @@ export default function PRListPage() {
                     ? String(reqName)
                     : (reqId ? `User ID: ${reqId}` : 'ไม่ระบุผู้ขอ');
 
-                // ── Department Name Hydration — dynamic lookup from Master Data ──
-                const deptName = row.department_name || row.dept_name;
-                const deptFromMap = DEPARTMENT_NAME_MAP[row.cost_center_id];
-                const deptFromMaster = costCenters.find(
-                    cc => String(cc.cost_center_id) === String(row.cost_center_id)
-                )?.cost_center_name;
-                const displayDept = isMasterDataLoading
-                    ? '...'
-                    : deptName
-                        ? String(deptName)
-                        : deptFromMaster || deptFromMap
-                            ? String(deptFromMaster || deptFromMap)
-                            : 'ไม่ระบุแผนก';
-
-                // ── Vendor Name Hydration (shown as subtle tag) ──
-                const vendorName = row.vendor_name || row.suggested_vendor;
-                const vendorFallback = row.preferred_vendor_id || row.vendor_id;
-                const displayVendor = vendorName
-                    ? String(vendorName)
-                    : (vendorFallback ? `Vendor ID: ${vendorFallback}` : null);
-
                 return (
                     <div className="flex flex-col py-2 gap-0.5">
-                        <span className="text-gray-900 dark:text-gray-100 font-medium truncate max-w-[180px]" title={displayReq}>
+                        <span className="text-gray-900 dark:text-gray-100 font-medium truncate max-w-[140px]" title={displayReq}>
                             {displayReq}
                         </span>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {displayDept}
+                    </div>
+                );
+            },
+            size: 140,
+            enableSorting: false,
+        }),
+        columnHelper.accessor(row => {
+            const vId = row.preferred_vendor_id || row.vendor_id;
+            const vendorFromId = vId ? vendorMap[Number(vId)] : undefined;
+            const vendorCode = vendorFromId?.vendor_code || row.vendor_quote_no || '';
+            const vendorName = vendorFromId?.vendor_name || row.vendor_name || '';
+            return `${vendorCode} ${vendorName}`;
+        }, {
+            id: 'vendor_info',
+            header: 'ผู้ขาย/รหัสผู้ขาย',
+            cell: (info) => {
+                const row = info.row.original;
+                const vId = row.preferred_vendor_id || row.vendor_id;
+                const vendorFromId = vId ? vendorMap[Number(vId)] : undefined;
+                
+                const vendorCode = vendorFromId?.vendor_code || row.vendor_quote_no || '';
+                let vendorName = vendorFromId?.vendor_name || row.vendor_name || '';
+
+                // If Code exists but Name is missing, do lookup in fetched vendorData
+                if (!vendorName && vendorCode) {
+                    const foundVendor = (vendorData?.items || []).find((v: any) => v.vendor_code === vendorCode);
+                    if (foundVendor) {
+                        vendorName = foundVendor.vendor_name;
+                    }
+                }
+
+                if (!vendorName && !vendorCode) return <div className="text-sm text-gray-400">-</div>;
+
+                return (
+                    <div className="flex flex-col py-1 gap-0.5">
+                        <span className="text-gray-900 dark:text-gray-100 font-medium truncate max-w-[180px]" title={vendorName || 'ไม่ระบุชื่อผู้ขาย'}>
+                            {vendorName || '-'}
                         </span>
-                        {displayVendor && (
-                            <span className="text-[10px] text-violet-600 dark:text-violet-400 truncate max-w-[180px]" title={displayVendor}>
-                                🏢 {displayVendor}
+                        {vendorCode && (
+                            <span className="text-[10px] text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded w-fit">
+                                {vendorCode}
                             </span>
                         )}
                     </div>
                 );
             },
-            size: 180,
+            size: 140,
             enableSorting: false,
         }),
         columnHelper.accessor(row => row.total_amount ?? Number(row.pr_base_total_amount ?? 0), {
@@ -364,10 +398,10 @@ export default function PRListPage() {
                      </div>
                  );
             },
-            size: 160, 
+            size: 150, 
             enableSorting: false,
         }),
-    ], [columnHelper, filters.page, filters.limit, data?.data, handleSendApproval, onApproveClick, handleReject, approvingId, handleEdit, handleCreateRFQ, handleView, costCenters, isMasterDataLoading]);
+    ], [columnHelper, filters.page, filters.limit, data?.data, handleSendApproval, onApproveClick, handleReject, approvingId, handleEdit, handleCreateRFQ, handleView, vendorMap, vendorData?.items]);
 
     // ====================================================================================
     // RENDER
@@ -393,17 +427,17 @@ export default function PRListPage() {
                             accentColor="blue"
                         />
                         <FilterField
-                            label="ผู้ขอ"
+                            label="รหัสผู้ขาย"
                             value={localFilters.search2}
                             onChange={(val: string) => handleFilterChange('search2', val)}
-                            placeholder="ชื่อผู้ขอ"
+                            placeholder="รหัสผู้ขาย"
                             accentColor="blue"
                         />
                         <FilterField
-                            label="แผนก"
+                            label="ชื่อผู้ขาย"
                             value={localFilters.search3}
                             onChange={(val: string) => handleFilterChange('search3', val)}
-                            placeholder="แผนก"
+                            placeholder="ชื่อผู้ขาย"
                             accentColor="blue"
                         />
                         <FilterField
@@ -501,21 +535,19 @@ export default function PRListPage() {
                                             || (item.requester_user_id ? `User ID: ${item.requester_user_id}` : 'ไม่ระบุผู้ขอ'),
                                     },
                                     {
-                                        label: 'แผนก:',
-                                        value: isMasterDataLoading
-                                            ? '...'
-                                            : item.department_name || item.dept_name
-                                                || costCenters.find(cc => String(cc.cost_center_id) === String(item.cost_center_id))?.cost_center_name
-                                                || (DEPARTMENT_NAME_MAP as Record<number, string>)[item.cost_center_id]
-                                                || 'ไม่ระบุแผนก',
+                                        label: 'รหัสผู้ขาย:',
+                                        value: (() => {
+                                            const vId = item.preferred_vendor_id || item.vendor_id;
+                                            return vId ? vendorMap[Number(vId)]?.vendor_code : '-';
+                                        })() || '-',
                                     },
-                                    ...((item.vendor_name || item.suggested_vendor || item.preferred_vendor_id)
-                                        ? [{
-                                            label: 'ผู้ขาย:',
-                                            value: item.vendor_name || item.suggested_vendor
-                                                || (item.preferred_vendor_id ? `Vendor ID: ${item.preferred_vendor_id}` : '-'),
-                                        }]
-                                        : []),
+                                    {
+                                        label: 'ชื่อผู้ขาย:',
+                                        value: (() => {
+                                            const vId = item.preferred_vendor_id || item.vendor_id;
+                                            return vId ? vendorMap[Number(vId)]?.vendor_name : '-';
+                                        })() || '-',
+                                    },
                                     ...(item.need_by_date ? [{ label: 'ต้องการใช้:', value: formatThaiDate(item.need_by_date) }] : []),
                                 ]}
                                 amountLabel="ยอดรวม"

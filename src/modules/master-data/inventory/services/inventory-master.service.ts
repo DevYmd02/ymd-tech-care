@@ -56,7 +56,7 @@ function createInventoryService<T extends IBaseMaster, F, A, O = Partial<A>>(
     let localData: T[] = [...config.mockData];
 
     return {
-        getAll: async (): Promise<ListResponse<T>> => {
+        getAll: async (params?: Record<string, any>): Promise<ListResponse<T>> => {
             if (USE_MOCK) {
                 logger.info(`🎭 [Mock Mode] Serving ${config.entityName} list`);
                 return {
@@ -67,7 +67,7 @@ function createInventoryService<T extends IBaseMaster, F, A, O = Partial<A>>(
                 };
             }
             try {
-                const response = await api.get<A[] | { items?: A[]; data?: A[]; total?: number; page?: number; limit?: number }>(config.apiPath);
+                const response = await api.get<A[] | { items?: A[]; data?: A[]; total?: number; page?: number; limit?: number }>(config.apiPath, { params });
                 
                 const rawItems = Array.isArray(response) 
                     ? response 

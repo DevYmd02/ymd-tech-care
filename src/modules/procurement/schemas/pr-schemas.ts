@@ -33,6 +33,11 @@ export const PRLineSchema = z.object({
   _standard_cost: z.number().optional(),
   _item_vendor_id: z.coerce.number().optional(),
   required_receipt_type: z.string().optional(),
+  location_name: z.string().optional(),
+  _base_uom_name: z.string().optional(),
+  _base_uom_id: z.coerce.number().optional(),
+  _purchasing_uom_name: z.string().optional(),
+  _purchasing_uom_id: z.coerce.number().optional(),
 });
 
 /** Canonical type for a single PR line item */

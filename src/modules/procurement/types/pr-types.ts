@@ -57,6 +57,7 @@ export interface PRHeader {
   remark?: string;                  // TEXT (Singular per Postman)
   preferred_vendor_id?: number; // INTEGER
   vendor_name?: string;             // VARCHAR(200)
+  vendor_code?: string;             // VARCHAR(50)
   department_name?: string;         // Added for List Page display
   created_by_name?: string;         // Added for List Page display
   pr_tax_code_id?: number | null;          // INTEGER
@@ -312,6 +313,8 @@ export interface PRListParams {
   project_id?: number;
   requester_name?: string;
   department?: string;
+  vendor_code?: string;
+  vendor_name?: string;
   date_from?: string;
   date_to?: string;
   page?: number;
