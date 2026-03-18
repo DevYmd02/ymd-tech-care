@@ -120,7 +120,6 @@ export default function RFQListPage() {
 
     // Send RFQ Modal State (replaces old ConfirmationModal)
     const [sendingRFQ, setSendingRFQ] = useState<RFQHeader | null>(null);
-    const [isSending, setIsSending] = useState(false);
 
     // Handlers
 
@@ -163,37 +162,55 @@ export default function RFQListPage() {
     ) => {
         if (!sendingRFQ || batchData.length === 0) return;
 
-        setIsSending(true);
-        try {
-            logger.info(`[RFQListPage] Executing batch send for ${batchData.length} vendors`);
-            
-            // Execute multiple PATCH calls in parallel
-            // We use allSettled to ensure we try all even if some fail
-            const results = await Promise.allSettled(
-                batchData.map(item => RFQService.sendToVendor(item.rfqVendorId, item.payload))
-            );
+        // 🚀 Optimistic Background: Close Modal instantly
+        const rfqNo = sendingRFQ.rfq_no;
+        toast(`กำลังส่งอีเมล RFQ ${rfqNo} ในพื้นหลัง...`, 'info');
+        setSendingRFQ(null);
 
+        Promise.allSettled(
+            batchData.map(item => RFQService.sendToVendor(item.rfqVendorId, item.payload))
+        ).then(results => {
             const failures = results.filter(r => r.status === 'rejected');
             if (failures.length > 0) {
                 logger.error('[RFQListPage] Some RFQ sends failed:', failures);
-                toast(`ส่งสำเร็จ ${batchData.length - failures.length} รายการ, ล้มเหลว ${failures.length} รายการ`, 'error');
+                toast(`ส่งสำเร็จบางส่วน (ล้มเหลว ${failures.length} รายการ)`, 'error');
             } else {
-                toast(`ส่ง RFQ ${sendingRFQ.rfq_no} เรียบร้อยแล้วทุกรายการ`, 'success');
+                toast(`ส่ง RFQ ${rfqNo} เรียบร้อยแล้ว`, 'success');
+            }
+
+            // 🌟 🌊 Status Update Chain (Front workaround)
+            if (String(sendingRFQ.status || '').toUpperCase() === 'DRAFT' && failures.length < batchData.length) {
+                // If at least 1 sent successfully
+                const updatePayload: any = {
+                    requested_by_user_id: Number(sendingRFQ.requested_by_user?.employee_id || (sendingRFQ as any).requested_by_user_id || 1),
+                    rfq_date: sendingRFQ.rfq_date,
+                    pr_id: Number(sendingRFQ.pr_id || 0),
+                    branch_id: Number(sendingRFQ.branch_id || 1),
+                    requested_by: (sendingRFQ as any).requested_by || 
+                                  (sendingRFQ.requested_by_user 
+                                      ? `${sendingRFQ.requested_by_user.employee_firstname_th} ${sendingRFQ.requested_by_user.employee_lastname_th}`.trim() 
+                                      : 'System'),
+                    purpose: sendingRFQ.purpose || 'RFQ Dispatch',
+                    responded_vendors_count: Number(sendingRFQ.responded_vendors_count || 0),
+                    sent_vendors_count: Number(sendingRFQ.sent_vendors_count || 0),
+                    status: 'SENT'
+                };
+
+                RFQService.update(sendingRFQ.rfq_id, updatePayload)
+                    .then(() => {
+                        toast('สถานะปรับเป็น ส่งแล้ว', 'info');
+                        queryClient.invalidateQueries({ queryKey: ['rfqs'] });
+                    }).catch(err => logger.error('[RFQListPage] Status update failed:', err));
             }
 
             // Always invalidate to get fresh X/Y counters
-            // Delay 100ms to ensure backend consistency (Gold Standard pattern)
             setTimeout(() => {
                 queryClient.invalidateQueries({ queryKey: ['rfqs'] });
                 handleApplyFilters();
             }, 100);
-            setSendingRFQ(null);
-        } catch (error) {
-            logger.error('[RFQListPage] executeSendRFQ unexpected error:', error);
-            toast('เกิดข้อผิดพลาดไม่คาดคิดในการส่ง RFQ', 'error');
-        } finally {
-            setIsSending(false);
-        }
+        }).catch(err => {
+            logger.error('[RFQListPage] executeSendRFQ background error:', err);
+        });
     };
 
     // Columns
@@ -302,9 +319,12 @@ export default function RFQListPage() {
             header: () => <div className="flex justify-center items-center w-full h-full">ผู้ขาย (ส่ง/ทั้งหมด)</div>,
             cell: ({ row }) => {
                 const item = row.original;
-                // UI Counters from Backend (X / Y)
-                const sentCount = item.vendor_sent ?? item.sent_vendors_count ?? 0;
-                const total = item.vendor_total ?? item.vendor_count ?? 0;
+                
+                // 💧 Client-side derivation fallback if rfqVendors relation is present
+                const total = item.rfqVendors?.length ?? item.vendor_total ?? item.vendor_count ?? 0;
+                const sentCount = item.rfqVendors?.filter((v: any) => 
+                    ['SENT', 'RESPONDED', 'DECLINED', 'CLOSED'].includes(String(v.status || '').toUpperCase())
+                ).length ?? item.vendor_sent ?? item.sent_vendors_count ?? 0;
 
                 return (
                     <div className="flex flex-col items-center justify-center h-full py-2">
@@ -345,8 +365,10 @@ export default function RFQListPage() {
             cell: ({ row }) => {
                 const item = row.original;
                 // const dynamicStatus = getDynamicStatus(item); // Unused for actions but available if needed
-                const sentCount = item.vendor_sent ?? item.sent_vendors_count ?? 0;
-                const total = item.vendor_total ?? item.vendor_count ?? 0;
+                const total = item.rfqVendors?.length ?? item.vendor_total ?? item.vendor_count ?? 0;
+                const sentCount = item.rfqVendors?.filter((v: any) => 
+                    ['SENT', 'RESPONDED', 'DECLINED', 'CLOSED'].includes(String(v.status || '').toUpperCase())
+                ).length ?? item.vendor_sent ?? item.sent_vendors_count ?? 0;
                 const isTerminal = ['CLOSED', 'CANCELLED', 'COMPLETED'].includes(item.status);
                 
                 return (
@@ -377,10 +399,10 @@ export default function RFQListPage() {
                                 {sentCount < total && (
                                     <button 
                                         className="flex items-center gap-1 pl-1.5 pr-2 py-1 ml-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap"
-                                        title={sentCount === 0 ? "ส่ง RFQ" : "ส่งเพิ่ม"}
+                                        title={item.status === 'DRAFT' ? "ส่ง RFQ" : "ส่งเพิ่ม"}
                                         onClick={() => handleSendRFQ(item)}
                                     >
-                                        <Send size={12} /> {sentCount === 0 ? "ส่ง RFQ" : "ส่งเพิ่ม"}
+                                        <Send size={12} /> {item.status === 'DRAFT' ? "ส่ง RFQ" : "ส่งเพิ่ม"}
                                     </button>
                                 )}
                             </>
@@ -568,7 +590,7 @@ export default function RFQListPage() {
                                                             onClick={() => handleSendRFQ(item)}
                                                             className="flex-[2] bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
                                                         >
-                                                            <Send size={14} /> {sentCount === 0 ? "ส่ง RFQ" : "ส่งเพิ่ม"}
+                                                            <Send size={14} /> {item.status === 'DRAFT' ? "ส่ง RFQ" : "ส่งเพิ่ม"}
                                                         </button>
                                                     )}
                                                 </>
@@ -604,7 +626,7 @@ export default function RFQListPage() {
                 rfq={sendingRFQ}
                 onClose={() => setSendingRFQ(null)}
                 onConfirm={executeSendRFQ}
-                isLoading={isSending}
+                isLoading={false}
             />
         </>
     );
