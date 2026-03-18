@@ -784,8 +784,8 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
           credit_days: Number(data.credit_days || 30),
           vendor_quote_no: data.vendor_quote_no || '',
           shipping_method: data.shipping_method || '',
-          // 🎯 FIX 1: Combine purpose and remark so no data is lost
-          remark: [data.purpose, data.remark].filter(Boolean).join('\n') || '',
+          // 🎯 FIX 1: Save purpose/remark directly without infinite accumulator concatenation bug
+          remark: data.purpose || data.remark || '',
           // 🎯 FIX 2: Explicitly inject the requester_name for backend processing
           requester_name: data.requester_name || "",
           pr_tax_code_id: data.pr_tax_code_id ? Number(data.pr_tax_code_id) : null,
