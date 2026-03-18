@@ -138,7 +138,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         defaultValues: {
             ...getRFQDefaultFormValues(),
             requested_by: user?.employee?.employee_fullname || '',
-            requested_by_user_id: user?.id || 1,
+            requested_by_user_id: user?.id || undefined,
         },
         mode: 'onBlur',
     });
@@ -538,8 +538,12 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                 });
 
             // 🎯 THE DOUBLE REQUESTER STRIKE: Backend demands BOTH fields simultaneously.
-            const resolvedRequestedByUserId = Number(stagedPayload.requested_by_user_id || 1);
-            const resolvedRequestedByName = String(stagedPayload.requested_by || 'System User');
+            const resolvedRequestedByUserId = editId 
+                ? (stagedPayload.requested_by_user_id ? Number(stagedPayload.requested_by_user_id) : undefined)
+                : (user?.id ? Number(user.id) : undefined);
+            const resolvedRequestedByName = editId 
+                ? (stagedPayload.requested_by ? String(stagedPayload.requested_by) : undefined)
+                : (user?.employee?.employee_fullname ? String(user.employee.employee_fullname) : undefined);
 
             // ⚠️ BACKEND WHITELIST: Only send fields the API accepts.
             // `purpose` and `project_id` are rejected by the backend controller.
@@ -569,14 +573,13 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
             const selectedVendors = Array.from(
                 new Map(
                     stagedPayload.vendors
-                        .filter(v => v.vendor_id && (!editId || !v.is_existing))
+                        .filter(v => v.vendor_id)
                         .map(v => [Number(v.vendor_id), { vendor_id: Number(v.vendor_id) }])
                 ).values()
             );
                 
-            if (selectedVendors.length > 0) {
-                payload.rfqVendors = selectedVendors;
-            }
+            // Always set rfqVendors so deletions (including clearing the list) propagate to backend
+            payload.rfqVendors = selectedVendors;
 
             // 🕵️‍♂️ @Agent_Source_Auditor: Verify pr_id Persistence
             logger.debug('[useRFQForm] RFQ Payload Audit:', {

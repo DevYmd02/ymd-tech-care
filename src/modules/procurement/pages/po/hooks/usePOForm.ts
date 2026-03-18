@@ -40,11 +40,13 @@ export const usePOForm = ({
     isOpen,
     onClose,
     onSuccess,
+    poId,
     initialValues,
     isViewMode = false,
 }: UsePOFormOptions) => {
     const queryClient = useQueryClient();
     const { toast } = useToast();
+    const { user } = useAuth();
 
     // ── UI state ──────────────────────────────────────────────────────────────
     const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
@@ -87,6 +89,7 @@ export const usePOForm = ({
             delivery_date: '',
             remarks: '',
             tax_code_id: undefined,
+            created_by_name: user?.employee?.employee_fullname || user?.username || '',
             po_lines: [],
         },
     });
@@ -211,10 +214,12 @@ export const usePOForm = ({
                 remarks:              initialValues?.remarks ?? '',
                 discount_expression:  initialValues?.discount_expression ?? '0',
                 tax_code_id:          initialValues?.tax_code_id ?? inheritedQC?.tax_code_id ?? undefined,
+                created_by:           initialValues?.created_by,
+                created_by_name:      initialValues?.created_by_name ?? (user?.employee?.employee_fullname || user?.username || ''),
                 po_lines:             initialPOLines,
             });
         }
-    }, [isOpen, initialValues, reset, inheritedQC]);
+    }, [isOpen, initialValues, reset, inheritedQC, user]);
     
 
     // ── Enforce THB when Multicurrency is OFF ─────────────────────────────────
@@ -566,7 +571,7 @@ export const usePOForm = ({
         });
     }, [append, fields.length]);
 
-    const { user } = useAuth();
+    // const { user } = useAuth(); (Moved to top)
 
     const handleConfirmSave = async () => {
         if (!pendingPayload) return;
@@ -601,7 +606,7 @@ export const usePOForm = ({
                 discount_expression: pendingPayload.discount_expression || "0",
                 status:             "DRAFT", // Hardcode DRAFT for new creation
                 created_at:         new Date().toISOString(),
-                created_by:         Number(user?.id || 1),
+                created_by:         (poId ? (getValues('created_by') ? Number(getValues('created_by')) : undefined) : (user?.id ? Number(user.id) : undefined)) as any,
                 winning_vq_id:      safeId(pendingPayload.winning_vq_id),
                 po_lines: (pendingPayload.po_lines || []).map((item: POLine, index: number) => ({
                     line_no:        index + 1,

@@ -88,6 +88,8 @@ export const QuotationHeaderSchema = z.object({
   net_amount: z.coerce.number().optional(),
   total_amount: z.coerce.number().optional(),
   status: VQStatusEnum,
+  created_by: z.coerce.number().optional(),
+  created_by_name: z.string().optional(),
   vq_lines: z.array(QuotationLineSchema).min(1, 'ต้องมีรายการสินค้าอย่างน้อย 1 รายการ')
     .refine(lines => lines.some(l => (l.item_id && Number(l.item_id) > 0) || (l.item_code && l.item_code.trim() !== '')), {
       message: "ต้องมีรายการสินค้าที่สมบูรณ์อย่างน้อย 1 รายการ"
