@@ -188,13 +188,8 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
         <VendorSearchModal 
             isOpen={isVendorModalOpen}
             onClose={() => setIsVendorModalOpen(false)}
-            onSelect={(vendor) => {
-                setValue('vendor_id', Number(vendor.vendor_id), { shouldValidate: true });
-                setValue('vendor_code', vendor.vendor_code || '', { shouldValidate: true });
-                setValue('vendor_name', vendor.name, { shouldValidate: true });
-                setValue('contact_phone', vendor.phone || '', { shouldValidate: true });
-                setValue('contact_email', vendor.email || '', { shouldValidate: true });
-                setValue('payment_terms', vendor.payment_term_days ? `${vendor.payment_term_days} วัน` : '', { shouldValidate: true });
+            onSelect={async (v) => {
+                await handleSelectRFQVendor(Number(v.vendor_id));
                 setIsVendorModalOpen(false);
             }}
         />

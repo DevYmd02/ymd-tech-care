@@ -86,12 +86,30 @@ export const PRFormLines: React.FC<PRFormLinesProps> = React.memo(({
                             const lineDiscount = line.discount || 0;
                             const lineTotal = ((line.qty || 0) * (line.est_unit_price || 0)) - lineDiscount;
                             
+                            // 🛑 Detect Duplicate Line item_id
+                            const isDuplicateItem = watchedLines.some((l, idx) => 
+                                idx !== index && 
+                                l.item_id && 
+                                line.item_id && 
+                                Number(l.item_id) === Number(line.item_id)
+                            );
+
                             return (
                                 <tr key={field.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-800 transition-colors">
                                     <td className="p-1 text-center bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold border-r border-gray-300 dark:border-gray-600 sticky left-0 z-10">{index + 1}</td>
                                     
                                     <td className={tdBaseClass}>
                                         <div className="flex items-center gap-1">
+                                            {/* Duplicate Warning */}
+                                            {isDuplicateItem && (
+                                                <span 
+                                                    className="flex-shrink-0 text-red-500" 
+                                                    title="รายการสินค้านี้ซ้ำ"
+                                                >
+                                                    <AlertTriangle size={14} />
+                                                </span>
+                                            )}
+
                                             {/* Vendor-Item Mismatch Warning */}
                                             {line.item_id && headerVendorId && line._item_vendor_id && line._item_vendor_id !== headerVendorId && (
                                                 <span 
@@ -104,8 +122,8 @@ export const PRFormLines: React.FC<PRFormLinesProps> = React.memo(({
                                             <input 
                                                 {...register(`lines.${index}.item_code`)} 
                                                 readOnly={!!line.item_id || readOnly}
-                                                className={`${line.item_id ? lockedInputClass : tableInputClass} text-center flex-1`} 
-                                                title={line.item_id ? masterDataTooltip : ''}
+                                                className={`${line.item_id ? lockedInputClass : tableInputClass} ${isDuplicateItem ? '!border-red-500 ring-1 ring-red-500 bg-red-50/50 dark:bg-red-900/10' : ''} text-center flex-1`} 
+                                                title={line.item_id ? (isDuplicateItem ? 'รายการสินค้านี้ซ้ำ' : masterDataTooltip) : ''}
                                             />
                                         </div>
                                     </td>

@@ -66,7 +66,7 @@ export const RFQVendorSelectorModal: React.FC<RFQVendorSelectorModalProps> = ({
             onClose={onClose}
             title="เลือกผู้ขายจากใบขอราคาสินค้า (RFQ Vendors)"
             titleIcon={<Users size={24} />}
-            width="max-w-6xl"
+            width="max-w-4xl"
         >
             <div className="flex flex-col h-full max-h-[75vh]">
                 {/* 🔍 ==================== SEARCH & FILTER SECTION ==================== */}
@@ -105,7 +105,7 @@ export const RFQVendorSelectorModal: React.FC<RFQVendorSelectorModalProps> = ({
                         <thead className="bg-gray-100 dark:bg-gray-700 sticky top-0 z-10">
                             <tr>
                                 <th className="px-4 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase w-28">เลือก</th>
-                                <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase w-28">สถานะ</th>
+                                <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase w-32">สถานะ</th>
                                 <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase w-32">รหัสผู้ขาย</th>
                                 <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">ชื่อผู้ขาย</th>
 
@@ -130,16 +130,16 @@ export const RFQVendorSelectorModal: React.FC<RFQVendorSelectorModalProps> = ({
                                                     }`}
                                                 >
                                                     {isCreated ? <Check size={14} className="text-gray-400" /> : <Check size={14} />}
-                                                    {isCreated ? 'สร้างแล้ว' : 'เลือก'}
+                                                    {isCreated ? 'สร้าง VQ แล้ว' : 'เลือก'}
                                                 </button>
                                             </td>
                                             <td className="px-4 py-3">
                                                 {isCreated ? (
-                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500 border border-gray-200">
-                                                        สร้างแล้ว
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500 border border-gray-200 whitespace-nowrap">
+                                                        สร้าง VQ แล้ว
                                                     </span>
                                                 ) : (
-                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/50">
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/50 whitespace-nowrap">
                                                         รอดำเนินการ
                                                     </span>
                                                 )}

@@ -596,6 +596,19 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
       const currentLines = watch('lines');
       const targetIndex = activeRowIndex;
 
+      // 🛑 Prevent Duplicate Selection
+      const isDuplicate = currentLines.some((line, index) => 
+         index !== targetIndex && 
+         line.item_id && 
+         Number(line.item_id) === Number(product.item_id)
+      );
+
+      if (isDuplicate) {
+         showAlert('สินค้านี้ถูกเลือกไปแล้ว กรุณาตรวจสอบอีกครั้ง');
+         setIsProductModalOpen(false);
+         return;
+      }
+
         // W-01: Apply conversion factor to standard cost when using purchasing unit
         const baseCost = product.standard_cost || 0;
         const conversionFactor = product.purchasing_conversion_factor || 1;
