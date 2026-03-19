@@ -364,7 +364,7 @@ export const useVQForm = (
             }
 
             // Find specific vendor if initialRFQ passed vendor_id
-            const allVendors = fullRFQ.vendors || fullRFQ.rfqVendors || [];
+            const allVendors = fullRFQ.rfqVendors || fullRFQ.vendors || [];
             let selectedVendor = allVendors.find(v => v.vendor_id === initialRFQ.vendor_id);
             if (!selectedVendor && allVendors.length > 0) {
                  selectedVendor = allVendors[0];
@@ -667,7 +667,9 @@ export const useVQForm = (
       setValue('vendor_id', vendorId, { shouldValidate: true });
       setValue('vendor_code', vendorDetails?.vendor_code || '', { shouldValidate: true });
       setValue('vendor_name', vendorDetails?.vendor_name || '', { shouldValidate: true });
-      setValue('contact_person', vendorDetails?.contacts?.[0]?.contact_name || '', { shouldValidate: true });
+      const contacts = vendorDetails?.contacts || vendorDetails?.vendorContacts || [];
+      const primaryContact = contacts.find((c: any) => c.is_primary) || contacts[0];
+      setValue('contact_person', primaryContact?.contact_name || '', { shouldValidate: true });
       setValue('contact_phone', vendorDetails?.phone || '', { shouldValidate: true });
       setValue('contact_email', vendorDetails?.email || '', { shouldValidate: true });
       if (vendorDetails?.payment_term_days) {
@@ -695,11 +697,13 @@ export const useVQForm = (
 
       const masterItems = Array.isArray(itemsRes) ? itemsRes : ((itemsRes as any)?.data || (itemsRes as any)?.items || []);
 
-      const existingVendorIds = (existingVQs?.data || []).map((v: any) => v.vendor_id);
-      const allVendors = fullRFQ.vendors || fullRFQ.rfqVendors || [];
+      const existingVendorIds = (existingVQs?.data || []).map((v: any) => Number(v.vendor_id)).filter(Boolean);
+      const allVendors = fullRFQ.rfqVendors || fullRFQ.vendors || [];
 
       // 1. Filter out only SENT/RESPONDED vendors (Exclude PENDING)
-      const sentVendors = allVendors.filter((v: any) => v.status !== 'PENDING');
+      const sentVendors = allVendors.filter((v: any) => 
+        ['SENT', 'RESPONDED', 'DECLINED', 'NO_RESPONSE', 'RECORDED'].includes(v.status)
+      );
 
       if (sentVendors.length === 0) {
         toast('RFQ นี้ยังไม่มีรายชื่อผู้ขายที่ส่งข้อมูลแล้ว', 'warning');
@@ -713,7 +717,7 @@ export const useVQForm = (
           sentVendors.map(async (v: any) => {
               try {
                   const details = await VendorService.getById(v.vendor_id);
-                  return { ...v, ...details }; 
+                  return { ...details, ...v }; 
               } catch {
                   return v; 
               }
@@ -723,7 +727,7 @@ export const useVQForm = (
       // 3. Map Vendors with hasVQ flag (INSTEAD of filtering out)
       const mappedVendors = vendorsWithDetails.map((v: any) => ({
           ...v,
-          hasVQ: existingVendorIds.includes(v.vendor_id),
+          hasVQ: existingVendorIds.includes(Number(v.vendor_id)),
           status: v.status || 'ACTIVE'
       }));
 

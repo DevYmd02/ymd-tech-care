@@ -113,6 +113,7 @@ export const PRFormSchema = baseFormSchema.superRefine((data, ctx) => {
     });
   }
 
+  const seenItemIds = new Set<number>();
   activeLines.forEach((line: PRLineFormData, index: number) => {
     if (!line.item_id || line.item_id === 0) {
       ctx.addIssue({
@@ -120,6 +121,17 @@ export const PRFormSchema = baseFormSchema.superRefine((data, ctx) => {
         message: 'กรุณาเลือกสินค้า',
         code: z.ZodIssueCode.custom,
       });
+    } else {
+      // 🛑 Check for Duplicate Selection
+      if (seenItemIds.has(line.item_id)) {
+        ctx.addIssue({
+          path: ['lines', index, 'item_code'],
+          message: 'สินค้านี้เลือกซ้ำกัน กรุณาตรวจสอบ',
+          code: z.ZodIssueCode.custom,
+        });
+      } else {
+        seenItemIds.add(line.item_id);
+      }
     }
   });
 
