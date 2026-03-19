@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react';
 import { Search, Check, FileText, Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { RFQService } from '@/modules/procurement/services/rfq.service';
-import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
 import type { RFQHeader } from '@/modules/procurement/types';
 import { ModalLayout } from '@/shared/components/ui/layout/ModalLayout';
 import { useDebounce } from '@/shared/hooks/useDebounce';
@@ -14,16 +13,7 @@ interface RFQSelectorModalProps {
     onSelect: (rfq: RFQHeader) => void;
 }
 
-const VendorNameDisplay = ({ vendorId }: { vendorId: number }) => {
-    const { data: vendor, isLoading } = useQuery({
-        queryKey: ['vendor', vendorId],
-        queryFn: () => VendorService.getById(vendorId),
-        enabled: !!vendorId,
-        staleTime: 5 * 60 * 1000,
-    });
-    if (isLoading) return <span className="text-gray-400 font-normal italic">กำลังโหลด...</span>;
-    return <span>{vendor?.vendor_name || '-'}</span>;
-};
+
 
 export const RFQSelectorModal: React.FC<RFQSelectorModalProps> = ({ isOpen, onClose, onSelect }) => {
     const [searchTerm, setSearchTerm] = useState('');
@@ -50,9 +40,9 @@ export const RFQSelectorModal: React.FC<RFQSelectorModalProps> = ({ isOpen, onCl
         return rawItems.filter((rfq: RFQHeader) => {
             const sentCount = rfq.vendor_sent ?? rfq.sent_vendors_count ?? 0;
             const total = rfq.vendor_total ?? rfq.vendor_count ?? 0;
-            const isFullySent = total > 0 && sentCount === total;
+            const isPartiallySent = total > 0 && sentCount > 0;
             
-            return rfq.status === 'SENT' || isFullySent;
+            return rfq.status === 'SENT' || isPartiallySent;
         });
     }, [rfqResponse]);
 
@@ -90,7 +80,6 @@ export const RFQSelectorModal: React.FC<RFQSelectorModalProps> = ({ isOpen, onCl
                             <tr>
                                 <th className="px-5 py-3 font-semibold whitespace-nowrap">เลขที่ RFQ</th>
                                 <th className="px-5 py-3 font-semibold whitespace-nowrap">วันที่</th>
-                                <th className="px-5 py-3 font-semibold whitespace-nowrap">ผู้ขาย</th>
                                 <th className="px-5 py-3 font-semibold whitespace-nowrap">เรื่อง/วัตถุประสงค์</th>
                                 <th className="px-5 py-3 font-semibold text-center whitespace-nowrap">จัดการ</th>
                             </tr>
@@ -99,7 +88,7 @@ export const RFQSelectorModal: React.FC<RFQSelectorModalProps> = ({ isOpen, onCl
                             {isLoading ? (
                                 // Full-body loader for first load or search transition
                                 <tr>
-                                    <td colSpan={5} className="py-20 text-center">
+                                    <td colSpan={4} className="py-20 text-center">
                                         <div className="flex flex-col items-center justify-center text-gray-400">
                                             <Loader2 size={40} className="animate-spin mb-4 opacity-20" />
                                             <p className="animate-pulse">กำลังดึงข้อมูล RFQ ล่าสุด...</p>
@@ -112,14 +101,6 @@ export const RFQSelectorModal: React.FC<RFQSelectorModalProps> = ({ isOpen, onCl
                                         <td className="px-5 py-3 font-medium text-indigo-700 dark:text-indigo-400 whitespace-nowrap">{rfq.rfq_no}</td>
                                         <td className="px-5 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">
                                             {rfq.rfq_date ? formatThaiDate(rfq.rfq_date) : '-'}
-                                        </td>
-                                        <td className="px-5 py-3 text-gray-600 dark:text-gray-300 max-w-[150px] truncate">
-                                            {/* @Agent_UI_Hydrator: Mapping vendor name via lookup */}
-                                            {rfq.rfqVendors && rfq.rfqVendors.length > 0 && rfq.rfqVendors[0]?.vendor_id ? (
-                                                <VendorNameDisplay vendorId={Number(rfq.rfqVendors[0].vendor_id)} />
-                                            ) : (
-                                                rfq.vendor_name || '-'
-                                            )}
                                         </td>
                                         <td className="px-5 py-3 text-gray-500 dark:text-gray-400">
                                             <div className="truncate max-w-[200px]" title={rfq.remarks || rfq.purpose}>
@@ -144,7 +125,7 @@ export const RFQSelectorModal: React.FC<RFQSelectorModalProps> = ({ isOpen, onCl
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={5} className="px-5 py-12 text-center">
+                                    <td colSpan={4} className="px-5 py-12 text-center">
                                         <div className="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
                                             <Search size={32} className="mb-2 opacity-20" />
                                             <p>ไม่พบข้อมูล RFQ</p>

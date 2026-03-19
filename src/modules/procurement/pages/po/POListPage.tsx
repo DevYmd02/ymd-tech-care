@@ -369,15 +369,15 @@ export default function POListPage() {
                         <FilterField
                             label="วันที่เอกสาร จาก"
                             type="date"
-                            value={localFilters.dateFrom || ''}
-                            onChange={(val: string) => handleFilterChange('dateFrom', val)}
+                            value={localFilters.date_start || ''}
+                            onChange={(val: string) => handleFilterChange('date_start', val)}
                             accentColor="blue"
                         />
                         <FilterField
                             label="ถึงวันที่"
                             type="date"
-                            value={localFilters.dateTo || ''}
-                            onChange={(val: string) => handleFilterChange('dateTo', val)}
+                            value={localFilters.date_end || ''}
+                            onChange={(val: string) => handleFilterChange('date_end', val)}
                             accentColor="blue"
                         />
                         

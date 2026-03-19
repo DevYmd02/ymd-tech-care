@@ -102,7 +102,12 @@ export const VQFormHeader: React.FC<VQFormHeaderProps> = ({
                     <div className="md:col-span-2">
                         <label className="text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-1 block">เลขที่ RFQ อ้างอิง</label>
                         <div className="flex gap-2">
-                            <input {...register('rfq_no')} className="flex-1 h-8 px-3 text-sm bg-gray-100/70 dark:bg-gray-800/70 text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg cursor-not-allowed font-medium disabled:opacity-70 disabled:cursor-not-allowed" readOnly disabled={forceViewMode} />
+                            <input 
+                                {...register('rfq_no')} 
+                                className={`flex-1 h-8 px-3 text-sm bg-gray-100/70 dark:bg-gray-800/70 text-gray-500 dark:text-gray-400 border ${errors.rfq_no ? 'border-red-500 ring-1 ring-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-lg cursor-not-allowed font-medium disabled:opacity-70 disabled:cursor-not-allowed`} 
+                                readOnly 
+                                disabled={forceViewMode} 
+                            />
                             <button 
                                 type="button"
                                 onClick={onOpenRFQModal}
@@ -122,6 +127,7 @@ export const VQFormHeader: React.FC<VQFormHeaderProps> = ({
                             </button>
                             )}
                         </div>
+                        {errors.rfq_no && <p className="text-red-500 text-[10px] mt-0.5 font-medium">{errors.rfq_no.message}</p>}
                     </div>
                     <div className="md:col-span-1">
                         <label className="text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-1 block">ระยะเวลานำส่ง (Lead Time / Days)</label>

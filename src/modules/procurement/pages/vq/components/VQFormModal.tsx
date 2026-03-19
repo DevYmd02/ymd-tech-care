@@ -227,11 +227,11 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
                 watchExchangeRate={watchExchangeRate || 1}
                 onOpenVendorModal={() => {
                     if (forceViewMode) return;
-                    if (watchRfqNo) {
-                        setIsRFQVendorModalOpen(true);
-                    } else {
-                        setIsVendorModalOpen(true);
+                    if (!watchRfqNo) {
+                        toast('กรุณาเลือกข้อมูล RFQ อ้างอิงก่อนเลือกผู้ขาย', 'warning');
+                        return;
                     }
+                    setIsRFQVendorModalOpen(true);
                 }}
                 onClearVendor={handleClearVendor}
                 onOpenRFQModal={() => !forceViewMode && setIsRFQModalOpen(true)}

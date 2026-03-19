@@ -315,8 +315,8 @@ export interface PRListParams {
   department?: string;
   vendor_code?: string;
   vendor_name?: string;
-  date_from?: string;
-  date_to?: string;
+  date_start?: string;
+  date_end?: string;
   page?: number;
   limit?: number;
   sort?: string;

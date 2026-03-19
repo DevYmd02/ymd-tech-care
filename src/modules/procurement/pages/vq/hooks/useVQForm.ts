@@ -658,19 +658,36 @@ export const useVQForm = (
       const existingVendorIds = (existingVQs?.data || []).map((v: any) => v.vendor_id);
       const allVendors = fullRFQ.vendors || fullRFQ.rfqVendors || [];
 
-      // 3. Filter Vendors
-      const filteredVendors = allVendors.filter((v: any) => !existingVendorIds.includes(v.vendor_id));
+      // 1. Filter out only SENT/RESPONDED vendors (Exclude PENDING)
+      const sentVendors = allVendors.filter((v: any) => v.status !== 'PENDING');
 
-      // 4. Dead-end UX Check
-      if (filteredVendors.length === 0) {
-        toast('RFQ นี้ได้รับการตอบกลับจากผู้ขายครบถ้วนแล้ว', 'error');
-        // Clear RFQ fields to prevent stuck state
+      if (sentVendors.length === 0) {
+        toast('RFQ นี้ยังไม่มีรายชื่อผู้ขายที่ส่งข้อมูลแล้ว', 'warning');
         setValue('rfq_id', 0, { shouldValidate: true });
         setValue('rfq_no', '', { shouldValidate: true });
         return false;
       }
 
-      setAvailableVendors(filteredVendors);
+      // 🔄 FETCH FULL VENDOR DETAILS for accurate code and name
+      const vendorsWithDetails = await Promise.all(
+          sentVendors.map(async (v: any) => {
+              try {
+                  const details = await VendorService.getById(v.vendor_id);
+                  return { ...v, ...details }; 
+              } catch {
+                  return v; 
+              }
+          })
+      );
+
+      // 3. Map Vendors with hasVQ flag (INSTEAD of filtering out)
+      const mappedVendors = vendorsWithDetails.map((v: any) => ({
+          ...v,
+          hasVQ: existingVendorIds.includes(v.vendor_id),
+          status: v.status || 'ACTIVE'
+      }));
+
+      setAvailableVendors(mappedVendors);
 
       // 5. Normal processing (setting RFQ lines)
       const apiLines: RFQLine[] = fullRFQ.rfqLines || fullRFQ.lines || [];
@@ -711,8 +728,9 @@ export const useVQForm = (
       replace(mappedLines.length > 0 ? mappedLines : []);
 
       // 6. Auto-Fill Vendor Logic if exactly 1
-      if (filteredVendors.length === 1) {
-          const singleVendor = filteredVendors[0];
+      const unvqd = mappedVendors.filter((v: any) => !v.hasVQ);
+      if (unvqd.length === 1) {
+          const singleVendor = unvqd[0];
           await handleSelectRFQVendor(singleVendor.vendor_id);
       }
 

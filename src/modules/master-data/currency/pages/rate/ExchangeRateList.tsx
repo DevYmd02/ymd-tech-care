@@ -27,7 +27,7 @@ export default function ExchangeRateList() {
     // but here we just need standard search/status/dateFrom.
     // 'date' was causing issues as it's not in TableFilters. We'll use 'dateFrom' for the specific date filter.
     const { filters, setFilters, handlePageChange, resetFilters } = useTableFilters({ 
-        customParamKeys: { search: 'currency_code', dateFrom: 'rate_date' } 
+        customParamKeys: { search: 'currency_code', date_start: 'rate_date' } 
     });
     
     const [allData, setAllData] = useState<ExchangeRateDisplay[]>([]);
@@ -49,7 +49,7 @@ export default function ExchangeRateList() {
             colSpan: 1
         },
         { 
-            name: 'dateFrom', 
+            name: 'date_start', 
             label: 'วันที่', 
             type: 'date',
             colSpan: 1
@@ -106,8 +106,8 @@ export default function ExchangeRateList() {
         if (filters.status && filters.status !== 'ALL') result = result.filter(item => filters.status === 'ACTIVE' ? item.is_active : !item.is_active);
         if (filters.search) result = result.filter(item => item.currency_code.toLowerCase().includes(filters.search.toLowerCase()));
         
-        // Exact date match using_dateFrom as the filter holder
-        if (filters.dateFrom) result = result.filter(item => item.rate_date.startsWith(filters.dateFrom));
+        // Exact date match using_date_start as the filter holder
+        if (filters.date_start) result = result.filter(item => item.rate_date.startsWith(filters.date_start));
         
         return result;
     }, [allData, filters]);
