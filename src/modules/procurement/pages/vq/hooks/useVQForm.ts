@@ -6,7 +6,7 @@ import { QuotationHeaderSchema, type QuotationFormData, type QuotationLineFormDa
 import { VQService, type VQCreateData } from '@/modules/procurement/services/vq.service';
 import { RFQService } from '@/modules/procurement/services/rfq.service';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
-import type { RFQHeader, RFQLine, RFQDetailResponse } from '@/modules/procurement/types';
+import type { RFQHeader, RFQLine } from '@/modules/procurement/types';
 import { logger } from '@/shared/utils/logger';
 import { MasterDataService } from '@/modules/master-data';
 const formatDateForInputHelper = (dateStr: string | Date | null | undefined): string => {
@@ -164,6 +164,9 @@ export const useVQForm = (
   }, [currencyOptions, watchCurrency, watchTargetCurrency, setValue, formMethods]);
 
   useEffect(() => {
+    const { isDirty } = formMethods.getFieldState('isMulticurrency');
+    if (!isDirty) return; // 💧 Guard: Only reset values if the user explicitly interacted with the toggle
+    
     if (!isMulticurrency) {
       if (getValues('currency') !== 'THB' || getValues('exchange_rate') !== 1) {
         setValue('currency', 'THB');
@@ -172,7 +175,7 @@ export const useVQForm = (
         setValue('exchange_rate_date', '');
       }
     }
-  }, [isMulticurrency, setValue, getValues]);
+  }, [isMulticurrency, setValue, getValues, formMethods]);
 
   // If currency is THB, exchange rate MUST be 1
   useEffect(() => {
@@ -180,6 +183,27 @@ export const useVQForm = (
       setValue('exchange_rate', 1);
     }
   }, [watchCurrency, setValue, getValues]);
+
+  const handleSelectRFQVendor = useCallback(async (vendorId: number) => {
+    try {
+      const vendorDetails = await VendorService.getById(vendorId);
+      setValue('vendor_id', vendorId, { shouldValidate: true });
+      setValue('vendor_code', vendorDetails?.vendor_code || '', { shouldValidate: true });
+      setValue('vendor_name', vendorDetails?.vendor_name || '', { shouldValidate: true });
+      const contacts = vendorDetails?.contacts || vendorDetails?.vendorContacts || [];
+      const primaryContact = contacts.find((c: any) => c.is_primary) || contacts[0];
+      setValue('contact_person', primaryContact?.contact_name || '', { shouldValidate: true });
+      setValue('contact_phone', vendorDetails?.phone || '', { shouldValidate: true });
+      setValue('contact_email', vendorDetails?.email || '', { shouldValidate: true });
+      if (vendorDetails?.payment_term_days) {
+        setValue('payment_term_days', Number(vendorDetails.payment_term_days), { shouldValidate: true });
+        setValue('payment_terms', `${vendorDetails.payment_term_days} วัน`, { shouldValidate: true });
+      }
+    } catch (err) {
+      logger.error('[useVQForm] Failed to fetch vendor details:', err);
+      toast('ไม่สามารถดึงข้อมูลรายละเอียดผู้ขายได้', 'error');
+    }
+  }, [setValue, toast]);
 
   const [vqStatus, setVqStatus] = useState<VQStatus | null>(null);
   const [isDataLoading, setIsDataLoading] = useState(false);
@@ -216,15 +240,44 @@ export const useVQForm = (
 
             setVqStatus(data.status || null);
 
-            // SPECIAL CASE: If PENDING, we must pull LATEST lines from the referenced RFQ
+            // 💧 Hydration Load Fallbacks: Fetch RFQ and Vendor detail for missing properties backfill
             let apiLines: RFQLine[] = [];
-                if (data.status === 'PENDING' && data.rfq_id) {
-                   try {
-                      const rfqDetail: RFQDetailResponse = await RFQService.getById(data.rfq_id);
-                      apiLines = (rfqDetail.lines && rfqDetail.lines.length > 0) ? rfqDetail.lines : (rfqDetail.rfqLines || []);
-                   } catch (err) {
-                  logger.error('[useVQForm] Failed to fetch RFQ lines for PENDING VQ:', err);
-               }
+            if (data.rfq_id || data.vendor_id) {
+                try {
+                    const [rfqDetail, vendorDetail] = await Promise.all([
+                        data.rfq_id ? RFQService.getById(data.rfq_id) : Promise.resolve(null),
+                        data.vendor_id ? VendorService.getById(data.vendor_id) : Promise.resolve(null)
+                    ]);
+                    
+                    if (rfqDetail && data.status === 'PENDING') {
+                        apiLines = (rfqDetail.lines && rfqDetail.lines.length > 0) ? rfqDetail.lines : (rfqDetail.rfqLines || []);
+                    }
+                    
+                    // 1. Backfill from RFQ
+                    if (rfqDetail) {
+                        (data as any).payment_terms = (data as any).payment_terms || (rfqDetail as any).payment_terms || (rfqDetail as any).payment_term_hint || ((rfqDetail as any).payment_term_days ? `${(rfqDetail as any).payment_term_days} วัน` : '');
+                        data.payment_term_days = data.payment_term_days || (rfqDetail as any).payment_term_days || 0;
+                        data.lead_time_days = data.lead_time_days || (rfqDetail as any).payment_term_days || 0; 
+                        data.created_by_name = data.created_by_name || (rfqDetail as any).created_by_name || '';
+                        data.currency = data.currency || (rfqDetail as any).rfq_quote_currency_code || '';
+                    }
+
+                    // 2. Backfill from Vendor Master
+                    if (vendorDetail) {
+                        const primaryContact = (vendorDetail as any).contacts?.find((c: any) => c.is_primary) || (vendorDetail as any).contacts?.[0];
+                        const addressContact = (vendorDetail as any).addresses?.find((a: any) => a.contact_person)?.contact_person;
+                        
+                        data.contact_person = data.contact_person || primaryContact?.contact_name || addressContact || '';
+                        data.contact_phone = data.contact_phone || primaryContact?.phone || primaryContact?.mobile || (vendorDetail as any).phone || '';
+                        data.contact_email = data.contact_email || primaryContact?.email || (vendorDetail as any).email || '';
+                        (data as any).payment_terms = (data as any).payment_terms || (vendorDetail as any).payment_terms || ((vendorDetail as any).payment_term_days ? `${(vendorDetail as any).payment_term_days} วัน` : '');
+                        if (!data.payment_term_days && (vendorDetail as any).payment_term_days) {
+                            data.payment_term_days = (vendorDetail as any).payment_term_days;
+                        }
+                    }
+                } catch (err) {
+                    logger.error('[useVQForm] Failed to fetch backfill details:', err);
+                }
             }
 
             // @Agent_Payload_Parser - Line Mapping (Search for vqLines, vq_lines, lines, items)
@@ -281,16 +334,19 @@ export const useVQForm = (
                 vendor_id: Number(data.vendor_id || 0),
                 vendor_code: data.vendor?.vendor_code || data.vendor_code || '',
                 vendor_name: data.vendor_name || data.vendor?.vendor_name || '',
-                contact_person: data.contact_person || '',
-                contact_phone: data.contact_phone || '',
-                contact_email: data.contact_email || '',
-                currency: data.base_currency_code || 'THB',
-                isMulticurrency: Boolean(data.base_currency_code && data.base_currency_code !== 'THB'),
+                contact_person: data.contact_person || (data.vendor as any)?.contact_person || '',
+                contact_phone: data.contact_phone || (data.vendor as any)?.contact_phone || '',
+                contact_email: data.contact_email || (data.vendor as any)?.contact_email || '',
+                currency: data.currency || data.base_currency_code || 'THB',
+                isMulticurrency: Boolean((data.currency || data.base_currency_code || 'THB') !== 'THB'),
                 exchange_rate_date: data.exchange_rate_date || '',
                 target_currency: data.target_currency || '',
                 exchange_rate: Number(data.exchange_rate) || 1,
                 payment_term_days: data.payment_term_days || 0,
                 lead_time_days: data.lead_time_days || 0,
+                // 💧 Map to view inputs inside VQFormHeader
+                delivery_days: Number(data.lead_time_days) || 0,
+                payment_terms: (data as any).payment_terms || (data.payment_term_days ? `${data.payment_term_days} วัน` : ''),
                 valid_until: data.quotation_expiry_date || '', 
                 qc_id: Number(data.qc_id || 0),
                 rfq_id: Number(data.rfq_id || 0),
@@ -299,7 +355,7 @@ export const useVQForm = (
                 tax_code_id: Number(data.tax_code_id || 0),
                 status: data.status || 'DRAFT',
                 created_by: data.created_by ? Number(data.created_by) : undefined,
-                created_by_name: data.created_by_name || '',
+                created_by_name: data.created_by_name || (data as any).created_by_user?.employee?.employee_fullname || (data as any).created_by_user?.name || (data as any).user?.name || (data as any).user?.username || '',
                 vq_lines: mappedLines
             };
 
@@ -339,28 +395,36 @@ export const useVQForm = (
       } else if (initialRFQ) {
         // --- CREATE MODE: Auto-fill from RFQ ---
         setIsDataLoading(true);
-        RFQService.getById(initialRFQ.rfq_id).then((fullRFQ: RFQDetailResponse) => {
+        Promise.all([
+            RFQService.getById(initialRFQ.rfq_id),
+            MasterDataService.getItems().catch(() => [])
+        ]).then(async ([fullRFQ, itemsRes]) => {
+            const masterItems = Array.isArray(itemsRes) ? itemsRes : ((itemsRes as any)?.data || (itemsRes as any)?.items || []);
+            const apiLines = (fullRFQ.lines && fullRFQ.lines.length > 0) ? fullRFQ.lines : (fullRFQ.rfqLines || []);
             let mappedLines: QuotationLineFormData[] = [];
             
-            if (fullRFQ.lines && fullRFQ.lines.length > 0) {
-                mappedLines = fullRFQ.lines.map((line) => ({
-                    ...createEmptyLine(),
-                    item_id: Number(line.item_id) || 0,
-                    item_code: String(line.item_code || ''),
-                    item_name: String(line.item_name || ''),
-                    qty: Number(line.qty) || 1,
-                    uom_id: Number(line.uom_id) || 0,
-                    uom_name: String(line.uom || ''),
-                    unit_price: 0,
-                    discount_expression: '',
-                    discount_amount: 0,
-                    net_amount: 0,
-                    no_quote: false,
-                    reference_price: Number(line.est_unit_price) || 0,
-                    pr_line_id: Number(line.pr_line_id) || 0,
-                    status: 'OPEN',
-                    remark: String(line.description || '')
-                }));
+            if (apiLines.length > 0) {
+                mappedLines = apiLines.map((line: RFQLine) => {
+                    const matchedItem = masterItems.find((i: any) => Number(i.item_id) === Number(line.item_id));
+                    return {
+                        ...createEmptyLine(),
+                        item_id: Number(line.item_id) || 0,
+                        item_code: String(line.item_code || line.itemCode || line.product_code || matchedItem?.item_code || line.item?.item_code || line.product?.product_code || ''),
+                        item_name: String(line.item_name || line.itemName || line.product_name || line.item?.item_name || line.product?.product_name || line.description || ''),
+                        qty: Number(line.qty) || 1,
+                        uom_id: Number(line.uom_id) || 0,
+                        uom_name: String(line.uom || ''),
+                        unit_price: 0,
+                        discount_amount: 0,
+                        net_amount: 0,
+                        no_quote: false,
+                        reference_price: Number(line.est_unit_price) || 0,
+                        pr_line_id: Number(line.pr_line_id) || 0,
+                        rfq_line_id: Number(line.rfq_line_id) || 0,
+                        status: 'OPEN',
+                        remark: String(line.description || '')
+                    };
+                });
             }
 
             // Find specific vendor if initialRFQ passed vendor_id
@@ -371,7 +435,7 @@ export const useVQForm = (
             }
 
             const rfqData = {
-                quotation_no: `VQ-${new Date().getFullYear()}-xxx (Auto)`,
+                quotation_no: '',
                 quotation_date: formatDateForInputHelper(new Date()),
                 vendor_id: Number(initialRFQ.vendor_id || selectedVendor?.vendor_id) || 0, 
                 vendor_code: selectedVendor?.vendor_code || '',
@@ -388,6 +452,7 @@ export const useVQForm = (
                 payment_term_days: 0,
                 lead_time_days: 0,
                 qc_id: 0,
+                pr_id: fullRFQ.pr_id ? Number(fullRFQ.pr_id) : undefined, // 👈 Fix: Populate pr_id 
                 rfq_id: Number(fullRFQ.rfq_id) || 0,
                 rfq_no: fullRFQ.rfq_no || '',
                 remark: fullRFQ.remarks || '',
@@ -399,6 +464,12 @@ export const useVQForm = (
             };
 
             reset(rfqData as QuotationFormData);
+
+            // 🔄 FETCH FULL VENDOR DETAILS for accurate code and name
+            if (initialRFQ.vendor_id) {
+                await handleSelectRFQVendor(initialRFQ.vendor_id);
+            }
+
             setIsDataLoading(false);
         }).catch((err) => {
             logger.error('[useVQForm] Failed to fetch RFQ details for initial load:', err);
@@ -431,7 +502,7 @@ export const useVQForm = (
         setDbTotals(null);
       }
     }
-  }, [isOpen, initialRFQ, vqId, reset, getValues, replace, setValue, user]);
+  }, [isOpen, initialRFQ, vqId, reset, getValues, replace, setValue, user, handleSelectRFQVendor]);
 
 
   // Calculations
@@ -556,21 +627,24 @@ export const useVQForm = (
     const sanitizePayload = (data: QuotationFormData): VQCreateData => {
     const payload: VQCreateData = {
       // 🛡️ @Agent_Ultimate_Purifier: STRICT DTO MAPPING (Header)
-      vq_no: data.vq_no,
-      quotation_no: data.quotation_no || '', 
+      ...(vqId ? { vq_no: data.vq_no } : {}), // Omit vq_no if creating to satisfy backend
+      quotation_no: data.quotation_no && data.quotation_no.trim() !== '' ? data.quotation_no : '-', 
       quotation_date: data.quotation_date ? new Date(data.quotation_date).toISOString() : new Date().toISOString(),
       quotation_expiry_date: data.valid_until ? new Date(data.valid_until).toISOString() : undefined,
       vendor_id: Number(data.vendor_id),
       pr_id: data.pr_id ? Number(data.pr_id) : undefined,
       rfq_id: data.rfq_id ? Number(data.rfq_id) : undefined,
-      lead_time_days: Number(data.lead_time_days) || 0,
-      payment_term_days: Number(data.payment_term_days) || 0,
+      lead_time_days: Number(data.lead_time_days || data.delivery_days) || 0,
+      payment_term_days: Number(data.payment_term_days || (data.payment_terms ? String(data.payment_terms).replace(/\D/g, '') : 0)) || 0,
       base_currency_code: String(data.currency || "THB"),
       quote_currency_code: data.target_currency || String(data.currency || "THB"),
       exchange_rate: Number(data.exchange_rate) || 1,
       exchange_rate_date: data.exchange_rate_date ? new Date(data.exchange_rate_date).toISOString() : new Date().toISOString(),
       tax_code_id: data.tax_code_id ? Number(data.tax_code_id) : undefined,
-      discount_expression: String(data.discount_expression || "0"),
+      // 👤 Contact Information (Failsafe for reload hydration)
+      contact_person: data.contact_person && data.contact_person.trim() !== '' ? data.contact_person : undefined,
+      contact_phone: data.contact_phone && data.contact_phone.trim() !== '' ? data.contact_phone : undefined,
+      contact_email: data.contact_email && data.contact_email.trim() !== '' ? data.contact_email : undefined,
       
       // 👤 @Agent_Auth_Injector
       created_by: vqId ? (getValues('created_by') ? Number(getValues('created_by')) : undefined) : (user?.id ? Number(user.id) : undefined), 
@@ -580,6 +654,12 @@ export const useVQForm = (
         .filter(l => (l.item_id && Number(l.item_id) > 0)) 
         .map((l, idx) => sanitizeLine(l, idx)) as QuotationLine[]
     };
+
+    // 🛡️ Pass payment_terms text if backend supports it
+    if (data.payment_terms && data.payment_terms.trim() !== '') {
+        (payload as any).payment_terms = data.payment_terms;
+    }
+
     return payload;
   };
 
@@ -595,7 +675,9 @@ export const useVQForm = (
           showAlert('กรุณาเลือกรหัสผู้ขาย');
           return;
       }
-      
+
+
+
       const validLines = data.vq_lines.filter(l => (l.item_id && Number(l.item_id) > 0) || (l.item_code && l.item_code.trim() !== ""));
       if (validLines.length === 0) {
           showAlert('ต้องมีรายการสินค้าอย่างน้อย 1 รายการ');
@@ -661,26 +743,7 @@ export const useVQForm = (
     setValue(`vq_lines.${index}.net_amount`, Number(net.toFixed(2)) || 0);
   };
 
-  const handleSelectRFQVendor = async (vendorId: number) => {
-    try {
-      const vendorDetails = await VendorService.getById(vendorId);
-      setValue('vendor_id', vendorId, { shouldValidate: true });
-      setValue('vendor_code', vendorDetails?.vendor_code || '', { shouldValidate: true });
-      setValue('vendor_name', vendorDetails?.vendor_name || '', { shouldValidate: true });
-      const contacts = vendorDetails?.contacts || vendorDetails?.vendorContacts || [];
-      const primaryContact = contacts.find((c: any) => c.is_primary) || contacts[0];
-      setValue('contact_person', primaryContact?.contact_name || '', { shouldValidate: true });
-      setValue('contact_phone', vendorDetails?.phone || '', { shouldValidate: true });
-      setValue('contact_email', vendorDetails?.email || '', { shouldValidate: true });
-      if (vendorDetails?.payment_term_days) {
-        setValue('payment_term_days', Number(vendorDetails.payment_term_days), { shouldValidate: true });
-        setValue('payment_terms', `${vendorDetails.payment_term_days} วัน`, { shouldValidate: true });
-      }
-    } catch (err) {
-      logger.error('[useVQForm] Failed to fetch vendor details:', err);
-      toast('ไม่สามารถดึงข้อมูลรายละเอียดผู้ขายได้', 'error');
-    }
-  };
+
 
   const handleSelectRFQ = async (rfq: RFQHeader) => {
     toast('กำลังดึงข้อมูลใบขอราคาสินค้า...', 'info');
