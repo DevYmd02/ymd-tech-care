@@ -25,6 +25,8 @@ interface ClientFilterOptions<T> {
   searchableFields?: (keyof T)[];
   /** The field on T that holds the date value for date_from / date_to range filtering */
   dateField?: keyof T;
+  /** Preserved total count from backend response to avoid capping total on paginated chunks */
+  backendTotal?: number;
 }
 
 /** Standard paginated list response shape used across all procurement modules */
@@ -141,15 +143,30 @@ export const applyClientFilters = <T extends object>(
   // 5. Pagination
   const page = Number(params.page) || 1;
   const limit = Number(params.limit) || 20;
-  const total = processed.length;
+  
+  let total = processed.length;
+  let hasOverriddenTotal = false;
+  // 🎯 PRESERVE BACKEND TOTAL: If backend is paginating and returned total exists,
+  // and we hasn't filter out anything from the array input size (length), override total
+  if (options.backendTotal !== undefined && options.backendTotal > total && total === data.length) {
+    total = options.backendTotal;
+    hasOverriddenTotal = true;
+  }
+
   const totalPages = Math.ceil(total / limit) || 1;
   const startIndex = (page - 1) * limit;
-  const items = processed.slice(startIndex, startIndex + limit);
+  
+  // 🎯 FIX: If total is overridden, data is already paginated by backend (or has chunk size = limit/total).
+  // DO NOT slice with offset (startIndex) because the array ALREADY starts at 0 for this page.
+  const items = hasOverriddenTotal 
+    ? processed.slice(0, limit) 
+    : processed.slice(startIndex, startIndex + limit);
 
   logger.debug(`🔍 [ClientFilter] Filtered ${data.length} → ${total} items (page ${page}/${totalPages}, limit ${limit})`);
 
   return { data: items, total, page, limit, totalPages };
 };
+
 
 /**
  * Safely extracts an array of items from various API response shapes.
@@ -182,14 +199,27 @@ export const extractArrayFromResponse = <T>(response: object | null | undefined)
 export const applyClientPagination = <T>(
   data: T[],
   page: number = 1,
-  limit: number = 20
+  limit: number = 20,
+  backendTotal?: number
 ): PaginatedResponse<T> => {
-  const total = data.length;
+  let total = data.length;
+  let hasOverriddenTotal = false;
+
+  if (backendTotal !== undefined && backendTotal > total && total === data.length) {
+    total = backendTotal;
+    hasOverriddenTotal = true;
+  }
+
   const totalPages = Math.ceil(total / limit) || 1;
   const startIndex = (page - 1) * limit;
-  const paginatedData = data.slice(startIndex, startIndex + limit);
+  
+  // 🎯 FIX: If total is overridden, data is already paginated by backend.
+  // DO NOT slice with offset (startIndex) because the array ALREADY starts at 0 for this page.
+  const paginatedData = hasOverriddenTotal 
+    ? data.slice(0, limit) 
+    : data.slice(startIndex, startIndex + limit);
 
-  logger.debug(`📄 [ClientPagination] Sliced ${total} items → page ${page}/${totalPages} (limit ${limit}, showing ${paginatedData.length})`);
+  logger.debug(`📄 [ClientPagination] Sliced ${data.length} items → page ${page}/${totalPages} (limit ${limit}, showing ${paginatedData.length})`);
 
   return {
     data: paginatedData,

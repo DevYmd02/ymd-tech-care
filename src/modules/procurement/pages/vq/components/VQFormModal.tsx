@@ -38,7 +38,8 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
     vqStatus,
     isDataLoading,
     availableVendors,
-    handleSelectRFQVendor
+    handleSelectRFQVendor,
+    fields, append, remove, insert
   } = useVQForm(isOpen, onClose, initialRFQ, onSuccess, vqId);
 
   const {
@@ -219,6 +220,7 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
                 isPending={isPending}
                 isMasterLoading={isMasterLoading}
                 currencyOptions={currencyOptions}
+                purchaseTaxOptions={purchaseTaxOptions}
                 watchVendorCode={watchVendorCode || ''}
                 watchVendorName={watchVendorName || ''}
                 watchVendorId={watchVendorId || 0}
@@ -246,8 +248,11 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
                 onOpenProductSearch={openProductSearch}
                 updateLineCalculation={updateLineCalculation}
                 createEmptyLine={createEmptyLine}
-                purchaseTaxOptions={purchaseTaxOptions}
                 totals={totals}
+                fields={fields}
+                append={append}
+                remove={remove}
+                insert={insert}
           />
           
           {/* 3. Remarks Section */}

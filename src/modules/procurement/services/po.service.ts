@@ -55,12 +55,13 @@ export const POService = {
             return applyClientFilters<POListItem>(allItems, filterParams, {
                 searchableFields: ['po_no', 'vendor_name', 'qc_no', 'pr_no'],
                 dateField: 'po_date',
+                backendTotal: response.total
             });
         }
 
         const page = params?.page || 1;
         const limit = params?.limit || 20;
-        return applyClientPagination<POListItem>(allItems, page, limit);
+        return applyClientPagination<POListItem>(allItems, page, limit, response.total);
     },
 
     getById: async (id: number): Promise<POListItem> => {

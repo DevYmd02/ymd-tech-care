@@ -124,6 +124,7 @@ export const PRService = {
       return applyClientFilters<PRHeader>(hydratedItems, filterParams, {
         searchableFields: ['pr_no', 'requester_name', 'purpose'],
         dateField: 'need_by_date',
+        backendTotal: response.total
       });
     }
 
@@ -132,7 +133,7 @@ export const PRService = {
     const allItems = extractArrayFromResponse<PRHeader>(response as PRListResponse | PRHeader[]);
     const page = params?.page || 1;
     const limit = params?.limit || 20;
-    return applyClientPagination<PRHeader>(allItems, page, limit);
+    return applyClientPagination<PRHeader>(allItems, page, limit, response.total);
   },
 
   getDetail: async (id: number): Promise<PRHeaderExtended> => {

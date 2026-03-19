@@ -265,7 +265,7 @@ export default function PRListPage() {
                 );
             },
             size: 160,
-            enableSorting: true,
+            enableSorting: false,
         }),
         columnHelper.accessor(row => row.purpose || row.remark || '', {
             id: 'purpose',
@@ -360,7 +360,7 @@ export default function PRListPage() {
                 </div>
             ),
             size: 180,
-            enableSorting: true,
+            enableSorting: false,
         }),
         columnHelper.accessor(row => row.status, {
             id: 'status',

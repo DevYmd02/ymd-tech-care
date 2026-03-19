@@ -274,7 +274,7 @@ export default function RFQListPage() {
                 );
             },
             size: 200,
-            enableSorting: true,
+            enableSorting: false,
         }),
         columnHelper.display({
             id: 'purpose',
@@ -342,7 +342,7 @@ export default function RFQListPage() {
                 );
             },
             size: 110,
-            enableSorting: true,
+            enableSorting: false,
         }),
         columnHelper.display({
             id: 'vendors',

@@ -28,6 +28,7 @@ export const GRNService = {
             return applyClientFilters<GRNListItem>(allItems, filterParams, {
                 searchableFields: ['grn_no', 'po_no'],
                 dateField: 'received_date',
+                backendTotal: response.total,
             });
         }
 
@@ -35,7 +36,7 @@ export const GRNService = {
         const allItems = extractArrayFromResponse<GRNListItem>(response);
         const page = params?.page || 1;
         const limit = params?.limit || 20;
-        return applyClientPagination<GRNListItem>(allItems, page, limit);
+        return applyClientPagination<GRNListItem>(allItems, page, limit, response.total);
     },
 
     getById: async (id: number): Promise<GRNListItem> => {

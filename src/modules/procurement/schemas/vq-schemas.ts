@@ -57,8 +57,9 @@ export const QuotationLineSchema = z.object({
 
 export const QuotationHeaderSchema = z.object({
   quotation_no: z.string().optional(),
+  vq_no: z.string().optional(),
   quotation_date: z.string().min(1, 'กรุณาระบุวันที่ใบเสนอราคา'),
-  vendor_id: z.coerce.number({ message: 'กรุณาระบุผู้จัดจำหน่าย' }).min(1, 'กรุณาระบุผู้จัดจำหน่าย'),
+  vendor_id: z.coerce.number({ message: 'กรุณาเลือกชื่อผู้ขาย' }).min(1, 'กรุณาเลือกชื่อผู้ขาย'),
   vendor_code: z.string().optional(),
   vendor_name: z.string().optional(),
   contact_person: z.string().optional(),
