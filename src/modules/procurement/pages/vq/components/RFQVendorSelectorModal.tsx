@@ -130,7 +130,7 @@ export const RFQVendorSelectorModal: React.FC<RFQVendorSelectorModalProps> = ({
                                                     }`}
                                                 >
                                                     {isCreated ? <Check size={14} className="text-gray-400" /> : <Check size={14} />}
-                                                    {isCreated ? 'สร้าง VQ แล้ว' : 'เลือก'}
+                                                    {isCreated ? null : 'เลือก'}
                                                 </button>
                                             </td>
                                             <td className="px-4 py-3">

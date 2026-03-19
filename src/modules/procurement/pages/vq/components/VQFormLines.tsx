@@ -38,7 +38,7 @@ export const VQFormLines: React.FC<VQFormLinesProps> = ({
     remove,
     insert
 }) => {
-    const { register, control } = useFormContext<QuotationFormData>();
+    const { register, control, setValue } = useFormContext<QuotationFormData>();
     const [isTotalExpanded, setIsTotalExpanded] = React.useState(false);
 
     const watchVqLinesRaw = useWatch({ control, name: 'vq_lines' });
@@ -73,12 +73,12 @@ export const VQFormLines: React.FC<VQFormLinesProps> = ({
                     </div>
                   
                     <div className="overflow-x-auto bg-gray-50 dark:bg-gray-800/50 p-2 rounded-lg">
-                        <table className="w-full min-w-[1000px] border-collapse bg-white dark:bg-gray-900 text-sm border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <table className="w-full min-w-[1100px] border-collapse bg-white dark:bg-gray-900 text-sm border border-gray-200 dark:border-gray-700 shadow-sm">
                             <thead className="bg-indigo-700 text-white text-xs dark:bg-indigo-900">
                                 <tr>
                                     <th className="px-3 py-2 text-center font-medium border-r border-indigo-600 dark:border-indigo-800 w-14">ลำดับ</th>
                                     <th className="px-3 py-2 text-center font-medium border-r border-indigo-600 dark:border-indigo-800 w-44">รหัสสินค้า</th>
-                                    <th className="px-3 py-2 text-left font-medium border-r border-indigo-600 dark:border-indigo-800">รายละเอียด</th>
+                                    <th className="px-3 py-2 text-left font-medium border-r border-indigo-600 dark:border-indigo-800 min-w-[220px]">ชื่อสินค้า</th>
                                     <th className="px-3 py-2 text-center font-medium border-r border-indigo-600 dark:border-indigo-800 w-24">จำนวน</th>
                                     <th className="px-3 py-2 text-center font-medium border-r border-indigo-600 dark:border-indigo-800 w-24">หน่วย</th>
                                     <th className="px-3 py-2 text-center font-medium border-r border-indigo-600 dark:border-indigo-800 w-32">ราคา/หน่วย</th>
@@ -171,7 +171,7 @@ export const VQFormLines: React.FC<VQFormLinesProps> = ({
                                                 
                                                 {/* Unit */}
                                                 <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">
-                                                    {isItemLocked ? (
+                                                    {forceViewMode ? (
                                                         <>
                                                             <input type="hidden" {...register(`vq_lines.${index}.uom_id`, { valueAsNumber: true })} />
                                                             <Controller
@@ -192,7 +192,14 @@ export const VQFormLines: React.FC<VQFormLinesProps> = ({
                                                         </>
                                                     ) : (
                                                         <select 
-                                                            {...register(`vq_lines.${index}.uom_id`, { valueAsNumber: true })} 
+                                                            {...register(`vq_lines.${index}.uom_id`, { 
+                                                                valueAsNumber: true,
+                                                                onChange: (e) => {
+                                                                    const selectedId = Number(e.target.value);
+                                                                    const name = units.find(u => u.unit_id === selectedId)?.unit_name || '';
+                                                                    setValue(`vq_lines.${index}.uom_name`, name);
+                                                                }
+                                                            })} 
                                                             className="w-full h-8 px-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white text-center cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed disabled:bg-gray-50 transition-all shadow-sm"
                                                         >
                                                             <option value={0}>- หน่วย -</option>

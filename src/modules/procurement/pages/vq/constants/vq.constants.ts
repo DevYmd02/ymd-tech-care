@@ -19,4 +19,5 @@ export const RFQ_VENDOR_STATUS_MAP: Record<string, { label: string; color: strin
     NEW: { label: 'รอส่งอีเมล', color: 'default' },
     WAITING: { label: 'รอคิวส่ง', color: 'processing' },
     SENT: { label: 'ส่ง RFQ แล้ว', color: 'warning' },
+    PENDING: { label: 'รอผู้ขายตอบกลับ', color: 'warning' },
 };

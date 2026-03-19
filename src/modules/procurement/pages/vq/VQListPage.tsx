@@ -22,6 +22,8 @@ import { RFQService } from '@/modules/procurement/services/rfq.service';
 
 import type { VQListItem, VQStatus, RFQHeader, VQPendingQueueItem } from '@/modules/procurement/types';
 import { VQFormModal, VQVendorTrackingModal } from './components';
+// import { RFQSendConfirmModal } from '@/modules/procurement/pages/rfq/components/RFQSendConfirmModal';
+// import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { logger } from '@/shared/utils/logger';
 
 import { getColumns, getPendingColumns } from './components/VQColumns';
@@ -84,8 +86,38 @@ export default function VQListPage() {
     }, [setSearchParams]);
 
     const [isTrackingOpen, setIsTrackingOpen] = useState(false);
+    // const { toast } = useToast();
+
     const [selectedRfqId, setSelectedRfqId] = useState<number | null>(null);
     const [selectedRfqNo, setSelectedRfqNo] = useState<string>('');
+    /*
+    const [sendingRFQ, setSendingRFQ] = useState<RFQHeader | null>(null);
+
+    const handleSendRFQ = useCallback((item: VQPendingQueueItem) => {
+        setSendingRFQ({ rfq_id: item.rfq_id, rfq_no: item.rfq_no } as RFQHeader);
+    }, []);
+
+    const executeSendRFQ = async (batchData: Array<{ rfqVendorId: number; payload: any }>) => {
+        if (!sendingRFQ || batchData.length === 0) return;
+        const rfqNo = sendingRFQ.rfq_no;
+        toast(`กำลังส่งอีเมล RFQ ${rfqNo} ในพื้นหลัง...`, 'info');
+        setSendingRFQ(null);
+
+        Promise.allSettled(
+            batchData.map(item => RFQService.sendToVendor(item.rfqVendorId, item.payload))
+        ).then(results => {
+            const failures = results.filter(r => r.status === 'rejected');
+            if (failures.length > 0) {
+                toast(`ส่งสำเร็จบางส่วน (ล้มเหลว ${failures.length} รายการ)`, 'error');
+            } else {
+                toast(`ส่ง RFQ ${rfqNo} เรียบร้อยแล้ว`, 'success');
+            }
+            queryClient.invalidateQueries({ queryKey: ['waiting-for-rfq-vendor'] });
+            queryClient.invalidateQueries({ queryKey: ['waiting-for-vq-vendor'] });
+        });
+    };
+    */
+
 
     // Auto-inject rfq_no from URL into search3 filter (runs once on mount or when param changes)
     const hasInjected = useRef(false);
@@ -315,8 +347,14 @@ export default function VQListPage() {
                 subtitle={rfqNoFilter ? `รายการใบเสนอราคาสำหรับ RFQ: ${rfqNoFilter} (ตอบกลับแล้ว ${data?.total || 0} ราย)` : 'Vendor Quotation (VQ)'}
                 icon={FileText}
                 accentColor="blue"
-                totalCount={data?.total}
-                totalCountLoading={isLoading}
+                totalCount={
+                    activeTab === 'WAITING_VQ' 
+                        ? (waitingVqData?.total || waitingVqData?.data?.length || 0) 
+                        : activeTab === 'WAITING_RFQ' 
+                            ? (waitingRfqData?.total || waitingRfqData?.data?.length || 0) 
+                            : (data?.total || data?.data?.length || 0)
+                }
+                totalCountLoading={isLoading || isWaitingVqLoading || isWaitingRfqLoading}
                 searchForm={
                     <form onSubmit={(e) => { e.preventDefault(); handleApplyFilters(); }} className="w-full">
                         <div className="flex flex-col gap-4">
@@ -361,13 +399,13 @@ export default function VQListPage() {
                                         activeTab === 'ALL'
                                             ? Object.entries(VQ_STATUS_MAP).map(([val, {label}]) => ({ value: val, label }))
                                             : activeTab === 'WAITING_RFQ'
-                                                ? Object.entries(RFQ_VENDOR_STATUS_MAP).filter(([val]) => val === 'ALL' || val === 'NEW' || val === 'WAITING').map(([val, {label}]) => ({ value: val, label }))
-                                                : [{ value: 'ALL', label: 'ทั้งหมด (ส่ง RFQ แล้ว)' }] // for WAITING_VQ it is implicitly SENT status
+                                                ? Object.entries(RFQ_VENDOR_STATUS_MAP).filter(([val]) => ['ALL', 'NEW', 'WAITING'].includes(val)).map(([val, {label}]) => ({ value: val, label }))
+                                                : Object.entries(RFQ_VENDOR_STATUS_MAP).filter(([val]) => ['ALL', 'SENT', 'PENDING'].includes(val)).map(([val, {label}]) => ({ value: val, label }))
                                     }
                                     value={localFilters.status || ''}
                                     onChange={(val) => handleFilterChange('status', val)}
                                     accentColor="blue"
-                                    disabled={activeTab === 'WAITING_VQ'}
+                                    disabled={false}
                                 />
                                 <FilterField
                                     label="วันที่เริ่มต้น"
@@ -513,13 +551,13 @@ export default function VQListPage() {
                                 pagination={{
                                     pageIndex: filters.page,
                                     pageSize: filters.limit,
-                                    totalCount: waitingVqData?.total ?? 0,
+                                    totalCount: waitingVqData?.total || waitingVqData?.data?.length || 0,
                                     onPageChange: handlePageChange,
                                     onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 })
                                 }}
                                 rowIdField="rfq_vendor_id"
                                 className="flex-1"
-                                showFooter={false}
+                                showFooter={true}
                             />
                         )}
                         {activeTab === 'WAITING_RFQ' && (
@@ -532,13 +570,13 @@ export default function VQListPage() {
                                 pagination={{
                                     pageIndex: filters.page,
                                     pageSize: filters.limit,
-                                    totalCount: waitingRfqData?.total ?? 0,
+                                    totalCount: waitingRfqData?.total || waitingRfqData?.data?.length || 0,
                                     onPageChange: handlePageChange,
                                     onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 })
                                 }}
                                 rowIdField="rfq_vendor_id"
                                 className="flex-1"
-                                showFooter={false}
+                                showFooter={true}
                             />
                         )}
                     </div>
