@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Controller, useFormContext, useFieldArray, useWatch, type FieldArrayWithId } from 'react-hook-form';
+import { Controller, useFormContext, useWatch, type FieldArrayWithId } from 'react-hook-form';
 import { Search, Plus, Trash2, FileText } from 'lucide-react';
 import type { UnitListItem } from '@/modules/master-data/types/master-data-types';
 import type { QuotationFormData } from '@/modules/procurement/schemas/vq-schemas';
@@ -11,14 +11,18 @@ export interface VQFormLinesProps {
     onOpenProductSearch: (index: number) => void;
     updateLineCalculation: (index: number) => void;
     createEmptyLine: () => QuotationFormData['vq_lines'][0];
-    purchaseTaxOptions: { label: string; value: string | number; original?: unknown }[];
     totals: {
         subtotal: number;
         billDiscount: number;
         taxAmount: number;
         grandTotal: number;
         totalLineDiscount: number;
+        taxRate?: number;
     };
+    fields: FieldArrayWithId<QuotationFormData, "vq_lines", "id">[];
+    append: (value: any) => void;
+    remove: (index?: number | number[]) => void;
+    insert: (index: number, value: any) => void;
 }
 
 export const VQFormLines: React.FC<VQFormLinesProps> = ({
@@ -28,17 +32,14 @@ export const VQFormLines: React.FC<VQFormLinesProps> = ({
     onOpenProductSearch,
     updateLineCalculation,
     createEmptyLine,
-    purchaseTaxOptions,
-    totals
+    totals,
+    fields,
+    append,
+    remove,
+    insert
 }) => {
-    const { register, control, formState: { errors } } = useFormContext<QuotationFormData>();
+    const { register, control } = useFormContext<QuotationFormData>();
     const [isTotalExpanded, setIsTotalExpanded] = React.useState(false);
-    
-    // @Agent_Payload_Interceptor - Mapping form array
-    const { fields, append, remove, insert } = useFieldArray({
-        control,
-        name: 'vq_lines'
-    });
 
     const watchVqLinesRaw = useWatch({ control, name: 'vq_lines' });
     const watchVqLines = useMemo(() => watchVqLinesRaw || [], [watchVqLinesRaw]);
@@ -368,51 +369,26 @@ export const VQFormLines: React.FC<VQFormLinesProps> = ({
                                 <div className="flex justify-between items-center relative">
                                     <span className={labelClass}>ภาษี VAT</span>
                                     <div className="flex items-center gap-1">
+                                        {totals.taxRate !== undefined && totals.taxRate > 0 && (
+                                            <div className="relative flex items-center">
+                                                <input 
+                                                    value={totals.taxRate} 
+                                                    readOnly 
+                                                    className="w-12 text-center h-7 px-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded text-gray-900 dark:text-white pr-4" 
+                                                />
+                                                <span className="absolute right-1 text-gray-400 dark:text-gray-500 text-[10px]">%</span>
+                                            </div>
+                                        )}
+                                        {totals.taxRate !== undefined && totals.taxRate > 0 && (
+                                            <span className="text-gray-400 dark:text-gray-500">-</span>
+                                        )}
                                         <input 
                                             value={(Number(vatAmount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} 
                                             readOnly 
-                                            className={`w-20 ${inputReadonlyClass} dark:text-white`} 
+                                            className={`w-36 ${inputReadonlyClass} bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-900/50 text-blue-700 dark:text-blue-300 font-medium text-right`} 
                                         />
-                                        {/* Tax Code Select */}
-                                        <div className="relative group/tax">
-                                            <Controller
-                                                name="tax_code_id"
-                                                control={control}
-                                                render={({ field }) => (
-                                                    <select
-                                                        {...field}
-                                                        value={field.value ? String(field.value) : ''}
-                                                        disabled={forceViewMode}
-                                                        onChange={(e) => {
-                                                            const val = e.target.value;
-                                                            const selected = purchaseTaxOptions.find(t => String(t.value) === val);
-                                                            field.onChange(selected ? selected.value : val);
-                                                        }}
-                                                        className={`h-7 px-1 text-xs bg-white dark:bg-gray-800 border ${errors.tax_code_id ? 'border-red-500 ring-1 ring-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600'} rounded text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 cursor-pointer min-w-[140px] ${forceViewMode ? 'bg-gray-50 dark:bg-gray-800/50 cursor-not-allowed opacity-70' : ''}`}
-                                                    >
-                                                        <option value="">เลือกภาษี</option>
-                                                        {purchaseTaxOptions.map((tax) => (
-                                                            <option key={tax.value} value={tax.value}>
-                                                                {tax.label}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                )}
-                                            />
-                                            {errors.tax_code_id && (
-                                                <p className="text-red-500 text-[10px] absolute top-full left-0 mt-0.5 font-medium whitespace-nowrap z-10 animate-in fade-in slide-in-from-top-1 duration-200">
-                                                    {errors.tax_code_id?.message}
-                                                </p>
-                                            )}
-                                         </div>
-                                         <span className="text-gray-400 dark:text-gray-500">-</span>
-                                         <input 
-                                             value={(Number(vatAmount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} 
-                                             readOnly 
-                                             className={`w-28 ${inputReadonlyClass} bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-900/50 text-blue-700 dark:text-blue-300 font-medium`} 
-                                         />
-                                     </div>
-                                 </div>
+                                    </div>
+                                </div>
 
                                 {/* รวมทั้งสิ้น (Grand Total) */}
                                 <div className="flex flex-col pt-2 border-t border-gray-300 dark:border-gray-600">

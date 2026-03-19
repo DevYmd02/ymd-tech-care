@@ -36,6 +36,7 @@ export const PrtService = {
         return applyClientFilters<PurchaseReturn>(allItems, filterParams, {
           searchableFields: ['prt_no', 'vendor_name'],
           dateField: 'prt_date',
+          backendTotal: response.total,
         });
       }
 
@@ -43,7 +44,7 @@ export const PrtService = {
       const allItems = extractArrayFromResponse<PurchaseReturn>(response);
       const page = params?.page || 1;
       const limit = params?.limit || 20;
-      return applyClientPagination<PurchaseReturn>(allItems, page, limit);
+      return applyClientPagination<PurchaseReturn>(allItems, page, limit, response.total);
     } catch (error) {
       logger.error('[PrtService] getList error:', error);
       throw error;

@@ -57,6 +57,7 @@ export const QCService = {
       return applyClientFilters<QCListItem>(allItems, filterParams, {
         searchableFields: ['qc_no', 'pr_no', 'lowest_bidder_name'],
         dateField: 'created_at',
+        backendTotal: response.total,
       });
     }
 
@@ -64,7 +65,7 @@ export const QCService = {
     const allItems = extractArrayFromResponse<QCListItem>(response);
     const page = params?.page || 1;
     const limit = params?.limit || 20;
-    return applyClientPagination<QCListItem>(allItems, page, limit);
+    return applyClientPagination<QCListItem>(allItems, page, limit, response.total);
   },
 
   getById: async (id: number): Promise<QCListItem> => {

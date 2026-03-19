@@ -8,6 +8,7 @@ import { RFQService } from '@/modules/procurement/services/rfq.service';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
 import type { RFQHeader, RFQLine, RFQDetailResponse } from '@/modules/procurement/types';
 import { logger } from '@/shared/utils/logger';
+import { MasterDataService } from '@/modules/master-data';
 const formatDateForInputHelper = (dateStr: string | Date | null | undefined): string => {
   if (!dateStr) return '';
   const d = new Date(dateStr);
@@ -135,12 +136,39 @@ export const useVQForm = (
     }
   }, [watchCurrency, setValue]);
 
+  const watchTargetCurrency = useWatch({ control, name: 'target_currency' });
+
+  // 💱 Auto-calculate Exchange Rate when currencies change
+  useEffect(() => {
+    if (!watchCurrency || !watchTargetCurrency) return;
+    
+    if (watchCurrency === watchTargetCurrency) {
+      setValue('exchange_rate', 1, { shouldDirty: false });
+      return;
+    }
+
+    const { isDirty } = formMethods.getFieldState('exchange_rate');
+    if (!isDirty) {
+      const sourceObj = currencyOptions.find(c => c.value === watchCurrency)?.original;
+      const targetObj = currencyOptions.find(c => c.value === watchTargetCurrency)?.original;
+
+      const fromRate = Number(sourceObj?.exchange_rate) || 1;
+      const toRate = Number(targetObj?.exchange_rate) || 1;
+
+      const calculatedRate = fromRate / toRate;
+
+      if (!isNaN(calculatedRate)) {
+        setValue('exchange_rate', Number(calculatedRate.toFixed(4)), { shouldValidate: true, shouldDirty: false });
+      }
+    }
+  }, [currencyOptions, watchCurrency, watchTargetCurrency, setValue, formMethods]);
+
   useEffect(() => {
     if (!isMulticurrency) {
       if (getValues('currency') !== 'THB' || getValues('exchange_rate') !== 1) {
         setValue('currency', 'THB');
         setValue('exchange_rate', 1);
-        setValue('target_currency', '');
+        setValue('target_currency', 'THB');
         setValue('exchange_rate_date', '');
       }
     }
@@ -170,10 +198,14 @@ export const useVQForm = (
     if (isOpen) {
       if (vqId) {
         setIsDataLoading(true);
-        // --- VIEW / EDIT MODE: Fetch Existing VQ ---
-        VQService.getById(vqId).then(async (response) => {
+        // --- VIEW / EDIT MODE: Fetch Existing VQ and Master Items ---
+        Promise.all([
+            VQService.getById(vqId),
+            MasterDataService.getItems().catch(() => [])
+        ]).then(async ([response, itemsRes]) => {
+            const masterItems = Array.isArray(itemsRes) ? itemsRes : ((itemsRes as any)?.data || (itemsRes as any)?.items || []);
+            
             // @Agent_Payload_Parser - Data Normalization (Unwrap Array) 
-            // We use type assertion to our specific RawVQResponse instead of any/unknown
             const data = (Array.isArray(response) ? response[0] : response) as RawVQResponse;
             
             if (!data) {
@@ -186,11 +218,11 @@ export const useVQForm = (
 
             // SPECIAL CASE: If PENDING, we must pull LATEST lines from the referenced RFQ
             let apiLines: RFQLine[] = [];
-            if (data.status === 'PENDING' && data.rfq_id) {
-               try {
-                  const rfqDetail: RFQDetailResponse = await RFQService.getById(data.rfq_id);
-                  apiLines = rfqDetail.rfqLines || rfqDetail.lines || [];
-               } catch (err) {
+                if (data.status === 'PENDING' && data.rfq_id) {
+                   try {
+                      const rfqDetail: RFQDetailResponse = await RFQService.getById(data.rfq_id);
+                      apiLines = (rfqDetail.lines && rfqDetail.lines.length > 0) ? rfqDetail.lines : (rfqDetail.rfqLines || []);
+                   } catch (err) {
                   logger.error('[useVQForm] Failed to fetch RFQ lines for PENDING VQ:', err);
                }
             }
@@ -204,13 +236,14 @@ export const useVQForm = (
             }
 
             const mappedLines: QuotationLineFormData[] = (apiLines.length > 0 ? apiLines : linesToMap).map((l: RawVQLine) => {
+                const matchedItem = masterItems.find((i: any) => Number(i.item_id) === Number(l.item_id));
                 return {
                     ...createEmptyLine(),
                     line_no: Number(l.line_no) || 0,
                     item_id: Number(l.item_id) || 0,
                     // 💧 @Agent_View_Hydrator: Multi-fallback for item details in View Mode
-                    item_code: String(l.item_code || l.itemCode || l.product_code || l.item?.item_code || l.product?.product_code || ''),
-                    item_name: String(l.item_name || l.itemName || l.product_name || l.item?.item_name || l.product?.product_name || l.description || ''),
+                    item_code: String(l.item_code || l.itemCode || l.product_code || matchedItem?.item_code || l.item?.item_code || l.product?.product_code || ''),
+                    item_name: String(l.item_name || l.itemName || l.product_name || matchedItem?.item_name || l.item?.item_name || l.product?.product_name || l.description || ''),
                     qty: Number(l.qty) || 0,
                     unit_price: Number(l.unit_price) || 0,
                     discount_expression: String(l.discount_expression || l.discount_raw || '0'),
@@ -242,7 +275,8 @@ export const useVQForm = (
             });
 
             const rawHydratedData = {
-                quotation_no: data.vq_no || '',
+                vq_no: data.vq_no || '',
+                quotation_no: data.quotation_no || '',
                 quotation_date: data.quotation_date || new Date().toISOString(),
                 vendor_id: Number(data.vendor_id || 0),
                 vendor_code: data.vendor?.vendor_code || data.vendor_code || '',
@@ -373,14 +407,15 @@ export const useVQForm = (
       } else {
         // --- BLANK CREATE MODE ---
         reset({
+          vq_no: '',
           quotation_no: '',
           quotation_date: formatDateForInputHelper(new Date()),
           currency: 'THB',
           isMulticurrency: false,
           exchange_rate_date: '',
-          target_currency: '',
+          target_currency: 'THB',
           exchange_rate: 1,
-          vq_lines: [createEmptyLine()],
+          vq_lines: [],
           payment_term_days: 0,
           lead_time_days: 0,
           remark: '',
@@ -392,6 +427,7 @@ export const useVQForm = (
           status: 'DRAFT',
           created_by_name: user?.employee?.employee_fullname || user?.username || ''
         });
+        replace([]);
         setDbTotals(null);
       }
     }
@@ -517,10 +553,11 @@ export const useVQForm = (
     };
   };
 
-  const sanitizePayload = (data: QuotationFormData): VQCreateData => {
+    const sanitizePayload = (data: QuotationFormData): VQCreateData => {
     const payload: VQCreateData = {
       // 🛡️ @Agent_Ultimate_Purifier: STRICT DTO MAPPING (Header)
-      quotation_no: data.quotation_no || "-", 
+      vq_no: data.vq_no,
+      quotation_no: data.quotation_no || '', 
       quotation_date: data.quotation_date ? new Date(data.quotation_date).toISOString() : new Date().toISOString(),
       quotation_expiry_date: data.valid_until ? new Date(data.valid_until).toISOString() : undefined,
       vendor_id: Number(data.vendor_id),
@@ -650,10 +687,13 @@ export const useVQForm = (
       handleClearVendor();
 
       // 2. Fetch concurrently using Promise.all
-      const [existingVQs, fullRFQ] = await Promise.all([
+      const [existingVQs, fullRFQ, itemsRes] = await Promise.all([
         VQService.getVQsByRfqId(rfq.rfq_id),
-        RFQService.getById(rfq.rfq_id)
+        RFQService.getById(rfq.rfq_id),
+        MasterDataService.getItems().catch(() => [])
       ]);
+
+      const masterItems = Array.isArray(itemsRes) ? itemsRes : ((itemsRes as any)?.data || (itemsRes as any)?.items || []);
 
       const existingVendorIds = (existingVQs?.data || []).map((v: any) => v.vendor_id);
       const allVendors = fullRFQ.vendors || fullRFQ.rfqVendors || [];
@@ -690,11 +730,13 @@ export const useVQForm = (
       setAvailableVendors(mappedVendors);
 
       // 5. Normal processing (setting RFQ lines)
-      const apiLines: RFQLine[] = fullRFQ.rfqLines || fullRFQ.lines || [];
-      const mappedLines: QuotationLineFormData[] = apiLines.map((line: RFQLine) => ({
-          ...createEmptyLine(),
-          item_id: Number(line.item_id) || 0,
-          item_code: String(line.item_code || line.itemCode || line.product_code || line.item?.item_code || line.product?.product_code || ''),
+      const apiLines: RFQLine[] = (fullRFQ.lines && fullRFQ.lines.length > 0) ? fullRFQ.lines : (fullRFQ.rfqLines || []);
+      const mappedLines: QuotationLineFormData[] = apiLines.map((line: RFQLine) => {
+          const matchedItem = masterItems.find((i: any) => Number(i.item_id) === Number(line.item_id));
+          return {
+              ...createEmptyLine(),
+              item_id: Number(line.item_id) || 0,
+              item_code: String(line.item_code || line.itemCode || line.product_code || matchedItem?.item_code || line.item?.item_code || line.product?.product_code || ''),
           item_name: String(line.item_name || line.itemName || line.product_name || line.item?.item_name || line.product?.product_name || line.description || ''),
           qty: Number(line.qty) || 1,
           uom_id: Number(line.uom_id) || 0,
@@ -709,7 +751,8 @@ export const useVQForm = (
           rfq_line_id: line.rfq_line_id ? Number(line.rfq_line_id) : 0,
           status: 'OPEN',
           remark: String(line.description || '')
-      }));
+          };
+      });
 
       // Update Header Fields
       setValue('rfq_id', Number(fullRFQ.rfq_id), { shouldValidate: true });

@@ -43,7 +43,7 @@ export const getColumns = (context: VQColumnsContext): ColumnDef<VQListItem, any
                 );
             },
             size: 140,
-            enableSorting: true,
+            enableSorting: false,
         }),
         columnHelper.accessor('quotation_date', {
             header: () => <div className="text-center w-full">วันที่เอกสาร</div>,
@@ -53,7 +53,7 @@ export const getColumns = (context: VQColumnsContext): ColumnDef<VQListItem, any
                 </div>
             ),
             size: 110,
-            enableSorting: true,
+            enableSorting: false,
         }),
         columnHelper.accessor('vendor_name', {
             header: 'ผู้ขาย',
@@ -125,7 +125,7 @@ export const getColumns = (context: VQColumnsContext): ColumnDef<VQListItem, any
                 );
             },
             size: 120,
-            enableSorting: true,
+            enableSorting: false,
         }),
         columnHelper.accessor('quotation_expiry_date', {
             header: () => <div className="text-center w-full">วันหมดเขต</div>,
@@ -135,7 +135,7 @@ export const getColumns = (context: VQColumnsContext): ColumnDef<VQListItem, any
                 </div>
             ),
             size: 110,
-            enableSorting: true,
+            enableSorting: false,
         }),
         columnHelper.accessor('status', {
             header: () => <div className="text-center w-full">สถานะ</div>,

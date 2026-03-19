@@ -18,7 +18,6 @@ import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
 import { usePRMasterData, type MappedOption } from './usePRMasterData';
-import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
 import type { WarehouseListItem, Currency } from '@/modules/master-data/types/master-data-types';
 import { usePRActions } from './usePRActions';
 import { useQueryClient } from '@tanstack/react-query';
@@ -128,21 +127,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
   
   const { handleSubmit, setValue, reset, watch, setFocus, control, getFieldState, formState: { isSubmitting, errors } } = formMethods;
 
-   // Effect: Set Default Tax Code (Safe Lookup)
-   useEffect(() => {
-     if (purchaseTaxOptions.length > 0 && !formMethods.getValues('pr_tax_code_id')) {
-       // Find 'VAT-IN-7' safely by code, fallback to first purchase tax, or 7% default
-       // Find 'VAT-IN-7' safely by code, fallback to first purchase tax, or 7% default
-       const defaultTax = purchaseTaxOptions.find((t: MappedOption<TaxCode>) => t.original?.tax_code === 'VAT-IN-7') || 
-                          purchaseTaxOptions.find((t: MappedOption<TaxCode>) => t.original?.tax_rate === 7) ||
-                          purchaseTaxOptions[0];
-       
-       if (defaultTax) {
-         setValue('pr_tax_code_id', Number(defaultTax.value));
-         setValue('pr_tax_rate', Number(defaultTax.original?.tax_rate || 0));
-       }
-     }
-   }, [purchaseTaxOptions, setValue, formMethods]);
+
 
   // 🎯 FIX: Sync requester_name from Auth User if it's currently empty (New PR)
   useEffect(() => {
@@ -197,24 +182,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
     }
   }, [setFocus, toast]);
 
-  // Fetch Default Tax Rate on Mount (Standardized on VAT 7% for Purchase)
-  useEffect(() => {
-    if (id || purchaseTaxOptions.length === 0) return;
-    
-    const currentTaxId = formMethods.getValues('pr_tax_code_id');
-    if (!currentTaxId) {
-      // Find 'VAT-IN-7' or fallback to 7% rate
-      // Find 'VAT-IN-7' or fallback to 7% rate
-      const defaultTax = purchaseTaxOptions.find((t: MappedOption<TaxCode>) => t.original?.tax_code === 'VAT-IN-7') || 
-                         purchaseTaxOptions.find((t: MappedOption<TaxCode>) => t.original?.tax_rate === 7) ||
-                         purchaseTaxOptions[0];
-      
-      if (defaultTax) {
-        setValue('pr_tax_code_id', Number(defaultTax.value));
-        setValue('pr_tax_rate', Number(defaultTax.original?.tax_rate || 0));
-      }
-    }
-  }, [id, purchaseTaxOptions, setValue, formMethods]);
+
 
   useEffect(() => {
     // Phase 1 & 2: Safe hydration ensures we only execute PR fetching and mapping WHEN master data is completely loaded

@@ -219,7 +219,7 @@ export const getPRDefaultFormValues = (user?: { id?: string | number; username?:
     total_amount: 0,
     pr_discount_raw: '',
     pr_tax_code_id: undefined,
-    pr_tax_rate: 7,
+    pr_tax_rate: 0,
     branch_id: undefined,
     warehouse_id: undefined,
     pr_sub_total: 0,

@@ -87,15 +87,17 @@ export const PRFormSummary: React.FC<PRFormSummaryProps> = ({ isViewMode = false
                 <div className="flex justify-between items-center">
                   <span className={labelClass}>ภาษี VAT</span>
                   <div className="flex items-center gap-1">
-                    <div className="relative flex items-center">
-                        <input 
-                          value={vatRate} 
-                          readOnly 
-                          className={`w-12 text-center ${inputReadonlyClass} pr-4`} 
-                        />
-                        <span className="absolute right-1.5 text-gray-400 dark:text-gray-500 text-[10px]">%</span>
-                    </div>
-                    <span className="text-gray-400 dark:text-gray-500">-</span>
+                    {vatRate > 0 && (
+                        <div className="relative flex items-center">
+                            <input 
+                              value={vatRate} 
+                              readOnly 
+                              className={`w-12 text-center ${inputReadonlyClass} pr-4`} 
+                            />
+                            <span className="absolute right-1.5 text-gray-400 dark:text-gray-500 text-[10px]">%</span>
+                        </div>
+                    )}
+                    {vatRate > 0 && <span className="text-gray-400 dark:text-gray-500">-</span>}
                     <input 
                       value={taxAmountState?.toLocaleString(undefined, { minimumFractionDigits: 2 })} 
                       readOnly 

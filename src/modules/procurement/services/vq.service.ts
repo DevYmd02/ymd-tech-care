@@ -37,6 +37,7 @@ export const VQService = {
       return applyClientFilters<VQListItem>(allItems, filterParams, {
         searchableFields: ['quotation_no', 'vendor_name', 'rfq_no', 'pr_no'],
         dateField: 'quotation_date',
+        backendTotal: response.total,
       });
     }
 
@@ -44,7 +45,7 @@ export const VQService = {
     const allItems = extractArrayFromResponse<VQListItem>(response);
     const page = params?.page || 1;
     const limit = params?.limit || 20;
-    return applyClientPagination<VQListItem>(allItems, page, limit);
+    return applyClientPagination<VQListItem>(allItems, page, limit, response.total);
   },
 
   getVQsByRfqId: async (rfqId: number): Promise<VQListResponse> => {

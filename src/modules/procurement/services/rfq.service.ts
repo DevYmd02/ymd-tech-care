@@ -160,7 +160,8 @@ export const RFQService = {
 
         return applyClientFilters<RFQHeader>(normalizedItems, filterParams, {
             searchableFields: ['rfq_no', 'pr_no', 'creator_name'],
-            dateField: 'rfq_date'
+            dateField: 'rfq_date',
+            backendTotal: res.total,
         }) as unknown as RFQListResponse;
     }
 
