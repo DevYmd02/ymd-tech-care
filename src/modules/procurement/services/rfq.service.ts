@@ -3,7 +3,7 @@ import type { RFQHeader, RFQListResponse, RFQFilterCriteria, RFQDetailResponse, 
 import { logger } from '@/shared/utils/logger';
 import type { SuccessResponse } from '@/shared/types/api-response.types';
 import { extractErrorMessage } from '@/core/api/api';
-import { extractArrayFromResponse } from '@/shared/utils/clientFilterUtils';
+import { applyClientFilters, extractArrayFromResponse } from '@/shared/utils/clientFilterUtils';
 
 const ENDPOINTS = {
   list: '/rfq',
@@ -107,20 +107,77 @@ export const RFQService = {
 
     // 🧹 Clean Parameters to prevent "undefined" in URL
     const cleanedParams = cleanParams(params || {});
-    const res = await api.get<RFQListResponse & { pageSize?: number }>(ENDPOINTS.list, { params: cleanedParams });
+    
+    // 🧹 Extract ONLY safe pagination/sorting for backend to prevent flaky filter breakage
+    const apiParams: Record<string, string | number | boolean | undefined | null> = {};
+    if (cleanedParams.page) apiParams.page = cleanedParams.page;
+    if (cleanedParams.limit) apiParams.limit = cleanedParams.limit;
+    if (cleanedParams.sort) apiParams.sort = cleanedParams.sort;
+
+    // 🎯 Architecture: Fetch ALL to allow client-side hybrid filters
+    const res = await api.get<RFQListResponse & { pageSize?: number }>(ENDPOINTS.list, { 
+        params: { ...apiParams, limit: 1000 } 
+    });
 
     // 🎯 Trusting Backend + Normalizing for UI (The Pipeline Fix)
-    // The backend returns { data: [...], total: 8, page: 1, pageSize: 20 }
     const items = extractArrayFromResponse<RFQHeader>(res);
+
+    // 🎯 HYBRID FALLBACK: Apply Client-Side Filtering when using Real API
+    if (params) {
+        const normalizedItems = items.map((item) => {
+            const u = item.requested_by_user;
+            const creatorName = u
+                ? `${u.employee_firstname_th} ${u.employee_lastname_th}`.trim()
+                : (item.created_by_name || item.creator_name || '-');
+
+            // 🎯 Dynamic Status Matching (Mirroring Layout Logic)
+            const sentCount = item.vendor_sent ?? item.sent_vendors_count ?? 0;
+            const total = item.vendor_total ?? item.vendor_count ?? 0;
+            let currentStatus = item.status;
+            if (!['CLOSED', 'CANCELLED'].includes(item.status) && total > 0 && sentCount > 0) {
+                 currentStatus = 'SENT';
+            }
+
+            return {
+                ...item,
+                creator_name: creatorName,
+                status: currentStatus, // Overwrite with dynamic status
+                ref_pr_no: item.ref_pr_no || item.pr_no || item.pr?.pr_no || null,
+                pr_no: item.ref_pr_no || item.pr_no || item.pr?.pr_no || null,
+            };
+        });
+
+        const filterParams: Record<string, string | number | boolean | undefined | null> = {};
+        if (params.rfq_no) filterParams.rfq_no = params.rfq_no;
+        if (params.pr_no) filterParams.pr_no = params.pr_no;
+        if (params.creator_name) filterParams.creator_name = params.creator_name;
+        if (params.status && params.status !== 'ALL') filterParams.status = params.status;
+        if (params.date_start) filterParams.date_start = params.date_start;
+        if (params.date_end) filterParams.date_end = params.date_end;
+        if (params.page) filterParams.page = params.page;
+        if (params.limit) filterParams.limit = params.limit;
+        if (params.sort) filterParams.sort = params.sort;
+
+        return applyClientFilters<RFQHeader>(normalizedItems, filterParams, {
+            searchableFields: ['rfq_no', 'pr_no', 'creator_name'],
+            dateField: 'rfq_date'
+        }) as unknown as RFQListResponse;
+    }
+
     const total = typeof res?.total === 'number' ? res.total : items.length;
     const limit = res?.limit || res?.pageSize || Number(cleanedParams.limit) || 20;
 
+    const defaultNormalizedItems = items.map((item) => ({
+        ...item,
+        ref_pr_no: item.ref_pr_no || item.pr_no || item.pr?.pr_no || null,
+    }));
+
     return {
-      data: items,
-      total: total,
-      page: res?.page || Number(cleanedParams.page) || 1,
-      limit: limit,
-      totalPages: res?.totalPages || Math.ceil(total / limit) || 1
+        data: defaultNormalizedItems,
+        total: total,
+        page: res?.page || Number(cleanedParams.page) || 1,
+        limit: limit,
+        totalPages: res?.totalPages || Math.ceil(total / limit) || 1
     };
   },
 

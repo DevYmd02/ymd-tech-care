@@ -159,8 +159,8 @@ export default function VQListPage() {
         rfq_no: filters.search3 || undefined,
         pr_no: filters.search4 || undefined,
         status: filters.status === 'ALL' ? undefined : filters.status,
-        date_from: filters.dateFrom || undefined,
-        date_to: filters.dateTo || undefined,
+        date_from: filters.date_start || undefined,
+        date_to: filters.date_end || undefined,
         page: filters.page,
         limit: filters.limit,
         sort: filters.sort || undefined
@@ -308,8 +308,6 @@ export default function VQListPage() {
         setIsViewMode
     }), [filters.page, filters.limit, setInitialRFQForCreate, setIsVqModalOpen, setSelectedVqId, setIsViewMode, vendorMap]);
 
-
-
     return (
         <>
             <PageListLayout
@@ -374,15 +372,15 @@ export default function VQListPage() {
                                 <FilterField
                                     label="วันที่เริ่มต้น"
                                     type="date"
-                                    value={localFilters.dateFrom || ''}
-                                    onChange={(val) => handleFilterChange('dateFrom', val)}
+                                    value={localFilters.date_start || ''}
+                                    onChange={(val) => handleFilterChange('date_start', val)}
                                     accentColor="blue"
                                 />
                                 <FilterField
                                     label="วันที่สิ้นสุด"
                                     type="date"
-                                    value={localFilters.dateTo || ''}
-                                    onChange={(val) => handleFilterChange('dateTo', val)}
+                                    value={localFilters.date_end || ''}
+                                    onChange={(val) => handleFilterChange('date_end', val)}
                                     accentColor="blue"
                                 />
                             </div>

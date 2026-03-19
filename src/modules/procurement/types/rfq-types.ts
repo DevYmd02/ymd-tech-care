@@ -285,13 +285,14 @@ export const initialRFQFormData: RFQFormData = {
 export interface RFQFilterCriteria {
     rfq_no?: string;
     ref_pr_no?: string;
+    pr_no?: string;
     pr_id?: number;
     creator_name?: string;
     search?: string;
     keyword?: string;
     status?: RFQStatus | 'ALL';
-    date_from?: string;
-    date_to?: string;
+    date_start?: string;
+    date_end?: string;
     page?: number;
     limit?: number;
     sort?: string;

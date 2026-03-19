@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Search, Check, FileText, Loader2 } from 'lucide-react';
 import type { PRHeader } from '@/modules/procurement/types';
 import { PRService } from '@/modules/procurement/services/pr.service';
+import { RFQService } from '@/modules/procurement/services/rfq.service';
 import { ModalLayout } from '@/shared/components/ui/layout/ModalLayout';
 import { logger } from '@/shared/utils/logger';
 
@@ -14,31 +15,52 @@ interface PRSourceSelectionModalProps {
 export const PRSourceSelectionModal: React.FC<PRSourceSelectionModalProps> = ({ isOpen, onClose, onSelect }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [prList, setPrList] = useState<PRHeader[]>([]);
+    const [linkedPrNos, setLinkedPrNos] = useState<Set<string>>(new Set());
     const [isLoading, setIsLoading] = useState(false);
     const [fetchError, setFetchError] = useState<string | null>(null);
 
-    // Fetch APPROVED PRs from real API whenever modal opens
+    // Fetch APPROVED PRs and Linked RFQs from real API whenever modal opens
     useEffect(() => {
         if (!isOpen) return;
 
-        const fetchApprovedPRs = async () => {
+        const fetchData = async () => {
             setIsLoading(true);
             setFetchError(null);
             try {
-                logger.info('[PRSourceSelectionModal] Fetching APPROVED PRs from API');
-                const response = await PRService.getList({ status: 'APPROVED' });
-                setPrList(response.data);
-                logger.info(`[PRSourceSelectionModal] Loaded ${response.data.length} APPROVED PRs`);
+                logger.info('[PRSourceSelectionModal] Fetching APPROVED PRs and RFQs');
+                
+                // 1. Fetch Approved PRs
+                const prResponse = await PRService.getList({ status: 'APPROVED' });
+                const prs = prResponse.data || [];
+
+                // 2. Fetch RFQs to get already linked PR Numbers
+                const rfqResponse = await RFQService.getList({ limit: 1000 });
+                const rfqs = rfqResponse.data || [];
+
+                // 3. Extract PR Numbers from non-cancelled RFQs
+                const usedNos = new Set<string>();
+                rfqs.forEach(rfq => {
+                    const prNo = rfq.ref_pr_no || rfq.pr_no;
+                    if (prNo && rfq.status !== 'CANCELLED') {
+                        usedNos.add(prNo);
+                    }
+                });
+
+                setLinkedPrNos(usedNos);
+                setPrList(prs);
+                
+                logger.info(`[PRSourceSelectionModal] Loaded ${prs.length} APPROVED PRs, found ${usedNos.size} used PR Numbers`);
             } catch (error) {
-                logger.error('[PRSourceSelectionModal] Failed to fetch APPROVED PRs:', error);
-                setFetchError('ไม่สามารถดึงข้อมูล PR ได้ กรุณาลองใหม่อีกครั้ง');
+                logger.error('[PRSourceSelectionModal] Failed to fetch data:', error);
+                setFetchError('ไม่สามารถดึงข้อมูลได้ กรุณาลองใหม่อีกครั้ง');
                 setPrList([]);
+                setLinkedPrNos(new Set());
             } finally {
                 setIsLoading(false);
             }
         };
 
-        fetchApprovedPRs();
+        fetchData();
     }, [isOpen]);
 
     // Reset search when modal closes
@@ -50,12 +72,17 @@ export const PRSourceSelectionModal: React.FC<PRSourceSelectionModalProps> = ({ 
 
     const filteredPRs = useMemo(() => {
         const term = searchTerm.toLowerCase();
-        if (!term) return prList;
-        return prList.filter(pr =>
+        
+        // Step 1: Filter out PRs already linked to an RFQ
+        const unlinkedPRs = prList.filter(pr => !linkedPrNos.has(pr.pr_no));
+
+        // Step 2: Apply Search Filter
+        if (!term) return unlinkedPRs;
+        return unlinkedPRs.filter(pr =>
             pr.pr_no.toLowerCase().includes(term) ||
             (pr.requester_name && pr.requester_name.toLowerCase().includes(term))
         );
-    }, [prList, searchTerm]);
+    }, [prList, linkedPrNos, searchTerm]);
 
     return (
         <ModalLayout

@@ -16,7 +16,7 @@ import { createColumnHelper } from '@tanstack/react-table';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { logger } from '@/shared/utils/logger';
 // Services & Types
-import { RFQService } from '@/modules/procurement/services';
+import { RFQService, PRService } from '@/modules/procurement/services';
 import type { RFQFilterCriteria, RFQHeader, RFQStatus, SendRFQToVendorPayload } from '@/modules/procurement/types';
 import { RFQFormModal, RFQSendConfirmModal } from './components';
 
@@ -46,8 +46,7 @@ const RFQ_STATUS_OPTIONS = [
 //     { name: 'search2', label: 'PR อ้างอิง', type: 'text', placeholder: 'PR-xxx' },
 //     { name: 'creator', label: 'ผู้สร้าง RFQ', type: 'text', placeholder: 'ชื่อผู้สร้าง' },
 //     { name: 'status', label: 'สถานะ', type: 'select', options: RFQ_STATUS_OPTIONS },
-//     { name: 'dateFrom', label: 'วันที่เริ่มต้น', type: 'date' },
-//     { name: 'dateTo', label: 'วันที่สิ้นสุด', type: 'date' },
+
 // ];
 
 // ====================================================================================
@@ -64,14 +63,49 @@ const getDynamicStatus = (item: RFQHeader) => {
     const total = item.vendor_total ?? item.vendor_count ?? 0;
     
     // 2. Apply dynamic logic for DRAFT vs SENT
-    if (total > 0 && sentCount === total) {
+    if (total > 0 && sentCount > 0) {
         return 'SENT';
-    }
-    if (total > 0 && sentCount > 0 && sentCount < total) {
-        return 'DRAFT';
     }
     
     return item.status; // Fallback
+};
+
+// ====================================================================================
+// PR NUMBER HYDRATOR
+// ====================================================================================
+
+const PRNumberCell = ({ prId, fallbackNo }: { prId: number | null | undefined, fallbackNo?: string | null }) => {
+    const { data, isLoading } = useQuery({
+        queryKey: ['pr', prId],
+        queryFn: () => PRService.getDetail(prId!),
+        enabled: !!prId && !fallbackNo,
+    });
+
+    const prNo = fallbackNo || data?.pr_no || (data as { header?: { pr_no?: string } })?.header?.pr_no;
+
+    if (!prId && !fallbackNo) {
+        return <span className="text-xs text-gray-400 dark:text-gray-600 italic">ไม่มี PR อ้างอิง</span>;
+    }
+
+    if (isLoading && !fallbackNo) {
+        return (
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-400 bg-gray-50 dark:bg-slate-800 px-1.5 py-0.5 rounded w-fit animate-pulse">
+                <span className="font-semibold text-gray-500">PR:</span>
+                กำลังโหลด...
+            </span>
+        );
+    }
+
+    if (!prNo) {
+        return <span className="text-xs text-gray-400 dark:text-gray-600 italic">ไม่มี PR อ้างอิง</span>;
+    }
+
+    return (
+        <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-1.5 py-0.5 rounded w-fit">
+            <span className="font-semibold">PR:</span>
+            {prNo}
+        </span>
+    );
 };
 
 // ====================================================================================
@@ -84,7 +118,7 @@ export default function RFQListPage() {
         defaultStatus: 'ALL',
         customParamKeys: {
             search: 'rfq_no',
-            search2: 'ref_pr_no',
+            search2: 'pr_no',
             search3: 'creator_name'
         }
     });
@@ -92,11 +126,11 @@ export default function RFQListPage() {
     // Convert to API filter format using APPLIED filters (from URL)
     const apiFilters: RFQFilterCriteria = {
         rfq_no: filters.search || undefined,
-        ref_pr_no: filters.search2 || undefined,
+        pr_no: filters.search2 || undefined,
         creator_name: filters.search3 || undefined,
         status: filters.status === 'ALL' ? undefined : filters.status,
-        date_from: filters.dateFrom || undefined,
-        date_to: filters.dateTo || undefined,
+        date_start: filters.date_start || undefined,
+        date_end: filters.date_end || undefined,
         page: filters.page,
         limit: filters.limit,
         sort: filters.sort || undefined
@@ -231,19 +265,15 @@ export default function RFQListPage() {
                 const prNumber = item.ref_pr_no || item.pr_no || item.pr?.pr_no;
 
                 return (
-                    <div className="flex flex-col py-2">
+                    <div className="flex flex-col py-2 gap-1">
                         <span className="font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline cursor-pointer" title={info.getValue()}>
                             {info.getValue()}
                         </span>
-                        {prNumber && (
-                            <span className="text-xs text-gray-500 mt-1">
-                                Ref: {prNumber}
-                            </span>
-                        )}
+                        <PRNumberCell prId={item.pr_id} fallbackNo={prNumber} />
                     </div>
                 );
             },
-            size: 180,
+            size: 200,
             enableSorting: true,
         }),
         columnHelper.display({
@@ -399,10 +429,10 @@ export default function RFQListPage() {
                                 {sentCount < total && (
                                     <button 
                                         className="flex items-center gap-1 pl-1.5 pr-2 py-1 ml-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap"
-                                        title={item.status === 'DRAFT' ? "ส่ง RFQ" : "ส่งเพิ่ม"}
+                                        title={sentCount === 0 ? "ส่ง RFQ" : "ส่งเพิ่ม"}
                                         onClick={() => handleSendRFQ(item)}
                                     >
-                                        <Send size={12} /> {item.status === 'DRAFT' ? "ส่ง RFQ" : "ส่งเพิ่ม"}
+                                        <Send size={12} /> {sentCount === 0 ? "ส่ง RFQ" : "ส่งเพิ่ม"}
                                     </button>
                                 )}
                             </>
@@ -466,15 +496,15 @@ export default function RFQListPage() {
                         <FilterField
                             label="วันที่เริ่มต้น"
                             type="date"
-                            value={localFilters.dateFrom || ''}
-                            onChange={(val: string) => handleFilterChange('dateFrom', val)}
+                            value={localFilters.date_start || ''}
+                            onChange={(val: string) => handleFilterChange('date_start', val)}
                             accentColor="blue"
                         />
                         <FilterField
                             label="วันที่สิ้นสุด"
                             type="date"
-                            value={localFilters.dateTo || ''}
-                            onChange={(val: string) => handleFilterChange('dateTo', val)}
+                            value={localFilters.date_end || ''}
+                            onChange={(val: string) => handleFilterChange('date_end', val)}
                             accentColor="blue"
                         />
                         
@@ -550,7 +580,7 @@ export default function RFQListPage() {
                                     subtitle={formatThaiDate(item.rfq_date)}
                                     statusBadge={<RFQStatusBadge status={dynamicStatus} />}
                                     details={[
-                                        ...(prNumber ? [{ label: 'PR อ้างอิง:', value: <span className="font-medium text-blue-600 dark:text-blue-400">{prNumber}</span> }] : []),
+                                        ...((item.pr_id || prNumber) ? [{ label: 'PR อ้างอิง:', value: <PRNumberCell prId={item.pr_id} fallbackNo={prNumber} /> }] : []),
                                         { label: 'ผู้สร้าง:', value: (() => {
                                             const u = item.requested_by_user;
                                             return u
@@ -590,7 +620,7 @@ export default function RFQListPage() {
                                                             onClick={() => handleSendRFQ(item)}
                                                             className="flex-[2] bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
                                                         >
-                                                            <Send size={14} /> {item.status === 'DRAFT' ? "ส่ง RFQ" : "ส่งเพิ่ม"}
+                                                            <Send size={14} /> {sentCount === 0 ? "ส่ง RFQ" : "ส่งเพิ่ม"}
                                                         </button>
                                                     )}
                                                 </>

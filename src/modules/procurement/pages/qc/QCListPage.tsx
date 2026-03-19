@@ -47,11 +47,11 @@ export default function QCListPage() {
         pr_no: filters.search2 || undefined,
         rfq_no: filters.search3 || undefined,
         status: filters.status === 'ALL' ? undefined : filters.status,
-        date_from: filters.dateFrom || undefined,
-        date_to: filters.dateTo || undefined,
+        date_from: filters.date_start || undefined,
+        date_to: filters.date_end || undefined,
         page: filters.page,
         limit: filters.limit,
-        sort: filters.sort || undefined,
+        sort: filters.sort || undefined
     };
 
     // Data Fetching with React Query
@@ -315,18 +315,18 @@ export default function QCListPage() {
                             accentColor="indigo"
                         />
                         <FilterField
-                            label="วันที่สร้างเริ่มต้น"
+                            label="วันที่เริ่มต้น"
                             type="date"
-                            value={localFilters.dateFrom || ''}
-                            onChange={(val: string) => handleFilterChange('dateFrom', val)}
-                            accentColor="indigo"
+                            value={localFilters.date_start || ''}
+                            onChange={(val: string) => handleFilterChange('date_start', val)}
+                            accentColor="blue"
                         />
                         <FilterField
-                            label="วันที่สร้างสิ้นสุด"
+                            label="วันที่สิ้นสุด"
                             type="date"
-                            value={localFilters.dateTo || ''}
-                            onChange={(val: string) => handleFilterChange('dateTo', val)}
-                            accentColor="indigo"
+                            value={localFilters.date_end || ''}
+                            onChange={(val: string) => handleFilterChange('date_end', val)}
+                            accentColor="blue"
                         />
                         
                         {/* Action Buttons Group */}

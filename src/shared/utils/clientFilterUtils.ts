@@ -93,9 +93,12 @@ export const applyClientFilters = <T extends object>(
   });
 
   // 3. Date Range Filtering
-  if ((params.date_from || params.date_to) && options.dateField) {
-    const dateFromStr = typeof params.date_from === 'string' ? params.date_from : undefined;
-    const dateToStr = typeof params.date_to === 'string' ? params.date_to : undefined;
+  const dateFrom = params.date_from ?? params.date_start;
+  const dateTo = params.date_to ?? params.date_end;
+
+  if ((dateFrom || dateTo) && options.dateField) {
+    const dateFromStr = typeof dateFrom === 'string' ? dateFrom : undefined;
+    const dateToStr = typeof dateTo === 'string' ? dateTo : undefined;
 
     const from = dateFromStr ? new Date(dateFromStr).getTime() : -Infinity;
     const to = dateToStr ? new Date(dateToStr).getTime() : Infinity;

@@ -68,8 +68,8 @@ export const PRService = {
       if (params.status && params.status !== 'ALL') filterParams.status = params.status;
       if (params.department) filterParams.department = params.department;
       if (params.cost_center_id) filterParams.cost_center_id = params.cost_center_id;
-      if (params.date_from) filterParams.date_from = params.date_from;
-      if (params.date_to) filterParams.date_to = params.date_to;
+      if (params.date_start) filterParams.date_start = params.date_start;
+      if (params.date_end) filterParams.date_end = params.date_end;
       if (params.page) filterParams.page = params.page;
       if (params.limit) filterParams.limit = params.limit;
       if (params.sort) filterParams.sort = params.sort;
@@ -123,7 +123,7 @@ export const PRService = {
 
       return applyClientFilters<PRHeader>(hydratedItems, filterParams, {
         searchableFields: ['pr_no', 'requester_name', 'purpose'],
-        dateField: 'pr_date',
+        dateField: 'need_by_date',
       });
     }
 

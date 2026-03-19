@@ -26,8 +26,8 @@ export interface TableFilterOptions<TStatus extends string = string> {
   defaultSearch4?: string;
   defaultStatus?: TStatus | 'ALL';
   defaultSort?: string;
-  defaultDateFrom?: string;
-  defaultDateTo?: string;
+  defaultDate_start?: string;
+  defaultDate_end?: string;
   customParamKeys?: {
     page?: string;
     limit?: string;
@@ -37,8 +37,8 @@ export interface TableFilterOptions<TStatus extends string = string> {
     search4?: string;
     status?: string;
     sort?: string;
-    dateFrom?: string;
-    dateTo?: string;
+    date_start?: string;
+    date_end?: string;
   };
 }
 
@@ -52,8 +52,8 @@ export interface TableFilters<TStatus extends string = string> {
   search4: string;
   status: TStatus | 'ALL';
   sort: string;
-  dateFrom: string;
-  dateTo: string;
+  date_start: string;
+  date_end: string;
 }
 
 /** Parsed sort state */
@@ -129,8 +129,8 @@ const PARAM_KEYS = {
   search4: 'search4',
   status: 'status',
   sort: 'sort',
-  dateFrom: 'dateFrom',
-  dateTo: 'dateTo',
+  date_start: 'date_start',
+  date_end: 'date_end',
 } as const;
 
 // ====================================================================================
@@ -164,9 +164,9 @@ export function useTableFilters<TStatus extends string = string>(
     search4: cpk?.search4 ?? PARAM_KEYS.search4,
     status: cpk?.status ?? PARAM_KEYS.status,
     sort: cpk?.sort ?? PARAM_KEYS.sort,
-    dateFrom: cpk?.dateFrom ?? PARAM_KEYS.dateFrom,
-    dateTo: cpk?.dateTo ?? PARAM_KEYS.dateTo,
-  }), [cpk?.page, cpk?.limit, cpk?.search, cpk?.search2, cpk?.search3, cpk?.search4, cpk?.status, cpk?.sort, cpk?.dateFrom, cpk?.dateTo]);
+    date_start: cpk?.date_start ?? PARAM_KEYS.date_start,
+    date_end: cpk?.date_end ?? PARAM_KEYS.date_end,
+  }), [cpk?.page, cpk?.limit, cpk?.search, cpk?.search2, cpk?.search3, cpk?.search4, cpk?.status, cpk?.sort, cpk?.date_start, cpk?.date_end]);
 
   // ------------------------------------------------------------
   // Default filter values (used for reset)
@@ -180,9 +180,9 @@ export function useTableFilters<TStatus extends string = string>(
     search4: options.defaultSearch4 || '',
     status: (options.defaultStatus || 'ALL') as TStatus | 'ALL',
     sort: options.defaultSort || '',
-    dateFrom: options.defaultDateFrom || '',
-    dateTo: options.defaultDateTo || '',
-  }), [options.defaultPage, options.defaultLimit, options.defaultSearch, options.defaultSearch2, options.defaultSearch3, options.defaultSearch4, options.defaultStatus, options.defaultSort, options.defaultDateFrom, options.defaultDateTo]);
+    date_start: options.defaultDate_start || '',
+    date_end: options.defaultDate_end || '',
+  }), [options.defaultPage, options.defaultLimit, options.defaultSearch, options.defaultSearch2, options.defaultSearch3, options.defaultSearch4, options.defaultStatus, options.defaultSort, options.defaultDate_start, options.defaultDate_end]);
 
   // ------------------------------------------------------------
   // APPLIED filters: Derived from URL params (triggers React Query)
@@ -199,8 +199,8 @@ export function useTableFilters<TStatus extends string = string>(
       search4: searchParams.get(keys.search4) ?? defaultFilters.search4,
       status: (searchParams.get(keys.status) ?? defaultFilters.status) as TStatus | 'ALL',
       sort: searchParams.get(keys.sort) ?? defaultFilters.sort,
-      dateFrom: searchParams.get(keys.dateFrom) ?? defaultFilters.dateFrom,
-      dateTo: searchParams.get(keys.dateTo) ?? defaultFilters.dateTo,
+      date_start: searchParams.get(keys.date_start) ?? defaultFilters.date_start,
+      date_end: searchParams.get(keys.date_end) ?? defaultFilters.date_end,
     };
   }, [searchParams, keys, defaultFilters]);
 
@@ -234,8 +234,8 @@ export function useTableFilters<TStatus extends string = string>(
         [keys.search3, localFilters.search3],
         [keys.search4, localFilters.search4],
         [keys.status, localFilters.status],
-        [keys.dateFrom, localFilters.dateFrom],
-        [keys.dateTo, localFilters.dateTo],
+        [keys.date_start, localFilters.date_start],
+        [keys.date_end, localFilters.date_end],
         [keys.sort, localFilters.sort],
       ];
 
@@ -298,7 +298,7 @@ export function useTableFilters<TStatus extends string = string>(
   // ------------------------------------------------------------
   const setFilters = useCallback(
     (updates: Partial<TableFilters<TStatus>>) => {
-      const shouldResetPage = 'search' in updates || 'search2' in updates || 'search3' in updates || 'search4' in updates || 'status' in updates || 'dateFrom' in updates || 'dateTo' in updates;
+      const shouldResetPage = 'search' in updates || 'search2' in updates || 'search3' in updates || 'search4' in updates || 'status' in updates || 'date_start' in updates || 'date_end' in updates;
       updateParams(updates, shouldResetPage && !('page' in updates));
       // Also sync local filters when programmatic updates are made
       setLocalFilters((prev) => ({ ...prev, ...updates }));
@@ -343,8 +343,8 @@ export function useTableFilters<TStatus extends string = string>(
   // ------------------------------------------------------------
   const handleDateRangeChange = useCallback(
     (from: string, to: string) => {
-      updateParams({ dateFrom: from, dateTo: to } as Partial<TableFilters<TStatus>>, true);
-      setLocalFilters((prev) => ({ ...prev, dateFrom: from, dateTo: to }));
+      updateParams({ date_start: from, date_end: to } as Partial<TableFilters<TStatus>>, true);
+      setLocalFilters((prev) => ({ ...prev, date_start: from, date_end: to }));
     },
     [updateParams]
   );

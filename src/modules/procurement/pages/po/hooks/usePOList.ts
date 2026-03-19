@@ -27,8 +27,8 @@ export const PO_FILTER_CONFIG: FilterFieldConfig<POFilterKeys>[] = [
     { name: 'search2', label: 'เลขที่ PR อ้างอิง', type: 'text', placeholder: 'PR2024-xxx' },
     { name: 'search3', label: 'ชื่อผู้ขาย', type: 'text', placeholder: 'ชื่อผู้ขาย' },
     { name: 'status', label: 'สถานะ', type: 'select', options: PO_STATUS_OPTIONS },
-    { name: 'dateFrom', label: 'วันที่เอกสาร จาก', type: 'date' },
-    { name: 'dateTo', label: 'ถึงวันที่', type: 'date' },
+    { name: 'date_start', label: 'วันที่เอกสาร จาก', type: 'date' },
+    { name: 'date_end', label: 'ถึงวันที่', type: 'date' },
 ];
 
 // ====================================================================================
@@ -61,8 +61,8 @@ export const usePOList = () => {
         pr_no: filters.search2 || undefined,
         vendor_name: filters.search3 || undefined,
         status: filters.status === 'ALL' ? undefined : filters.status,
-        date_from: filters.dateFrom || undefined,
-        date_to: filters.dateTo || undefined,
+        date_from: filters.date_start || undefined,
+        date_to: filters.date_end || undefined,
         page: filters.page,
         limit: filters.limit,
         sort: filters.sort || undefined,
