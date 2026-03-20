@@ -220,6 +220,7 @@ export const useVQForm = (
   // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
+      console.log("📌 [useVQForm] vqId inside effect:", vqId, "Type:", typeof vqId, "isOpen:", isOpen);
       if (vqId) {
         setIsDataLoading(true);
         // --- VIEW / EDIT MODE: Fetch Existing VQ and Master Items ---
@@ -229,8 +230,10 @@ export const useVQForm = (
         ]).then(async ([response, itemsRes]) => {
             const masterItems = Array.isArray(itemsRes) ? itemsRes : ((itemsRes as any)?.data || (itemsRes as any)?.items || []);
             
-            // @Agent_Payload_Parser - Data Normalization (Unwrap Array) 
-            const data = (Array.isArray(response) ? response[0] : response) as RawVQResponse;
+            // @Agent_Payload_Parser - Data Normalization (Unwrap Array/Object) 
+            const unwrappedResponse = (response as any)?.data ?? response;
+            const data = (Array.isArray(unwrappedResponse) ? unwrappedResponse[0] : unwrappedResponse) as RawVQResponse;
+            console.log("🔍 [useVQForm] VQ Data Loaded for ID", vqId, ":", data);
             
             if (!data) {
                 console.warn("VQ Data Not Found for ID:", vqId);
@@ -244,12 +247,17 @@ export const useVQForm = (
             let apiLines: RFQLine[] = [];
             if (data.rfq_id || data.vendor_id) {
                 try {
-                    const [rfqDetail, vendorDetail] = await Promise.all([
+                    const [rfqDetailRes, vendorDetailRes] = await Promise.all([
                         data.rfq_id ? RFQService.getById(data.rfq_id) : Promise.resolve(null),
                         data.vendor_id ? VendorService.getById(data.vendor_id) : Promise.resolve(null)
                     ]);
+                    const rfqDetail = (rfqDetailRes as any)?.data ?? rfqDetailRes;
+                    const vendorDetail = (vendorDetailRes as any)?.data ?? vendorDetailRes;
                     
-                    if (rfqDetail && data.status === 'PENDING') {
+                    const vqRawLines = data.vqLines || data.vq_lines || data.lines || data.items || [];
+                    const vqHasNoLines = !Array.isArray(vqRawLines) || vqRawLines.length === 0;
+                    
+                    if (rfqDetail && (data.status === 'PENDING' || vqHasNoLines)) {
                         apiLines = (rfqDetail.lines && rfqDetail.lines.length > 0) ? rfqDetail.lines : (rfqDetail.rfqLines || []);
                     }
                     
@@ -281,7 +289,8 @@ export const useVQForm = (
             }
 
             // @Agent_Payload_Parser - Line Mapping (Search for vqLines, vq_lines, lines, items)
-            const linesToMap = data.vqLines || data.vq_lines || data.lines || data.items || [];
+            const rawLines = data.vqLines || data.vq_lines || data.lines || data.items || [];
+            const linesToMap = Array.isArray(rawLines) ? rawLines : [];
             
             // @Agent_Backend_Diagnostic - Failsafe Alert
             if (linesToMap.length === 0 && apiLines.length === 0) {
@@ -356,7 +365,7 @@ export const useVQForm = (
                 status: data.status || 'DRAFT',
                 created_by: data.created_by ? Number(data.created_by) : undefined,
                 created_by_name: data.created_by_name || (data as any).created_by_user?.employee?.employee_fullname || (data as any).created_by_user?.name || (data as any).user?.name || (data as any).user?.username || '',
-                vq_lines: mappedLines
+                vq_lines: []
             };
 
             // 📅 @Agent_Date_Standardizer: Hydrate dates correctly for HTML inputs
@@ -390,6 +399,7 @@ export const useVQForm = (
             setIsDataLoading(false);
         }).catch(err => {
             logger.error('[useVQForm] Failed to fetch VQ detail:', err);
+            console.error("💥 [useVQForm] CRASH IN LOAD PROMISE:", err);
             setIsDataLoading(false);
         });
       } else if (initialRFQ) {
@@ -561,8 +571,13 @@ export const useVQForm = (
   
   const totals = useMemo(() => {
       const hasEdit = !!dirtyFields.vq_lines || !!dirtyFields.discount_expression || !!dirtyFields.tax_code_id;
-      // Use dbTotals only if it exists and there's no UI edit in the critical fields.
-      return (dbTotals && !hasEdit) ? dbTotals : calculatedTotals;
+      
+      const isCalculatedEmpty = (Number(calculatedTotals.subtotal) || 0) === 0;
+      const isDbPopulated = dbTotals && (Number(dbTotals.subtotal) || 0) > 0;
+
+      // 🛡️ @Agent_Totals_Synchronizer: Use dbTotals if calculated fails or no user edit
+      const useDb = (isDbPopulated && isCalculatedEmpty) || (dbTotals && !hasEdit);
+      return useDb ? dbTotals : calculatedTotals;
   }, [dbTotals, dirtyFields, calculatedTotals]);
   
   // Error handler (The PR DNA: Recursive first error message extractor)
@@ -752,20 +767,23 @@ export const useVQForm = (
       handleClearVendor();
 
       // 2. Fetch concurrently using Promise.all
-      const [existingVQs, fullRFQ, itemsRes] = await Promise.all([
-        VQService.getVQsByRfqId(rfq.rfq_id),
+      const [fullRFQ, itemsRes, rfqVendorsRes, existingVQsRes] = await Promise.all([
         RFQService.getById(rfq.rfq_id),
-        MasterDataService.getItems().catch(() => [])
+        MasterDataService.getItems().catch(() => []),
+        VQService.getModalWaitingForRFQVendor(rfq.rfq_id).catch(() => ({ data: [] })),
+        VQService.getVQsByRfqId(rfq.rfq_id).catch(() => ({ data: [] }))
       ]);
 
       const masterItems = Array.isArray(itemsRes) ? itemsRes : ((itemsRes as any)?.data || (itemsRes as any)?.items || []);
 
-      const existingVendorIds = (existingVQs?.data || []).map((v: any) => Number(v.vendor_id)).filter(Boolean);
-      const allVendors = fullRFQ.rfqVendors || fullRFQ.vendors || [];
+      const existingVendorIds = (existingVQsRes?.data || [])
+          .filter((v: any) => v.status !== 'CANCELLED')
+          .map((v: any) => Number(v.vendor_id));
+      const allVendors = rfqVendorsRes?.data || rfqVendorsRes || [];
 
       // 1. Filter out only SENT/RESPONDED vendors (Exclude PENDING)
       const sentVendors = allVendors.filter((v: any) => 
-        ['SENT', 'RESPONDED', 'DECLINED', 'NO_RESPONSE', 'RECORDED'].includes(v.status)
+        !v.status || ['SENT', 'RESPONDED', 'DECLINED', 'NO_RESPONSE', 'RECORDED'].includes(v.status)
       );
 
       if (sentVendors.length === 0) {
@@ -833,6 +851,10 @@ export const useVQForm = (
       setValue('exchange_rate_date', fullRFQ.rfq_exchange_rate_date || '', { shouldValidate: true });
       setValue('target_currency', fullRFQ.rfq_quote_currency_code || '', { shouldValidate: true });
       setValue('remark', fullRFQ.remarks || '', { shouldValidate: true });
+      setValue('payment_terms', fullRFQ.payment_term_hint || '', { shouldValidate: true });
+      
+      const parsedDays = fullRFQ.payment_term_hint ? Number(fullRFQ.payment_term_hint.replace(/\D/g, '')) : 0;
+      setValue('payment_term_days', parsedDays || 0, { shouldValidate: true });
 
       // Inject lines
       replace(mappedLines.length > 0 ? mappedLines : []);

@@ -9,7 +9,7 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/react-query';
-import { Eye, Edit, Filter, FileText, X, Search, Plus } from 'lucide-react';
+import { Eye, Edit, Filter, FileText, X, Search, Plus, XCircle } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { PageListLayout, SmartTable, VQStatusBadge, FilterField, MobileListCard, MobileListContainer } from '@ui';
 
@@ -23,13 +23,14 @@ import { RFQService } from '@/modules/procurement/services/rfq.service';
 import type { VQListItem, VQStatus, RFQHeader, VQPendingQueueItem } from '@/modules/procurement/types';
 import { VQFormModal, VQVendorTrackingModal } from './components';
 // import { RFQSendConfirmModal } from '@/modules/procurement/pages/rfq/components/RFQSendConfirmModal';
-// import { useToast } from '@/shared/components/ui/feedback/Toast';
+import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { logger } from '@/shared/utils/logger';
 
 import { getColumns, getPendingColumns } from './components/VQColumns';
 import { RFQNoDisplay, PRNoDisplay } from './components/VQColumnComponents';
 import { useVendorsBatchQuery } from './hooks/useVendorsBatchQuery';
 import { VQ_STATUS_MAP, RFQ_VENDOR_STATUS_MAP } from './constants/vq.constants';
+import { CancelVendorModal } from '@/modules/procurement/pages/rfq/components/CancelVendorModal';
 
 
 // ====================================================================================
@@ -61,7 +62,7 @@ export default function VQListPage() {
     const { filters, localFilters, handleFilterChange, handleApplyFilters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<VQStatus>({
         defaultStatus: 'ALL',
         customParamKeys: {
-            search: 'quotation_no',
+            search: 'vq_no',
             search2: 'vendor_name',
             search3: 'ref_rfq_no',
             search4: 'ref_pr_no'
@@ -86,7 +87,11 @@ export default function VQListPage() {
     }, [setSearchParams]);
 
     const [isTrackingOpen, setIsTrackingOpen] = useState(false);
-    // const { toast } = useToast();
+    const { toast } = useToast();
+
+    const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+    const [selectedRfqVendorId, setSelectedRfqVendorId] = useState<number | null>(null);
+    const [isCancelling, setIsCancelling] = useState(false);
 
     const [selectedRfqId, setSelectedRfqId] = useState<number | null>(null);
     const [selectedRfqNo, setSelectedRfqNo] = useState<string>('');
@@ -186,13 +191,13 @@ export default function VQListPage() {
 
     // Convert to API filter format
     const apiFilters: VQListParams = {
-        quotation_no: filters.search || undefined,
+        vq_no: filters.search || undefined,
         vendor_name: filters.search2 || undefined,
         rfq_no: filters.search3 || undefined,
         pr_no: filters.search4 || undefined,
         status: filters.status === 'ALL' ? undefined : filters.status,
-        date_from: filters.date_start || undefined,
-        date_to: filters.date_end || undefined,
+        date_start: filters.date_start || undefined,
+        date_end: filters.date_end || undefined,
         page: filters.page,
         limit: filters.limit,
         sort: filters.sort || undefined
@@ -218,6 +223,43 @@ export default function VQListPage() {
         enabled: activeTab === 'WAITING_RFQ',
         staleTime: 1 * 60 * 1000,
     });
+
+    // ==========================================================================
+    // AGGREGATION LOGIC: Group by RFQ for WAITING_RFQ
+    // ==========================================================================
+    
+    interface GroupedPendingRFQ {
+        rfq_id: number;
+        rfq_no: string;
+        pr_no?: string;
+        created_at: string;
+        vendorCount: number;
+        vendors: Array<{ vendor_id: number; vendor_name: string }>;
+    }
+
+    const groupedWaitingRfqData = useMemo(() => {
+        const rawData = waitingRfqData?.data ?? [];
+        const grouped: Record<string, GroupedPendingRFQ> = {};
+
+        rawData.forEach(item => {
+            if (!grouped[item.rfq_no]) {
+                grouped[item.rfq_no] = {
+                    rfq_id: item.rfq_id,
+                    rfq_no: item.rfq_no,
+                    pr_no: item.pr_no,
+                    created_at: item.created_at,
+                    vendorCount: 0,
+                    vendors: []
+                };
+            }
+            if (!grouped[item.rfq_no].vendors.some(v => v.vendor_id === item.vendor_id)) {
+                grouped[item.rfq_no].vendorCount += 1;
+                grouped[item.rfq_no].vendors.push({ ...item });
+            }
+        });
+
+        return Object.values(grouped);
+    }, [waitingRfqData?.data]);
 
     // ==========================================================================
     // DATA HYDRATION: Master Data for Lookups
@@ -324,21 +366,80 @@ export default function VQListPage() {
         setInitialRFQForCreate,
         setIsVqModalOpen,
         setSelectedVqId,
-        setIsViewMode
+        setIsViewMode,
+        handleCancelVendor: (rfqVendorId: number) => {
+            setSelectedRfqVendorId(rfqVendorId);
+            setIsCancelModalOpen(true);
+        }
     }), [filters.page, filters.limit, setInitialRFQForCreate, setIsVqModalOpen, setSelectedVqId, setIsViewMode, vendorMap]);
 
-    const pendingRfqColumns = useMemo(() => getPendingColumns('WAITING_RFQ', {
-        vendorMap,
-        filters: { page: filters.page, limit: filters.limit },
-        totalAmount: 0,
-        handleOpenView: () => {},
-        handleOpenEdit: () => {},
-        handleOpenTracking: () => {},
-        setInitialRFQForCreate,
-        setIsVqModalOpen,
-        setSelectedVqId,
-        setIsViewMode
-    }), [filters.page, filters.limit, setInitialRFQForCreate, setIsVqModalOpen, setSelectedVqId, setIsViewMode, vendorMap]);
+    const groupedRfqColumns = useMemo<ColumnDef<GroupedPendingRFQ, any>[]>(() => [
+        {
+            id: 'index',
+            header: () => <div className="text-center w-full">ลำดับ</div>,
+            cell: (info) => <div className="text-center">{info.row.index + 1 + (filters.page - 1) * filters.limit}</div>,
+            size: 60,
+        },
+        {
+            accessorKey: 'created_at',
+            header: () => <div className="text-center w-full">วันที่สร้าง</div>,
+            cell: (info) => (
+                <div className="text-center text-gray-600 dark:text-gray-300 font-medium whitespace-nowrap">
+                    {formatThaiDate(info.getValue() as string)}
+                </div>
+            ),
+            size: 110,
+        },
+        {
+            accessorKey: 'rfq_no',
+            header: 'เอกสารอ้างอิง',
+            cell: (info) => {
+                const item = info.row.original;
+                return (
+                    <div className="flex flex-col py-1 min-w-0">
+                        <span className="text-purple-600 dark:text-purple-400 font-semibold leading-tight truncate">
+                            {item.rfq_no || '-'}
+                        </span>
+                        {item.pr_no && (
+                            <span className="text-[10px] text-gray-400 dark:text-gray-500 truncate leading-tight mt-1">
+                                Ref: {item.pr_no}
+                            </span>
+                        )}
+                    </div>
+                );
+            },
+            size: 140,
+        },
+        {
+            accessorKey: 'vendorCount',
+            header: () => <div className="text-center w-full">จำนวนผู้ขาย</div>,
+            cell: (info) => (
+                <div className="text-center font-bold text-blue-600 dark:text-blue-400">
+                    {info.getValue() as number} ราย
+                </div>
+            ),
+            size: 120,
+        },
+        {
+            id: 'actions',
+            header: () => <div className="text-center w-full">จัดการ</div>,
+            cell: ({ row }) => {
+                const item = row.original;
+                return (
+                    <div className="flex justify-center">
+                        <button 
+                            onClick={() => handleOpenTracking(item.rfq_id, item.rfq_no)}
+                            className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-all"
+                            title="ดูรายละเอียด"
+                        >
+                            <Eye size={16} />
+                        </button>
+                    </div>
+                );
+            },
+            size: 100,
+        }
+    ], [filters.page, filters.limit, handleOpenTracking]);
 
     return (
         <>
@@ -397,7 +498,7 @@ export default function VQListPage() {
                                     type="select"
                                     options={
                                         activeTab === 'ALL'
-                                            ? Object.entries(VQ_STATUS_MAP).map(([val, {label}]) => ({ value: val, label }))
+                                            ? Object.entries(VQ_STATUS_MAP).filter(([val]) => val !== "DRAFT").map(([val, {label}]) => ({ value: val, label }))
                                             : activeTab === 'WAITING_RFQ'
                                                 ? Object.entries(RFQ_VENDOR_STATUS_MAP).filter(([val]) => ['ALL', 'NEW', 'WAITING'].includes(val)).map(([val, {label}]) => ({ value: val, label }))
                                                 : Object.entries(RFQ_VENDOR_STATUS_MAP).filter(([val]) => ['ALL', 'SENT', 'PENDING'].includes(val)).map(([val, {label}]) => ({ value: val, label }))
@@ -405,7 +506,7 @@ export default function VQListPage() {
                                     value={localFilters.status || ''}
                                     onChange={(val) => handleFilterChange('status', val)}
                                     accentColor="blue"
-                                    disabled={false}
+                                    disabled={activeTab !== 'ALL'}
                                 />
                                 <FilterField
                                     label="วันที่เริ่มต้น"
@@ -492,9 +593,9 @@ export default function VQListPage() {
                             }`}
                         >
                             รอดำเนินการ (RFQ)
-                            {waitingRfqData && waitingRfqData.total > 0 && (
+                            {groupedWaitingRfqData.length > 0 && (
                                 <span className="inline-flex items-center justify-center w-5 h-5 ml-2 text-[10px] font-bold text-gray-600 bg-gray-200 dark:text-gray-300 dark:bg-gray-700 rounded-full">
-                                    {waitingRfqData.total}
+                                    {groupedWaitingRfqData.length}
                                 </span>
                             )}
                         </button>
@@ -562,19 +663,17 @@ export default function VQListPage() {
                         )}
                         {activeTab === 'WAITING_RFQ' && (
                             <SmartTable
-                                // 🔥 TODO: Move filter logic to backend API (Pass status or has_vq flag)
-                                // RFQ Tab should only show items that haven't been sent or recorded yet.
-                                data={waitingRfqData?.data ?? []}
-                                columns={pendingRfqColumns as ColumnDef<VQPendingQueueItem>[]}
+                                data={groupedWaitingRfqData}
+                                columns={groupedRfqColumns as ColumnDef<any>[]}
                                 isLoading={isWaitingRfqLoading}
                                 pagination={{
                                     pageIndex: filters.page,
                                     pageSize: filters.limit,
-                                    totalCount: waitingRfqData?.total || waitingRfqData?.data?.length || 0,
+                                    totalCount: groupedWaitingRfqData.length,
                                     onPageChange: handlePageChange,
                                     onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 })
                                 }}
-                                rowIdField="rfq_vendor_id"
+                                rowIdField="rfq_id"
                                 className="flex-1"
                                 showFooter={true}
                             />
@@ -588,7 +687,7 @@ export default function VQListPage() {
                             isEmpty={!data?.data?.length}
                             pagination={data?.total ? { page: filters.page, total: data.total, limit: filters.limit, onPageChange: handlePageChange } : undefined}
                         >
-                            {(data?.data ?? []).map((item) => {
+                            {(data?.data ?? []).map((item, index) => {
                             const vendorDisplay = item.vendor_name || item.vendor?.vendor_name || (item.vendor_id ? (vendorMap[item.vendor_id] || '-') : '-');
                             
                             const rfqDisplay = item.rfq_no || item.rfq?.rfq_no || (item.rfq_id ? <RFQNoDisplay rfqId={item.rfq_id} /> : '-');
@@ -597,10 +696,10 @@ export default function VQListPage() {
 
                             return (
                                 <MobileListCard
-                                    key={item.vq_header_id}
+                                    key={item.vq_header_id || index}
                                     title={item.vq_no || item.quotation_no || <span className="text-gray-400 dark:text-slate-500 italic text-base">รอเลขใบเสนอราคา</span>}
                                     subtitle={formatThaiDate(item.quotation_date)}
-                                    statusBadge={<VQStatusBadge status={item.status} />}
+                                    statusBadge={<VQStatusBadge status={item.status === 'DRAFT' ? 'RECORDED' : item.status} />}
                                     details={[
                                         { label: 'ผู้ขาย:', value: vendorDisplay },
                                         { label: 'RFQ อ้างอิง:', value: <span className="font-semibold text-blue-600 dark:text-blue-400">{rfqDisplay}</span> },
@@ -610,7 +709,7 @@ export default function VQListPage() {
                                     amountLabel="ยอดสุทธิ"
                                     amountValue={
                                         <span className={`font-bold text-lg ${
-                                            item.status === 'RECORDED' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-700 dark:text-slate-200'
+                                            ['RECORDED', 'DRAFT'].includes(item.status) ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-700 dark:text-slate-200'
                                         }`}>
                                             {item.base_total_amount
                                                 ? Number(item.base_total_amount).toLocaleString('th-TH', { minimumFractionDigits: 2 })
@@ -651,55 +750,84 @@ export default function VQListPage() {
                         </MobileListContainer>
                     )}
                     {(activeTab === 'WAITING_VQ' || activeTab === 'WAITING_RFQ') && (() => {
-                        const targetData = activeTab === 'WAITING_VQ' ? waitingVqData : waitingRfqData;
                         const targetLoading = activeTab === 'WAITING_VQ' ? isWaitingVqLoading : isWaitingRfqLoading;
                         
-                                                // Server-side filtered data
-                        const filteredData = targetData?.data ?? [];
+                        // Use aggregated data for WAITING_RFQ
+                        const filteredData = activeTab === 'WAITING_VQ' 
+                            ? (waitingVqData?.data ?? []) 
+                            : groupedWaitingRfqData;
+
+                        const totalCount = activeTab === 'WAITING_VQ'
+                            ? (waitingVqData?.total ?? 0)
+                            : groupedWaitingRfqData.length;
 
                         return (
                             <MobileListContainer
                                 isLoading={targetLoading}
                                 isEmpty={!filteredData.length}
-                                pagination={targetData?.total ? { page: filters.page, total: targetData.total, limit: filters.limit, onPageChange: handlePageChange } : undefined}
+                                pagination={totalCount ? { page: filters.page, total: totalCount, limit: filters.limit, onPageChange: handlePageChange } : undefined}
                             >
-                                {filteredData.map((item) => (
+                                {filteredData.map((item: any, index: number) => (
                                     <MobileListCard
-                                        key={item.rfq_vendor_id}
+                                        key={`${activeTab}-${activeTab === 'WAITING_VQ' ? item.rfq_vendor_id : (item.rfq_no || item.rfq_id || index)}`}
                                         title={<span className="text-gray-400 dark:text-slate-500 italic text-base">รอดำเนินการ</span>}
                                         subtitle={formatThaiDate(item.created_at)}
                                         statusBadge={
-                                            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200 whitespace-nowrap">
-                                                {item.status}
-                                            </span>
+                                            activeTab === 'WAITING_VQ' ? (
+                                                <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200 whitespace-nowrap">
+                                                    รอผู้ขายตอบกลับ
+                                                </span>
+                                            ) : undefined
                                         }
-                                        details={[
+                                        details={activeTab === 'WAITING_VQ' ? [
                                             { label: 'ผู้ขาย:', value: item.vendor_name || '-' },
+                                            { label: 'RFQ อ้างอิง:', value: <span className="font-semibold text-purple-600 dark:text-purple-400">{item.rfq_no || '-'}</span> },
+                                            { label: 'PR อ้างอิง:', value: item.pr_no || '-' },
+                                        ] : [
+                                            { label: 'จำนวนผู้ขาย:', value: <span className="font-bold text-blue-600 dark:text-blue-400">{item.vendorCount || 0} ราย</span> },
                                             { label: 'RFQ อ้างอิง:', value: <span className="font-semibold text-purple-600 dark:text-purple-400">{item.rfq_no || '-'}</span> },
                                             { label: 'PR อ้างอิง:', value: item.pr_no || '-' },
                                         ]}
                                         actions={
-                                            activeTab === 'WAITING_VQ' && (
+                                            activeTab === 'WAITING_VQ' ? (
+                                                <div className="flex flex-col gap-2 w-full mt-2">
+                                                    <button
+                                                        onClick={() => {
+                                                            setSelectedRfqVendorId(item.rfq_vendor_id!);
+                                                            setIsCancelModalOpen(true);
+                                                        }}
+                                                        className="w-full bg-red-50 hover:bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 border border-red-200 dark:border-red-800 shadow-sm"
+                                                    >
+                                                        <XCircle size={14} /> ยกเลิก
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            const rfqInit: Partial<RFQHeader> = {
+                                                                rfq_id: item.rfq_id,
+                                                                rfq_no: item.rfq_no,
+                                                            };
+                                                            
+                                                            setInitialRFQForCreate({ 
+                                                                ...rfqInit, 
+                                                                vendor_id: item.vendor_id, 
+                                                                rfq_vendor_id: item.rfq_vendor_id 
+                                                            } as RFQHeader);
+                                                            
+                                                            setSelectedVqId(null);
+                                                            setIsViewMode(false);
+                                                            setIsVqModalOpen(true);
+                                                        }}
+                                                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
+                                                    >
+                                                        <Plus size={14} strokeWidth={2.5} /> สร้างใบเสนอราคา
+                                                    </button>
+                                                </div>
+                                            ) : (
                                                 <button
-                                                    onClick={() => {
-                                                        const rfqInit: Partial<RFQHeader> = {
-                                                            rfq_id: item.rfq_id,
-                                                            rfq_no: item.rfq_no,
-                                                        };
-                                                        
-                                                        setInitialRFQForCreate({ 
-                                                            ...rfqInit, 
-                                                            vendor_id: item.vendor_id, 
-                                                            rfq_vendor_id: item.rfq_vendor_id 
-                                                        } as RFQHeader);
-                                                        
-                                                        setSelectedVqId(null);
-                                                        setIsViewMode(false);
-                                                        setIsVqModalOpen(true);
-                                                    }}
-                                                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1 mt-2 shadow-sm"
+                                                    onClick={() => handleOpenTracking(item.rfq_id, item.rfq_no)}
+                                                    className="w-full bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs font-bold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1 mt-2 border border-blue-200 dark:border-blue-800 shadow-sm"
                                                 >
-                                                    <Plus size={14} strokeWidth={2.5} /> สร้างใบเสนอราคา
+                                                    <Eye size={14} /> ดูรายละเอียด
                                                 </button>
                                             )
                                         }
@@ -729,6 +857,26 @@ export default function VQListPage() {
                 onClose={() => setIsTrackingOpen(false)}
                 rfqId={selectedRfqId}
                 rfqNo={selectedRfqNo}
+            />
+
+            <CancelVendorModal
+                isOpen={isCancelModalOpen}
+                onClose={() => setIsCancelModalOpen(false)}
+                onConfirm={async (remark) => {
+                    if (!selectedRfqVendorId) return;
+                    setIsCancelling(true);
+                    try {
+                        await RFQService.cancelVendor(selectedRfqVendorId, remark);
+                        toast('ยกเลิกผู้ขายสำเร็จ', 'success');
+                        refetchWaitingVq();
+                        setIsCancelModalOpen(false);
+                    } catch (error) {
+                        toast(error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการยกเลิก', 'error');
+                    } finally {
+                        setIsCancelling(false);
+                    }
+                }}
+                isLoading={isCancelling}
             />
         </>
     );

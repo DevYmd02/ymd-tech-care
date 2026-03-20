@@ -242,5 +242,10 @@ export const RFQService = {
   sendToVendor: async (rfqVendorId: number, payload: SendRFQToVendorPayload): Promise<SuccessResponse> => {
     logger.info(`[RFQService] Sending RFQ via vendor row ${rfqVendorId} using PATCH ${ENDPOINTS.sendToVendor(rfqVendorId)}`, payload);
     return await api.patch<SuccessResponse>(ENDPOINTS.sendToVendor(rfqVendorId), payload);
+  },
+
+  cancelVendor: async (rfqVendorId: number, remark: string): Promise<SuccessResponse> => {
+    logger.info(`[RFQService] Cancelling vendor ${rfqVendorId} with remark: ${remark}`);
+    return await api.patch<SuccessResponse>(`/rfq/${rfqVendorId}/cancel`, { remark });
   }
 };
