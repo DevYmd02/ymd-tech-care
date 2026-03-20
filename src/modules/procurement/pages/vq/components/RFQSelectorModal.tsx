@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Search, Check, FileText, Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { RFQService } from '@/modules/procurement/services/rfq.service';
+import { VQService } from '@/modules/procurement/services/vq.service';
 import type { RFQHeader } from '@/modules/procurement/types';
 import { ModalLayout } from '@/shared/components/ui/layout/ModalLayout';
 import { useDebounce } from '@/shared/hooks/useDebounce';
@@ -22,28 +22,18 @@ export const RFQSelectorModal: React.FC<RFQSelectorModalProps> = ({ isOpen, onCl
     // 📡 @Agent_API_Infector: Fetch real RFQ data (Fetching more but filtering visually for VQ safety if needed)
     const { data: rfqResponse, isLoading } = useQuery({
         queryKey: ['rfqs-selector', debouncedSearch],
-        queryFn: () => RFQService.getList({ 
+        queryFn: () => VQService.getModalWaitingForRFQ({ 
             keyword: debouncedSearch, 
-            status: 'ALL', 
             limit: 100 
         }),
         enabled: isOpen,
     });
 
     // 📡 @Agent_UI_Hydrator: Match the Status Logic of the main List Page
-    // We show RFQs that are either explicitly SENT or have all vendors sent (X/Y logic)
     const rfqs: RFQHeader[] = useMemo(() => {
-        // useQuery data is Typed as RFQListResponse | undefined
         const rawItems = rfqResponse?.data; 
         if (!Array.isArray(rawItems)) return [];
-        
-        return rawItems.filter((rfq: RFQHeader) => {
-            const sentCount = rfq.vendor_sent ?? rfq.sent_vendors_count ?? 0;
-            const total = rfq.vendor_total ?? rfq.vendor_count ?? 0;
-            const isPartiallySent = total > 0 && sentCount > 0;
-            
-            return rfq.status === 'SENT' || isPartiallySent;
-        });
+        return rawItems;
     }, [rfqResponse]);
 
     return (

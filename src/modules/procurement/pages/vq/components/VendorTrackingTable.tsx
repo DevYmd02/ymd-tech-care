@@ -39,8 +39,7 @@ export const VendorTrackingTable: React.FC<VendorTrackingTableProps> = ({
      * Determine if we should show the "Actions" (จัดการ) column.
      * Hidden if actionComponent is not provided AND no vendor has a QT number to display.
      */
-    const hasAnyVq = vendors.some(v => !!v.vq_no);
-    const showActions = !!actionComponent || hasAnyVq;
+    const showActions = false; // Hide Actions column
 
     /**
      * Shared Grid Configuration

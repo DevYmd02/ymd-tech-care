@@ -35,7 +35,7 @@ export interface QuotationHeader {
     rfq_vendor_id?: number | null;      // Relation ID
 
     // Nested Objects (Anticipating JOINs)
-    vendor?: { vendor_id: number; vendor_name: string; vendor_code?: string; vendor_name_th?: string; name_th?: string };
+    vendor?: { vendor_id: number; vendor_name: string; vendor_code?: string; vendor_name_th?: string; name_th?: string; payment_term_days?: number | null; };
     rfq?: { rfq_id: number; rfq_no: string };
     pr?: { pr_id: number; pr_no: string };
     
@@ -151,13 +151,13 @@ export type VQStatus = QuotationStatus;
 // ====================================================================================
 
 export interface VQListParams {
-  quotation_no?: string;
+  vq_no?: string;
   vendor_name?: string;
   rfq_no?: string;
   pr_no?: string;
   status?: QuotationStatus | 'ALL';
-  date_from?: string;
-  date_to?: string;
+  date_start?: string;
+  date_end?: string;
   page?: number;
   limit?: number;
   sort?: string;

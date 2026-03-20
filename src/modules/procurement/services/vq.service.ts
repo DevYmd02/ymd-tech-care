@@ -10,32 +10,48 @@ const ENDPOINTS = {
   create: '/vq',
   update: '/vq',
   detail: (id: number) => `/vq/${id}`,
-  waitingForRfq: '/vq/pr/waiting-for-rfq-vendor',
-  waitingForVq: '/vq/pr/waiting-for-vq-vendor',
+  waitingForRfq: '/vq/rfq/waiting-for-rfq',
+  waitingForVq: '/vq/rfq/waiting-for-vq',
+  modalWaitingForRfq: '/vq/rfq/waiting-for-rfq',
+  modalWaitingForRfqVendor: (id: number) => `/vq/rfq/waiting-for-rfq-vendor/${id}`,
 };
 
 export const VQService = {
   getList: async (params?: VQListParams): Promise<VQListResponse> => {
     logger.info('[VQService] Fetching VQ List', params);
-    const response = await api.get<VQListResponse>(ENDPOINTS.list, { params });
+    const apiParams = { ...params };
+    if (apiParams.status === 'RECORDED') {
+        delete apiParams.status;
+    }
+
+    const response = await api.get<VQListResponse>(ENDPOINTS.list, { params: apiParams });
 
     // 🎯 HYBRID FALLBACK: Apply Client-Side Filtering when using Real API
     if (!USE_MOCK && params) {
       const allItems = extractArrayFromResponse<VQListItem>(response);
       const filterParams: Record<string, string | number | boolean | undefined | null> = {};
-      if (params.quotation_no) filterParams.quotation_no = params.quotation_no;
-      if (params.vendor_name) filterParams.vendor_name = params.vendor_name;
-      if (params.rfq_no) filterParams.rfq_no = params.rfq_no;
-      if (params.pr_no) filterParams.pr_no = params.pr_no;
-      if (params.status && params.status !== 'ALL') filterParams.status = params.status;
-      if (params.date_from) filterParams.date_from = params.date_from;
-      if (params.date_to) filterParams.date_to = params.date_to;
-      if (params.page) filterParams.page = params.page;
-      if (params.limit) filterParams.limit = params.limit;
-      if (params.sort) filterParams.sort = params.sort;
+      
+      if (params?.vq_no) filterParams.vq_no = params.vq_no;
+      if (params?.vendor_name) filterParams.vendor_name = params.vendor_name;
+      if (params?.rfq_no) filterParams.rfq_no = params.rfq_no;
+      if (params?.pr_no) filterParams.pr_no = params.pr_no;
+      if (params?.date_start) filterParams.date_start = params.date_start;
+      if (params?.date_end) filterParams.date_end = params.date_end;
+      if (params?.page) filterParams.page = params.page;
+      if (params?.limit) filterParams.limit = params.limit;
+      if (params?.sort) filterParams.sort = params.sort;
 
-      return applyClientFilters<VQListItem>(allItems, filterParams, {
-        searchableFields: ['quotation_no', 'vendor_name', 'rfq_no', 'pr_no'],
+      let filteredItems = allItems;
+      if (params?.status && params.status !== 'ALL') {
+          filteredItems = allItems.filter(item => 
+              params.status === 'RECORDED' 
+                ? (item.status === 'RECORDED' || item.status === 'DRAFT')
+                : item.status === params.status
+          );
+      }
+
+      return applyClientFilters<VQListItem>(filteredItems, filterParams, {
+        searchableFields: ['vq_no', 'vendor_name', 'rfq_no', 'pr_no'],
         dateField: 'quotation_date',
         backendTotal: response.total,
       });
@@ -113,6 +129,16 @@ export const VQService = {
   cancel: async (id: number): Promise<SuccessResponse> => {
     logger.info(`[VQService] Cancelling VQ ${id}`);
     return await api.post<SuccessResponse>(`${ENDPOINTS.list}/${id}/cancel`, {});
+  },
+
+  getModalWaitingForRFQ: async (params?: any): Promise<any> => {
+    logger.info('[VQService] Fetching Modal Waiting for RFQ', params);
+    return await api.get<any>(ENDPOINTS.modalWaitingForRfq, { params });
+  },
+
+  getModalWaitingForRFQVendor: async (id: number): Promise<any> => {
+    logger.info(`[VQService] Fetching Modal Waiting for RFQ Vendor ${id}`);
+    return await api.get<any>(ENDPOINTS.modalWaitingForRfqVendor(id));
   }
 };
 

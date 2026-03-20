@@ -12,6 +12,8 @@ import { SharedRemarksTab } from '@/shared/components/forms/SharedRemarksTab';
 import type { PRHeader } from '@/modules/procurement/types';
 import { logger } from '@/shared/utils/logger';
 import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal';
+import { CancelVendorModal } from './CancelVendorModal';
+import { useState } from 'react';
 
 interface Props {
     isOpen: boolean;
@@ -40,7 +42,14 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
         handleOpenVendorModal, handleVendorSelect,
         vendors,
 
+        // Cancel Vendor
+        isCancelModalOpen, setIsCancelModalOpen,
+        cancelVendorIndex, setCancelVendorIndex,
+        handleCancelVendor,
+
     } = useRFQForm(isOpen, onClose, initialPR, onSuccess, editId);
+
+    const [isCancelling, setIsCancelling] = useState(false);
 
     const { watch, setValue } = methods;
     const formData = watch(); // Watch all for UI reactivity in modal wrapper
@@ -145,6 +154,10 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
                             onRemove={handleRemoveVendor}
                             handleOpenVendorModal={handleOpenVendorModal}
                             isViewMode={readOnly}
+                            onCancelVendor={(index: number) => {
+                                setCancelVendorIndex(index);
+                                setIsCancelModalOpen(true);
+                            }}
                         />
                     </div>
 
@@ -184,6 +197,21 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
                 cancelText="ยกเลิก"
                 variant="info"
                 isLoading={isSaving}
+            />
+
+            <CancelVendorModal
+                isOpen={isCancelModalOpen}
+                onClose={() => setIsCancelModalOpen(false)}
+                onConfirm={async (remark) => {
+                    if (cancelVendorIndex === null) return;
+                    setIsCancelling(true);
+                    const success = await handleCancelVendor(cancelVendorIndex, remark);
+                    setIsCancelling(false);
+                    if (success) {
+                        setIsCancelModalOpen(false);
+                    }
+                }}
+                isLoading={isCancelling}
             />
         </WindowFormLayout>
     );

@@ -1,6 +1,6 @@
 import { createColumnHelper } from '@tanstack/react-table';
 import type { ColumnDef } from '@tanstack/react-table';
-import { Eye, Edit, Plus } from 'lucide-react';
+import { Eye, Edit, Plus, XCircle } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { VQStatusBadge } from '@ui'; 
 import type { VQListItem, VQPendingQueueItem, RFQHeader } from '@/modules/procurement/types';
@@ -17,7 +17,7 @@ const columnHelper = createColumnHelper<VQListItem>();
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const getColumns = (context: VQColumnsContext): ColumnDef<VQListItem, any>[] => {
-    const { vendorMap, filters, totalAmount, handleOpenView, handleOpenEdit, handleOpenTracking } = context;
+    const { vendorMap, filters, totalAmount, handleOpenView, handleOpenEdit } = context;
 
     return [
         columnHelper.display({
@@ -59,10 +59,10 @@ export const getColumns = (context: VQColumnsContext): ColumnDef<VQListItem, any
             header: 'ผู้ขาย',
             cell: (info) => {
                 const item = info.row.original;
-                const vendorId = item.vendor_id;
-                const vendorName = vendorId ? vendorMap[String(vendorId)] : null;
-                const credit = item.payment_term_days || '-';
-                const lead = item.lead_time_days || '-';
+                const vendorId = item.vendor_id || item.vendor?.vendor_id;
+                const vendorName = item.vendor_name || item.vendor?.vendor_name || (vendorId ? vendorMap[String(vendorId)] : null);
+                const credit = item.payment_term_days ?? item.vendor?.payment_term_days ?? '-';
+                const lead = item.lead_time_days ?? '-';
 
                 return (
                     <div className="flex flex-col min-w-0">
@@ -90,13 +90,9 @@ export const getColumns = (context: VQColumnsContext): ColumnDef<VQListItem, any
 
                 return (
                     <div className="flex flex-col min-w-0">
-                        <button 
-                            type="button"
-                            onClick={() => handleOpenTracking(item.rfq_id, typeof rfqDisplay === 'string' && rfqDisplay !== '-' ? rfqDisplay : undefined)}
-                            className="font-medium text-purple-600 dark:text-purple-400 text-left hover:underline truncate w-fit"
-                        >
+                        <span className="font-medium text-purple-600 dark:text-purple-400 truncate w-fit">
                             {rfqDisplay}
-                        </button>
+                        </span>
                         {prDisplay && (
                             <span className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
                                 Ref: {prDisplay}
@@ -141,7 +137,7 @@ export const getColumns = (context: VQColumnsContext): ColumnDef<VQListItem, any
             header: () => <div className="text-center w-full">สถานะ</div>,
             cell: (info) => (
                 <div className="flex justify-center">
-                    <VQStatusBadge status={info.getValue()} />
+                    <VQStatusBadge status={info.getValue() === 'DRAFT' ? 'RECORDED' : info.getValue()} />
                 </div>
             ),
             size: 100,
@@ -152,6 +148,7 @@ export const getColumns = (context: VQColumnsContext): ColumnDef<VQListItem, any
             header: () => <div className="text-center w-full">จัดการ</div>,
             cell: ({ row }) => {
                 const item = row.original;
+                console.log("📋 [VQColumns] ROW ITEM PAYLOAD:", item);
                 const canRecord = item.status === 'PENDING' && !item.quotation_no;
                 const isRecorded = item.status === 'RECORDED';
                 const isCancelled = item.status === 'CANCELLED';
@@ -168,7 +165,7 @@ export const getColumns = (context: VQColumnsContext): ColumnDef<VQListItem, any
                     <div className="flex flex-row items-center justify-center gap-2 whitespace-nowrap">
                         {canView && (
                             <button 
-                                onClick={() => handleOpenView(item.vq_header_id)}
+                                onClick={() => handleOpenView((item as any).vq_id || item.vq_header_id)}
                                 className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-all"
                                 title="ดูรายละเอียด"
                             >
@@ -178,7 +175,7 @@ export const getColumns = (context: VQColumnsContext): ColumnDef<VQListItem, any
 
                         {canEdit && (
                             <button 
-                                onClick={() => handleOpenEdit(item.vq_header_id)}
+                                onClick={() => handleOpenEdit((item as any).vq_id || item.vq_header_id)}
                                 className="flex items-center gap-1 pl-1.5 pr-2 py-1 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded shadow-sm border border-transparent hover:border-amber-200 dark:hover:border-amber-800 transition-all whitespace-nowrap"
                                 title="แก้ไข"
                             >
@@ -189,7 +186,7 @@ export const getColumns = (context: VQColumnsContext): ColumnDef<VQListItem, any
 
                         {canRecord && (
                             <button 
-                                onClick={() => handleOpenEdit(item.vq_header_id)}
+                                onClick={() => handleOpenEdit((item as any).vq_id || item.vq_header_id)}
                                 className="flex items-center gap-1 pl-1.5 pr-2 py-1 ml-1 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap"
                                 title="บันทึกราคา"
                             >
@@ -221,7 +218,7 @@ const pendingColumnHelper = createColumnHelper<VQPendingQueueItem>();
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const getPendingColumns = (tab: 'WAITING_VQ' | 'WAITING_RFQ', context: VQColumnsContext): ColumnDef<VQPendingQueueItem, any>[] => {
-    const { filters, setInitialRFQForCreate, setIsVqModalOpen, setSelectedVqId, setIsViewMode } = context;
+    const { filters, setInitialRFQForCreate, setIsVqModalOpen, setSelectedVqId, setIsViewMode, handleCancelVendor } = context;
 
     return [
         pendingColumnHelper.display({
@@ -283,7 +280,7 @@ export const getPendingColumns = (tab: 'WAITING_VQ' | 'WAITING_RFQ', context: VQ
                 return (
                     <div className="flex justify-center">
                         <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold border whitespace-nowrap ${colorClass}`}>
-                            {mapped.label}
+                            {tab === 'WAITING_VQ' ? 'รอผู้ขายตอบกลับ' : mapped.label}
                         </span>
                     </div>
                 );
@@ -295,9 +292,11 @@ export const getPendingColumns = (tab: 'WAITING_VQ' | 'WAITING_RFQ', context: VQ
             header: () => <div className="text-center w-full">จัดการ</div>,
             cell: ({ row }) => {
                 const item = row.original;
+                const showCancel = tab === 'WAITING_VQ' && handleCancelVendor && item.rfq_vendor_id;
+
                 if (tab === 'WAITING_VQ' && setInitialRFQForCreate && setIsVqModalOpen && setSelectedVqId && setIsViewMode) {
                     return (
-                        <div className="flex justify-center">
+                        <div className="flex justify-center items-center gap-1.5">
                             <button 
                                 onClick={() => {
                                         const rfqInit: Partial<RFQHeader> = {
@@ -320,6 +319,17 @@ export const getPendingColumns = (tab: 'WAITING_VQ' | 'WAITING_RFQ', context: VQ
                                 <Plus size={12} strokeWidth={2.5} />
                                 <span>สร้างใบเสนอราคา</span>
                             </button>
+
+                            {showCancel && (
+                                <button
+                                    onClick={() => handleCancelVendor?.(item.rfq_vendor_id!)}
+                                    className="flex items-center gap-1 pl-1.5 pr-2 py-1 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-[10px] font-bold rounded shadow-sm border border-red-200 dark:border-red-800 transition-all whitespace-nowrap"
+                                    title="ยกเลิกผู้ขาย"
+                                >
+                                    <XCircle size={12} strokeWidth={2.5} />
+                                    <span>ยกเลิกผู้ขาย</span>
+                                </button>
+                            )}
                         </div>
                     );
                 }

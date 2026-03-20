@@ -1,5 +1,4 @@
-import React from 'react';
-import { Users, Search, Trash2, Plus } from 'lucide-react';
+import { Users, Search, Trash2, Plus, XCircle } from 'lucide-react';
 import { type FieldArrayWithId } from 'react-hook-form';
 import type { RFQFormValues } from '@/modules/procurement/schemas/rfq-schemas';
 
@@ -9,6 +8,7 @@ interface RFQVendorSelectionProps {
     onRemove: (index: number) => void;
     handleOpenVendorModal: (index: number) => void;
     isViewMode?: boolean;
+    onCancelVendor?: (index: number) => void;
 }
 
 export const RFQVendorSelection: React.FC<RFQVendorSelectionProps> = ({ 
@@ -17,6 +17,7 @@ export const RFQVendorSelection: React.FC<RFQVendorSelectionProps> = ({
     onRemove, 
     handleOpenVendorModal,
     isViewMode = false,
+    onCancelVendor
 }) => {
 
     const labelStyle = "text-sm font-medium text-teal-700 dark:text-teal-300 mb-1 block";
@@ -60,6 +61,8 @@ export const RFQVendorSelection: React.FC<RFQVendorSelectionProps> = ({
                     <>
                         {vendors.map((vendor, index: number) => {
                             const isRowLocked = isViewMode || vendor.status === 'SENT' || vendor.status === 'RESPONDED';
+                            const showCancelButton = vendor.status === 'SENT' && onCancelVendor;
+
                             return (
                                 <div key={vendor.id} className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 relative group">
                                     <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
@@ -102,8 +105,18 @@ export const RFQVendorSelection: React.FC<RFQVendorSelectionProps> = ({
                                             />
                                         </div>
 
-                                        {/* Remove Button */}
-                                        <div className="md:col-span-1 flex justify-end">
+                                        {/* Remove / Cancel Button */}
+                                        <div className="md:col-span-1 flex justify-end gap-1">
+                                            {showCancelButton && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => onCancelVendor && onCancelVendor(index)}
+                                                    className="h-8 w-8 flex items-center justify-center text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
+                                                    title="ยกเลิกผู้ขาย"
+                                                >
+                                                    <XCircle size={18} />
+                                                </button>
+                                            )}
                                             {!isRowLocked && (
                                                 <button
                                                     type="button"

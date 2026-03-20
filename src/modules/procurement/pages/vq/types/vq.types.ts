@@ -16,4 +16,5 @@ export interface VQColumnsContext {
     setIsVqModalOpen?: (open: boolean) => void;
     setSelectedVqId?: (id: number | null) => void;
     setIsViewMode?: (view: boolean) => void;
+    handleCancelVendor?: (rfqVendorId: number) => void;
 }

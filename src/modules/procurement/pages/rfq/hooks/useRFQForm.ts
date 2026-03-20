@@ -652,6 +652,30 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         removeVendor(index);
     }, [removeVendor]);
 
+    const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+    const [cancelVendorIndex, setCancelVendorIndex] = useState<number | null>(null);
+
+    const handleCancelVendor = async (index: number, remark: string) => {
+        const vendor = vendorFields[index];
+        const trackingItem = trackingVendors?.find(v => v.vendor_id === vendor.vendor_id);
+        const rfqVendorId = trackingItem?.rfq_vendor_id;
+
+        if (!rfqVendorId) {
+            toast('ไม่พบข้อมูลรหัสผู้ขายในระบบ (rfq_vendor_id)', 'error');
+            return false;
+        }
+
+        try {
+            await RFQService.cancelVendor(rfqVendorId, remark);
+            toast('ยกเลิกผู้ขายสำเร็จ', 'success');
+            if (onSuccess) onSuccess();
+            return true;
+        } catch (error) {
+            toast(error instanceof Error ? error.message : 'เกิดข้อผิดพลาด', 'error');
+            return false;
+        }
+    };
+
     const handleOpenVendorModal = (index: number) => {
         setActiveVendorIndex(index);
         setIsVendorModalOpen(true);
@@ -721,5 +745,12 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
 
         // Expose vendors fields to prevent useFieldArray overlap sync bugs
         vendors: vendorFields,
+
+        // Cancel Vendor States & Handler
+        isCancelModalOpen,
+        setIsCancelModalOpen,
+        cancelVendorIndex,
+        setCancelVendorIndex,
+        handleCancelVendor,
     };
 };
