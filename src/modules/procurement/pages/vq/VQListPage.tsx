@@ -767,9 +767,9 @@ export default function VQListPage() {
                                 isEmpty={!filteredData.length}
                                 pagination={totalCount ? { page: filters.page, total: totalCount, limit: filters.limit, onPageChange: handlePageChange } : undefined}
                             >
-                                {filteredData.map((item: any) => (
+                                {filteredData.map((item: any, index: number) => (
                                     <MobileListCard
-                                        key={activeTab === 'WAITING_VQ' ? item.rfq_vendor_id : item.rfq_id}
+                                        key={`${activeTab}-${activeTab === 'WAITING_VQ' ? item.rfq_vendor_id : (item.rfq_no || item.rfq_id || index)}`}
                                         title={<span className="text-gray-400 dark:text-slate-500 italic text-base">รอดำเนินการ</span>}
                                         subtitle={formatThaiDate(item.created_at)}
                                         statusBadge={

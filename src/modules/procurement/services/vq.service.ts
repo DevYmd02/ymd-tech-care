@@ -11,7 +11,7 @@ const ENDPOINTS = {
   update: '/vq',
   detail: (id: number) => `/vq/${id}`,
   waitingForRfq: '/vq/rfq/waiting-for-rfq',
-  waitingForVq: '/vq/rfq/waiting-for-vq',
+  waitingForVq: '/vq/rfq/waiting-for-rfq',
   modalWaitingForRfq: '/vq/rfq/waiting-for-rfq',
   modalWaitingForRfqVendor: (id: number) => `/vq/rfq/waiting-for-rfq-vendor/${id}`,
 };

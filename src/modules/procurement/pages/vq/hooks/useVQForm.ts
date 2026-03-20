@@ -767,15 +767,18 @@ export const useVQForm = (
       handleClearVendor();
 
       // 2. Fetch concurrently using Promise.all
-      const [fullRFQ, itemsRes, rfqVendorsRes] = await Promise.all([
+      const [fullRFQ, itemsRes, rfqVendorsRes, existingVQsRes] = await Promise.all([
         RFQService.getById(rfq.rfq_id),
         MasterDataService.getItems().catch(() => []),
-        VQService.getModalWaitingForRFQVendor(rfq.rfq_id).catch(() => ({ data: [] }))
+        VQService.getModalWaitingForRFQVendor(rfq.rfq_id).catch(() => ({ data: [] })),
+        VQService.getVQsByRfqId(rfq.rfq_id).catch(() => ({ data: [] }))
       ]);
 
       const masterItems = Array.isArray(itemsRes) ? itemsRes : ((itemsRes as any)?.data || (itemsRes as any)?.items || []);
 
-      const existingVendorIds: number[] = [];
+      const existingVendorIds = (existingVQsRes?.data || [])
+          .filter((v: any) => v.status !== 'CANCELLED')
+          .map((v: any) => Number(v.vendor_id));
       const allVendors = rfqVendorsRes?.data || rfqVendorsRes || [];
 
       // 1. Filter out only SENT/RESPONDED vendors (Exclude PENDING)
@@ -848,6 +851,10 @@ export const useVQForm = (
       setValue('exchange_rate_date', fullRFQ.rfq_exchange_rate_date || '', { shouldValidate: true });
       setValue('target_currency', fullRFQ.rfq_quote_currency_code || '', { shouldValidate: true });
       setValue('remark', fullRFQ.remarks || '', { shouldValidate: true });
+      setValue('payment_terms', fullRFQ.payment_term_hint || '', { shouldValidate: true });
+      
+      const parsedDays = fullRFQ.payment_term_hint ? Number(fullRFQ.payment_term_hint.replace(/\D/g, '')) : 0;
+      setValue('payment_term_days', parsedDays || 0, { shouldValidate: true });
 
       // Inject lines
       replace(mappedLines.length > 0 ? mappedLines : []);
