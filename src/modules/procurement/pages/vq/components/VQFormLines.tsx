@@ -381,7 +381,7 @@ export const VQFormLines: React.FC<VQFormLinesProps> = ({
                                                 <input 
                                                     value={totals.taxRate} 
                                                     readOnly 
-                                                    className="w-12 text-center h-7 px-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded text-gray-900 dark:text-white pr-4" 
+                                                    className="w-16 text-center h-7 px-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded text-gray-900 dark:text-white pr-4" 
                                                 />
                                                 <span className="absolute right-1 text-gray-400 dark:text-gray-500 text-[10px]">%</span>
                                             </div>

@@ -81,10 +81,13 @@ export const useQCForm = (onSuccess?: () => void, onClose?: () => void) => {
     const payload: CreateQCPayload = {
       rfq_id: Number(data.rfq_id),
       winning_vq_id: Number(data.winning_vq_id),
-      remark: data.remark || '',
       pr_id: data.pr_id ? Number(data.pr_id) : 0,
       department_id: data.department_id ? Number(data.department_id) : Number(user?.employee?.department_id || 1),
+      created_by: data.created_by ? Number(data.created_by) : Number(user?.employee_id || 1),
     };
+
+    // Remove remark if present to satisfy Strict Backend Validation (class-validator whitelist)
+    delete payload.remark;
 
 
     logger.info('[useQCForm] Submitting Purified QC Payload:', payload);

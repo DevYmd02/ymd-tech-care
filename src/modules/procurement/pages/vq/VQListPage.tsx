@@ -210,6 +210,12 @@ export default function VQListPage() {
         placeholderData: keepPreviousData,
     });
 
+    // 🎯 Lookup query for all VQs to filter out duplicates in WAITING_VQ tab
+    const { data: allVqsData } = useQuery({
+        queryKey: ['all-vendor-quotations-lookup'],
+        queryFn: () => VQService.getList({ limit: 1000 }),
+    });
+
     const { data: waitingVqData, isLoading: isWaitingVqLoading, refetch: refetchWaitingVq } = useQuery({
         queryKey: ['waiting-for-vq-vendor', apiFilters],
         queryFn: () => VQService.getWaitingForVQ(apiFilters),
@@ -239,27 +245,63 @@ export default function VQListPage() {
 
     const groupedWaitingRfqData = useMemo(() => {
         const rawData = waitingRfqData?.data ?? [];
-        const grouped: Record<string, GroupedPendingRFQ> = {};
+        if (!Array.isArray(rawData)) return [];
 
-        rawData.forEach(item => {
-            if (!grouped[item.rfq_no]) {
-                grouped[item.rfq_no] = {
-                    rfq_id: item.rfq_id,
-                    rfq_no: item.rfq_no,
-                    pr_no: item.pr_no,
-                    created_at: item.created_at,
-                    vendorCount: 0,
-                    vendors: []
-                };
-            }
-            if (!grouped[item.rfq_no].vendors.some(v => v.vendor_id === item.vendor_id)) {
-                grouped[item.rfq_no].vendorCount += 1;
-                grouped[item.rfq_no].vendors.push({ ...item });
-            }
+        return rawData.map((rfq: any) => ({
+            ...rfq,
+            vendorCount: rfq.vendors?.length || 0
+        }));
+    }, [waitingRfqData?.data]);
+
+
+
+    const createdVqKeys = useMemo(() => {
+        const set = new Set<string>();
+        (allVqsData?.data ?? []).forEach((vq: any) => {
+            const rfqId = vq.rfq_id || vq.rfq?.rfq_id;
+            const rfqNo = vq.rfq_no || vq.rfq?.rfq_no;
+            const vendorId = vq.vendor_id || vq.vendor?.vendor_id;
+            
+            if (rfqId && vendorId) set.add(`${rfqId}-${vendorId}`);
+            if (rfqNo && vendorId) set.add(`${rfqNo}-${vendorId}`);
+        });
+        return set;
+    }, [allVqsData?.data]);
+
+    const flattenedWaitingVqData = useMemo(() => {
+        const rawData = waitingVqData?.data ?? [];
+        if (!Array.isArray(rawData)) return [];
+
+        const flattened: VQPendingQueueItem[] = [];
+
+        rawData.forEach((rfq: any) => {
+            const vendors = rfq.vendors || [];
+            vendors.forEach((v: any) => {
+                const hasVq = createdVqKeys.has(`${rfq.rfq_id}-${v.vendor_id}`) || 
+                              createdVqKeys.has(`${rfq.rfq_no}-${v.vendor_id}`);
+
+                const isSent = v.status === 'SENT';
+
+                // 🎯 FILTER: Only show SENT vendors that don't have a VQ created yet
+                if (isSent && !hasVq) {
+                    flattened.push({
+                        rfq_vendor_id: v.rfq_vendor_id,
+                        pr_id: rfq.pr_id,
+                        pr_no: rfq.pr_no,
+                        rfq_id: rfq.rfq_id,
+                        rfq_no: rfq.rfq_no,
+                        vendor_id: v.vendor_id,
+                        vendor_code: v.vendor_code,
+                        vendor_name: v.vendor_name,
+                        status: v.status,
+                        created_at: rfq.created_at,
+                    } as VQPendingQueueItem);
+                }
+            });
         });
 
-        return Object.values(grouped);
-    }, [waitingRfqData?.data]);
+        return flattened;
+    }, [waitingVqData?.data, createdVqKeys]);
 
     // ==========================================================================
     // DATA HYDRATION: Master Data for Lookups
@@ -338,10 +380,10 @@ export default function VQListPage() {
         const list = activeTab === 'ALL' 
             ? (data?.data ?? []) 
             : activeTab === 'WAITING_VQ' 
-                ? (waitingVqData?.data ?? []) 
+                ? flattenedWaitingVqData 
                 : (waitingRfqData?.data ?? []);
-        return Array.from(new Set(list.map((item: VQListItem | VQPendingQueueItem) => item.vendor_id).filter(Boolean))) as number[];
-    }, [activeTab, data?.data, waitingVqData?.data, waitingRfqData?.data]);
+        return Array.from(new Set(list.map((item: any) => item.vendor_id).filter(Boolean))) as number[];
+    }, [activeTab, data?.data, flattenedWaitingVqData, waitingRfqData?.data]);
 
     // 2. Fetch Batch
     const { vendorMap } = useVendorsBatchQuery(visibleVendorIds);
@@ -389,6 +431,7 @@ export default function VQListPage() {
                 </div>
             ),
             size: 110,
+            enableSorting: false,
         },
         {
             accessorKey: 'rfq_no',
@@ -578,11 +621,11 @@ export default function VQListPage() {
                             }`}
                         >
                             รอผู้ขายตอบกลับ (VQ) 
-                            {waitingVqData && waitingVqData.total > 0 && (
+                            {/* {waitingVqData && waitingVqData.total > 0 && (
                                 <span className="inline-flex items-center justify-center w-5 h-5 ml-2 text-[10px] font-bold text-white bg-red-500 rounded-full">
                                     {waitingVqData.total}
                                 </span>
-                            )}
+                            )} */}
                         </button>
                         <button
                             onClick={() => handleTabChange('WAITING_RFQ')}
@@ -593,11 +636,11 @@ export default function VQListPage() {
                             }`}
                         >
                             รอดำเนินการ (RFQ)
-                            {groupedWaitingRfqData.length > 0 && (
+                            {/* {groupedWaitingRfqData.length > 0 && (
                                 <span className="inline-flex items-center justify-center w-5 h-5 ml-2 text-[10px] font-bold text-gray-600 bg-gray-200 dark:text-gray-300 dark:bg-gray-700 rounded-full">
                                     {groupedWaitingRfqData.length}
                                 </span>
-                            )}
+                            )} */}
                         </button>
                     </div>
 
@@ -623,6 +666,8 @@ export default function VQListPage() {
 
                     {/* Desktop View: Table */}
                     <div className="hidden md:block flex-1 overflow-hidden">
+
+
                         {activeTab === 'ALL' && (
                             <SmartTable
                                 data={data?.data ?? []}
@@ -646,7 +691,7 @@ export default function VQListPage() {
                             <SmartTable
                                 // 🔥 TODO: Move filter logic to backend API (Pass status or has_vq flag)
                                 // Only show RFQs that have been SENT to vendors
-                                data={waitingVqData?.data ?? []}
+                                data={flattenedWaitingVqData}
                                 columns={pendingVqColumns as ColumnDef<VQPendingQueueItem>[]}
                                 isLoading={isWaitingVqLoading}
                                 pagination={{
@@ -734,7 +779,7 @@ export default function VQListPage() {
                                                 <Edit size={14} /> บันทึกราคา
                                             </button>
                                         )}
-                                        {!!item.quotation_no && item.status !== 'CANCELLED' && item.status !== 'RECORDED' && (
+                                        {!!item.quotation_no && item.status !== 'CANCELLED' && item.status !== 'RECORDED' && item.status !== 'DRAFT' && (
                                             <button
                                                 onClick={() => handleOpenEdit(item.vq_header_id)}
                                                 className="flex-1 bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1"
@@ -754,11 +799,11 @@ export default function VQListPage() {
                         
                         // Use aggregated data for WAITING_RFQ
                         const filteredData = activeTab === 'WAITING_VQ' 
-                            ? (waitingVqData?.data ?? []) 
+                            ? flattenedWaitingVqData 
                             : groupedWaitingRfqData;
 
                         const totalCount = activeTab === 'WAITING_VQ'
-                            ? (waitingVqData?.total ?? 0)
+                            ? flattenedWaitingVqData.length
                             : groupedWaitingRfqData.length;
 
                         return (
@@ -780,7 +825,7 @@ export default function VQListPage() {
                                             ) : undefined
                                         }
                                         details={activeTab === 'WAITING_VQ' ? [
-                                            { label: 'ผู้ขาย:', value: item.vendor_name || '-' },
+                                            { label: 'ผู้ขาย:', value: item.vendor_name || (item.vendor_id ? vendorMap[item.vendor_id] : '-') || '-' },
                                             { label: 'RFQ อ้างอิง:', value: <span className="font-semibold text-purple-600 dark:text-purple-400">{item.rfq_no || '-'}</span> },
                                             { label: 'PR อ้างอิง:', value: item.pr_no || '-' },
                                         ] : [

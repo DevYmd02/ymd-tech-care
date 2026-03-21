@@ -191,7 +191,7 @@ export const VQFormHeader: React.FC<VQFormHeaderProps> = ({
                     </div>
                     <div className="md:col-span-1">
                         <label className="text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-1 block">ผู้ติดต่อ (Contact Person)</label>
-                        <input type="text" {...register('contact_person')} className="w-full h-8 px-3 text-sm bg-gray-100/70 dark:bg-gray-800/70 text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg cursor-not-allowed font-medium disabled:opacity-70 disabled:cursor-not-allowed" readOnly disabled={forceViewMode} />
+                        <input type="text" {...register('contact_person')} className="w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white transition-all disabled:opacity-70 disabled:cursor-not-allowed" disabled={forceViewMode} />
                     </div>
                 </div>
 
@@ -199,11 +199,11 @@ export const VQFormHeader: React.FC<VQFormHeaderProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                     <div className="md:col-span-1">
                         <label className="text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-1 block">โทรศัพท์ (Phone)</label>
-                        <input type="text" {...register('contact_phone')} className="w-full h-8 px-3 text-sm bg-gray-100/70 dark:bg-gray-800/70 text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg cursor-not-allowed font-medium disabled:opacity-70 disabled:cursor-not-allowed" readOnly disabled={forceViewMode} />
+                        <input type="text" {...register('contact_phone')} className="w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white transition-all disabled:opacity-70 disabled:cursor-not-allowed" disabled={forceViewMode} />
                     </div>
                     <div className="md:col-span-1">
                         <label className="text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-1 block">อีเมล (Email)</label>
-                        <input type="email" {...register('contact_email')} className="w-full h-8 px-3 text-sm bg-gray-100/70 dark:bg-gray-800/70 text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg cursor-not-allowed font-medium disabled:opacity-70 disabled:cursor-not-allowed" readOnly disabled={forceViewMode} />
+                        <input type="email" {...register('contact_email')} className="w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white transition-all disabled:opacity-70 disabled:cursor-not-allowed" disabled={forceViewMode} />
                     </div>
                     <div className="md:col-span-1">
                         <label className="text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-1 block">ภาษี VAT <span className="text-red-500">*</span></label>

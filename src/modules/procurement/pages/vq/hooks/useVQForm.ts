@@ -188,22 +188,33 @@ export const useVQForm = (
     try {
       const vendorDetails = await VendorService.getById(vendorId);
       setValue('vendor_id', vendorId, { shouldValidate: true });
+      
+      // 🎯 Lookup and set rfq_vendor_id from availableVendors list
+      const listVendor = availableVendors.find(v => Number(v.vendor_id) === Number(vendorId));
+      if (listVendor?.rfq_vendor_id) {
+          setValue('rfq_vendor_id', Number(listVendor.rfq_vendor_id), { shouldValidate: true });
+      }
+
       setValue('vendor_code', vendorDetails?.vendor_code || '', { shouldValidate: true });
       setValue('vendor_name', vendorDetails?.vendor_name || '', { shouldValidate: true });
       const contacts = vendorDetails?.contacts || vendorDetails?.vendorContacts || [];
       const primaryContact = contacts.find((c: any) => c.is_primary) || contacts[0];
-      setValue('contact_person', primaryContact?.contact_name || '', { shouldValidate: true });
+      const addressContact = vendorDetails?.addresses?.find((a: any) => a.contact_person)?.contact_person;
+      setValue('contact_person', primaryContact?.contact_name || addressContact || '', { shouldValidate: true });
       setValue('contact_phone', vendorDetails?.phone || '', { shouldValidate: true });
       setValue('contact_email', vendorDetails?.email || '', { shouldValidate: true });
-      if (vendorDetails?.payment_term_days) {
-        setValue('payment_term_days', Number(vendorDetails.payment_term_days), { shouldValidate: true });
-        setValue('payment_terms', `${vendorDetails.payment_term_days} วัน`, { shouldValidate: true });
-      }
+      setValue('payment_term_days', Number(vendorDetails?.payment_term_days ?? 0), { shouldValidate: true });
+      setValue('payment_terms', `${vendorDetails?.payment_term_days ?? 0} วัน`, { shouldValidate: true });
+      setValue('lead_time_days', Number((vendorDetails as any)?.lead_time_days ?? 0), { shouldValidate: true });
+
+
     } catch (err) {
+
       logger.error('[useVQForm] Failed to fetch vendor details:', err);
       toast('ไม่สามารถดึงข้อมูลรายละเอียดผู้ขายได้', 'error');
     }
-  }, [setValue, toast]);
+  }, [setValue, toast, availableVendors]);
+
 
   const [vqStatus, setVqStatus] = useState<VQStatus | null>(null);
   const [isDataLoading, setIsDataLoading] = useState(false);
@@ -266,7 +277,7 @@ export const useVQForm = (
                         (data as any).payment_terms = (data as any).payment_terms || (rfqDetail as any).payment_terms || (rfqDetail as any).payment_term_hint || ((rfqDetail as any).payment_term_days ? `${(rfqDetail as any).payment_term_days} วัน` : '');
                         data.payment_term_days = data.payment_term_days || (rfqDetail as any).payment_term_days || 0;
                         data.lead_time_days = data.lead_time_days || (rfqDetail as any).payment_term_days || 0; 
-                        data.created_by_name = data.created_by_name || (rfqDetail as any).created_by_name || '';
+                        data.created_by_name = data.created_by_name || (rfqDetail as any).created_by_name || (rfqDetail as any).requested_by || '';
                         data.currency = data.currency || (rfqDetail as any).rfq_quote_currency_code || '';
                     }
 
@@ -333,7 +344,7 @@ export const useVQForm = (
                 taxAmount: Number(data.base_tax_amount) || 0,
                 grandTotal: Number(data.base_total_amount) || 0,
                 totalLineDiscount: 0,
-                taxRate: Number(data.tax_rate) ? Number(data.tax_rate) * 100 : 0
+                taxRate: Number(data.tax_rate) ? Math.round(Number(data.tax_rate) * 100 * 100) / 100 : 0
             });
 
             const rawHydratedData = {
@@ -462,8 +473,9 @@ export const useVQForm = (
                 payment_term_days: 0,
                 lead_time_days: 0,
                 qc_id: 0,
-                pr_id: fullRFQ.pr_id ? Number(fullRFQ.pr_id) : undefined, // 👈 Fix: Populate pr_id 
+                pr_id: fullRFQ.pr_id ? Number(fullRFQ.pr_id) : undefined,
                 rfq_id: Number(fullRFQ.rfq_id) || 0,
+                rfq_vendor_id: Number(selectedVendor?.rfq_vendor_id || initialRFQ.rfq_vendor_id || 0), // 🎯 Map rfq_vendor_id
                 rfq_no: fullRFQ.rfq_no || '',
                 remark: fullRFQ.remarks || '',
                 valid_until: formatDateForInputHelper(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
@@ -472,6 +484,7 @@ export const useVQForm = (
                 status: 'DRAFT' as VQStatus,
                 created_by_name: user?.employee?.employee_fullname || user?.username || ''
             };
+
 
             reset(rfqData as QuotationFormData);
 
@@ -553,8 +566,10 @@ export const useVQForm = (
     // Find tax rate
     const taxOption = purchaseTaxOptions.find(o => Number(o.value || 0) === Number(watchTaxCodeId || 0));
     const taxRatePercent = taxOption ? (Number(taxOption.original?.tax_rate) || 0) : 0;
-    const taxAmount = (preTax * taxRatePercent) / 100;
-    const grandTotal = preTax + taxAmount;
+    const rawTaxAmount = (preTax * taxRatePercent) / 100;
+    const taxAmount = Math.round(rawTaxAmount * 100) / 100;
+    const grandTotal = Math.round((preTax + taxAmount) * 100) / 100;
+
 
     return {
       subtotal,
@@ -625,28 +640,38 @@ export const useVQForm = (
 
   // 🧹 @Agent_Payload_Purifier: Strict Sanitization
   const sanitizeLine = (line: QuotationLineFormData, index: number): Partial<QuotationLine> => {
+    const qty = Number(line.qty) || 0;
+    const price = Number(line.unit_price) || 0;
+    const base = qty * price;
+    // 🎯 Frontend flattening: Evaluate percentage to sum to prevent backend parseDiscountRaw crash
+    const absDiscount = parseDiscount(line.discount_expression, base);
+
     return {
-      line_no: index + 1, // backend: line_no should not be empty
+      line_no: index + 1, 
       item_id: Number(line.item_id) || 0,
       pr_line_id: line.pr_line_id ? Number(line.pr_line_id) : undefined,
       status: "OPEN", 
-      qty: Number(line.qty) || 0,
+      qty,
       uom_id: Number(line.uom_id) || 0,
-      unit_price: Number(line.unit_price) || 0,
-      discount_expression: String(line.discount_expression || "0"),
-      // 🛡️ @Agent_Ultimate_Purifier: STRICT DTO MAPPING (Lines)
-      // Removal of forbidden fields: item_code, item_name, discount_amount, net_amount, no_quote, reference_price, remark, rfq_line_id
+      unit_price: price,
+      discount_expression: String(absDiscount || 0),
     };
   };
 
-    const sanitizePayload = (data: QuotationFormData): VQCreateData => {
+
+  const sanitizePayload = (data: QuotationFormData): VQCreateData => {
+    // 🎯 Flatten Header Discount to absolute money amount to keep calculateHeaderTotal happy
+    const globalDiscountAmount = parseDiscount(data.discount_expression, totals.subtotal);
+
     const payload: VQCreateData = {
       // 🛡️ @Agent_Ultimate_Purifier: STRICT DTO MAPPING (Header)
       ...(vqId ? { vq_no: data.vq_no } : {}), // Omit vq_no if creating to satisfy backend
+      discount_expression: String(globalDiscountAmount || 0), // 🎯 Explicit Header Discount
       quotation_no: data.quotation_no && data.quotation_no.trim() !== '' ? data.quotation_no : '-', 
       quotation_date: data.quotation_date ? new Date(data.quotation_date).toISOString() : new Date().toISOString(),
       quotation_expiry_date: data.valid_until ? new Date(data.valid_until).toISOString() : undefined,
       vendor_id: Number(data.vendor_id),
+      rfq_vendor_id: (data as any).rfq_vendor_id ? Number((data as any).rfq_vendor_id) : undefined, // 🎯 Add rfq_vendor_id
       pr_id: data.pr_id ? Number(data.pr_id) : undefined,
       rfq_id: data.rfq_id ? Number(data.rfq_id) : undefined,
       lead_time_days: Number(data.lead_time_days || data.delivery_days) || 0,
@@ -656,10 +681,10 @@ export const useVQForm = (
       exchange_rate: Number(data.exchange_rate) || 1,
       exchange_rate_date: data.exchange_rate_date ? new Date(data.exchange_rate_date).toISOString() : new Date().toISOString(),
       tax_code_id: data.tax_code_id ? Number(data.tax_code_id) : undefined,
-      // 👤 Contact Information (Failsafe for reload hydration)
-      contact_person: data.contact_person && data.contact_person.trim() !== '' ? data.contact_person : undefined,
+      // 👤 Contact Information (Removed contact_person due to backend constraints)
       contact_phone: data.contact_phone && data.contact_phone.trim() !== '' ? data.contact_phone : undefined,
       contact_email: data.contact_email && data.contact_email.trim() !== '' ? data.contact_email : undefined,
+
       
       // 👤 @Agent_Auth_Injector
       created_by: vqId ? (getValues('created_by') ? Number(getValues('created_by')) : undefined) : (user?.id ? Number(user.id) : undefined), 
@@ -670,12 +695,8 @@ export const useVQForm = (
         .map((l, idx) => sanitizeLine(l, idx)) as QuotationLine[]
     };
 
-    // 🛡️ Pass payment_terms text if backend supports it
-    if (data.payment_terms && data.payment_terms.trim() !== '') {
-        (payload as any).payment_terms = data.payment_terms;
-    }
-
     return payload;
+
   };
 
   // Handlers
