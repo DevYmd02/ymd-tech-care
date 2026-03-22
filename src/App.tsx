@@ -31,6 +31,7 @@ const EmployeePage = React.lazy(() => import('@/modules/admin/pages/employees/Em
 // Procurement Pages
 const ProcurementDashboard = React.lazy(() => import('@/modules/procurement/pages/dashboard/ProcurementDashboard'));
 const PRListPage = React.lazy(() => import('@/modules/procurement/pages/pr/PRListPage'));
+const AVListPage = React.lazy(() => import('@/modules/procurement/pages/av/AVListPage'));
 const RFQListPage = React.lazy(() => import('@/modules/procurement/pages/rfq/RFQListPage'));
 const VQListPage = React.lazy(() => import('@/modules/procurement/pages/vq/VQListPage'));
 const QCListPage = React.lazy(() => import('@/modules/procurement/pages/qc/QCListPage'));
@@ -200,6 +201,7 @@ function AppContent() {
             <Route path="procurement">
               <Route path="dashboard" element={<ProcurementDashboard />} />
               <Route path="pr" element={<PRListPage />} />
+              <Route path="av" element={<AVListPage />} />
               <Route path="rfq" element={<RFQListPage />} />
               <Route path="vq" element={<VQListPage />} />
               <Route path="qc" element={<QCListPage />} />

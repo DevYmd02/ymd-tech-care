@@ -401,7 +401,6 @@ export default function QCListPage() {
                                 details={[
                                     { label: 'PR อ้างอิง:', value: <span className="font-medium text-blue-600 dark:text-blue-400">{item.pr_no}</span> },
                                     { label: 'RFQ อ้างอิง:', value: <span className="font-semibold text-blue-600 dark:text-blue-400">{item.rfq_no || '-'}</span> },
-                                    { label: 'Vendors:', value: `${item.vendor_count} ราย` },
                                     {
                                         label: 'ผู้ชนะ:',
                                         value: item.vq_header_id ? (
