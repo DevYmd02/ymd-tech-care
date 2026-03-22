@@ -542,6 +542,7 @@ const _mockItemBarcodes: ItemBarcodeListItem[] = [
     {
         id: 1,
         barcode_id: 1,
+        item_id: 1,
         item_code: 'RM-001',
         item_name: 'Paracetamol 500mg',
         barcode: '8850007001234',
@@ -553,6 +554,7 @@ const _mockItemBarcodes: ItemBarcodeListItem[] = [
     {
         id: 2,
         barcode_id: 2,
+        item_id: 1,
         item_code: 'RM-001',
         item_name: 'Paracetamol 500mg',
         barcode: '8850007001241',
@@ -564,6 +566,7 @@ const _mockItemBarcodes: ItemBarcodeListItem[] = [
     {
         id: 3,
         barcode_id: 3,
+        item_id: 5,
         item_code: 'EQ-005',
         item_name: 'Surgical Mask',
         barcode: '8850007005678',

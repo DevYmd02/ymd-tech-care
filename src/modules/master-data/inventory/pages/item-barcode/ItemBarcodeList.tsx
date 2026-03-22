@@ -14,6 +14,7 @@ import { SmartTable } from '@ui';
 import { useTableFilters } from '@/shared/hooks';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useQuery } from '@tanstack/react-query';
+import { useConfirmation } from '@/shared/hooks/useConfirmation';
 
 const STATUS_OPTIONS = [
     { value: 'ALL', label: 'ทั้งหมด' },
@@ -22,6 +23,7 @@ const STATUS_OPTIONS = [
 ];
 
 export default function ItemBarcodeList() {
+    const { confirm } = useConfirmation();
     // ==================== STATE & FILTERS ====================
     const { 
         filters, 
@@ -125,11 +127,18 @@ export default function ItemBarcodeList() {
     };
 
     const handleDelete = useCallback(async (id: number) => {
-        if (confirm('คุณต้องการลบข้อมูลบาร์โค้ดนี้หรือไม่?')) {
+        const isConfirmed = await confirm({
+            title: 'ยืนยันการลบ',
+            description: 'คุณต้องการลบข้อมูลบาร์โค้ดนี้หรือไม่?',
+            confirmText: 'ลบ',
+            cancelText: 'ยกเลิก',
+            variant: 'danger',
+        });
+        if (isConfirmed) {
             await ItemBarcodeService.delete(id);
             refetch();
         }
-    }, [refetch]);
+    }, [confirm, refetch]);
 
     const handleModalClose = () => {
         setIsModalOpen(false);

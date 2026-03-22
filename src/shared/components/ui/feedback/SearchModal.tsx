@@ -19,6 +19,7 @@
  */
 
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Search } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 
@@ -126,7 +127,7 @@ export function SearchModal<T>({
     // Generate grid template columns from column definitions
     const gridCols = columns.map(col => col.width || '1fr').join(' ');
 
-    return (
+    return createPortal(
         // Overlay
         <div className={`${styles.modalOverlay} p-4 font-sans`}>
             {/* Modal Container */}
@@ -257,6 +258,8 @@ export function SearchModal<T>({
                     </button>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
+
 }
