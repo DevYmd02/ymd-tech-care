@@ -2,7 +2,9 @@ import api from '@/core/api/api';
 import { USE_MOCK } from '@/core/api/api';
 import type { QCListParams, QCListResponse, CreateQCPayload, SubmitQCWinnerData, IReadyForPOPR } from '@/modules/procurement/schemas/qc-schemas';
 import type { QCListItem } from '@/modules/procurement/schemas/qc-schemas';
+import type { RFQHeader } from '@/modules/procurement/types';
 import { logger } from '@/shared/utils/logger';
+
 import type { SuccessResponse } from '@/shared/types/api-response.types';
 import { applyClientFilters, applyClientPagination, extractArrayFromResponse } from '@/shared/utils/clientFilterUtils';
 
@@ -77,6 +79,25 @@ export const QCService = {
     logger.info('[QCService] Fetching PRs waiting for QC (Ready for PO)');
     return await api.get<IReadyForPOPR[]>('/po/pr/waiting-for-qc');
   },
+
+  getWaitingForQC: async (): Promise<RFQHeader[]> => {
+    logger.info('[QCService] Fetching RFQs waiting for QC');
+    const response = await api.get<{ data: RFQHeader[] }>('/qc/rfq/waiting-for-qc');
+
+    return extractArrayFromResponse<RFQHeader>(response);
+  },
+
+  getVQsWaitingForQC: async (rfqId: number): Promise<any[]> => {
+    logger.info(`[QCService] Fetching VQs for RFQ ID waiting for QC: ${rfqId}`);
+    const response = await api.get<any>(`/qc/vendor/${rfqId}/waiting-for-qc`);
+    console.log("[QCService_RAW_VQs_RESPONSE]:", response);
+    return extractArrayFromResponse<any>(response);
+  },
+
+
+
+
+
 
   create: async (data: CreateQCPayload): Promise<{ qc_id: number }> => {
     logger.info('[QCService] Creating QC with 5-field payload', data);

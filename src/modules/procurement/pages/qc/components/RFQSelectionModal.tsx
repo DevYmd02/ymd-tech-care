@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Search, X, FileText } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { RFQService, cleanParams } from '@/modules/procurement/services/rfq.service';
 import type { RFQHeader } from '@/modules/procurement/types';
+
 
 interface RFQSelectionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelect: (rfq: RFQHeader) => void;
+  data?: RFQHeader[];
+  isLoading: boolean;
   prId?: number | null;
   prNo?: string;
 }
@@ -17,23 +18,11 @@ export function RFQSelectionModal({
   isOpen,
   onClose,
   onSelect,
-  prId,
+  data = [],
+  isLoading,
   prNo,
 }: RFQSelectionModalProps) {
   const [searchTerm, setSearchTerm] = useState('');
-
-  // 🔓 Unlocked Fetching: Trust the Backend API (No "Hybrid Fallback")
-  // Fetch immediately when open. 
-  // Always filter by status 'CLOSED' for business logic.
-  const { data, isLoading } = useQuery({
-    queryKey: ['rfq-selection-list', prId, searchTerm],
-    queryFn: () => RFQService.getList(cleanParams({ 
-      pr_id: prId || undefined, 
-      status: 'CLOSED',
-      search: searchTerm || undefined // 🎯 Search handled by API
-    })),
-    enabled: isOpen,
-  });
 
   // 🧪 Debugging: Ensure data is correctly received
   useEffect(() => {
@@ -44,9 +33,18 @@ export function RFQSelectionModal({
 
   if (!isOpen) return null;
 
-  // 🎯 Robust Data Binding: Support both {data: []} and raw [] shapes
-  const rawData = Array.isArray(data) ? data : (data?.data || []);
-  const displayData = rawData; // Trusting the API result exactly
+  // 🎯 Client-Side Filtering since list is provided by parent
+  const displayData = data.filter((item: RFQHeader) => {
+    if (!searchTerm) return true;
+    const term = searchTerm.toLowerCase();
+    const matchesRFQ = item.rfq_no.toLowerCase().includes(term);
+    const matchesPurpose = (item.purpose || item.remarks || (item as any).rfq_remark || '').toLowerCase().includes(term);
+    const matchesVendor = item.vendor_name?.toLowerCase().includes(term);
+    const matchesPR = (item.pr_no || item.ref_pr_no || '').toLowerCase().includes(term);
+    
+    return matchesRFQ || matchesPurpose || matchesVendor || matchesPR;
+  });
+
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md animate-in fade-in duration-300">
@@ -102,8 +100,8 @@ export function RFQSelectionModal({
                    <tr className="border-b border-gray-100 dark:border-gray-800">
                       <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider w-1/4">เลขที่ (No)</th>
                       <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider w-1/6">วันที่ (Date)</th>
-                      <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider w-1/4">ผู้ขาย (Vendor)</th>
-                      <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider flex-1">เรื่อง/วัตถุประสงค์ (Subject)</th>
+                      <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider w-32">จำนวนผู้ขาย</th>
+                      <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider flex-1">เรื่อง/วัตถุประสงค์</th>
                       <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider text-right">จัดการ</th>
                    </tr>
                 </thead>
@@ -121,19 +119,20 @@ export function RFQSelectionModal({
                            </td>
                            <td className="px-6 py-4">
                               <span className="text-sm text-gray-600 dark:text-gray-300">
-                                {item.rfq_date}
+                                {item.rfq_date ? new Date(item.rfq_date).toLocaleDateString('en-GB') : '-'}
+                              </span>
+                           </td>
+                           <td className="px-6 py-4">
+                              <span className="text-sm font-semibold text-indigo-600 bg-indigo-50 dark:bg-indigo-900/40 dark:text-indigo-300 px-3 py-1 rounded-full whitespace-nowrap">
+                                {item._count?.rfqVendors || item.vendor_count || item.vendor_total || item.sent_vendors_count || item.responded_vendors_count || item.rfqVendors?.length || item.vendors?.length || (item.vendor_name ? item.vendor_name.split(',').length : 0)} ราย
                               </span>
                            </td>
                            <td className="px-6 py-4">
                               <span className="text-sm text-gray-600 dark:text-gray-300">
-                                {item.vendor_name}
+                                {(item as any).purpose || (item as any).remarks || (item as any).rfq_remark || '-'}
                               </span>
                            </td>
-                           <td className="px-6 py-4">
-                              <span className="text-sm text-gray-600 dark:text-gray-300">
-                                {item.purpose}
-                              </span>
-                           </td>
+
                            <td className="px-6 py-4 text-right whitespace-nowrap">
                               <button 
                                  onClick={() => onSelect(item)}
@@ -146,7 +145,7 @@ export function RFQSelectionModal({
                       ))
                    ) : (
                       <tr>
-                        <td colSpan={5} className="px-6 py-12 text-center text-gray-500 text-sm">
+                        <td colSpan={6} className="px-6 py-12 text-center text-gray-500 text-sm">
                           ไม่พบข้อมูลที่ค้นหา
                         </td>
                       </tr>

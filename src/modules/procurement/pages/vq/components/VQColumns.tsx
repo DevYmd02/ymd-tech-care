@@ -154,7 +154,7 @@ export const getColumns = (context: VQColumnsContext): ColumnDef<VQListItem, any
                 const isCancelled = item.status === 'CANCELLED';
                 const hasVqDocument = !!item.quotation_no || isRecorded || item.status === 'DRAFT';
 
-                const canEdit = hasVqDocument && !isCancelled && !isRecorded;
+                const canEdit = hasVqDocument && !isCancelled && !isRecorded && item.status !== 'DRAFT';
                 const canView = hasVqDocument || isCancelled;
 
                 if (!canRecord && !canEdit && !canView) {
@@ -218,7 +218,7 @@ const pendingColumnHelper = createColumnHelper<VQPendingQueueItem>();
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const getPendingColumns = (tab: 'WAITING_VQ' | 'WAITING_RFQ', context: VQColumnsContext): ColumnDef<VQPendingQueueItem, any>[] => {
-    const { filters, setInitialRFQForCreate, setIsVqModalOpen, setSelectedVqId, setIsViewMode, handleCancelVendor } = context;
+    const { vendorMap, filters, setInitialRFQForCreate, setIsVqModalOpen, setSelectedVqId, setIsViewMode, handleCancelVendor } = context;
 
     return [
         pendingColumnHelper.display({
@@ -236,14 +236,21 @@ export const getPendingColumns = (tab: 'WAITING_VQ' | 'WAITING_RFQ', context: VQ
                 </div>
             ),
             size: 110,
+            enableSorting: false,
         }),
         pendingColumnHelper.accessor('vendor_name', {
             header: 'ผู้ขาย',
-            cell: (info) => (
-                <div className="text-gray-900 dark:text-gray-100 font-medium truncate" title={info.getValue()}>
-                    {info.getValue() || '-'}
-                </div>
-            ),
+            cell: (info) => {
+                const item = info.row.original;
+                const vendorId = item.vendor_id;
+                const vendorName = info.getValue() || (vendorId ? vendorMap[String(vendorId)] : null);
+                
+                return (
+                    <div className="text-gray-900 dark:text-gray-100 font-medium truncate" title={vendorName || undefined}>
+                        {vendorName || '-'}
+                    </div>
+                );
+            },
             size: 180,
         }),
         pendingColumnHelper.accessor('rfq_no', {

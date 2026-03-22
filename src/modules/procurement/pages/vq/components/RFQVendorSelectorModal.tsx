@@ -151,6 +151,7 @@ export const RFQVendorSelectorModal: React.FC<RFQVendorSelectorModalProps> = ({
                                             </td>
                                             <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-200">
                                                 {vendor.vendor_name || '-'}
+
                                             </td>
 
                                         </tr>

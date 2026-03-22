@@ -31,9 +31,9 @@ export const VendorTrackingTable: React.FC<VendorTrackingTableProps> = ({
     vendorMap,
     actionComponent 
 }) => {
-    const repliedCount  = vendors.filter(v => v.status === 'RESPONDED').length;
-    const declinedCount = vendors.filter(v => v.status === 'DECLINED').length;
-    const waitingCount  = vendors.filter(v => v.status === 'SENT' || v.status === 'PENDING').length;
+    const repliedCount  = vendors.filter(v => v.status === 'RESPONDED' || v.status === 'RECORDED' || !!v.vq_no).length;
+    const declinedCount = vendors.filter(v => v.status === 'DECLINED' || v.status === 'NO_RESPONSE').length;
+    const waitingCount  = vendors.length - repliedCount - declinedCount;
 
     /**
      * Determine if we should show the "Actions" (จัดการ) column.

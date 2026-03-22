@@ -198,7 +198,7 @@ export default function RFQListPage() {
 
         // 🚀 Optimistic Background: Close Modal instantly
         const rfqNo = sendingRFQ.rfq_no;
-        toast(`กำลังส่งอีเมล RFQ ${rfqNo} ในพื้นหลัง...`, 'info');
+        toast(`กำลังส่งอีเมล RFQ ${rfqNo} รอดำเนินการ`, 'info');
         setSendingRFQ(null);
 
         Promise.allSettled(

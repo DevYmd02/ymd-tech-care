@@ -68,6 +68,8 @@ export const QuotationHeaderSchema = z.object({
   qc_id: z.coerce.number().optional(), // FK to Comparison
   rfq_id: z.coerce.number().optional(), // FK to Request For Quotation
   pr_id: z.coerce.number().optional(), // FK to Purchase Request
+  rfq_vendor_id: z.coerce.number().optional(), // 🎯 Pivot relation reference
+
   rfq_no: z.string().min(1, 'กรุณาเลือกเลขที่ RFQ'), // Human-readable Ref RFQ
   currency: z.string().min(1, 'กรุณาระบุสกุลเงิน'),
   isMulticurrency: z.boolean().optional(),

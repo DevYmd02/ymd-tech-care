@@ -108,11 +108,10 @@ export function SelectionModal<T extends object>({
                         >
                            {columns.map((col, colIdx) => (
                              <td key={colIdx} className={`px-6 py-4 ${col.className || ''}`}>
-                               {typeof col.key === 'function' ? col.key(item) : (
-                                  <span className={`text-sm ${colIdx === 0 ? 'font-bold text-indigo-600 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300'}`}>
-                                    {String(item[col.key] ?? '')}
-                                  </span>
-                               )}
+                                 <span className={`text-sm ${colIdx === 0 ? 'font-bold text-indigo-600 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300'}`}>
+                                   {typeof col.key === 'function' ? col.key(item) : String(item[col.key as keyof T] ?? '')}
+                                 </span>
+
                              </td>
                            ))}
                            <td className="px-6 py-4 text-right whitespace-nowrap">

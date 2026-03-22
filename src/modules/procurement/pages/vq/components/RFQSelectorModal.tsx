@@ -90,7 +90,7 @@ export const RFQSelectorModal: React.FC<RFQSelectorModalProps> = ({ isOpen, onCl
                                     <tr key={rfq.rfq_id} className="hover:bg-indigo-50/50 dark:hover:bg-gray-700/50 transition-colors">
                                         <td className="px-5 py-3 font-medium text-indigo-700 dark:text-indigo-400 whitespace-nowrap">{rfq.rfq_no}</td>
                                         <td className="px-5 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">
-                                            {rfq.rfq_date ? formatThaiDate(rfq.rfq_date) : '-'}
+                                            {(rfq.rfq_date || rfq.created_at) ? formatThaiDate(rfq.rfq_date || rfq.created_at) : '-'}
                                         </td>
                                         <td className="px-5 py-3 text-gray-500 dark:text-gray-400">
                                             <div className="truncate max-w-[200px]" title={rfq.remarks || rfq.purpose}>

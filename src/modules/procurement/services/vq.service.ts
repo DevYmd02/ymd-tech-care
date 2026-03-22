@@ -23,8 +23,10 @@ export const VQService = {
     if (apiParams.status === 'RECORDED') {
         delete apiParams.status;
     }
-
+    console.log("[VQ_GET_LIST_PARAMS]:", apiParams);
     const response = await api.get<VQListResponse>(ENDPOINTS.list, { params: apiParams });
+
+
 
     // 🎯 HYBRID FALLBACK: Apply Client-Side Filtering when using Real API
     if (!USE_MOCK && params) {
