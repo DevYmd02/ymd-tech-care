@@ -70,7 +70,7 @@ const POSummaryPanel = ({ control, taxCodes }: { control: Control<POFormData>; t
     const poLines = useWatch({ control, name: 'po_lines' });
     const taxCodeId = useWatch({ control, name: 'tax_code_id' });
 
-    const { beforeTax, taxAmount, totalAmount, taxRate } = useMemo(() => {
+    const { taxAmount, totalAmount, taxRate, totalDiscount, grossTotal } = useMemo(() => {
         const items = (poLines ?? []).map((l: POLine) => {
             const qty = Number(l.qty_ordered ?? l.qty ?? 0);
             const price = Number(l.unit_price ?? 0);
@@ -87,18 +87,29 @@ const POSummaryPanel = ({ control, taxCodes }: { control: Control<POFormData>; t
         const taxRate = selectedTax ? Number(selectedTax.tax_rate) : 0;
 
         const summary = calculatePricingSummary(items, taxRate, false);
+        const totalDiscount = items.reduce((sum, item) => sum + (item.discount || 0), 0);
+        const grossTotal = items.reduce((sum, item) => sum + (item.qty * item.unit_price), 0);
+
         return {
             ...summary,
-            taxRate
+            taxRate,
+            totalDiscount,
+            grossTotal
         };
     }, [poLines, taxCodeId, taxCodes]);
 
     return (
-        <div className="w-80 space-y-3 bg-white dark:bg-slate-800 p-4 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm">
+        <div className="w-80 space-y-2 bg-white dark:bg-slate-800 p-4 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm transition-all">
             <div className="flex justify-between text-sm">
                 <span className="text-gray-600 dark:text-slate-400">รวมเป็นเงิน</span>
                 <span className="font-medium text-gray-900 dark:text-white">
-                    {beforeTax.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    {grossTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </span>
+            </div>
+            <div className="flex justify-between text-sm">
+                <span className="text-gray-600 dark:text-slate-400">ส่วนลด</span>
+                <span className={`font-medium ${totalDiscount > 0 ? 'text-red-500' : 'text-gray-900 dark:text-white'}`}>
+                    {totalDiscount > 0 ? '-' : ''}{totalDiscount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </span>
             </div>
             <div className="flex justify-between text-sm">
@@ -159,7 +170,6 @@ export default function POFormModal({
         setValue,
         watchVendorName,
         watchPrNo,
-        watchCurrencyCode,
         handleSelectReferenceDoc,
         handleVendorSelect,
         handleAddLine,
@@ -191,6 +201,7 @@ export default function POFormModal({
     } = usePOForm({ isOpen, onClose, onSuccess, poId, initialValues, isViewMode });
 
     const watchQcNo = useWatch({ control, name: 'qc_no' });
+    const watchedLines = useWatch({ control, name: 'po_lines' });
     const { getValues } = formMethods;
 
     const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -215,7 +226,7 @@ export default function POFormModal({
             <WindowFormLayout
                 isOpen={isOpen}
                 onClose={onClose}
-                title={isView ? 'รายละเอียดใบสั่งซื้อ (VIEW PO)' : 'สร้างใบสั่งซื้อ (CREATE PURCHASE ORDER)'}
+                title={isView ? 'รายละเอียดใบสั่งซื้อ (VIEW PO)' : watchQcNo ? 'สร้างใบสั่งซื้อจากใบ QC (CREATE PO FROM QC)' : 'สร้างใบสั่งซื้อ (CREATE PURCHASE ORDER)'}
                 titleIcon={
                     <div className="bg-white/20 p-1 rounded-md shadow-sm">
                         <FileText size={14} strokeWidth={3} className="text-white" />
@@ -438,7 +449,7 @@ export default function POFormModal({
                                         <label className={ui.label}>ไปที่สกุลเงิน (Target)</label>
                                         <select {...register('target_currency')} className={ui.select} disabled={isView || isLoadingCurrencies}>
                                             <option value="">{isLoadingCurrencies ? 'โหลด...' : 'เลือกสกุลเงิน'}</option>
-                                            {currencies.filter((o: Currency) => o.currency_code !== watchCurrencyCode).map((o: Currency) => <option key={o.currency_code} value={o.currency_code}>{o.currency_code} - {o.name_en}</option>)}
+                                            {currencies.map((o: Currency) => <option key={o.currency_code} value={o.currency_code}>{o.currency_code} - {o.name_en}</option>)}
                                         </select>
                                     </div>
                                     <div>
@@ -526,7 +537,7 @@ export default function POFormModal({
                                                 <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
                                                     <div className="relative w-full flex items-center">
                                                         <input
-                                                            value={field.code || field.item_code || ''}
+                                                            value={watchedLines?.[idx]?.item_code || watchedLines?.[idx]?.code || field.code || field.item_code || ''}
                                                             className="w-full pr-10 border rounded px-3 !h-9 text-[13px] bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
                                                             placeholder="ค้นหารหัส..."
                                                             readOnly

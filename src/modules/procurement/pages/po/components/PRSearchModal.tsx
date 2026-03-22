@@ -39,7 +39,9 @@ export const PRSearchModal: React.FC<PRSearchModalProps> = ({
         status: 'APPROVED',
         limit: 50,
       });
-      return response.data || [];
+      const items = response.data || [];
+      // 🛡️ Safety fallback: Case-Insensitive Multi-mode guarantees APPROVED status only
+      return items.filter((pr: PRHeader) => String(pr.status || '').toUpperCase() === 'APPROVED');
     },
     enabled: isOpen,
   });
@@ -138,6 +140,9 @@ export const PRSearchModal: React.FC<PRSearchModalProps> = ({
                     <div className="flex flex-col items-center gap-2 opacity-60">
                       <Search size={40} className="mb-2" />
                       <span className="text-lg font-medium">ไม่พบข้อมูล PR ที่ได้รับการอนุมัติ</span>
+                      <span className="text-xs text-gray-400 mt-1">
+                        (พบข้อมูลดิบ {prResults?.length ?? 0} รายการ - ค้นหา: "{debouncedSearch}" - โหมด: {import.meta.env.VITE_USE_MOCK === 'true' ? 'จำลอง (Mock)' : 'เซิร์ฟเวอร์จริง (Real)'})
+                      </span>
                       <span className="text-sm">ลองเปลี่ยนคำค้นหา หรือตรวจสอบสถานะ PR อีกครั้ง</span>
                     </div>
                   </td>

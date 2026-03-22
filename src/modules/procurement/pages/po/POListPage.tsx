@@ -37,9 +37,11 @@ export default function POListPage() {
 
     const initialCreateValues = useMemo<Partial<POFormData> | undefined>(() => {
         if (createFromQC) {
+            const qcNoParam = searchParams.get('qcNo');
             return {
                 vendor_id: vendorIdParam ? Number(vendorIdParam) : undefined,
                 qc_id: qcIdParam ? Number(qcIdParam) : undefined,
+                qc_no: qcNoParam || undefined,
                 pr_id: prIdParam ? Number(prIdParam) : undefined,
                 winning_vq_id: winningVqIdParam ? Number(winningVqIdParam) : undefined,
                 remarks: remarksParam || undefined,
@@ -50,7 +52,7 @@ export default function POListPage() {
             return { vendor_id: Number(vendorIdParam) };
         }
         return undefined;
-    }, [createFromQC, vendorIdParam, qcIdParam, prIdParam, winningVqIdParam, remarksParam]);
+    }, [createFromQC, vendorIdParam, qcIdParam, prIdParam, winningVqIdParam, remarksParam, searchParams]);
 
     const handleCloseCreateModal = () => {
         setSearchParams(prev => {
@@ -533,7 +535,7 @@ export default function POListPage() {
             <DocumentSourceSelectorModal
                 isOpen={isCreateInterceptorOpen}
                 onClose={() => handleCloseCreateModal()}
-                onSelectSource={(sourceType: 'QC' | 'BLANK', prId?: number, qcId?: number, vendorId?: number, winningVqId?: number) => {
+                onSelectSource={(sourceType: 'QC' | 'BLANK', prId?: number, qcId?: number, vendorId?: number, winningVqId?: number, qcNo?: string) => {
                     if (sourceType === 'QC' && (prId || qcId)) {
                         setSearchParams({ 
                             mode: 'create', 
@@ -541,7 +543,8 @@ export default function POListPage() {
                             ...(prId ? { sourcePrId: String(prId) } : {}),
                             ...(qcId ? { sourceQcId: String(qcId) } : {}),
                             ...(vendorId ? { vendorId: String(vendorId) } : {}),
-                            ...(winningVqId ? { winningVqId: String(winningVqId) } : {})
+                            ...(winningVqId ? { winningVqId: String(winningVqId) } : {}),
+                            ...(qcNo ? { qcNo: String(qcNo) } : {})
                         });
                     } else {
                         setSearchParams({ mode: 'create' });

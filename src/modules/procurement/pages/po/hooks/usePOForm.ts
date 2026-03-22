@@ -4,7 +4,7 @@ import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import type { Resolver, SubmitHandler, FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { POService, VQService, QCService } from '@/modules/procurement/services';
+import { POService, VQService } from '@/modules/procurement/services';
 import { POFormSchema, CreatePOSchema, type POFormData, type POLine, type ItemSelectorResult } from '@/modules/procurement/schemas/po-schemas'; 
 import type { IHydrationPRLine, IHydrationVQLine, IHydrationVQHeader } from '@/modules/procurement/schemas/po-schemas'; 
 import type { CreatePOPayload } from '@/modules/procurement/types/po-types';
@@ -13,11 +13,14 @@ import { PRService } from '@/modules/procurement/services/pr.service';
 import type { PRHeader, PRLine } from '@/modules/procurement/types/pr-types';
 import type { QuotationHeader, QuotationLine } from '@/modules/procurement/types/vq-types'; 
 import { MasterDataService } from '@/modules/master-data/services/master-data.service';
+import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
 import { TaxCodeService } from '@/modules/master-data/tax/services/tax-code.service';
+import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
 import { logger } from '@/shared/utils/logger';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { extractErrorMessage } from '@/core/api/api';
+import type { Currency } from '@/modules/master-data/types/master-data-types';
 
 // ====================================================================================
 // CONFIG
@@ -82,7 +85,7 @@ export const usePOForm = ({
             ship_to_warehouse_id: undefined,
             is_multicurrency: false,
             currency_code: 'THB',
-            target_currency: undefined,
+            target_currency: 'THB',
             exchange_rate_date: new Date().toISOString().split('T')[0],
             exchange_rate: 1,
             payment_term_days: 30,
@@ -102,6 +105,7 @@ export const usePOForm = ({
         setValue,
         getValues,
         trigger,
+        getFieldState,
         formState: { errors },
     } = formMethods;
 
@@ -110,7 +114,8 @@ export const usePOForm = ({
 
     const watchVendorName      = useWatch({ control, name: 'vendor_name' });
     const watchPrNo            = useWatch({ control, name: 'pr_no' });
-    const watchCurrencyCode    = useWatch({ control, name: 'currency_code' });
+    const watchCurrencyCode    = useWatch({ control, name: 'currency_code' }) as string | undefined;
+    const watchTargetCurrency  = useWatch({ control, name: 'target_currency' }) as string | undefined;
     const watchIsMulticurrency = useWatch({ control, name: 'is_multicurrency' });
 
     // ── VQ Inheritance Query (read-only cross-module lookup) ──────────────────
@@ -229,9 +234,46 @@ export const usePOForm = ({
             setValue('pr_no', undefined);
             setValue('currency_code', 'THB');
             setValue('exchange_rate', 1);
-            setValue('target_currency', undefined);
+            setValue('target_currency', 'THB');
         }
     }, [watchIsMulticurrency, setValue]);
+
+    // ── Currency Exchange Rate Auto-Calculation triggers ─────────────────────
+    const prevCurrencyId = useRef<string | undefined>(undefined);
+    const prevTargetCurrency = useRef<string | undefined>(undefined);
+
+    useEffect(() => {
+        if (!watchCurrencyCode) return;
+        
+        // Equal currencies reset Rate to 1
+        if (watchCurrencyCode === watchTargetCurrency || !watchTargetCurrency) {
+            setValue('exchange_rate', 1, { shouldDirty: false });
+            prevCurrencyId.current = watchCurrencyCode;
+            prevTargetCurrency.current = watchTargetCurrency;
+            return;
+        }
+
+        const isSourceChanged = prevCurrencyId.current !== watchCurrencyCode;
+        const isTargetChanged = prevTargetCurrency.current !== watchTargetCurrency;
+
+        const { isDirty } = getFieldState('exchange_rate');
+        if (isSourceChanged || isTargetChanged || !isDirty) {
+            const sourceObj = currencies.find((c: Currency) => c.currency_code === watchCurrencyCode);
+            const targetObj = currencies.find((c: Currency) => c.currency_code === watchTargetCurrency);
+
+            const fromRate = sourceObj?.exchange_rate || 1;
+            const toRate = targetObj?.exchange_rate || 1;
+
+            const calculatedRate = fromRate / toRate;
+
+            if (calculatedRate !== undefined && !isNaN(calculatedRate)) {
+                setValue('exchange_rate', Number(calculatedRate.toFixed(6)), { shouldValidate: true, shouldDirty: false });
+            }
+        }
+
+        prevCurrencyId.current = watchCurrencyCode;
+        prevTargetCurrency.current = watchTargetCurrency;
+    }, [currencies, watchCurrencyCode, watchTargetCurrency, setValue, getFieldState]);
 
     // ── Handlers ──────────────────────────────────────────────────────────────
     const handleVendorSelect = (vendor: VendorSearchItem) => {
@@ -271,14 +313,7 @@ export const usePOForm = ({
                     toast('ไม่สามารถดึงข้อมูลราคาจากใบเสนอราคาได้ กรุณาระบุราคาด้วยตนเอง', 'error');
                 }
 
-                if (qcId) {
-                    try {
-                        const fullQC = await QCService.getById(Number(qcId));
-                        setValue('qc_no', fullQC.qc_no);
-                    } catch (qcError) {
-                        logger.error('[usePOForm] Failed to fetch QC details', qcError);
-                    }
-                }
+                /* qc_no is already hydrated via initialValues */
             }
             
             // 2. Map Header IDs
@@ -295,7 +330,19 @@ export const usePOForm = ({
                     shouldValidate: true, 
                     shouldDirty: true 
                 });
-                setValue('vendor_name', fullPR.vendor_name || winningVQ?.vendor_name || '');
+                // Prioritize Winner Vendor Name from VQ lookup
+                let finalVendorName = winningVQ?.vendor?.vendor_name || winningVQ?.vendor_name || fullPR.vendor_name || '';
+                if (finalVendorId && !finalVendorName) {
+                    try {
+                        const vendorDetail = await VendorService.getById(finalVendorId);
+                        if (vendorDetail) {
+                            finalVendorName = vendorDetail.vendor_name;
+                        }
+                    } catch (e) {
+                        logger.error('[usePOForm] Failed to fetch vendor detail for name', e);
+                    }
+                }
+                setValue('vendor_name', finalVendorName);
             }
 
             // FINANCIAL TERMS: Priority to VQ (Negotiated), then PR estimates
@@ -354,7 +401,7 @@ export const usePOForm = ({
                     type
                 });
 
-                const mappedLines: POFormData['po_lines'] = prLines.map((l: PRLine, index: number) => {
+                const mappedLines: POFormData['po_lines'] = await Promise.all(prLines.map(async (l: PRLine, index: number) => {
                     const hydrationLine = l as IHydrationPRLine;
                     const getItemCode = (line: PRLine) => String(line.item?.item_code || line.item_code || "");
                     
@@ -416,7 +463,24 @@ export const usePOForm = ({
 
                     // 🛡️ DATA INTEGRITY (Rule 3): All IDs/Prices must be Number()
                     const finalItemId = getRobustItemId(hydrationLine, vqLine);
-                    const finalCode = String(vqLine?.item_code || vqLine?.item?.item_code || getItemCode(l) || '');
+                                        let finalCode = String(
+                                            vqLine?.item_code || vqLine?.item?.item_code || 
+                                            (vqLine as unknown as Record<string, unknown> | undefined)?.code || (vqLine?.item as unknown as Record<string, unknown> | undefined)?.code || 
+                                            l.item?.item_code || l.item_code || 
+                                            (l.item as unknown as Record<string, unknown> | undefined)?.code || (l as unknown as Record<string, unknown> | undefined)?.code || 
+                                            getItemCode(l) || ''
+                                        );
+
+                                        if (!finalCode && finalItemId && finalItemId > 0) {
+                        try {
+                            const fetchedItem = await ItemMasterService.getById(Number(finalItemId));
+                            if (fetchedItem?.item_code) {
+                                finalCode = fetchedItem.item_code;
+                            }
+                        } catch (e) {
+                            logger.error("[usePOForm] Async Item Fix failed", e);
+                        }
+                    }
 
                     return {
                         id: (finalItemId || 0) as number, // 🚀 Dual Mapping
@@ -439,7 +503,7 @@ export const usePOForm = ({
                         receipt_type: 'GOODS' as const,
                         line_total: Number((Number(l.qty || 0) * Number(finalUnitPrice)).toFixed(2)),
                     };
-                });
+                }));
 
                 // 🧪 [HYDRATION_DEBUG] Verification
                 logger.info("🛠️ [HYDRATION_DEBUG] Hydrated Item IDs:", mappedLines.map(l => l.item_id));
@@ -463,6 +527,26 @@ export const usePOForm = ({
             setIsHydrating(false);
         }
     }, [setValue, getValues, replace, trigger, toast]);
+    
+    // ── Auto-Hydrate from Reference Doc on Create Mount ───────────────────────
+    useEffect(() => {
+        if (isOpen && !poId && initialValues?.pr_id) {
+            const isQcFlow = !!initialValues?.qc_id || !!initialValues?.winning_vq_id;
+            
+            if (isQcFlow) {
+                handleSelectReferenceDoc(
+                    Number(initialValues.pr_id), 
+                    'QC', 
+                    initialValues.qc_id ? Number(initialValues.qc_id) : undefined, 
+                    initialValues.vendor_id ? Number(initialValues.vendor_id) : undefined,
+                    initialValues.winning_vq_id ? Number(initialValues.winning_vq_id) : undefined
+                );
+            } else {
+                handleSelectReferenceDoc(Number(initialValues.pr_id), 'PR');
+            }
+        }
+    }, [isOpen, initialValues?.pr_id, initialValues?.qc_id, initialValues?.winning_vq_id, initialValues?.vendor_id, handleSelectReferenceDoc, poId]);
+
 
     const handleSelectPR = useCallback((pr: PRHeader) => {
         handleSelectReferenceDoc(pr.pr_id, 'PR');
@@ -606,7 +690,7 @@ export const usePOForm = ({
                 discount_expression: pendingPayload.discount_expression || "0",
                 status:             "DRAFT", // Hardcode DRAFT for new creation
                 created_at:         new Date().toISOString(),
-                created_by:         (poId ? (getValues('created_by') ? Number(getValues('created_by')) : undefined) : (user?.id ? Number(user.id) : undefined)) as any,
+                created_by:         (poId ? (getValues('created_by') ? Number(getValues('created_by')) : undefined) : (user?.id ? Number(user.id) : undefined)) as unknown as number,
                 winning_vq_id:      safeId(pendingPayload.winning_vq_id),
                 po_lines: (pendingPayload.po_lines || []).map((item: POLine, index: number) => ({
                     line_no:        index + 1,
