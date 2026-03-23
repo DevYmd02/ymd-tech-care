@@ -39,7 +39,7 @@ export const AVFormLines: React.FC<AVFormLinesProps> = React.memo(({
                         <tr>
                             <th className="p-2 w-10 text-center border-r border-blue-500 sticky left-0 z-20 bg-blue-600">✓</th>
                             <th className="p-2 w-10 text-center border-r border-blue-500 sticky left-[40px] z-20 bg-blue-600">No.</th>
-                            <th className="p-2 w-24 text-center border-r border-blue-500">รหัสสินค้า</th>
+                            <th className="p-2 w-40 text-center border-r border-blue-500">รหัสสินค้า</th>
                             <th className="p-2 min-w-[180px] text-center border-r border-blue-500">ชื่อสินค้า</th>
                             <th className="p-2 w-16 text-center border-r border-blue-500">คลัง</th>
                             <th className="p-2 w-16 text-center border-r border-blue-500">ที่เก็บ</th>

@@ -6,18 +6,19 @@ import type { POListParams, POStatus } from '@/modules/procurement/types';
 import type { FilterFieldConfig } from '@ui';
 
 export const POA_STATUS_OPTIONS = [
+    { value: 'ALL', label: 'ทั้งหมด' },
     { value: 'PENDING_APPROVAL', label: 'รออนุมัติ' },
-    // You could also show recently approved/rejected if needed, but usually POA is just pending
+    { value: 'APPROVED', label: 'อนุมัติแล้ว' },
+    { value: 'REJECTED', label: 'ไม่อนุมัติ' },
 ];
 
-export type POAFilterKeys = Extract<keyof TableFilters<POStatus>, string>;
+export type POAFilterKeys = Extract<keyof TableFilters<POStatus>, string> | 'status'; // Add status to keys if not present
 
 export const POA_FILTER_CONFIG: FilterFieldConfig<POAFilterKeys>[] = [
     { name: 'search', label: 'เลขที่ PO', type: 'text', placeholder: 'PO2024-xxx' },
-    { name: 'search2', label: 'เลขที่ PR อ้างอิง', type: 'text', placeholder: 'PR2024-xxx' },
-    { name: 'search3', label: 'ชื่อผู้ขาย', type: 'text', placeholder: 'ชื่อผู้ขาย' },
-    { name: 'date_start', label: 'วันที่เอกสาร จาก', type: 'date' },
-    { name: 'date_end', label: 'ถึงวันที่', type: 'date' },
+    { name: 'date_start', label: 'วันที่เริ่มต้น', type: 'date' },
+    { name: 'date_end', label: 'วันที่สิ้นสุด', type: 'date' },
+    { name: 'status', label: 'สถานะ', type: 'select', options: POA_STATUS_OPTIONS },
 ];
 
 export const usePOAList = () => {
@@ -42,7 +43,7 @@ export const usePOAList = () => {
         po_no: filters.search || undefined,
         pr_no: filters.search2 || undefined,
         vendor_name: filters.search3 || undefined,
-        status: 'PENDING_APPROVAL', // Force status constraint
+        status: filters.status === 'ALL' ? undefined : (filters.status || 'PENDING_APPROVAL') as any,
         date_from: filters.date_start || undefined,
         date_to: filters.date_end || undefined,
         page: filters.page,

@@ -78,6 +78,7 @@ export const RFQFormSchema = z.object({
     // Optional — PR reference (can create blank RFQ without PR)
     pr_id: z.number().nullable().optional(),
     pr_no: z.string().nullable().optional(),
+    approved_pr_no: z.string().nullable().optional(),
 
     // Optional — user/cost center info
     project_id: z.number().nullable().optional(),
@@ -148,6 +149,7 @@ export const getRFQDefaultFormValues = (): RFQFormValues => ({
     rfq_date: new Date().toLocaleDateString('en-CA'),
     pr_id: null,
     pr_no: null,
+    approved_pr_no: null,
     branch_id: 0,
     project_id: null,
     requested_by_user_id: undefined,

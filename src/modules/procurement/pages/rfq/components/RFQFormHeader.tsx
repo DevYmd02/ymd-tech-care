@@ -134,6 +134,16 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ branches, currenci
                         className={`${inputStyle} bg-gray-200 dark:bg-gray-700 font-medium text-gray-700 dark:text-gray-300`}
                     />
                 </div>
+                <div>
+                    <label className={labelStyle}>เลขที่ Approve PR</label>
+                    <input
+                        type="text"
+                        placeholder="ระบุเลขที่ Approve PR"
+                        {...register('approved_pr_no')}
+                        disabled={isLocked}
+                        className={inputStyle}
+                    />
+                </div>
             </div>
 
             {/* Row 3: วันครบกำหนดส่งใบเสนอราคา, สถานที่รับของ */}
