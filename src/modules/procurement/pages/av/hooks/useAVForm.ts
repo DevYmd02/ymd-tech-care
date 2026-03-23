@@ -4,7 +4,7 @@ import type { FieldErrors, Path, FieldPathValue } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
-import { useConfirmation } from '@/shared/hooks/useConfirmation';
+
 
 import { AVFormSchema } from '../schemas/av.schema';
 import type { AVFormData, AVLineFormData } from '../schemas/av.schema';
@@ -13,6 +13,7 @@ import { usePRMasterData } from '@/modules/procurement/pages/pr/hooks/usePRMaste
 import { LocationService } from '@/modules/master-data/inventory/services/inventory-master.service';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
 import { logger } from '@/shared/utils/logger';
+import { extractErrorMessage } from '@/core/api/api';
 
 
 export interface UseAVFormProps {
@@ -23,7 +24,6 @@ export interface UseAVFormProps {
 }
 
 export const useAVForm = ({ id, isOpen, onClose, onSuccess }: UseAVFormProps) => {
-  const { confirm } = useConfirmation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const showAlert = useCallback((message: string) => toast(message, 'error'), [toast]);
@@ -45,9 +45,8 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess }: UseAVFormProps) =>
   const [isSubmitting, setIsSubmitting] = useState(false);
   const prevIsOpenRef = useRef(false);
 
-
-
-  const [isRejectReasonOpen, setIsRejectReasonOpen] = useState(false);
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [isConfirmRejectOpen, setIsConfirmRejectOpen] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
 
   const formMethods = useForm<AVFormData>({
@@ -64,6 +63,7 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess }: UseAVFormProps) =>
   });
 
   const handleFormError = useCallback((fieldErrors: FieldErrors<AVFormData>) => {
+    console.error("[useAVForm] Validation Errors:", fieldErrors);
     const errorMessages: string[] = [];
     const extractMessages = (errs: object) => {
       Object.values(errs).forEach((val) => {
@@ -205,6 +205,11 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess }: UseAVFormProps) =>
               ...source,
               lines: mappedLines,
               
+              pr_no: source.pr_no || '',
+              need_by_date: source.need_by_date || '',
+              pr_date: source.pr_date || '',
+              isMulticurrency: !!source.isMulticurrency,
+              
               // Fallback Cost Center
               cost_center_id: (() => {
                 const val = source.cost_center_id ?? source.department_id;
@@ -219,10 +224,11 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess }: UseAVFormProps) =>
               vendor_name: vendorName,
 
               // Requester Fallback
-              preparer_name: source.requester_name || source.employee_name || '',
+              preparer_name: source.preparer_name || source.requester_name || source.employee_name || '',
               requester_name: source.requester_name || source.employee_name || '',
 
               is_on_hold: source.status === 'DRAFT' ? 'Y' : 'N',
+              shipping_method: source.shipping_method || '',
 
               pr_tax_code_id: source.pr_tax_code_id ? Number(source.pr_tax_code_id) : undefined,
               pr_tax_rate: (() => {
@@ -255,60 +261,59 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess }: UseAVFormProps) =>
   }, [setValue]);
 
   // Submit functions
-  const handleApprove = handleSubmit(async (data: any) => {
-    const isConfirmed = await confirm({
-      title: 'ยืนยันการอนุมัติ',
-      description: 'คุณต้องการอนุมัติรายการที่เลือกใช่หรือไม่?',
-      confirmText: 'อนุมัติ',
-      cancelText: 'ยกเลิก',
-    });
-    
-    if (isConfirmed && id) {
-      setIsSubmitting(true);
-      try {
-        await AVService.approvePR(id, data);
-        toast('อนุมัติรายการสำเร็จ', 'success');
-        onSuccess?.();
-        onClose();
-        queryClient.invalidateQueries({ queryKey: ['prs'] });
-      } catch {
-        // Validation msg inside service already or shown via toast
-      } finally {
-        setIsSubmitting(false);
-      }
+  const handleApprove = handleSubmit(() => {
+    setIsConfirmModalOpen(true);
+  }, handleFormError);
+
+  const handleConfirmApprove = async () => {
+    if (!id) return;
+    const data = formMethods.getValues();
+
+    setIsSubmitting(true);
+    try {
+      await AVService.approvePR(id, data);
+      toast('อนุมัติรายการสำเร็จ', 'success');
+      onSuccess?.();
+      onClose();
+      queryClient.invalidateQueries({ queryKey: ['prs'] });
+    } catch (error) {
+      logger.error('[useAVForm] handleConfirmApprove error:', error);
+      toast(extractErrorMessage(error), 'error');
+    } finally {
+      setIsSubmitting(false);
+      setIsConfirmModalOpen(false);
     }
-  });
+  };
 
   const handleRejectInit = () => {
-    setIsRejectReasonOpen(true);
-  };
-
-  const submitReject = async (reason?: string) => {
+    const reason = formMethods.getValues('reject_reason' as any);
     if (!reason?.trim()) {
       toast('กรุณาระบุเหตุผลที่ไม่อนุมัติ', 'error');
-      return false;
+      formMethods.setError('reject_reason' as any, { type: 'required', message: 'กรุณาระบุเหตุผลที่ไม่อนุมัติ' });
+      formMethods.setFocus('reject_reason' as any);
+      return;
     }
-    
-    if (id) {
-      setIsRejecting(true);
-      try {
-        await AVService.rejectPR(id, reason);
-        toast('ไม่อนุมัติรายการสำเร็จ', 'success');
-        onSuccess?.();
-        onClose();
-        queryClient.invalidateQueries({ queryKey: ['prs'] });
-        return true;
-      } catch {
-        return false;
-      } finally {
-        setIsRejecting(false);
-        setIsRejectReasonOpen(false);
-      }
-    }
-    return false;
+    setIsConfirmRejectOpen(true);
   };
 
-  const closeRejectModal = () => setIsRejectReasonOpen(false);
+  const handleConfirmReject = async () => {
+    const reason = formMethods.getValues('reject_reason' as any);
+    if (!id) return;
+
+    setIsRejecting(true);
+    try {
+      await AVService.rejectPR(id, reason);
+      toast('ไม่อนุมัติรายการสำเร็จ', 'success');
+      onSuccess?.();
+      onClose();
+      queryClient.invalidateQueries({ queryKey: ['prs'] });
+    } catch (error) {
+      toast(extractErrorMessage(error), 'error');
+    } finally {
+      setIsRejecting(false);
+      setIsConfirmRejectOpen(false);
+    }
+  };
 
   return {
     isSubmitting,
@@ -318,10 +323,13 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess }: UseAVFormProps) =>
     projects,
     updateLine,
     handleApprove,
+    isConfirmModalOpen,
+    setIsConfirmModalOpen,
+    handleConfirmApprove,
+    isConfirmRejectOpen,
+    setIsConfirmRejectOpen,
     handleRejectInit,
-    submitReject,
-    closeRejectModal,
-    isRejectReasonOpen,
+    handleConfirmReject,
     isRejecting,
     formMethods,
     lines,

@@ -211,7 +211,7 @@ export const usePOForm = ({
                 currency_code:        (inheritedQC?.base_currency_code || inheritedQC?.currency || initialValues?.currency_code) ?? 'THB',
                 base_currency_code:   inheritedQC?.base_currency_code || 'THB',
                 quote_currency_code:  inheritedQC?.quote_currency_code || inheritedQC?.currency || 'THB',
-                target_currency:      undefined,
+                target_currency:      'THB',
                 exchange_rate_date:   new Date().toISOString().split('T')[0],
                 exchange_rate:        Number(inheritedQC?.exchange_rate || initialValues?.exchange_rate || 1),
                 payment_term_days:    Number(inheritedQC?.payment_term_days || initialValues?.payment_term_days || 30),
@@ -366,7 +366,7 @@ export const usePOForm = ({
             setValue('is_multicurrency', isForeign, { shouldValidate: true, shouldDirty: true });
             setValue('quote_currency_code', quoteCurrency);
             setValue('currency_code', quoteCurrency);
-            setValue('target_currency', isForeign ? quoteCurrency : '');
+            setValue('target_currency', isForeign ? quoteCurrency : 'THB');
 
             const finalExRate = Number(winningVQ?.exchange_rate || fullPR.pr_exchange_rate || 1);
             setValue('exchange_rate', finalExRate);

@@ -39,8 +39,16 @@ export const POService = {
             po_id: item.po_id ?? (item as unknown as { po_header_id?: number }).po_header_id as number
         }));
 
-        // 🎯 HYBRID FALLBACK: Apply Client-Side Filtering when using Real API
-        if (!USE_MOCK && params) {
+        // ⚡ PHASE 2: Server-Side Pagination & Filtering (Real API)
+        if (!USE_MOCK) {
+            return {
+                ...response,
+                data: allItems
+            };
+        }
+
+        // 🎯 HYBRID FALLBACK: Apply Client-Side Filtering when using Mock Data
+        if (params) {
             const filterParams: Record<string, string | number | boolean | undefined | null> = {};
             if (params.po_no) filterParams.po_no = params.po_no;
             if (params.pr_no) filterParams.pr_no = params.pr_no;
@@ -59,8 +67,8 @@ export const POService = {
             });
         }
 
-        const page = params?.page || 1;
-        const limit = params?.limit || 20;
+        const page = 1;
+        const limit = 20;
         return applyClientPagination<POListItem>(allItems, page, limit, response.total);
     },
 

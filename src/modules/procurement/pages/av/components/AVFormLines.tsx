@@ -61,7 +61,7 @@ export const AVFormLines: React.FC<AVFormLinesProps> = React.memo(({
                             const requestedQty = Number(line.requested_qty || line.qty) || 0;
                             
                             const lineDiscount = line.discount || 0;
-                            const lineTotal = isApproved ? (approvedQty * (line.est_unit_price || 0)) - lineDiscount : 0;
+                            const lineTotal = isApproved ? Math.max(0, (approvedQty * (line.est_unit_price || 0)) - lineDiscount) : 0;
                             
                             // Detect Duplicate Line item_id
                             const isDuplicateItem = watchedLines.some((l, idx) => 

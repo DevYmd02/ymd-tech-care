@@ -1,4 +1,4 @@
-import api from '@/core/api/api';
+import api, { USE_MOCK } from '@/core/api/api';
 import type { RFQHeader, RFQListResponse, RFQFilterCriteria, RFQDetailResponse, SendRFQToVendorPayload } from '@/modules/procurement/types';
 import { logger } from '@/shared/utils/logger';
 import type { SuccessResponse } from '@/shared/types/api-response.types';
@@ -114,9 +114,9 @@ export const RFQService = {
     if (cleanedParams.limit) apiParams.limit = cleanedParams.limit;
     if (cleanedParams.sort) apiParams.sort = cleanedParams.sort;
 
-    // 🎯 Architecture: Fetch ALL to allow client-side hybrid filters
+    // ⚡ PHASE 2: Let backend do pagination
     const res = await api.get<RFQListResponse & { pageSize?: number }>(ENDPOINTS.list, { 
-        params: { ...apiParams, limit: 1000 } 
+        params: apiParams 
     });
 
     // 🎯 Trusting Backend + Normalizing for UI (The Pipeline Fix)
@@ -146,6 +146,17 @@ export const RFQService = {
                 pr_no: item.ref_pr_no || item.pr_no || item.pr?.pr_no || null,
             };
         });
+
+        // ⚡ PHASE 2: Server-Side Pagination & Filtering (Real API)
+        if (!USE_MOCK) {
+            return {
+                data: normalizedItems,
+                total: res.total ?? items.length,
+                page: res.page ?? 1,
+                limit: res.limit ?? 20,
+                totalPages: res.totalPages ?? 1
+            } as unknown as RFQListResponse;
+        }
 
         const filterParams: Record<string, string | number | boolean | undefined | null> = {};
         if (params.rfq_no) filterParams.rfq_no = params.rfq_no;

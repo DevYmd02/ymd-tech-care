@@ -8,7 +8,7 @@ import { AVFormSummary } from './AVFormSummary';
 import { WindowFormLayout } from '@/shared/components/ui/layout/WindowFormLayout';
 import { SharedRemarksTab } from '@/shared/components/forms/SharedRemarksTab';
 import { useAVForm } from '../hooks/useAVForm';
-import { RejectReasonModal } from '@/modules/procurement/shared/components/RejectReasonModal';
+import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal';
 
 const SHIPPING_OPTIONS = [
   { label: 'รถยนต์', value: 'Car' },
@@ -28,9 +28,12 @@ export const AVFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
     costCenters, projects, purchaseTaxOptions, currencies,
     updateLine,
     handleApprove,
+    isConfirmModalOpen,
+    setIsConfirmModalOpen,
+    handleConfirmApprove,
     formMethods,
     // Reject Logic
-    handleRejectInit, submitReject, closeRejectModal, isRejectReasonOpen, isRejecting,
+    handleRejectInit, handleConfirmReject, isConfirmRejectOpen, setIsConfirmRejectOpen, isRejecting,
     lines
   } = useAVForm({ id, isOpen, onClose, onSuccess });
 
@@ -117,7 +120,7 @@ export const AVFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                         <input 
                             {...register('av_no')}
                             type="text" 
-                            placeholder="เลขที่อนุมัติ PR"
+                            placeholder="ระบบจะกรอกอัตโนมัติ"
                             readOnly={true}
                             className="w-full h-9 px-3 text-sm bg-gray-50 dark:bg-gray-800/50 border border-gray-300 dark:border-gray-600 rounded text-gray-500 dark:text-gray-400 italic cursor-not-allowed"
                         />
@@ -192,7 +195,7 @@ export const AVFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                                 {...field}
                                 value={field.value ? String(field.value) : ''}
                                 disabled={readOnly}
-                                className="w-full h-9 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 cursor-not-allowed bg-gray-50 dark:bg-gray-800/50"
+                                className="w-full h-9 px-3 text-sm bg-gray-50 dark:bg-gray-800/50 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 cursor-not-allowed"
                               >
                                 <option value="">เลือกภาษี</option>
                                 {purchaseTaxOptions?.map((tax: any) => (
@@ -214,6 +217,18 @@ export const AVFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                             readOnly
                             className="w-full h-9 px-3 text-sm bg-gray-50 dark:bg-gray-800/50 border border-gray-300 dark:border-gray-600 rounded text-gray-500 dark:text-gray-400 italic cursor-not-allowed"
                         />
+                    </div>
+                    
+                    {/* Item 7: หมายเหตุที่ไม่อนุมัติ */}
+                    <div className="md:col-span-2">
+                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">หมายเหตุ</label>
+                        <input 
+                            {...register('reject_reason' as any)}
+                            type="text"
+                            placeholder="ระบุเหตุผล... (กรณีไม่อนุมัติ)"
+                            className={`w-full h-9 px-3 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white ${errors?.reject_reason ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-300 dark:border-gray-600'}`}
+                        />
+                        {errors?.reject_reason && <p className="text-red-500 text-[10px] mt-1">{(errors.reject_reason as any).message}</p>}
                     </div>
                 </div>
             </div>
@@ -323,11 +338,25 @@ export const AVFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
       </FormProvider>
 
     </WindowFormLayout>
-    <RejectReasonModal
-        isOpen={isRejectReasonOpen}
-        onClose={closeRejectModal}
-        onConfirm={(r) => submitReject(r)}
-        isSubmitting={isRejecting}
+    <ConfirmationModal
+        isOpen={isConfirmModalOpen}
+        onClose={() => setIsConfirmModalOpen(false)}
+        onConfirm={handleConfirmApprove}
+        title="ยืนยันการอนุมัติใบขอซื้อ"
+        description="คุณต้องการอนุมัติรายการที่เลือกใช่หรือไม่? ข้อมูลจะถูกบันทึกและเปลี่ยนสถานะเป็นอนุมัติแล้ว"
+        confirmText="อนุมัติ"
+        isLoading={isSubmitting}
+        variant="success"
+    />
+    <ConfirmationModal
+        isOpen={isConfirmRejectOpen}
+        onClose={() => setIsConfirmRejectOpen(false)}
+        onConfirm={handleConfirmReject}
+        title="ยืนยันการไม่อนุมัติใบขอซื้อ"
+        description="คุณต้องการไม่อนุมัติรายการที่เลือกใช่หรือไม่? ข้อมูลจะถูกบันทึกและเปลี่ยนสถานะเป็นไม่อนุมัติ"
+        confirmText="ยืนยันการไม่อนุมัติ"
+        isLoading={isRejecting}
+        variant="danger"
     />
     </>
   );

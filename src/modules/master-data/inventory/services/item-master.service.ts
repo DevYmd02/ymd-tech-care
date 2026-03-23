@@ -161,9 +161,9 @@ export const ItemMasterService = {
 
       return {
         items: itemsArray,
-        total: itemsArray.length,
-        page: 1,
-        limit: itemsArray.length || 10
+        total: Array.isArray(response) ? itemsArray.length : (response.total ?? response.count ?? itemsArray.length),
+        page: Array.isArray(response) ? 1 : (response.page ?? 1),
+        limit: Array.isArray(response) ? itemsArray.length : (response.limit ?? itemsArray.length)
       };
     } catch (error) {
       logger.error('[ItemMasterService] getAll error:', error);

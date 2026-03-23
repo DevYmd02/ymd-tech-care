@@ -42,8 +42,13 @@ export const QCService = {
     const cleanedParams = cleanParams(params || {});
     const response = await api.get<QCListResponse>(ENDPOINTS.list, { params: cleanedParams });
 
-    // 🎯 HYBRID FALLBACK: Apply Client-Side Filtering when using Real API
-    if (!USE_MOCK && params) {
+    // ⚡ PHASE 2: Server-Side Pagination & Filtering (Real API)
+    if (!USE_MOCK) {
+      return response;
+    }
+
+    // 🎯 HYBRID FALLBACK: Apply Client-Side Filtering when using Mock Data
+    if (params) {
       const allItems = extractArrayFromResponse<QCListItem>(response);
       const filterParams: Record<string, string | number | boolean | undefined | null> = {};
       if (params.qc_no) filterParams.qc_no = params.qc_no;
@@ -65,8 +70,8 @@ export const QCService = {
 
     // 🎯 HYBRID PAGINATION: Always apply client-side slicing even for mock responses
     const allItems = extractArrayFromResponse<QCListItem>(response);
-    const page = params?.page || 1;
-    const limit = params?.limit || 20;
+    const page = 1;
+    const limit = 20;
     return applyClientPagination<QCListItem>(allItems, page, limit, response.total);
   },
 
