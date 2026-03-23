@@ -118,6 +118,20 @@ export const usePOForm = ({
     const watchTargetCurrency  = useWatch({ control, name: 'target_currency' }) as string | undefined;
     const watchIsMulticurrency = useWatch({ control, name: 'is_multicurrency' });
 
+    // ── Existing PO Detail Query (for view/edit) ─────────────────────────────
+    const { data: existingPO, isLoading: isLoadingPO } = useQuery({
+        queryKey: ['existing-po', poId],
+        queryFn: async () => {
+            if (!poId) return null;
+            return await POService.getById(poId);
+        },
+        enabled: isOpen && !!poId
+    });
+
+    useEffect(() => {
+        setIsHydrating(isLoadingPO);
+    }, [isLoadingPO]);
+
     // ── VQ Inheritance Query (read-only cross-module lookup) ──────────────────
     const { data: inheritedQC } = useQuery({
         queryKey: ['inherit-vq', initialValues?.rfq_id, initialValues?.winning_vq_id, initialValues?.vendor_id],
@@ -143,8 +157,34 @@ export const usePOForm = ({
         if (isOpen) {
             let initialPOLines: POFormData['po_lines'] = [];
             
+            // Phase 0: Loaded from existing PO DB Call
+            if (existingPO) {
+                const detail = existingPO as any;
+                const lines = detail.poLines || detail.po_lines || detail.lines || [];
+                if (lines.length > 0) {
+                    initialPOLines = lines.map((l: any, idx: number) => ({
+                        line_no:         idx + 1,
+                        item_id:         Number(l.item_id || 0),
+                        item_code:       l.item_code || l.item?.item_code || '',
+                        item_name:       l.item_name || l.item?.item_name || '',
+                        description:     l.description || l.remark || '',
+                        pr_line_id:      l.pr_line_id || null,
+                        status:          l.status || 'OPEN',
+                        qty:             Number(l.qty || l.qty_ordered || 0),
+                        qty_ordered:     Number(l.qty_ordered || l.qty || 0),
+                        uom_id:          Number(l.uom_id || 1),
+                        unit_price:      Number(l.unit_price || 0),
+                        discount_amount: Number(l.discount_amount || 0),
+                        discount_expression: String(l.discount_expression || '0'),
+                        tax_code_id:     l.tax_code_id || undefined,
+                        required_receipt_type: l.required_receipt_type || 'FULL',
+                        receipt_type:    'GOODS' as const,
+                        line_total:      Number(l.line_total || 0),
+                    }));
+                }
+            }
             // Phase 1: Direct PO Lines from internal or partial initialValues
-            if (initialValues?.po_lines && initialValues.po_lines.length > 0) {
+            else if (initialValues?.po_lines && initialValues.po_lines.length > 0) {
                 initialPOLines = initialValues.po_lines as POFormData['po_lines'];
             } 
             // Phase 2: Derive from RFQ/VQ inheritance
@@ -194,37 +234,39 @@ export const usePOForm = ({
                 }];
             }
 
+            const detail = existingPO as any;
+
             reset({
-                po_no:                initialValues?.po_no                ?? undefined,
-                po_date:              initialValues?.po_date              ?? new Date().toISOString().split('T')[0],
-                rfq_id:               initialValues?.rfq_id               ?? inheritedQC?.rfq_id ?? undefined,
-                winning_vq_id:        initialValues?.winning_vq_id        ?? inheritedQC?.vq_header_id ?? inheritedQC?.quotation_id ?? undefined,
-                pr_id:                inheritedQC?.pr_id                  || initialValues?.pr_id || undefined,
-                pr_no:                inheritedQC?.pr_no                  || initialValues?.pr_no || undefined,
-                qc_id:                initialValues?.qc_id                ?? undefined,
-                qc_no:                initialValues?.qc_no                ?? undefined,
-                vendor_id:            initialValues?.vendor_id            ?? undefined,
-                vendor_name:          initialValues?.vendor_name          ?? undefined,
-                branch_id:            initialValues?.branch_id            ?? undefined,
-                ship_to_warehouse_id: initialValues?.ship_to_warehouse_id ?? undefined,
+                po_no:                detail?.po_no                       ?? initialValues?.po_no                ?? undefined,
+                po_date:              detail?.po_date                     ?? initialValues?.po_date              ?? new Date().toISOString().split('T')[0],
+                rfq_id:               detail?.rfq_id                      ?? initialValues?.rfq_id               ?? inheritedQC?.rfq_id ?? undefined,
+                winning_vq_id:        detail?.winning_vq_id               ?? initialValues?.winning_vq_id        ?? inheritedQC?.vq_header_id ?? inheritedQC?.quotation_id ?? undefined,
+                pr_id:                detail?.pr_id                       ?? (inheritedQC?.pr_id || initialValues?.pr_id) ?? undefined,
+                pr_no:                detail?.pr_no                       ?? (inheritedQC?.pr_no || initialValues?.pr_no) ?? undefined,
+                qc_id:                detail?.qc_id                       ?? initialValues?.qc_id                ?? undefined,
+                qc_no:                detail?.qc_no                       ?? initialValues?.qc_no                ?? undefined,
+                vendor_id:            detail?.vendor_id                   ?? initialValues?.vendor_id            ?? undefined,
+                vendor_name:          detail?.vendor_name                 ?? initialValues?.vendor_name          ?? undefined,
+                branch_id:            detail?.branch_id                   ?? initialValues?.branch_id            ?? undefined,
+                ship_to_warehouse_id: detail?.ship_to_warehouse_id       ?? detail?.warehouse_id ?? initialValues?.ship_to_warehouse_id ?? undefined,
                 is_multicurrency:     false,
-                currency_code:        (inheritedQC?.base_currency_code || inheritedQC?.currency || initialValues?.currency_code) ?? 'THB',
-                base_currency_code:   inheritedQC?.base_currency_code || 'THB',
-                quote_currency_code:  inheritedQC?.quote_currency_code || inheritedQC?.currency || 'THB',
+                currency_code:        detail?.currency_code               ?? (inheritedQC?.base_currency_code || inheritedQC?.currency || initialValues?.currency_code) ?? 'THB',
+                base_currency_code:   inheritedQC?.base_currency_code     || 'THB',
+                quote_currency_code:  inheritedQC?.quote_currency_code    || inheritedQC?.currency || 'THB',
                 target_currency:      'THB',
                 exchange_rate_date:   new Date().toISOString().split('T')[0],
-                exchange_rate:        Number(inheritedQC?.exchange_rate || initialValues?.exchange_rate || 1),
-                payment_term_days:    Number(inheritedQC?.payment_term_days || initialValues?.payment_term_days || 30),
-                delivery_date:        initialValues?.delivery_date ?? '',
-                remarks:              initialValues?.remarks ?? '',
-                discount_expression:  initialValues?.discount_expression ?? '0',
-                tax_code_id:          initialValues?.tax_code_id ?? inheritedQC?.tax_code_id ?? undefined,
-                created_by:           initialValues?.created_by,
-                created_by_name:      initialValues?.created_by_name ?? (user?.employee?.employee_fullname || user?.username || ''),
+                exchange_rate:        Number(detail?.exchange_rate        || inheritedQC?.exchange_rate || initialValues?.exchange_rate || 1),
+                payment_term_days:    Number(detail?.payment_term_days    || inheritedQC?.payment_term_days || initialValues?.payment_term_days || 30),
+                delivery_date:        detail?.delivery_date               ? detail.delivery_date.split('T')[0] : (initialValues?.delivery_date ?? ''),
+                remarks:              detail?.remarks                     ?? initialValues?.remarks ?? '',
+                discount_expression:  detail?.discount_expression         ?? initialValues?.discount_expression ?? '0',
+                tax_code_id:          detail?.tax_code_id                 ?? initialValues?.tax_code_id ?? inheritedQC?.tax_code_id ?? undefined,
+                created_by:           detail?.created_by                  ?? initialValues?.created_by,
+                created_by_name:      detail?.created_by_name             ?? initialValues?.created_by_name ?? (user?.employee?.employee_fullname || user?.username || ''),
                 po_lines:             initialPOLines,
             });
         }
-    }, [isOpen, initialValues, reset, inheritedQC, user]);
+    }, [isOpen, initialValues, reset, inheritedQC, user, existingPO]);
     
 
     // ── Enforce THB when Multicurrency is OFF ─────────────────────────────────
@@ -428,6 +470,7 @@ export const usePOForm = ({
                     
                     let finalUnitPrice = 0;
                     let discAmount = 0;
+                    let discExpr = '0';
                     let vqLine: IHydrationVQLine | undefined;
 
                     if (type === 'QC' && winningVQ) {
@@ -448,6 +491,7 @@ export const usePOForm = ({
                         if (vqLine) {
                             finalUnitPrice = Number(vqLine.unit_price || 0);
                             discAmount = Number(vqLine.discount_amount || 0);
+                            discExpr = String(vqLine.discount_expression || '0');
                         } else {
                             // 🚫 Rule: ห้ามใช้ราคาประเมินจาก PR ในเคสที่สร้างจาก QC
                             finalUnitPrice = 0; 
@@ -459,6 +503,7 @@ export const usePOForm = ({
                     } else {
                         // PR Flow: Use PR estimates
                         finalUnitPrice = Number(l.unit_price || l.est_unit_price || 0);
+                        discExpr = String(l.line_discount_raw || '0');
                     }
 
                     // 🛡️ DATA INTEGRITY (Rule 3): All IDs/Prices must be Number()
@@ -497,7 +542,7 @@ export const usePOForm = ({
                         uom_id: Number(vqLine?.uom_id || l.uom_id || l.item?.uom_id || 0) || 1, 
                         unit_price: Number(finalUnitPrice), 
                         discount_amount: Number(discAmount),
-                        discount_expression: '0',
+                        discount_expression: discExpr,
                         tax_code_id: vqLine?.tax_code_id ? Number(vqLine.tax_code_id) : (l.tax_code_id ? Number(l.tax_code_id) : Number(getValues('tax_code_id'))), 
                         required_receipt_type: (l.required_receipt_type as "FULL" | "PARTIAL") || 'FULL',
                         receipt_type: 'GOODS' as const,
@@ -569,6 +614,15 @@ export const usePOForm = ({
      * @description Receives selected item from Modal and updates line with Dual Mapping
      */
     const handleSelectItemMaster = useCallback((index: number, item: ItemSelectorResult) => {
+        // 🧩 Fallback matching by Name string since Backend might omit ID fields
+        const anyItem = item as any;
+        const matchedUnit = units?.find(u => {
+            const prodName = anyItem.uom_name || anyItem.unit_name || anyItem.base_uom_name || anyItem.sale_uom_name || '';
+            if (!prodName) return false;
+            return (u.uom_name === prodName) || (u.unit_name === prodName);
+        });
+        const finalUomId = Number(item.uom_id || item.unit_id || matchedUnit?.uom_id || matchedUnit?.unit_id || 0);
+
         update(index, {
             ...getValues(`po_lines.${index}`),
             id: Number(item.id || item.item_id),
@@ -576,13 +630,13 @@ export const usePOForm = ({
             code: String(item.item_code || item.code || ""),
             item_code: String(item.item_code || item.code || ""),
             description: String(item.item_name || item.description || ""),
-            uom_id: Number(item.uom_id || 0),
+            uom_id: finalUomId,
             unit_price: Number(item.standard_price || item.unit_price || 0),
         });
         
         // 🧪 UI ERROR CLEARANCE: Trigger validation immediately to clear red highlights
         setTimeout(() => trigger(`po_lines.${index}.item_id`), 100);
-    }, [update, getValues, trigger]);
+    }, [update, getValues, trigger, units]);
 
     // (handleSelectProduct removed as it's now handled by the component state)
 
@@ -678,6 +732,7 @@ export const usePOForm = ({
 
             // STRICT PAYLOAD ARCHITECTURE (Aligned with Backend Contract 100%)
             const fullPayload: CreatePOPayload = {
+                pr_id:              safeId(pendingPayload.pr_id),
                 rfq_id:             safeId(pendingPayload.rfq_id),
                 vendor_id:          Number(pendingPayload.vendor_id),
                 branch_id:          Number(pendingPayload.branch_id),
@@ -728,13 +783,7 @@ export const usePOForm = ({
 
             const baseCleanedPayload = cleanPayload(fullPayload) as Record<string, unknown>;
 
-            // MANUAL NULL OVERRIDE (Forcing validation agreement for backend)
-            // TODO: Inform Backend Developer to change validation rule for 'qc_id' to be 'nullable' or 'optional' when creating a PO directly from a PR.
-            const finalizedPayload = {
-                ...baseCleanedPayload,
-                qc_id: pendingPayload.qc_id ? Number(pendingPayload.qc_id) : null,
-                pr_id: pendingPayload.pr_id ? Number(pendingPayload.pr_id) : null,
-            } as unknown as CreatePOPayload;
+            const finalizedPayload = baseCleanedPayload as unknown as CreatePOPayload;
 
             logger.info("FINAL_PO_PAYLOAD (Cleaned + Null Override):", finalizedPayload);
 

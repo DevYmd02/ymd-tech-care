@@ -23,10 +23,12 @@ function mapItemFields(raw: Partial<ItemListItem> & Record<string, unknown>): It
     standard_cost: raw.standard_cost ? Number(raw.standard_cost) : undefined,
     category_id: Number(raw.category_id || 0),
     category_name: String(raw.category_name || ''),
-    unit_id: Number(raw.unit_id || raw.uom_id || raw.base_uom_id || 0),
-    unit_name: String(raw.unit_name || raw.uom_name || ''),
-    uom_id: Number(raw.uom_id || raw.unit_id || raw.base_uom_id || 0),
-    uom_name: raw.uom_name ? String(raw.uom_name) : undefined,
+    unit_id: Number(raw.unit_id || raw.uom_id || raw.base_uom_id || raw.purchasing_unit_id || raw.purchase_uom_id || 0),
+    unit_name: String(raw.unit_name || raw.uom_name || raw.base_uom_name || raw.purchasing_unit_name || ''),
+    uom_id: Number(raw.uom_id || raw.unit_id || raw.base_uom_id || raw.purchasing_unit_id || raw.purchase_uom_id || 0),
+    uom_name: String(raw.uom_name || raw.unit_name || raw.base_uom_name || raw.purchasing_unit_name || ''),
+    purchasing_unit_id: raw.purchasing_unit_id ? Number(raw.purchasing_unit_id) : undefined,
+    purchasing_unit_name: raw.purchasing_unit_name ? String(raw.purchasing_unit_name) : undefined,
     is_active: Boolean(raw.is_active ?? true),
     created_at: String(raw.created_at || new Date().toISOString()),
     // Spread remaining optional fields safely if needed, or map explicitly
@@ -197,14 +199,14 @@ export const ItemMasterService = {
         item_code: data.item_code,
         item_name: data.item_name,
 
-        item_type_id: Number(data.item_type_id),
-        item_group_id: Number(data.item_group_id),
-        item_category_id: Number(data.item_category_id),
+        item_type_id: data.item_type_id ? Number(data.item_type_id) : null,
+        item_group_id: data.item_group_id ? Number(data.item_group_id) : null,
+        item_category_id: data.item_category_id ? Number(data.item_category_id) : null,
 
         base_uom_id: Number(data.base_uom_id),
-        sale_uom_id: Number(data.sale_uom_id),
+        sale_uom_id: data.sale_uom_id ? Number(data.sale_uom_id) : null,
 
-        tax_code_id: Number(data.tax_code_id),
+        tax_code_id: data.tax_code_id ? Number(data.tax_code_id) : null,
         barcode_default: data.barcode_default || null,
 
         is_batch_control: Boolean(data.is_batch_control),
@@ -232,7 +234,7 @@ export const ItemMasterService = {
       return true;
     } catch (error) {
       logger.error('[ItemMasterService] create error:', error);
-      return false;
+      throw error;
     }
   },
 
@@ -246,14 +248,14 @@ export const ItemMasterService = {
         item_code: data.item_code,
         item_name: data.item_name,
 
-        item_type_id: Number(data.item_type_id),
-        item_group_id: Number(data.item_group_id),
-        item_category_id: Number(data.item_category_id),
+        item_type_id: data.item_type_id ? Number(data.item_type_id) : null,
+        item_group_id: data.item_group_id ? Number(data.item_group_id) : null,
+        item_category_id: data.item_category_id ? Number(data.item_category_id) : null,
 
         base_uom_id: Number(data.base_uom_id),
-        sale_uom_id: Number(data.sale_uom_id),
+        sale_uom_id: data.sale_uom_id ? Number(data.sale_uom_id) : null,
 
-        tax_code_id: Number(data.tax_code_id),
+        tax_code_id: data.tax_code_id ? Number(data.tax_code_id) : null,
         barcode_default: data.barcode_default || null,
 
         is_batch_control: Boolean(data.is_batch_control),
@@ -281,7 +283,7 @@ export const ItemMasterService = {
       return true;
     } catch (error) {
       logger.error('[ItemMasterService] update error:', error);
-      return false;
+      throw error;
     }
   },
 

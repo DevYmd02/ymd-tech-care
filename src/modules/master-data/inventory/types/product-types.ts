@@ -621,6 +621,7 @@ export interface ItemMasterFormData {
     item_group_id?: number;
     item_category_id?: number;
     base_uom_id?: number;
+    purchase_uom_id?: number;
     sale_uom_id?: number;
     tax_code_id?: number;
     barcode_default?: string;

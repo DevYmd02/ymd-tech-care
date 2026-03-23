@@ -123,7 +123,7 @@ export default function POListPage() {
                 </span>
             ),
             size: 120,
-            enableSorting: true,
+            enableSorting: false,
         }),
         columnHelper.accessor('po_date', {
             header: 'วันที่',
@@ -133,7 +133,7 @@ export default function POListPage() {
                 </span>
             ),
             size: 90,
-            enableSorting: true,
+            enableSorting: false,
         }),
         columnHelper.accessor('qc_no', {
             id: 'ref_docs',
@@ -145,20 +145,20 @@ export default function POListPage() {
                 
                 return (
                     <div className="flex flex-col whitespace-nowrap">
-                        {qcDisplay ? (
+                        {prDisplay ? (
                             <>
-                                <span className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline cursor-pointer leading-tight">
-                                    QC: {qcDisplay}
+                                <span className="font-semibold text-slate-700 dark:text-gray-200 leading-tight">
+                                    PR: {prDisplay}
                                 </span>
-                                {prDisplay && (
-                                    <span className="text-[10px] text-slate-500 mt-0.5">
-                                        PR: {prDisplay}
+                                {qcDisplay && (
+                                    <span className="text-[10px] text-blue-600 dark:text-blue-400 mt-0.5 hover:text-blue-800 hover:underline cursor-pointer leading-tight">
+                                        QC: {qcDisplay}
                                     </span>
                                 )}
                             </>
-                        ) : prDisplay ? (
-                            <span className="font-semibold text-slate-700 dark:text-gray-200 leading-tight">
-                                PR: {prDisplay}
+                        ) : qcDisplay ? (
+                            <span className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline cursor-pointer leading-tight">
+                                QC: {qcDisplay}
                             </span>
                         ) : (
                             <span className="text-gray-400">-</span>
@@ -197,6 +197,7 @@ export default function POListPage() {
             size: 80,
             enableSorting: false,
         }),
+        /* 
         columnHelper.accessor('item_count', {
             header: () => <div className="text-right w-full whitespace-nowrap">รายการ</div>,
             cell: (info) => {
@@ -212,7 +213,8 @@ export default function POListPage() {
             },
             size: 60,
             enableSorting: false,
-        }),
+        }), 
+        */
         columnHelper.accessor('total_amount', {
             header: () => <div className="text-right w-full whitespace-nowrap">ยอดรวม (บาท)</div>,
             cell: (info) => {
@@ -227,7 +229,7 @@ export default function POListPage() {
                 );
             },
             size: 130,
-            enableSorting: true,
+            enableSorting: false,
         }),
         columnHelper.display({
             id: 'actions',

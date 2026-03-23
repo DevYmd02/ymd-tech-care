@@ -141,10 +141,13 @@ export const AVFormLines: React.FC<AVFormLinesProps> = React.memo(({
                                                     onChange: (e) => updateLine(index, 'approved_qty', parseFloat(e.target.value) || 0)
                                                 })} 
                                                 disabled={!isApproved || readOnly}
-                                                className={`w-full h-8 px-3 text-sm text-center font-bold text-green-700 bg-white dark:bg-gray-800 border border-green-300 dark:border-green-700 !rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 shadow-sm transition-all ${!isApproved ? 'opacity-50 cursor-not-allowed' : ''}`} 
+                                                className={`w-full h-8 px-3 text-sm text-center font-bold bg-white dark:bg-gray-800 border !rounded-xl focus:outline-none focus:ring-2 shadow-sm transition-all 
+                                                    ${!isApproved ? 'opacity-50 cursor-not-allowed border-gray-300 dark:border-gray-700' : ''} 
+                                                    ${isApproved && approvedQty > requestedQty ? 'border-red-500 text-red-600 focus:ring-red-500' : 'border-green-300 dark:border-green-700 text-green-700 focus:ring-green-500'}`} 
                                             />
                                             {isApproved && approvedQty !== requestedQty && approvedQty > 0 && (
-                                                <div className="absolute -left-1.5 top-1/2 -translate-y-1/2 w-1.5 h-4 bg-amber-400 rounded-full" title="ยอดอนุมัติถูกแก้ไข" />
+                                                <div className={`absolute -left-1.5 top-1/2 -translate-y-1/2 w-1.5 h-4 rounded-full ${approvedQty > requestedQty ? 'bg-red-500 animate-pulse' : 'bg-amber-400'}`} 
+                                                     title={approvedQty > requestedQty ? "ยอดอนุมัติเกินยอดขอซื้อ" : "ยอดอนุมัติถูกแก้ไข"} />
                                             )}
                                         </div>
                                     </td>

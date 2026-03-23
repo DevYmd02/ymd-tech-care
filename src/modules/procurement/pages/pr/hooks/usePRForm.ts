@@ -658,15 +658,13 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
      if (vendor) {
        setValue("preferred_vendor_id", vendor.vendor_id);
        setValue("vendor_name", vendor.vendor_name);
-       setValue("vendor_quote_no", vendor.vendor_code || '');
-      setValue("credit_days", vendor.payment_term_days ?? 30);
-    } else {
-      setValue("preferred_vendor_id", undefined);
-      setValue("vendor_name", '');
-      setValue("vendor_quote_no", '');
-      setValue("credit_days", 30);
-    }
-  };
+       setValue("credit_days", vendor.payment_term_days ?? 30);
+     } else {
+       setValue("preferred_vendor_id", undefined);
+       setValue("vendor_name", '');
+       setValue("credit_days", 30);
+     }
+   };
 
   const handleSaveData = async (data: PRFormData) => {
     // 🔍 [DIAGNOSTIC]: Capture raw RHF data before transformation
@@ -815,7 +813,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
           branch_id: payload.branch_id,
           project_id: payload.project_id,
           cost_center_id: payload.cost_center_id,
-          // preferred_vendor_id: payload.preferred_vendor_id,
+          preferred_vendor_id: payload.preferred_vendor_id,
           pr_tax_code_id: payload.pr_tax_code_id,
           remark: payload.remark,
           status: payload.status,

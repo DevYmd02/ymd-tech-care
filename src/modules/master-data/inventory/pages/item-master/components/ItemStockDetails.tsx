@@ -46,7 +46,9 @@ export const ItemStockDetails: React.FC<ItemStockDetailsProps> = ({
                             <select 
                                 value={formData.base_uom_id} 
                                 onChange={(e) => onChange('base_uom_id', Number(e.target.value))} 
-                                className={`w-full h-8 bg-white dark:bg-gray-700 border ${
+                                disabled={!!editId}
+                                title={editId ? "ไม่สามารถแก้ไขหน่วยนับหลักได้ในโหมดแก้ไข" : ""}
+                                className={`w-full h-8 ${editId ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed' : 'bg-white dark:bg-gray-700'} border ${
                                     errors.base_uom_id ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                                 } rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-emerald-500 outline-none`}
                             >
@@ -60,13 +62,18 @@ export const ItemStockDetails: React.FC<ItemStockDetailsProps> = ({
                         {/* 💡 บาร์โค้ดสำหรับหน่วยนับหลัก (Moved from Financials) */}
                         <div>
                             {editId ? (
-                                <button
-                                    type="button"
-                                    onClick={onManageBarcodes}
-                                    className="w-full h-8 bg-purple-50 hover:bg-purple-100 dark:bg-purple-900/30 dark:hover:bg-purple-900/50 border border-purple-200 dark:border-purple-700 rounded px-2 text-xs text-purple-600 dark:text-purple-400 font-medium transition-colors flex items-center justify-center gap-1 mt-0.5"
-                                >
-                                    <ScanBarcode size={14} /> จัดการบาร์โค้ดสินค้า
-                                </button>
+                                <div className="space-y-1">
+                                    <label className="block text-[10px] text-gray-500 dark:text-gray-400">
+                                        บาร์โค้ดปัจจุบัน: <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{formData.barcode_default || '-'}</span>
+                                    </label>
+                                    <button
+                                        type="button"
+                                        onClick={onManageBarcodes}
+                                        className="w-full h-8 bg-purple-50 hover:bg-purple-100 dark:bg-purple-900/30 dark:hover:bg-purple-900/50 border border-purple-200 dark:border-purple-700 rounded px-2 text-xs text-purple-600 dark:text-purple-400 font-medium transition-colors flex items-center justify-center gap-1"
+                                    >
+                                        <ScanBarcode size={14} /> จัดการบาร์โค้ดสินค้า
+                                    </button>
+                                </div>
                             ) : (
                                 <>
                                     <label className="block text-[10px] text-gray-500 dark:text-gray-400 mb-0.5">
@@ -91,9 +98,11 @@ export const ItemStockDetails: React.FC<ItemStockDetailsProps> = ({
                                     หน่วยนับซื้อ (Purchase)
                                 </label>
                                 <select 
-                                    value={formData.base_uom_id || ''} 
-                                    onChange={(e) => onChange('base_uom_id', Number(e.target.value))} 
-                                    className="w-full h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-emerald-500 outline-none"
+                                    value={formData.purchase_uom_id || ''} 
+                                    onChange={(e) => onChange('purchase_uom_id', Number(e.target.value))} 
+                                    disabled={!!editId}
+                                    title={editId ? "หน่วยนับเสริม จัดการได้ในเมนูบาร์โค้ดหลังจากบันทึก" : ""}
+                                    className={`w-full h-8 ${editId ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed' : 'bg-white dark:bg-gray-700'} border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-emerald-500 outline-none`}
                                 >
                                     <option value="">-- เลือก --</option>
                                     {uom.map(u => (

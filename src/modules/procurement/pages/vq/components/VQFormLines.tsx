@@ -192,15 +192,14 @@ export const VQFormLines: React.FC<VQFormLinesProps> = ({
                                                         </>
                                                     ) : (
                                                         <select 
-                                                            {...register(`vq_lines.${index}.uom_id`, { 
-                                                                valueAsNumber: true,
-                                                                onChange: (e) => {
-                                                                    const selectedId = Number(e.target.value);
-                                                                    const name = units.find(u => u.unit_id === selectedId)?.unit_name || '';
-                                                                    setValue(`vq_lines.${index}.uom_name`, name);
-                                                                }
-                                                            })} 
-                                                            className="w-full h-8 px-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white text-center cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed disabled:bg-gray-50 transition-all shadow-sm"
+                                                            {...register(`vq_lines.${index}.uom_id`, { valueAsNumber: true })} 
+                                                            value={watchedLines?.[index]?.uom_id || 0}
+                                                            onChange={(e) => {
+                                                                const selectedId = Number(e.target.value);
+                                                                setValue(`vq_lines.${index}.uom_id`, selectedId, { shouldValidate: true });
+                                                                const name = units.find(u => u.unit_id === selectedId)?.unit_name || '';
+                                                                setValue(`vq_lines.${index}.uom_name`, name);
+                                                            }}                                                            className="w-full h-8 px-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white text-center cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed disabled:bg-gray-50 transition-all shadow-sm"
                                                         >
                                                             <option value={0}>- หน่วย -</option>
                                                             {units.map((u: UnitListItem) => (

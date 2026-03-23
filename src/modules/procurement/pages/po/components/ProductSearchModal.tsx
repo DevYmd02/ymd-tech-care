@@ -35,7 +35,7 @@ const productColumns: ColumnDef<ItemListItem>[] = [
     },
     {
         key: 'unit_name', header: 'หน่วย', width: '120px', render: (p: ItemListItem) => (
-            <span className="text-xs text-gray-600 dark:text-gray-400">{p.unit_name}</span>
+            <span className="text-xs text-gray-600 dark:text-gray-400">{p.uom_name || p.unit_name || p.base_uom_name || '-'}</span>
         )
     },
     {

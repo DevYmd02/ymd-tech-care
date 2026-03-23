@@ -16,11 +16,6 @@ interface UomResponse {
     updated_at?: string;
 }
 
- 
- 
- 
-
- 
 // ✅ type-safe ไม่ใช้ any
 function mapUomToUnit(item: UomResponse): UnitListItem {
     return {

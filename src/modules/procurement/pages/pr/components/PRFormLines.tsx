@@ -56,7 +56,7 @@ export const PRFormLines: React.FC<PRFormLinesProps> = React.memo(({
                     <thead className="bg-blue-600 text-white text-xs">
                         <tr>
                             <th className="p-2 w-12 text-center border-r border-blue-500 sticky left-0 z-10 bg-blue-600">No.</th>
-                            <th className="p-2 w-24 text-center border-r border-blue-500">รหัสสินค้า</th>
+                            <th className="p-2 w-40 text-center border-r border-blue-500">รหัสสินค้า</th>
                             <th className="p-2 min-w-[180px] text-center border-r border-blue-500">ชื่อสินค้า</th>
                             <th className="p-2 w-16 text-center border-r border-blue-500">คลัง</th>
                             <th className="p-2 w-16 text-center border-r border-blue-500">ที่เก็บ</th>

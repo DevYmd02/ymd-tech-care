@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { useForm, useWatch, type SubmitHandler, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useDebounce } from '@/shared/hooks/useDebounce';
 import { ItemBarcodeService } from '../services/item-barcode.service';
 import { UnitService } from '../services/unit.service';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
@@ -46,6 +47,8 @@ export function useItemBarcodeForm(
         reset,
         control,
         setValue,
+        setError,
+        clearErrors,
         formState: { errors }
     } = useForm<ItemBarcodeFormData>({
         resolver: zodResolver(itemBarcodeSchema) as Resolver<ItemBarcodeFormData>,
@@ -56,6 +59,34 @@ export function useItemBarcodeForm(
         control,
         defaultValue: initialFormData
     }) as ItemBarcodeFormData;
+
+    const barcodeValue = formData.barcode;
+    const debouncedBarcode = useDebounce(barcodeValue, 500);
+
+    const { data: duplicateCheckData } = useQuery({
+        queryKey: ['barcode-check-duplicate', debouncedBarcode],
+        queryFn: async () => {
+            if (!debouncedBarcode) return { items: [] };
+            return ItemBarcodeService.getAll({ barcode: debouncedBarcode });
+        },
+        enabled: !!debouncedBarcode && debouncedBarcode.trim().length >= 1,
+    });
+
+    useEffect(() => {
+        if (duplicateCheckData?.items && debouncedBarcode) {
+            const matches = duplicateCheckData.items;
+            const isDuplicate = matches.some(item => 
+                item.barcode?.toLowerCase() === debouncedBarcode.trim().toLowerCase() && 
+                item.barcode_id !== editId
+            );
+
+            if (isDuplicate) {
+                setError('barcode', { type: 'manual', message: 'บาร์โค้ดนี้ถูกใช้งานแล้ว' });
+            } else if (errors.barcode?.message === 'บาร์โค้ดนี้ถูกใช้งานแล้ว') {
+                clearErrors('barcode');
+            }
+        }
+    }, [duplicateCheckData, debouncedBarcode, editId, setError, clearErrors, errors.barcode?.message]);
 
     // Load units for dropdown
     const { data: unitData } = useQuery({

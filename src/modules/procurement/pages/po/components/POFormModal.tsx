@@ -204,6 +204,9 @@ export default function POFormModal({
     const watchedLines = useWatch({ control, name: 'po_lines' });
     const { getValues } = formMethods;
 
+    // 🔒 Audit Lock: Lock prices & quantity if this PO is associated with a winning QC
+    const isLockedByQC = !!watchQcNo && watchQcNo !== 'ไม่ได้ผ่าน QC';
+
     const [isProductModalOpen, setIsProductModalOpen] = useState(false);
     const [activeSearchIndex, setActiveSearchIndex] = useState<number | null>(null);
 
@@ -473,7 +476,7 @@ export default function POFormModal({
                                     <FileText size={18} />
                                     <span className="font-semibold">รายการสินค้า — Line Items</span>
                                 </div>
-                                {!isView && (
+                                {!isView && !isLockedByQC && (
                                     <button
                                         type="button"
                                         onClick={handleAddLine}
@@ -518,12 +521,12 @@ export default function POFormModal({
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {fields.length === 0 && (
+                                            {fields.length === 0 && (
                                             <tr>
                                                 <td colSpan={isView ? 10 : 11} className="px-4 py-12 text-center text-gray-400">
                                                     <FileText size={40} className="mx-auto mb-2 text-gray-300" />
                                                     <p>ยังไม่มีรายการสินค้า</p>
-                                                    {!isView && (
+                                                    {!isView && !isLockedByQC && (
                                                         <button type="button" onClick={handleAddLine} className="text-blue-500 hover:underline text-sm mt-1">
                                                             คลิกเพื่อเพิ่มรายการ
                                                         </button>
@@ -547,7 +550,7 @@ export default function POFormModal({
                                                         <input type="hidden" {...register(`po_lines.${idx}.id`)} />
                                                         <input type="hidden" {...register(`po_lines.${idx}.item_id`)} />
                                                         <input type="hidden" {...register(`po_lines.${idx}.item_name`)} />
-                                                        {!isView && (
+                                                        {!isView && !isLockedByQC && (
                                                             <button
                                                                 type="button"
                                                                 className="absolute right-1.5 z-10 p-1 text-gray-500 hover:text-blue-600 hover:bg-gray-100 rounded-md cursor-pointer transition-colors"
@@ -580,14 +583,19 @@ export default function POFormModal({
                                                         {...register(`po_lines.${idx}.qty_ordered`, { valueAsNumber: true })}
                                                         className={`${ui.input} !h-9 text-center text-[13px] border-slate-300 shadow-sm`}
                                                         placeholder="0.000"
-                                                        readOnly={isView}
+                                                        readOnly={isView || isLockedByQC}
                                                     />
                                                 </td>
                                                 <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
                                                     <select
                                                         {...register(`po_lines.${idx}.uom_id`, { valueAsNumber: true })}
+                                                        value={watchedLines?.[idx]?.uom_id || ''}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value === '' ? 0 : Number(e.target.value);
+                                                            setValue(`po_lines.${idx}.uom_id`, val, { shouldValidate: true });
+                                                        }}
                                                         className={`${ui.select} !h-9 text-center px-1 text-[13px] border-slate-300 shadow-sm`}
-                                                        disabled={isView || isLoadingUnits}
+                                                        disabled={isView || isLockedByQC || isLoadingUnits}
                                                     >
                                                         <option value="">{isLoadingUnits ? 'โหลด...' : 'หน่วย'}</option>
                                                         {units.map((u: UnitListItem) => <option key={u.uom_id} value={u.uom_id}>{u.uom_name || u.unit_name}</option>)}
@@ -599,7 +607,7 @@ export default function POFormModal({
                                                         {...register(`po_lines.${idx}.unit_price`, { valueAsNumber: true })}
                                                         className={`${ui.input} !h-9 text-right text-[13px] border-slate-300 shadow-sm`}
                                                         placeholder="0.0000"
-                                                        readOnly={isView}
+                                                        readOnly={isView || isLockedByQC}
                                                     />
                                                 </td>
                                                 <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
@@ -608,7 +616,7 @@ export default function POFormModal({
                                                         {...register(`po_lines.${idx}.discount_expression`)}
                                                         className={`${ui.input} !h-9 text-right text-[13px] border-slate-300 shadow-sm`}
                                                         placeholder="0 หรือ 5%"
-                                                        readOnly={isView}
+                                                        readOnly={isView || isLockedByQC}
                                                     />
                                                 </td>
                                                 <td className="px-3 py-2 text-right font-semibold text-slate-800 dark:text-slate-200 border-r border-gray-200 dark:border-gray-700 text-[13px] bg-slate-50/50 dark:bg-slate-900/50">
@@ -624,7 +632,7 @@ export default function POFormModal({
                                                         <option value="SERVICE">SERVICE</option>
                                                     </select>
                                                 </td>
-                                                {!isView && (
+                                                {!isView && !isLockedByQC && (
                                                     <td className="px-1 text-center">
                                                         <div className="flex items-center justify-center gap-2">
                                                             <button

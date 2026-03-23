@@ -628,10 +628,14 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
         sameAsRegistered,
         contactName: formContacts.find(c => c.isMain)?.name || vendorAny.contactName || vendorAny.contactPerson || vendorAny.primaryContact || registeredAddress.contactPerson || '',
         phone: vendor.phone || '',
-        mobile: vendor.phone_extension || vendorAny.mobile || vendorAny.phoneNumber || '',
+        mobile: formContacts.find(c => c.isMain)?.mobile || vendor.phone_extension || vendorAny.mobile || vendorAny.phoneNumber || '',
         email: vendor.email || '',
         website: vendor.website || '',
-        paymentTerms: `${vendor.payment_term_days ? 'Net ' + vendor.payment_term_days + ' Days' : 'Net 30 Days'}`,
+        paymentTerms: vendor.payment_term_days === 0 
+            ? 'Cash' 
+            : vendor.payment_term_days 
+                ? 'Net ' + vendor.payment_term_days + ' Days' 
+                : 'Net 30 Days',
         creditLimit: vendor.credit_limit || 0,
         bankAccounts: formBankAccounts,
         additionalContacts: formContacts,

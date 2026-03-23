@@ -256,12 +256,19 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess }: UseAVFormProps) =>
     const path = `lines.${index}.${field}` as Path<AVFormData>;
     setValue(path, value as FieldPathValue<AVFormData, typeof path>);
     
-    // Auto uncheck if approved_qty is set to 0? Maybe not strictly required
-    // Let user explicitly check/uncheck
+    // Auto reset approved_qty to 0 if unchecked
+    if (field === 'is_approved' && value === false) {
+      setValue(`lines.${index}.approved_qty` as any, 0);
+    }
   }, [setValue]);
 
-  // Submit functions
   const handleApprove = handleSubmit(() => {
+    const data = formMethods.getValues();
+    const hasApprovedItems = data.lines.some(line => line.is_approved);
+    if (!hasApprovedItems) {
+      toast('กรุณาเลือกรายการที่ต้องการอนุมัติอย่างน้อย 1 รายการ', 'error');
+      return;
+    }
     setIsConfirmModalOpen(true);
   }, handleFormError);
 

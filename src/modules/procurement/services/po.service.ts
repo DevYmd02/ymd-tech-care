@@ -6,6 +6,10 @@ import type { CreatePOPayload } from '@/modules/procurement/types';
 import { logger } from '@/shared/utils/logger';
 import type { SuccessResponse } from '@/shared/types/api-response.types';
 import { applyClientFilters, applyClientPagination, extractArrayFromResponse } from '@/shared/utils/clientFilterUtils';
+import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
+import { PRService } from './pr.service';
+import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
+import { QCService } from './qc.service';
 
 // ---------------------------------------------------------------------------
 // NOTE on Zod Boundary Design (per Architect's guidance):
@@ -34,15 +38,89 @@ export const POService = {
 
         // 🎯 DATA NORMALIZATION: Guarantee po_id is set inside mapped UI item
         const rawItems = extractArrayFromResponse<POListItem>(response);
-        const allItems = rawItems.map(item => ({
-            ...item,
-            po_id: item.po_id ?? (item as unknown as { po_header_id?: number }).po_header_id as number
+
+        // 1. Hydrate Vendors (Batch All)
+        const vendorMap: Record<number, string> = {};
+        try {
+            const vendorsRes = await VendorService.getList();
+            const vendors = Array.isArray(vendorsRes) ? vendorsRes : vendorsRes.items || [];
+            vendors.forEach((v) => {
+                const vendorObj = v as Record<string, unknown>;
+                const id = (vendorObj.vendor_id || vendorObj.id) as number;
+                const name = vendorObj.vendor_name as string;
+                if (id && name) vendorMap[id] = name;
+            });
+        } catch (err) {
+            logger.debug('[POService] Vendor hydration error', err);
+        }
+
+        // 2. Hydrate PRs and QCs (Async Batch Page Items)
+        const allItems = await Promise.all(rawItems.map(async (item) => {
+            const mappedItem = {
+                ...item,
+                po_id: item.po_id ?? (item as unknown as { po_header_id?: number }).po_header_id as number,
+                vendor_name: item.vendor_name || vendorMap[item.vendor_id] || undefined
+            };
+
+            // Inflate pr_no
+            if (mappedItem.pr_id && !mappedItem.pr_no) {
+                try {
+                    const pr = await PRService.getDetail(mappedItem.pr_id);
+                    if (pr?.pr_no) mappedItem.pr_no = pr.pr_no;
+                } catch (err) {
+                    logger.debug(`[POService] Failed to inflate pr_no for PR ${mappedItem.pr_id}`, err);
+                }
+            }
+
+            // Inflate qc_no
+            const qcId = mappedItem.qc_id || (mappedItem as Record<string, unknown>).qc_header_id as number | undefined;
+            if (qcId && !mappedItem.qc_no) {
+                try {
+                    const qc = await QCService.getById(qcId);
+                    if (qc?.qc_no) mappedItem.qc_no = qc.qc_no;
+                } catch (err) {
+                    logger.debug(`[POService] Failed to inflate qc_no for QC ${qcId}`, err);
+                }
+            }
+
+            // 🌟 BACKUP LOOKUP: Deduce qc_no using inflated pr_no
+            if (!mappedItem.qc_no && mappedItem.pr_no) {
+                try {
+                    const qcsRes = await QCService.getList({ pr_no: mappedItem.pr_no });
+                    let qcs: import('@/modules/procurement/schemas/qc-schemas').QCListItem[] = [];
+                    
+                    if (Array.isArray(qcsRes)) {
+                        qcs = qcsRes;
+                    } else {
+                        const qcsResObj = qcsRes as unknown as Record<string, unknown>;
+                        if (qcsResObj && 'data' in qcsResObj && Array.isArray(qcsResObj.data)) {
+                            qcs = qcsResObj.data as import('@/modules/procurement/schemas/qc-schemas').QCListItem[];
+                        }
+                    }
+
+                    const approvedQc = qcs.find((q) => q.status === 'COMPLETED');
+                    if (approvedQc?.qc_no) {
+                        mappedItem.qc_no = approvedQc.qc_no;
+                        if (approvedQc.qc_id) mappedItem.qc_id = approvedQc.qc_id;
+                    }
+                } catch (err) {
+                    logger.debug(`[POService] Backup QC lookup failed for PR ${mappedItem.pr_no}`, err);
+                }
+            }
+
+            return mappedItem;
         }));
 
         // ⚡ PHASE 2: Server-Side Pagination & Filtering (Real API)
         if (!USE_MOCK) {
+            const responseObj = response as unknown as Record<string, unknown>;
+            const total = typeof responseObj?.total === 'number' ? responseObj.total : allItems.length;
             return {
                 ...response,
+                total: total,
+                page: typeof responseObj?.page === 'number' ? responseObj.page : (params?.page ?? 1),
+                limit: typeof responseObj?.limit === 'number' ? responseObj.limit : (params?.limit ?? 20),
+                totalPages: typeof responseObj?.totalPages === 'number' ? responseObj.totalPages : Math.ceil(total / (params?.limit ?? 20)),
                 data: allItems
             };
         }
@@ -75,10 +153,100 @@ export const POService = {
     getById: async (id: number): Promise<POListItem> => {
         logger.info(`[POService] Fetching PO Detail: ${id}`);
         const res = await api.get<POListItem>(ENDPOINTS.detail(id));
-        return {
+        const mappedItem = {
             ...res,
             po_id: res.po_id ?? (res as unknown as { po_header_id?: number }).po_header_id as number
         };
+
+        // 1. Hydrate Vendor Name
+        if (mappedItem.vendor_id && !mappedItem.vendor_name) {
+            try {
+                const vendorRes = await VendorService.getById(mappedItem.vendor_id);
+                if (vendorRes?.vendor_name) {
+                    mappedItem.vendor_name = vendorRes.vendor_name;
+                }
+            } catch (error) {
+                logger.error('[POService] Hydrate Vendor failed during getById:', error);
+            }
+        }
+
+        // 2. Hydrate PR Reference (and delivery_date)
+        if (mappedItem.pr_id) {
+            try {
+                const prDetail = await PRService.getDetail(mappedItem.pr_id);
+                if (prDetail?.pr_no && !mappedItem.pr_no) {
+                    mappedItem.pr_no = prDetail.pr_no;
+                }
+                // 📅 Fallback delivery_date from PR if PO is missing it
+                if (!(mappedItem as any).delivery_date && prDetail?.delivery_date) {
+                    (mappedItem as any).delivery_date = prDetail.delivery_date;
+                }
+            } catch (error) {
+                logger.error('[POService] Hydrate PR failed during getById:', error);
+            }
+        }
+
+        // 3. Hydrate QC Reference (If qc_id/qc_header_id exists)
+        const qcId = mappedItem.qc_id || (mappedItem as any).qc_header_id as number | undefined;
+        if (qcId && !mappedItem.qc_no) {
+            try {
+                const qcDetail = await QCService.getById(qcId);
+                if (qcDetail?.qc_no) {
+                    mappedItem.qc_no = qcDetail.qc_no;
+                }
+            } catch (error) {
+                logger.error('[POService] Hydrate QC failed during getById:', error);
+            }
+        }
+
+        // 4. Backup QC lookup using pr_no (Backup relationship chain)
+        if (!mappedItem.qc_no && mappedItem.pr_no) {
+            try {
+                const qcsRes = await QCService.getList({ pr_no: mappedItem.pr_no });
+                let qcs: any[] = [];
+                if (Array.isArray(qcsRes)) {
+                    qcs = qcsRes;
+                } else if (qcsRes && typeof qcsRes === 'object' && Array.isArray((qcsRes as any).data)) {
+                    qcs = (qcsRes as any).data;
+                }
+                
+                // 🎯 Strictly match by pr_no to ensure correct PO-PR-QC relationship mapping
+                const matchingQc = qcs.find((q: any) => q.pr_no === mappedItem.pr_no);
+                if (matchingQc?.qc_no) {
+                    mappedItem.qc_no = matchingQc.qc_no;
+                }
+            } catch (error) {
+                logger.error('[POService] Backup QC hydration failed during getById:', error);
+            }
+        }
+
+        // 5. Hydrate Line Items for accurate Item Code/Name display
+        const linesKey = (mappedItem as any).poLines ? 'poLines' : 'po_lines';
+        const lines = (mappedItem as any)[linesKey];
+
+        if (lines && Array.isArray(lines)) {
+            (mappedItem as any)[linesKey] = await Promise.all(
+                lines.map(async (line: any) => {
+                    if (line.item_id && (!line.item_code || !line.item_name)) {
+                        try {
+                            const item = await ItemMasterService.getById(line.item_id);
+                            if (item) {
+                                return {
+                                    ...line,
+                                    item_code: item.item_code || line.item_code || '',
+                                    item_name: item.item_name || line.item_name || '',
+                                };
+                            }
+                        } catch (e) {
+                            logger.error(`[POService] Failed to hydrate item ${line.item_id}`, e);
+                        }
+                    }
+                    return line;
+                })
+            );
+        }
+
+        return mappedItem;
     },
 
     /**

@@ -73,7 +73,9 @@ export const WarehouseService = {
         return { success: true };
     } catch (error) {
         logger.error('[WarehouseService] create error:', error);
-        return { success: false, message: 'Failed to create warehouse' };
+        const err = error as { response?: { data?: { message?: string, error?: string } }, message?: string };
+        const backendMsg = err.response?.data?.message || err.response?.data?.error || err.message;
+        return { success: false, message: backendMsg || 'Failed to create warehouse' };
     }
   },
 
@@ -87,7 +89,9 @@ export const WarehouseService = {
         return { success: true };
     } catch (error) {
         logger.error('[WarehouseService] update error:', error);
-        return { success: false, message: 'Failed to update warehouse' };
+        const err = error as { response?: { data?: { message?: string, error?: string } }, message?: string };
+        const backendMsg = err.response?.data?.message || err.response?.data?.error || err.message;
+        return { success: false, message: backendMsg || 'Failed to update warehouse' };
     }
   },
 

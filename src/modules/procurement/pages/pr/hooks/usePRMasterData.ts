@@ -92,11 +92,11 @@ export const usePRMasterData = () => {
                  return String(t.is_active).toUpperCase() === 'Y' || String(t.is_active) === '1' || String(t.is_active).toLowerCase() === 'true';
                }
              );
-             setPurchaseTaxOptions(filtered.map((t: TaxCode) => ({
-               value: Number(t.tax_code_id || t.tax_id),
-               label: `${t.tax_code} (${t.tax_rate}%)`,
-               original: t
-             })));
+               setPurchaseTaxOptions(filtered.map((t: TaxCode) => ({
+                 value: Number(t.tax_code_id || t.tax_id),
+                 label: t.tax_code,
+                 original: t
+               })));
           } catch (err) {
             logger.error('[usePRMasterData] Failed to fetch master data:', err);
             setError(err instanceof Error ? err : new Error('Failed to fetch master data'));

@@ -6,7 +6,7 @@ import type { ListResponse } from '@/shared/types/common-api.types';
 import type { SuccessResponse } from '@/shared/types/api-response.types';
 
 export const ItemBarcodeService = {
-  getAll: async (params?: { item_id?: number }): Promise<ListResponse<ItemBarcodeListItem>> => {
+  getAll: async (params?: { item_id?: number; barcode?: string }): Promise<ListResponse<ItemBarcodeListItem>> => {
     if (USE_MOCK) {
        logger.info('🎭 [Mock Mode] Serving Item Barcode List', params);
        let items = mockItemBarcodes;

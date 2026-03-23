@@ -9,14 +9,44 @@ import { Hash, Save, X } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
 import { LotNoService } from '@/modules/master-data/inventory/services/inventory-master.service';
+import { useQuery } from '@tanstack/react-query';
+import { useDebounce } from '@/shared/hooks/useDebounce';
 
 const schema = z.object({ code: z.string().min(1, 'กรุณากรอกรหัส').max(50), nameTh: z.string().min(1, 'กรุณากรอกชื่อ').max(200), nameEn: z.string().max(200), isActive: z.boolean() });
 type FormValues = z.infer<typeof schema>;
 interface Props { isOpen: boolean; onClose: () => void; editId?: number | null; onSuccess?: () => void; }
 
 export function LotNoFormModal({ isOpen, onClose, editId, onSuccess }: Props) {
-    const { register, handleSubmit, reset, formState: { errors, isSubmitting }, control, setValue } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { code: '', nameTh: '', nameEn: '', isActive: true } });
+    const { register, handleSubmit, reset, formState: { errors, isSubmitting }, control, setValue, setError, clearErrors } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { code: '', nameTh: '', nameEn: '', isActive: true } });
     const isActive = useWatch({ control, name: 'isActive' });
+
+    const codeValue = useWatch({ control, name: 'code' });
+    const debouncedCode = useDebounce(codeValue, 500);
+
+    const { data: duplicateCheckData } = useQuery({
+        queryKey: ['lotno-check-duplicate', debouncedCode],
+        queryFn: async () => {
+            if (!debouncedCode) return { items: [] };
+            return LotNoService.getAll({ code: debouncedCode });
+        },
+        enabled: !!debouncedCode && debouncedCode.trim().length >= 1 && isOpen,
+    });
+
+    useEffect(() => {
+        if (duplicateCheckData?.items && debouncedCode) {
+            const matches = duplicateCheckData.items;
+            const isDuplicate = matches.some(item => 
+                item.code?.toLowerCase() === debouncedCode.trim().toLowerCase() && 
+                item.id !== editId
+            );
+
+            if (isDuplicate) {
+                setError('code', { type: 'manual', message: 'รหัส Lot No ซ้ำในระบบ' });
+            } else if (errors.code?.message === 'รหัส Lot No ซ้ำในระบบ') {
+                clearErrors('code');
+            }
+        }
+    }, [duplicateCheckData, debouncedCode, editId, setError, clearErrors, errors.code?.message]);
 
     useEffect(() => { if (isOpen) { if (editId) LotNoService.getById(editId).then(e => { if (e) reset({ code: e.code, nameTh: e.name_th, nameEn: e.name_en || '', isActive: e.is_active }); }); else reset({ code: '', nameTh: '', nameEn: '', isActive: true }); } }, [isOpen, editId, reset]);
     const onSubmit = async (data: FormValues) => { const result = editId ? await LotNoService.update(editId, data) : await LotNoService.create(data); if (result.success) { if (onSuccess) onSuccess(); onClose(); } else alert(result.message); };
