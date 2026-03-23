@@ -1,8 +1,9 @@
 import { useCallback, useEffect } from 'react';
+import { useDebounce } from '@/shared/hooks/useDebounce';
 import { z } from 'zod';
 import { useForm, useWatch, type SubmitHandler, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { UnitService } from '../services/unit.service';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import { logger } from '@/shared/utils/logger';
@@ -34,6 +35,8 @@ export function useUnitForm(editId: number | null, initialData?: UnitListItem | 
         reset,
         control,
         setValue,
+        setError,
+        clearErrors,
         formState: { errors }
     } = useForm<UnitFormData>({
         resolver: zodResolver(unitSchema) as Resolver<UnitFormData>,
@@ -44,6 +47,34 @@ export function useUnitForm(editId: number | null, initialData?: UnitListItem | 
         control,
         defaultValue: initialFormData
     }) as UnitFormData;
+
+    const codeValue = formData.unit_code;
+    const debouncedCode = useDebounce(codeValue, 500);
+
+    const { data: duplicateCheckData } = useQuery({
+        queryKey: ['unit-check-duplicate', debouncedCode],
+        queryFn: async () => {
+            if (!debouncedCode) return { items: [] };
+            return UnitService.getAll({ unit_code: debouncedCode } as any);
+        },
+        enabled: !!debouncedCode && debouncedCode.trim().length >= 1,
+    });
+
+    useEffect(() => {
+        if (duplicateCheckData?.items && debouncedCode) {
+            const matches = duplicateCheckData.items;
+            const isDuplicate = matches.some(item => 
+                item.unit_code?.toLowerCase() === debouncedCode.trim().toLowerCase() && 
+                item.id !== editId
+            );
+
+            if (isDuplicate) {
+                setError('unit_code', { type: 'manual', message: 'รหัสหน่วยนับซ้ำในระบบ' });
+            } else if (errors.unit_code?.message === 'รหัสหน่วยนับซ้ำในระบบ') {
+                clearErrors('unit_code');
+            }
+        }
+    }, [duplicateCheckData, debouncedCode, editId, setError, clearErrors, errors.unit_code?.message]);
 
     // Hydrate form when data is provided
     useEffect(() => {
@@ -81,6 +112,14 @@ export function useUnitForm(editId: number | null, initialData?: UnitListItem | 
         },
         onError: async (error: Error) => {
             logger.error('Save unit error:', error);
+            const errorMsg = error.message.toLowerCase();
+            const isDuplicate = errorMsg.includes('duplicate') || errorMsg.includes('ซ้ำ');
+            
+            if (isDuplicate) {
+                setError('unit_code', { message: 'รหัสหน่วยนับซ้ำในระบบ' });
+                return;
+            }
+
             await confirm({
                 title: 'เกิดข้อผิดพลาด',
                 description: error.message || 'ไม่สามารถบันทึกข้อมูลได้',

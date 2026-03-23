@@ -63,11 +63,11 @@ export default function PRListPage() {
     });
 
     const vendorMap = useMemo(() => {
-        const map: Record<number, { vendor_code: string; vendor_name: string }> = {};
+        const map: Record<string, { vendor_code: string; vendor_name: string }> = {};
         (vendorData?.items || []).forEach((v: any) => {
             const id = v.vendor_id || v.id;
             if (id) {
-                map[Number(id)] = {
+                map[String(id)] = {
                     vendor_code: v.vendor_code || '',
                     vendor_name: v.vendor_name || ''
                 };
@@ -309,7 +309,7 @@ export default function PRListPage() {
         }),
         columnHelper.accessor(row => {
             const vId = row.preferred_vendor_id || row.vendor_id;
-            const vendorFromId = vId ? vendorMap[Number(vId)] : undefined;
+            const vendorFromId = vId ? vendorMap[String(vId)] : undefined;
             const vendorCode = vendorFromId?.vendor_code || row.vendor_quote_no || '';
             const vendorName = vendorFromId?.vendor_name || row.vendor_name || '';
             return `${vendorCode} ${vendorName}`;
@@ -319,7 +319,7 @@ export default function PRListPage() {
             cell: (info) => {
                 const row = info.row.original;
                 const vId = row.preferred_vendor_id || row.vendor_id;
-                const vendorFromId = vId ? vendorMap[Number(vId)] : undefined;
+                const vendorFromId = vId ? vendorMap[String(vId)] : undefined;
                 
                 const vendorCode = vendorFromId?.vendor_code || row.vendor_quote_no || '';
                 let vendorName = vendorFromId?.vendor_name || row.vendor_name || '';
@@ -538,14 +538,14 @@ export default function PRListPage() {
                                         label: 'รหัสผู้ขาย:',
                                         value: (() => {
                                             const vId = item.preferred_vendor_id || item.vendor_id;
-                                            return vId ? vendorMap[Number(vId)]?.vendor_code : '-';
+                                            return vId ? vendorMap[String(vId)]?.vendor_code : '-';
                                         })() || '-',
                                     },
                                     {
                                         label: 'ชื่อผู้ขาย:',
                                         value: (() => {
                                             const vId = item.preferred_vendor_id || item.vendor_id;
-                                            return vId ? vendorMap[Number(vId)]?.vendor_name : '-';
+                                            return vId ? vendorMap[String(vId)]?.vendor_name : '-';
                                         })() || '-',
                                     },
                                     ...(item.need_by_date ? [{ label: 'ต้องการใช้:', value: formatThaiDate(item.need_by_date) }] : []),

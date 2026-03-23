@@ -1,4 +1,5 @@
 import { type FieldErrors } from 'react-hook-form';
+import { ScanBarcode } from 'lucide-react';
 import type { ItemFormData, ItemFormChangeHandler } from '../hooks/useItemForm';
 import { 
     ITEM_COSTING_METHODS
@@ -15,13 +16,17 @@ interface ItemStockDetailsProps {
     onChange: ItemFormChangeHandler;
     errors: FieldErrors<ItemFormData>;
     uom?: UnitListItem[];
+    editId?: number | null;
+    onManageBarcodes?: () => void;
 }
 
 export const ItemStockDetails: React.FC<ItemStockDetailsProps> = ({
     formData,
     onChange,
     errors,
-    uom = []
+    uom = [],
+    editId,
+    onManageBarcodes
 }) => {
     return (
         <div className="lg:col-span-4 space-y-2">
@@ -41,7 +46,9 @@ export const ItemStockDetails: React.FC<ItemStockDetailsProps> = ({
                             <select 
                                 value={formData.base_uom_id} 
                                 onChange={(e) => onChange('base_uom_id', Number(e.target.value))} 
-                                className={`w-full h-8 bg-white dark:bg-gray-700 border ${
+                                disabled={!!editId}
+                                title={editId ? "ไม่สามารถแก้ไขหน่วยนับหลักได้ในโหมดแก้ไข" : ""}
+                                className={`w-full h-8 ${editId ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed' : 'bg-white dark:bg-gray-700'} border ${
                                     errors.base_uom_id ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                                 } rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-emerald-500 outline-none`}
                             >
@@ -51,15 +58,51 @@ export const ItemStockDetails: React.FC<ItemStockDetailsProps> = ({
                                 ))}
                             </select>
                         </div>
+
+                        {/* 💡 บาร์โค้ดสำหรับหน่วยนับหลัก (Moved from Financials) */}
+                        <div>
+                            {editId ? (
+                                <div className="space-y-1">
+                                    <label className="block text-[10px] text-gray-500 dark:text-gray-400">
+                                        บาร์โค้ดปัจจุบัน: <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{formData.barcode_default || '-'}</span>
+                                    </label>
+                                    <button
+                                        type="button"
+                                        onClick={onManageBarcodes}
+                                        className="w-full h-8 bg-purple-50 hover:bg-purple-100 dark:bg-purple-900/30 dark:hover:bg-purple-900/50 border border-purple-200 dark:border-purple-700 rounded px-2 text-xs text-purple-600 dark:text-purple-400 font-medium transition-colors flex items-center justify-center gap-1"
+                                    >
+                                        <ScanBarcode size={14} /> จัดการบาร์โค้ดสินค้า
+                                    </button>
+                                </div>
+                            ) : (
+                                <>
+                                    <label className="block text-[10px] text-gray-500 dark:text-gray-400 mb-0.5">
+                                        บาร์โค้ด (สำหรับหน่วยนับหลัก)
+                                    </label>
+                                    <input 
+                                        type="text" 
+                                        value={formData.barcode_default || ''} 
+                                        onChange={(e) => onChange('barcode_default', e.target.value)} 
+                                        className="w-full h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-emerald-500 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                        placeholder="ระบุบาร์โค้ดตัวแรก"
+                                    />
+                                    <p className="mt-0.5 text-[9px] text-gray-400">
+                                        * หน่วยอื่น ๆ (ลัง, กล่อง) จัดการได้หลังบันทึกเรียบร้อย
+                                    </p>
+                                </>
+                            )}
+                        </div>
                         <div className="grid grid-cols-2 gap-2">
                             <div>
                                 <label className="block text-[10px] text-gray-500 dark:text-gray-400 mb-0.5">
                                     หน่วยนับซื้อ (Purchase)
                                 </label>
                                 <select 
-                                    value={formData.base_uom_id || ''} 
-                                    onChange={(e) => onChange('base_uom_id', Number(e.target.value))} 
-                                    className="w-full h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-emerald-500 outline-none"
+                                    value={formData.purchase_uom_id || ''} 
+                                    onChange={(e) => onChange('purchase_uom_id', Number(e.target.value))} 
+                                    disabled={!!editId}
+                                    title={editId ? "หน่วยนับเสริม จัดการได้ในเมนูบาร์โค้ดหลังจากบันทึก" : ""}
+                                    className={`w-full h-8 ${editId ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed' : 'bg-white dark:bg-gray-700'} border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-emerald-500 outline-none`}
                                 >
                                     <option value="">-- เลือก --</option>
                                     {uom.map(u => (

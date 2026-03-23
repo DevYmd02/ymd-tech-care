@@ -24,7 +24,19 @@ function mapVendorToApi(data: any): any {
         vendor_nameeng: data.vendor_nameeng || data.vendor_name_en || data.vendorNameEn || '',
         vat_registration_no: data.vat_registration_no || data.tax_id || data.taxId || '',
         is_vat_registered: Boolean(data.is_vat_registered ?? data.vatRegistered ?? false),
-        payment_term_days: Number(data.payment_term_days || data.paymentTerms || 0),
+        payment_term_days: (() => {
+            if (data.payment_term_days !== undefined && data.payment_term_days !== null && data.payment_term_days !== '') {
+                return Number(data.payment_term_days);
+            }
+            const terms = data.paymentTerms;
+            if (terms === 'Cash') return 0;
+            if (terms === 'Net 7 Days') return 7;
+            if (terms === 'Net 15 Days') return 15;
+            if (terms === 'Net 30 Days') return 30;
+            if (terms === 'Net 60 Days') return 60;
+            const match = String(terms || '').match(/\d+/);
+            return match ? Number(match[0]) : 30; 
+        })(),
         phone: data.phone || '',
         phone_extension: data.mobile || data.phone_extension || '',
         email: data.email || '',

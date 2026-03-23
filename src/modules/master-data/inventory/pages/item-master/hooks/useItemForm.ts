@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { useForm as useRHF, useWatch, type Path, type PathValue, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useDebounce } from '@/shared/hooks/useDebounce';
 
 import { logger } from '@/shared/utils/logger';
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
@@ -10,6 +11,7 @@ import { UnitService } from '@/modules/master-data/inventory/services/unit.servi
 import { ProductCategoryService } from '@/modules/master-data/inventory/services/product-category.service';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import type { ItemMaster, ItemMasterFormData } from '@/modules/master-data/types/master-data-types';
+import { extractErrorMessage } from '@/core/api/api';
 
 export const itemMasterSchema = z.object({
     item_code: z.string().min(1, 'กรุณากรอกรหัสสินค้า'),
@@ -135,6 +137,8 @@ export function useItemForm(editId: number | null, onSuccess?: () => void) {
         reset,
         control,
         setValue,
+        setError,
+        clearErrors,
         formState: { errors }
     } = useRHF<ItemFormData>({
         resolver: zodResolver(itemMasterSchema) as Resolver<ItemFormData>,
@@ -145,6 +149,35 @@ export function useItemForm(editId: number | null, onSuccess?: () => void) {
         control,
         defaultValue: initialFormData
     }) as ItemFormData;
+
+    const codeValue = formData.item_code;
+    const debouncedCode = useDebounce(codeValue, 500);
+
+    const { data: duplicateCheckData } = useQuery({
+        queryKey: ['item-check-duplicate', debouncedCode],
+        queryFn: async () => {
+            if (!debouncedCode) return { items: [] };
+            return ItemMasterService.getAll({ q: debouncedCode, limit: 100 });
+        },
+        enabled: !!debouncedCode && debouncedCode.trim().length >= 1,
+    });
+
+    useEffect(() => {
+        if (duplicateCheckData?.items && debouncedCode) {
+            const matches = duplicateCheckData.items;
+            const isDuplicate = matches.some(item => 
+                item.item_code?.toLowerCase() === debouncedCode.trim().toLowerCase() && 
+                item.item_id !== editId
+            );
+
+            if (isDuplicate) {
+                setError('item_code', { type: 'manual', message: 'รหัสสินค้าซ้ำในระบบ' });
+            } else if (errors.item_code?.message === 'รหัสสินค้าซ้ำในระบบ') {
+                clearErrors('item_code');
+            }
+        }
+    }, [duplicateCheckData, debouncedCode, editId, setError, clearErrors, errors.item_code?.message]);
+
 
     // Real Data Fetching
     const { data: units = [] } = useQuery({
@@ -240,6 +273,9 @@ export function useItemForm(editId: number | null, onSuccess?: () => void) {
                 });
                 
                 queryClient.invalidateQueries({ queryKey: ['items'] });
+                if (editId) {
+                    queryClient.invalidateQueries({ queryKey: ['item-detail', editId] });
+                }
                 if (onSuccess) onSuccess();
             } else {
                 throw new Error('บันทึกไม่สำเร็จ');
@@ -247,9 +283,18 @@ export function useItemForm(editId: number | null, onSuccess?: () => void) {
         },
         onError: async (error: Error) => {
             logger.error('Save item error:', error);
+            const apiError = extractErrorMessage(error);
+            const errorMsg = apiError.toLowerCase();
+            const isDuplicate = errorMsg.includes('duplicate') || errorMsg.includes('ซ้ำ');
+            
+            if (isDuplicate) {
+                setError('item_code', { message: 'รหัสสินค้าซ้ำในระบบ' });
+                return;
+            }
+
             await confirm({
                 title: 'เกิดข้อผิดพลาด',
-                description: error.message || 'เกิดข้อผิดพลาดในการบันทึก',
+                description: apiError || 'เกิดข้อผิดพลาดในการบันทึก',
                 confirmText: 'ตกลง',
                 variant: 'danger',
                 hideCancel: true

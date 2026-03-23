@@ -1,8 +1,9 @@
 import { useCallback, useEffect } from 'react';
+import { useDebounce } from '@/shared/hooks/useDebounce';
 import { z } from 'zod';
-import { useForm, type SubmitHandler, type Resolver } from 'react-hook-form';
+import { useForm, useWatch, type SubmitHandler, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { ItemGroupService } from '../services/inventory-master.service';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import { logger } from '@/shared/utils/logger';
@@ -35,11 +36,42 @@ export function useItemGroupForm(editId: number | null, initialData?: ItemGroup 
         register,
         handleSubmit: rhfHandleSubmit,
         reset,
+        control,
+        setError,
+        clearErrors,
         formState: { errors }
     } = useForm<ItemGroupFormValues>({
         resolver: zodResolver(itemGroupSchema) as Resolver<ItemGroupFormValues>,
         defaultValues: initialFormData
     });
+
+    const codeValue = useWatch({ control, name: 'code' });
+    const debouncedCode = useDebounce(codeValue, 500);
+
+    const { data: duplicateCheckData } = useQuery({
+        queryKey: ['itemgroup-check-duplicate', debouncedCode],
+        queryFn: async () => {
+            if (!debouncedCode) return { items: [] };
+            return ItemGroupService.getAll({ code: debouncedCode });
+        },
+        enabled: !!debouncedCode && debouncedCode.trim().length >= 1,
+    });
+
+    useEffect(() => {
+        if (duplicateCheckData?.items && debouncedCode) {
+            const matches = duplicateCheckData.items;
+            const isDuplicate = matches.some(item => 
+                item.code?.toLowerCase() === debouncedCode.trim().toLowerCase() && 
+                item.id !== editId
+            );
+
+            if (isDuplicate) {
+                setError('code', { type: 'manual', message: 'รหัสกลุ่มสินค้าซ้ำในระบบ' });
+            } else if (errors.code?.message === 'รหัสกลุ่มสินค้าซ้ำในระบบ') {
+                clearErrors('code');
+            }
+        }
+    }, [duplicateCheckData, debouncedCode, editId, setError, clearErrors, errors.code?.message]);
 
     useEffect(() => {
         if (initialData) {
@@ -71,6 +103,14 @@ export function useItemGroupForm(editId: number | null, initialData?: ItemGroup 
         },
         onError: async (error: Error) => {
             logger.error('Save item group error:', error);
+            const errorMsg = error.message.toLowerCase();
+            const isDuplicate = errorMsg.includes('duplicate') || errorMsg.includes('ซ้ำ');
+            
+            if (isDuplicate) {
+                setError('code', { message: 'รหัสกลุ่มสินค้าซ้ำในระบบ' });
+                return;
+            }
+
             await confirm({ title: 'เกิดข้อผิดพลาด', description: error.message || 'ไม่สามารถบันทึกข้อมูลได้', confirmText: 'ตกลง', variant: 'danger', hideCancel: true });
         }
     });

@@ -621,6 +621,7 @@ export interface ItemMasterFormData {
     item_group_id?: number;
     item_category_id?: number;
     base_uom_id?: number;
+    purchase_uom_id?: number;
     sale_uom_id?: number;
     tax_code_id?: number;
     barcode_default?: string;
@@ -798,13 +799,26 @@ export interface ItemBarcodeFormData {
 export interface ItemBarcodeListItem {
     id: number;
     barcode_id: number;
+    item_id: number;
     item_code: string;
     item_name: string;
     barcode: string;
+    unit_id?: number;
     unit_name?: string;
     is_primary: boolean;
     is_active: boolean;
     created_at: string;
+}
+
+export interface ItemBarcodeCreateRequest {
+    item_id: number;
+    barcode: string;
+    uom_id?: number | null;
+    is_default?: boolean;
+}
+
+export interface ItemBarcodeUpdateRequest extends Partial<ItemBarcodeCreateRequest> {
+    barcode_id: number;
 }
 
 export const initialItemBarcodeFormData: ItemBarcodeFormData = {
@@ -815,3 +829,4 @@ export const initialItemBarcodeFormData: ItemBarcodeFormData = {
     isPrimary: false,
     isActive: true,
 };
+

@@ -1,6 +1,7 @@
 import api from '@/core/api/api';
 import { USE_MOCK } from '@/core/api/api';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
+import type { VendorListResponse, VendorListItem } from '@/modules/master-data/vendor/types/vendor-types';
 import type {
   PRListParams,
   PRListResponse,
@@ -53,14 +54,27 @@ const KNOWN_LINE_DTO_FIELDS = new Set([
   'location', 'required_receipt_type'
 ]);
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🔒 INTERNAL SPEED CACHE (Phase 1 Optimization)
+// ═══════════════════════════════════════════════════════════════════════════════
+let cachedVendors: VendorListResponse | null = null;
+let lastVendorFetchTime = 0;
+const VENDOR_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 export const PRService = {
   getList: async (params?: PRListParams): Promise<PRListResponse> => {
     logger.info('[PRService] Fetching PR List', params);
     const response = await api.get<PRListResponse>(ENDPOINTS.list, { params });
 
-    // 🎯 HYBRID FALLBACK: Apply Client-Side Filtering when using Real API
-    // The backend currently ignores filter params — we replicate Mock logic here.
-    if (!USE_MOCK && params) {
+
+
+    // ⚡ PHASE 2: Server-Side Pagination & Filtering (Real API)
+    if (!USE_MOCK) {
+      return response;
+    }
+
+    // 🎯 HYBRID FALLBACK: Apply Client-Side Filtering when using Mock Data
+    if (params) {
       const allItems = extractArrayFromResponse<PRHeader>(response as PRListResponse | PRHeader[]);
       const filterParams: Record<string, string | number | boolean | undefined | null> = {};
       if (params.pr_no) filterParams.pr_no = params.pr_no;
@@ -79,9 +93,15 @@ export const PRService = {
       let hydratedItems = [...allItems];
       if (params.vendor_code || params.vendor_name) {
           try {
-              const vendorsRes = await VendorService.getList();
+              const now = Date.now();
+              if (!cachedVendors || (now - lastVendorFetchTime > VENDOR_CACHE_TTL)) {
+                  logger.debug('🚀 [PRService] Cache miss for Vendors inside list fetcher, syncing...');
+                  cachedVendors = await VendorService.getList();
+                  lastVendorFetchTime = now;
+              }
+              const vendorsRes = cachedVendors;
               const vendorMap: Record<number, { vendor_code?: string; vendor_name?: string }> = {};
-              (vendorsRes.items || []).forEach((v: any) => {
+              (vendorsRes.items || []).forEach((v: VendorListItem) => {
                   const id = v.vendor_id || v.id;
                   if (id) {
                       vendorMap[Number(id)] = {
@@ -131,8 +151,8 @@ export const PRService = {
     // 🎯 HYBRID PAGINATION: Always apply client-side slicing even for mock responses
     // This ensures the table only shows items for the current page
     const allItems = extractArrayFromResponse<PRHeader>(response as PRListResponse | PRHeader[]);
-    const page = params?.page || 1;
-    const limit = params?.limit || 20;
+    const page = 1;
+    const limit = 20;
     return applyClientPagination<PRHeader>(allItems, page, limit, response.total);
   },
 

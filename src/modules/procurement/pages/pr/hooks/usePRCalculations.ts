@@ -49,7 +49,7 @@ export const usePRCalculations = (props?: UsePRCalculationsProps): PRCalculation
       const lineDiscount = Number(line?.discount);
       const safeLineDiscount = isNaN(lineDiscount) ? 0 : lineDiscount;
       
-      const lineTotal = gross - safeLineDiscount;
+      const lineTotal = Math.max(0, gross - safeLineDiscount);
 
       acc.totalGross += gross;
       acc.subtotal += lineTotal;

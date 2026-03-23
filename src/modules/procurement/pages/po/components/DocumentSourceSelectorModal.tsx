@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
 import { FileText, Plus, CheckCircle, PackageSearch, AlertCircle, Search } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueries } from '@tanstack/react-query';
 import { QCService } from '@/modules/procurement/services/qc.service';
+import { VQService } from '@/modules/procurement/services/vq.service';
+import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
+import type { VQListItem } from '@/modules/procurement/types';
 import { ModalLayout } from '@/shared/components/ui/layout';
 import { cn } from '@/shared/utils/cn';
 
 interface DocumentSourceSelectorModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSelectSource: (sourceType: 'QC' | 'BLANK', prId?: number, qcId?: number, vendorId?: number, winningVqId?: number) => void;
+    onSelectSource: (sourceType: 'QC' | 'BLANK', prId?: number, qcId?: number, vendorId?: number, winningVqId?: number, qcNo?: string) => void;
 }
 
 export const DocumentSourceSelectorModal: React.FC<DocumentSourceSelectorModalProps> = ({
@@ -25,6 +28,48 @@ export const DocumentSourceSelectorModal: React.FC<DocumentSourceSelectorModalPr
         queryFn: () => QCService.getReadyForPO(),
         enabled: isOpen,
     });
+
+    // Batch fetch VQ details for winning quotations
+    const winningVqIds = readyPRs
+        .map(pr => pr.qcHeaders?.[0]?.winning_vq_id)
+        .filter((id): id is number => id !== undefined && id !== null);
+
+    const vqQueries = useQueries({
+        queries: winningVqIds.map(id => ({
+            queryKey: ['vq-detail', id],
+            queryFn: () => VQService.getById(id),
+            enabled: isOpen && !!id,
+        }))
+    });
+
+    const vqMap = vqQueries.reduce((acc, query, index) => {
+        if (query.data) {
+            const id = winningVqIds[index];
+            acc[id] = query.data as VQListItem;
+        }
+        return acc;
+    }, {} as Record<number, VQListItem>);
+
+    // Batch fetch Vendor details for winning quotations (Waterfall from VQ Detail)
+    const winningVendorIds = Object.values(vqMap)
+        .map(vq => vq.vendor_id)
+        .filter((id): id is number => id !== undefined && id !== null);
+
+    const vendorQueries = useQueries({
+        queries: winningVendorIds.map(id => ({
+            queryKey: ['vendor-detail', id],
+            queryFn: () => VendorService.getById(id),
+            enabled: isOpen && !!id,
+        }))
+    });
+
+    const vendorMap = vendorQueries.reduce((acc, query, index) => {
+        if (query.data) {
+            const id = winningVendorIds[index];
+            acc[id] = query.data;
+        }
+        return acc;
+    }, {} as Record<number, any>);
     
     // Filter logic based on search query
     const filteredPRs = readyPRs.filter(pr => {
@@ -44,12 +89,16 @@ export const DocumentSourceSelectorModal: React.FC<DocumentSourceSelectorModalPr
             const selectedPr = readyPRs.find(pr => pr.pr_id === selectedPrId);
             // If there's a QC associated, pick the first one (or winning one) to pass as sourceQcId
             const firstQC = selectedPr?.qcHeaders?.[0];
+            const winningVqId = firstQC?.winning_vq_id;
+            const vqDetail = winningVqId ? vqMap[winningVqId] : null;
+
             onSelectSource(
                 'QC', 
                 selectedPrId, 
                 firstQC?.qc_id, 
-                firstQC?.winning_vendor_id || selectedPr?.preferred_vendor?.vendor_id,
-                firstQC?.winning_vq_id
+                vqDetail?.vendor_id || firstQC?.winning_vendor_id || selectedPr?.preferred_vendor?.vendor_id,
+                firstQC?.winning_vq_id,
+                firstQC?.qc_no
             );
         } else {
             onSelectSource('BLANK');
@@ -111,7 +160,7 @@ export const DocumentSourceSelectorModal: React.FC<DocumentSourceSelectorModalPr
                     <input 
                         type="text" 
                         placeholder="ค้นหาด้วยเลข QC, PR หรือชื่อผู้ขาย..." 
-                        className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-shadow"
+                        className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-shadow"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -144,7 +193,14 @@ export const DocumentSourceSelectorModal: React.FC<DocumentSourceSelectorModalPr
                                 filteredPRs.map((pr) => {
                                     const hasQC = pr.qcHeaders && pr.qcHeaders.length > 0;
                                     const displayQcNo = hasQC ? pr.qcHeaders?.[0]?.qc_no : null;
-                                    const vendorName = pr.preferred_vendor?.vendor_name || (hasQC ? 'มีผู้ชนะใน QC' : 'ไม่ระบุผู้ขาย');
+                                    const winningVqId = pr.qcHeaders?.[0]?.winning_vq_id;
+                                    const vqDetail = winningVqId ? vqMap[winningVqId] : null;
+                                    const winningVendorId = pr.qcHeaders?.[0]?.winning_vendor_id || vqDetail?.vendor_id;
+                                    
+                                    const vendorDetail = winningVendorId ? vendorMap[winningVendorId] : null;
+                                    
+                                    const vendorName = vendorDetail?.vendor_name || vqDetail?.vendor?.vendor_name || vqDetail?.vendor_name || pr.preferred_vendor?.vendor_name || (hasQC ? 'มีผู้ชนะใน QC' : 'ไม่ระบุผู้ขาย');
+                                    const displayAmount = vqDetail ? Number(vqDetail.base_total_amount || 0) : pr.pr_base_total_amount;
 
                                     return (
                                         <div 
@@ -170,13 +226,13 @@ export const DocumentSourceSelectorModal: React.FC<DocumentSourceSelectorModalPr
                                                             {pr.pr_no}
                                                         </h4>
                                                         <span className="text-xs text-indigo-500 font-medium whitespace-nowrap ml-2">
-                                                            {pr.pr_base_total_amount?.toLocaleString()} {pr.base_currency_code}
+                                                            {displayAmount?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {pr.base_currency_code}
                                                         </span>
                                                     </div>
                                                     <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 flex flex-wrap gap-x-3 gap-y-1">
                                                         <span className="flex items-center gap-1">
                                                             <span className="font-semibold text-gray-500">ผู้ขาย:</span> 
-                                                            <span className="text-emerald-600 dark:text-emerald-400 font-bold max-w-[150px] truncate">{vendorName}</span>
+                                                            <span className="text-emerald-600 dark:text-emerald-400 font-bold">{vendorName}</span>
                                                         </span>
                                                         {displayQcNo && (
                                                             <span className="flex items-center gap-1">

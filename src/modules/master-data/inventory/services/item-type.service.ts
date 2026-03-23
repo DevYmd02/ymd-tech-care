@@ -7,7 +7,7 @@ import type { SuccessResponse } from '@/shared/types/api-response.types';
 
 export const ItemTypeService = {
 
-  getAll: async (): Promise<ListResponse<ItemTypeListItem>> => {
+  getAll: async (params?: any): Promise<ListResponse<ItemTypeListItem>> => {
     if (USE_MOCK) {
       logger.info('🎭 [Mock Mode] Serving Item Type List');
       return {
@@ -19,7 +19,7 @@ export const ItemTypeService = {
     }
 
     try {
-      const response = await api.get<ListResponse<ItemTypeListItem>>('/item-type');
+      const response = await api.get<ListResponse<ItemTypeListItem>>('/item-type', { params });
 
       if (Array.isArray(response)) {
         return {

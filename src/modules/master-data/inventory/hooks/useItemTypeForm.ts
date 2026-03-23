@@ -1,8 +1,9 @@
 import { useCallback, useEffect } from 'react';
+import { useDebounce } from '@/shared/hooks/useDebounce';
 import { z } from 'zod';
-import { useForm, type SubmitHandler, type Resolver } from 'react-hook-form';
+import { useForm, useWatch, type SubmitHandler, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { ItemTypeService } from '../services/item-type.service';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import { logger } from '@/shared/utils/logger';
@@ -33,11 +34,42 @@ export function useItemTypeForm(editId: number | null, initialData?: ItemTypeLis
         register,
         handleSubmit: rhfHandleSubmit,
         reset,
+        control,
+        setError,
+        clearErrors,
         formState: { errors }
     } = useForm<ItemTypeFormData>({
         resolver: zodResolver(itemTypeSchema) as Resolver<ItemTypeFormData>,
         defaultValues: initialFormData
     });
+
+    const codeValue = useWatch({ control, name: 'item_type_code' });
+    const debouncedCode = useDebounce(codeValue, 500);
+
+    const { data: duplicateCheckData } = useQuery({
+        queryKey: ['itemtype-check-duplicate', debouncedCode],
+        queryFn: async () => {
+            if (!debouncedCode) return { items: [] };
+            return ItemTypeService.getAll({ item_type_code: debouncedCode } as any);
+        },
+        enabled: !!debouncedCode && debouncedCode.trim().length >= 1,
+    });
+
+    useEffect(() => {
+        if (duplicateCheckData?.items && debouncedCode) {
+            const matches = duplicateCheckData.items;
+            const isDuplicate = matches.some(item => 
+                item.item_type_code?.toLowerCase() === debouncedCode.trim().toLowerCase() && 
+                item.id !== editId
+            );
+
+            if (isDuplicate) {
+                setError('item_type_code', { type: 'manual', message: 'รหัสประเภทสินค้าซ้ำในระบบ' });
+            } else if (errors.item_type_code?.message === 'รหัสประเภทสินค้าซ้ำในระบบ') {
+                clearErrors('item_type_code');
+            }
+        }
+    }, [duplicateCheckData, debouncedCode, editId, setError, clearErrors, errors.item_type_code?.message]);
 
     // Hydrate form when data is provided for editing
     useEffect(() => {
@@ -77,6 +109,14 @@ export function useItemTypeForm(editId: number | null, initialData?: ItemTypeLis
         },
         onError: async (error: Error) => {
             logger.error('Save item type error:', error);
+            const errorMsg = error.message.toLowerCase();
+            const isDuplicate = errorMsg.includes('duplicate') || errorMsg.includes('ซ้ำ');
+            
+            if (isDuplicate) {
+                setError('item_type_code', { message: 'รหัสประเภทสินค้าซ้ำในระบบ' });
+                return;
+            }
+
             await confirm({ title: 'เกิดข้อผิดพลาด', description: error.message || 'ไม่สามารถบันทึกข้อมูลได้', confirmText: 'ตกลง', variant: 'danger', hideCancel: true });
         }
     });

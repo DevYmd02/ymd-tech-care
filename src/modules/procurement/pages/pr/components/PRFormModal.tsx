@@ -217,9 +217,9 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
                         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Vendor Quote No.</label>
                         <input 
                             {...register('vendor_quote_no')} 
-                            disabled={readOnly || !!watch('preferred_vendor_id')} 
+                            disabled={readOnly} 
                             placeholder="Quote No" 
-                            className={`w-full h-9 px-3 text-sm border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-colors ${(readOnly || !!watch('preferred_vendor_id')) ? 'bg-gray-50 dark:bg-gray-800/50 italic text-gray-500 cursor-not-allowed' : 'bg-white dark:bg-gray-800'}`}
+                            className={`w-full h-9 px-3 text-sm border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-colors ${readOnly ? 'bg-gray-50 dark:bg-gray-800/50 italic text-gray-500 cursor-not-allowed' : 'bg-white dark:bg-gray-800'}`}
                         />
                     </div>
 

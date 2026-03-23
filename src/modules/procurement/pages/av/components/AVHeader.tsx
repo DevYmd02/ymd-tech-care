@@ -74,7 +74,7 @@ export const AVHeader: React.FC<Props> = ({ prId, costCenters, projects, onVendo
             <input 
               {...register("pr_no")} 
               className={`${inputClass} bg-gray-100 italic ${watch("pr_no")?.startsWith('DRAFT-TEMP') ? 'text-amber-600 font-bold' : ''}`} 
-              value={watch("pr_no")?.startsWith('DRAFT-TEMP') ? 'NEW (รอรันเลข)' : watch("pr_no")}
+              value={(watch("pr_no")?.startsWith('DRAFT-TEMP') ? 'NEW (รอรันเลข)' : watch("pr_no")) || ''}
               readOnly 
             />
           </div>

@@ -4,7 +4,7 @@ import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import type { Resolver, SubmitHandler, FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { POService, VQService, QCService } from '@/modules/procurement/services';
+import { POService, VQService } from '@/modules/procurement/services';
 import { POFormSchema, CreatePOSchema, type POFormData, type POLine, type ItemSelectorResult } from '@/modules/procurement/schemas/po-schemas'; 
 import type { IHydrationPRLine, IHydrationVQLine, IHydrationVQHeader } from '@/modules/procurement/schemas/po-schemas'; 
 import type { CreatePOPayload } from '@/modules/procurement/types/po-types';
@@ -13,11 +13,14 @@ import { PRService } from '@/modules/procurement/services/pr.service';
 import type { PRHeader, PRLine } from '@/modules/procurement/types/pr-types';
 import type { QuotationHeader, QuotationLine } from '@/modules/procurement/types/vq-types'; 
 import { MasterDataService } from '@/modules/master-data/services/master-data.service';
+import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
 import { TaxCodeService } from '@/modules/master-data/tax/services/tax-code.service';
+import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
 import { logger } from '@/shared/utils/logger';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { extractErrorMessage } from '@/core/api/api';
+import type { Currency } from '@/modules/master-data/types/master-data-types';
 
 // ====================================================================================
 // CONFIG
@@ -82,7 +85,7 @@ export const usePOForm = ({
             ship_to_warehouse_id: undefined,
             is_multicurrency: false,
             currency_code: 'THB',
-            target_currency: undefined,
+            target_currency: 'THB',
             exchange_rate_date: new Date().toISOString().split('T')[0],
             exchange_rate: 1,
             payment_term_days: 30,
@@ -102,6 +105,7 @@ export const usePOForm = ({
         setValue,
         getValues,
         trigger,
+        getFieldState,
         formState: { errors },
     } = formMethods;
 
@@ -110,8 +114,23 @@ export const usePOForm = ({
 
     const watchVendorName      = useWatch({ control, name: 'vendor_name' });
     const watchPrNo            = useWatch({ control, name: 'pr_no' });
-    const watchCurrencyCode    = useWatch({ control, name: 'currency_code' });
+    const watchCurrencyCode    = useWatch({ control, name: 'currency_code' }) as string | undefined;
+    const watchTargetCurrency  = useWatch({ control, name: 'target_currency' }) as string | undefined;
     const watchIsMulticurrency = useWatch({ control, name: 'is_multicurrency' });
+
+    // ── Existing PO Detail Query (for view/edit) ─────────────────────────────
+    const { data: existingPO, isLoading: isLoadingPO } = useQuery({
+        queryKey: ['existing-po', poId],
+        queryFn: async () => {
+            if (!poId) return null;
+            return await POService.getById(poId);
+        },
+        enabled: isOpen && !!poId
+    });
+
+    useEffect(() => {
+        setIsHydrating(isLoadingPO);
+    }, [isLoadingPO]);
 
     // ── VQ Inheritance Query (read-only cross-module lookup) ──────────────────
     const { data: inheritedQC } = useQuery({
@@ -138,8 +157,34 @@ export const usePOForm = ({
         if (isOpen) {
             let initialPOLines: POFormData['po_lines'] = [];
             
+            // Phase 0: Loaded from existing PO DB Call
+            if (existingPO) {
+                const detail = existingPO as any;
+                const lines = detail.poLines || detail.po_lines || detail.lines || [];
+                if (lines.length > 0) {
+                    initialPOLines = lines.map((l: any, idx: number) => ({
+                        line_no:         idx + 1,
+                        item_id:         Number(l.item_id || 0),
+                        item_code:       l.item_code || l.item?.item_code || '',
+                        item_name:       l.item_name || l.item?.item_name || '',
+                        description:     l.description || l.remark || '',
+                        pr_line_id:      l.pr_line_id || null,
+                        status:          l.status || 'OPEN',
+                        qty:             Number(l.qty || l.qty_ordered || 0),
+                        qty_ordered:     Number(l.qty_ordered || l.qty || 0),
+                        uom_id:          Number(l.uom_id || 1),
+                        unit_price:      Number(l.unit_price || 0),
+                        discount_amount: Number(l.discount_amount || 0),
+                        discount_expression: String(l.discount_expression || '0'),
+                        tax_code_id:     l.tax_code_id || undefined,
+                        required_receipt_type: l.required_receipt_type || 'FULL',
+                        receipt_type:    'GOODS' as const,
+                        line_total:      Number(l.line_total || 0),
+                    }));
+                }
+            }
             // Phase 1: Direct PO Lines from internal or partial initialValues
-            if (initialValues?.po_lines && initialValues.po_lines.length > 0) {
+            else if (initialValues?.po_lines && initialValues.po_lines.length > 0) {
                 initialPOLines = initialValues.po_lines as POFormData['po_lines'];
             } 
             // Phase 2: Derive from RFQ/VQ inheritance
@@ -189,37 +234,39 @@ export const usePOForm = ({
                 }];
             }
 
+            const detail = existingPO as any;
+
             reset({
-                po_no:                initialValues?.po_no                ?? undefined,
-                po_date:              initialValues?.po_date              ?? new Date().toISOString().split('T')[0],
-                rfq_id:               initialValues?.rfq_id               ?? inheritedQC?.rfq_id ?? undefined,
-                winning_vq_id:        initialValues?.winning_vq_id        ?? inheritedQC?.vq_header_id ?? inheritedQC?.quotation_id ?? undefined,
-                pr_id:                inheritedQC?.pr_id                  || initialValues?.pr_id || undefined,
-                pr_no:                inheritedQC?.pr_no                  || initialValues?.pr_no || undefined,
-                qc_id:                initialValues?.qc_id                ?? undefined,
-                qc_no:                initialValues?.qc_no                ?? undefined,
-                vendor_id:            initialValues?.vendor_id            ?? undefined,
-                vendor_name:          initialValues?.vendor_name          ?? undefined,
-                branch_id:            initialValues?.branch_id            ?? undefined,
-                ship_to_warehouse_id: initialValues?.ship_to_warehouse_id ?? undefined,
+                po_no:                detail?.po_no                       ?? initialValues?.po_no                ?? undefined,
+                po_date:              detail?.po_date                     ?? initialValues?.po_date              ?? new Date().toISOString().split('T')[0],
+                rfq_id:               detail?.rfq_id                      ?? initialValues?.rfq_id               ?? inheritedQC?.rfq_id ?? undefined,
+                winning_vq_id:        detail?.winning_vq_id               ?? initialValues?.winning_vq_id        ?? inheritedQC?.vq_header_id ?? inheritedQC?.quotation_id ?? undefined,
+                pr_id:                detail?.pr_id                       ?? (inheritedQC?.pr_id || initialValues?.pr_id) ?? undefined,
+                pr_no:                detail?.pr_no                       ?? (inheritedQC?.pr_no || initialValues?.pr_no) ?? undefined,
+                qc_id:                detail?.qc_id                       ?? initialValues?.qc_id                ?? undefined,
+                qc_no:                detail?.qc_no                       ?? initialValues?.qc_no                ?? undefined,
+                vendor_id:            detail?.vendor_id                   ?? initialValues?.vendor_id            ?? undefined,
+                vendor_name:          detail?.vendor_name                 ?? initialValues?.vendor_name          ?? undefined,
+                branch_id:            detail?.branch_id                   ?? initialValues?.branch_id            ?? undefined,
+                ship_to_warehouse_id: detail?.ship_to_warehouse_id       ?? detail?.warehouse_id ?? initialValues?.ship_to_warehouse_id ?? undefined,
                 is_multicurrency:     false,
-                currency_code:        (inheritedQC?.base_currency_code || inheritedQC?.currency || initialValues?.currency_code) ?? 'THB',
-                base_currency_code:   inheritedQC?.base_currency_code || 'THB',
-                quote_currency_code:  inheritedQC?.quote_currency_code || inheritedQC?.currency || 'THB',
-                target_currency:      undefined,
+                currency_code:        detail?.currency_code               ?? (inheritedQC?.base_currency_code || inheritedQC?.currency || initialValues?.currency_code) ?? 'THB',
+                base_currency_code:   inheritedQC?.base_currency_code     || 'THB',
+                quote_currency_code:  inheritedQC?.quote_currency_code    || inheritedQC?.currency || 'THB',
+                target_currency:      'THB',
                 exchange_rate_date:   new Date().toISOString().split('T')[0],
-                exchange_rate:        Number(inheritedQC?.exchange_rate || initialValues?.exchange_rate || 1),
-                payment_term_days:    Number(inheritedQC?.payment_term_days || initialValues?.payment_term_days || 30),
-                delivery_date:        initialValues?.delivery_date ?? '',
-                remarks:              initialValues?.remarks ?? '',
-                discount_expression:  initialValues?.discount_expression ?? '0',
-                tax_code_id:          initialValues?.tax_code_id ?? inheritedQC?.tax_code_id ?? undefined,
-                created_by:           initialValues?.created_by,
-                created_by_name:      initialValues?.created_by_name ?? (user?.employee?.employee_fullname || user?.username || ''),
+                exchange_rate:        Number(detail?.exchange_rate        || inheritedQC?.exchange_rate || initialValues?.exchange_rate || 1),
+                payment_term_days:    Number(detail?.payment_term_days    || inheritedQC?.payment_term_days || initialValues?.payment_term_days || 30),
+                delivery_date:        detail?.delivery_date               ? detail.delivery_date.split('T')[0] : (initialValues?.delivery_date ?? ''),
+                remarks:              detail?.remarks                     ?? initialValues?.remarks ?? '',
+                discount_expression:  detail?.discount_expression         ?? initialValues?.discount_expression ?? '0',
+                tax_code_id:          detail?.tax_code_id                 ?? initialValues?.tax_code_id ?? inheritedQC?.tax_code_id ?? undefined,
+                created_by:           detail?.created_by                  ?? initialValues?.created_by,
+                created_by_name:      detail?.created_by_name             ?? initialValues?.created_by_name ?? (user?.employee?.employee_fullname || user?.username || ''),
                 po_lines:             initialPOLines,
             });
         }
-    }, [isOpen, initialValues, reset, inheritedQC, user]);
+    }, [isOpen, initialValues, reset, inheritedQC, user, existingPO]);
     
 
     // ── Enforce THB when Multicurrency is OFF ─────────────────────────────────
@@ -229,9 +276,46 @@ export const usePOForm = ({
             setValue('pr_no', undefined);
             setValue('currency_code', 'THB');
             setValue('exchange_rate', 1);
-            setValue('target_currency', undefined);
+            setValue('target_currency', 'THB');
         }
     }, [watchIsMulticurrency, setValue]);
+
+    // ── Currency Exchange Rate Auto-Calculation triggers ─────────────────────
+    const prevCurrencyId = useRef<string | undefined>(undefined);
+    const prevTargetCurrency = useRef<string | undefined>(undefined);
+
+    useEffect(() => {
+        if (!watchCurrencyCode) return;
+        
+        // Equal currencies reset Rate to 1
+        if (watchCurrencyCode === watchTargetCurrency || !watchTargetCurrency) {
+            setValue('exchange_rate', 1, { shouldDirty: false });
+            prevCurrencyId.current = watchCurrencyCode;
+            prevTargetCurrency.current = watchTargetCurrency;
+            return;
+        }
+
+        const isSourceChanged = prevCurrencyId.current !== watchCurrencyCode;
+        const isTargetChanged = prevTargetCurrency.current !== watchTargetCurrency;
+
+        const { isDirty } = getFieldState('exchange_rate');
+        if (isSourceChanged || isTargetChanged || !isDirty) {
+            const sourceObj = currencies.find((c: Currency) => c.currency_code === watchCurrencyCode);
+            const targetObj = currencies.find((c: Currency) => c.currency_code === watchTargetCurrency);
+
+            const fromRate = sourceObj?.exchange_rate || 1;
+            const toRate = targetObj?.exchange_rate || 1;
+
+            const calculatedRate = fromRate / toRate;
+
+            if (calculatedRate !== undefined && !isNaN(calculatedRate)) {
+                setValue('exchange_rate', Number(calculatedRate.toFixed(6)), { shouldValidate: true, shouldDirty: false });
+            }
+        }
+
+        prevCurrencyId.current = watchCurrencyCode;
+        prevTargetCurrency.current = watchTargetCurrency;
+    }, [currencies, watchCurrencyCode, watchTargetCurrency, setValue, getFieldState]);
 
     // ── Handlers ──────────────────────────────────────────────────────────────
     const handleVendorSelect = (vendor: VendorSearchItem) => {
@@ -271,14 +355,7 @@ export const usePOForm = ({
                     toast('ไม่สามารถดึงข้อมูลราคาจากใบเสนอราคาได้ กรุณาระบุราคาด้วยตนเอง', 'error');
                 }
 
-                if (qcId) {
-                    try {
-                        const fullQC = await QCService.getById(Number(qcId));
-                        setValue('qc_no', fullQC.qc_no);
-                    } catch (qcError) {
-                        logger.error('[usePOForm] Failed to fetch QC details', qcError);
-                    }
-                }
+                /* qc_no is already hydrated via initialValues */
             }
             
             // 2. Map Header IDs
@@ -295,7 +372,19 @@ export const usePOForm = ({
                     shouldValidate: true, 
                     shouldDirty: true 
                 });
-                setValue('vendor_name', fullPR.vendor_name || winningVQ?.vendor_name || '');
+                // Prioritize Winner Vendor Name from VQ lookup
+                let finalVendorName = winningVQ?.vendor?.vendor_name || winningVQ?.vendor_name || fullPR.vendor_name || '';
+                if (finalVendorId && !finalVendorName) {
+                    try {
+                        const vendorDetail = await VendorService.getById(finalVendorId);
+                        if (vendorDetail) {
+                            finalVendorName = vendorDetail.vendor_name;
+                        }
+                    } catch (e) {
+                        logger.error('[usePOForm] Failed to fetch vendor detail for name', e);
+                    }
+                }
+                setValue('vendor_name', finalVendorName);
             }
 
             // FINANCIAL TERMS: Priority to VQ (Negotiated), then PR estimates
@@ -319,7 +408,7 @@ export const usePOForm = ({
             setValue('is_multicurrency', isForeign, { shouldValidate: true, shouldDirty: true });
             setValue('quote_currency_code', quoteCurrency);
             setValue('currency_code', quoteCurrency);
-            setValue('target_currency', isForeign ? quoteCurrency : '');
+            setValue('target_currency', isForeign ? quoteCurrency : 'THB');
 
             const finalExRate = Number(winningVQ?.exchange_rate || fullPR.pr_exchange_rate || 1);
             setValue('exchange_rate', finalExRate);
@@ -354,7 +443,7 @@ export const usePOForm = ({
                     type
                 });
 
-                const mappedLines: POFormData['po_lines'] = prLines.map((l: PRLine, index: number) => {
+                const mappedLines: POFormData['po_lines'] = await Promise.all(prLines.map(async (l: PRLine, index: number) => {
                     const hydrationLine = l as IHydrationPRLine;
                     const getItemCode = (line: PRLine) => String(line.item?.item_code || line.item_code || "");
                     
@@ -381,6 +470,7 @@ export const usePOForm = ({
                     
                     let finalUnitPrice = 0;
                     let discAmount = 0;
+                    let discExpr = '0';
                     let vqLine: IHydrationVQLine | undefined;
 
                     if (type === 'QC' && winningVQ) {
@@ -401,6 +491,7 @@ export const usePOForm = ({
                         if (vqLine) {
                             finalUnitPrice = Number(vqLine.unit_price || 0);
                             discAmount = Number(vqLine.discount_amount || 0);
+                            discExpr = String(vqLine.discount_expression || '0');
                         } else {
                             // 🚫 Rule: ห้ามใช้ราคาประเมินจาก PR ในเคสที่สร้างจาก QC
                             finalUnitPrice = 0; 
@@ -412,11 +503,29 @@ export const usePOForm = ({
                     } else {
                         // PR Flow: Use PR estimates
                         finalUnitPrice = Number(l.unit_price || l.est_unit_price || 0);
+                        discExpr = String(l.line_discount_raw || '0');
                     }
 
                     // 🛡️ DATA INTEGRITY (Rule 3): All IDs/Prices must be Number()
                     const finalItemId = getRobustItemId(hydrationLine, vqLine);
-                    const finalCode = String(vqLine?.item_code || vqLine?.item?.item_code || getItemCode(l) || '');
+                                        let finalCode = String(
+                                            vqLine?.item_code || vqLine?.item?.item_code || 
+                                            (vqLine as unknown as Record<string, unknown> | undefined)?.code || (vqLine?.item as unknown as Record<string, unknown> | undefined)?.code || 
+                                            l.item?.item_code || l.item_code || 
+                                            (l.item as unknown as Record<string, unknown> | undefined)?.code || (l as unknown as Record<string, unknown> | undefined)?.code || 
+                                            getItemCode(l) || ''
+                                        );
+
+                                        if (!finalCode && finalItemId && finalItemId > 0) {
+                        try {
+                            const fetchedItem = await ItemMasterService.getById(Number(finalItemId));
+                            if (fetchedItem?.item_code) {
+                                finalCode = fetchedItem.item_code;
+                            }
+                        } catch (e) {
+                            logger.error("[usePOForm] Async Item Fix failed", e);
+                        }
+                    }
 
                     return {
                         id: (finalItemId || 0) as number, // 🚀 Dual Mapping
@@ -433,13 +542,13 @@ export const usePOForm = ({
                         uom_id: Number(vqLine?.uom_id || l.uom_id || l.item?.uom_id || 0) || 1, 
                         unit_price: Number(finalUnitPrice), 
                         discount_amount: Number(discAmount),
-                        discount_expression: '0',
+                        discount_expression: discExpr,
                         tax_code_id: vqLine?.tax_code_id ? Number(vqLine.tax_code_id) : (l.tax_code_id ? Number(l.tax_code_id) : Number(getValues('tax_code_id'))), 
                         required_receipt_type: (l.required_receipt_type as "FULL" | "PARTIAL") || 'FULL',
                         receipt_type: 'GOODS' as const,
                         line_total: Number((Number(l.qty || 0) * Number(finalUnitPrice)).toFixed(2)),
                     };
-                });
+                }));
 
                 // 🧪 [HYDRATION_DEBUG] Verification
                 logger.info("🛠️ [HYDRATION_DEBUG] Hydrated Item IDs:", mappedLines.map(l => l.item_id));
@@ -463,6 +572,26 @@ export const usePOForm = ({
             setIsHydrating(false);
         }
     }, [setValue, getValues, replace, trigger, toast]);
+    
+    // ── Auto-Hydrate from Reference Doc on Create Mount ───────────────────────
+    useEffect(() => {
+        if (isOpen && !poId && initialValues?.pr_id) {
+            const isQcFlow = !!initialValues?.qc_id || !!initialValues?.winning_vq_id;
+            
+            if (isQcFlow) {
+                handleSelectReferenceDoc(
+                    Number(initialValues.pr_id), 
+                    'QC', 
+                    initialValues.qc_id ? Number(initialValues.qc_id) : undefined, 
+                    initialValues.vendor_id ? Number(initialValues.vendor_id) : undefined,
+                    initialValues.winning_vq_id ? Number(initialValues.winning_vq_id) : undefined
+                );
+            } else {
+                handleSelectReferenceDoc(Number(initialValues.pr_id), 'PR');
+            }
+        }
+    }, [isOpen, initialValues?.pr_id, initialValues?.qc_id, initialValues?.winning_vq_id, initialValues?.vendor_id, handleSelectReferenceDoc, poId]);
+
 
     const handleSelectPR = useCallback((pr: PRHeader) => {
         handleSelectReferenceDoc(pr.pr_id, 'PR');
@@ -485,6 +614,15 @@ export const usePOForm = ({
      * @description Receives selected item from Modal and updates line with Dual Mapping
      */
     const handleSelectItemMaster = useCallback((index: number, item: ItemSelectorResult) => {
+        // 🧩 Fallback matching by Name string since Backend might omit ID fields
+        const anyItem = item as any;
+        const matchedUnit = units?.find(u => {
+            const prodName = anyItem.uom_name || anyItem.unit_name || anyItem.base_uom_name || anyItem.sale_uom_name || '';
+            if (!prodName) return false;
+            return (u.uom_name === prodName) || (u.unit_name === prodName);
+        });
+        const finalUomId = Number(item.uom_id || item.unit_id || matchedUnit?.uom_id || matchedUnit?.unit_id || 0);
+
         update(index, {
             ...getValues(`po_lines.${index}`),
             id: Number(item.id || item.item_id),
@@ -492,13 +630,13 @@ export const usePOForm = ({
             code: String(item.item_code || item.code || ""),
             item_code: String(item.item_code || item.code || ""),
             description: String(item.item_name || item.description || ""),
-            uom_id: Number(item.uom_id || 0),
+            uom_id: finalUomId,
             unit_price: Number(item.standard_price || item.unit_price || 0),
         });
         
         // 🧪 UI ERROR CLEARANCE: Trigger validation immediately to clear red highlights
         setTimeout(() => trigger(`po_lines.${index}.item_id`), 100);
-    }, [update, getValues, trigger]);
+    }, [update, getValues, trigger, units]);
 
     // (handleSelectProduct removed as it's now handled by the component state)
 
@@ -594,6 +732,7 @@ export const usePOForm = ({
 
             // STRICT PAYLOAD ARCHITECTURE (Aligned with Backend Contract 100%)
             const fullPayload: CreatePOPayload = {
+                pr_id:              safeId(pendingPayload.pr_id),
                 rfq_id:             safeId(pendingPayload.rfq_id),
                 vendor_id:          Number(pendingPayload.vendor_id),
                 branch_id:          Number(pendingPayload.branch_id),
@@ -606,7 +745,7 @@ export const usePOForm = ({
                 discount_expression: pendingPayload.discount_expression || "0",
                 status:             "DRAFT", // Hardcode DRAFT for new creation
                 created_at:         new Date().toISOString(),
-                created_by:         (poId ? (getValues('created_by') ? Number(getValues('created_by')) : undefined) : (user?.id ? Number(user.id) : undefined)) as any,
+                created_by:         (poId ? (getValues('created_by') ? Number(getValues('created_by')) : undefined) : (user?.id ? Number(user.id) : undefined)) as unknown as number,
                 winning_vq_id:      safeId(pendingPayload.winning_vq_id),
                 po_lines: (pendingPayload.po_lines || []).map((item: POLine, index: number) => ({
                     line_no:        index + 1,
@@ -644,13 +783,7 @@ export const usePOForm = ({
 
             const baseCleanedPayload = cleanPayload(fullPayload) as Record<string, unknown>;
 
-            // MANUAL NULL OVERRIDE (Forcing validation agreement for backend)
-            // TODO: Inform Backend Developer to change validation rule for 'qc_id' to be 'nullable' or 'optional' when creating a PO directly from a PR.
-            const finalizedPayload = {
-                ...baseCleanedPayload,
-                qc_id: pendingPayload.qc_id ? Number(pendingPayload.qc_id) : null,
-                pr_id: pendingPayload.pr_id ? Number(pendingPayload.pr_id) : null,
-            } as unknown as CreatePOPayload;
+            const finalizedPayload = baseCleanedPayload as unknown as CreatePOPayload;
 
             logger.info("FINAL_PO_PAYLOAD (Cleaned + Null Override):", finalizedPayload);
 

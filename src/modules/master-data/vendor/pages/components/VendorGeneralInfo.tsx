@@ -84,9 +84,9 @@ export const VendorGeneralInfo: React.FC<VendorGeneralInfoProps> = ({
                     </div>
                 </div>
 
-                {/* Vendor Type (หมวดหมู่ธุรกิจ) & Tax ID */}
+                {/* Vendor Type (ประเภทเจ้าหนี้) & Tax ID */}
                 <div className="space-y-1">
-                    <label className={styles.label}>หมวดหมู่ธุรกิจ <span className="text-red-500">*</span></label>
+                    <label className={styles.label}>ประเภทเจ้าหนี้ <span className="text-red-500">*</span></label>
                     <select 
                         name="vendorTypeId" 
                         value={formData.vendorTypeId || ""} 
@@ -94,7 +94,7 @@ export const VendorGeneralInfo: React.FC<VendorGeneralInfoProps> = ({
                         className={`${styles.inputSelect} ${errors.vendorTypeId ? 'border-red-500 focus:ring-red-500' : ''}`}
                         required
                     >
-                        <option value="" disabled>{isLoading ? 'กำลังโหลด...' : 'เลือกหมวดหมู่ธุรกิจ'}</option>
+                        <option value="" disabled>{isLoading ? 'กำลังโหลด...' : 'เลือกประเภทเจ้าหนี้'}</option>
                         {vendorTypeOptions.map(type => (
                             <option key={type.value} value={type.value}>{type.label}</option>
                         ))}

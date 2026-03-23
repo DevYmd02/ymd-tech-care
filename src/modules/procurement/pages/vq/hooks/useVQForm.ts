@@ -110,6 +110,7 @@ export const useVQForm = (
       vq_lines: [],
       currency: 'THB',
       exchange_rate: 1,
+      exchange_rate_date: formatDateForInputHelper(new Date()),
       tax_code_id: 0,
       discount_expression: '0',
       created_by_name: user?.employee?.employee_fullname || user?.username || ''
@@ -466,7 +467,7 @@ export const useVQForm = (
                 contact_email: '',
                 currency: fullRFQ.rfq_quote_currency_code || 'THB',
                 isMulticurrency: Boolean(fullRFQ.rfq_quote_currency_code && fullRFQ.rfq_quote_currency_code !== 'THB'),
-                exchange_rate_date: formatDateForInputHelper(fullRFQ.rfq_exchange_rate_date),
+                exchange_rate_date: formatDateForInputHelper(fullRFQ.rfq_exchange_rate_date) || formatDateForInputHelper(new Date()),
                 target_currency: fullRFQ.rfq_base_currency_code || 'THB',
                 exchange_rate: Number(fullRFQ.rfq_exchange_rate) || 1,
                 vq_lines: mappedLines,
@@ -506,7 +507,7 @@ export const useVQForm = (
           quotation_date: formatDateForInputHelper(new Date()),
           currency: 'THB',
           isMulticurrency: false,
-          exchange_rate_date: '',
+          exchange_rate_date: formatDateForInputHelper(new Date()),
           target_currency: 'THB',
           exchange_rate: 1,
           vq_lines: [],
@@ -869,7 +870,7 @@ export const useVQForm = (
       setValue('currency', fullRFQ.rfq_base_currency_code || 'THB', { shouldValidate: true });
       setValue('isMulticurrency', Boolean(fullRFQ.rfq_base_currency_code && fullRFQ.rfq_base_currency_code !== 'THB'), { shouldValidate: true });
       setValue('exchange_rate', Number(fullRFQ.rfq_exchange_rate) || 1, { shouldValidate: true });
-      setValue('exchange_rate_date', fullRFQ.rfq_exchange_rate_date || '', { shouldValidate: true });
+      setValue('exchange_rate_date', formatDateForInputHelper(fullRFQ.rfq_exchange_rate_date) || formatDateForInputHelper(new Date()), { shouldValidate: true });
       setValue('target_currency', fullRFQ.rfq_quote_currency_code || '', { shouldValidate: true });
       setValue('remark', fullRFQ.remarks || '', { shouldValidate: true });
       setValue('payment_terms', fullRFQ.payment_term_hint || '', { shouldValidate: true });

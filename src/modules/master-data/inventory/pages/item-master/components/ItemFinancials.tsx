@@ -1,6 +1,5 @@
 import React from 'react';
 import type { ItemFormData, ItemFormChangeHandler } from '../hooks/useItemForm';
-
 import type { TaxCodeListItem } from '@/modules/master-data/types/master-data-types';
 
 /**
@@ -65,16 +64,6 @@ export const ItemFinancials: React.FC<ItemFinancialsProps> = ({
                         onChange={(e) => onChange('standard_cost', e.target.value === '' ? 0 : parseFloat(e.target.value))} 
                         onFocus={(e) => e.target.select()}
                         className="w-full h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-purple-500 outline-none text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-xs text-gray-700 dark:text-gray-400 mb-0.5">บาร์โค้ด (Barcode)</label>
-                    <input 
-                        type="text" 
-                        value={formData.barcode_default || ''} 
-                        onChange={(e) => onChange('barcode_default', e.target.value)} 
-                        className="w-full h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-purple-500 outline-none text-right"
                     />
                 </div>
             </div>
