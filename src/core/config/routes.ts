@@ -24,6 +24,7 @@ export const implementedRoutes = {
         dashboard: '/procurement/dashboard',
         pr: '/procurement/pr',
         rfq: '/procurement/rfq',
+        poa: '/procurement/poa',
     },
     roles: {
         dashboard: '/roles/dashboard',
@@ -57,10 +58,12 @@ export const ROUTES = {
   PROCUREMENT: {
     DASHBOARD: '/procurement/dashboard',
     PR: '/procurement/pr',
+    AV: '/procurement/av',
     RFQ: '/procurement/rfq',
     VQ: '/procurement/vq',
     QC: '/procurement/qc',
     PO: '/procurement/po',
+    POA: '/procurement/poa',
     GRN: '/procurement/grn',
     PRT: '/procurement/prt',
   },

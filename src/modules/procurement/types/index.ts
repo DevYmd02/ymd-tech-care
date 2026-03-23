@@ -9,6 +9,9 @@ export * from './pr-types';
 // PO Types
 export * from './po-types';
 
+// POA Types
+export * from './poa-types';
+
 // RFQ Types
 export * from './rfq-types';
 

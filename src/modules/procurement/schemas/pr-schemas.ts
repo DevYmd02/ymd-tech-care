@@ -43,7 +43,7 @@ export const PRLineSchema = z.object({
 /** Canonical type for a single PR line item */
 export type PRLineFormData = z.infer<typeof PRLineSchema>;
 
-const baseFormSchema = z.object({
+export const PRBaseFormSchema = z.object({
   preparer_name: z.string(),
   pr_no: z.string().trim(),
   pr_date: z.string().trim(),
@@ -92,7 +92,7 @@ const baseFormSchema = z.object({
 export const getInitialLines = () => Array(5).fill(null).map(() => createEmptyPRLine());
 
 /** Refined schema for runtime validation — zero-assertion natural inference */
-export const PRFormSchema = baseFormSchema.superRefine((data, ctx) => {
+export const PRFormSchema = PRBaseFormSchema.superRefine((data, ctx) => {
   const isDraft = data.is_on_hold === 'Y';
   
   const activeLines = (data.lines || []).filter((line: PRLineFormData) => {

@@ -19,6 +19,7 @@ import type { RFQHeader, VQListItem, RFQDetailResponse } from '@/modules/procure
 import type { QCListItem } from '@/modules/procurement/schemas/qc-schemas';
 import { SelectionModal } from './SelectionModal';
 import { RFQSelectionModal } from './RFQSelectionModal';
+import { OrgEmployeeService } from '@/modules/master-data/company/services/company.service';
 import { useQCForm } from '../hooks/useQCForm';
 import { useConfirmation } from '@/shared/hooks';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
@@ -188,6 +189,28 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
       }
     }
   }, [rfqDetail, createdBy]);
+
+  // 🛡️ DATA RECOVERY: Fetch Creator Name if missing from detailed API
+  useEffect(() => {
+    const creatorId = qcData?.created_by || initialData?.created_by;
+    console.log("[QC_CREATOR_DEBUG] ID Check:", { creatorId, currentCreatedBy: createdBy });
+    
+    if (creatorId && !createdBy) {
+      // Fallback 1: Current Logger
+      if (Number(creatorId) === Number(user?.employee_id)) {
+         setCreatedBy(user?.employee?.employee_fullname || '');
+      } else {
+         // Fallback 2: Fetch via OrgEmployeeService
+         OrgEmployeeService.get(Number(creatorId))
+           .then((res: any) => {
+             const actualEmp = res?.data || res;
+             const empName = actualEmp?.employee_fullname || '';
+             if (empName) setCreatedBy(empName);
+           })
+           .catch((err) => console.error("QC_CREATOR_FETCH_ERR:", err));
+      }
+    }
+  }, [qcData, initialData, createdBy, user]);
 
   // 🔍 Fetch winning VQ detail for items list (View Mode)
   const effectiveWinnerId = mode === 'view' ? (qcData?.winning_vq_id || winnerVQId) : winnerVQId;

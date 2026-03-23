@@ -119,10 +119,12 @@ export const sidebarMenuItems: MenuItem[] = [
         subItems: [
             { id: 'proc-dashboard', label: 'Procurement Dashboard', path: '/procurement/dashboard' },
             { id: 'pr', label: 'รายการใบขอซื้อ (PR)', path: '/procurement/pr' },
+            { id: 'av', label: 'รายการอนุมัติใบขอซื้อ (AV)', path: '/procurement/av' },
             { id: 'rfq', label: 'รายการขอใบเสนอราคา (RFQ)', path: '/procurement/rfq' },
             { id: 'vq', label: 'รายการใบเสนอราคา (VQ)', path: '/procurement/vq' },
             { id: 'qc', label: 'รายการใบเปรียบเทียบราคา (QC)', path: '/procurement/qc' },
             { id: 'po', label: 'รายการขอสั่งซื้อ (PO)', path: '/procurement/po' },
+            { id: 'poa', label: 'รายการอนุมัติใบสั่งซื้อ (POA)', path: '/procurement/poa' },
             { id: 'grn', label: 'รายการใบรับสินค้า (GRN)', path: '/procurement/grn' },
             { id: 'prt', label: 'รายการใบคืนสินค้า (PRT)', path: '/procurement/prt' },
         ]
