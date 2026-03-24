@@ -205,10 +205,10 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
                     <div>
                         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">เครดิต (วัน)</label>
                         <input 
-                            type="text"
-                            value={watch('credit_days') ?? 0}
-                            readOnly
-                            className="w-full h-9 px-3 text-sm bg-gray-50 dark:bg-gray-800/50 border border-gray-300 dark:border-gray-600 rounded text-gray-500 dark:text-gray-400 italic"
+                            {...register('credit_days')}
+                            disabled={readOnly}
+                            placeholder="ระบุจำนวนวัน"
+                            className={`w-full h-9 px-3 text-sm border rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-colors ${readOnly ? 'bg-gray-50 dark:bg-gray-800/50 italic text-gray-500 cursor-not-allowed' : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600'}`}
                         />
                     </div>
 
