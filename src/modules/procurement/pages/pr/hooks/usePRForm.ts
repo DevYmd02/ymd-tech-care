@@ -710,7 +710,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
         }
         
         const isOnHold = data.is_on_hold === 'Y' || data.is_on_hold === true;
-        const targetStatus = data.status || (isOnHold ? 'DRAFT' : 'PENDING');
+        const targetStatus = isOnHold ? 'DRAFT' : 'PENDING';
 
         // ═══════════════════════════════════════════════════════════════════════
         // 🔧 POSTMAN-SYNCED GOLDEN PAYLOAD — Mirrors production DB structure
@@ -747,7 +747,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
           need_by_date: data.need_by_date,
           branch_id: Number(data.branch_id || 1),
           requester_user_id: Number(data.requester_user_id || 2),
-          project_id: data.project_id ? Number(data.project_id) : 1,
+          project_id: data.project_id ? Number(data.project_id) : 0,
           
           // 🎯 PRO-TIP FIX: Map cost_center_id & preferred_vendor_id with explicit casting
           cost_center_id: data.cost_center_id ? Number(data.cost_center_id) : undefined,

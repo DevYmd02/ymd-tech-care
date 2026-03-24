@@ -64,93 +64,143 @@ const VENDOR_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 export const PRService = {
   getList: async (params?: PRListParams): Promise<PRListResponse> => {
     logger.info('[PRService] Fetching PR List', params);
-    const response = await api.get<PRListResponse>(ENDPOINTS.list, { params });
 
+    // 1. Prepare API Params (Optionally omit offending filters if working around backend)
+    const apiParams = { ...params };
+    const needsClientFilter = params?.vendor_code || params?.vendor_name;
 
+    // 🎯 WORKAROUND: Don't let backend filter by vendor if we intend to filter client-side
+    // because backend logic is likely flawed (missing join).
+    if (needsClientFilter && !USE_MOCK) {
+        logger.debug('🚀 [PRService] Overriding backend filter for vendor search, will filter client-side.');
+        delete apiParams.vendor_code;
+        delete apiParams.vendor_name;
+    }
+
+    const response = await api.get<PRListResponse>(ENDPOINTS.list, { params: apiParams });
+
+    // 2. Hydrate Items (Same for BOTH mock and real API)
+    const allItems = extractArrayFromResponse<PRHeader>(response as PRListResponse | PRHeader[]);
+    
+    // Check if hydration or filtering is needed
+    if (needsClientFilter || USE_MOCK) {
+        const filterParams: Record<string, string | number | boolean | undefined | null> = {};
+        if (params?.pr_no) filterParams.pr_no = params.pr_no;
+        if (params?.requester_name) filterParams.requester_name = params.requester_name;
+        if (params?.status && params.status !== 'ALL') filterParams.status = params.status;
+        if (params?.department) filterParams.department = params.department;
+        if (params?.cost_center_id) filterParams.cost_center_id = params.cost_center_id;
+        if (params?.date_start) filterParams.date_start = params.date_start;
+        if (params?.date_end) filterParams.date_end = params.date_end;
+        if (params?.page) filterParams.page = params.page;
+        if (params?.limit) filterParams.limit = params.limit;
+        if (params?.sort) filterParams.sort = params.sort;
+        if (params?.q) filterParams.q = params.q;
+
+        // 🎯 Client-Side Vendor Hydration for filtering
+        let hydratedItems = [...allItems];
+        try {
+            const now = Date.now();
+            if (!cachedVendors || (now - lastVendorFetchTime > VENDOR_CACHE_TTL)) {
+                logger.debug('🚀 [PRService] Cache miss for Vendors inside list fetcher, syncing...');
+                cachedVendors = await VendorService.getList();
+                lastVendorFetchTime = now;
+            }
+            const vendorsRes = cachedVendors;
+            const vendorMap: Record<number, { vendor_code?: string; vendor_name?: string }> = {};
+            (vendorsRes.items || []).forEach((v: VendorListItem) => {
+                const id = v.vendor_id || v.id;
+                if (id) {
+                    vendorMap[Number(id)] = {
+                        vendor_code: v.vendor_code,
+                        vendor_name: v.vendor_name
+                    };
+                }
+            });
+
+            hydratedItems = allItems.map(item => {
+                const vId = item.preferred_vendor_id || item.vendor_id;
+                const vendorFromId = vId ? vendorMap[Number(vId)] : undefined;
+                
+                const vendorCode = vendorFromId?.vendor_code || item.vendor_quote_no || '';
+                let vendorName = vendorFromId?.vendor_name || item.vendor_name || '';
+
+                // Look up by vendorCode if name is missing
+                if (!vendorName && vendorCode) {
+                    const foundVendor = Object.values(vendorMap).find((v: any) => v.vendor_code === vendorCode);
+                    if (foundVendor) {
+                        vendorName = foundVendor.vendor_name || '';
+                    }
+                }
+
+                return {
+                    ...item,
+                    vendor_code: vendorCode,
+                    vendor_name: vendorName
+                };
+            });
+
+            if (params?.vendor_code) filterParams.vendor_code = params.vendor_code;
+            if (params?.vendor_name) filterParams.vendor_name = params.vendor_name;
+
+        } catch (err) {
+            logger.error('[PRService] Failed to hydrate vendors for filtering:', err);
+        }
+
+        return applyClientFilters<PRHeader>(hydratedItems, filterParams, {
+            searchableFields: ['pr_no', 'requester_name', 'purpose'],
+            dateField: 'need_by_date',
+            backendTotal: response.total
+        });
+    }
 
     // ⚡ PHASE 2: Server-Side Pagination & Filtering (Real API)
     if (!USE_MOCK) {
-      return response;
-    }
+        // Hydrate data with vendor info for display even if not filtering
+        let hydratedItems = [...allItems];
+        try {
+            const now = Date.now();
+            if (!cachedVendors || (now - lastVendorFetchTime > VENDOR_CACHE_TTL)) {
+                cachedVendors = await VendorService.getList();
+                lastVendorFetchTime = now;
+            }
+            const vendorsRes = cachedVendors;
+            const vendorMap: Record<number, { vendor_code?: string; vendor_name?: string }> = {};
+            (vendorsRes.items || []).forEach((v: VendorListItem) => {
+                const id = v.vendor_id || v.id;
+                if (id) {
+                    vendorMap[Number(id)] = {
+                        vendor_code: v.vendor_code,
+                        vendor_name: v.vendor_name
+                    };
+                }
+            });
 
-    // 🎯 HYBRID FALLBACK: Apply Client-Side Filtering when using Mock Data
-    if (params) {
-      const allItems = extractArrayFromResponse<PRHeader>(response as PRListResponse | PRHeader[]);
-      const filterParams: Record<string, string | number | boolean | undefined | null> = {};
-      if (params.pr_no) filterParams.pr_no = params.pr_no;
-      if (params.requester_name) filterParams.requester_name = params.requester_name;
-      if (params.status && params.status !== 'ALL') filterParams.status = params.status;
-      if (params.department) filterParams.department = params.department;
-      if (params.cost_center_id) filterParams.cost_center_id = params.cost_center_id;
-      if (params.date_start) filterParams.date_start = params.date_start;
-      if (params.date_end) filterParams.date_end = params.date_end;
-      if (params.page) filterParams.page = params.page;
-      if (params.limit) filterParams.limit = params.limit;
-      if (params.sort) filterParams.sort = params.sort;
-      if (params.q) filterParams.q = params.q;
+            hydratedItems = allItems.map(item => {
+                const vId = item.preferred_vendor_id || item.vendor_id;
+                const vendorFromId = vId ? vendorMap[Number(vId)] : undefined;
+                
+                const vendorCode = vendorFromId?.vendor_code || item.vendor_quote_no || '';
+                const vendorName = vendorFromId?.vendor_name || item.vendor_name || '';
 
-      // 🎯 Client-Side Vendor Hydration for filtering
-      let hydratedItems = [...allItems];
-      if (params.vendor_code || params.vendor_name) {
-          try {
-              const now = Date.now();
-              if (!cachedVendors || (now - lastVendorFetchTime > VENDOR_CACHE_TTL)) {
-                  logger.debug('🚀 [PRService] Cache miss for Vendors inside list fetcher, syncing...');
-                  cachedVendors = await VendorService.getList();
-                  lastVendorFetchTime = now;
-              }
-              const vendorsRes = cachedVendors;
-              const vendorMap: Record<number, { vendor_code?: string; vendor_name?: string }> = {};
-              (vendorsRes.items || []).forEach((v: VendorListItem) => {
-                  const id = v.vendor_id || v.id;
-                  if (id) {
-                      vendorMap[Number(id)] = {
-                          vendor_code: v.vendor_code,
-                          vendor_name: v.vendor_name
-                      };
-                  }
-              });
+                return {
+                    ...item,
+                    vendor_code: vendorCode,
+                    vendor_name: vendorName
+                };
+            });
+        } catch (err) {
+             logger.debug('Hydration failed during fallback', err);
+        }
 
-              hydratedItems = allItems.map(item => {
-                  const vId = item.preferred_vendor_id || item.vendor_id;
-                  const vendorFromId = vId ? vendorMap[Number(vId)] : undefined;
-                  
-                  const vendorCode = vendorFromId?.vendor_code || item.vendor_quote_no || '';
-                  let vendorName = vendorFromId?.vendor_name || item.vendor_name || '';
-
-                  // Look up by vendorCode if name is missing
-                  if (!vendorName && vendorCode) {
-                      const foundVendor = Object.values(vendorMap).find((v: any) => v.vendor_code === vendorCode);
-                      if (foundVendor) {
-                          vendorName = foundVendor.vendor_name || '';
-                      }
-                  }
-
-                  return {
-                      ...item,
-                      vendor_code: vendorCode,
-                      vendor_name: vendorName
-                  };
-              });
-
-              if (params.vendor_code) filterParams.vendor_code = params.vendor_code;
-              if (params.vendor_name) filterParams.vendor_name = params.vendor_name;
-
-          } catch (err) {
-              logger.error('[PRService] Failed to hydrate vendors for filtering:', err);
-          }
-      }
-
-      return applyClientFilters<PRHeader>(hydratedItems, filterParams, {
-        searchableFields: ['pr_no', 'requester_name', 'purpose'],
-        dateField: 'need_by_date',
-        backendTotal: response.total
-      });
+        return {
+            ...response,
+            data: hydratedItems
+        };
     }
 
     // 🎯 HYBRID PAGINATION: Always apply client-side slicing even for mock responses
     // This ensures the table only shows items for the current page
-    const allItems = extractArrayFromResponse<PRHeader>(response as PRListResponse | PRHeader[]);
     const page = 1;
     const limit = 20;
     return applyClientPagination<PRHeader>(allItems, page, limit, response.total);
