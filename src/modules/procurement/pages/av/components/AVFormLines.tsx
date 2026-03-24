@@ -166,12 +166,12 @@ export const AVFormLines: React.FC<AVFormLinesProps> = React.memo(({
                                     
                                     <td className={tdBaseClass}>
                                         <div className="px-2 h-8 flex items-center justify-end text-gray-700 dark:text-gray-300 text-sm">
-                                            {line.discount ? line.discount.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
+                                            {line.discount ? line.discount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}
                                         </div>
                                     </td>
                                     
                                     <td className={`${tdBaseClass} text-right font-bold pr-2 flex items-center justify-end h-8 text-gray-700 dark:text-gray-300`}>
-                                        {lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        {lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </td>
                                     
                                     <td className="p-1">

@@ -34,10 +34,10 @@ export const AVFormSummary: React.FC<AVFormSummaryProps> = () => {
 
     // Update form values with calculated totals so they are perfectly synced on submit
     useEffect(() => {
-        setValue('pr_sub_total', subtotal);
-        setValue('pr_discount_amount', globalDiscountAmount);
-        setValue('pr_tax_amount', vatAmount);
-        setValue('total_amount', grandTotal);
+        setValue('pr_sub_total', Number(subtotal.toFixed(2)));
+        setValue('pr_discount_amount', Number(globalDiscountAmount.toFixed(2)));
+        setValue('pr_tax_amount', Number(vatAmount.toFixed(2)));
+        setValue('total_amount', Number(grandTotal.toFixed(2)));
     }, [subtotal, globalDiscountAmount, vatAmount, grandTotal, setValue]);
 
     const cardClass = 'bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-sm overflow-hidden';
@@ -55,7 +55,7 @@ export const AVFormSummary: React.FC<AVFormSummaryProps> = () => {
                   <span className={labelClass}>ยอดรวมอนุมัติ</span>
                   <input 
                     {...register('pr_sub_total')}
-                    value={subtotal?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    value={subtotal?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     readOnly 
                     className={`w-32 ${inputReadonlyClass} bg-yellow-50 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-600 text-gray-900 dark:text-yellow-200`} 
                   />
@@ -77,14 +77,14 @@ export const AVFormSummary: React.FC<AVFormSummaryProps> = () => {
                     {/* Field 2: Read-only — calculated discount amount from this input */}
                     <input 
                       {...register('pr_discount_amount')}
-                      value={globalDiscountAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      value={globalDiscountAmount?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       readOnly 
                       className={`w-24 ${inputReadonlyClass}`} 
                     />
                     <span className="text-gray-400 dark:text-gray-500">-</span>
                     {/* Field 3: Read-only — total discount (line discounts + global discount) */}
                     <input 
-                      value={(globalDiscountAmount + totalLineDiscount).toLocaleString(undefined, { minimumFractionDigits: 2 })} 
+                      value={(globalDiscountAmount + totalLineDiscount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
                       readOnly 
                       className={`w-28 ${inputReadonlyClass} text-red-500 dark:text-red-400 font-medium`} 
                     />
@@ -107,7 +107,7 @@ export const AVFormSummary: React.FC<AVFormSummaryProps> = () => {
                     )}
                     {vatRate > 0 && <span className="text-gray-400 dark:text-gray-500">-</span>}
                     <input 
-                      value={vatAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 })} 
+                      value={vatAmount?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
                       readOnly 
                       className={`w-28 ${inputReadonlyClass}`} 
                     />
@@ -119,7 +119,7 @@ export const AVFormSummary: React.FC<AVFormSummaryProps> = () => {
                   <span className="font-bold text-gray-700 dark:text-gray-300">รวมทั้งสิ้น</span>
                   <input 
                     {...register('total_amount')}
-                    value={grandTotal?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    value={grandTotal?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     readOnly 
                     className="w-32 h-8 px-2 text-right font-bold bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-400 dark:border-yellow-600 rounded text-blue-600 dark:text-yellow-200" 
                   />

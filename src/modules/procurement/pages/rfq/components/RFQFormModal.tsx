@@ -7,6 +7,7 @@ import { RFQVendorSelection } from './RFQVendorSelection';
 import { VendorDispatchTable } from './VendorDispatchTable';
 import { VendorSearchModal } from '@/modules/master-data/vendor/components/selector/VendorSearchModal';
 import { PRSourceSelectionModal } from './PRSourceSelectionModal';
+import { ApprovedPRSelectionModal } from './ApprovedPRSelectionModal';
 import { WindowFormLayout } from '@ui';
 import { SharedRemarksTab } from '@/shared/components/forms/SharedRemarksTab';
 import type { PRHeader } from '@/modules/procurement/types';
@@ -35,6 +36,7 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
 
         // PR Logic
         isPRSelectionModalOpen, setIsPRSelectionModalOpen, handlePRSelect,
+        isApprovedPRModalOpen, setIsApprovedPRModalOpen, handleApprovedPRSelect,
 
         // Vendor Props
         isVendorModalOpen, setIsVendorModalOpen,
@@ -126,6 +128,7 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
                             branches={branches} 
                             currencies={currencies}
                             onOpenPRModal={() => setIsPRSelectionModalOpen(true)}
+                            onOpenApprovedPRModal={() => setIsApprovedPRModalOpen(true)}
                             readOnly={readOnly}
                             isInviteMode={isInviteMode}
                         />
@@ -185,6 +188,14 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
                 isOpen={isPRSelectionModalOpen}
                 onClose={() => setIsPRSelectionModalOpen(false)}
                 onSelect={handlePRSelect}
+            />
+
+            {/* Approved PR Selection Modal */}
+            <ApprovedPRSelectionModal
+                isOpen={isApprovedPRModalOpen}
+                onClose={() => setIsApprovedPRModalOpen(false)}
+                onSelect={handleApprovedPRSelect}
+                prNo={formData.pr_no || null}
             />
 
             <ConfirmationModal

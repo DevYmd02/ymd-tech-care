@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from 'react';
+import { useDebounce } from '@/shared/hooks/useDebounce';
 import { z } from 'zod';
-import { useForm, type SubmitHandler, type Resolver } from 'react-hook-form';
+import { useForm, useWatch, type SubmitHandler, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { LocationService, ShelfService } from '../services/inventory-master.service';
@@ -38,11 +39,46 @@ export function useLocationForm(editId: number | null, initialData?: Location | 
         register,
         handleSubmit: rhfHandleSubmit,
         reset,
+        control,
+        setError,
+        clearErrors,
         formState: { errors }
     } = useForm<LocationFormValues>({
         resolver: zodResolver(locationSchema) as Resolver<LocationFormValues>,
         defaultValues: initialFormData
     });
+
+    const codeValue = useWatch({ control, name: 'code' });
+    const debouncedCode = useDebounce(codeValue, 500);
+
+    const { data: duplicateCheckData } = useQuery({
+        queryKey: ['location-check-duplicate', debouncedCode],
+        queryFn: async () => {
+            if (!debouncedCode) return { items: [] };
+            return LocationService.getAll({ location_code: debouncedCode });
+        },
+        enabled: !!debouncedCode && debouncedCode.trim().length >= 1,
+    });
+
+    useEffect(() => {
+        if (codeValue !== debouncedCode) return;
+
+        if (duplicateCheckData?.items && debouncedCode) {
+            const matches = duplicateCheckData.items;
+            const isDuplicate = matches.some(item => 
+                item.code?.toLowerCase() === debouncedCode.trim().toLowerCase() && 
+                item.location_id !== editId
+            );
+
+            if (isDuplicate) {
+                setError('code', { type: 'manual', message: 'รหัสที่จัดเก็บซ้ำในระบบ' });
+            } else if (errors.code?.message === 'รหัสที่จัดเก็บซ้ำในระบบ') {
+                clearErrors('code');
+            }
+        } else if (!debouncedCode && errors.code?.message === 'รหัสที่จัดเก็บซ้ำในระบบ') {
+            clearErrors('code');
+        }
+    }, [duplicateCheckData, debouncedCode, codeValue, editId, setError, clearErrors, errors.code?.message]);
 
     const { data: warehouseData, isLoading: isLoadingWarehouse } = useQuery({
         queryKey: ['warehouses-lookup'],
@@ -95,6 +131,14 @@ export function useLocationForm(editId: number | null, initialData?: Location | 
         },
         onError: async (error: Error) => {
             logger.error('Save location error:', error);
+            const errorMsg = error.message.toLowerCase();
+            const isDuplicate = errorMsg.includes('duplicate') || errorMsg.includes('ซ้ำ');
+            
+            if (isDuplicate) {
+                setError('code', { message: 'รหัสที่จัดเก็บซ้ำในระบบ' });
+                return;
+            }
+
             await confirm({ title: 'เกิดข้อผิดพลาด', description: error.message || 'ไม่สามารถบันทึกข้อมูลได้', confirmText: 'ตกลง', variant: 'danger', hideCancel: true });
         }
     });

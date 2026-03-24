@@ -197,6 +197,12 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
 
     // PR Selection State
     const [isPRSelectionModalOpen, setIsPRSelectionModalOpen] = useState(false);
+    const [isApprovedPRModalOpen, setIsApprovedPRModalOpen] = useState(false);
+
+    const handleApprovedPRSelect = useCallback((approvedNo: string) => {
+        methods.setValue('approved_pr_no', approvedNo, { shouldValidate: true, shouldDirty: true });
+        setIsApprovedPRModalOpen(false);
+    }, [methods]);
 
     // Fetch Master Data
     useEffect(() => {
@@ -732,6 +738,9 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         isPRSelectionModalOpen,
         setIsPRSelectionModalOpen,
         handlePRSelect,
+        isApprovedPRModalOpen,
+        setIsApprovedPRModalOpen,
+        handleApprovedPRSelect,
 
         // Modal Controls
         isVendorModalOpen,
