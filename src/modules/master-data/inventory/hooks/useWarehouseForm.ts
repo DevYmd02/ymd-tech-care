@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo } from 'react';
+import { useDebounce } from '@/shared/hooks/useDebounce';
 import { z } from 'zod';
 import { useForm, useWatch, type SubmitHandler, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -37,11 +38,45 @@ export function useWarehouseForm(editId: number | null, initialData?: WarehouseM
         reset,
         control,
         setValue,
+        setError,
+        clearErrors,
         formState: { errors }
     } = useForm<WarehouseFormData>({
         resolver: zodResolver(warehouseSchema) as Resolver<WarehouseFormData>,
         defaultValues: initialFormData
     });
+
+    const codeValue = useWatch({ control, name: 'warehouse_code' });
+    const debouncedCode = useDebounce(codeValue, 500);
+
+    const { data: duplicateCheckData } = useQuery({
+        queryKey: ['warehouse-check-duplicate', debouncedCode],
+        queryFn: async () => {
+            if (!debouncedCode) return { items: [] };
+            return WarehouseService.getAll({ warehouse_code: debouncedCode });
+        },
+        enabled: !!debouncedCode && debouncedCode.trim().length >= 1,
+    });
+
+    useEffect(() => {
+        if (codeValue !== debouncedCode) return;
+
+        if (duplicateCheckData?.items && debouncedCode) {
+            const matches = duplicateCheckData.items;
+            const isDuplicate = matches.some(item => 
+                item.warehouse_code?.toLowerCase() === debouncedCode.trim().toLowerCase() && 
+                item.warehouse_id !== editId
+            );
+
+            if (isDuplicate) {
+                setError('warehouse_code', { type: 'manual', message: 'รหัสคลังสินค้าซ้ำในระบบ' });
+            } else if (errors.warehouse_code?.message === 'รหัสคลังสินค้าซ้ำในระบบ') {
+                clearErrors('warehouse_code');
+            }
+        } else if (!debouncedCode && errors.warehouse_code?.message === 'รหัสคลังสินค้าซ้ำในระบบ') {
+            clearErrors('warehouse_code');
+        }
+    }, [duplicateCheckData, debouncedCode, codeValue, editId, setError, clearErrors, errors.warehouse_code?.message]);
 
     const formData = useWatch({ 
         control,
@@ -99,6 +134,14 @@ export function useWarehouseForm(editId: number | null, initialData?: WarehouseM
         },
         onError: async (error: Error) => {
             logger.error('Save warehouse error:', error);
+            const errorMsg = error.message.toLowerCase();
+            const isDuplicate = errorMsg.includes('duplicate') || errorMsg.includes('ซ้ำ');
+            
+            if (isDuplicate) {
+                setError('warehouse_code', { message: 'รหัสคลังสินค้าซ้ำในระบบ' });
+                return;
+            }
+
             await confirm({
                 title: 'เกิดข้อผิดพลาด',
                 description: error.message || 'ไม่สามารถบันทึกข้อมูลได้',

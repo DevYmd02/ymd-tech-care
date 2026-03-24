@@ -24,7 +24,7 @@ export const POAService = {
     getList: async (params?: POListParams): Promise<POListResponse> => {
         logger.info('[POAService] Fetching POA List (status: PENDING_APPROVAL)', params);
         // Force status to PENDING_APPROVAL for the approval list
-        const queryParams = { ...params, status: 'PENDING_APPROVAL' };
+        const queryParams = { ...params, status: params?.status || 'PENDING_APPROVAL' };
         
         const response = await api.get<POListResponse>(ENDPOINTS.list, { params: queryParams });
 
@@ -39,9 +39,10 @@ export const POAService = {
             if (params.po_no) filterParams.po_no = params.po_no;
             if (params.pr_no) filterParams.pr_no = params.pr_no;
             if (params.vendor_name) filterParams.vendor_name = params.vendor_name;
-            filterParams.status = 'PENDING_APPROVAL';
+            filterParams.status = params.status || 'PENDING_APPROVAL';
             if (params.date_from) filterParams.date_from = params.date_from;
             if (params.date_to) filterParams.date_to = params.date_to;
+
             if (params.page) filterParams.page = params.page;
             if (params.limit) filterParams.limit = params.limit;
             if (params.sort) filterParams.sort = params.sort;

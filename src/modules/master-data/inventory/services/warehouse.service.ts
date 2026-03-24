@@ -6,7 +6,7 @@ import type { ListResponse } from '@/shared/types/common-api.types';
 import type { SuccessResponse } from '@/shared/types/api-response.types';
 
 export const WarehouseService = {
-  getAll: async (): Promise<ListResponse<WarehouseListItem>> => {
+  getAll: async (params?: any): Promise<ListResponse<WarehouseListItem>> => {
     if (USE_MOCK) {
        logger.info('🎭 [Mock Mode] Serving Warehouse List');
        return {
@@ -18,7 +18,7 @@ export const WarehouseService = {
     }
     try {
       // Strictly typed Backend response (Flat Array)
-      const data = await api.get<BackendWarehouse[]>('/warehouse');
+      const data = await api.get<BackendWarehouse[]>('/warehouse', { params });
       
       // Explicit mapping to UI-Ready format (Strictly Typed)
       const items: WarehouseListItem[] = (data || []).map(item => ({

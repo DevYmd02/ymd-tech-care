@@ -41,6 +41,7 @@ export const mapPRToRFQFormData = (
     return {
         pr_id: pr.pr_id,
         pr_no: pr.pr_no,
+        approved_pr_no: (pr as unknown as Record<string, unknown>).approved_pr_no as string || null,
         branch_id: pr.branch_id,
         project_id: pr.project_id || null,
         purpose: pr.purpose || '',
@@ -196,6 +197,12 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
 
     // PR Selection State
     const [isPRSelectionModalOpen, setIsPRSelectionModalOpen] = useState(false);
+    const [isApprovedPRModalOpen, setIsApprovedPRModalOpen] = useState(false);
+
+    const handleApprovedPRSelect = useCallback((approvedNo: string) => {
+        methods.setValue('approved_pr_no', approvedNo, { shouldValidate: true, shouldDirty: true });
+        setIsApprovedPRModalOpen(false);
+    }, [methods]);
 
     // Fetch Master Data
     useEffect(() => {
@@ -313,6 +320,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                     rfq_date: rfq.rfq_date?.split('T')[0] || new Date().toLocaleDateString('en-CA'),
                     pr_id: rfq.pr_id || null,
                     pr_no: fetchedPrNo,
+                    approved_pr_no: (rfq as unknown as Record<string, unknown>).approved_pr_no as string || null,
                     branch_id: rfq.branch_id ? Number(rfq.branch_id) : 0,
                     status: (rfq.status as RFQStatus) || 'DRAFT',
                     quotation_due_date: rfq.quotation_due_date?.split('T')[0] || '',
@@ -573,7 +581,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
 
             // ⚠️ BACKEND WHITELIST: Only send fields the API accepts.
             // `purpose` and `project_id` are rejected by the backend controller.
-            const payload: RFQCreateDTO = {
+            const payload: RFQCreateDTO & { approved_pr_no?: string } = {
                 rfq_date: stagedPayload.rfq_date,
                 requested_by_user_id: resolvedRequestedByUserId,
                 requested_by: resolvedRequestedByName,
@@ -588,6 +596,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                 receive_location: stagedPayload.receive_location,
                 payment_term_hint: stagedPayload.payment_term_hint,
                 incoterm: stagedPayload.incoterm,
+                approved_pr_no: stagedPayload.approved_pr_no || undefined,
                 // ❌ purpose     — backend rejects this field
                 // ❌ project_id  — backend rejects this field
 
@@ -729,6 +738,9 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         isPRSelectionModalOpen,
         setIsPRSelectionModalOpen,
         handlePRSelect,
+        isApprovedPRModalOpen,
+        setIsApprovedPRModalOpen,
+        handleApprovedPRSelect,
 
         // Modal Controls
         isVendorModalOpen,

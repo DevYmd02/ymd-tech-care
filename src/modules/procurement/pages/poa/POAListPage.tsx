@@ -5,7 +5,7 @@ import { PageListLayout, SmartTable, FilterField, MobileListCard, MobileListCont
 import { POStatusBadge } from '@ui';
 import { createColumnHelper } from '@tanstack/react-table';
 import type { ColumnDef } from '@tanstack/react-table';
-import { usePOAList } from './hooks/usePOAList';
+import { usePOAList, POA_STATUS_OPTIONS } from './hooks/usePOAList';
 import type { POListItem } from '@/modules/procurement/types';
 import { POAFormModal } from './components';
 
@@ -24,6 +24,46 @@ export default function POAListPage() {
 
     const handleApprove = (item: POListItem) => {
         setSelectedPO(item);
+        setIsApprovalModalOpen(true);
+    };
+
+    const handleTestOpenModal = () => {
+        const mockItem: POListItem = {
+            po_id: 99999,
+            po_no: 'PO-TEST-001',
+            po_date: new Date().toISOString(),
+            vendor_name: 'บริษัท ทดสอบ จำกัด (Vendor Test)',
+            status: 'PENDING_APPROVAL',
+            subtotal: 1000,
+            total_amount: 1070,
+            currency_code: 'THB',
+        } as any;
+        
+        (mockItem as any).po_lines = [
+            {
+                id: 1,
+                item_id: 101,
+                item_code: 'ITEM001',
+                item_name: 'สินค้าทดสอบ 1 (Test Product 1)',
+                qty_ordered: 10,
+                unit_price: 100,
+                is_approved: true,
+                line_remark: 'ด่วน',
+                line_no: 1
+            },
+            {
+                id: 2,
+                item_id: 102,
+                item_code: 'ITEM002',
+                item_name: 'สินค้าทดสอบ 2 (Test Product 2)',
+                qty_ordered: 5,
+                unit_price: 200,
+                is_approved: true,
+                line_no: 2
+            }
+        ];
+        
+        setSelectedPO(mockItem);
         setIsApprovalModalOpen(true);
     };
 
@@ -136,7 +176,7 @@ export default function POAListPage() {
                             className="flex items-center gap-1 px-2 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-md shadow-sm transition-all whitespace-nowrap"
                             title="อนุมัติเอกสาร"
                         >
-                            <CheckCircle size={12} /> พิจารณา
+                            <CheckCircle size={12} /> พิจารณาอนุมัติ
                         </button>
                     </div>
                 );
@@ -160,35 +200,43 @@ export default function POAListPage() {
                     <form onSubmit={(e) => { e.preventDefault(); handleApplyFilters(); }} className="w-full">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                             <FilterField
-                                label="เลขที่ PO"
+                                label="เลขที่เอกสาร PO"
                                 value={localFilters.search}
                                 onChange={(val: string) => handleFilterChange('search', val)}
-                                placeholder="PO-xxx"
+                                placeholder="กรอกเลขที่เอกสาร"
                                 accentColor="emerald"
                             />
                             <FilterField
-                                label="เลขที่ PR อ้างอิง"
-                                value={localFilters.search2}
-                                onChange={(val: string) => handleFilterChange('search2', val)}
-                                placeholder="PR-xxx"
-                                accentColor="emerald"
-                            />
-                            <FilterField
-                                label="ชื่อผู้ขาย"
-                                value={localFilters.search3}
-                                onChange={(val: string) => handleFilterChange('search3', val)}
-                                placeholder="ชื่อผู้ขาย"
-                                accentColor="emerald"
-                            />
-                            <FilterField
-                                label="วันที่เอกสาร จาก"
+                                label="วันที่เริ่มต้น"
                                 type="date"
                                 value={localFilters.date_start || ''}
                                 onChange={(val: string) => handleFilterChange('date_start', val)}
                                 accentColor="emerald"
                             />
+                            <FilterField
+                                label="วันที่สิ้นสุด"
+                                type="date"
+                                value={localFilters.date_end || ''}
+                                onChange={(val: string) => handleFilterChange('date_end', val)}
+                                accentColor="emerald"
+                            />
+                            <FilterField
+                                label="สถานะ"
+                                type="select"
+                                value={localFilters.status || ''}
+                                onChange={(val: string) => handleFilterChange('status', val as any)}
+                                options={POA_STATUS_OPTIONS}
+                                accentColor="emerald"
+                            />
                             <div className="md:col-span-2 lg:col-span-4 flex flex-col sm:flex-row flex-wrap justify-end gap-2 items-center">
                                 <div className="flex gap-2 w-full sm:w-auto">
+                                    <button
+                                        type="button"
+                                        onClick={handleTestOpenModal}
+                                        className="flex-1 sm:flex-none h-10 px-4 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+                                    >
+                                        เปิด Modal (ทดสอบ)
+                                    </button>
                                     <button
                                         type="button"
                                         onClick={resetFilters}

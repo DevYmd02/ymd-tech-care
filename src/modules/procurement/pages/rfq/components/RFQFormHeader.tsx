@@ -9,11 +9,12 @@ interface RFQFormHeaderProps {
     branches: BranchListItem[];
     currencies: Currency[];
     onOpenPRModal: () => void;
+    onOpenApprovedPRModal: () => void;
     readOnly?: boolean;
     isInviteMode?: boolean;
 }
 
-export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ branches, currencies, onOpenPRModal, readOnly, isInviteMode }) => {
+export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ branches, currencies, onOpenPRModal, onOpenApprovedPRModal, readOnly, isInviteMode }) => {
     const { register, watch, setValue, formState: { errors } } = useFormContext<RFQFormValues>();
     
     const formData = watch();
@@ -133,6 +134,27 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ branches, currenci
                         readOnly
                         className={`${inputStyle} bg-gray-200 dark:bg-gray-700 font-medium text-gray-700 dark:text-gray-300`}
                     />
+                </div>
+                <div>
+                    <label className={labelStyle}>เลขที่ Approve PR</label>
+                    <div className="flex gap-2">
+                        <input
+                            type="text"
+                            placeholder="เลือกเลขที่ Approve PR"
+                            {...register('approved_pr_no')}
+                            readOnly
+                            className={`${inputStyle} ${formData.approved_pr_no ? 'bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300 font-medium cursor-default' : ''}`}
+                            disabled={isLocked}
+                        />
+                        <button
+                            type="button"
+                            onClick={onOpenApprovedPRModal}
+                            disabled={isLocked || !formData.pr_id}
+                            className="px-4 py-1.5 bg-teal-600 hover:bg-teal-500 text-white rounded-lg transition-colors shrink-0 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            เลือก
+                        </button>
+                    </div>
                 </div>
             </div>
 
