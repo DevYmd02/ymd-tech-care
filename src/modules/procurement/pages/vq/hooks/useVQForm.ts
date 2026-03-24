@@ -19,11 +19,25 @@ import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import type { VQListItem, VQStatus, QuotationLine, QuotationHeader } from '@/modules/procurement/types/vq-types';
 import { useVQMasterData } from './useVQMasterData';
+import { calculatePricingSummary, parseDiscountAmount } from '@/modules/procurement/utils/pricing.utils';
+
+import type { VendorMaster } from '@/modules/master-data/vendor/types/vendor-types';
 
 export interface ExtendedRFQHeader extends RFQHeader {
     vendor_id?: number | null;
     vendor_name?: string | null;
     isMulticurrency?: boolean;
+    payment_terms?: string | null;
+    payment_term_days?: number | null;
+    created_by_name?: string | null;
+    import_type?: string; 
+    lines?: import('@/modules/procurement/types').RFQLine[];
+    rfqLines?: import('@/modules/procurement/types').RFQLine[];
+}
+
+export interface AvailableVendor extends VendorMaster {
+    hasVQ: boolean;
+    rfq_vendor_id?: number;
 }
 
 const createEmptyLine = (): QuotationLineFormData => ({
@@ -100,7 +114,7 @@ export const useVQForm = (
   const { confirm } = useConfirmation();
   const { purchaseTaxOptions, currencyOptions, isLoading: isMasterLoading } = useVQMasterData();
 
-  const [availableVendors, setAvailableVendors] = useState<any[]>([]);
+  const [availableVendors, setAvailableVendors] = useState<AvailableVendor[]>([]);
 
   const formMethods = useForm<QuotationFormData>({
     resolver: zodResolver(QuotationHeaderSchema) as Resolver<QuotationFormData>,
@@ -199,14 +213,15 @@ export const useVQForm = (
       setValue('vendor_code', vendorDetails?.vendor_code || '', { shouldValidate: true });
       setValue('vendor_name', vendorDetails?.vendor_name || '', { shouldValidate: true });
       const contacts = vendorDetails?.contacts || vendorDetails?.vendorContacts || [];
-      const primaryContact = contacts.find((c: any) => c.is_primary) || contacts[0];
-      const addressContact = vendorDetails?.addresses?.find((a: any) => a.contact_person)?.contact_person;
+      const primaryContact = contacts.find((c) => c.is_primary) || contacts[0];
+      const addressContact = vendorDetails?.addresses?.find((a) => a.contact_person)?.contact_person;
       setValue('contact_person', primaryContact?.contact_name || addressContact || '', { shouldValidate: true });
       setValue('contact_phone', vendorDetails?.phone || '', { shouldValidate: true });
       setValue('contact_email', vendorDetails?.email || '', { shouldValidate: true });
       setValue('payment_term_days', Number(vendorDetails?.payment_term_days ?? 0), { shouldValidate: true });
       setValue('payment_terms', `${vendorDetails?.payment_term_days ?? 0} วัน`, { shouldValidate: true });
-      setValue('lead_time_days', Number((vendorDetails as any)?.lead_time_days ?? 0), { shouldValidate: true });
+      setValue('lead_time_days', Number(vendorDetails?.lead_time_days ?? 0), { shouldValidate: true });
+
 
 
     } catch (err) {
@@ -240,7 +255,7 @@ export const useVQForm = (
             VQService.getById(vqId),
             MasterDataService.getItems().catch(() => [])
         ]).then(async ([response, itemsRes]) => {
-            const masterItems = Array.isArray(itemsRes) ? itemsRes : ((itemsRes as any)?.data || (itemsRes as any)?.items || []);
+            const masterItems = Array.isArray(itemsRes) ? itemsRes : [];
             
             // @Agent_Payload_Parser - Data Normalization (Unwrap Array/Object) 
             const unwrappedResponse = (response as any)?.data ?? response;
@@ -263,8 +278,8 @@ export const useVQForm = (
                         data.rfq_id ? RFQService.getById(data.rfq_id) : Promise.resolve(null),
                         data.vendor_id ? VendorService.getById(data.vendor_id) : Promise.resolve(null)
                     ]);
-                    const rfqDetail = (rfqDetailRes as any)?.data ?? rfqDetailRes;
-                    const vendorDetail = (vendorDetailRes as any)?.data ?? vendorDetailRes;
+                    const rfqDetail = ((rfqDetailRes as any)?.data ?? rfqDetailRes) as ExtendedRFQHeader | null;
+                    const vendorDetail = ((vendorDetailRes as any)?.data ?? vendorDetailRes) as VendorMaster | null;
                     
                     const vqRawLines = data.vqLines || data.vq_lines || data.lines || data.items || [];
                     const vqHasNoLines = !Array.isArray(vqRawLines) || vqRawLines.length === 0;
@@ -275,17 +290,17 @@ export const useVQForm = (
                     
                     // 1. Backfill from RFQ
                     if (rfqDetail) {
-                        (data as any).payment_terms = (data as any).payment_terms || (rfqDetail as any).payment_terms || (rfqDetail as any).payment_term_hint || ((rfqDetail as any).payment_term_days ? `${(rfqDetail as any).payment_term_days} วัน` : '');
-                        data.payment_term_days = data.payment_term_days || (rfqDetail as any).payment_term_days || 0;
-                        data.lead_time_days = data.lead_time_days || (rfqDetail as any).payment_term_days || 0; 
-                        data.created_by_name = data.created_by_name || (rfqDetail as any).created_by_name || (rfqDetail as any).requested_by || '';
-                        data.currency = data.currency || (rfqDetail as any).rfq_quote_currency_code || '';
+                        (data as any).payment_terms = (data as any).payment_terms || rfqDetail.payment_terms || rfqDetail.payment_term_hint || (rfqDetail.payment_term_days ? `${rfqDetail.payment_term_days} วัน` : '');
+                        data.payment_term_days = data.payment_term_days || rfqDetail.payment_term_days || 0;
+                        data.lead_time_days = data.lead_time_days || rfqDetail.payment_term_days || 0; 
+                        data.created_by_name = data.created_by_name || rfqDetail.created_by_name || rfqDetail.requested_by || '';
+                        data.currency = data.currency || rfqDetail.rfq_quote_currency_code || '';
                     }
 
                     // 2. Backfill from Vendor Master
                     if (vendorDetail) {
-                        const primaryContact = (vendorDetail as any).contacts?.find((c: any) => c.is_primary) || (vendorDetail as any).contacts?.[0];
-                        const addressContact = (vendorDetail as any).addresses?.find((a: any) => a.contact_person)?.contact_person;
+                        const primaryContact = vendorDetail.contacts?.find((c) => c.is_primary) || vendorDetail.contacts?.[0];
+                        const addressContact = vendorDetail.addresses?.find((a) => a.contact_person)?.contact_person;
                         
                         data.contact_person = data.contact_person || primaryContact?.contact_name || addressContact || '';
                         data.contact_phone = data.contact_phone || primaryContact?.phone || primaryContact?.mobile || (vendorDetail as any).phone || '';
@@ -310,7 +325,7 @@ export const useVQForm = (
             }
 
             const mappedLines: QuotationLineFormData[] = (apiLines.length > 0 ? apiLines : linesToMap).map((l: RawVQLine) => {
-                const matchedItem = masterItems.find((i: any) => Number(i.item_id) === Number(l.item_id));
+                const matchedItem = masterItems.find((i) => Number(i.item_id) === Number(l.item_id));
                 return {
                     ...createEmptyLine(),
                     line_no: Number(l.line_no) || 0,
@@ -421,13 +436,13 @@ export const useVQForm = (
             RFQService.getById(initialRFQ.rfq_id),
             MasterDataService.getItems().catch(() => [])
         ]).then(async ([fullRFQ, itemsRes]) => {
-            const masterItems = Array.isArray(itemsRes) ? itemsRes : ((itemsRes as any)?.data || (itemsRes as any)?.items || []);
+            const masterItems = Array.isArray(itemsRes) ? itemsRes : [];
             const apiLines = (fullRFQ.lines && fullRFQ.lines.length > 0) ? fullRFQ.lines : (fullRFQ.rfqLines || []);
             let mappedLines: QuotationLineFormData[] = [];
             
             if (apiLines.length > 0) {
                 mappedLines = apiLines.map((line: RFQLine) => {
-                    const matchedItem = masterItems.find((i: any) => Number(i.item_id) === Number(line.item_id));
+                    const matchedItem = masterItems.find((i) => Number(i.item_id) === Number(line.item_id));
                     return {
                         ...createEmptyLine(),
                         item_id: Number(line.item_id) || 0,
@@ -535,53 +550,50 @@ export const useVQForm = (
   const watchedGlobalDiscount = useWatch({ control, name: 'discount_expression' });
   const watchTaxCodeId = useWatch({ control, name: 'tax_code_id' });
 
-  const parseDiscount = (expr: string | undefined, base: number) => {
-    if (!expr) return 0;
-    const cleanExpr = expr.toString().trim();
-    if (cleanExpr.endsWith('%')) {
-      const percent = parseFloat(cleanExpr.replace('%', '')) || 0;
-      return (base * percent) / 100;
-    }
-    return parseFloat(cleanExpr) || 0;
-  };
-
   const calculatedTotals = useMemo(() => {
     const lines = watchedLines || [];
     const globalDiscountExpr = watchedGlobalDiscount || '0';
 
-    const subtotal = lines.reduce((sum, line) => {
-      if (line.no_quote) return sum;
-      const base = (Number(line.qty) || 0) * (Number(line.unit_price) || 0);
-      const discount = parseDiscount(line.discount_expression, base);
-      return sum + (base - (Number(discount) || 0));
-    }, 0);
+    // 1. Map to PricingItem with line-level discounts
+    const items = lines.map(line => {
+      if (line.no_quote) return { qty: 0, unit_price: 0, discount: 0 };
+      const qty = Number(line.qty) || 0;
+      const price = Number(line.unit_price) || 0;
+      const discount = parseDiscountAmount(line.discount_expression ?? '0', qty * price);
+      return {
+        qty,
+        unit_price: price,
+        discount
+      };
+    });
 
-    const totalLineDiscount = lines.reduce((sum, line) => {
-      if (line.no_quote) return sum;
-      return sum + (Number(parseDiscount(line.discount_expression, (Number(line.qty) || 0) * (Number(line.unit_price) || 0))) || 0);
-    }, 0);
+    // 2. Sum line-level discounts for reporting
+    const totalLineDiscount = items.reduce((sum, item) => sum + (item.discount || 0), 0);
 
-    const billDiscount = Number(parseDiscount(globalDiscountExpr, subtotal)) || 0;
-    const preTax = subtotal - billDiscount;
-    
-    // Find tax rate
+    // 3. Subtotal (Before Global Discount)
+    const subtotal = items.reduce((sum, item) => sum + (item.qty * item.unit_price - (item.discount || 0)), 0);
+
+    // 4. Calculate Global Discount Amount
+    const billDiscount = parseDiscountAmount(globalDiscountExpr, subtotal);
+
+    // 5. Find Tax Rate
     const taxOption = purchaseTaxOptions.find(o => Number(o.value || 0) === Number(watchTaxCodeId || 0));
     const taxRatePercent = taxOption ? (Number(taxOption.original?.tax_rate) || 0) : 0;
-    const rawTaxAmount = (preTax * taxRatePercent) / 100;
-    const taxAmount = Math.round(rawTaxAmount * 100) / 100;
-    const grandTotal = Math.round((preTax + taxAmount) * 100) / 100;
 
+    // 6. Use pricing.utils core engine for totals (Raw floats, consistency with PO)
+    const summary = calculatePricingSummary(items, taxRatePercent, false, billDiscount);
 
     return {
-      subtotal,
-      billDiscount, // Aligned with UI expectation (passed as discountAmount in destruct)
-      preTax,
-      taxAmount,    // Aligned with UI expectation (passed as vatAmount in destruct)
-      grandTotal,
+      subtotal: summary.subtotal,
+      billDiscount, 
+      preTax: summary.beforeTax,
+      taxAmount: summary.taxAmount,
+      grandTotal: summary.totalAmount,
       totalLineDiscount,
       taxRate: taxRatePercent
     };
   }, [watchedLines, watchedGlobalDiscount, watchTaxCodeId, purchaseTaxOptions]);
+
 
   const { formState: { dirtyFields } } = formMethods;
   
@@ -605,20 +617,21 @@ export const useVQForm = (
     
     // Helper สำหรับดึง message จาก Object ลึกๆ
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const extractErrorMessages = (errs: any): string[] => {
+    const extractErrorMessages = (errs: Record<string, unknown>): string[] => {
       let messages: string[] = [];
       for (const key in errs) {
         const error = errs[key];
-        if (error?.message && typeof error.message === 'string') {
-          // 🛡️ ระบบกรองคำภาษาอังกฤษที่อาจหลุดมา
-          let msg = error.message;
-          const lowerMsg = msg.toLowerCase();
-          if (lowerMsg.includes('invalid input') || lowerMsg.includes('expected number') || lowerMsg.includes('received string') || lowerMsg.includes('received nan')) {
-            msg = 'กรุณาระบุข้อมูลให้ถูกต้อง';
+        if (typeof error === 'object' && error !== null) {
+          if ('message' in error && typeof (error as { message: unknown }).message === 'string') {
+            let msg = (error as { message: string }).message;
+            const lowerMsg = msg.toLowerCase();
+            if (lowerMsg.includes('invalid input') || lowerMsg.includes('expected number') || lowerMsg.includes('received string') || lowerMsg.includes('received nan')) {
+              msg = 'กรุณาระบุข้อมูลให้ถูกต้อง';
+            }
+            messages.push(msg);
+          } else {
+            messages = messages.concat(extractErrorMessages(error as Record<string, unknown>));
           }
-          messages.push(msg);
-        } else if (typeof error === 'object' && error !== null) {
-          messages = messages.concat(extractErrorMessages(error));
         }
       }
       return Array.from(new Set(messages));
@@ -645,7 +658,7 @@ export const useVQForm = (
     const price = Number(line.unit_price) || 0;
     const base = qty * price;
     // 🎯 Frontend flattening: Evaluate percentage to sum to prevent backend parseDiscountRaw crash
-    const absDiscount = parseDiscount(line.discount_expression, base);
+    const absDiscount = parseDiscountAmount(line.discount_expression, base);
 
     return {
       line_no: index + 1, 
@@ -662,7 +675,7 @@ export const useVQForm = (
 
   const sanitizePayload = (data: QuotationFormData): VQCreateData => {
     // 🎯 Flatten Header Discount to absolute money amount to keep calculateHeaderTotal happy
-    const globalDiscountAmount = parseDiscount(data.discount_expression, totals.subtotal);
+    const globalDiscountAmount = parseDiscountAmount(data.discount_expression, totals.subtotal);
 
     const payload: VQCreateData = {
       // 🛡️ @Agent_Ultimate_Purifier: STRICT DTO MAPPING (Header)
@@ -773,7 +786,7 @@ export const useVQForm = (
     }
 
     const base = qty * price;
-    const discount = Number(parseDiscount(expr, base)) || 0;
+    const discount = Number(parseDiscountAmount(expr, base)) || 0;
     const net = base - discount;
 
     setValue(`vq_lines.${index}.discount_amount`, Number(discount.toFixed(2)) || 0);
@@ -796,15 +809,15 @@ export const useVQForm = (
         VQService.getVQsByRfqId(rfq.rfq_id).catch(() => ({ data: [] }))
       ]);
 
-      const masterItems = Array.isArray(itemsRes) ? itemsRes : ((itemsRes as any)?.data || (itemsRes as any)?.items || []);
+      const masterItems = Array.isArray(itemsRes) ? itemsRes : [];
 
       const existingVendorIds = (existingVQsRes?.data || [])
-          .filter((v: any) => v.status !== 'CANCELLED')
-          .map((v: any) => Number(v.vendor_id));
+          .filter((v) => v.status !== 'CANCELLED')
+          .map((v) => Number(v.vendor_id));
       const allVendors = rfqVendorsRes?.data || rfqVendorsRes || [];
 
       // 1. Filter out only SENT/RESPONDED vendors (Exclude PENDING)
-      const sentVendors = allVendors.filter((v: any) => 
+      const sentVendors = allVendors.filter((v: { status?: string }) => 
         !v.status || ['SENT', 'RESPONDED', 'DECLINED', 'NO_RESPONSE', 'RECORDED'].includes(v.status)
       );
 
@@ -817,7 +830,7 @@ export const useVQForm = (
 
       // 🔄 FETCH FULL VENDOR DETAILS for accurate code and name
       const vendorsWithDetails = await Promise.all(
-          sentVendors.map(async (v: any) => {
+          sentVendors.map(async (v: { vendor_id: number; status?: string }) => {
               try {
                   const details = await VendorService.getById(v.vendor_id);
                   return { ...details, ...v }; 
@@ -828,7 +841,7 @@ export const useVQForm = (
       );
 
       // 3. Map Vendors with hasVQ flag (INSTEAD of filtering out)
-      const mappedVendors = vendorsWithDetails.map((v: any) => ({
+      const mappedVendors = vendorsWithDetails.map((v) => ({
           ...v,
           hasVQ: existingVendorIds.includes(Number(v.vendor_id)),
           status: v.status || 'ACTIVE'
@@ -839,7 +852,7 @@ export const useVQForm = (
       // 5. Normal processing (setting RFQ lines)
       const apiLines: RFQLine[] = (fullRFQ.lines && fullRFQ.lines.length > 0) ? fullRFQ.lines : (fullRFQ.rfqLines || []);
       const mappedLines: QuotationLineFormData[] = apiLines.map((line: RFQLine) => {
-          const matchedItem = masterItems.find((i: any) => Number(i.item_id) === Number(line.item_id));
+          const matchedItem = masterItems.find((i) => Number(i.item_id) === Number(line.item_id));
           return {
               ...createEmptyLine(),
               item_id: Number(line.item_id) || 0,
@@ -882,7 +895,7 @@ export const useVQForm = (
       replace(mappedLines.length > 0 ? mappedLines : []);
 
       // 6. Auto-Fill Vendor Logic if exactly 1
-      const unvqd = mappedVendors.filter((v: any) => !v.hasVQ);
+      const unvqd = mappedVendors.filter((v) => !v.hasVQ);
       if (unvqd.length === 1) {
           const singleVendor = unvqd[0];
           await handleSelectRFQVendor(singleVendor.vendor_id);

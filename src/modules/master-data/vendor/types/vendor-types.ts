@@ -161,6 +161,7 @@ export interface VendorMaster {
     // Payment Info
     payment_term_days?: number;
     credit_limit?: number;
+    lead_time_days?: number;
     currency_code?: string;
     vat_registered?: boolean;
     is_vat_registered?: boolean;

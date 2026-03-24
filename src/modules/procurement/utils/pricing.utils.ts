@@ -29,29 +29,28 @@ export const calculateLineTotal = (qty: number, price: number, discount: number 
 export const calculatePricingSummary = (
     items: PricingItem[], 
     taxRate: number = 7, 
-    isVatIncluded: boolean = false
+    isVatIncluded: boolean = false,
+    globalDiscountAmount: number = 0
 ): PricingSummary => {
     const subtotal = items.reduce((sum, item) => {
-        return sum + calculateLineTotal(item.qty, item.unit_price, item.discount);
+        return sum + calculateLineTotal(item.qty, item.unit_price, item.discount || 0);
     }, 0);
 
     let taxAmount = 0;
     let totalAmount = 0;
-    let beforeTax = subtotal;
+    const beforeTax = Math.max(0, subtotal - globalDiscountAmount);
 
     if (isVatIncluded) {
         // Formula: Total = Subtotal (inclusive)
         // Tax = Total * Rate / (100 + Rate)
         // Before Tax = Total - Tax
-        totalAmount = subtotal;
+        totalAmount = beforeTax; // discount reduces the beforeTax base
         taxAmount = (totalAmount * taxRate) / (100 + taxRate);
-        beforeTax = totalAmount - taxAmount;
     } else {
         // Formula: Tax = Subtotal * Rate / 100
         // Total = Subtotal + Tax
-        beforeTax = subtotal;
-        taxAmount = subtotal * (taxRate / 100);
-        totalAmount = subtotal + taxAmount;
+        taxAmount = beforeTax * (taxRate / 100);
+        totalAmount = beforeTax + taxAmount;
     }
 
     return {
@@ -61,6 +60,7 @@ export const calculatePricingSummary = (
         totalAmount
     };
 };
+
 
 /**
  * Parses a discount string (e.g., "10%", "500") and returns the discount amount.
