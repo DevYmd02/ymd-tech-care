@@ -1,8 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useWarehouseList } from '@/modules/master-data/inventory/hooks/useWarehouseList';
 import { DialogFormLayout } from '@ui';
 import { Search } from 'lucide-react';
-import { WarehouseService } from '@/modules/master-data/inventory/services/warehouse.service';
 import type { WarehouseListItem } from '@/modules/master-data/inventory/types/warehouse-types';
 
 interface WarehouseSearchModalProps {
@@ -14,9 +13,7 @@ interface WarehouseSearchModalProps {
 export const WarehouseSearchModal: React.FC<WarehouseSearchModalProps> = ({ isOpen, onClose, onSelect }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['warehouses'],
-    queryFn: () => WarehouseService.getAll(),
+  const { data, isLoading } = useWarehouseList({
     enabled: isOpen,
     staleTime: 5 * 60 * 1000, // Caching Master Data for 5 mins
   });

@@ -134,18 +134,20 @@ export const VendorGeneralInfo: React.FC<VendorGeneralInfoProps> = ({
                     />
                 </div>
                 <div className="space-y-1">
-                    <label className={styles.label}>สกุลเงิน</label>
+                    <label className={styles.label}>สกุลเงิน <span className="text-red-500">*</span></label>
                     <select 
                         name="currencyId" 
                         value={formData.currencyId || ""} 
                         onChange={onChange} 
-                        className={styles.inputSelect}
+                        className={`${styles.inputSelect} ${errors.currencyId ? 'border-red-500 focus:ring-red-500' : ''}`}
+                        required
                     >
                         <option value="" disabled>{isLoading ? 'กำลังโหลด...' : 'เลือกสกุลเงิน'}</option>
                         {currencyOptions.map(curr => (
                             <option key={curr.value} value={curr.value}>{curr.label}</option>
                         ))}
                     </select>
+                    {errors.currencyId && <p className="text-red-500 text-xs mt-1">{errors.currencyId}</p>}
                 </div>
 
                 {/* Checkboxes */}

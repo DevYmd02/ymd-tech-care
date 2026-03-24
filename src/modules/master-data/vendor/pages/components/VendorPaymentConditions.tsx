@@ -1,7 +1,6 @@
 import React from 'react';
 import { CreditCard } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
-import { PAYMENT_TERMS } from '@/modules/master-data/vendor/constants/vendorConstants';
 import type { VendorFormData } from '@/modules/master-data/vendor/types/vendor-types';
 
 interface VendorPaymentConditionsProps {
@@ -26,18 +25,16 @@ export const VendorPaymentConditions: React.FC<VendorPaymentConditionsProps> = (
             <div className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
                     <label className={styles.label}>เงื่อนไขการชำระเงิน <span className="text-red-500">*</span></label>
-                    <select 
+                    <input 
+                        type="number"
                         name="paymentTerms" 
-                        value={formData.paymentTerms} 
+                        value={formData.paymentTerms ?? ''} 
                         onChange={onChange} 
-                        className={`${styles.inputSelect} ${errors.paymentTerms ? 'border-red-500 focus:ring-red-500' : ''}`}
+                        className={`${styles.input} ${errors.paymentTerms ? 'border-red-500 focus:ring-red-500' : ''}`}
                         required
-                    >
-                        <option value="" disabled>เลือก</option>
-                        {PAYMENT_TERMS.map(term => (
-                            <option key={term.value} value={term.value}>{term.label}</option>
-                        ))}
-                    </select>
+                        placeholder="จำนวนวัน (เช่น 30)"
+                        min="0"
+                    />
                     {errors.paymentTerms && <p className="text-red-500 text-xs mt-1">{errors.paymentTerms}</p>}
                 </div>
                 <div className="space-y-1">

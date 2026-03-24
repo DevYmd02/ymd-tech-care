@@ -59,22 +59,24 @@ export const VendorAddressList: React.FC<VendorAddressListProps> = ({
                             />
                         </div>
                         <div className="space-y-1">
-                            <label className={styles.label}>แขวง/ตำบล</label>
+                            <label className={styles.label}>แขวง/ตำบล <span className="text-red-500">*</span></label>
                             <input 
                                 name="addresses[0].subDistrict"
                                 value={formData.addresses?.[0]?.subDistrict || ''}
                                 onChange={(e) => updateAddress(0, 'subDistrict', e.target.value)}
-                                className={styles.input}
+                                className={`${styles.input} ${errors['addresses[0].subDistrict'] ? 'border-red-500 focus:ring-red-500' : ''}`}
                             />
+                            {errors['addresses[0].subDistrict'] && <p className="text-red-500 text-xs mt-1">{errors['addresses[0].subDistrict']}</p>}
                         </div>
                         <div className="space-y-1">
-                            <label className={styles.label}>เขต/อำเภอ</label>
+                            <label className={styles.label}>เขต/อำเภอ <span className="text-red-500">*</span></label>
                             <input 
                                 name="addresses[0].district"
                                 value={formData.addresses?.[0]?.district || ''}
                                 onChange={(e) => updateAddress(0, 'district', e.target.value)}
-                                className={styles.input}
+                                className={`${styles.input} ${errors['addresses[0].district'] ? 'border-red-500 focus:ring-red-500' : ''}`}
                             />
+                            {errors['addresses[0].district'] && <p className="text-red-500 text-xs mt-1">{errors['addresses[0].district']}</p>}
                         </div>
                         <div className="space-y-1">
                             <label className={styles.label}>จังหวัด <span className="text-red-500">*</span></label>
@@ -211,24 +213,26 @@ export const VendorAddressList: React.FC<VendorAddressListProps> = ({
                             />
                         </div>
                         <div className="space-y-1">
-                            <label className={styles.label}>แขวง/ตำบล</label>
+                            <label className={styles.label}>แขวง/ตำบล <span className="text-red-500">*</span></label>
                             <input 
                                 name="addresses[1].subDistrict"
                                 value={formData.addresses?.[1]?.subDistrict || ''}
                                 onChange={(e) => updateAddress(1, 'subDistrict', e.target.value)}
-                                className={styles.input} 
+                                className={`${styles.input} ${errors['addresses[1].subDistrict'] ? 'border-red-500 focus:ring-red-500' : ''}`} 
                                 disabled={formData.sameAsRegistered}
                             />
+                            {errors['addresses[1].subDistrict'] && <p className="text-red-500 text-xs mt-1">{errors['addresses[1].subDistrict']}</p>}
                         </div>
                         <div className="space-y-1">
-                            <label className={styles.label}>เขต/อำเภอ</label>
+                            <label className={styles.label}>เขต/อำเภอ <span className="text-red-500">*</span></label>
                             <input 
                                 name="addresses[1].district"
                                 value={formData.addresses?.[1]?.district || ''}
                                 onChange={(e) => updateAddress(1, 'district', e.target.value)}
-                                className={styles.input} 
+                                className={`${styles.input} ${errors['addresses[1].district'] ? 'border-red-500 focus:ring-red-500' : ''}`} 
                                 disabled={formData.sameAsRegistered}
                             />
+                            {errors['addresses[1].district'] && <p className="text-red-500 text-xs mt-1">{errors['addresses[1].district']}</p>}
                         </div>
                         <div className="space-y-1">
                             <label className={styles.label}>จังหวัด <span className="text-red-500">*</span></label>
@@ -386,22 +390,24 @@ export const VendorAddressList: React.FC<VendorAddressListProps> = ({
                                     />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className={styles.label}>แขวง/ตำบล</label>
+                                    <label className={styles.label}>แขวง/ตำบล <span className="text-red-500">*</span></label>
                                     <input 
                                         name={`addresses[${actualIndex}].subDistrict`}
                                         value={addr.subDistrict}
                                         onChange={(e) => updateAddress(actualIndex, 'subDistrict', e.target.value)}
-                                        className={styles.input}
+                                        className={`${styles.input} ${errors[`addresses[${actualIndex}].subDistrict`] ? 'border-red-500 focus:ring-red-500' : ''}`}
                                     />
+                                    {errors[`addresses[${actualIndex}].subDistrict`] && <p className="text-red-500 text-xs mt-1">{errors[`addresses[${actualIndex}].subDistrict`]}</p>}
                                 </div>
                                 <div className="space-y-1">
-                                    <label className={styles.label}>เขต/อำเภอ</label>
+                                    <label className={styles.label}>เขต/อำเภอ <span className="text-red-500">*</span></label>
                                     <input 
                                         name={`addresses[${actualIndex}].district`}
                                         value={addr.district}
                                         onChange={(e) => updateAddress(actualIndex, 'district', e.target.value)}
-                                        className={styles.input}
+                                        className={`${styles.input} ${errors[`addresses[${actualIndex}].district`] ? 'border-red-500 focus:ring-red-500' : ''}`}
                                     />
+                                    {errors[`addresses[${actualIndex}].district`] && <p className="text-red-500 text-xs mt-1">{errors[`addresses[${actualIndex}].district`]}</p>}
                                 </div>
                                 <div className="space-y-1">
                                     <label className={styles.label}>จังหวัด <span className="text-red-500">*</span></label>

@@ -53,7 +53,7 @@ export function useVendorForm({
         getValues,
         formState: { errors, isSubmitting } 
     } = useForm<VendorSchemaType>({
-        resolver: zodResolver(VendorSchema),
+        resolver: zodResolver(VendorSchema) as any,
         defaultValues: initialVendorFormData,
         mode: 'onChange' 
     });
@@ -161,6 +161,8 @@ export function useVendorForm({
         // ID Number conversion (Zod expects number)
         if (['vendorTypeId', 'vendorGroupId', 'currencyId'].includes(name)) {
             finalValue = Number(value);
+        } else if (name === 'paymentTerms') {
+            finalValue = value === '' ? '' : Number(value);
         }
 
         // Input Masking Logic
@@ -391,7 +393,7 @@ export function useVendorForm({
     const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
-        await rhfHandleSubmit(onSubmit, (invalidErrors) => {
+        await rhfHandleSubmit(onSubmit as any, (invalidErrors) => {
             console.error('Validation Errors:', invalidErrors);
             toast('กรุณาตรวจสอบข้อมูลสีแดงในแบบฟอร์ม', 'error');
             

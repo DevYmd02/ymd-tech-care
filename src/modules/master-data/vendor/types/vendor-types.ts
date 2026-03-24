@@ -46,7 +46,7 @@ export interface VendorContactPerson {
 export interface VendorAddressFormItem {
     id: number; // Temp ID for UI key
     address: string;
-    subDistrict?: string; // Tambon / Khwaeng (Optional)
+    subDistrict: string; // Tambon / Khwaeng
     district: string;    // Amphoe / Khet
     province: string;
     postalCode: string;
@@ -382,11 +382,7 @@ export function toVendorCreateRequest(form: VendorFormData): VendorCreateRequest
     }));
 
     // Payment Term logic
-    let payment_term_days = 30;
-    if (form.paymentTerms === 'Net 7 Days') payment_term_days = 7;
-    else if (form.paymentTerms === 'Net 15 Days') payment_term_days = 15;
-    else if (form.paymentTerms === 'Net 60 Days') payment_term_days = 60;
-    else if (form.paymentTerms === 'Cash') payment_term_days = 0;
+    const payment_term_days = Number(form.paymentTerms ?? 30);
 
     return {
         vendor_code: form.vendorCode || undefined,
@@ -632,11 +628,7 @@ export function toVendorFormData(vendor: VendorMaster): VendorFormData {
         mobile: formContacts.find(c => c.isMain)?.mobile || vendor.phone_extension || vendorAny.mobile || vendorAny.phoneNumber || '',
         email: vendor.email || '',
         website: vendor.website || '',
-        paymentTerms: vendor.payment_term_days === 0 
-            ? 'Cash' 
-            : vendor.payment_term_days 
-                ? 'Net ' + vendor.payment_term_days + ' Days' 
-                : 'Net 30 Days',
+        paymentTerms: vendor.payment_term_days ?? 30,
         creditLimit: vendor.credit_limit || 0,
         bankAccounts: formBankAccounts,
         additionalContacts: formContacts,
@@ -660,11 +652,11 @@ export const initialVendorFormData: VendorFormData = {
     vendorType: 'COMPANY',
     vendorTypeId: 0,
     vendorGroupId: 0,
-    currencyId: 1,
+    currencyId: 0,
     businessCategory: '',
     taxId: '',
     branchName: '',
-    currency: 'THB',
+    currency: '',
     vatRegistered: true,
     whtRegistered: false,
     addresses: [{
@@ -702,7 +694,7 @@ export const initialVendorFormData: VendorFormData = {
     mobile: '',
     email: '',
     website: '',
-    paymentTerms: '',
+    paymentTerms: '' as any,
     creditLimit: 0,
     bankAccounts: [],
     additionalContacts: [],

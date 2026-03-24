@@ -8,7 +8,7 @@ import { z } from 'zod';
 const VendorAddressSchema = z.object({
     id: z.number(),
     address: z.string().min(1, 'กรุณากรอกที่อยู่'),
-    subDistrict: z.string().optional().or(z.literal('')),
+    subDistrict: z.string().min(1, 'กรุณากรอกแขวง/ตำบล'),
     district: z.string().min(1, 'กรุณากรอกอำเภอ/เขต'),
     province: z.string().min(1, 'กรุณากรอกจังหวัด'),
     postalCode: z.string().length(5, 'รหัสไปรษณีย์ต้องมี 5 หลัก').regex(/^\d+$/, 'กรอกได้เฉพาะตัวเลข'),
@@ -85,7 +85,7 @@ export const VendorSchema = z.object({
     website: z.string(),
     
     // Payment
-    paymentTerms: z.string(),
+    paymentTerms: z.coerce.number().min(0, 'กรุณากรอกจำนวนวัน'),
     creditLimit: z.number().min(0),
     
     // Lists
