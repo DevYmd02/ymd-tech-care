@@ -219,7 +219,7 @@ export const getPRDefaultFormValues = (user?: { id?: string | number; username?:
     preferred_vendor_id: undefined,
     vendor_name: '',
     delivery_date: nextWeekStr,
-    credit_days: 30,
+    credit_days: undefined,
     payment_term_days: 0,
     vendor_quote_no: '',
     shipping_method: '',

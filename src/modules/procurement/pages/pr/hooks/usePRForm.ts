@@ -658,11 +658,11 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
      if (vendor) {
        setValue("preferred_vendor_id", vendor.vendor_id);
        setValue("vendor_name", vendor.vendor_name);
-       setValue("credit_days", vendor.payment_term_days ?? 30);
+       setValue("credit_days", vendor.payment_term_days);
      } else {
        setValue("preferred_vendor_id", undefined);
        setValue("vendor_name", '');
-       setValue("credit_days", 30);
+       setValue("credit_days", undefined);
      }
    };
 
