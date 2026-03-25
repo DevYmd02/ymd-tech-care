@@ -64,8 +64,8 @@ export default function VQListPage() {
         customParamKeys: {
             search: 'vq_no',
             search2: 'vendor_name',
-            search3: 'ref_rfq_no',
-            search4: 'ref_pr_no'
+            search3: 'rfq_no',
+            search4: 'pr_no'
         }
     });
 
