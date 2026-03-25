@@ -135,7 +135,7 @@ const AVNumberCell = ({ prNo, fallbackNo }: { prNo?: string | null, fallbackNo?:
 
     if (isLoading && !hasFallback) {
         return (
-            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/40 px-1.5 py-0.5 rounded border border-blue-200/50 dark:border-blue-800/50 shadow-sm animate-pulse">
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-violet-700 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/40 px-1.5 py-0.5 rounded border border-violet-200/50 dark:border-violet-800/50 shadow-sm animate-pulse">
                กำลังโหลด...
             </span>
         );
@@ -144,7 +144,7 @@ const AVNumberCell = ({ prNo, fallbackNo }: { prNo?: string | null, fallbackNo?:
     if (!avNo) return null;
 
     return (
-        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/40 px-1.5 py-0.5 rounded border border-blue-200/50 dark:border-blue-800/50 shadow-sm whitespace-nowrap leading-tight" title="Approval Number">
+        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-violet-700 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/40 px-1.5 py-0.5 rounded border border-violet-200/50 dark:border-violet-800/50 shadow-sm whitespace-nowrap leading-tight" title="Approval Number">
             {avNo}
         </span>
     );

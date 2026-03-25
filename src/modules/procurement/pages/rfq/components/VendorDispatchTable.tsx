@@ -54,9 +54,11 @@ export const VendorDispatchTable: React.FC<VendorDispatchTableProps> = ({ vendor
                                                 {vendor.sent_via || 'EMAIL'}
                                             </span>
                                         </td>
-                                        <td className={tdCls}>{vendor.email_sent_to || '-'}</td>
+                                        <td className={tdCls}>{vendor.email_sent_to || (vendor as any).email || '-'}</td>
                                         <td className={`${tdCls} font-medium`}>
-                                            {vendor.sent_date ? formatThaiDate(vendor.sent_date) : '-'}
+                                            {(vendor.sent_date || (vendor as any).sent_at) 
+                                                ? formatThaiDate(vendor.sent_date || (vendor as any).sent_at) 
+                                                : '-'}
                                         </td>
                                     </tr>
                                 );

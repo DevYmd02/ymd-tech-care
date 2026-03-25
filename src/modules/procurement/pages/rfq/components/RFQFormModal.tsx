@@ -150,9 +150,12 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
                             </div>
                         )}
 
-                        {/* 2. Standard Vendor List (ALWAYS visible) */}
+                        {/* 2. Standard Vendor List (ALWAYS visible, but hide sent ones in view mode) */}
                         <RFQVendorSelection  
-                            vendors={vendors}
+                            vendors={readOnly 
+                                ? vendors.filter(v => v.status !== 'SENT' && v.status !== 'RESPONDED') 
+                                : vendors
+                            }
                             onAdd={handleAddVendor}
                             onRemove={handleRemoveVendor}
                             handleOpenVendorModal={handleOpenVendorModal}

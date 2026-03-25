@@ -9,7 +9,7 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/react-query';
-import { Eye, Edit, Filter, FileText, X, Search, Plus, XCircle } from 'lucide-react';
+import { Eye, Edit, FileText, Search, Plus, XCircle } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { PageListLayout, SmartTable, VQStatusBadge, FilterField, MobileListCard, MobileListContainer } from '@ui';
 
@@ -178,16 +178,6 @@ export default function VQListPage() {
         }
     }, [rfqNoFilter, setFilters, searchParams, isVqModalOpen, setSearchParams, setInitialRFQForCreate]);
 
-    // Clear the URL filter (React Router — no hard refresh)
-    const handleClearRfqFilter = useCallback(() => {
-        setSearchParams((prev) => {
-            const newParams = new URLSearchParams(prev);
-            newParams.delete('rfq_no');     // Remove shortcut param
-            newParams.set('page', '1');
-            return newParams;
-        }, { replace: true });
-        hasInjected.current = false;
-    }, [setSearchParams]);
 
     // Convert to API filter format
     const apiFilters: VQListParams = {
@@ -493,9 +483,9 @@ export default function VQListPage() {
                 accentColor="blue"
                 totalCount={
                     activeTab === 'WAITING_VQ' 
-                        ? (waitingVqData?.total || waitingVqData?.data?.length || 0) 
+                        ? (flattenedWaitingVqData.length || 0) 
                         : activeTab === 'WAITING_RFQ' 
-                            ? (waitingRfqData?.total || waitingRfqData?.data?.length || 0) 
+                            ? (groupedWaitingRfqData.length || 0) 
                             : (data?.total || data?.data?.length || 0)
                 }
                 totalCountLoading={isLoading || isWaitingVqLoading || isWaitingRfqLoading}
@@ -644,25 +634,6 @@ export default function VQListPage() {
                         </button>
                     </div>
 
-                    {/* ===== Active Filter Banner (shows only when filtered via URL param) ===== */}
-                    {activeTab === 'ALL' && rfqNoFilter && (
-                        <div className="flex items-center justify-between gap-3 px-4 py-2.5 mb-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-lg">
-                            <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300">
-                                <Filter size={15} className="text-blue-500 shrink-0" />
-                                <span>
-                                    กำลังแสดงใบเสนอราคาสำหรับ RFQ อ้างอิง: <strong className="text-blue-900 dark:text-blue-100">{rfqNoFilter}</strong>
-                                </span>
-                            </div>
-                            <button
-                                onClick={handleClearRfqFilter}
-                                className="flex items-center gap-1 px-3 py-1 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-md border border-blue-300 dark:border-blue-700 transition-colors whitespace-nowrap"
-                                title="ล้างตัวกรอง แสดงทั้งหมด"
-                            >
-                                <X size={13} />
-                                ล้างตัวกรอง
-                            </button>
-                        </div>
-                    )}
 
                     {/* Desktop View: Table */}
                     <div className="hidden md:block flex-1 overflow-hidden">
@@ -697,7 +668,7 @@ export default function VQListPage() {
                                 pagination={{
                                     pageIndex: filters.page,
                                     pageSize: filters.limit,
-                                    totalCount: waitingVqData?.total || waitingVqData?.data?.length || 0,
+                                    totalCount: flattenedWaitingVqData.length,
                                     onPageChange: handlePageChange,
                                     onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 })
                                 }}

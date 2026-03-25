@@ -120,7 +120,7 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ branches, currenci
                             placeholder="เลือกเลขที่ Approve PR"
                             {...register('approved_pr_no')}
                             readOnly
-                            className={`${inputStyle} ${formData.approved_pr_no ? 'bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300 font-medium cursor-default' : ''}`}
+                            className={`${inputStyle} ${formData.approved_pr_no ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-medium cursor-default border-blue-200 dark:border-blue-800' : ''} focus:ring-blue-500`}
                             disabled={isLocked}
                         />
                         <button

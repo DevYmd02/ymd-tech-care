@@ -179,21 +179,22 @@ export const useVQForm = (
     name: 'vq_lines'
   });
 
-  // Watch for isMulticurrency changes to auto-reset
-  const isMulticurrency = useWatch({ control, name: 'isMulticurrency' });
+  const watchTargetCurrency = useWatch({ control, name: 'target_currency' });
   const watchCurrency = useWatch({ control, name: 'currency' });
+  const isMulticurrency = useWatch({ control, name: 'isMulticurrency' });
 
   // 💱 Auto-toggle Multicurrency based on Currency Selection
   useEffect(() => {
-    if (watchCurrency && watchCurrency !== 'THB') {
-      setValue('isMulticurrency', true);
-    } else {
-      setValue('isMulticurrency', false);
-      setValue('exchange_rate', 1);
-    }
-  }, [watchCurrency, setValue]);
+    if (!watchCurrency || !watchTargetCurrency) return;
+    
+    // It is multicurrency if the two currencies are different
+    const different = watchCurrency !== watchTargetCurrency;
+    setValue('isMulticurrency', different);
 
-  const watchTargetCurrency = useWatch({ control, name: 'target_currency' });
+    if (!different) {
+        setValue('exchange_rate', 1);
+    }
+  }, [watchCurrency, watchTargetCurrency, setValue]);
 
   // 💱 Auto-calculate Exchange Rate when currencies change
   useEffect(() => {
@@ -283,6 +284,7 @@ export const useVQForm = (
     taxAmount: number;
     grandTotal: number;
     totalLineDiscount: number;
+    totalGross: number;
     taxRate: number;
   } | null>(null);
 
@@ -341,7 +343,8 @@ export const useVQForm = (
                         data.payment_term_days = data.payment_term_days || rfqDetail.payment_term_days || 0;
                         data.lead_time_days = data.lead_time_days || rfqDetail.payment_term_days || 0; 
                         data.created_by_name = data.created_by_name || rfqDetail.created_by_name || rfqDetail.requested_by || '';
-                        data.currency = data.currency || rfqDetail.rfq_quote_currency_code || '';
+                        data.currency = data.currency || rfqDetail.rfq_base_currency_code || '';
+                        data.target_currency = data.target_currency || rfqDetail.rfq_quote_currency_code || '';
                     }
 
                     // 2. Backfill from Vendor Master
@@ -399,13 +402,17 @@ export const useVQForm = (
 
 
             // @Agent_Summary_Syncer - Sync DB Totals to UI
+            const totalGrossVal = mappedLines.reduce((sum, l) => sum + (Number(l.qty) * Number(l.unit_price)), 0);
+            const totalLineDiscountVal = mappedLines.reduce((sum, l) => sum + (Number(l.discount_amount) || 0), 0);
+            
             setDbTotals({
                 subtotal: (Number(data.base_total_amount) || 0) + (Number(data.base_discount_amount) || 0) - (Number(data.base_tax_amount) || 0),
                 billDiscount: Number(data.base_discount_amount) || 0,
                 preTax: (Number(data.base_total_amount) || 0) - (Number(data.base_tax_amount) || 0),
                 taxAmount: Number(data.base_tax_amount) || 0,
                 grandTotal: Number(data.base_total_amount) || 0,
-                totalLineDiscount: 0,
+                totalLineDiscount: totalLineDiscountVal,
+                totalGross: totalGrossVal,
                 taxRate: Number(data.tax_rate) ? Math.round(Number(data.tax_rate) * 100 * 100) / 100 : 0
             });
 
@@ -480,14 +487,17 @@ export const useVQForm = (
         setIsDataLoading(true);
         Promise.all([
             RFQService.getById(initialRFQ.rfq_id),
-            MasterDataService.getItems().catch(() => [])
-        ]).then(async ([rawRFQ, itemsRes]) => {
+            MasterDataService.getItems().catch(() => []),
+            VQService.getVQsByRfqNo(initialRFQ.rfq_no || '').catch(() => ({ data: [] }))
+        ]).then(async ([rawRFQ, itemsRes, existingVQsRes]) => {
             const fullRFQ = unwrapResponseData(rawRFQ);
             const masterItems = Array.isArray(itemsRes) ? itemsRes : [];
+            const existingVendorIds = ((existingVQsRes as any)?.data || [])
+                .filter((v: any) => v.status !== 'CANCELLED')
+                .map((v: any) => Number(v.vendor_id));
             
             // 🎯 Fallback Array Scanning
             const apiLines = extractLinesArray(fullRFQ);
-            logger.info('[useVQForm] Extracted API Lines from initialRFQ:', { count: apiLines.length, payload: fullRFQ });
             
             let mappedLines: QuotationLineFormData[] = [];
             
@@ -517,7 +527,15 @@ export const useVQForm = (
 
             // Find specific vendor if initialRFQ passed vendor_id
             const allVendors = fullRFQ.rfqVendors || fullRFQ.vendors || [];
-            let selectedVendor = allVendors.find((v: any) => v.vendor_id === initialRFQ.vendor_id);
+            
+            // Map vendors with hasVQ flag
+            const mappedVendors = allVendors.map((v: any) => ({
+                ...v,
+                hasVQ: existingVendorIds.includes(Number(v.vendor_id))
+            }));
+            setAvailableVendors(mappedVendors);
+
+            let selectedVendor = mappedVendors.find((v: any) => v.vendor_id === initialRFQ.vendor_id);
             if (!selectedVendor && allVendors.length > 0) {
                  selectedVendor = allVendors[0];
             }
@@ -531,10 +549,10 @@ export const useVQForm = (
                 contact_person: '', 
                 contact_phone: '',
                 contact_email: '',
-                currency: fullRFQ.rfq_quote_currency_code || 'THB',
-                isMulticurrency: Boolean(fullRFQ.rfq_quote_currency_code && fullRFQ.rfq_quote_currency_code !== 'THB'),
+                currency: fullRFQ.rfq_base_currency_code || 'THB',
+                isMulticurrency: Boolean(fullRFQ.rfq_base_currency_code && fullRFQ.rfq_base_currency_code !== 'THB'),
                 exchange_rate_date: formatDateForInputHelper(fullRFQ.rfq_exchange_rate_date) || formatDateForInputHelper(new Date()),
-                target_currency: fullRFQ.rfq_base_currency_code || 'THB',
+                target_currency: fullRFQ.rfq_quote_currency_code || 'THB',
                 exchange_rate: Number(fullRFQ.rfq_exchange_rate) || 1,
                 vq_lines: mappedLines,
                 payment_term_days: 0,
@@ -618,11 +636,12 @@ export const useVQForm = (
       };
     });
 
-    // 2. Sum line-level discounts for reporting
+    // 2. Sum line-level totals
+    const totalGross = items.reduce((sum, item) => sum + (item.qty * item.unit_price), 0);
     const totalLineDiscount = items.reduce((sum, item) => sum + (item.discount || 0), 0);
 
-    // 3. Subtotal (Before Global Discount)
-    const subtotal = items.reduce((sum, item) => sum + (item.qty * item.unit_price - (item.discount || 0)), 0);
+    // 3. Subtotal (Net before Global Discount)
+    const subtotal = Math.max(0, totalGross - totalLineDiscount);
 
     // 4. Calculate Global Discount Amount
     const billDiscount = parseDiscountAmount(globalDiscountExpr, subtotal);
@@ -636,6 +655,7 @@ export const useVQForm = (
 
     return {
       subtotal: summary.subtotal,
+      totalGross,
       billDiscount, 
       preTax: summary.beforeTax,
       taxAmount: summary.taxAmount,
@@ -835,7 +855,7 @@ export const useVQForm = (
 
     const base = qty * price;
     const discount = Number(parseDiscountAmount(expr, base)) || 0;
-    const net = base - discount;
+    const net = Math.max(0, base - discount);
 
     setValue(`vq_lines.${index}.discount_amount`, Number(discount.toFixed(2)) || 0);
     setValue(`vq_lines.${index}.net_amount`, Number(net.toFixed(2)) || 0);
@@ -854,7 +874,7 @@ export const useVQForm = (
         RFQService.getById(rfq.rfq_id),
         MasterDataService.getItems().catch(() => []),
         VQService.getModalWaitingForRFQVendor(rfq.rfq_id).catch(() => ({ data: [] })),
-        VQService.getVQsByRfqId(rfq.rfq_id).catch(() => ({ data: [] }))
+        VQService.getVQsByRfqNo(rfq.rfq_no || '').catch(() => ({ data: [] }))
       ]);
 
       const fullRFQ = unwrapResponseData(rawRFQ);
@@ -878,8 +898,8 @@ export const useVQForm = (
       }
 
       // 🔄 FETCH FULL VENDOR DETAILS for accurate code and name
-      const vendorsWithDetails = await Promise.all(
-          sentVendors.map(async (v: { vendor_id: number; status?: string }) => {
+      const vendorsWithDetails: any[] = await Promise.all(
+          sentVendors.map(async (v: any) => {
               try {
                   const details = await VendorService.getById(v.vendor_id);
                   return { ...details, ...v }; 
@@ -900,7 +920,6 @@ export const useVQForm = (
 
       // 5. Normal processing (setting RFQ lines)
       const apiLines: RFQLine[] = extractLinesArray(fullRFQ);
-      logger.info('[useVQForm] Extracted API Lines from handleSelectRFQ:', { count: apiLines.length, payload: fullRFQ });
 
       const mappedLines: QuotationLineFormData[] = apiLines.map((line: RFQLine) => {
           const matchedItem = masterItems.find((i) => Number(i.item_id) === Number(line.item_id));

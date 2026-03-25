@@ -315,13 +315,13 @@ export const VQFormHeader: React.FC<VQFormHeaderProps> = ({
                                     type="number" 
                                     step="0.0001"
                                     {...register('exchange_rate', { valueAsNumber: true })} 
-                                    className={`w-full h-9 px-3 text-sm text-right border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition-colors ${watchCurrency === 'THB' || forceViewMode ? 'bg-gray-50 dark:bg-gray-800/50 italic text-gray-500' : 'bg-white dark:bg-gray-800 font-semibold'}`}
-                                    disabled={forceViewMode || watchCurrency === 'THB'}
+                                    className={`w-full h-9 px-3 text-sm text-right border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition-colors ${watchCurrency === watchTargetCurrency || forceViewMode ? 'bg-gray-50 dark:bg-gray-800/50 italic text-gray-500' : 'bg-white dark:bg-gray-800 font-semibold'}`}
+                                    disabled={forceViewMode || watchCurrency === watchTargetCurrency}
                                     placeholder="1.0000"
                                 />
-                                {watchCurrency && watchCurrency !== 'THB' && (
+                                {watchCurrency && watchTargetCurrency && watchCurrency !== watchTargetCurrency && (
                                 <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 text-right font-medium">
-                                    1 {watchCurrency} ≈ {(Number(watchExchangeRate) || 0).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })} {watchTargetCurrency || 'THB'}
+                                    1 {watchCurrency} ≈ {(Number(watchExchangeRate) || 0).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })} {watchTargetCurrency}
                                 </div>
                                 )}
                                 {errors.exchange_rate && <p className="text-red-500 text-[10px] mt-0.5 font-medium">{errors.exchange_rate.message}</p>}
