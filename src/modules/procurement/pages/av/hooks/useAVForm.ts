@@ -139,7 +139,7 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess, approvalItem }: UseA
           const locName = locationLookup[Number(line.location)] || line.location_name || line.location || '';
 
           const isLineApproved = String(line.status || '').trim().toUpperCase() === 'APPROVED';
-          const rem = isLineApproved ? 0 : (line.remaining_qty !== undefined ? Number(line.remaining_qty) : Number(line.qty));
+          const rem = isLineApproved ? 0 : (Number(line.remaining_qty) > 0 ? Number(line.remaining_qty) : Number(line.qty));
 
           return {
             ...line,

@@ -53,6 +53,7 @@ export const RFQLineSchema = z.object({
     // Traceability fields from PR
     item_id: z.number().optional(),
     pr_line_id: z.number().optional(),
+    approval_line_id: z.number().optional(), // 🔗 Added for AV Line traceability
     est_unit_price: z.number().min(0, MESSAGES.NON_NEGATIVE).optional(),
     est_amount: z.number().min(0, MESSAGES.NON_NEGATIVE).optional(),
 });
@@ -79,6 +80,7 @@ export const RFQFormSchema = z.object({
     pr_id: z.number().nullable().optional(),
     pr_no: z.string().nullable().optional(),
     approved_pr_no: z.string().nullable().optional(),
+    pr_approval_id: z.number().nullable().optional(), // 🔗 Added for AV Header traceability
 
     // Optional — user/cost center info
     project_id: z.number().nullable().optional(),
@@ -142,6 +144,7 @@ export const createEmptyRFQLine = (lineNo: number): RFQLineValues => ({
     required_receipt_type: 'FULL',
     target_delivery_date: '',
     note_to_vendor: '',
+    approval_line_id: undefined,
 });
 
 export const getRFQDefaultFormValues = (): RFQFormValues => ({
@@ -150,6 +153,7 @@ export const getRFQDefaultFormValues = (): RFQFormValues => ({
     pr_id: null,
     pr_no: null,
     approved_pr_no: null,
+    pr_approval_id: null,
     branch_id: 0,
     project_id: null,
     requested_by_user_id: undefined,

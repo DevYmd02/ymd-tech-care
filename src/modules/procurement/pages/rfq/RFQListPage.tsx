@@ -16,7 +16,7 @@ import { createColumnHelper } from '@tanstack/react-table';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { logger } from '@/shared/utils/logger';
 // Services & Types
-import { RFQService, PRService } from '@/modules/procurement/services';
+import { RFQService, PRService, AVService } from '@/modules/procurement/services';
 import type { RFQFilterCriteria, RFQHeader, RFQStatus, SendRFQToVendorPayload } from '@/modules/procurement/types';
 import { RFQFormModal, RFQSendConfirmModal } from './components';
 
@@ -101,9 +101,51 @@ const PRNumberCell = ({ prId, fallbackNo }: { prId: number | null | undefined, f
     }
 
     return (
-        <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-1.5 py-0.5 rounded w-fit">
-            <span className="font-semibold">PR:</span>
+        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/40 px-1.5 py-0.5 rounded border border-emerald-200/50 dark:border-emerald-800/50 shadow-sm whitespace-nowrap leading-tight" title="Purchase Requisition">
             {prNo}
+        </span>
+    );
+};
+
+// ====================================================================================
+// AV NUMBER HYDRATOR
+// ====================================================================================
+
+const AVNumberCell = ({ prNo, fallbackNo }: { prNo?: string | null, fallbackNo?: string | null }) => {
+    const hasFallback = !!(fallbackNo && fallbackNo.trim() !== '');
+    
+    const { data: approvalList, isLoading } = useQuery({
+        queryKey: ['pr-approval-by-no', prNo],
+        queryFn: async () => {
+            if (!prNo) return null;
+            const res = await AVService.getApprovalList({ pr_no: prNo });
+            return res.data || [];
+        },
+        enabled: !!(prNo && !hasFallback),
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const avNo = useMemo(() => {
+        if (hasFallback) return fallbackNo;
+        if (!approvalList || approvalList.length === 0) return null;
+        
+        // Take the first one (usually there's only one active approval per PR in this view)
+        return approvalList[0].approval_no;
+    }, [hasFallback, fallbackNo, approvalList]);
+
+    if (isLoading && !hasFallback) {
+        return (
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/40 px-1.5 py-0.5 rounded border border-blue-200/50 dark:border-blue-800/50 shadow-sm animate-pulse">
+               กำลังโหลด...
+            </span>
+        );
+    }
+
+    if (!avNo) return null;
+
+    return (
+        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/40 px-1.5 py-0.5 rounded border border-blue-200/50 dark:border-blue-800/50 shadow-sm whitespace-nowrap leading-tight" title="Approval Number">
+            {avNo}
         </span>
     );
 };
@@ -265,11 +307,21 @@ export default function RFQListPage() {
                 const prNumber = item.ref_pr_no || item.pr_no || item.pr?.pr_no;
 
                 return (
-                    <div className="flex flex-col py-2 gap-1">
-                        <span className="font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline cursor-pointer" title={info.getValue()}>
+                    <div className="flex flex-col py-2 gap-1.5">
+                        <span 
+                            className="font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline cursor-pointer transition-colors" 
+                            title={info.getValue()}
+                            onClick={() => handleView(item.rfq_id)}
+                        >
                             {info.getValue()}
                         </span>
-                        <PRNumberCell prId={item.pr_id} fallbackNo={prNumber} />
+                        <div className="flex flex-wrap items-center gap-1.5">
+                            <PRNumberCell prId={item.pr_id} fallbackNo={prNumber} />
+                            <AVNumberCell 
+                                prNo={prNumber} 
+                                fallbackNo={item.approved_pr_no} 
+                            />
+                        </div>
                     </div>
                 );
             },
@@ -352,7 +404,7 @@ export default function RFQListPage() {
                 
                 // 💧 Client-side derivation fallback if rfqVendors relation is present
                 const total = item.rfqVendors?.length ?? item.vendor_total ?? item.vendor_count ?? 0;
-                const sentCount = item.rfqVendors?.filter((v: any) => 
+                const sentCount = item.rfqVendors?.filter((v: { status?: string }) => 
                     ['SENT', 'RESPONDED', 'DECLINED', 'CLOSED'].includes(String(v.status || '').toUpperCase())
                 ).length ?? item.vendor_sent ?? item.sent_vendors_count ?? 0;
 
@@ -580,7 +632,15 @@ export default function RFQListPage() {
                                     subtitle={formatThaiDate(item.rfq_date)}
                                     statusBadge={<RFQStatusBadge status={dynamicStatus} />}
                                     details={[
-                                        ...((item.pr_id || prNumber) ? [{ label: 'PR อ้างอิง:', value: <PRNumberCell prId={item.pr_id} fallbackNo={prNumber} /> }] : []),
+                                        ...((item.pr_id || prNumber) ? [{ label: 'PR / AV:', value: (
+                                            <div className="flex flex-wrap items-center gap-1.5">
+                                                <PRNumberCell prId={item.pr_id} fallbackNo={prNumber} />
+                                                <AVNumberCell 
+                                                    prNo={prNumber}
+                                                    fallbackNo={item.approved_pr_no} 
+                                                />
+                                            </div>
+                                        ) }] : []),
                                         { label: 'ผู้สร้าง:', value: (() => {
                                             const u = item.requested_by_user;
                                             return u

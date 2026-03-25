@@ -1,6 +1,7 @@
 import React from 'react';
 import { FileText } from 'lucide-react';
-import { useFormContext, useFieldArray } from 'react-hook-form';
+import { useFormContext, useFieldArray, Controller } from 'react-hook-form';
+import { CustomDateInput } from '@/shared/components/forms/CustomDateInput';
 import type { RFQFormValues } from '@/modules/procurement/schemas/rfq-schemas';
 
 interface RFQFormLinesProps {
@@ -102,12 +103,17 @@ export const RFQFormLines: React.FC<RFQFormLinesProps> = ({
                                         />
                                     </td>
                                     <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">
-                                        <input
-                                            type="date"
-                                            {...register(`rfqLines.${index}.target_delivery_date`)}
-                                            className={`${editableInput} ${errors.rfqLines?.[index]?.target_delivery_date ? 'border-red-500' : ''}`}
-                                            disabled={isLocked}
-                                            onClick={(e) => { if (!isLocked && 'showPicker' in HTMLInputElement.prototype) e.currentTarget.showPicker(); }}
+                                        <Controller
+                                            control={control}
+                                            name={`rfqLines.${index}.target_delivery_date`}
+                                            render={({ field }) => (
+                                                <CustomDateInput
+                                                    value={field.value || ''}
+                                                    onChange={field.onChange}
+                                                    disabled={isLocked}
+                                                    className={`${editableInput} ${errors.rfqLines?.[index]?.target_delivery_date ? 'border-red-500' : ''}`}
+                                                />
+                                            )}
                                         />
                                     </td>
                                     <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">

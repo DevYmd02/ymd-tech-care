@@ -82,13 +82,14 @@ export const ApprovedPRSelectionModal: React.FC<ApprovedPRSelectionModalProps> =
                         <thead className="text-xs text-gray-500 uppercase bg-gray-50 dark:bg-gray-900/50 dark:text-gray-400 sticky top-0 z-10 border-b border-gray-200 dark:border-gray-700">
                             <tr>
                                 <th className="px-5 py-3 font-semibold whitespace-nowrap">เลขที่ Approve PR</th>
+                                <th className="px-5 py-3 font-semibold whitespace-nowrap">สถานะ</th>
                                 <th className="px-5 py-3 font-semibold text-center whitespace-nowrap w-24">จัดการ</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                             {isLoading && (
                                 <tr>
-                                    <td colSpan={2} className="px-5 py-12 text-center">
+                                    <td colSpan={3} className="px-5 py-12 text-center">
                                         <div className="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
                                             <Loader2 size={32} className="mb-2 animate-spin text-teal-500" />
                                             <p>กำลังโหลดข้อมูล...</p>
@@ -99,7 +100,7 @@ export const ApprovedPRSelectionModal: React.FC<ApprovedPRSelectionModalProps> =
 
                             {!isLoading && fetchError && (
                                 <tr>
-                                    <td colSpan={2} className="px-5 py-12 text-center border-b">
+                                    <td colSpan={3} className="px-5 py-12 text-center border-b">
                                         <p className="text-red-500">{fetchError}</p>
                                     </td>
                                 </tr>
@@ -107,7 +108,7 @@ export const ApprovedPRSelectionModal: React.FC<ApprovedPRSelectionModalProps> =
 
                             {!isLoading && !fetchError && filteredRecords.length === 0 && (
                                 <tr>
-                                    <td colSpan={2} className="px-5 py-12 text-center border-b">
+                                    <td colSpan={3} className="px-5 py-12 text-center border-b">
                                         <div className="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 gap-2">
                                             <Info size={32} className="opacity-20" />
                                             <p className="text-sm">
@@ -131,6 +132,30 @@ export const ApprovedPRSelectionModal: React.FC<ApprovedPRSelectionModalProps> =
                                     <tr key={i} className="hover:bg-teal-50/50 dark:hover:bg-gray-700/50 transition-colors">
                                         <td className="px-5 py-3 font-medium text-teal-700 dark:text-teal-400">
                                             {approvedNo}
+                                        </td>
+                                        <td className="px-5 py-3">
+                                            {(() => {
+                                                const status = record.status?.toUpperCase() || '';
+                                                let bgColor = 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700';
+                                                let label = record.status || 'ไม่ระบุ';
+
+                                                if (status === 'APPROVED') {
+                                                    bgColor = 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800/50';
+                                                    label = 'อนุมัติแล้ว';
+                                                } else if (status === 'PARTIAL') {
+                                                    bgColor = 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800/50';
+                                                    label = 'อนุมัติบางส่วน';
+                                                } else if (status === 'PENDING') {
+                                                    bgColor = 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800/50';
+                                                    label = 'รออนุมัติ';
+                                                }
+
+                                                return (
+                                                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold border ${bgColor}`}>
+                                                        {label}
+                                                    </span>
+                                                );
+                                            })()}
                                         </td>
                                         <td className="px-5 py-3 text-center">
                                             <button
