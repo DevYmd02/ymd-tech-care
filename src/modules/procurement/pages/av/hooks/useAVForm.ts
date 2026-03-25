@@ -9,6 +9,7 @@ import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { AVFormSchema } from '../../../schemas/av.schema';
 import type { AVFormData, AVLineFormData } from '../../../schemas/av.schema';
 import { AVService } from '../../../services/av.service';
+import { PRService } from '@/modules/procurement/services/pr.service';
 import { usePRMasterData } from '@/modules/procurement/pages/pr/hooks/usePRMasterData';
 import { LocationService } from '@/modules/master-data/inventory/services/inventory-master.service';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
@@ -305,10 +306,20 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess, approvalItem }: UseA
     setIsSubmitting(true);
     try {
       await AVService.approvePR(apiPayload);
+      
+      // 🎯 SYNC PR STATUS: Use dedicated approve endpoint (POST /pr/:id/approve)
+      // This is the most reliable way to update PR status — both mock and real backend handle it
+      try {
+        await PRService.approvePR(Number(activeId));
+      } catch (err) {
+        logger.warn('[useAVForm] PR approve sync failed (non-critical):', err);
+      }
+
       toast('อนุมัติรายการสำเร็จ', 'success');
+      // 🎯 Force purge the PR cache so PRListPage always refetches fresh data
+      queryClient.removeQueries({ queryKey: ['prs'] });
       onSuccess?.();
       onClose();
-      queryClient.invalidateQueries({ queryKey: ['prs'] });
     } catch (error) {
       logger.error('[useAVForm] handleConfirmApprove error:', error);
       toast(extractErrorMessage(error), 'error');
@@ -361,10 +372,20 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess, approvalItem }: UseA
     setIsRejecting(true);
     try {
       await AVService.rejectPR(apiPayload);
+
+      // 🎯 SYNC PR STATUS: Use dedicated reject endpoint (POST /pr/:id/reject)
+      // This is the most reliable way to update PR status — both mock and real backend handle it
+      try {
+        await PRService.rejectPR(Number(activeId), reason || 'Rejected');
+      } catch (err) {
+        logger.warn('[useAVForm] PR reject sync failed (non-critical):', err);
+      }
+
       toast('ไม่อนุมัติรายการสำเร็จ', 'success');
+      // 🎯 Force purge the PR cache so PRListPage always refetches fresh data
+      queryClient.removeQueries({ queryKey: ['prs'] });
       onSuccess?.();
       onClose();
-      queryClient.invalidateQueries({ queryKey: ['prs'] });
     } catch (error) {
       toast(extractErrorMessage(error), 'error');
     } finally {

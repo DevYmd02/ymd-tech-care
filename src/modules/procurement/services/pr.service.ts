@@ -22,7 +22,7 @@ import type { SuccessResponse } from '@/shared/types/api-response.types';
 const ENDPOINTS = {
   list: '/pr',
   detail: (id: number) => `/pr/${id}`,
-  pending: (id: number) => `/pr/${id}/pending`, // 🎯 Precise Pending endpoint
+  pending: (id: number) => `/pr/${id}/pending`, // 🎯 Restore 'pending' endpoint
   approve: (id: number) => `/pr/${id}/approve`,
   cancel: (id: number) => `/pr/${id}/cancel`,
   reject: (id: number) => `/pr/${id}/reject`,
@@ -65,16 +65,19 @@ export const PRService = {
   getList: async (params?: PRListParams): Promise<PRListResponse> => {
     logger.info('[PRService] Fetching PR List', params);
 
-    // 1. Prepare API Params (Optionally omit offending filters if working around backend)
+    // 1. Prepare API Params
     const apiParams = { ...params };
-    const needsClientFilter = params?.vendor_code || params?.vendor_name;
+    const needsClientFilter = !!(params?.pr_no || params?.vendor_code || params?.vendor_name || params?.status || params?.date_start || params?.date_end || params?.q);
 
     // 🎯 WORKAROUND: Don't let backend filter by vendor if we intend to filter client-side
     // because backend logic is likely flawed (missing join).
     if (needsClientFilter && !USE_MOCK) {
-        logger.debug('🚀 [PRService] Overriding backend filter for vendor search, will filter client-side.');
-        delete apiParams.vendor_code;
-        delete apiParams.vendor_name;
+        logger.debug('🚀 [PRService] Hybrid Fallback Triggered: verified filters will be applied client-side.');
+        if (params?.vendor_code || params?.vendor_name || params?.status) {
+            delete apiParams.vendor_code;
+            delete apiParams.vendor_name;
+            delete apiParams.status;
+        }
     }
 
     const response = await api.get<PRListResponse>(ENDPOINTS.list, { params: apiParams });
@@ -408,20 +411,20 @@ export const PRService = {
 
   // 1. Submit for Approval (Draft -> Pending)
   async processDirectApproval(id: number) {
-    // CRITICAL: Call the /pending endpoint with NO BODY
+    // 🎯 Restore PATCH /pending which was working
     return await api.patch(ENDPOINTS.pending(id));
   },
 
   // 2. Approve PR (Pending -> Approved)
   async approvePR(id: number) {
-    // CRITICAL: Call the /approve endpoint with NO BODY
-    return await api.patch(ENDPOINTS.approve(id));
+    // 🎯 Use POST for actions
+    return await api.post(ENDPOINTS.approve(id));
   },
 
   // 3. Reject PR (Pending -> Rejected)
-  async rejectPR(id: number) {
-    // CRITICAL: Call the /reject endpoint with NO BODY
-    return await api.patch(ENDPOINTS.reject(id));
+  async rejectPR(id: number, reason?: string) {
+    // 🎯 Use POST and pass reason if provided
+    return await api.post(ENDPOINTS.reject(id), { reason });
   },
 
   cancel: async (id: number): Promise<SuccessResponse> => {

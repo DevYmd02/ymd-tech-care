@@ -162,7 +162,7 @@ export const setupPRHandlers = (mock: MockAdapter) => {
     });
 
     // 6. SUBMIT PR
-    mock.onPost(/\/pr\/.+\/submit/).reply((config: AxiosRequestConfig) => {
+    mock.onPatch(/\/pr\/.+\/pending/).reply((config: AxiosRequestConfig) => {
         const id = sanitizeId(config.url?.split('/')[2]);
         const pr = MOCK_PRS.find(p => sanitizeId(p.pr_id) === id);
         if (pr) {

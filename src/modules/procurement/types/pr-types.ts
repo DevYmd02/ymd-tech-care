@@ -13,6 +13,7 @@ export type PRStatus =
   | 'DRAFT'                 // ร่าง
   | 'PENDING'               // รออนุมัติ
   | 'APPROVED'              // อนุมัติแล้ว
+  | 'PARTIAL'               // อนุมัติบางส่วน
   | 'REJECTED'              // ไม่อนุมัติ
   | 'CANCELLED'             // ยกเลิก
   | 'COMPLETED';            // เสร็จสมบูรณ์
