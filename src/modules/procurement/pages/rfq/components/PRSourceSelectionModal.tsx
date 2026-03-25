@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Search, Check, FileText, Loader2 } from 'lucide-react';
 import type { PRHeader } from '@/modules/procurement/types';
-import { PRService } from '@/modules/procurement/services/pr.service';
 import { RFQService } from '@/modules/procurement/services/rfq.service';
+import { AVService } from '@/modules/procurement/services/av.service';
+import type { ApprovalHeader } from '@/modules/procurement/types/av-types';
 import { ModalLayout } from '@/shared/components/ui/layout/ModalLayout';
 import { logger } from '@/shared/utils/logger';
 
@@ -19,7 +20,7 @@ export const PRSourceSelectionModal: React.FC<PRSourceSelectionModalProps> = ({ 
     const [isLoading, setIsLoading] = useState(false);
     const [fetchError, setFetchError] = useState<string | null>(null);
 
-    // Fetch APPROVED PRs and Linked RFQs from real API whenever modal opens
+    // Fetch APPROVED PRs without RFQ from real API whenever modal opens
     useEffect(() => {
         if (!isOpen) return;
 
@@ -27,34 +28,64 @@ export const PRSourceSelectionModal: React.FC<PRSourceSelectionModalProps> = ({ 
             setIsLoading(true);
             setFetchError(null);
             try {
-                logger.info('[PRSourceSelectionModal] Fetching APPROVED PRs and RFQs');
+                logger.info('[PRSourceSelectionModal] Deep Scanning for APPROVED and PARTIAL PRs');
                 
-                // 1. Fetch Approved PRs
-                const prResponse = await PRService.getList({ status: 'APPROVED' });
-                const prs = prResponse.data || [];
+                // 🎯 DEEP FETCH: Combine sources to capture all visible "Approved/Partial" PRs
+                const [approvedRes, partialPRsRes, avListRes] = await Promise.all([
+                    RFQService.getApprovedPRsWithoutRFQ(),
+                    AVService.getPendingApprovalPRs(), // PRs that are partially handled but still in pending flow
+                    AVService.getApprovalList({ status: 'PARTIAL', limit: 50 }) // Real partial approval records
+                ]);
 
-                // 2. Fetch RFQs to get already linked PR Numbers
-                const rfqResponse = await RFQService.getList({ limit: 1000 });
-                const rfqs = rfqResponse.data || [];
+                const approvedPRs = approvedRes.data || [];
+                
+                // Map Pending Approval PRs
+                const pendingPartials = (partialPRsRes || []).map(p => ({
+                    ...p,
+                    status: 'PARTIAL' as const
+                }));
 
-                // 3. Extract PR Numbers from non-cancelled RFQs
-                const usedNos = new Set<string>();
-                rfqs.forEach(rfq => {
-                    const prNo = rfq.ref_pr_no || rfq.pr_no;
-                    if (prNo && rfq.status !== 'CANCELLED') {
-                        usedNos.add(prNo);
+                // Map PRs from AV List records
+                // 🎯 FIX: AV record has pr_id at top level; its nested pr object is often empty or just pr_no
+                const avPartials = (avListRes?.data || []).map((a: ApprovalHeader) => ({
+                    ...a,
+                    ...a.pr,
+                    pr_id: a.pr_id, // Ensure ID is present
+                    pr_no: a.pr?.pr_no || '-',
+                    pr_date: a.approval_date || a.created_at,
+                    requester_name: a.approval_emp_name || '-',
+                    total_amount: Number(a.base_total_amount || 0),
+                    status: 'PARTIAL' as const
+                }));
+
+                // Merge and Deduplicate by pr_id
+                const combined = [...approvedPRs];
+                const seenIds = new Set(approvedPRs.map((p: PRHeader) => p.pr_id));
+
+                for (const pr of [...pendingPartials, ...avPartials]) {
+                    const typedPr = pr as unknown as PRHeader;
+                    const prId = Number(typedPr.pr_id);
+                    if (prId && !seenIds.has(prId)) {
+                        combined.push(typedPr);
+                        seenIds.add(prId);
                     }
+                }
+                
+                // Sort by date descending
+                combined.sort((a, b) => {
+                    const dateA = new Date(a.pr_date || 0);
+                    const dateB = new Date(b.pr_date || 0);
+                    return dateB.getTime() - dateA.getTime();
                 });
 
-                setLinkedPrNos(usedNos);
-                setPrList(prs);
+                setPrList(combined);
+                setLinkedPrNos(new Set()); 
                 
-                logger.info(`[PRSourceSelectionModal] Loaded ${prs.length} APPROVED PRs, found ${usedNos.size} used PR Numbers`);
+                logger.info(`[PRSourceSelectionModal] Loaded ${combined.length} PRs (Approved: ${approvedPRs.length}, Partial: ${combined.length - approvedPRs.length})`);
             } catch (error) {
                 logger.error('[PRSourceSelectionModal] Failed to fetch data:', error);
                 setFetchError('ไม่สามารถดึงข้อมูลได้ กรุณาลองใหม่อีกครั้ง');
                 setPrList([]);
-                setLinkedPrNos(new Set());
             } finally {
                 setIsLoading(false);
             }
@@ -151,7 +182,7 @@ export const PRSourceSelectionModal: React.FC<PRSourceSelectionModalProps> = ({ 
                                     <td colSpan={6} className="px-5 py-12 text-center">
                                         <div className="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
                                             <Search size={32} className="mb-2 opacity-20" />
-                                            <p>ไม่พบประวัติ PR ที่ได้รับการอนุมัติ (Status: APPROVED)</p>
+                                            <p>ไม่พบประวัติ PR ที่ได้รับการอนุมัติ (Status: APPROVED / PARTIAL)</p>
                                         </div>
                                     </td>
                                 </tr>

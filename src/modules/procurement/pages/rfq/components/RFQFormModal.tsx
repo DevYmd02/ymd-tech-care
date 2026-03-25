@@ -196,6 +196,7 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
                 onClose={() => setIsApprovedPRModalOpen(false)}
                 onSelect={handleApprovedPRSelect}
                 prNo={formData.pr_no || null}
+                prId={formData.pr_id || null}
             />
 
             <ConfirmationModal

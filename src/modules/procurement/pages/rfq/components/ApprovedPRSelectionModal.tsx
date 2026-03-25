@@ -1,45 +1,45 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Check, FileText, Loader2 } from 'lucide-react';
+import { Search, Check, FileText, Loader2, Info } from 'lucide-react';
+import { RFQService } from '@/modules/procurement/services/rfq.service';
 import { ModalLayout } from '@/shared/components/ui/layout/ModalLayout';
+import { logger } from '@/shared/utils/logger';
 
 interface ApprovedPRSelectionModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSelect: (approvedNo: string) => void;
+    onSelect: (record: any) => void;
     prNo: string | null;
+    prId: number | null;
 }
 
-export const ApprovedPRSelectionModal: React.FC<ApprovedPRSelectionModalProps> = ({ isOpen, onClose, onSelect, prNo }) => {
+export const ApprovedPRSelectionModal: React.FC<ApprovedPRSelectionModalProps> = ({ isOpen, onClose, onSelect, prNo, prId }) => {
     const [searchTerm, setSearchTerm] = useState('');
-    const [approvedNumbers, setApprovedNumbers] = useState<string[]>([]);
+    const [approvedRecords, setApprovedRecords] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [fetchError, setFetchError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!isOpen || !prNo) return;
+        if (!isOpen || !prId) return;
 
         const fetchApprovedNumbers = async () => {
             setIsLoading(true);
             setFetchError(null);
             try {
-                // 🎯 TODO: Replace with real API call when backend is ready
-                // Example:
-                // const response = await PRService.getApprovedNumbers(prNo);
-                // setApprovedNumbers(response.data || []);
-                
-                // For now, left Empty as requested ("ไม่ต้องใส่ mock data")
-                setApprovedNumbers([]);
+                logger.info(`[ApprovedPRSelectionModal] Fetching AV numbers for ${prNo} (ID: ${prId})`);
+                const records = await RFQService.getPRApprovalDetail(prId);
+                setApprovedRecords(records);
+                logger.info(`[ApprovedPRSelectionModal] Found ${records.length} AV records for PR ${prNo}`);
             } catch (error) {
-                console.error('[ApprovedPRSelectionModal] Failed to fetch:', error);
-                setFetchError('ไม่สามารถดึงข้อมูลได้ กรุณาลองใหม่อีกครั้ง');
-                setApprovedNumbers([]);
+                logger.error(`[ApprovedPRSelectionModal] Failed to fetch for PR ${prId}:`, error);
+                setFetchError('ไม่สามารถดึงข้อมูลเลขที่ Approve ได้');
+                setApprovedRecords([]);
             } finally {
                 setIsLoading(false);
             }
         };
 
         fetchApprovedNumbers();
-    }, [isOpen, prNo]);
+    }, [isOpen, prId, prNo]); // Added prNo to dependencies
 
     // Reset search on close
     useEffect(() => {
@@ -48,9 +48,10 @@ export const ApprovedPRSelectionModal: React.FC<ApprovedPRSelectionModalProps> =
         }
     }, [isOpen]);
 
-    const filteredNumbers = approvedNumbers.filter(num =>
-        num.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredRecords = approvedRecords.filter(record => {
+        const num = record.approval_no || record.approved_pr_no || '';
+        return num.toLowerCase().includes(searchTerm.toLowerCase());
+    });
 
     return (
         <ModalLayout
@@ -104,31 +105,46 @@ export const ApprovedPRSelectionModal: React.FC<ApprovedPRSelectionModalProps> =
                                 </tr>
                             )}
 
-                            {!isLoading && !fetchError && filteredNumbers.length === 0 && (
+                            {!isLoading && !fetchError && filteredRecords.length === 0 && (
                                 <tr>
-                                    <td colSpan={2} className="px-5 py-12 text-center border-b text-gray-400">
-                                        {!prNo ? 'กรุณาเลือก PR ต้นทางก่อน' : 'ไม่พบข้อมูลเลขที่ Approve สำหรับ PR นี้'}
+                                    <td colSpan={2} className="px-5 py-12 text-center border-b">
+                                        <div className="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 gap-2">
+                                            <Info size={32} className="opacity-20" />
+                                            <p className="text-sm">
+                                                {!prNo 
+                                                    ? 'กรุณาเลือก PR ต้นทางก่อน' 
+                                                    : `ไม่พบเลขที่ Approve (AV) สำหรับ ${prNo} ในระบบ`}
+                                            </p>
+                                            {prNo && (
+                                                <p className="text-xs opacity-60 max-w-[280px]">
+                                                    โปรดตรวจสอบว่า PR นี้ได้รับการอนุมัติผ่านระบบ AV Module และมีเลขที่เอกสาร AV-xxxx แล้ว
+                                                </p>
+                                            )}
+                                        </div>
                                     </td>
                                 </tr>
                             )}
 
-                            {!isLoading && !fetchError && filteredNumbers.map((num, i) => (
-                                <tr key={i} className="hover:bg-teal-50/50 dark:hover:bg-gray-700/50 transition-colors">
-                                    <td className="px-5 py-3 font-medium text-teal-700 dark:text-teal-400">
-                                        {num}
-                                    </td>
-                                    <td className="px-5 py-3 text-center">
-                                        <button
-                                            type="button"
-                                            onClick={() => onSelect(num)}
-                                            className="inline-flex items-center justify-center px-4 py-1.5 bg-teal-600 hover:bg-teal-500 text-white rounded-md text-sm font-medium transition-colors shadow-sm active:scale-95"
-                                        >
-                                            <Check size={16} className="mr-1 -ml-1" />
-                                            เลือก
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
+                            {!isLoading && !fetchError && filteredRecords.map((record, i) => {
+                                const approvedNo = record.approval_no || record.approved_pr_no || record.approval_id?.toString() || '-';
+                                return (
+                                    <tr key={i} className="hover:bg-teal-50/50 dark:hover:bg-gray-700/50 transition-colors">
+                                        <td className="px-5 py-3 font-medium text-teal-700 dark:text-teal-400">
+                                            {approvedNo}
+                                        </td>
+                                        <td className="px-5 py-3 text-center">
+                                            <button
+                                                type="button"
+                                                onClick={() => onSelect(record)}
+                                                className="inline-flex items-center justify-center px-4 py-1.5 bg-teal-600 hover:bg-teal-500 text-white rounded-md text-sm font-medium transition-colors shadow-sm active:scale-95"
+                                            >
+                                                <Check size={16} className="mr-1 -ml-1" />
+                                                เลือก
+                                            </button>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>

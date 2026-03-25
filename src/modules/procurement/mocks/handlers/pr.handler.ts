@@ -177,7 +177,9 @@ export const setupPRHandlers = (mock: MockAdapter) => {
 
     // 7. APPROVE
     mock.onPost(/\/pr\/.+\/approve/).reply((config: AxiosRequestConfig) => {
-        const id = sanitizeId(config.url?.split('/')[2]);
+        const parts = config.url?.split('/') || [];
+        const idStr = parts[parts.indexOf('pr') + 1];
+        const id = sanitizeId(idStr);
         const pr = MOCK_PRS.find(p => sanitizeId(p.pr_id) === id);
         if (pr) {
             pr.status = 'APPROVED';
@@ -188,7 +190,9 @@ export const setupPRHandlers = (mock: MockAdapter) => {
 
     // 8. REJECT
     mock.onPost(/\/pr\/.+\/reject/).reply((config: AxiosRequestConfig) => {
-        const id = sanitizeId(config.url?.split('/')[2]);
+        const parts = config.url?.split('/') || [];
+        const idStr = parts[parts.indexOf('pr') + 1];
+        const id = sanitizeId(idStr);
         const pr = MOCK_PRS.find(p => sanitizeId(p.pr_id) === id);
         if (pr) {
             pr.status = 'REJECTED';
