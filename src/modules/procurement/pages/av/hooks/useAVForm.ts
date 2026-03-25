@@ -373,17 +373,23 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess, approvalItem }: UseA
     try {
       await AVService.rejectPR(apiPayload);
 
-      // 🎯 SYNC PR STATUS: Use dedicated reject endpoint (POST /pr/:id/reject)
-      // This is the most reliable way to update PR status — both mock and real backend handle it
+      // 🎯 SYNC PR HEADER STATUS: Use dedicated reject endpoint (POST /pr/:id/reject)
+      // This ensures the PR List shows 'REJECTED' instead of 'PENDING'.
       try {
         await PRService.rejectPR(Number(activeId), reason || 'Rejected');
       } catch (err) {
-        logger.warn('[useAVForm] PR reject sync failed (non-critical):', err);
+        logger.error('[useAVForm] PR status sync failed:', err);
+        // We still consider the main action (AV entry) a success, but warn the user about the sync gap.
+        toast('บันทึกการไม่อนุมัติแล้ว แต่ไม่สามารถอัปเดตสถานะที่หน้ารายการ PR ได้กรุณารีเฟรชหน้าจอ', 'warning');
       }
 
       toast('ไม่อนุมัติรายการสำเร็จ', 'success');
-      // 🎯 Force purge the PR cache so PRListPage always refetches fresh data
+      
+      // 🎯 Force purge ALL procurement caches to ensure UI shows fresh data immediately
       queryClient.removeQueries({ queryKey: ['prs'] });
+      queryClient.removeQueries({ queryKey: ['pr', Number(activeId)] });
+      queryClient.removeQueries({ queryKey: ['approvals'] });
+      
       onSuccess?.();
       onClose();
     } catch (error) {

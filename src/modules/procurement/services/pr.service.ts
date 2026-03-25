@@ -73,10 +73,9 @@ export const PRService = {
     // because backend logic is likely flawed (missing join).
     if (needsClientFilter && !USE_MOCK) {
         logger.debug('🚀 [PRService] Hybrid Fallback Triggered: verified filters will be applied client-side.');
-        if (params?.vendor_code || params?.vendor_name || params?.status) {
+        if (params?.vendor_code || params?.vendor_name) {
             delete apiParams.vendor_code;
             delete apiParams.vendor_name;
-            delete apiParams.status;
         }
     }
 
@@ -130,7 +129,7 @@ export const PRService = {
 
                 // Look up by vendorCode if name is missing
                 if (!vendorName && vendorCode) {
-                    const foundVendor = Object.values(vendorMap).find((v: any) => v.vendor_code === vendorCode);
+                    const foundVendor = Object.values(vendorMap).find(v => v.vendor_code === vendorCode);
                     if (foundVendor) {
                         vendorName = foundVendor.vendor_name || '';
                     }
@@ -423,8 +422,13 @@ export const PRService = {
 
   // 3. Reject PR (Pending -> Rejected)
   async rejectPR(id: number, reason?: string) {
-    // 🎯 Use POST and pass reason if provided
-    return await api.post(ENDPOINTS.reject(id), { reason });
+    // 🎯 Use POST and pass reason if provided. 
+    // We send both 'reason' and 'remarks'/'reject_reason' to handle inconsistent backend DTOs.
+    return await api.post(ENDPOINTS.reject(id), { 
+      reason,
+      remarks: reason,
+      reject_reason: reason
+    });
   },
 
   cancel: async (id: number): Promise<SuccessResponse> => {

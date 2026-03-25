@@ -1,5 +1,5 @@
 import api, { USE_MOCK } from '@/core/api/api';
-import type { RFQHeader, RFQListResponse, RFQFilterCriteria, RFQDetailResponse, SendRFQToVendorPayload } from '@/modules/procurement/types';
+import type { RFQHeader, RFQListResponse, RFQFilterCriteria, RFQDetailResponse, SendRFQToVendorPayload, PRHeader } from '@/modules/procurement/types';
 import { logger } from '@/shared/utils/logger';
 import type { SuccessResponse } from '@/shared/types/api-response.types';
 import { extractErrorMessage } from '@/core/api/api';
@@ -11,6 +11,8 @@ const ENDPOINTS = {
   create: '/rfq',
   addVendors: (id: number) => `/rfq/${id}/vendors`,
   sendToVendor: (rfqVendorId: number) => `/rfq/${rfqVendorId}/send-to-vendor`,
+  approvedPRsWithoutRFQ: '/rfq/pr-approved/without-rfq',
+  prApprovalDetail: (prId: number) => `/rfq/pr-approved/${prId}/without-rfq`,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -258,5 +260,31 @@ export const RFQService = {
   cancelVendor: async (rfqVendorId: number, remark: string): Promise<SuccessResponse> => {
     logger.info(`[RFQService] Cancelling vendor ${rfqVendorId} with remark: ${remark}`);
     return await api.patch<SuccessResponse>(`/rfq/${rfqVendorId}/cancel`, { remark });
+  },
+
+  getApprovedPRsWithoutRFQ: async (): Promise<{ data: PRHeader[] }> => {
+    logger.info('[RFQService] Fetching Approved PRs without RFQ');
+    const res = await api.get<{ data: PRHeader[] }>(ENDPOINTS.approvedPRsWithoutRFQ);
+    return res;
+  },
+
+  getPRApprovalDetail: async (prId: number): Promise<any[]> => {
+    logger.info(`[RFQService] Fetching PR Approval Detail for PR ID: ${prId}`);
+    try {
+      // 🎯 FIX: Postman shows backend returns 'approval_no', not 'approved_pr_no'
+      // 🎯 FIX: Postman shows backend returns 'approval_no', not 'approved_pr_no'
+      const res = await api.get<{ data: { approval_no?: string; approved_pr_no?: string; approval_id?: number | string }[] }>(ENDPOINTS.prApprovalDetail(prId));
+      
+      const items = res.data || [];
+      if (!Array.isArray(items)) {
+        logger.warn(`[RFQService] Expected array for PR Approval Detail, got:`, typeof items);
+        return [];
+      }
+
+      return items.filter((item: any) => Boolean(item.approval_no || item.approved_pr_no || item.approval_id));
+    } catch (error) {
+      logger.error(`[RFQService] Failed to fetch PR Approval Detail for ${prId}:`, error);
+      return [];
+    }
   }
 };

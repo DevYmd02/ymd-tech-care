@@ -5,7 +5,7 @@ import { useAuth } from '@/core/auth/contexts/AuthContext';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { MasterDataService } from '@/modules/master-data';
 import type { BranchListItem, ItemListItem, UnitListItem, Currency } from '@/modules/master-data/types/master-data-types';
-import type { VendorSearchItem } from '@/modules/master-data/vendor/types/vendor-types';
+import type { VendorSearchItem, VendorMaster } from '@/modules/master-data/vendor/types/vendor-types';
 import type { RFQVendor, RFQLine, RFQDetailResponse, RFQStatus } from '@/modules/procurement/types/rfq-types';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
 import type { PRHeader } from '@/modules/procurement/types';
@@ -35,6 +35,7 @@ export const mapPRToRFQFormData = (
     pr: PRHeader,
     itemsMap?: ItemListItem[],
     unitsMap?: UnitListItem[],
+    vendorDetail?: VendorMaster | null
 ): Partial<RFQFormValues> => {
     const isMulti = pr.pr_base_currency_code !== 'THB';
     
@@ -109,9 +110,11 @@ export const mapPRToRFQFormData = (
         // Preferred Vendor Carryover
         vendors: pr.preferred_vendor_id ? [{
             vendor_id: pr.preferred_vendor_id,
-            vendor_code: '',
-            vendor_name: pr.vendor_name || '',
-            vendor_name_display: pr.vendor_name || '(Preferred Vendor from PR)',
+            vendor_code: vendorDetail?.vendor_code || pr.vendor_code || '',
+            vendor_name: vendorDetail?.vendor_name || pr.vendor_name || '',
+            vendor_name_display: (vendorDetail?.vendor_code || pr.vendor_code) 
+                ? `${vendorDetail?.vendor_code || pr.vendor_code} - ${vendorDetail?.vendor_name || pr.vendor_name || ''}`
+                : (vendorDetail?.vendor_name || pr.vendor_name || '(Preferred Vendor from PR)'),
         }] : [],
     };
 };
@@ -199,10 +202,51 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
     const [isPRSelectionModalOpen, setIsPRSelectionModalOpen] = useState(false);
     const [isApprovedPRModalOpen, setIsApprovedPRModalOpen] = useState(false);
 
-    const handleApprovedPRSelect = useCallback((approvedNo: string) => {
-        methods.setValue('approved_pr_no', approvedNo, { shouldValidate: true, shouldDirty: true });
+    const handleApprovedPRSelect = useCallback((record: any) => {
+        const approvedNo = record.approval_no || record.approved_pr_no || record.approval_id?.toString();
+        setValue('approved_pr_no', approvedNo, { shouldValidate: true, shouldDirty: true });
+        
+        // 🔄 SYNC LINES: If AV record has lines, override form lines
+        const avLines = record.prApprovalLines || record.lines || record.pr_approval_lines || [];
+        
+        if (avLines.length > 0) {
+            // Get original PR lines to preserve item details
+            const currentPrLines = originalPRLines || [];
+            
+            const matchedLines: RFQLineValues[] = avLines.map((avLine: any, index: number) => {
+                const prLineId = avLine.pr_line_id || avLine.id;
+                // Use loose equality or Number conversion to be safe
+                const originalLine = currentPrLines.find(l => Number(l.pr_line_id) === Number(prLineId));
+                
+                const qty = Number(avLine.approved_qty || avLine.qty || 0);
+                
+                return {
+                    line_no: index + 1,
+                    item_code: originalLine?.item_code || avLine.item_code || '',
+                    item_name: originalLine?.item_name || avLine.item_name || avLine.description || '',
+                    description: originalLine?.description || avLine.description || '',
+                    qty: qty, // 🎯 This is the new quantity from AV
+                    uom: originalLine?.uom || avLine.uom || '',
+                    uom_id: originalLine?.uom_id || avLine.uom_id || 0,
+                    required_receipt_type: originalLine?.required_receipt_type || 'FULL',
+                    target_delivery_date: originalLine?.target_delivery_date || '',
+                    note_to_vendor: originalLine?.note_to_vendor || '',
+                    item_id: originalLine?.item_id || avLine.item_id,
+                    pr_line_id: prLineId ? Number(prLineId) : undefined,
+                    est_unit_price: originalLine?.est_unit_price || avLine.est_unit_price,
+                    est_amount: qty * (originalLine?.est_unit_price || avLine.est_unit_price || 0)
+                };
+            });
+            
+            console.log(`🐞 [DEBUG] Matched ${matchedLines.length} lines for RFQ`, matchedLines);
+            
+            // 🎯 Update using setValue for better reactivity across components
+            setValue('rfqLines', matchedLines, { shouldDirty: true, shouldValidate: true });
+            toast(`ปรับปรุงรายการสินค้าตามใบอนุมัติ ${approvedNo} เรียบร้อย`, 'success');
+        }
+        
         setIsApprovedPRModalOpen(false);
-    }, [methods]);
+    }, [setValue, originalPRLines, toast]);
 
     // Fetch Master Data
     useEffect(() => {
@@ -368,8 +412,19 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
             try {
                 setIsLoadingEdit(true);
                 const fullPR = await PRService.getDetail(pr_id);
+                
+                // 🆕 Hydrate Preferred Vendor
+                let vendorDetail: VendorMaster | null = null;
+                if (fullPR.preferred_vendor_id) {
+                    try {
+                        vendorDetail = await VendorService.getById(fullPR.preferred_vendor_id);
+                    } catch (e) {
+                        logger.warn('Failed to hydrate preferred vendor from PR:', e);
+                    }
+                }
+
                 // Pass already-loaded master data for line enrichment
-                const mappedData = mapPRToRFQFormData(fullPR, items, units);
+                const mappedData = mapPRToRFQFormData(fullPR, items, units, vendorDetail);
                 
                 // Track original lines for reset feature
                 if (mappedData.rfqLines) {
@@ -420,16 +475,28 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
             setIsLoadingEdit(true);
             const fullPR = await PRService.getDetail(prRecord.pr_id);
             
+            // 🆕 Hydrate Preferred Vendor
+            let vendorDetail: VendorMaster | null = null;
+            if (fullPR.preferred_vendor_id) {
+                try {
+                    vendorDetail = await VendorService.getById(fullPR.preferred_vendor_id);
+                } catch (e) {
+                    logger.warn('Failed to hydrate preferred vendor on PR selection:', e);
+                }
+            }
+            
             // 🔍 DIAGNOSTIC: Log the full PR detail response
             logger.debug('[handlePRSelect] fullPR from getDetail:', {
                 pr_id: fullPR?.pr_id,
                 pr_no: fullPR?.pr_no,
                 lines_count: fullPR?.lines?.length ?? 'NO LINES',
                 raw_keys: Object.keys(fullPR || {}),
+                vendor_id: fullPR?.preferred_vendor_id,
+                has_vendor_detail: !!vendorDetail
             });
             
             // Pass already-loaded master data for enriching item_code/item_name/uom
-            const mappedData = mapPRToRFQFormData(fullPR, items, units);
+            const mappedData = mapPRToRFQFormData(fullPR, items, units, vendorDetail);
 
             // Track original lines for reset feature
             if (mappedData.rfqLines) {
@@ -442,6 +509,9 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                 ...currentValues,
                 ...mappedData,
             });
+            
+            // 🎯 Ensure approved_pr_no is cleared on source change to prevent stale data
+            setValue('approved_pr_no', null);
 
             toast(`ดึงรายการสินค้าจาก PR ${fullPR?.pr_no ?? prRecord.pr_no} เรียบร้อย`, 'success');
         } catch (error) {
@@ -450,7 +520,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         } finally {
             setIsLoadingEdit(false);
         }
-    }, [items, units, reset, getValues, toast]);
+    }, [items, units, reset, getValues, toast, setValue]);
 
     const handleResetLines = useCallback(() => {
         if (originalPRLines.length === 0) {
