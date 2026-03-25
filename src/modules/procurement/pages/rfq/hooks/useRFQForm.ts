@@ -205,16 +205,26 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
     const handleApprovedPRSelect = useCallback((record: any) => {
         const approvedNo = record.approval_no || record.approved_pr_no || record.approval_id?.toString();
         setValue('approved_pr_no', approvedNo, { shouldValidate: true, shouldDirty: true });
+        setValue('pr_approval_id', record.approval_id ? Number(record.approval_id) : undefined, { shouldDirty: true });
         
         // 🔄 SYNC LINES: If AV record has lines, override form lines
         const avLines = record.prApprovalLines || record.lines || record.pr_approval_lines || [];
+        logger.info("💎 [DIAGNOSTIC] AV Record Keys:", Object.keys(record));
+        if (avLines.length > 0) {
+            logger.info("💎 [DIAGNOSTIC] First Line Keys:", Object.keys(avLines[0]));
+            logger.info("💎 [DIAGNOSTIC] First Line Data:", JSON.stringify(avLines[0]));
+        }
         
         if (avLines.length > 0) {
             // Get original PR lines to preserve item details
             const currentPrLines = originalPRLines || [];
             
             const matchedLines: RFQLineValues[] = avLines.map((avLine: any, index: number) => {
-                const prLineId = avLine.pr_line_id || avLine.id;
+                // 🛡️ DISAMBIGUATION: Separating source PR Line ID from this Approval Line's own ID
+                // PR Lines usually have 'pr_line_id'. Approval Lines are the 'records' themselves so they have 'id'
+                const prLineId = avLine.pr_line_id || avLine.item_id || 0; 
+                const avLineId = Number(avLine.id || avLine.approval_line_id || avLine.pr_approval_line_id || 0);
+
                 // Use loose equality or Number conversion to be safe
                 const originalLine = currentPrLines.find(l => Number(l.pr_line_id) === Number(prLineId));
                 
@@ -233,6 +243,8 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                     note_to_vendor: originalLine?.note_to_vendor || '',
                     item_id: originalLine?.item_id || avLine.item_id,
                     pr_line_id: prLineId ? Number(prLineId) : undefined,
+                    // 🔗 Record ID of the PR Approval Line (CRITICAL FOR BACKEND)
+                    approval_line_id: avLineId > 0 ? avLineId : undefined,
                     est_unit_price: originalLine?.est_unit_price || avLine.est_unit_price,
                     est_amount: qty * (originalLine?.est_unit_price || avLine.est_unit_price || 0)
                 };
@@ -620,6 +632,10 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                     // Optional fields — only add if present
                     if (line.item_id) dto.item_id = Number(line.item_id);
                     if (line.pr_line_id) dto.pr_line_id = Number(line.pr_line_id);
+                    // 🔗 Send AV Line ID if it's a valid positive number
+                    if (line.approval_line_id && Number(line.approval_line_id) > 0) {
+                        dto.approval_line_id = Number(line.approval_line_id);
+                    }
                     if (line.required_receipt_type) dto.required_receipt_type = String(line.required_receipt_type);
                     if (line.target_delivery_date) dto.target_delivery_date = String(line.target_delivery_date);
                     if (line.note_to_vendor) dto.note_to_vendor = String(line.note_to_vendor);
@@ -661,7 +677,8 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                 receive_location: stagedPayload.receive_location,
                 payment_term_hint: stagedPayload.payment_term_hint,
                 incoterm: stagedPayload.incoterm,
-                approved_pr_no: stagedPayload.approved_pr_no || undefined,
+                // ❌ approved_pr_no: REMOVED - backend rejects this field (UI usage ONLY)
+                pr_approval_id: stagedPayload.pr_approval_id ? Number(stagedPayload.pr_approval_id) : undefined, // 🔗 Send AV Header ID
                 // ❌ purpose     — backend rejects this field
                 // ❌ project_id  — backend rejects this field
 
@@ -690,6 +707,8 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                 has_pr_id: !!payload.pr_id,
                 rfq_no_placeholder: payload.rfq_date // tracing timestamp
             });
+
+            logger.info("💎 [DIAGNOSTIC] Final RFQ Creation Payload:", JSON.stringify(payload));
 
             if (editId) {
                 await RFQService.update(editId, payload);

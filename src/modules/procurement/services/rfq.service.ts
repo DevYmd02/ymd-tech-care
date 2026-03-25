@@ -44,6 +44,7 @@ export interface RFQLineDTO {
   uom_id: number;
   item_id?: number;
   pr_line_id?: number;
+  approval_line_id?: number;
   required_receipt_type?: string;
   target_delivery_date?: string;
   note_to_vendor?: string;
@@ -78,6 +79,8 @@ export interface RFQCreateDTO {
   rfqVendors?: { vendor_id: number, status?: string }[]; // newly supported direct binding
   rfqLines: RFQLineDTO[];
   pr_id?: number;
+  pr_approval_id?: number;
+  // ❌ approved_pr_no - backend rejects
   // ❌ project_id — backend rejects
   // ❌ purpose    — backend rejects
   receive_location?: string;

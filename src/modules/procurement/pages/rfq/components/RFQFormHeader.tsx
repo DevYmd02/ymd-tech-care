@@ -1,9 +1,10 @@
 import React from 'react';
-import { FileText, Calendar } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { useFormContext, Controller } from 'react-hook-form';
 import type { RFQFormValues } from '@/modules/procurement/schemas/rfq-schemas';
 import type { BranchListItem, Currency } from '@/modules/master-data/types/master-data-types';
 import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWrapper';
+import { CustomDateInput } from '@/shared/components/forms/CustomDateInput';
 
 interface RFQFormHeaderProps {
     branches: BranchListItem[];
@@ -28,15 +29,7 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ branches, currenci
     const errorInputClass = "border-red-500 ring-1 ring-red-500 focus:ring-red-500";
     const errorMsgClass = "text-red-500 text-[10px] mt-0.5 font-medium";
 
-    // Format yyyy-mm-dd → dd/mm/yyyy for display
-    const formatDisplayDate = (val?: string) => {
-        if (!val) return '';
-        if (val.includes('-') && val.length >= 10) {
-            const [y, m, d] = val.split('-');
-            return `${d.substring(0, 2)}/${m}/${y}`;
-        }
-        return val;
-    };
+
 
     return (
         <div className="p-4">
@@ -56,29 +49,13 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ branches, currenci
                     <label className={labelStyle}>วันที่สร้าง RFQ <span className="text-red-500">*</span></label>
                     <Controller
                         name="rfq_date"
-                        render={({ field: { value, onChange, onBlur, ref } }) => (
-                            <div className="relative w-full">
-                                <input
-                                    type="text"
-                                    readOnly
-                                    placeholder="dd/mm/yyyy"
-                                    value={formatDisplayDate(value)}
-                                    disabled={isLocked}
-                                    onClick={(e) => { try { (e.currentTarget.nextElementSibling as HTMLInputElement)?.showPicker(); } catch { /* noop */ } }}
-                                    className={`${inputStyle} cursor-pointer pr-8 ${errors.rfq_date ? errorInputClass : ''}`}
-                                />
-                                <input
-                                    type="date"
-                                    value={value || ''}
-                                    onChange={(e) => onChange(e.target.value)}
-                                    onBlur={onBlur}
-                                    ref={ref}
-                                    disabled={isLocked}
-                                    onClick={(e) => { if ('showPicker' in HTMLInputElement.prototype) e.currentTarget.showPicker(); }}
-                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                />
-                                <Calendar size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 pointer-events-none" />
-                            </div>
+                        render={({ field }) => (
+                            <CustomDateInput
+                                value={field.value || ''}
+                                onChange={field.onChange}
+                                disabled={isLocked}
+                                className={`${inputStyle} ${errors.rfq_date ? errorInputClass : ''}`}
+                            />
                         )}
                     />
                     {errors.rfq_date && <p className={errorMsgClass}>{errors.rfq_date.message}</p>}
@@ -164,29 +141,13 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ branches, currenci
                     <label className={labelStyle}>วันครบกำหนดใบเสนอราคา <span className="text-red-500">*</span></label>
                     <Controller
                         name="quotation_due_date"
-                        render={({ field: { value, onChange, onBlur, ref } }) => (
-                            <div className="relative w-full">
-                                <input
-                                    type="text"
-                                    readOnly
-                                    placeholder="dd/mm/yyyy"
-                                    value={formatDisplayDate(value)}
-                                    disabled={isLocked}
-                                    onClick={(e) => { try { (e.currentTarget.nextElementSibling as HTMLInputElement)?.showPicker(); } catch { /* noop */ } }}
-                                    className={`${inputStyle} cursor-pointer pr-8 ${errors.quotation_due_date ? errorInputClass : ''}`}
-                                />
-                                <input
-                                    type="date"
-                                    value={value || ''}
-                                    onChange={(e) => onChange(e.target.value)}
-                                    onBlur={onBlur}
-                                    ref={ref}
-                                    disabled={isLocked}
-                                    onClick={(e) => { if ('showPicker' in HTMLInputElement.prototype) e.currentTarget.showPicker(); }}
-                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                />
-                                <Calendar size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 pointer-events-none" />
-                            </div>
+                        render={({ field }) => (
+                            <CustomDateInput
+                                value={field.value || ''}
+                                onChange={field.onChange}
+                                disabled={isLocked}
+                                className={`${inputStyle} ${errors.quotation_due_date ? errorInputClass : ''}`}
+                            />
                         )}
                     />
                     {errors.quotation_due_date && <p className={errorMsgClass}>{errors.quotation_due_date.message}</p>}
@@ -263,29 +224,13 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ branches, currenci
                             <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">วันที่อัตราแลกเปลี่ยน</label>
                             <Controller
                                 name="rfq_exchange_rate_date"
-                                render={({ field: { value, onChange, onBlur, ref } }) => (
-                                    <div className="relative w-full">
-                                        <input
-                                            type="text"
-                                            readOnly
-                                            placeholder="dd/mm/yyyy"
-                                            value={formatDisplayDate(value)}
-                                            disabled={!formData.isMulticurrency || isLocked}
-                                            onClick={(e) => { try { (e.currentTarget.nextElementSibling as HTMLInputElement)?.showPicker(); } catch { /* noop */ } }}
-                                            className="w-full h-9 px-3 pr-8 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
-                                        />
-                                        <input
-                                            type="date"
-                                            value={value || ''}
-                                            onChange={(e) => onChange(e.target.value)}
-                                            onBlur={onBlur}
-                                            ref={ref}
-                                            disabled={!formData.isMulticurrency || isLocked}
-                                            onClick={(e) => { if ('showPicker' in HTMLInputElement.prototype) e.currentTarget.showPicker(); }}
-                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                        />
-                                        <Calendar size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 pointer-events-none" />
-                                    </div>
+                                render={({ field }) => (
+                                    <CustomDateInput
+                                        value={field.value || ''}
+                                        onChange={field.onChange}
+                                        disabled={!formData.isMulticurrency || isLocked}
+                                        className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow disabled:opacity-70 disabled:cursor-not-allowed"
+                                    />
                                 )}
                             />
                         </div>

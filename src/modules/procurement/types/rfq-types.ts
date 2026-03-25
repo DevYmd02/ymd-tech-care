@@ -39,6 +39,8 @@ export interface RFQHeader {
     // Extended fields for UI display (from JOINs)
     pr_no?: string | null;              // เลขที่ PR (UI อาจใช้ ref_pr_no เพื่อความชัดเจนใน Filter)
     ref_pr_no?: string | null;          // Alias สำหรับ pr_no
+    approved_pr_no?: string | null;      // เลขที่ Approve PR (ใบ AV)
+    pr_approval_id?: number | null;      // ID Reference to pr_approval table
     branch_name?: string | null;        // From joined org_branch
     created_by_name?: string | null;    // ชื่อผู้สร้าง
     creator_name?: string | null;       // Alias สำหรับ created_by_name
@@ -103,6 +105,7 @@ export interface RFQLine {
     rfq_id: number;                     // INTEGER
     line_no: number;                    // INTEGER - ลำดับรายการ
     pr_line_id: number | null;          // INTEGER
+    approval_line_id?: number | null;    // INTEGER (Reference to PR Approval Line)
     item_id: number | null;             // INTEGER
     item_code: string;                  // VARCHAR(50)
     item_name: string;                  // VARCHAR(500)
