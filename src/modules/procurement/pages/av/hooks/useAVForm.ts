@@ -310,7 +310,11 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess, approvalItem }: UseA
       // 🎯 SYNC PR STATUS: Use dedicated approve endpoint (POST /pr/:id/approve)
       // This is the most reliable way to update PR status — both mock and real backend handle it
       try {
-        await PRService.approvePR(Number(activeId));
+        if (apiPayload.status === 'PARTIAL') {
+          await PRService.update(Number(activeId), { status: 'PARTIAL' });
+        } else {
+          await PRService.approvePR(Number(activeId));
+        }
       } catch (err) {
         logger.warn('[useAVForm] PR approve sync failed (non-critical):', err);
       }

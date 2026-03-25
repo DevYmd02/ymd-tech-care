@@ -2,6 +2,7 @@ import api from '@/core/api/api';
 import { USE_MOCK } from '@/core/api/api';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
 import type { VendorListResponse, VendorListItem } from '@/modules/master-data/vendor/types/vendor-types';
+import type { ApprovalListResponse } from '@/modules/procurement/types/av-types';
 import type {
   PRListParams,
   PRListResponse,
@@ -61,6 +62,64 @@ let cachedVendors: VendorListResponse | null = null;
 let lastVendorFetchTime = 0;
 const VENDOR_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+// 🎯 AV STATUS CACHE: Cache pr_id → effective status from AV approval records
+let cachedAVStatusMap: Map<number, string> | null = null;
+let lastAVStatusFetchTime = 0;
+const AV_STATUS_CACHE_TTL = 30 * 1000; // 30 seconds (shorter TTL to catch recent approvals)
+
+/**
+ * Fetches all AV approval records and builds a pr_id → effective status map.
+ * PRs that have been processed (PARTIAL/APPROVED/REJECTED) in the AV module
+ * will have their status overridden here, since the PR header table may lag
+ * behind (e.g., still showing PENDING after a partial approval).
+ */
+async function buildAVStatusMap(): Promise<Map<number, string>> {
+  const now = Date.now();
+  if (cachedAVStatusMap && (now - lastAVStatusFetchTime < AV_STATUS_CACHE_TTL)) {
+    return cachedAVStatusMap;
+  }
+  try {
+    const avRes: ApprovalListResponse = await api.get<ApprovalListResponse>('/pr-approval', { params: { limit: 1000, page: 1 } });
+    const records = avRes?.data || [];
+    const map = new Map<number, string>();
+    for (const rec of records) {
+      const prId = Number(rec.pr_id);
+      if (!isNaN(prId) && rec.status) {
+        // Keep the LATEST record per PR (highest approval_id)
+        const existing = map.get(prId);
+        if (!existing) {
+          map.set(prId, rec.status.toUpperCase());
+        }
+        // If there's a newer record, it overrides (approvalRecords are sorted desc by API, or we handle manually)
+      }
+    }
+    cachedAVStatusMap = map;
+    lastAVStatusFetchTime = now;
+    logger.debug(`🔍 [PRService] AV Status Map built: ${map.size} entries`);
+    return map;
+  } catch (err) {
+    logger.warn('[PRService] Failed to fetch AV status map (non-critical):', err);
+    return new Map();
+  }
+}
+
+/**
+ * Overlays the AV-derived status onto an array of PR items.
+ * If a PR has an AV record, its status comes from the AV table (PARTIAL/APPROVED/REJECTED).
+ * PRs with no AV record keep their original status from the PR header table.
+ */
+function overlayAVStatus(items: PRHeader[], avStatusMap: Map<number, string>): PRHeader[] {
+  if (avStatusMap.size === 0) return items;
+  return items.map(item => {
+    const avStatus = avStatusMap.get(Number(item.pr_id));
+    if (avStatus && avStatus !== item.status) {
+      logger.debug(`[PRService] Overriding PR ${item.pr_no} status: ${item.status} → ${avStatus} (from AV record)`);
+      return { ...item, status: avStatus as PRHeader['status'] };
+    }
+    return item;
+  });
+}
+
 export const PRService = {
   getList: async (params?: PRListParams): Promise<PRListResponse> => {
     logger.info('[PRService] Fetching PR List', params);
@@ -69,14 +128,18 @@ export const PRService = {
     const apiParams = { ...params };
     const needsClientFilter = !!(params?.pr_no || params?.vendor_code || params?.vendor_name || params?.status || params?.date_start || params?.date_end || params?.q);
 
-    // 🎯 WORKAROUND: Don't let backend filter by vendor if we intend to filter client-side
-    // because backend logic is likely flawed (missing join).
+    // 🎯 WORKAROUND: Strip all filterable params before sending to backend when client-side filtering
+    // is active. The backend may not support PARTIAL/custom statuses or join-based vendor filtering,
+    // so we fetch ALL items from the backend and apply filters client-side to prevent 0-result issues.
     if (needsClientFilter && !USE_MOCK) {
-        logger.debug('🚀 [PRService] Hybrid Fallback Triggered: verified filters will be applied client-side.');
-        if (params?.vendor_code || params?.vendor_name) {
-            delete apiParams.vendor_code;
-            delete apiParams.vendor_name;
-        }
+        logger.debug('🚀 [PRService] Hybrid Fallback Triggered: ALL filters will be applied client-side.');
+        delete apiParams.vendor_code;
+        delete apiParams.vendor_name;
+        delete apiParams.status;
+        delete apiParams.pr_no;
+        delete apiParams.date_start;
+        delete apiParams.date_end;
+        delete apiParams.q;
     }
 
     const response = await api.get<PRListResponse>(ENDPOINTS.list, { params: apiParams });
@@ -149,6 +212,17 @@ export const PRService = {
             logger.error('[PRService] Failed to hydrate vendors for filtering:', err);
         }
 
+        // 🎯 AV STATUS HYDRATION: Overlay correct status from AV approval records
+        // This fixes cases where PR header is still PENDING but was already approved/partially approved
+        try {
+            if (!USE_MOCK) {
+                const avStatusMap = await buildAVStatusMap();
+                hydratedItems = overlayAVStatus(hydratedItems, avStatusMap);
+            }
+        } catch (err) {
+            logger.warn('[PRService] AV status hydration failed (non-critical):', err);
+        }
+
         return applyClientFilters<PRHeader>(hydratedItems, filterParams, {
             searchableFields: ['pr_no', 'requester_name', 'purpose'],
             dateField: 'need_by_date',
@@ -191,6 +265,14 @@ export const PRService = {
                     vendor_name: vendorName
                 };
             });
+
+            // 🎯 AV STATUS HYDRATION: Overlay correct status from AV approval records
+            try {
+                const avStatusMap = await buildAVStatusMap();
+                hydratedItems = overlayAVStatus(hydratedItems, avStatusMap);
+            } catch (err) {
+                logger.warn('[PRService] AV status hydration failed (non-critical):', err);
+            }
         } catch (err) {
              logger.debug('Hydration failed during fallback', err);
         }

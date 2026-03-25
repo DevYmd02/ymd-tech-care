@@ -100,6 +100,47 @@ interface RawVQResponse extends Omit<Partial<QuotationHeader>, 'vq_lines' | 'lin
     created_by_name?: string;
 }
 
+// ============================================================================
+// DATA UNWRAPPING & EXTRACTION UTILITIES
+// ============================================================================
+
+/**
+ * Helper to recursively unwrap nested API responses.
+ * Sometimes the backend wraps responses in `{ data: { data: ... } }`.
+ */
+const unwrapResponseData = (response: any): any => {
+    if (!response) return response;
+    let unwrapped = response;
+    let depth = 0;
+    while (unwrapped && unwrapped.data !== undefined && !Array.isArray(unwrapped.data) && typeof unwrapped.data === 'object' && depth < 3) {
+        unwrapped = unwrapped.data;
+        depth++;
+    }
+    if (unwrapped && unwrapped.data !== undefined) {
+        return unwrapped.data;
+    }
+    return unwrapped;
+};
+
+/**
+ * Scan an object for any array property that looks like line items.
+ * Guards against inconsistent snake_case / camelCase keys from the backend.
+ */
+const extractLinesArray = (data: any): any[] => {
+    if (!data || typeof data !== 'object') return [];
+    const possibleArrays = [
+        data.lines, data.rfqLines, data.rfq_lines, data.items, 
+        data.rfq_items, data.vq_lines, data.vqLines, data.po_lines, data.poLines
+    ];
+    for (const arr of possibleArrays) {
+        if (Array.isArray(arr) && arr.length > 0) return arr;
+    }
+    for (const arr of possibleArrays) {
+        if (Array.isArray(arr)) return arr;
+    }
+    return [];
+};
+
 export const useVQForm = (
   isOpen: boolean, 
   onClose: () => void, 
@@ -115,6 +156,7 @@ export const useVQForm = (
   const { purchaseTaxOptions, currencyOptions, isLoading: isMasterLoading } = useVQMasterData();
 
   const [availableVendors, setAvailableVendors] = useState<AvailableVendor[]>([]);
+  const hasInitialized = React.useRef(false);
 
   const formMethods = useForm<QuotationFormData>({
     resolver: zodResolver(QuotationHeaderSchema) as Resolver<QuotationFormData>,
@@ -246,7 +288,13 @@ export const useVQForm = (
 
   // Reset form when modal opens
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) {
+        hasInitialized.current = false;
+        return;
+    }
+
+    if (isOpen && !hasInitialized.current) {
+      hasInitialized.current = true;
       if (vqId) {
         setIsDataLoading(true);
         // --- VIEW / EDIT MODE: Fetch Existing VQ and Master Items ---
@@ -433,9 +481,14 @@ export const useVQForm = (
         Promise.all([
             RFQService.getById(initialRFQ.rfq_id),
             MasterDataService.getItems().catch(() => [])
-        ]).then(async ([fullRFQ, itemsRes]) => {
+        ]).then(async ([rawRFQ, itemsRes]) => {
+            const fullRFQ = unwrapResponseData(rawRFQ);
             const masterItems = Array.isArray(itemsRes) ? itemsRes : [];
-            const apiLines = (fullRFQ.lines && fullRFQ.lines.length > 0) ? fullRFQ.lines : (fullRFQ.rfqLines || []);
+            
+            // 🎯 Fallback Array Scanning
+            const apiLines = extractLinesArray(fullRFQ);
+            logger.info('[useVQForm] Extracted API Lines from initialRFQ:', { count: apiLines.length, payload: fullRFQ });
+            
             let mappedLines: QuotationLineFormData[] = [];
             
             if (apiLines.length > 0) {
@@ -464,7 +517,7 @@ export const useVQForm = (
 
             // Find specific vendor if initialRFQ passed vendor_id
             const allVendors = fullRFQ.rfqVendors || fullRFQ.vendors || [];
-            let selectedVendor = allVendors.find(v => v.vendor_id === initialRFQ.vendor_id);
+            let selectedVendor = allVendors.find((v: any) => v.vendor_id === initialRFQ.vendor_id);
             if (!selectedVendor && allVendors.length > 0) {
                  selectedVendor = allVendors[0];
             }
@@ -797,13 +850,14 @@ export const useVQForm = (
       handleClearVendor();
 
       // 2. Fetch concurrently using Promise.all
-      const [fullRFQ, itemsRes, rfqVendorsRes, existingVQsRes] = await Promise.all([
+      const [rawRFQ, itemsRes, rfqVendorsRes, existingVQsRes] = await Promise.all([
         RFQService.getById(rfq.rfq_id),
         MasterDataService.getItems().catch(() => []),
         VQService.getModalWaitingForRFQVendor(rfq.rfq_id).catch(() => ({ data: [] })),
         VQService.getVQsByRfqId(rfq.rfq_id).catch(() => ({ data: [] }))
       ]);
 
+      const fullRFQ = unwrapResponseData(rawRFQ);
       const masterItems = Array.isArray(itemsRes) ? itemsRes : [];
 
       const existingVendorIds = (existingVQsRes?.data || [])
@@ -845,7 +899,9 @@ export const useVQForm = (
       setAvailableVendors(mappedVendors);
 
       // 5. Normal processing (setting RFQ lines)
-      const apiLines: RFQLine[] = (fullRFQ.lines && fullRFQ.lines.length > 0) ? fullRFQ.lines : (fullRFQ.rfqLines || []);
+      const apiLines: RFQLine[] = extractLinesArray(fullRFQ);
+      logger.info('[useVQForm] Extracted API Lines from handleSelectRFQ:', { count: apiLines.length, payload: fullRFQ });
+
       const mappedLines: QuotationLineFormData[] = apiLines.map((line: RFQLine) => {
           const matchedItem = masterItems.find((i) => Number(i.item_id) === Number(line.item_id));
           return {
