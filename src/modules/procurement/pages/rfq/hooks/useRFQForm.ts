@@ -569,14 +569,9 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                 : (user?.employee?.employee_fullname ? String(user.employee.employee_fullname) : undefined);
 
             // 🔍 Debug Audit Log for backend updates
-            console.log('[executeSave] Fallback debug:', {
+            logger.debug('[executeSave] Requester resolution:', {
                 editId,
-                stagedPayload_id: stagedPayload.requested_by_user_id,
-                rfq_created_by: rfq?.created_by_user_id,
-                rfq_req_by_id: (rfq as any)?.requested_by_user_id,
-                rfq_req_by_user: rfq?.requested_by_user?.employee_id,
                 resolvedRequestedByUserId,
-                full_rfq_state: JSON.stringify(rfq || {})
             });
 
             // ⚠️ BACKEND WHITELIST: Only send fields the API accepts.

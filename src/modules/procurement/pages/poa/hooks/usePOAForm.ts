@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useEffect, useState, useRef } from 'react';
+import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import type { Resolver, SubmitHandler, FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -9,6 +9,7 @@ import type { POListItem } from '@/modules/procurement/types';
 import { logger } from '@/shared/utils/logger';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { extractErrorMessage } from '@/core/api/api';
+import { MasterDataService } from '@/modules/master-data/services/master-data.service';
 
 interface UsePOAFormOptions {
     isOpen: boolean;
@@ -38,6 +39,12 @@ export const usePOAForm = ({
         enabled: isOpen && !!poId,
     });
 
+    const { data: currencies = [], isLoading: isLoadingCurrencies } = useQuery({
+        queryKey: ['master-currencies'],
+        queryFn: MasterDataService.getCurrencies,
+        enabled: isOpen,
+    });
+
     const formMethods = useForm<POAFormData>({
         resolver: zodResolver(POAFormSchema) as Resolver<POAFormData>,
         defaultValues: {
@@ -47,6 +54,10 @@ export const usePOAForm = ({
             vendor_name: '',
             remarks: '',
             reject_reason: '',
+            currency_code: 'THB',
+            target_currency: 'THB',
+            exchange_rate_date: new Date().toISOString().split('T')[0],
+            exchange_rate: 1,
             po_lines: [],
         },
     });
@@ -58,6 +69,7 @@ export const usePOAForm = ({
         reset,
         setValue,
         getValues,
+        getFieldState,
         formState: { errors, isDirty },
     } = formMethods;
 
@@ -88,14 +100,55 @@ export const usePOAForm = ({
                 delivery_date: (source as any).delivery_date || '',
                 tax_code_id: (source as any).tax_code_id,
                 created_by_name: (source as any).created_by_name || (source as any).created_by || '',
-                exchange_rate_date: (source as any).exchange_rate_date || '',
+                exchange_rate_date: (source as any).exchange_rate_date ? new Date((source as any).exchange_rate_date).toISOString().split('T')[0] : (new Date().toISOString().split('T')[0]),
                 currency_code: source.currency_code || 'THB',
+                target_currency: (source as any).target_currency || 'THB',
                 exchange_rate: source.exchange_rate || 1,
             } as any);
         } else if (!isOpen) {
             reset();
         }
     }, [isOpen, initialValues, detailData, reset]);
+
+    const watchCurrencyCode    = useWatch({ control, name: 'currency_code' }) as string | undefined;
+    const watchTargetCurrency  = useWatch({ control, name: 'target_currency' }) as string | undefined;
+
+    // ── Currency Exchange Rate Auto-Calculation triggers ─────────────────────
+    const prevCurrencyId = useRef<string | undefined>(undefined);
+    const prevTargetCurrency = useRef<string | undefined>(undefined);
+
+    useEffect(() => {
+        if (!watchCurrencyCode) return;
+        
+        // Equal currencies reset Rate to 1
+        if (watchCurrencyCode === watchTargetCurrency || !watchTargetCurrency) {
+            setValue('exchange_rate', 1, { shouldDirty: false });
+            prevCurrencyId.current = watchCurrencyCode;
+            prevTargetCurrency.current = watchTargetCurrency;
+            return;
+        }
+
+        const isSourceChanged = prevCurrencyId.current !== watchCurrencyCode;
+        const isTargetChanged = prevTargetCurrency.current !== watchTargetCurrency;
+
+        const { isDirty } = getFieldState('exchange_rate');
+        if (isSourceChanged || isTargetChanged || !isDirty) {
+            const sourceObj = currencies.find((c: any) => c.currency_code === watchCurrencyCode);
+            const targetObj = currencies.find((c: any) => c.currency_code === watchTargetCurrency);
+
+            const fromRate = sourceObj?.exchange_rate || 1;
+            const toRate = targetObj?.exchange_rate || 1;
+
+            const calculatedRate = fromRate / toRate;
+
+            if (calculatedRate !== undefined && !isNaN(calculatedRate)) {
+                setValue('exchange_rate', Number(calculatedRate.toFixed(6)), { shouldValidate: true, shouldDirty: false });
+            }
+        }
+
+        prevCurrencyId.current = watchCurrencyCode;
+        prevTargetCurrency.current = watchTargetCurrency;
+    }, [currencies, watchCurrencyCode, watchTargetCurrency, setValue, getFieldState]);
 
     const handleConfirmApprove = async () => {
         if (!poId) return;
@@ -158,7 +211,16 @@ export const usePOAForm = ({
         toast("กรุณาตรวจสอบข้อมูลให้ถูกต้อง", 'error');
     };
 
-    const openRejectModal = () => setIsRejectModalOpen(true);
+    const handleRejectInit = () => {
+        const reason = getValues('reject_reason');
+        if (!reason?.trim()) {
+            toast('กรุณาระบุเหตุผลที่ไม่อนุมัติ', 'error');
+            formMethods.setError('reject_reason', { type: 'required', message: 'กรุณาระบุเหตุผลที่ไม่อนุมัติ' });
+            formMethods.setFocus('reject_reason');
+            return;
+        }
+        setIsRejectModalOpen(true);
+    };
 
     return {
         formMethods,
@@ -178,11 +240,14 @@ export const usePOAForm = ({
 
         isRejectModalOpen,
         setIsRejectModalOpen,
-        openRejectModal,
+        handleRejectInit,
         handleConfirmReject,
 
         isSubmitting,
         detailData,
         isLoadingDetail,
+
+        currencies,
+        isLoadingCurrencies,
     };
 };

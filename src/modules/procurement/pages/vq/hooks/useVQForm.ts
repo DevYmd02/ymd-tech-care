@@ -247,7 +247,6 @@ export const useVQForm = (
   // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
-      console.log("📌 [useVQForm] vqId inside effect:", vqId, "Type:", typeof vqId, "isOpen:", isOpen);
       if (vqId) {
         setIsDataLoading(true);
         // --- VIEW / EDIT MODE: Fetch Existing VQ and Master Items ---
@@ -260,7 +259,7 @@ export const useVQForm = (
             // @Agent_Payload_Parser - Data Normalization (Unwrap Array/Object) 
             const unwrappedResponse = (response as any)?.data ?? response;
             const data = (Array.isArray(unwrappedResponse) ? unwrappedResponse[0] : unwrappedResponse) as RawVQResponse;
-            console.log("🔍 [useVQForm] VQ Data Loaded for ID", vqId, ":", data);
+            logger.debug("[useVQForm] VQ Data Loaded for ID", vqId);
             
             if (!data) {
                 console.warn("VQ Data Not Found for ID:", vqId);
@@ -349,8 +348,7 @@ export const useVQForm = (
                 };
             });
 
-            // 🧪 @Agent_Debug_Proof: Strictly Verified Data
-            console.log("🚀 [EXCAVATED_DATA]:", mappedLines);
+
 
             // @Agent_Summary_Syncer - Sync DB Totals to UI
             setDbTotals({
@@ -737,9 +735,6 @@ export const useVQForm = (
       // 🧼 Sanitize Payload before sending
       const payload = sanitizePayload(data);
       
-      // 🧪 @Agent_Debug_Helper: Explicit payload logging
-      console.log('💾 Payload to Save:', JSON.stringify(payload, null, 2));
-
       if (vqId) {
         await VQService.update(vqId, payload as Partial<VQListItem>);
         

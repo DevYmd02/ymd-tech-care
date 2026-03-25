@@ -23,7 +23,7 @@ export const VQService = {
     if (apiParams.status === 'RECORDED') {
         delete apiParams.status;
     }
-    console.log("[VQ_GET_LIST_PARAMS]:", apiParams);
+    logger.debug("[VQService] getList params:", apiParams);
     const response = await api.get<VQListResponse>(ENDPOINTS.list, { params: apiParams });
 
 

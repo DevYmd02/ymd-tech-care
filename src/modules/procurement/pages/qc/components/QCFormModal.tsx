@@ -24,6 +24,7 @@ import { useQCForm } from '../hooks/useQCForm';
 import { useConfirmation } from '@/shared/hooks';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
+import { logger } from '@/shared/utils/logger';
 
 interface QCFormModalProps {
   isOpen: boolean;
@@ -152,13 +153,9 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
       const res = await VQService.getList({ limit: 1000 });
       const items = res.data || [];
       
-      console.log("[QC_FILTER_DEBUG] Comparing to state:", { rfqNo, rfqId });
-      
       const filtered = items.filter((vq: any) => {
         const vqRfqId = vq.rfq_id || vq.rfq?.rfq_id;
         const vqRfqNo = vq.rfq_no || vq.rfq?.rfq_no;
-        
-        console.log("[QC_FILTER_ITEM]:", { vq_no: vq.vq_no, vqRfqNo, vqRfqId });
         
         return vqRfqNo === rfqNo || (!!rfqId && Number(vqRfqId) === Number(rfqId));
       });
@@ -193,8 +190,6 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
   // 🛡️ DATA RECOVERY: Fetch Creator Name if missing from detailed API
   useEffect(() => {
     const creatorId = qcData?.created_by || initialData?.created_by;
-    console.log("[QC_CREATOR_DEBUG] ID Check:", { creatorId, currentCreatedBy: createdBy });
-    
     if (creatorId && !createdBy) {
       // Fallback 1: Current Logger
       if (Number(creatorId) === Number(user?.employee_id)) {
@@ -207,7 +202,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
              const empName = actualEmp?.employee_fullname || '';
              if (empName) setCreatedBy(empName);
            })
-           .catch((err) => console.error("QC_CREATOR_FETCH_ERR:", err));
+           .catch((err) => logger.error("QC_CREATOR_FETCH_ERR:", err));
       }
     }
   }, [qcData, initialData, createdBy, user]);
@@ -231,7 +226,6 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
       const recoveredPrNo = actualRfq.pr_no || actualRfq.ref_pr_no || '';
 
       if (recoveredPrId && (prId === null || prId === 0)) {
-        console.log("QC_RECOVERY_SYNC:", { pr_id: recoveredPrId });
         setValue('pr_id', Number(recoveredPrId));
 
         

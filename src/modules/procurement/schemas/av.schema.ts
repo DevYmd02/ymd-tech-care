@@ -7,6 +7,7 @@ export const AVLineSchema = PRLineSchema.extend({
     approved_qty: z.number().min(0).default(0),
     remark: z.string().optional().nullable(),
     requested_qty: z.number().optional().nullable(),
+    remaining_qty: z.number().optional().nullable(),
 });
 
 export type AVLineFormData = z.infer<typeof AVLineSchema>;
@@ -15,6 +16,7 @@ export type AVLineFormData = z.infer<typeof AVLineSchema>;
 export const AVFormSchema = PRBaseFormSchema.extend({
     lines: z.array(AVLineSchema),
     av_no: z.string().optional().nullable(),
+    hasOtherAVs: z.boolean().optional(),
     reject_reason: z.string().optional().nullable(),
 });
 

@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
 import { usePRCalculations } from '@/modules/procurement/pages/pr/hooks';
-import type { AVFormData, AVLineFormData } from '../schemas/av.schema';
+import type { AVFormData, AVLineFormData } from '../../../schemas/av.schema';
 
 interface AVFormSummaryProps {
     isViewMode?: boolean;
@@ -14,11 +14,56 @@ export const AVFormSummary: React.FC<AVFormSummaryProps> = () => {
     const vatRate = Number(useWatch({ control, name: 'pr_tax_rate' }) ?? 0);
     const discountInput = useWatch({ control, name: 'pr_discount_raw' }) ?? '';
     
+    // Calculate Original Subtotal for Prorating Global Discount
+    const originalSubtotal = (rawLines || []).reduce((sum, line) => {
+        const qty = Number(line.requested_qty || line.qty) || 0;
+        const price = Number(line.est_unit_price) || 0;
+        return sum + (qty * price);
+    }, 0);
+
+    const approvedSubtotal = (rawLines || []).reduce((sum, line) => {
+        const isApproved = line.is_approved;
+        const approvedQty = isApproved ? Number(line.approved_qty) || 0 : 0;
+        const price = Number(line.est_unit_price) || 0;
+        return sum + (approvedQty * price);
+    }, 0);
+
+    // Prorate Global Discount if Fixed (e.g. "500")
+    let proratedDiscountInput = discountInput;
+    const trimmedDiscountInput = String(discountInput || '').trim();
+    if (trimmedDiscountInput && !trimmedDiscountInput.endsWith('%')) {
+        const fixed = parseFloat(trimmedDiscountInput) || 0;
+        const ratio = originalSubtotal > 0 ? approvedSubtotal / originalSubtotal : 0;
+        proratedDiscountInput = (fixed * ratio).toFixed(2);
+    }
+
     // Map lines to use approved_qty as the qty for calculation
-    const approvedLinesForCalc = (rawLines || []).map(line => ({
-        ...line,
-        qty: line.is_approved ? line.approved_qty : 0
-    })) as any;
+    const approvedLinesForCalc = (rawLines || []).map(line => {
+        const isApproved = line.is_approved;
+        const approvedQty = isApproved ? Number(line.approved_qty) || 0 : 0;
+        const price = Number(line.est_unit_price) || 0;
+        const originalQty = Number(line.requested_qty || line.qty) || 1;
+        
+        // Recalculate discount
+        let discount = 0;
+        const lineDiscountInput = String(line.line_discount_raw || '').trim();
+        if (lineDiscountInput.endsWith('%')) {
+            const percent = parseFloat(lineDiscountInput.replace('%', ''));
+            if (!isNaN(percent)) {
+                discount = (approvedQty * price) * (percent / 100);
+            }
+        } else {
+            const fixed = parseFloat(lineDiscountInput) || 0;
+            // Prorate line discount: (approvedQty / originalQty) * fixed
+            discount = originalQty > 0 ? (approvedQty / originalQty) * fixed : 0;
+        }
+
+        return {
+            ...line,
+            qty: approvedQty,
+            discount: discount // Override with recalculated discount
+        };
+    }) as any;
 
     const {
         subtotal,
@@ -29,7 +74,7 @@ export const AVFormSummary: React.FC<AVFormSummaryProps> = () => {
     } = usePRCalculations({
         lines: approvedLinesForCalc,
         vatRate,
-        globalDiscountInput: discountInput
+        globalDiscountInput: proratedDiscountInput
     });
 
     // Update form values with calculated totals so they are perfectly synced on submit

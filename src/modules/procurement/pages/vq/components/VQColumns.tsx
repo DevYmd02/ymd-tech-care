@@ -148,7 +148,6 @@ export const getColumns = (context: VQColumnsContext): ColumnDef<VQListItem, any
             header: () => <div className="text-center w-full">จัดการ</div>,
             cell: ({ row }) => {
                 const item = row.original;
-                console.log("📋 [VQColumns] ROW ITEM PAYLOAD:", item);
                 const canRecord = item.status === 'PENDING' && !item.quotation_no;
                 const isRecorded = item.status === 'RECORDED';
                 const isCancelled = item.status === 'CANCELLED';

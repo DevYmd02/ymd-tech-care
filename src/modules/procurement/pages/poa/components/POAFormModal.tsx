@@ -10,11 +10,14 @@ import { WindowFormLayout } from '@/shared/components/ui/layout/WindowFormLayout
 import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal';
 import { usePOAForm } from '../hooks/usePOAForm';
 import type { POListItem } from '@/modules/procurement/types';
+import { CustomDateInput } from '@/shared/components/forms/CustomDateInput';
+import type { Currency } from '@/modules/master-data/types/master-data-types';
 
 const ui = {
     label: 'text-sm font-medium text-blue-700 dark:text-blue-300 mb-1 block',
     input: 'w-full h-8 px-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:text-white transition-all',
     inputRO: 'w-full h-8 px-3 text-sm bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-800 rounded-lg cursor-not-allowed font-medium',
+    select: 'w-full h-8 px-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:text-white cursor-pointer transition-all',
     error: 'text-red-500 text-[10px] mt-0.5 font-medium',
 };
 
@@ -77,6 +80,7 @@ export const POAFormModal = ({
         control,
         register,
         handleSubmit,
+        errors,
         fields,
         onSubmit,
         onInvalidSubmit,
@@ -85,12 +89,14 @@ export const POAFormModal = ({
         handleConfirmApprove,
         isRejectModalOpen,
         setIsRejectModalOpen,
-        openRejectModal,
+        handleRejectInit,
         handleConfirmReject,
         isSubmitting,
         detailData,
         isLoadingDetail,
-    } = usePOAForm({ isOpen, onClose, onSuccess, poId, initialValues });
+        currencies,
+        isLoadingCurrencies,
+    } = usePOAForm({ isOpen, onClose, onSuccess, poId: Number(poId), initialValues });
 
     const poLinesValues = useWatch({ control, name: 'po_lines' });
 
@@ -120,11 +126,11 @@ export const POAFormModal = ({
                             </button>
                             <button
                                 type="button"
-                                onClick={openRejectModal}
+                                onClick={handleRejectInit}
                                 disabled={isSubmitting}
-                                className="px-4 py-2 bg-red-100 text-red-700 hover:bg-red-200 border border-red-300 rounded-md text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="px-4 py-2 bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/40 hover:border-red-500 rounded-md text-sm font-medium transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                <XCircle size={14} /> ปฏิเสธ (Reject)
+                                <XCircle size={14} /> ไม่อนุมัติ
                             </button>
                             <button
                                 type="button"
@@ -160,7 +166,12 @@ export const POAFormModal = ({
                             ) : (
                                 <>
                                     {/* ── Row 1: เลขที่ PO | วันที่ PO | อ้างอิง PR | อ้างอิง QC ── */}
-                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                    {/* ── Row 1: เลขที่อนุมัติ PO | เลขที่ PO | วันที่ PO | อ้างอิง PR | อ้างอิง QC ── */}
+                                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                                        <div>
+                                            <label className={ui.label}>เลขที่อนุมัติ PO</label>
+                                            <input value={(detailData as any)?.poa_no || '-'} className={ui.inputRO} readOnly placeholder="-" />
+                                        </div>
                                         <div>
                                             <label className={ui.label}>เลขที่ PO</label>
                                             <input value={detailData?.po_no || '-'} className={ui.inputRO} readOnly placeholder="ระบบจะสร้างอัตโนมัติ" />
@@ -216,30 +227,51 @@ export const POAFormModal = ({
                                     </div>
 
                                     {/* ── Row 4: Currency Detail Fields ── */}
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-lg">
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-lg">
                                         <div>
                                             <label className={ui.label}>วันที่อัตราแลกเปลี่ยน</label>
-                                            <input value={(detailData as any)?.exchange_rate_date ? formatThaiDate((detailData as any).exchange_rate_date) : '-'} className={ui.inputRO} readOnly />
+                                            <div className="h-8">
+                                                <Controller
+                                                    name="exchange_rate_date"
+                                                    control={control}
+                                                    render={({ field }) => (
+                                                        <CustomDateInput value={field.value || ''} onChange={field.onChange} disabled={false} className={ui.input} />
+                                                    )}
+                                                />
+                                            </div>
                                         </div>
                                         <div>
-                                            <label className={ui.label}>รหัสสกุลเงิน</label>
-                                            <input value={detailData?.currency_code || 'THB'} className={ui.inputRO} readOnly />
+                                            <label className={ui.label}>รหัสสกุลเงิน <span className="text-red-500">*</span></label>
+                                            <select {...register('currency_code')} className={ui.select} disabled={isLoadingCurrencies}>
+                                                <option value="">{isLoadingCurrencies ? 'โหลด...' : 'เลือกสกุลเงิน'}</option>
+                                                {currencies.map((o: Currency) => <option key={o.currency_code} value={o.currency_code}>{o.currency_code} - {o.name_en}</option>)}
+                                            </select>
                                         </div>
                                         <div>
-                                            <label className={ui.label}>อัตราแลกเปลี่ยน</label>
-                                            <input value={(detailData as any)?.exchange_rate || '1'} className={`${ui.inputRO} text-right`} readOnly />
+                                            <label className={ui.label}>ไปที่สกุลเงิน (Target)</label>
+                                            <select {...register('target_currency')} className={ui.select} disabled={isLoadingCurrencies}>
+                                                <option value="">{isLoadingCurrencies ? 'โหลด...' : 'เลือกสกุลเงิน'}</option>
+                                                {currencies.map((o: Currency) => <option key={o.currency_code} value={o.currency_code}>{o.currency_code} - {o.name_en}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className={ui.label}>อัตราแลกเปลี่ยน <span className="text-red-500">*</span></label>
+                                            <input type="number" step="0.0001" {...register('exchange_rate', { valueAsNumber: true })}
+                                                className={`${ui.input} text-right`} placeholder="1" />
+                                            {errors?.exchange_rate && <p className={ui.error}>{(errors.exchange_rate as any).message}</p>}
                                         </div>
                                     </div>
 
                                     {/* Remarks */}
                                     <div className="grid grid-cols-1 gap-4">
                                         <div>
-                                            <label className={ui.label}>หมายเหตุ (แก้ไขได้)</label>
+                                            <label className={ui.label}>หมายเหตุที่ไม่อนุมัติ <span className="text-red-500">*</span></label>
                                             <textarea 
-                                                {...register('remarks')} 
-                                                className="w-full text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 dark:text-white min-h-[60px]"
-                                                placeholder="ระบุหมายเหตุสำหรับการอนุมัติ..."
+                                                {...register('reject_reason')} 
+                                                className={`w-full text-sm bg-white dark:bg-slate-900 border ${errors?.reject_reason ? 'border-red-500 focus:ring-red-500/20 focus:border-red-500' : 'border-slate-300 dark:border-slate-700 focus:ring-emerald-500/20 focus:border-emerald-500'} rounded-lg p-2 focus:outline-none focus:ring-2 dark:text-white min-h-[60px]`}
+                                                placeholder="ระบุเหตุผล... (กรณีไม่อนุมัติ)"
                                             />
+                                            {errors?.reject_reason && <p className={ui.error}>{(errors.reject_reason as any).message}</p>}
                                         </div>
                                     </div>
                                 </>
@@ -388,9 +420,11 @@ export const POAFormModal = ({
                     isOpen={isRejectModalOpen}
                     onClose={() => setIsRejectModalOpen(false)}
                     onConfirm={handleConfirmReject}
-                    title="ปฏิเสธการอนุมัติใบสั่งซื้อ"
-                    description="กรุณาระบุเหตุผลการปฏิเสธในช่องหมายเหตุก่อนกดยืนยัน"
-                    confirmText="ยืนยันปฏิเสธ"
+                    title="ยืนยันการไม่อนุมัติใบสั่งซื้อ"
+                    description="คุณต้องการไม่อนุมัติรายการที่เลือกใช่หรือไม่? ข้อมูลจะถูกบันทึกและเปลี่ยนสถานะเป็นไม่อนุมัติ"
+                    confirmText="ยืนยันการไม่อนุมัติ"
+                    isLoading={isSubmitting}
+                    variant="danger"
                 />
 
             </WindowFormLayout>

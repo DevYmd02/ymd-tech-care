@@ -8,12 +8,14 @@ import { ErrorBoundary } from '@/shared/components/system/ErrorBoundary';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { createColumnHelper } from '@tanstack/react-table';
 
-import { PRService, type PRListParams } from '@/modules/procurement/services/pr.service';
-import type { PRHeader, PRStatus } from '@/modules/procurement/types';
+import { AVService } from '../../services/av.service';
+import type { PRListParams } from '@/modules/procurement/services/pr.service';
+import type { PRStatus } from '@/modules/procurement/types';
 
 const AV_STATUS_OPTIONS = [
     { value: 'ALL', label: 'ทั้งหมด' },
     { value: 'PENDING', label: 'รออนุมัติ' },
+    { value: 'PARTIAL', label: 'อนุมัติบางส่วน' },
     { value: 'APPROVED', label: 'อนุมัติแล้ว' },
     { value: 'REJECTED', label: 'ไม่อนุมัติ' },
 ];
@@ -24,15 +26,13 @@ export default function AVListPage() {
         defaultStatus: 'PENDING',
         customParamKeys: {
             search: 'pr_no',
-            search2: 'vendor_code',
-            search3: 'vendor_name'
+            search2: 'approval_no'
         }
     });
 
-    const apiFilters: PRListParams = {
+    const apiFilters: PRListParams & { approval_no?: string } = {
         pr_no: filters.search || undefined,
-        vendor_code: filters.search2 || undefined,
-        vendor_name: filters.search3 || undefined,
+        approval_no: filters.search2 || undefined,
         status: filters.status === 'ALL' ? undefined : filters.status,
         date_start: filters.date_start || undefined,
         date_end: filters.date_end || undefined,
@@ -41,9 +41,76 @@ export default function AVListPage() {
         sort: filters.sort || undefined
     };
 
-    const { data, isLoading, refetch } = useQuery({
-        queryKey: ['prs', apiFilters], // We query PR API for approvals
-        queryFn: () => PRService.getList(apiFilters),
+        const { data, isLoading, refetch } = useQuery({
+        queryKey: ['prs', apiFilters],
+        queryFn: async () => {
+            const filterPendingList = (list: any[]) => {
+                return list.filter((item: any) => {
+                    const rowPrNo = (item.pr_no || '').toLowerCase();
+                    const filterPrNo = (apiFilters.pr_no || '').toLowerCase();
+                    const matchPr = !filterPrNo || rowPrNo.includes(filterPrNo);
+                    
+                    const rowAppNo = (item.approval_no || item.av_no || '').toLowerCase();
+                    const filterAppNo = (apiFilters.approval_no || '').toLowerCase();
+                    const matchApp = !filterAppNo || rowAppNo.includes(filterAppNo);
+
+                    let matchDate = true;
+                    const itemDate = item.pr_date || item.approval_date;
+                    
+                    if (itemDate) {
+                        const dateStr = String(itemDate).split('T')[0];
+                        if (apiFilters.date_start && dateStr < apiFilters.date_start) matchDate = false;
+                        if (apiFilters.date_end && dateStr > apiFilters.date_end) matchDate = false;
+                    } else if (apiFilters.date_start || apiFilters.date_end) {
+                        matchDate = false;
+                    }
+
+                    return matchPr && matchApp && matchDate;
+                });
+            };
+
+            if (filters.status === 'PENDING') {
+                const res = await AVService.getPendingApprovalPRs();
+                const filtered = filterPendingList(res || []);
+                const startIndex = (filters.page - 1) * filters.limit;
+                const paginatedData = filtered.slice(startIndex, startIndex + filters.limit);
+                
+                return {
+                    data: paginatedData.map((p: any) => ({ ...p, status: 'PENDING', row_key: `pending-${p.pr_id}` })),
+                    total: filtered.length,
+                    page: filters.page,
+                    limit: filters.limit,
+                    totalPages: Math.ceil(filtered.length / filters.limit)
+                };
+            }
+
+            if (filters.status === 'ALL') {
+                const [pendingRes, approvedRes] = await Promise.all([
+                    AVService.getPendingApprovalPRs(),
+                    // Fetch with high limit to do full client-side combined pagination correctly
+                    AVService.getApprovalList({ ...apiFilters, limit: 1000, page: 1, status: undefined })
+                ]);
+                
+                const filteredPending = filterPendingList(pendingRes || []);
+                const combined = [
+                    ...filteredPending.map((p: any) => ({ ...p, status: 'PENDING', row_key: `pending-${p.pr_id}` })),
+                    ...(approvedRes?.data || []).map((a: any) => ({ ...a, row_key: `approved-${a.approval_id}` }))
+                ];
+                
+                const startIndex = (filters.page - 1) * filters.limit;
+                const paginatedCombined = combined.slice(startIndex, startIndex + filters.limit);
+
+                return {
+                    data: paginatedCombined,
+                    total: combined.length,
+                    page: filters.page,
+                    limit: filters.limit,
+                    totalPages: Math.ceil(combined.length / filters.limit)
+                };
+            }
+
+            return await AVService.getApprovalList(apiFilters);
+        },
         placeholderData: keepPreviousData,
         staleTime: 0,
         refetchOnWindowFocus: true,
@@ -51,22 +118,25 @@ export default function AVListPage() {
 
     const [isAVModalOpen, setIsAVModalOpen] = useState(false);
     const [selectedPRId, setSelectedPRId] = useState<number | undefined>(undefined);
+    const [selectedApproval, setSelectedApproval] = useState<any | undefined>(undefined);
 
-    const handleApprove = useCallback((id: number) => {
+    const handleApprove = useCallback((id: number, approvalItem?: any) => {
         setSelectedPRId(id);
+        setSelectedApproval(approvalItem);
         setIsAVModalOpen(true);
     }, []);
 
     const handleCloseAVModal = () => {
         setIsAVModalOpen(false);
         setSelectedPRId(undefined);
+        setSelectedApproval(undefined);
     };
 
     const handleAVSuccess = () => {
         refetch();
     };
 
-    const columnHelper = createColumnHelper<PRHeader>();
+    const columnHelper = createColumnHelper<any>();
     
     const columns = useMemo(() => [
         columnHelper.display({
@@ -76,30 +146,37 @@ export default function AVListPage() {
             size: 50,
             enableSorting: false,
         }),
-        columnHelper.accessor(row => (row as any).av_no || '-', {
+        columnHelper.accessor(row => (row as any).approval_no || '-', {
             id: 'av_no',
             header: 'เลขที่อนุมัติ PR',
-            cell: (info) => (
-                <div className="py-2 text-sm text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">
-                    {info.getValue() || '-'}
-                </div>
-            ),
+            cell: (info) => {
+                const val = info.getValue();
+                if (!val || val === '-') {
+                    return <div className="py-2 text-sm text-gray-400 dark:text-gray-500 whitespace-nowrap">-</div>;
+                }
+                return (
+                    <div className="py-2 text-sm text-emerald-600 dark:text-emerald-400 font-bold whitespace-nowrap">
+                        {val}
+                    </div>
+                );
+            },
             size: 140,
             enableSorting: false,
         }),
-        columnHelper.accessor('pr_date', {
+        columnHelper.accessor(row => (row as any).approval_date || '-', {
             id: 'pr_date_no',
             header: 'เอกสาร / วันที่',
             cell: (info) => {
                 const row = info.row.original;
+                const prNo = (row as any).pr?.pr_no || (row as any).pr_no || '-';
                 return (
                     <div className="flex flex-col py-2">
-                        <span className="font-bold whitespace-nowrap text-base leading-tight text-blue-600 dark:text-blue-400 hover:underline cursor-pointer" onClick={() => handleApprove(row.pr_id)}>
-                            {row.pr_no}
+                        <span className="font-bold whitespace-nowrap text-base leading-tight text-blue-600 dark:text-blue-400 hover:underline cursor-pointer" onClick={() => handleApprove(row.pr_id, row)}>
+                            {prNo}
                         </span>
                         <div className="flex flex-col mt-1">
                             <span className="text-xs text-gray-500 dark:text-gray-400">
-                                {formatThaiDate(info.getValue())}
+                                {formatThaiDate((row as any).approval_date || (row as any).pr_date)}
                             </span>
                         </div>
                     </div>
@@ -108,7 +185,7 @@ export default function AVListPage() {
             size: 160,
             enableSorting: false,
         }),
-        columnHelper.accessor(row => row.purpose || row.remark || '', {
+        columnHelper.accessor(row => (row as any).remarks || row.purpose || row.remark || '', {
             id: 'purpose',
             header: 'รายละเอียด',
             cell: (info) => (
@@ -119,11 +196,11 @@ export default function AVListPage() {
             size: 220,
             enableSorting: false,
         }),
-        columnHelper.accessor('requester_name', {
+        columnHelper.accessor(row => (row as any).approval_emp_name || row.requester_name || '', {
             header: 'ผู้จัดทำ',
             cell: (info) => {
                 const row = info.row.original;
-                const reqName = row.requester_name || row.created_by_name || row.employee_name;
+                const reqName = (row as any).approval_emp_name || (row as any).requester_name || (row as any).created_by_name || (row as any).employee_name;
                 const displayReq = reqName ? String(reqName) : 'ไม่ระบุผู้ขอ';
                 return (
                     <div className="flex flex-col py-2 gap-0.5">
@@ -136,7 +213,7 @@ export default function AVListPage() {
             size: 140,
             enableSorting: false,
         }),
-        columnHelper.accessor(row => row.total_amount ?? Number(row.pr_base_total_amount ?? 0), {
+        columnHelper.accessor(row => Number((row as any).quote_total_amount ?? (row as any).base_total_amount ?? (row as any).total_amount ?? (row as any).pr_base_total_amount ?? 0), {
             id: 'total_amount',
             header: () => <span className="whitespace-nowrap">ยอดรวม (บาท)</span>,
             meta: { align: 'right' },
@@ -165,8 +242,12 @@ export default function AVListPage() {
             cell: ({ row }) => (
                 <div className="flex justify-center items-center gap-2 w-full h-full py-2 min-w-[100px]">
                     <button
-                        onClick={() => handleApprove(row.original.pr_id)}
-                        className="p-1.5 text-blue-600 hover:bg-blue-50 hover:text-blue-700 dark:text-blue-400 dark:hover:bg-blue-900/30 dark:hover:text-blue-300 rounded-md transition-colors"
+                        onClick={() => handleApprove(row.original.pr_id, row.original)}
+                        className={`p-1.5 rounded-md transition-colors flex items-center justify-center ${
+                            row.original.status === 'PENDING'
+                            ? "text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-300"
+                            : "text-blue-600 hover:bg-blue-50 hover:text-blue-700 dark:text-blue-400 dark:hover:bg-blue-900/30 dark:hover:text-blue-300"
+                        }`}
                         title={row.original.status === 'PENDING' ? "พิจารณาอนุมัติ" : "ดูรายละเอียด"}
                     >
                         {row.original.status === 'PENDING' ? <ShieldCheck size={18} /> : <Eye size={18} />}
@@ -191,10 +272,17 @@ export default function AVListPage() {
                     <form onSubmit={(e) => { e.preventDefault(); handleApplyFilters(); }} className="w-full">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                         <FilterField
-                            label="เลขที่เอกสาร"
+                            label="เลขที่ PR"
                             value={localFilters.search}
                             onChange={(val: string) => handleFilterChange('search', val)}
                             placeholder="PR-xxx"
+                            accentColor="emerald"
+                        />
+                        <FilterField
+                            label="เลขที่อนุมัติ PR"
+                            value={localFilters.search2 || ''}
+                            onChange={(val: string) => handleFilterChange('search2', val)}
+                            placeholder="AV-xxx"
                             accentColor="emerald"
                         />
                          <FilterField
@@ -220,7 +308,7 @@ export default function AVListPage() {
                             accentColor="emerald"
                         />
                         
-                        <div className="md:col-span-4 xl:col-span-4 flex justify-end gap-2 items-center">
+                        <div className="md:col-span-1 lg:col-span-3 flex justify-end gap-2 items-center">
                             <button
                                 type="button"
                                 onClick={resetFilters}
@@ -230,10 +318,18 @@ export default function AVListPage() {
                             </button>
                             <button
                                 type="submit"
-                                className="h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+                                className="h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap mr-2"
                             >
                                 <Search size={18} />
                                 ค้นหา
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => { setSelectedPRId(undefined); setIsAVModalOpen(true); }}
+                                className="h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+                            >
+                                <ShieldCheck size={18} />
+                                รายการอนุมัติใบขอซื้อ
                             </button>
                         </div>
                         </div>
@@ -255,7 +351,7 @@ export default function AVListPage() {
                             }}
                             sortConfig={sortConfig}
                             onSortChange={handleSortChange}
-                            rowIdField="pr_id"
+                            rowIdField="row_key"
                             className="flex-1"
                             showFooter={false}
                         />
@@ -268,29 +364,35 @@ export default function AVListPage() {
                     >
                         {data?.data.map((item) => (
                             <MobileListCard
-                                key={item.pr_id}
-                                title={item.pr_no}
-                                subtitle={formatThaiDate(item.pr_date)}
+                                key={(item as any).approval_id || (item as any).pr_id}
+                                title={(item as any).pr?.pr_no || (item as any).pr_no || '-'}
+                                subtitle={formatThaiDate((item as any).approval_date || (item as any).pr_date)}
                                 statusBadge={<PRStatusBadge status={item.status} />}
                                 details={[
                                     {
                                         label: 'เลขที่อนุมัติ PR:',
-                                        value: (item as any).av_no || '-',
+                                        value: (item as any).approval_no || (item as any).av_no ? (
+                                            <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                                                {(item as any).approval_no || (item as any).av_no}
+                                            </span>
+                                        ) : (
+                                            <span className="text-gray-400 dark:text-gray-500">-</span>
+                                        ),
                                     },
                                     {
                                         label: 'ผู้ขอ:',
-                                        value: item.requester_name || item.created_by_name || item.employee_name || 'ไม่ระบุผู้ขอ',
+                                        value: (item as any).approval_emp_name || (item as any).requester_name || 'ไม่ระบุผู้ขอ',
                                     }
                                 ]}
                                 amountLabel="ยอดรวม"
                                 amountValue={
                                     <span className="font-bold text-lg text-emerald-600 dark:text-emerald-400">
-                                        {(item.total_amount ?? Number(item.pr_base_total_amount ?? 0)).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                                        {Number((item as any).quote_total_amount ?? (item as any).base_total_amount ?? (item as any).total_amount ?? (item as any).pr_base_total_amount ?? 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                                     </span>
                                 }
                                 actions={
                                     <button
-                                        onClick={() => handleApprove(item.pr_id)}
+                                        onClick={() => handleApprove(item.pr_id, item)}
                                         className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
                                     >
                                         {item.status === 'PENDING' ? (
@@ -312,6 +414,13 @@ export default function AVListPage() {
                         isOpen={isAVModalOpen}
                         onClose={handleCloseAVModal}
                         id={selectedPRId}
+                        approvalItem={{
+                            ...(selectedApproval || {}),
+                            hasOtherAVs: (data?.data || []).some((item: any) => 
+                                item.pr_id === selectedPRId && 
+                                !!(item.approval_no || item.av_no)
+                            )
+                        }}
                         onSuccess={handleAVSuccess}
                     />
                 </ErrorBoundary>

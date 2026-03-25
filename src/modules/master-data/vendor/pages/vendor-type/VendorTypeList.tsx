@@ -4,7 +4,8 @@
  * @module vendor
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { 
     Edit2, 
     Trash2, 
@@ -42,8 +43,8 @@ export default function VendorTypeList() {
         resetFilters
     } = useTableFilters();
 
-    const [allVendorTypes, setAllVendorTypes] = useState<VendorTypeMaster[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const queryClient = useQueryClient();
+
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
 
@@ -64,21 +65,12 @@ export default function VendorTypeList() {
     ], []);
 
     // ==================== DATA FETCHING ====================
-    const fetchData = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const response = await VendorTypeService.getAll();
-            setAllVendorTypes(response?.items || []);
-        } catch (error) {
-            console.error('Failed to fetch vendor types:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+    const { data: vendorTypeData, isLoading } = useQuery({
+        queryKey: ['vendor-types'],
+        queryFn: () => VendorTypeService.getAll(),
+        staleTime: 5 * 60 * 1000, // 5 minutes (master data)
+    });
+    const allVendorTypes = useMemo(() => vendorTypeData?.items ?? [], [vendorTypeData]);
 
     // ==================== CLIENT-SIDE FILTERING & PAGINATION ====================
     const filteredData = useMemo(() => {
@@ -126,9 +118,11 @@ export default function VendorTypeList() {
 
     const handleDelete = useCallback((id: number) => {
         if (confirm('คุณต้องการลบข้อมูลประเภทเจ้าหนี้นี้หรือไม่?')) {
-            VendorTypeService.delete(id).then(() => fetchData());
+            VendorTypeService.delete(id).then(() =>
+                queryClient.invalidateQueries({ queryKey: ['vendor-types'] })
+            );
         }
-    }, [fetchData]);
+    }, [queryClient]);
 
     const handleModalClose = () => {
         setIsModalOpen(false);
@@ -252,7 +246,7 @@ export default function VendorTypeList() {
                 isOpen={isModalOpen} 
                 onClose={handleModalClose}
                 editId={editingId}
-                onSuccess={fetchData}
+                onSuccess={() => queryClient.invalidateQueries({ queryKey: ['vendor-types'] })}
             />
         </div>
     );

@@ -17,3 +17,7 @@ export type { QCListParams, QCListResponse, QCCreateData } from './qc.service';
 
 export { VQService } from './vq.service';
 export type { VQListParams, VQListResponse, VQCreateData } from './vq.service';
+
+export { AVService } from './av.service';
+
+export { POAService } from './poa.service';

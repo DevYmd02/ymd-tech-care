@@ -1,15 +1,16 @@
 import React from 'react';
 import { useFormContext, Controller } from 'react-hook-form';
 
-import { Building2, FolderKanban, User, Calendar } from 'lucide-react';
+import { Building2, FolderKanban, User, Calendar, Search } from 'lucide-react';
 import type { VendorSelection } from '@/modules/procurement/types/pr-types';
 import type { CostCenter, Project } from '@/modules/master-data/types/master-data-types';
 import { VendorSearch } from '@/modules/master-data/vendor/components/selector/VendorSearch';
 import { StatusCheckbox } from '@ui';
-import type { AVFormData } from '../schemas/av.schema';
+import type { AVFormData } from '../../../schemas/av.schema';
 
 interface Props {
   prId?: number;
+  onSearchPRClick?: () => void;
   costCenters: CostCenter[];
   projects: Project[];
   onVendorSelect: (vendor: VendorSelection | null) => void;
@@ -18,7 +19,7 @@ interface Props {
   readOnly?: boolean;
 }
 
-export const AVHeader: React.FC<Props> = ({ prId, costCenters, projects, onVendorSelect, readOnly = true }) => {
+export const AVHeader: React.FC<Props> = ({ prId, onSearchPRClick, costCenters, projects, onVendorSelect, readOnly = true }) => {
   const { register, watch, control, formState: { errors } } = useFormContext<AVFormData>();
   const preferredVendorId = watch("preferred_vendor_id");
   const vendorName = watch("vendor_name");
@@ -70,13 +71,20 @@ export const AVHeader: React.FC<Props> = ({ prId, costCenters, projects, onVendo
           <label className={labelClass}>
             เลขที่เอกสาร {(prId || (watch as any)('id') || (watch as any)('pr_id')) ? <span className="text-gray-500 font-normal ml-1 text-[10px]">(ID: {prId || (watch as any)('id') || (watch as any)('pr_id')})</span> : ''}
           </label>
-          <div className="relative">
+          <div className="flex items-center gap-1">
             <input 
               {...register("pr_no")} 
               className={`${inputClass} bg-gray-100 italic ${watch("pr_no")?.startsWith('DRAFT-TEMP') ? 'text-amber-600 font-bold' : ''}`} 
               value={(watch("pr_no")?.startsWith('DRAFT-TEMP') ? 'NEW (รอรันเลข)' : watch("pr_no")) || ''}
               readOnly 
             />
+            <button 
+                type="button" 
+                onClick={onSearchPRClick}
+                className="p-1 min-h-[32px] px-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 transition-colors"
+            >
+                <Search size={14} />
+            </button>
           </div>
         </div>
 
