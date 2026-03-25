@@ -5,7 +5,7 @@ import { z } from 'zod';
 // ====================================================================================
 
 /** PR Status Enum — exported for use in mock data, badges, and filter dropdowns */
-export const PRStatusEnum = z.enum(['DRAFT', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED', 'COMPLETED']);
+export const PRStatusEnum = z.enum(['DRAFT', 'PENDING', 'APPROVED', 'PARTIAL', 'REJECTED', 'CANCELLED', 'COMPLETED']);
 export type PRStatus = z.infer<typeof PRStatusEnum>;
 
 // ====================================================================================

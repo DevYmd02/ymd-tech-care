@@ -13,8 +13,8 @@ import { useTableFilters } from '@/shared/hooks';
 import RFQFormModal from '@/modules/procurement/pages/rfq/components/RFQFormModal';
 import { PRFormModal } from './components/PRFormModal';
 import { PRActionsCell } from './components/PRActionsCell';
+import { ApprovalHistoryModal } from '@/modules/procurement/shared/components/ApprovalHistoryModal';
 import { usePRActions } from '@/modules/procurement/pages/pr/hooks';
-import { RejectReasonModal } from '@/modules/procurement/shared/components/RejectReasonModal';
 import { ErrorBoundary } from '@/shared/components/system/ErrorBoundary';
 
 import { formatThaiDate } from '@/shared/utils/dateUtils';
@@ -36,6 +36,7 @@ const PR_STATUS_OPTIONS = [
     { value: 'DRAFT', label: 'แบบร่าง' },
     { value: 'PENDING', label: 'รออนุมัติ' },
     { value: 'APPROVED', label: 'อนุมัติแล้ว' },
+    { value: 'PARTIAL', label: 'อนุมัติบางส่วน' },
     { value: 'REJECTED', label: 'ไม่อนุมัติ' },
     { value: 'CANCELLED', label: 'ยกเลิก' },
     { value: 'COMPLETED', label: 'เสร็จสมบูรณ์' },
@@ -116,16 +117,14 @@ export default function PRListPage() {
     const [selectedPRId, setSelectedPRId] = useState<number | undefined>(undefined);
     const [isReadOnly, setIsReadOnly] = useState(false);
 
+    // Approval History Modal State
+    const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+    const [historyPrId, setHistoryPrId] = useState<number | undefined>(undefined);
+    const [historyPrNo, setHistoryPrNo] = useState<string | undefined>(undefined);
+
     // Hook Actions
     const {
-        handleApprove,
-        handleDirectApproval,
-        approvingId,
-        handleReject,
-        submitReject,
-        closeRejectModal,
-        isRejectReasonOpen,
-        isRejecting
+        handleDirectApproval
     } = usePRActions();
 
     // Handlers (handleFilterChange is from useTableFilters, directly available)
@@ -176,6 +175,12 @@ export default function PRListPage() {
         setIsReadOnly(false);
     };
 
+    const handleViewHistory = useCallback((id: number, prNo?: string) => {
+        setHistoryPrId(id);
+        setHistoryPrNo(prNo);
+        setIsHistoryModalOpen(true);
+    }, []);
+
     const handleSendApproval = useCallback(async (pr: PRHeader) => {
         const confirmed = await handleDirectApproval(pr);
         if (confirmed) {
@@ -185,14 +190,7 @@ export default function PRListPage() {
         }
     }, [handleDirectApproval, queryClient]);
 
-    const onApproveClick = useCallback(async (id: number) => {
-        const confirmed = await handleApprove(id);
-        if (confirmed) {
-            setTimeout(() => {
-                queryClient.invalidateQueries({ queryKey: ['prs'] });
-            }, 100);
-        }
-    }, [handleApprove, queryClient]);
+    // Removed onApproveClick and handleReject as they are now handled by AV Module
 
     // Columns Definition
     const columnHelper = createColumnHelper<PRHeader>();
@@ -371,7 +369,7 @@ export default function PRListPage() {
                 </div>
             ),
             size: 100,
-            enableSorting: false,
+            enableSorting: true,
         }),
         columnHelper.display({
             id: 'actions',
@@ -382,11 +380,9 @@ export default function PRListPage() {
                         row={row.original}
                         onEdit={handleEdit}
                         onView={handleView}
+                        onViewHistory={(id) => handleViewHistory(id, row.original.pr_no)}
                         onSendApproval={handleSendApproval}
-                        onApprove={onApproveClick}
-                        onReject={handleReject}
                         onCreateRFQ={handleCreateRFQ}
-                        isApproving={approvingId === row.original.pr_id}
                     />
                 </div>
             ),
@@ -401,7 +397,7 @@ export default function PRListPage() {
             size: 150, 
             enableSorting: false,
         }),
-    ], [columnHelper, filters.page, filters.limit, data?.data, handleSendApproval, onApproveClick, handleReject, approvingId, handleEdit, handleCreateRFQ, handleView, vendorMap, vendorData?.items]);
+    ], [columnHelper, filters.page, filters.limit, data?.data, handleSendApproval, handleEdit, handleCreateRFQ, handleView, vendorMap, vendorData?.items, handleViewHistory]);
 
     // ====================================================================================
     // RENDER
@@ -517,91 +513,85 @@ export default function PRListPage() {
                     </div>
 
                     {/* Mobile View: Cards (shared MobileListContainer + MobileListCard) */}
-                    <MobileListContainer
-                        isLoading={isLoading}
-                        isEmpty={!data?.data.length}
-                        pagination={data?.total ? { page: filters.page, total: data.total, limit: filters.limit, onPageChange: handlePageChange } : undefined}
-                    >
-                        {data?.data.map((item) => (
-                            <MobileListCard
-                                key={item.pr_id}
-                                title={item.pr_no}
-                                subtitle={formatThaiDate(item.pr_date)}
-                                statusBadge={<PRStatusBadge status={item.status} />}
-                                details={[
-                                    {
-                                        label: 'ผู้ขอ:',
-                                        value: item.requester_name || item.created_by_name || item.employee_name
-                                            || (item.requester_user_id ? `User ID: ${item.requester_user_id}` : 'ไม่ระบุผู้ขอ'),
-                                    },
-                                    {
-                                        label: 'รหัสผู้ขาย:',
-                                        value: (() => {
-                                            const vId = item.preferred_vendor_id || item.vendor_id;
-                                            return vId ? vendorMap[String(vId)]?.vendor_code : '-';
-                                        })() || '-',
-                                    },
-                                    {
-                                        label: 'ชื่อผู้ขาย:',
-                                        value: (() => {
-                                            const vId = item.preferred_vendor_id || item.vendor_id;
-                                            return vId ? vendorMap[String(vId)]?.vendor_name : '-';
-                                        })() || '-',
-                                    },
-                                    ...(item.need_by_date ? [{ label: 'ต้องการใช้:', value: formatThaiDate(item.need_by_date) }] : []),
-                                ]}
-                                amountLabel="ยอดรวม"
-                                amountValue={
-                                    <span className="font-bold text-lg text-emerald-600 dark:text-emerald-400">
-                                        {(item.total_amount ?? Number(item.pr_base_total_amount ?? 0)).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                                    </span>
-                                }
-                                actions={
-                                    <>
-                                        <button
-                                            onClick={() => handleView(item.pr_id)}
-                                            className="flex-1 bg-gray-50 dark:bg-slate-700 hover:bg-gray-100 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1 border border-gray-200 dark:border-slate-600"
-                                        >
-                                            <Eye size={14} /> ดู
-                                        </button>
-                                        {item.status === 'DRAFT' && (
-                                            <>
-                                                <button
-                                                    onClick={() => handleEdit(item.pr_id)}
-                                                    className="flex-1 bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1"
-                                                >
-                                                    <Send size={14} /> แก้ไข
-                                                </button>
-                                                <button
-                                                    onClick={() => handleSendApproval(item)}
-                                                    className="flex-[2] bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
-                                                >
-                                                    <Send size={14} /> ส่งอนุมัติ
-                                                </button>
-                                            </>
-                                        )}
-                                        {item.status === 'PENDING' && (
+                    <div className="md:hidden">
+                        <MobileListContainer
+                            isLoading={isLoading}
+                            isEmpty={!data?.data.length}
+                            pagination={data?.total ? { page: filters.page, total: data.total, limit: filters.limit, onPageChange: handlePageChange } : undefined}
+                        >
+                            {data?.data.map((item) => (
+                                <MobileListCard
+                                    key={item.pr_id}
+                                    title={item.pr_no}
+                                    subtitle={formatThaiDate(item.pr_date)}
+                                    statusBadge={<PRStatusBadge status={item.status} />}
+                                    details={[
+                                        {
+                                            label: 'ผู้ขอ:',
+                                            value: item.requester_name || item.created_by_name || item.employee_name
+                                                || (item.requester_user_id ? `User ID: ${item.requester_user_id}` : 'ไม่ระบุผู้ขอ'),
+                                        },
+                                        {
+                                            label: 'รหัสผู้ขาย:',
+                                            value: (() => {
+                                                const vId = item.preferred_vendor_id || item.vendor_id;
+                                                return vId ? vendorMap[String(vId)]?.vendor_code : '-';
+                                            })() || '-',
+                                        },
+                                        {
+                                            label: 'ชื่อผู้ขาย:',
+                                            value: (() => {
+                                                const vId = item.preferred_vendor_id || item.vendor_id;
+                                                return vId ? vendorMap[String(vId)]?.vendor_name : '-';
+                                            })() || '-',
+                                        },
+                                        ...(item.need_by_date ? [{ label: 'ต้องการใช้:', value: formatThaiDate(item.need_by_date) }] : []),
+                                    ]}
+                                    amountLabel="ยอดรวม"
+                                    amountValue={
+                                        <span className="font-bold text-lg text-emerald-600 dark:text-emerald-400">
+                                            {(item.total_amount ?? Number(item.pr_base_total_amount ?? 0)).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                                        </span>
+                                    }
+                                    actions={
+                                        <>
                                             <button
-                                                onClick={() => onApproveClick(item.pr_id)}
-                                                disabled={approvingId === item.pr_id}
-                                                className="flex-[2] bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm disabled:opacity-50"
+                                                onClick={() => handleView(item.pr_id)}
+                                                className="flex-1 bg-gray-50 dark:bg-slate-700 hover:bg-gray-100 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1 border border-gray-200 dark:border-slate-600"
                                             >
-                                                <Send size={14} /> อนุมัติ
+                                                <Eye size={14} /> ดู
                                             </button>
-                                        )}
-                                        {item.status === 'APPROVED' && (
-                                            <button
-                                                onClick={() => handleCreateRFQ(item)}
-                                                className="flex-[2] bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
-                                            >
-                                                <Send size={14} /> สร้าง RFQ
-                                            </button>
-                                        )}
-                                    </>
-                                }
-                            />
-                        ))}
-                    </MobileListContainer>
+                                            {item.status === 'DRAFT' && (
+                                                <>
+                                                    <button
+                                                        onClick={() => handleEdit(item.pr_id)}
+                                                        className="flex-1 bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1"
+                                                    >
+                                                        <Send size={14} /> แก้ไข
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleSendApproval(item)}
+                                                        className="flex-[2] bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
+                                                    >
+                                                        <Send size={14} /> ส่งอนุมัติ
+                                                    </button>
+                                                </>
+                                            )}
+                                            {/* PENDING approval actions removed for Mobile View to enforce AV Module usage */}
+                                            {item.status === 'APPROVED' && (
+                                                <button
+                                                    onClick={() => handleCreateRFQ(item)}
+                                                    className="flex-[2] bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
+                                                >
+                                                    <Send size={14} /> สร้าง RFQ
+                                                </button>
+                                            )}
+                                        </>
+                                    }
+                                />
+                            ))}
+                        </MobileListContainer>
+                    </div>
                 </div>
 
             </PageListLayout>
@@ -631,19 +621,14 @@ export default function PRListPage() {
                 </ErrorBoundary>
             )}
 
-            <RejectReasonModal
-                isOpen={isRejectReasonOpen}
-                onClose={closeRejectModal}
-                onConfirm={async () => {
-                    const success = await submitReject();
-                    if (success) {
-                        setTimeout(() => {
-                            queryClient.invalidateQueries({ queryKey: ['prs'] });
-                        }, 100);
-                    }
-                }}
-                isSubmitting={isRejecting}
-            />
+            {/* RejectReasonModal has been removed */}            {historyPrId && (
+                <ApprovalHistoryModal 
+                    isOpen={isHistoryModalOpen}
+                    onClose={() => setIsHistoryModalOpen(false)}
+                    prId={historyPrId}
+                    prNo={historyPrNo}
+                />
+            )}
         </>
     );
 }

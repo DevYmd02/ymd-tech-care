@@ -4,13 +4,13 @@ import { ShieldCheck, Search, Eye } from 'lucide-react';
 import { PageListLayout, SmartTable, PRStatusBadge, FilterField, MobileListCard, MobileListContainer } from '@ui';
 import { useTableFilters } from '@/shared/hooks';
 import { AVFormModal } from './components/AVFormModal';
+import { ApprovalHistoryModal } from '@/modules/procurement/shared/components/ApprovalHistoryModal';
 import { ErrorBoundary } from '@/shared/components/system/ErrorBoundary';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { createColumnHelper } from '@tanstack/react-table';
 
 import { AVService } from '../../services/av.service';
 import type { PRListParams } from '@/modules/procurement/services/pr.service';
-import type { PRStatus } from '@/modules/procurement/types';
 
 const AV_STATUS_OPTIONS = [
     { value: 'ALL', label: 'ทั้งหมด' },
@@ -22,7 +22,7 @@ const AV_STATUS_OPTIONS = [
 
 export default function AVListPage() {
     // Force default status to PENDING for approvals
-    const { filters, localFilters, handleFilterChange, handleApplyFilters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<PRStatus>({
+    const { filters, localFilters, handleFilterChange, handleApplyFilters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<string>({
         defaultStatus: 'PENDING',
         customParamKeys: {
             search: 'pr_no',
@@ -33,7 +33,7 @@ export default function AVListPage() {
     const apiFilters: PRListParams & { approval_no?: string } = {
         pr_no: filters.search || undefined,
         approval_no: filters.search2 || undefined,
-        status: filters.status === 'ALL' ? undefined : filters.status,
+        status: ((filters.status as string) === 'ALL' ? undefined : filters.status) as PRListParams['status'],
         date_start: filters.date_start || undefined,
         date_end: filters.date_end || undefined,
         page: filters.page,
@@ -44,72 +44,130 @@ export default function AVListPage() {
         const { data, isLoading, refetch } = useQuery({
         queryKey: ['prs', apiFilters],
         queryFn: async () => {
-            const filterPendingList = (list: any[]) => {
-                return list.filter((item: any) => {
-                    const rowPrNo = (item.pr_no || '').toLowerCase();
-                    const filterPrNo = (apiFilters.pr_no || '').toLowerCase();
-                    const matchPr = !filterPrNo || rowPrNo.includes(filterPrNo);
-                    
-                    const rowAppNo = (item.approval_no || item.av_no || '').toLowerCase();
-                    const filterAppNo = (apiFilters.approval_no || '').toLowerCase();
-                    const matchApp = !filterAppNo || rowAppNo.includes(filterAppNo);
 
-                    let matchDate = true;
-                    const itemDate = item.pr_date || item.approval_date;
-                    
-                    if (itemDate) {
-                        const dateStr = String(itemDate).split('T')[0];
-                        if (apiFilters.date_start && dateStr < apiFilters.date_start) matchDate = false;
-                        if (apiFilters.date_end && dateStr > apiFilters.date_end) matchDate = false;
-                    } else if (apiFilters.date_start || apiFilters.date_end) {
-                        matchDate = false;
+            // ====================================================
+            // 🎯 ALWAYS fetch both sources in parallel for dedup
+            // ====================================================
+            const [pendingRes, approvalRes] = await Promise.all([
+                // Source 1: PR headers that are waiting for approval action (status=PENDING from PR table)
+                AVService.getPendingApprovalPRs(),
+                // Source 2: Completed approval records (status from AV/pr-approval table)
+                AVService.getApprovalList({ limit: 1000, page: 1, status: undefined })
+            ]);
+
+            const pendingPRs: any[] = pendingRes || [];
+            const approvalRecords: any[] = approvalRes?.data || [];
+
+            // Build a map of pr_id -> approval record for fast lookup
+            // This is the GROUND TRUTH of what has been processed
+            const approvalByPRId = new Map<number, any>();
+            for (const rec of approvalRecords) {
+                const prId = Number(rec.pr_id);
+                if (!isNaN(prId)) {
+                    // Keep the LATEST record if multiple exist for same PR
+                    const existing = approvalByPRId.get(prId);
+                    if (!existing || rec.approval_id > existing.approval_id) {
+                        approvalByPRId.set(prId, rec);
                     }
+                }
+            }
 
-                    return matchPr && matchApp && matchDate;
-                });
+            // PRs that have been FULLY processed (approved/rejected — no more pending items)
+            const fullyHandledPRIds = new Set<number>(
+                [...approvalByPRId.entries()]
+                    .filter(([, rec]) => {
+                        const s = (rec.status || '').toUpperCase();
+                        return s === 'APPROVED' || s === 'REJECTED';
+                    })
+                    .map(([prId]) => prId)
+            );
+
+            // PRs that are partially approved (still have pending items)
+            const partialPRIds = new Set<number>(
+                [...approvalByPRId.entries()]
+                    .filter(([, rec]) => rec.status?.toUpperCase() === 'PARTIAL')
+                    .map(([prId]) => prId)
+            );
+
+            // Pending items: all PRs currently awaiting action
+            // Exclude fully handled ones (rejected or fully approved)
+            // Include partially approved (they still need another approval round)
+            const trulyPendingPRs = pendingPRs
+                .filter((p: any) => {
+                    const prId = Number(p.pr_id);
+                    return !fullyHandledPRIds.has(prId); // Still pending or partial
+                })
+                .map((p: any) => ({
+                    ...p,
+                    status: partialPRIds.has(Number(p.pr_id)) ? 'PARTIAL' : 'PENDING',
+                    row_key: `pending-${p.pr_id}`,
+                    pr_no: p.pr_no,
+                }));
+
+            // Approval records: all completed/partial approval entries
+            const approvalItems = approvalRecords.map((a: any) => ({
+                ...a,
+                pr_no: a.pr?.pr_no || a.pr_no || '',
+                row_key: `approved-${a.approval_id || a.pr_id}`,
+            }));
+
+            // ====================================================
+            // 🎯 CLIENT-SIDE FILTER: Search & Status filter
+            // ====================================================
+            const filterItem = (item: any): boolean => {
+                // PR No search
+                const prNo = (item.pr_no || '').toLowerCase();
+                const filterPrNo = (apiFilters.pr_no || '').toLowerCase();
+                if (filterPrNo && !prNo.includes(filterPrNo)) return false;
+
+                // Approval No search
+                const appNo = (item.approval_no || item.av_no || '').toLowerCase();
+                const filterAppNo = (apiFilters.approval_no || '').toLowerCase();
+                if (filterAppNo && !appNo.includes(filterAppNo)) return false;
+
+                // Date range filter
+                const itemDate = (item.pr_date || item.approval_date || '').split('T')[0];
+                if (apiFilters.date_start && itemDate && itemDate < apiFilters.date_start) return false;
+                if (apiFilters.date_end && itemDate && itemDate > apiFilters.date_end) return false;
+
+                return true;
             };
 
-            if (filters.status === 'PENDING') {
-                const res = await AVService.getPendingApprovalPRs();
-                const filtered = filterPendingList(res || []);
-                const startIndex = (filters.page - 1) * filters.limit;
-                const paginatedData = filtered.slice(startIndex, startIndex + filters.limit);
-                
-                return {
-                    data: paginatedData.map((p: any) => ({ ...p, status: 'PENDING', row_key: `pending-${p.pr_id}` })),
-                    total: filtered.length,
-                    page: filters.page,
-                    limit: filters.limit,
-                    totalPages: Math.ceil(filtered.length / filters.limit)
-                };
+            let combined: any[];
+
+            const selectedStatus = filters.status;
+
+            if (selectedStatus === 'PENDING') {
+                // Show only truly pending PRs (no approval record at all, or still waiting)
+                combined = trulyPendingPRs.filter((p: any) => p.status === 'PENDING');
+            } else if (selectedStatus === 'PARTIAL') {
+                // Show partially approved items: from both pending list (with PARTIAL status) and approval records
+                const partialFromPending = trulyPendingPRs.filter((p: any) => p.status === 'PARTIAL');
+                const partialFromApproval = approvalItems.filter((a: any) => a.status?.toUpperCase() === 'PARTIAL');
+                combined = [...partialFromPending, ...partialFromApproval];
+            } else if (selectedStatus === 'APPROVED') {
+                combined = approvalItems.filter((a: any) => a.status?.toUpperCase() === 'APPROVED');
+            } else if (selectedStatus === 'REJECTED') {
+                combined = approvalItems.filter((a: any) => a.status?.toUpperCase() === 'REJECTED');
+            } else {
+                // ALL: merge — pending (not handled) + all approval records
+                combined = [...trulyPendingPRs, ...approvalItems];
             }
 
-            if (filters.status === 'ALL') {
-                const [pendingRes, approvedRes] = await Promise.all([
-                    AVService.getPendingApprovalPRs(),
-                    // Fetch with high limit to do full client-side combined pagination correctly
-                    AVService.getApprovalList({ ...apiFilters, limit: 1000, page: 1, status: undefined })
-                ]);
-                
-                const filteredPending = filterPendingList(pendingRes || []);
-                const combined = [
-                    ...filteredPending.map((p: any) => ({ ...p, status: 'PENDING', row_key: `pending-${p.pr_id}` })),
-                    ...(approvedRes?.data || []).map((a: any) => ({ ...a, row_key: `approved-${a.approval_id}` }))
-                ];
-                
-                const startIndex = (filters.page - 1) * filters.limit;
-                const paginatedCombined = combined.slice(startIndex, startIndex + filters.limit);
+            // Apply text/date search filter
+            const filtered = combined.filter(filterItem);
 
-                return {
-                    data: paginatedCombined,
-                    total: combined.length,
-                    page: filters.page,
-                    limit: filters.limit,
-                    totalPages: Math.ceil(combined.length / filters.limit)
-                };
-            }
+            // Paginate client-side
+            const startIndex = (filters.page - 1) * filters.limit;
+            const paginatedData = filtered.slice(startIndex, startIndex + filters.limit);
 
-            return await AVService.getApprovalList(apiFilters);
+            return {
+                data: paginatedData,
+                total: filtered.length,
+                page: filters.page,
+                limit: filters.limit,
+                totalPages: Math.ceil(filtered.length / filters.limit),
+            };
         },
         placeholderData: keepPreviousData,
         staleTime: 0,
@@ -120,10 +178,20 @@ export default function AVListPage() {
     const [selectedPRId, setSelectedPRId] = useState<number | undefined>(undefined);
     const [selectedApproval, setSelectedApproval] = useState<any | undefined>(undefined);
 
+    const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+    const [historyPrId, setHistoryPrId] = useState<number | undefined>(undefined);
+    const [historyPrNo, setHistoryPrNo] = useState<string | undefined>(undefined);
+
     const handleApprove = useCallback((id: number, approvalItem?: any) => {
         setSelectedPRId(id);
         setSelectedApproval(approvalItem);
         setIsAVModalOpen(true);
+    }, []);
+
+    const handleViewHistory = useCallback((id: number, prNo?: string) => {
+        setHistoryPrId(id);
+        setHistoryPrNo(prNo);
+        setIsHistoryModalOpen(true);
     }, []);
 
     const handleCloseAVModal = () => {
@@ -171,7 +239,7 @@ export default function AVListPage() {
                 const prNo = (row as any).pr?.pr_no || (row as any).pr_no || '-';
                 return (
                     <div className="flex flex-col py-2">
-                        <span className="font-bold whitespace-nowrap text-base leading-tight text-blue-600 dark:text-blue-400 hover:underline cursor-pointer" onClick={() => handleApprove(row.pr_id, row)}>
+                        <span className="font-bold whitespace-nowrap text-base leading-tight text-blue-600 dark:text-blue-400 hover:underline cursor-pointer" onClick={() => handleViewHistory(row.pr_id, prNo)}>
                             {prNo}
                         </span>
                         <div className="flex flex-col mt-1">
@@ -213,7 +281,7 @@ export default function AVListPage() {
             size: 140,
             enableSorting: false,
         }),
-        columnHelper.accessor(row => Number((row as any).quote_total_amount ?? (row as any).base_total_amount ?? (row as any).total_amount ?? (row as any).pr_base_total_amount ?? 0), {
+        columnHelper.accessor(row => Number((row as any).base_total_amount ?? (row as any).pr_base_total_amount ?? (row as any).total_amount ?? (row as any).quote_total_amount ?? 0), {
             id: 'total_amount',
             header: () => <span className="whitespace-nowrap">ยอดรวม (บาท)</span>,
             meta: { align: 'right' },
@@ -257,7 +325,7 @@ export default function AVListPage() {
             size: 100, 
             enableSorting: false,
         }),
-    ], [columnHelper, filters.page, filters.limit, handleApprove]);
+    ], [columnHelper, filters.page, filters.limit, handleApprove, handleViewHistory]);
 
     return (
         <>
@@ -424,6 +492,15 @@ export default function AVListPage() {
                         onSuccess={handleAVSuccess}
                     />
                 </ErrorBoundary>
+            )}
+
+            {isHistoryModalOpen && historyPrId && (
+                <ApprovalHistoryModal 
+                    isOpen={isHistoryModalOpen}
+                    onClose={() => setIsHistoryModalOpen(false)}
+                    prId={historyPrId}
+                    prNo={historyPrNo}
+                />
             )}
         </>
     );

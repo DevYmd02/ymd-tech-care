@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FormProvider, Controller } from 'react-hook-form';
 
-import { FileText, Printer, Copy, CheckCircle, XCircle, Loader2, Calendar } from 'lucide-react';
+import { FileText, Printer, Copy, Loader2, Calendar } from 'lucide-react';
 import { PRHeader } from './PRHeader';
 import { PRFormLines } from './PRFormLines';
 import { PRFormSummary } from './PRFormSummary';
@@ -9,7 +9,6 @@ import { ProductSearchModal } from './ProductSearchModal';
 import { WindowFormLayout } from '@ui';
 import { SharedRemarksTab } from '@/shared/components/forms/SharedRemarksTab';
 import { usePRForm } from '@/modules/procurement/pages/pr/hooks';
-import { RejectReasonModal } from '@/modules/procurement/shared/components/RejectReasonModal';
 import { WarehouseSearchModal } from '@/modules/procurement/shared/components/WarehouseSearchModal';
 import { LocationSearchModal } from '@/modules/procurement/shared/components/LocationSearchModal';
 
@@ -35,14 +34,12 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
     isSubmitting, isActionLoading,
     costCenters, projects, purchaseTaxOptions, currencies, masterUnits,
     addLine, removeLine, clearLine, updateLine, handleClearLines,
-    openProductSearch, openWarehouseSearch, openLocationSearch, selectProduct, selectWarehouse, selectLocation, handleVendorSelect, onSubmit, handleApprove,
+    openProductSearch, openWarehouseSearch, openLocationSearch, selectProduct, selectWarehouse, selectLocation, handleVendorSelect, onSubmit,
     handleVoid,
     handleSubmit,
     handleFormError,
     formMethods,
-    user,
-    // Reject Logic
-    handleReject, submitReject, closeRejectModal, isRejectReasonOpen, isRejecting
+    user
   } = usePRForm({ isOpen, onClose, id, onSuccess });
 
   const { register, control, watch, setValue, formState: { errors } } = formMethods;
@@ -52,7 +49,6 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
   const readOnly = readOnlyProp || (!!id && currentStatus !== undefined && currentStatus !== 'DRAFT');
 
   // Action permissions — decoupled from readOnly (which is only for input fields)
-  const canApproveReject = isEditMode && currentStatus === 'PENDING';
   const canSaveDraft = !readOnly; // Only editable forms can save
 
   // Tabs state
@@ -92,27 +88,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
             <div className="flex items-center gap-2">
                 <button type="button" onClick={onClose} disabled={isSubmitting || isActionLoading} className="px-4 py-2 border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-md text-sm font-medium">{'ปิด'}</button>
 
-                {/* Approve / Reject — shown when PENDING (regardless of readOnly) */}
-                {canApproveReject && (
-                  <>
-                    <button 
-                        type="button" 
-                        onClick={handleReject} 
-                        disabled={isSubmitting || isActionLoading} 
-                        className="px-4 py-2 bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 rounded-md text-sm font-medium flex items-center gap-2 border border-red-200 dark:border-red-800/50"
-                    >
-                        <XCircle size={16} /> ไม่อนุมัติ
-                    </button>
-                    <button 
-                        type="button" 
-                        onClick={handleApprove} 
-                        disabled={isSubmitting || isActionLoading} 
-                        className="px-6 py-2 bg-green-600 text-white hover:bg-green-700 rounded-md text-sm font-medium flex items-center gap-2"
-                    >
-                        <CheckCircle size={16} /> อนุมัติ
-                    </button>
-                  </>
-                )}
+                {/* Approve/Reject actions removed to enforce Approval (AV) Module workflow */}
 
                 {/* Save/Submit — shown only when form is editable (DRAFT) */}
                 {canSaveDraft && (
@@ -418,12 +394,6 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
         </div>
       </FormProvider>
 
-      <RejectReasonModal
-          isOpen={isRejectReasonOpen}
-          onClose={closeRejectModal}
-          onConfirm={() => submitReject()}
-          isSubmitting={isRejecting}
-      />
     </WindowFormLayout>
   );
 };

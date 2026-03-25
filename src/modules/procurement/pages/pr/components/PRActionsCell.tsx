@@ -1,28 +1,24 @@
-import { Eye, Edit, Send, CheckCircle, XCircle, FileText } from 'lucide-react';
+import { Eye, Edit, Send, FileText, Clock } from 'lucide-react';
 import type { PRHeader } from '@/modules/procurement/types';
 
 interface PRActionsCellProps {
     row: PRHeader;
     onEdit: (id: number) => void;
     onView: (id: number) => void;
+    onViewHistory?: (id: number) => void;
 
     onSendApproval: (row: PRHeader) => void;
-    onApprove: (id: number) => void;
-    onReject: (id: number) => void;
     onCreateRFQ: (item: PRHeader) => void;
-    isApproving?: boolean;
 }
 
 export const PRActionsCell = ({ 
     row: item, 
     onEdit, 
     onView,
+    onViewHistory,
 
     onSendApproval, 
-    onApprove, 
-    onReject, 
-    onCreateRFQ,
-    isApproving = false
+    onCreateRFQ
 }: PRActionsCellProps) => {
 
     return (
@@ -35,6 +31,17 @@ export const PRActionsCell = ({
             >
                 <Eye size={16} />
             </button>
+
+            {/* History Trigger for relevant states */}
+            {['PENDING', 'APPROVED', 'PARTIAL', 'COMPLETED'].includes(item.status as string) && onViewHistory && (
+                <button 
+                    onClick={() => onViewHistory(item.pr_id)}
+                    className="p-1.5 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-md transition-all" 
+                    title="ประวัติการอนุมัติ"
+                >
+                    <Clock size={16} />
+                </button>
+            )}
 
             {/* 2. DRAFT Actions: Edit, Delete, Send Approval */}
             {item.status === 'DRAFT' && (
@@ -59,36 +66,8 @@ export const PRActionsCell = ({
                 </>
             )}
 
-            {/* 3. PENDING: Approve / Reject (Approver View) */}
-            {item.status === 'PENDING' && (
-                <>
-                    <button 
-                        onClick={() => onApprove(item.pr_id)}
-                        disabled={isApproving}
-                        className={`flex items-center gap-1 pl-1.5 pr-2 py-1 ml-1 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap ${
-                            isApproving 
-                            ? 'bg-gray-400 cursor-not-allowed opacity-70' 
-                            : 'bg-green-600 hover:bg-green-700'
-                        }`}
-                        title="อนุมัติ"
-                    >
-                        <CheckCircle size={12} /> 
-                        อนุมัติ
-                    </button>
-                    <button 
-                        onClick={() => onReject(item.pr_id)}
-                        disabled={isApproving}
-                        className={`flex items-center gap-1 pl-1.5 pr-2 py-1 ml-1 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap ${
-                            isApproving
-                            ? 'bg-gray-400 cursor-not-allowed opacity-70'
-                            : 'bg-red-600 hover:bg-red-700'
-                        }`}
-                        title="ไม่อนุมัติ"
-                    >
-                        <XCircle size={12} /> ไม่อนุมัติ
-                    </button>
-                </>
-            )}
+            {/* 3. PENDING: Handled by AV Module */}
+            {/* The previous Approve/Reject actions have been removed to enforce usage of the dedicated Approval (AV) Module */}
             
             {/* 4. APPROVED Actions: Create RFQ */}
             {item.status === 'APPROVED' && (

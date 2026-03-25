@@ -80,7 +80,7 @@ export const applyClientFilters = <T extends object>(
 
     processed = processed.filter(item => {
       const record = item as Record<string, string | number | boolean | null | undefined>;
-      if (!(key in record)) return true;
+      if (!(key in record)) return false; // 🎯 STRICT: Missing key means mismatch
 
       const itemValue = record[key];
 
