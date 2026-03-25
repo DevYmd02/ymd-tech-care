@@ -95,7 +95,7 @@ export const QCService = {
   getVQsWaitingForQC: async (rfqId: number): Promise<any[]> => {
     logger.info(`[QCService] Fetching VQs for RFQ ID waiting for QC: ${rfqId}`);
     const response = await api.get<any>(`/qc/vendor/${rfqId}/waiting-for-qc`);
-    console.log("[QCService_RAW_VQs_RESPONSE]:", response);
+    logger.debug("[QCService] getVQsWaitingForQC response received");
     return extractArrayFromResponse<any>(response);
   },
 

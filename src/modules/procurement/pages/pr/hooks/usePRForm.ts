@@ -451,15 +451,6 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
   });
 
   useEffect(() => {
-    // 📸 [CALC ENGINE TRIGGERED]: Mandatory debug log
-    console.log("⚙️ [CALC ENGINE TRIGGERED]:", { 
-        lines: watchedLinesForCalc, 
-        subTotal: subtotal, 
-        taxId: watchedTaxId,
-        taxRate: watchedTaxRate, 
-        grandTotal 
-    });
-
     // STRICT TAX GUARDRAIL: VAT is strictly 0 unless a tax code is selected
     const isActiveTax = watchedTaxId && String(watchedTaxId) !== '';
     const finalVatAmount = isActiveTax ? vatAmount : 0;
@@ -914,10 +905,26 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
   };
 
   const onSubmit: SubmitHandler<PRFormData> = async (data) => {
+    const isOnHold = data.is_on_hold === 'Y';
+
+    let title = isEditMode ? 'ยืนยันการแก้ไข' : 'ยืนยันการบันทึก';
+    let description = isEditMode ? 'คุณต้องการบันทึกการแก้ไขเอกสารใบขอซื้อใช่หรือไม่?' : 'คุณต้องการบันทึกเอกสารใบขอซื้อใช่หรือไม่?';
+    let confirmText = isEditMode ? 'ยืนยันการแก้ไข' : 'ยืนยัน';
+    let variant: 'info' | 'warning' = 'info';
+
+    if (isOnHold) {
+       title = 'ยืนยันการพักเรื่อง (ON HOLD)';
+       description = 'เอกสารนี้จะถูกบันทึกเป็น "แบบร่าง (On Hold)" และจะยังไม่ส่งเข้ากระบวนการอนุมัติ คุณต้องการดำเนินการต่อใช่หรือไม่?';
+       confirmText = 'บันทึกแบบร่าง';
+       variant = 'warning';
+    }
+
     const isConfirmed = await confirm({
-        title: isEditMode ? 'ยืนยันการแก้ไข' : 'ยืนยันการบันทึก',
-        description: isEditMode ? 'คุณต้องการบันทึกการแก้ไขเอกสารใบขอซื้อใช่หรือไม่?' : 'คุณต้องการบันทึกเอกสารใบขอซื้อใช่หรือไม่?',
-        confirmText: isEditMode ? 'ยืนยันการแก้ไข' : 'ยืนยัน', cancelText: 'ยกเลิก', variant: 'info'
+        title,
+        description,
+        confirmText,
+        cancelText: 'ยกเลิก',
+        variant
     });
     if (isConfirmed) await handleSaveData(data);
   };

@@ -672,7 +672,7 @@ export const usePOForm = ({
 
         // Auto-hydration logic for both PR and QC flows
         if (prId && getValues('po_lines').length === 0) {
-            console.log("🚀 Starting Auto-Hydration. Source:", { prId, isQC, qcId, winningVqId });
+            logger.debug("🚀 [usePOForm] Starting Auto-Hydration:", { prId, isQC });
             hasHydratedInitial.current = true; // Set flag immediately to prevent double-hits
             
             const type = isQC ? 'QC' : 'PR';

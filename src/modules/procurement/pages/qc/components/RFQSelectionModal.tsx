@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Search, X, FileText } from 'lucide-react';
 import type { RFQHeader } from '@/modules/procurement/types';
@@ -24,12 +24,6 @@ export function RFQSelectionModal({
 }: RFQSelectionModalProps) {
   const [searchTerm, setSearchTerm] = useState('');
 
-  // 🧪 Debugging: Ensure data is correctly received
-  useEffect(() => {
-    if (data) {
-      console.log("[RFQ_MODAL_API_RES]:", data);
-    }
-  }, [data]);
 
   if (!isOpen) return null;
 

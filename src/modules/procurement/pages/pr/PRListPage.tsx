@@ -213,7 +213,7 @@ export default function PRListPage() {
                 const row = info.row.original;
                 const prNo = row.pr_no;
                 const prDateStr = info.getValue() as string;
-                const isTemp = prNo.startsWith('DRAFT-TEMP');
+                const isTemp = prNo?.startsWith('DRAFT-TEMP') ?? false;
                 const needByDateStr = row.need_by_date;
                 
                 // Urgency Logic

@@ -4,7 +4,8 @@
  * @module vendor
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { 
     Edit2, 
     Trash2, 
@@ -42,8 +43,8 @@ export default function VendorGroupList() {
         resetFilters
     } = useTableFilters();
 
-    const [allVendorGroups, setAllVendorGroups] = useState<VendorGroupMaster[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const queryClient = useQueryClient();
+
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
 
@@ -64,21 +65,12 @@ export default function VendorGroupList() {
     ], []);
 
     // ==================== DATA FETCHING ====================
-    const fetchData = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const response = await VendorGroupService.getAll();
-            setAllVendorGroups(response?.items || []);
-        } catch (error) {
-            console.error('Failed to fetch vendor groups:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+    const { data: vendorGroupData, isLoading } = useQuery({
+        queryKey: ['vendor-groups'],
+        queryFn: () => VendorGroupService.getAll(),
+        staleTime: 5 * 60 * 1000, // 5 minutes (master data)
+    });
+    const allVendorGroups = useMemo(() => vendorGroupData?.items ?? [], [vendorGroupData]);
 
     // ==================== CLIENT-SIDE FILTERING & PAGINATION ====================
     const filteredData = useMemo(() => {
@@ -126,9 +118,11 @@ export default function VendorGroupList() {
 
     const handleDelete = useCallback((id: number) => {
         if (confirm('คุณต้องการลบข้อมูลกลุ่มเจ้าหนี้นี้หรือไม่?')) {
-            VendorGroupService.delete(id).then(() => fetchData());
+            VendorGroupService.delete(id).then(() =>
+                queryClient.invalidateQueries({ queryKey: ['vendor-groups'] })
+            );
         }
-    }, [fetchData]);
+    }, [queryClient]);
 
     const handleModalClose = () => {
         setIsModalOpen(false);
@@ -252,7 +246,7 @@ export default function VendorGroupList() {
                 isOpen={isModalOpen} 
                 onClose={handleModalClose}
                 editId={editingId}
-                onSuccess={fetchData}
+                onSuccess={() => queryClient.invalidateQueries({ queryKey: ['vendor-groups'] })}
             />
         </div>
     );

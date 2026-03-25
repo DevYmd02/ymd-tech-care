@@ -84,7 +84,6 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
 
   const selectProduct = (product: Product) => {
     if (activeRowIndex !== null) {
-      console.log(`🎯 [VQFormModal] Selecting product for index ${activeRowIndex}:`, product);
       const index = activeRowIndex;
 
       // 🧩 Fallback matching by Name string since Backend might omit ID fields
@@ -168,7 +167,6 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
                   <button 
                       type="button" 
                       onClick={formMethods.handleSubmit(() => {
-                        console.log('💾 Triggering Confirmation for VQ...');
                         setShowConfirm(true);
                       }, handleFormError)}
                       disabled={isDataLoading || formMethods.formState.isSubmitting}

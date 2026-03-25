@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FormProvider, Controller } from 'react-hook-form';
 
-import { FileText, CheckCircle, XCircle, Loader2, Calendar } from 'lucide-react';
+import { FileText, CheckCircle, XCircle, Loader2, Calendar, Search } from 'lucide-react';
 import { AVHeader } from './AVHeader';
 import { AVFormLines } from './AVFormLines';
 import { AVFormSummary } from './AVFormSummary';
@@ -9,6 +9,7 @@ import { WindowFormLayout } from '@/shared/components/ui/layout/WindowFormLayout
 import { SharedRemarksTab } from '@/shared/components/forms/SharedRemarksTab';
 import { useAVForm } from '../hooks/useAVForm';
 import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal';
+import { PendingPRSearchModal } from './PendingPRSearchModal';
 
 const SHIPPING_OPTIONS = [
   { label: 'รถยนต์', value: 'Car' },
@@ -20,9 +21,10 @@ interface Props {
   onClose: () => void;
   id?: number;
   onSuccess?: () => void;
+  approvalItem?: any;
 }
 
-export const AVFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess }) => {
+export const AVFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, approvalItem }) => {
   const {
     isSubmitting,
     costCenters, projects, purchaseTaxOptions, currencies,
@@ -34,13 +36,16 @@ export const AVFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
     formMethods,
     // Reject Logic
     handleRejectInit, handleConfirmReject, isConfirmRejectOpen, setIsConfirmRejectOpen, isRejecting,
-    lines
-  } = useAVForm({ id, isOpen, onClose, onSuccess });
+    lines,
+    loadPRData,
+    activeId
+  } = useAVForm({ id, isOpen, onClose, onSuccess, approvalItem });
 
   const { register, control, watch, formState: { errors } } = formMethods;
 
   // Tabs state
   const [activeTab, setActiveTab] = useState('detail');
+  const [isPRSearchOpen, setIsPRSearchOpen] = useState(false);
 
   const cardClass = 'bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-sm overflow-hidden';
 
@@ -72,7 +77,7 @@ export const AVFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
             <div className="flex items-center gap-2">
                 <button type="button" onClick={onClose} disabled={isSubmitting || isRejecting} className="px-4 py-2 border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-md text-sm font-medium">ปิด</button>
 
-                {id && (
+                {activeId && (!approvalItem || approvalItem.status === 'PENDING') && (
                   <>
                     <button 
                         type="button" 
@@ -104,6 +109,7 @@ export const AVFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
             <div className={cardClass}>
                 <AVHeader 
                     prId={id}
+                    onSearchPRClick={() => setIsPRSearchOpen(true)}
                     costCenters={costCenters || []}
                     projects={projects || []}
                     onVendorSelect={() => {}}
@@ -117,13 +123,18 @@ export const AVFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
                     {/* Item 0: เลขที่อนุมัติ PR */}
                     <div>
                         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">เลขที่อนุมัติ PR <span className="text-red-500">*</span></label>
-                        <input 
-                            {...register('av_no')}
-                            type="text" 
-                            placeholder="ระบบจะกรอกอัตโนมัติ"
-                            readOnly={true}
-                            className="w-full h-9 px-3 text-sm bg-gray-50 dark:bg-gray-800/50 border border-gray-300 dark:border-gray-600 rounded text-gray-500 dark:text-gray-400 italic cursor-not-allowed"
-                        />
+                        <div className="flex items-center gap-1">
+                            <input 
+                                {...register('av_no')}
+                                type="text" 
+                                placeholder="ระบบจะกรอกอัตโนมัติ"
+                                readOnly={true}
+                                className="w-full h-9 px-3 text-sm bg-gray-50 dark:bg-gray-800/50 border border-gray-300 dark:border-gray-600 rounded text-gray-500 dark:text-gray-400 italic cursor-not-allowed"
+                            />
+                            <button type="button" className="h-9 px-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 transition-colors">
+                                <Search size={14} />
+                            </button>
+                        </div>
                     </div>
 
                     {/* Item 1: วันที่กำหนดส่ง */}
@@ -358,6 +369,16 @@ export const AVFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess })
         isLoading={isRejecting}
         variant="danger"
     />
+    {isPRSearchOpen && (
+        <PendingPRSearchModal 
+            isOpen={isPRSearchOpen} 
+            onClose={() => setIsPRSearchOpen(false)} 
+            onSelect={(selectedId) => {
+                loadPRData(selectedId);
+                setIsPRSearchOpen(false);
+            }} 
+        />
+    )}
     </>
   );
 };
