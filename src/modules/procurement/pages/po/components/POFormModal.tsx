@@ -25,7 +25,6 @@ import type { POFormData, POLine } from '@/modules/procurement/schemas/po-schema
 import { usePOForm } from '../hooks/usePOForm';
 import type {
     BranchListItem,
-    WarehouseListItem,
     UnitListItem,
     Currency
 } from '@/modules/master-data/types/master-data-types';
@@ -183,8 +182,6 @@ export default function POFormModal({
         // Data
         branches,
         isLoadingBranches,
-        warehouses,
-        isLoadingWarehouses,
         currencies,
         isLoadingCurrencies,
         handleSelectItemMaster,
@@ -360,7 +357,7 @@ export default function POFormModal({
                                     {errors.vendor_id && <p className={ui.error}>{errors.vendor_id.message}</p>}
                                 </div>
                                 <div>
-                                    <label className={ui.label}>สาขา <span className="text-red-500">*</span></label>
+                                    <label className={ui.label}>สาขา</label>
                                     <select {...register('branch_id', { valueAsNumber: true })} className={`${ui.select} ${errors.branch_id ? 'border-red-500' : ''}`} disabled={isView || isLoadingBranches}>
                                         <option value="">{isLoadingBranches ? 'กำลังโหลด...' : '— เลือกสาขา —'}</option>
                                         {branches.map((o: BranchListItem) => <option key={o.branch_id} value={o.branch_id}>{o.branch_name}</option>)}
@@ -368,17 +365,13 @@ export default function POFormModal({
                                     {errors.branch_id && <p className={ui.error}>{errors.branch_id.message}</p>}
                                 </div>
                                 <div>
-                                    <label className={ui.label}>คลังสินค้าปลายทาง <span className="text-red-500">*</span></label>
-                                    <select {...register('ship_to_warehouse_id', { valueAsNumber: true })} className={`${ui.select} ${errors.ship_to_warehouse_id ? 'border-red-500' : ''}`} disabled={isView || isLoadingWarehouses}>
-                                        <option value="">{isLoadingWarehouses ? 'กำลังโหลด...' : '— เลือกคลังสินค้า —'}</option>
-                                        {warehouses.map((o: WarehouseListItem) => <option key={o.warehouse_id} value={o.warehouse_id}>{o.warehouse_name}</option>)}
-                                    </select>
-                                    {errors.ship_to_warehouse_id && <p className={ui.error}>{errors.ship_to_warehouse_id.message}</p>}
+                                    <label className={ui.label}>ผู้จัดทำ</label>
+                                    <input {...register('created_by_name')} className={ui.inputRO} readOnly placeholder="-" />
                                 </div>
                             </div>
 
-                            {/* ── Row 3: เครดิตเทอม | กำหนดส่งของ | ประเภทภาษี | ผู้จัดทำ ── */}
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            {/* ── Row 3: เครดิตเทอม | กำหนดส่งของ | ประเภทภาษี ── */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
                                     <label className={ui.label}>เครดิตเทอม (วัน)</label>
                                     <input type="number" {...register('payment_term_days', { valueAsNumber: true })}
@@ -429,10 +422,7 @@ export default function POFormModal({
                                     </div>
                                     {errors.tax_code_id && <p className={ui.error}>{errors.tax_code_id.message}</p>}
                                 </div>
-                                <div>
-                                    <label className={ui.label}>ผู้จัดทำ</label>
-                                    <input {...register('created_by_name')} className={ui.inputRO} readOnly placeholder="-" />
-                                </div>
+
                             </div>
 
                             {/* ── Row 4: Currency Detail Fields (Always visible) ── */}

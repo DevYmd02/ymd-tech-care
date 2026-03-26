@@ -64,7 +64,6 @@ export const usePOForm = ({
     
     // ── Master Data Queries ──────────────────────────────────────────────────
     const { data: branches = [],   isLoading: isLoadingBranches }   = useQuery({ queryKey: ['master-branches'],   queryFn: MasterDataService.getBranches,   enabled: isOpen });
-    const { data: warehouses = [], isLoading: isLoadingWarehouses } = useQuery({ queryKey: ['master-warehouses'], queryFn: MasterDataService.getWarehouses, enabled: isOpen });
     const { data: taxCodes = [],   isLoading: isLoadingTaxCodes }   = useQuery({ queryKey: ['master-tax-codes'], queryFn: TaxCodeService.getTaxCodes,     enabled: isOpen });
     const { data: units = [],      isLoading: isLoadingUnits }      = useQuery({ queryKey: ['master-units'],      queryFn: MasterDataService.getUnits,        enabled: isOpen });
     const { data: currencies = [], isLoading: isLoadingCurrencies } = useQuery({ queryKey: ['master-currencies'], queryFn: MasterDataService.getCurrencies,   enabled: isOpen });
@@ -1013,8 +1012,6 @@ export const usePOForm = ({
         // Data
         branches,
         isLoadingBranches,
-        warehouses,
-        isLoadingWarehouses,
         taxCodes,
         isLoadingTaxCodes,
         units,
