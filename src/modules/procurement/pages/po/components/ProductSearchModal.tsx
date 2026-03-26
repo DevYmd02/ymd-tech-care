@@ -38,13 +38,6 @@ const productColumns: ColumnDef<ItemListItem>[] = [
             <span className="text-xs text-gray-600 dark:text-gray-400">{p.uom_name || p.unit_name || p.base_uom_name || '-'}</span>
         )
     },
-    {
-        key: 'standard_cost', header: 'ราคามาตรฐาน', width: '140px', align: 'right', render: (p: ItemListItem) => (
-            <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">
-                {(Number(p.standard_cost) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-            </span>
-        )
-    },
 ];
 
 // ====================================================================================

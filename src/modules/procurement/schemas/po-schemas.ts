@@ -125,7 +125,7 @@ export type POTransaction = z.infer<typeof POTransactionSchema>;
 // ====================================================================================
 
 export const POLineSchema = z.object({
-    id:              z.number().optional(), // Dual mapping for UI compatibility (matches item_id)
+    id:              z.coerce.number().optional().nullable(), // Dual mapping for UI compatibility (matches item_id)
     code:            z.string().optional(), // Dual mapping for UI compatibility (matches item_code)
     line_no: z.coerce.number().min(1),
     item_id: z.coerce.number().min(1, "กรุณาเลือกรหัสสินค้าจากตาราง"),
@@ -193,8 +193,8 @@ export const CreatePOSchema = z.object({
     pr_id: optionalIdSchema,
     rfq_id: optionalIdSchema,
     vendor_id: z.preprocess((val) => (val === "" || val === null || Number(val) === 0 ? undefined : Number(val)), z.number({ message: 'กรุณาเลือกผู้ขาย' }).min(1, 'กรุณาเลือกผู้ขาย')),
-    branch_id: z.preprocess((val) => (val === "" || val === null ? undefined : Number(val)), z.number({ message: 'กรุณาเลือกสาขา' }).min(1, 'กรุณาเลือกสาขา')),
-    warehouse_id: z.preprocess((val) => (val === "" || val === null ? undefined : Number(val)), z.number({ message: 'กรุณาระบุคลังสินค้าที่จะรับสินค้า' }).min(1, 'กรุณาระบุคลังสินค้าที่จะรับสินค้า')),
+    branch_id: optionalIdSchema,
+    warehouse_id: optionalIdSchema,
     base_currency_code: z.string().min(1, 'กรุณาระบุสกุลเงินหลัก'),
     quote_currency_code: z.string().min(1, 'กรุณาระบุสกุลเงินที่เสนอ'),
     exchange_rate: optionalNumberSchema,
@@ -239,8 +239,8 @@ export const POFormSchema = z.object({
     po_date:  z.string().min(1, 'กรุณาระบุวันที่ PO'),
     vendor_id: z.preprocess((val) => (val === "" || val === null || Number(val) === 0 ? undefined : Number(val)), z.number({ message: 'กรุณาเลือกผู้ขาย' }).min(1, 'กรุณาเลือกผู้ขาย')),
     vendor_name:            z.string().optional(),
-    branch_id: z.preprocess((val) => (val === "" || val === null ? undefined : Number(val)), z.number({ message: 'กรุณาเลือกสาขา' }).min(1, 'กรุณาเลือกสาขา')),
-    ship_to_warehouse_id: z.preprocess((val) => (val === "" || val === null ? undefined : Number(val)), z.number({ message: 'กรุณาเลือกคลังสินค้า' }).min(1, 'กรุณาเลือกคลังสินค้า')),
+    branch_id: optionalIdSchema,
+    ship_to_warehouse_id: optionalIdSchema,
 
     // Terms
     tax_code_id: optionalIdSchema,

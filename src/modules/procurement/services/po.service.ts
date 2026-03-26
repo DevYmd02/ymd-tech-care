@@ -213,7 +213,12 @@ export const POService = {
                 // 🎯 Strictly match by pr_no to ensure correct PO-PR-QC relationship mapping
                 const matchingQc = qcs.find((q: any) => q.pr_no === mappedItem.pr_no);
                 if (matchingQc?.qc_no) {
+                    logger.debug(`[POService] Backup QC Found: ${matchingQc.qc_no}`, matchingQc);
                     mappedItem.qc_no = matchingQc.qc_no;
+                    // 🔥 FIX: Also hydrate IDs to prevent missing FKs on save
+                    if (!mappedItem.qc_id) mappedItem.qc_id = matchingQc.qc_id || (matchingQc as any).qc_header_id;
+                    if (!mappedItem.winning_vq_id) mappedItem.winning_vq_id = matchingQc.winning_vq_id || (matchingQc as any).vq_header_id || (matchingQc as any).quotation_id;
+                    if (!mappedItem.rfq_id) mappedItem.rfq_id = matchingQc.rfq_id || (matchingQc as any).rfq_header_id;
                 }
             } catch (error) {
                 logger.error('[POService] Backup QC hydration failed during getById:', error);
@@ -261,6 +266,13 @@ export const POService = {
         CreatePOSchema.parse(data);
         logger.info('[POService] Payload valid — posting to API');
         return await api.post<POListItem>(ENDPOINTS.create, data);
+    },
+
+    /** Updates an existing PO (Partial supported by backend usually) */
+    update: async (id: number, data: Partial<CreatePOPayload>): Promise<POListItem> => {
+        logger.info(`[POService] Updating PO: ${id}`);
+        // 🛡️ Skip strict Create schema check as it's an update
+        return await api.patch<POListItem>(ENDPOINTS.detail(id), data);
     },
 
     /** Transition: DRAFT → ISSUED (send PO to vendor) */

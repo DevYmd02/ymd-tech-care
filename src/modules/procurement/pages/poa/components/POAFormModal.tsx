@@ -201,13 +201,13 @@ export const POAFormModal = ({
                                             <input value={(detailData as any)?.branch?.branch_name || (detailData as any)?.branch_name || '-'} className={ui.inputRO} readOnly />
                                         </div>
                                         <div>
-                                            <label className={ui.label}>คลังสินค้าปลายทาง</label>
-                                            <input value={(detailData as any)?.ship_to_warehouse?.warehouse_name || (detailData as any)?.ship_to_warehouse_name || '-'} className={ui.inputRO} readOnly />
+                                            <label className={ui.label}>ผู้จัดทำ</label>
+                                            <input value={(detailData as any)?.created_by_name || '-'} className={ui.inputRO} readOnly />
                                         </div>
                                     </div>
 
-                                    {/* ── Row 3: เครดิตเทอม | กำหนดส่งของ | ประเภทภาษี | ผู้จัดทำ ── */}
-                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                    {/* ── Row 3: เครดิตเทอม | กำหนดส่งของ | ประเภทภาษี ── */}
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                         <div>
                                             <label className={ui.label}>เครดิตเทอม (วัน)</label>
                                             <input value={(detailData as any)?.payment_term_days || '-'} className={`${ui.inputRO} text-right`} readOnly />
@@ -220,10 +220,7 @@ export const POAFormModal = ({
                                             <label className={ui.label}>ประเภทภาษี</label>
                                             <input value={(detailData as any)?.tax_code?.tax_name || (detailData as any)?.tax_name || '-'} className={ui.inputRO} readOnly />
                                         </div>
-                                        <div>
-                                            <label className={ui.label}>ผู้จัดทำ</label>
-                                            <input value={(detailData as any)?.created_by_name || '-'} className={ui.inputRO} readOnly />
-                                        </div>
+
                                     </div>
 
                                     {/* ── Row 4: Currency Detail Fields ── */}
