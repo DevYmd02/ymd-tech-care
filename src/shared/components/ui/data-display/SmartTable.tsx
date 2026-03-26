@@ -147,7 +147,7 @@ export function SmartTable<TData>({
                                     return (
                                         <th
                                             key={header.id}
-                                            style={meta?.thClassName?.includes('w-') ? undefined : { width: header.getSize() === 150 ? undefined : header.getSize() }}
+                                            style={meta?.thClassName?.includes('w-') ? undefined : { width: header.getSize() }}
                                             className={`${meta?.thClassName || 'px-2 py-3 font-semibold'} select-none group transition-all ${
                                                 canSort ? `cursor-pointer ${styles.state.hover}` : ''
                                             } ${sortConfig?.key === header.column.id ? styles.state.active : ''}`}

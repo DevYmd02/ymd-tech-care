@@ -30,6 +30,15 @@ const PR_CONFIG = {
   INITIAL_LINES: 5,
 } as const;
 
+// 🎯 Helper to sanitize ISO strings to YYYY-MM-DD for HTML5 date inputs
+const sanitizeDate = (dateStr?: string | null): string => {
+  if (!dateStr) return '';
+  // If it's a full ISO string (contains T), slice it
+  if (dateStr.includes('T')) return dateStr.split('T')[0];
+  // If it's already YYYY-MM-DD, return as is
+  return dateStr;
+};
+
 export interface UsePRFormProps {
   id?: number;
   isOpen: boolean;
@@ -190,6 +199,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
                 const locName = locationLookup[Number(line.location)] || line.location || '';
 
                 return {
+                  pr_line_id: line.pr_line_id ? Number(line.pr_line_id) : undefined,
                   item_id: line.item_id ? Number(line.item_id) : undefined,
                   item_code: matchedItem?.item_code || line.item_code || '',
                   item_name: matchedItem?.item_name || line.item_name || '',
@@ -199,9 +209,9 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
                   uom_id: line.uom_id ? Number(line.uom_id) : undefined,
                   est_unit_price: Number(line.est_unit_price) || 0,
                   est_amount: (Number(line.qty) || 0) * (Number(line.est_unit_price) || 0),
-                  needed_date: line.needed_date,
+                   needed_date: sanitizeDate(line.needed_date),
                   preferred_vendor_id: line.preferred_vendor_id ? Number(line.preferred_vendor_id) : undefined,
-                  remark: line.remark,
+                  remark: line.remark || '',
                   warehouse_id: Number(lineWhId), 
                   warehouse_code: matchedWh?.original?.warehouse_code || '',
                   location: line.location || '',
@@ -280,6 +290,8 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
 
                 // 3. Purpose / Remark Fallback
                 purpose: (pr.purpose || pr.remark || '').trim(),
+                pr_date: sanitizeDate(pr.pr_date),
+                need_by_date: sanitizeDate(pr.need_by_date),
 
                 // 4. Vendor Fallback
                 preferred_vendor_id: vendorId ? Number(vendorId) : undefined,
@@ -294,6 +306,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
                 pr_quote_currency_code: pr.pr_quote_currency_code || 'THB',
                 isMulticurrency: (pr.pr_base_currency_code || 'THB') !== 'THB',
                 pr_exchange_rate: pr.pr_exchange_rate || 1,
+                pr_exchange_rate_date: sanitizeDate(pr.pr_exchange_rate_date || pr.pr_date || ''),
                 lines: mappedLines,
                 is_on_hold: pr.status === 'DRAFT' ? 'Y' : 'N',
                 pr_tax_code_id: pr.pr_tax_code_id ? Number(pr.pr_tax_code_id) : undefined,
@@ -302,10 +315,17 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
                   const matchedTax = purchaseTaxOptions.find(t => String(t.value) === String(pr.pr_tax_code_id));
                   return Number(matchedTax?.original?.tax_rate || 0);
                 })(),
+                delivery_date: sanitizeDate(pr.delivery_date || pr.need_by_date || pr.pr_date || ''),
                 pr_discount_raw: pr.pr_discount_raw != null ? String(pr.pr_discount_raw) : '',
                 remark: pr.remark || '',
                 shipping_method: pr.shipping_method || '',
                 vendor_quote_no: pr.vendor_quote_no || '',
+                credit_days: pr.credit_days != null ? Number(pr.credit_days) : 0,
+                payment_term_days: pr.payment_term_days != null ? Number(pr.payment_term_days) : 0,
+                pr_sub_total: 0,
+                pr_discount_amount: 0,
+                pr_tax_amount: 0,
+                total_amount: Number(pr.total_amount || 0),
               };
 
               reset(formData);
@@ -727,6 +747,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
 
           // ── LINES (Sanitized — Postman-aligned keys only) ──
           lines: validLines.map((line: PRLineFormData, index: number) => ({
+            pr_line_id: line.pr_line_id ? Number(line.pr_line_id) : undefined,
             line_no: index + 1,
             item_id: Number(line.item_id),
             description: line.item_name || line.description || "No Description",
@@ -787,6 +808,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
           
           // ── LINES (Whitelist-only Re-mapping) ──
           lines: payload.lines.map((line, index: number) => ({
+            pr_line_id: line.pr_line_id,
             line_no: index + 1,
             item_id: line.item_id,
             description: line.remark ? `${line.description} (หมายเหตุ: ${line.remark})` : line.description,
@@ -834,6 +856,24 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
         
         if (isEditMode && id) {
             await updatePR(id, finalPayload);
+            
+            // 🎯 RESUBMISSION FIX: If status is PENDING, we must explicitly trigger the approval process
+            // via the /pending endpoint. Otherwise, it might stay "Rejected" if stale AV records exist.
+            if (!isOnHold) {
+                try {
+                    logger.info(`🚀 [usePRForm] Triggering explicit approval process for PR ${id}`);
+                    // 🎯 NOTE: Casting to any because processDirectApproval is a dynamic method shorthand 
+                    // that TS might not always resolve correctly in older service definitions.
+                    await (PRService as any).processDirectApproval(id);
+                    // ⏱️ Minor delay to allow backend processing before list refresh
+                    await new Promise(resolve => setTimeout(resolve, 800));
+                } catch (approveErr) {
+                    logger.error('❌ [usePRForm] Failed to trigger explicit approval:', approveErr);
+                    // We don't throw here so the user still sees the "Update Successful" message
+                    // since the main PR update already succeeded.
+                }
+            }
+
             await confirm({
                 title: 'แก้ไขสำเร็จ',
                 description: isOnHold ? 'บันทึกเป็นแบบร่างแล้ว (On Hold)' : 'ส่งอนุมัติเรียบร้อยแล้ว',
@@ -841,6 +881,8 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
             });
             onSuccess?.(); onClose();
             queryClient.invalidateQueries({ queryKey: ['prs'] });
+            queryClient.invalidateQueries({ queryKey: ['pr', id] });
+            PRService.clearAVCache(); // Final safety clear
         } else {
             const { newPR } = await createPRMutation.mutateAsync(finalPayload);
             const displayNo = newPR.pr_no.startsWith('DRAFT-TEMP') ? 'รอรันเลข (NEW)' : newPR.pr_no;

@@ -114,14 +114,14 @@ export default function QCListPage() {
     const columns = useMemo(() => [
         columnHelper.display({
             id: 'index',
-            header: 'ลำดับ',
+            header: () => <div className="text-center w-full">ลำดับ</div>,
             cell: (info) => <div className="text-center">{info.row.index + 1 + (filters.page - 1) * filters.limit}</div>,
             footer: () => (
                 <div className="text-left font-bold text-sm text-gray-500 dark:text-gray-400 pl-4 whitespace-nowrap">
                     ยอดรวมราคาต่ำสุดสะสม :
                 </div>
             ),
-            size: 60,
+            size: 50,
             enableSorting: false,
         }),
         columnHelper.accessor('qc_no', {
@@ -131,7 +131,7 @@ export default function QCListPage() {
                     {info.getValue() || '-'}
                 </span>
             ),
-            size: 160,
+            size: 140,
             enableSorting: true,
         }),
         columnHelper.accessor('created_at', {
@@ -141,7 +141,7 @@ export default function QCListPage() {
                     {info.getValue() ? formatThaiDate(info.getValue()!) : '-'}
                 </div>
             ),
-            size: 120,
+            size: 100,
             enableSorting: true,
         }),
         columnHelper.display({
@@ -159,7 +159,7 @@ export default function QCListPage() {
                     )}
                 </div>
             ),
-            size: 180,
+            size: 150,
         }),
         columnHelper.display({
             id: 'winner',
@@ -198,7 +198,7 @@ export default function QCListPage() {
                     </div>
                 );
             },
-            size: 280,
+            size: 220,
         }),
         columnHelper.accessor('vq_total_amount', {
             header: () => <div className="text-right w-full pr-4">ราคาต่ำสุด (บาท)</div>,
@@ -213,7 +213,7 @@ export default function QCListPage() {
                     </div>
                 );
             },
-            size: 160,
+            size: 130,
         }),
         columnHelper.accessor(row => row.status, {
             id: 'status',
@@ -229,7 +229,7 @@ export default function QCListPage() {
                     </div>
                 );
             },
-            size: 120,
+            size: 100,
             enableSorting: false,
         }),
         columnHelper.display({
@@ -268,7 +268,7 @@ export default function QCListPage() {
                     <span className="text-sm font-bold text-gray-500">บาท</span>
                 </div>
             ),
-            size: 150,
+            size: 165,
             enableSorting: false,
         }),
     ], [columnHelper, filters.page, filters.limit, handleView, handleEdit, totalAccumulatedAmount]);

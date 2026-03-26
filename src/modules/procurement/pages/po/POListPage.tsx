@@ -320,7 +320,7 @@ export default function POListPage() {
                      </div>
                  );
             },
-            size: 140,
+            size: 200,
             enableSorting: false,
         }),
     ], [columnHelper, filters.page, filters.limit, data?.data, handleGRN, handleApprove, handleIssuePO, handleDirectSubmit, handleView, handleEdit]);

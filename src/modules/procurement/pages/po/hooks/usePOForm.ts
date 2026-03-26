@@ -134,14 +134,22 @@ export const usePOForm = ({
 
     // ── VQ Inheritance Query (read-only cross-module lookup) ──────────────────
     const { data: inheritedQC } = useQuery({
-        queryKey: ['inherit-vq', initialValues?.rfq_id, initialValues?.winning_vq_id, initialValues?.vendor_id],
+        queryKey: ['inherit-vq', 
+            initialValues?.rfq_id || existingPO?.rfq_id, 
+            initialValues?.winning_vq_id || existingPO?.winning_vq_id, 
+            initialValues?.vendor_id || existingPO?.vendor_id
+        ],
         queryFn: async () => {
-            if ((!initialValues?.rfq_id && !initialValues?.winning_vq_id) || !initialValues?.vendor_id) return null;
+            const rfqId = initialValues?.rfq_id || existingPO?.rfq_id;
+            const winningVqId = initialValues?.winning_vq_id || existingPO?.winning_vq_id;
+            const vendorId = initialValues?.vendor_id || existingPO?.vendor_id;
+
+            if ((!rfqId && !winningVqId) || !vendorId) return null;
             const res = await VQService.getList({});
             // Find VQ by searching for vendor and matching RFQ/VQ ID
             const sourceVQ = res.data.find(vq => 
-                vq.vendor_id === initialValues.vendor_id && 
-                (vq.rfq_id === initialValues.rfq_id || vq.vq_header_id === initialValues.winning_vq_id || vq.quotation_id === initialValues.winning_vq_id)
+                Number(vq.vendor_id) === Number(vendorId) && 
+                (Number(vq.rfq_id) === Number(rfqId) || Number(vq.vq_header_id) === Number(winningVqId) || Number(vq.quotation_id) === Number(winningVqId))
             );
             
             if (sourceVQ?.vq_header_id || sourceVQ?.quotation_id) {
@@ -149,7 +157,7 @@ export const usePOForm = ({
             }
             return null;
         },
-        enabled: isOpen && (!!initialValues?.rfq_id || !!initialValues?.winning_vq_id) && !!initialValues?.vendor_id && !isViewMode
+        enabled: isOpen && (!!initialValues?.rfq_id || !!initialValues?.winning_vq_id || !!existingPO?.rfq_id || !!existingPO?.winning_vq_id) && (!!initialValues?.vendor_id || !!existingPO?.vendor_id)
     });
 
     // ── Form Reset Effect (Hydration) ─────────────────────────────────────────
@@ -260,7 +268,7 @@ export const usePOForm = ({
                 delivery_date:        detail?.delivery_date               ? detail.delivery_date.split('T')[0] : (initialValues?.delivery_date ?? ''),
                 remarks:              detail?.remarks                     ?? initialValues?.remarks ?? '',
                 discount_expression:  detail?.discount_expression         ?? initialValues?.discount_expression ?? '0',
-                tax_code_id:          detail?.tax_code_id                 ?? initialValues?.tax_code_id ?? inheritedQC?.tax_code_id ?? undefined,
+                tax_code_id:          detail?.tax_code_id                 ?? detail?.tax_id ?? initialValues?.tax_code_id ?? inheritedQC?.tax_code_id ?? initialPOLines[0]?.tax_code_id ?? undefined,
                 created_by:           detail?.created_by                  ?? initialValues?.created_by,
                 created_by_name:      detail?.created_by_name             ?? initialValues?.created_by_name ?? (user?.employee?.employee_fullname || user?.username || ''),
                 po_lines:             initialPOLines,

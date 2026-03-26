@@ -470,7 +470,7 @@ export default function VQListPage() {
                     </div>
                 );
             },
-            size: 100,
+            size: 140,
         }
     ], [filters.page, filters.limit, handleOpenTracking]);
 

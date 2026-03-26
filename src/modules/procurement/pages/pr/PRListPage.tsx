@@ -10,7 +10,6 @@ import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/react-quer
 import { FileText, Plus, Search, Send, AlertTriangle, Eye, Edit } from 'lucide-react';
 import { PageListLayout, SmartTable, PRStatusBadge, FilterField, MobileListCard, MobileListContainer } from '@ui';
 import { useTableFilters } from '@/shared/hooks';
-import RFQFormModal from '@/modules/procurement/pages/rfq/components/RFQFormModal';
 import { PRFormModal } from './components/PRFormModal';
 import { PRActionsCell } from './components/PRActionsCell';
 import { ApprovalHistoryModal } from '@/modules/procurement/shared/components/ApprovalHistoryModal';
@@ -22,7 +21,6 @@ import { createColumnHelper } from '@tanstack/react-table';
 
 // Services & Types - Updated imports to use new module structure
 import { PRService, type PRListParams } from '@/modules/procurement/services/pr.service';
-import { logger } from '@/shared/utils/logger';
 import type { PRHeader, PRStatus } from '@/modules/procurement/types';
 
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
@@ -100,7 +98,7 @@ export default function PRListPage() {
     };
 
     // Data Fetching with React Query (responds to applied filters in URL only)
-    const { data, isLoading, refetch } = useQuery({
+    const { data, isLoading } = useQuery({
         queryKey: ['prs', apiFilters],
         queryFn: () => PRService.getList(apiFilters),
         placeholderData: keepPreviousData,
@@ -109,8 +107,6 @@ export default function PRListPage() {
     });
 
     // Modal States
-    const [isRFQModalOpen, setIsRFQModalOpen] = useState(false);
-    const [selectedPR, setSelectedPR] = useState<PRHeader | null>(null);
     
     // PR Form Modal Local State
     const [isPRModalOpen, setIsPRModalOpen] = useState(false);
@@ -129,27 +125,6 @@ export default function PRListPage() {
 
     // Handlers (handleFilterChange is from useTableFilters, directly available)
 
-    const handleCreateRFQ = useCallback((pr: PRHeader) => {
-        // V-05: Only allow RFQ creation for APPROVED PRs
-        if (pr.status !== 'APPROVED') {
-            logger.warn(`[PR] Cannot create RFQ: PR ${pr.pr_no} status is ${pr.status}, expected APPROVED`);
-            return;
-        }
-        setSelectedPR(pr);
-        setIsRFQModalOpen(true);
-    }, []);
-
-    const handleRFQSuccess = useCallback(async () => {
-        if (!selectedPR) return;
-        
-        try {
-            await PRService.update(selectedPR.pr_id, { status: 'COMPLETED' as PRStatus });
-            logger.log(`PR ${selectedPR.pr_no} status updated to COMPLETED`);
-        } catch (error) {
-            logger.error('Failed to update PR status to COMPLETED', error);
-        }
-        refetch();
-    }, [selectedPR, refetch]);
 
     const handleCreate = () => {
         setSelectedPRId(undefined);
@@ -382,7 +357,6 @@ export default function PRListPage() {
                         onView={handleView}
                         onViewHistory={(id) => handleViewHistory(id, row.original.pr_no)}
                         onSendApproval={handleSendApproval}
-                        onCreateRFQ={handleCreateRFQ}
                     />
                 </div>
             ),
@@ -394,10 +368,10 @@ export default function PRListPage() {
                      </div>
                  );
             },
-            size: 150, 
+            size: 200, 
             enableSorting: false,
         }),
-    ], [columnHelper, filters.page, filters.limit, data?.data, handleSendApproval, handleEdit, handleCreateRFQ, handleView, vendorMap, vendorData?.items, handleViewHistory]);
+    ], [columnHelper, filters.page, filters.limit, data?.data, handleSendApproval, handleEdit, handleView, vendorMap, vendorData?.items, handleViewHistory]);
 
     // ====================================================================================
     // RENDER
@@ -561,7 +535,7 @@ export default function PRListPage() {
                                             >
                                                 <Eye size={14} /> ดู
                                             </button>
-                                            {(item.status === 'DRAFT' || item.status === 'REJECTED') && (
+                                            {(item.status === 'DRAFT' || item.status === 'REJECTED' || item.status === 'PENDING') && (
                                                 <button
                                                     onClick={() => handleEdit(item.pr_id)}
                                                     className="flex-1 bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1"
@@ -578,14 +552,6 @@ export default function PRListPage() {
                                                 </button>
                                             )}
                                             {/* PENDING approval actions removed for Mobile View to enforce AV Module usage */}
-                                            {item.status === 'APPROVED' && (
-                                                <button
-                                                    onClick={() => handleCreateRFQ(item)}
-                                                    className="flex-[2] bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
-                                                >
-                                                    <Send size={14} /> สร้าง RFQ
-                                                </button>
-                                            )}
                                         </>
                                     }
                                 />
@@ -596,19 +562,6 @@ export default function PRListPage() {
 
             </PageListLayout>
 
-            {isRFQModalOpen && (
-                <ErrorBoundary>
-                    <RFQFormModal
-                        isOpen={isRFQModalOpen}
-                        onClose={() => {
-                            setIsRFQModalOpen(false);
-                            setSelectedPR(null);
-                        }}
-                        initialPR={selectedPR}
-                        onSuccess={handleRFQSuccess}
-                    />
-                </ErrorBoundary>
-            )}
 
             {isPRModalOpen && (
                 <ErrorBoundary>

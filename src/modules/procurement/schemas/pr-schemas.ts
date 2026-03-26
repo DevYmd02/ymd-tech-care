@@ -13,6 +13,7 @@ export type PRStatus = z.infer<typeof PRStatusEnum>;
 // ====================================================================================
 
 export const PRLineSchema = z.object({
+  pr_line_id: z.coerce.number().optional(),
   item_id: z.coerce.number().optional(),
   item_code: z.string(),
   item_name: z.string(),
@@ -176,6 +177,7 @@ export type PRFormData = z.infer<typeof PRFormSchema>;
 // ====================================================================================
 
 export const createEmptyPRLine = (): PRLineFormData => ({
+  pr_line_id: undefined,
   item_id: undefined,
   item_code: '',
   item_name: '',
@@ -219,7 +221,7 @@ export const getPRDefaultFormValues = (user?: { id?: string | number; username?:
     preferred_vendor_id: undefined,
     vendor_name: '',
     delivery_date: nextWeekStr,
-    credit_days: undefined,
+    credit_days: 0,
     payment_term_days: 0,
     vendor_quote_no: '',
     shipping_method: '',
@@ -232,8 +234,8 @@ export const getPRDefaultFormValues = (user?: { id?: string | number; username?:
     pr_discount_raw: '',
     pr_tax_code_id: undefined,
     pr_tax_rate: 0,
-    branch_id: undefined,
-    warehouse_id: undefined,
+    branch_id: 1,
+    warehouse_id: 1,
     pr_sub_total: 0,
     pr_discount_amount: 0,
     pr_tax_amount: 0,

@@ -181,7 +181,7 @@ export default function POAListPage() {
                     </div>
                 );
             },
-            size: 100,
+            size: 150,
             enableSorting: false,
         }),
     ], [columnHelper, filters.page, filters.limit]);

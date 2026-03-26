@@ -50,6 +50,7 @@ const KNOWN_DTO_FIELDS = new Set([
 
 // NOTE: 'remark' is NOT allowed on lines per backend DTO (whitelist: true + forbidNonWhitelisted: true)
 const KNOWN_LINE_DTO_FIELDS = new Set([
+  'pr_line_id', 'id', // 🎯 FIX: Added for explicit recognition during updates
   'line', 'item_id', 'qty', 'est_unit_price', 'uom_id',
   'line_discount_raw', 'line_no', 'description', 'warehouse_id',
   'location', 'required_receipt_type'
@@ -80,27 +81,46 @@ async function buildAVStatusMap(): Promise<Map<number, string>> {
   }
   try {
     const avRes: ApprovalListResponse = await api.get<ApprovalListResponse>('/pr-approval', { params: { limit: 1000, page: 1 } });
+    const map = new Map<number, { status: string; id: number; no?: string }>();
     const records = avRes?.data || [];
-    const map = new Map<number, string>();
     for (const rec of records) {
       const prId = Number(rec.pr_id);
       if (!isNaN(prId) && rec.status) {
-        // Keep the LATEST record per PR (highest approval_id)
-        const existing = map.get(prId);
-        if (!existing) {
-          map.set(prId, rec.status.toUpperCase());
+        // 🎯 LATEST WINS: If multiple records exist, we keep the one with the highest approval_id
+        // (assuming records are sorted or we check ID)
+        const existingId = map.get(prId)?.id || 0;
+        if (Number(rec.approval_id) >= existingId) {
+          map.set(prId, { 
+            status: rec.status.toUpperCase(), 
+            id: Number(rec.approval_id),
+            no: rec.approval_no 
+          });
         }
-        // If there's a newer record, it overrides (approvalRecords are sorted desc by API, or we handle manually)
       }
     }
-    cachedAVStatusMap = map;
+    
+    // Convert complex map back to simple status map for backward compatibility 
+    // but keep the latest logic intact inside the loop above
+    const finalMap = new Map<number, string>();
+    map.forEach((value, key) => finalMap.set(key, value.status));
+
+    cachedAVStatusMap = finalMap;
     lastAVStatusFetchTime = now;
-    logger.debug(`🔍 [PRService] AV Status Map built: ${map.size} entries`);
-    return map;
+    logger.debug(`🔍 [PRService] AV Status Map built: ${finalMap.size} entries (prioritized latest IDs)`);
+    return finalMap;
   } catch (err) {
     logger.warn('[PRService] Failed to fetch AV status map (non-critical):', err);
     return new Map();
   }
+}
+
+/**
+ * Force clear the AV status cache (to be called after updates/submissions)
+ */
+export function clearPRServiceAVCache() {
+  cachedAVStatusMap = null;
+  lastAVStatusFetchTime = 0;
+  logger.debug('🧹 [PRService] AV Status Cache Cleared');
 }
 
 /**
@@ -112,8 +132,22 @@ function overlayAVStatus(items: PRHeader[], avStatusMap: Map<number, string>): P
   if (avStatusMap.size === 0) return items;
   return items.map(item => {
     const avStatus = avStatusMap.get(Number(item.pr_id));
+    
     if (avStatus && avStatus !== item.status) {
-      logger.debug(`[PRService] Overriding PR ${item.pr_no} status: ${item.status} → ${avStatus} (from AV record)`);
+      // 🎯 STALE REJECTION FIX:
+      // If the PR Header is 'PENDING' but the AV record is 'REJECTED', 
+      // it means the rejection is likely from a previous cycle and should be ignored.
+      // We only override if the AV status is positive (APPROVED/PARTIAL) or 
+      // if the PR is still DRAFT/PENDING and someone JUST rejected it (handled by backend usually).
+      
+      const isStaleRejection = item.status === 'PENDING' && avStatus === 'REJECTED';
+      
+      if (isStaleRejection) {
+        logger.debug(`[PRService] ⏭️ Skipping stale AV rejection for PR ${item.pr_no} (Header is already PENDING)`);
+        return item;
+      }
+
+      logger.info(`[PRService] 🔄 Overriding PR ${item.pr_no} status: ${item.status} → ${avStatus} (from AV record)`);
       return { ...item, status: avStatus as PRHeader['status'] };
     }
     return item;
@@ -121,6 +155,7 @@ function overlayAVStatus(items: PRHeader[], avStatusMap: Map<number, string>): P
 }
 
 export const PRService = {
+  clearAVCache: clearPRServiceAVCache,
   getList: async (params?: PRListParams): Promise<PRListResponse> => {
     logger.info('[PRService] Fetching PR List', params);
 
@@ -403,6 +438,7 @@ export const PRService = {
         pr_id: response.pr_id,
         pr_no: response.pr_no,
       });
+      clearPRServiceAVCache();
       return response;
     } catch (error: unknown) {
       const axiosErr = error as { response?: { data?: unknown; status?: number; headers?: unknown } };
@@ -469,6 +505,7 @@ export const PRService = {
     try {
       const response = await api.patch<PRHeader>(ENDPOINTS.detail(id), payload);
       logger.info('✅ [PRService] PR Updated Successfully!', { pr_id: id });
+      clearPRServiceAVCache();
       return response;
     } catch (error: unknown) {
       const axiosErr = error as { response?: { data?: unknown; status?: number; headers?: unknown } };

@@ -243,7 +243,7 @@ export default function PRTListPage() {
                     </div>
                 );
             },
-            size: 120,
+            size: 160,
             enableSorting: false,
         }),
     ], [columnHelper, filters.page, filters.limit]);

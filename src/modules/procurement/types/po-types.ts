@@ -40,6 +40,7 @@ export interface POHeader {
     payment_term_days: number;      // int
     
     subtotal: number;               // numeric(18,2)
+    tax_code_id?: number;           // FK -> tax_code
     tax_amount: number;             // numeric(18,2)
     total_amount: number;           // numeric(18,2)
     
@@ -54,6 +55,8 @@ export interface POHeader {
     // QC Traceability (Source document)
     qc_id?: number;                 // INTEGER — FK -> qc_header
     qc_no?: string;                 // Display Only
+    rfq_id?: number;                // FK -> rfq
+    winning_vq_id?: number;         // FK -> quotation_header
 
     // Aggregates for List View
     item_count?: number;
