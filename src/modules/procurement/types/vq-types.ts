@@ -155,6 +155,7 @@ export interface VQListParams {
   vendor_name?: string;
   rfq_no?: string;
   pr_no?: string;
+  keyword?: string; // 🔍 @Agent_Search_Operator: Generic search keyword for modals
   status?: QuotationStatus | 'ALL';
   date_start?: string;
   date_end?: string;

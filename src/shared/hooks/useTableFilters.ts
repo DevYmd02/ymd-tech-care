@@ -405,9 +405,15 @@ export function useTableFilters<TStatus extends string = string>(
   // Handler: Reset all filters to defaults
   // ------------------------------------------------------------
   const resetFilters = useCallback(() => {
-    setSearchParams(new URLSearchParams());
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      Object.values(keys).forEach((paramKey) => {
+        next.delete(paramKey);
+      });
+      return next;
+    });
     setLocalFilters(defaultFilters);
-  }, [setSearchParams, defaultFilters]);
+  }, [setSearchParams, keys, defaultFilters]);
 
   return {
     filters,

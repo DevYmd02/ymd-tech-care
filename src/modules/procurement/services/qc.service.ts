@@ -86,10 +86,14 @@ export const QCService = {
   },
 
   getWaitingForQC: async (): Promise<RFQHeader[]> => {
-    logger.info('[QCService] Fetching RFQs waiting for QC');
-    const response = await api.get<{ data: RFQHeader[] }>('/qc/rfq/waiting-for-qc');
+    logger.info('[QCService] Fetching RFQs waiting for QC (Limit: 1000)');
+    const response = await api.get<{ data: RFQHeader[] }>('/qc/rfq/waiting-for-qc', { 
+      params: { limit: 1000 } 
+    });
 
-    return extractArrayFromResponse<RFQHeader>(response);
+    const items = extractArrayFromResponse<RFQHeader>(response);
+    logger.debug(`[QCService] Found ${items.length} items waiting for QC`);
+    return items;
   },
 
   getVQsWaitingForQC: async (rfqId: number): Promise<any[]> => {

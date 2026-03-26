@@ -12,6 +12,7 @@ import type { PRHeader } from '@/modules/procurement/types';
 import type { Resolver } from 'react-hook-form';
 import { PRService } from '@/modules/procurement/services/pr.service';
 import { RFQService, type RFQCreateDTO, type RFQLineDTO } from '@/modules/procurement/services/rfq.service';
+import { AVService } from '@/modules/procurement/services/av.service';
 import { logger } from '@/shared/utils/logger';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { useQuery } from '@tanstack/react-query';
@@ -171,6 +172,38 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         enabled: isOpen,
     });
 
+    // --- 🔗 [NEW] AV Hydration logic: Fetch Approval No if missing but PR reference exists ---
+    const currentPrNo = methods.watch('pr_no');
+    const currentApprovedPrNo = methods.watch('approved_pr_no');
+    
+    const { data: approvalHydrationData } = useQuery({
+        queryKey: ['rfq-av-hydration', currentPrNo],
+        queryFn: async () => {
+            if (!currentPrNo) return null;
+            const res = await AVService.getApprovalList({ pr_no: currentPrNo });
+            return res.data || [];
+        },
+        enabled: isOpen && !!(currentPrNo && !currentApprovedPrNo),
+        staleTime: 5 * 60 * 1000,
+    });
+
+    useEffect(() => {
+        if (isOpen && currentPrNo && !currentApprovedPrNo && approvalHydrationData && approvalHydrationData.length > 0) {
+            const firstAV = approvalHydrationData[0];
+            const avNo = firstAV.approval_no;
+            const avId = firstAV.approval_id;
+
+            if (avNo) {
+                logger.info(`[useRFQForm] Hydrating missing AV for PR ${currentPrNo}: ${avNo}`);
+                // Use { shouldDirty: false } to prevent tracking this hydration as a user change (especially in View mode)
+                methods.setValue('approved_pr_no', avNo, { shouldValidate: true, shouldDirty: false });
+                if (avId) {
+                    methods.setValue('pr_approval_id', Number(avId), { shouldDirty: false });
+                }
+            }
+        }
+    }, [isOpen, currentPrNo, currentApprovedPrNo, approvalHydrationData, methods]);
+
     // Exchange Rate Sync logic
     const sourceCurrency = methods.watch('rfq_base_currency_code');
     const targetCurrency = methods.watch('rfq_quote_currency_code');
@@ -294,22 +327,35 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                 if (!rfq) return;
                 setRfq(rfq); // Save to state for executeSave fallback scope
 
-                const allVendors = [
-                    ...(rfq.rfqVendors || []),
-                    ...(rfq.vendors || [])
-                ];
-                const uniqueVendors = Array.from(
-                    new Map(allVendors.map(v => {
-                        const key = v.rfq_vendor_id ? `rfq_${v.rfq_vendor_id}` : `v_${v.vendor_id}`;
-                        return [key, v];
-                    })).values()
-                );
+                // 🎯 MERGE LOGIC: Combine master vendors and junction rfqVendors, prioritizing rfqVendors for sent status/dates
+                const vendorMap = new Map<number, any>();
+                
+                // 1. Add master vendors first (base info)
+                (rfq.vendors || []).forEach(v => {
+                    if (v.vendor_id) vendorMap.set(Number(v.vendor_id), v);
+                });
+                
+                // 2. Overwrite/Merge with rfqVendors (has sent_date, email_sent_to, status)
+                (rfq.rfqVendors || []).forEach(v => {
+                    const vendorId = Number(v.vendor_id);
+                    const existing = vendorMap.get(vendorId) || {};
+                    vendorMap.set(vendorId, { ...existing, ...v });
+                });
+
+                const uniqueVendors = Array.from(vendorMap.values());
                 const sourceVendors = uniqueVendors;
                 const sourceLines = (rfq.rfqLines && rfq.rfqLines.length > 0) ? rfq.rfqLines : (rfq.lines || []);
+                
+                logger.debug('[useRFQForm] Merged uniqueVendors:', uniqueVendors);
 
                 // Hydrate vendor details if missing from backend (since standard backend list only has vendor_id)
                 const enhancedVendors = await Promise.all(sourceVendors.map(async (v) => {
-                    if (v.vendor_name && v.vendor_code) return v;
+                    // 🎯 HYDRATION RULE: If essential names are missing, OR if SENT status exists but email is missing, try to fetch from Master Data
+                    const isSent = v.status === 'SENT' || v.status === 'RESPONDED';
+                    const hasEmail = Boolean(v.email_sent_to || (v as any).email);
+                    
+                    if (v.vendor_name && v.vendor_code && (isSent ? hasEmail : true)) return v;
+                    
                     try {
                         const vendorDetail = await VendorService.getById(v.vendor_id);
                         if (vendorDetail) {
@@ -317,6 +363,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                                 ...v,
                                 vendor_name: vendorDetail.vendor_name || v.vendor_name || '',
                                 vendor_code: vendorDetail.vendor_code || v.vendor_code || '',
+                                email_sent_to: v.email_sent_to || vendorDetail.email || null,
                             };
                         }
                     } catch {

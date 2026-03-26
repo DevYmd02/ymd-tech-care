@@ -24,7 +24,6 @@ import { useQCForm } from '../hooks/useQCForm';
 import { useConfirmation } from '@/shared/hooks';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
-import { logger } from '@/shared/utils/logger';
 
 interface QCFormModalProps {
   isOpen: boolean;
@@ -84,55 +83,120 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
   const [isPRSelectorOpen, setIsPRSelectorOpen] = useState(false);
   const [selectedVQIds, setSelectedVQIds] = useState<number[]>([]);
 
-  // Fetch Existing QC Data if mode is edit/view
+  // Fetch Existing QC Data — Only fetch full detail when in EDIT mode where we need to update.
+  // In VIEW mode, initialData and list-level queries provide enough context.
   const { data: qcData } = useQuery({
     queryKey: ['qc-detail', qcId],
     queryFn: () => QCService.getById(Number(qcId)),
-    enabled: !!qcId && (mode === 'edit' || (mode === 'view' && !initialData)),
+    enabled: !!qcId && mode === 'edit', // 🛡️ EXCLUSION: Skip for 'view' to prevent 404 noise and redundant traffic
+    retry: false, 
   });
 
 
   useEffect(() => {
-    // Priority 1: Hydrate from background API (deep detail)
-    if (qcData && (mode === 'view' || mode === 'edit')) {
-      setQCNo(qcData.qc_no || '');
-      setPRNo(qcData.pr_no || '');
-      setValue('pr_id', qcData.pr_id || null);
-      setRFQNo(qcData.rfq_no || '');
+    // SCENARIO 1: Deep Hydration from API (Edit Mode Only)
+    if (qcData && (mode === 'edit')) {
+      const actualQCData = (qcData as any)?.data || qcData;
+      setQCNo(actualQCData.qc_no || '');
+      setPRNo(actualQCData.pr_no || '');
+      setValue('pr_id', actualQCData.pr_id || null);
+      setRFQNo(actualQCData.rfq_no || '');
 
-      setValue('rfq_id', qcData.rfq_id || 0);
-      setQCDate(qcData.comparison_date ? new Date(qcData.comparison_date).toLocaleDateString('en-GB') : getTodayFormatted());
-      setValue('winning_vq_id', qcData.winning_vq_id || 0);
+      setValue('rfq_id', actualQCData.rfq_id || actualQCData.rfq_header_id || 0);
+      setQCDate(actualQCData.comparison_date ? new Date(actualQCData.comparison_date).toLocaleDateString('en-GB') : getTodayFormatted());
+      setValue('winning_vq_id', actualQCData.winning_vq_id || actualQCData.vq_header_id || 0);
       
-      const remarkVal = (qcData as any).remark || (qcData as any).remarks || (initialData as any)?.remark || (initialData as any)?.remarks || '';
+      const remarkVal = actualQCData?.remark || actualQCData?.remarks || '';
       setValue('remark', remarkVal);
       
-      const creatorName = (qcData as any).created_by_name || (qcData as any).creator_name || (qcData as any).employee_name || (qcData as any).rfq_requester_name || (initialData as any)?.created_by_name || (initialData as any)?.creator_name || (initialData as any)?.rfq_requester_name || '';
+      const creatorName = actualQCData?.created_by_name || actualQCData?.creator_name || actualQCData?.employee_name || '';
       if (creatorName) setCreatedBy(creatorName);
 
-      const winnerId = qcData.winning_vq_id || initialData?.vq_header_id;
+      const winnerId = actualQCData?.winning_vq_id || actualQCData.vq_header_id;
       if (winnerId) setSelectedVQIds([winnerId]);
     } 
-    // Priority 2: Hydrate from initialData (Hydrate First logic)
+    // SCENARIO 2: Resilient Hydration from initialData (View mode or Fallback)
     else if (initialData && (mode === 'view' || mode === 'edit')) {
-      setQCNo(initialData.qc_no || '');
-      setPRNo(initialData.pr_no || '');
-      setRFQNo(initialData.rfq_no || '');
-      setValue('winning_vq_id', initialData.vq_header_id || 0);
+      const actualInitial = (initialData as any)?.data || initialData;
+      
+      // Mandatory Mapping: List items often use 'rfq_header_id' while form expects 'rfq_id'
+      const mappedRfqId = actualInitial.rfq_id || actualInitial.rfq_header_id;
+      const mappedWinnerId = actualInitial.winning_vq_id || actualInitial.vq_header_id;
 
-      const remarkVal = (initialData as any).remark || (initialData as any).remarks || '';
+      setQCNo(actualInitial.qc_no || '');
+      setPRNo(actualInitial.pr_no || actualInitial.ref_pr_no || '');
+      setRFQNo(actualInitial.rfq_no || '');
+      setQCDate(actualInitial.comparison_date ? new Date(actualInitial.comparison_date).toLocaleDateString('en-GB') : (actualInitial.created_at ? new Date(actualInitial.created_at).toLocaleDateString('en-GB') : getTodayFormatted()));
+      
+      setValue('rfq_id', Number(mappedRfqId) || 0);
+      setValue('winning_vq_id', Number(mappedWinnerId) || 0);
+
+      const remarkVal = actualInitial.remark || actualInitial.remarks || '';
       setValue('remark', remarkVal);
 
-      const creatorName = (initialData as any).created_by_name || (initialData as any).creator_name || (initialData as any).employee_name || (initialData as any).rfq_requester_name || '';
+      const creatorName = actualInitial.created_by_name || actualInitial.creator_name || actualInitial.employee_name || '';
       if (creatorName) setCreatedBy(creatorName);
 
-      if (initialData.vq_header_id) setSelectedVQIds([initialData.vq_header_id]);
+      if (mappedWinnerId) setSelectedVQIds([Number(mappedWinnerId)]);
+      
+      console.log('🛡️ [QCFormModal] Legitimate Hydration from initialData (Console Cleanse Mode)');
     }
-  }, [qcData, initialData, mode, setValue]);
+  }, [qcData, initialData, mode, setValue, watch]);
+
+  // 👤 EFFECT: Fetch Creator Name if missing but ID is present
+  useEffect(() => {
+    const actualQC = (qcData as any)?.data || qcData;
+    const actualInitial = (initialData as any)?.data || initialData;
+    const creatorId = actualQC?.created_by || actualInitial?.created_by;
+    
+    if (creatorId && !createdBy && (mode === 'view' || mode === 'edit')) {
+      console.log('👤 [QCFormModal] Attempting to fetch creator name for ID:', creatorId);
+      OrgEmployeeService.get(creatorId as number).then((response: any) => {
+        const emp = response?.data || response;
+        const name = emp?.employee_name || emp?.first_name || emp?.first_name_th || emp?.employee_name_th || '';
+        if (name) {
+          console.log('✅ [QCFormModal] Found creator name:', name);
+          setCreatedBy(name);
+        }
+      }).catch(err => console.warn('[QCFormModal] Failed to fetch creator employee name:', err));
+    }
+  }, [qcData, initialData, createdBy, mode]);
 
   const { data: waitingList, isLoading: isWaitingListLoading } = useQuery({
-    queryKey: ['waiting-for-qc-list'],
-    queryFn: () => QCService.getWaitingForQC(),
+    queryKey: ['waiting-for-qc-list', isOpen],
+    queryFn: async () => {
+      // 🎯 BROADER SCAN: Fetch from both specialized and general endpoints to catch missing items
+      try {
+        const [waitingData, allRFQData] = await Promise.all([
+          QCService.getWaitingForQC(),
+          RFQService.getList({ limit: 100 })
+        ]);
+
+        const waitingItems = Array.isArray(waitingData) ? waitingData : [];
+        const allItems = Array.isArray(allRFQData?.data) ? allRFQData.data : [];
+
+        // Merge and deduplicate by rfq_id
+        const merged = [...waitingItems];
+        allItems.forEach((item: RFQHeader) => {
+          if (!merged.find(m => m.rfq_id === item.rfq_id)) {
+            merged.push(item);
+          }
+        });
+
+        // 🔍 DEBUG: Log specifically if our target RFQ is found
+        const targetRFQ = merged.find(m => m.rfq_no === 'RFQ-001-202603-0009');
+        if (targetRFQ) {
+          console.log('✅ [QCFormModal] Found target RFQ-001-202603-0009 in merged list!', targetRFQ);
+        } else {
+          console.warn('❌ [QCFormModal] RFQ-001-202603-0009 still NOT found in merged list of', merged.length, 'items');
+        }
+
+        return merged;
+      } catch (err) {
+        console.error('❌ [QCFormModal] Failed to fetch lists:', err);
+        return [];
+      }
+    },
     enabled: isOpen,
   });
 
@@ -148,20 +212,13 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
 
   // Fetch VQs related to this RFQ by ID
   const { data: vqList, isLoading: isVQListLoading, isFetching: isVQListFetching } = useQuery({
-    queryKey: ['vq-list-for-qc-by-no', rfqNo],
+    queryKey: ['vq-list-for-qc-by-id', rfqId],
     queryFn: async () => {
-      const res = await VQService.getList({ limit: 1000 });
-      const items = res.data || [];
-      
-      const filtered = items.filter((vq: any) => {
-        const vqRfqId = vq.rfq_id || vq.rfq?.rfq_id;
-        const vqRfqNo = vq.rfq_no || vq.rfq?.rfq_no;
-        
-        return vqRfqNo === rfqNo || (!!rfqId && Number(vqRfqId) === Number(rfqId));
-      });
-      return { data: filtered };
+      if (!rfqId) return { data: [] };
+      const items = await QCService.getVQsWaitingForQC(Number(rfqId));
+      return { data: items || [] };
     },
-    enabled: !!rfqNo && isOpen,
+    enabled: !!rfqId && isOpen,
   });
 
 
@@ -175,37 +232,6 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
     queryFn: () => RFQService.getById(rfqId!),
     enabled: !!rfqId && isOpen,
   });
-
-  // 🔄 Hydrate Creator Name from rfqDetail if available
-  useEffect(() => {
-    if (rfqDetail) {
-      const actualRfq = (rfqDetail as any)?.data || rfqDetail;
-      const creatorName = actualRfq?.rfq_requester_name || actualRfq?.requester_name || actualRfq?.created_by_name || '';
-      if (creatorName && !createdBy) {
-         setCreatedBy(creatorName);
-      }
-    }
-  }, [rfqDetail, createdBy]);
-
-  // 🛡️ DATA RECOVERY: Fetch Creator Name if missing from detailed API
-  useEffect(() => {
-    const creatorId = qcData?.created_by || initialData?.created_by;
-    if (creatorId && !createdBy) {
-      // Fallback 1: Current Logger
-      if (Number(creatorId) === Number(user?.employee_id)) {
-         setCreatedBy(user?.employee?.employee_fullname || '');
-      } else {
-         // Fallback 2: Fetch via OrgEmployeeService
-         OrgEmployeeService.get(Number(creatorId))
-           .then((res: any) => {
-             const actualEmp = res?.data || res;
-             const empName = actualEmp?.employee_fullname || '';
-             if (empName) setCreatedBy(empName);
-           })
-           .catch((err) => logger.error("QC_CREATOR_FETCH_ERR:", err));
-      }
-    }
-  }, [qcData, initialData, createdBy, user]);
 
   // 🔍 Fetch winning VQ detail for items list (View Mode)
   const effectiveWinnerId = mode === 'view' ? (qcData?.winning_vq_id || winnerVQId) : winnerVQId;
@@ -380,7 +406,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
   useEffect(() => {
     if (mode === 'view') return; // Don't auto-reset selection in view mode
     
-    const safeVqList = Array.isArray(vqList) ? vqList : [];
+    const safeVqList = Array.isArray(vqList?.data) ? vqList.data : [];
     if (rfqId && safeVqList.length > 0) {
       // 🛡️ Anti-Bias Guard: Auto-select only if <= 3 items
       if (safeVqList.length <= 3) {
@@ -531,7 +557,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
             <Scale size={16} strokeWidth={2} />
           </div>
         }
-        headerColor={`${mode === 'view' ? 'bg-slate-700' : 'bg-blue-600'} [&_div.flex.items-center.space-x-1>button:not(:last-child)]:hidden`}
+        headerColor={`${mode === 'view' ? 'bg-purple-600' : 'bg-blue-600'} [&_div.flex.items-center.space-x-1>button:not(:last-child)]:hidden`}
         footer={
           <div className="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-end items-center bg-white dark:bg-gray-900 sticky bottom-0 z-10 gap-x-2">
             <button
@@ -564,18 +590,18 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
             return (
               <div className={`rounded-xl border-2 p-6 transition-all shadow-lg ${
                 hasWinner 
-                  ? 'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-300 dark:from-amber-900/10 dark:to-orange-900/10 dark:border-amber-700' 
+                  ? 'bg-gradient-to-br from-indigo-50 to-purple-50 border-purple-300 dark:from-indigo-900/10 dark:to-purple-900/10 dark:border-purple-700' 
                   : 'bg-gray-50 border-gray-200 dark:bg-gray-900/50 dark:border-gray-800'
               }`}>
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                   <div className="flex items-start gap-4">
                     <div className={`p-3 rounded-full shrink-0 ${
-                      hasWinner ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-gray-200 dark:bg-gray-800'
+                      hasWinner ? 'bg-indigo-100 dark:bg-indigo-900/30' : 'bg-gray-200 dark:bg-gray-800'
                     }`}>
-                      <Trophy size={32} className={hasWinner ? 'text-amber-500 fill-amber-400' : 'text-gray-400'} />
+                      <Trophy size={32} className={hasWinner ? 'text-purple-500 fill-purple-400' : 'text-gray-400'} />
                     </div>
                     <div>
-                      <h2 className="text-sm font-bold text-amber-800 dark:text-amber-500 uppercase tracking-widest mb-1">
+                      <h2 className="text-sm font-bold text-indigo-800 dark:text-indigo-400 uppercase tracking-widest mb-1">
                         {hasWinner ? 'ผู้ชนะการเสนอราคา (Winner Selected)' : 'ยังไม่มีการเลือกผู้ชนะ'}
                       </h2>
                     {qcData?.winning_vq_id || initialData?.vq_header_id || winnerVQId ? (() => {
@@ -601,7 +627,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
                 </div>
 
                 { !!(qcData?.winning_vq_id || initialData?.vq_header_id) && (
-                  <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm p-4 rounded-xl border border-amber-200/50 dark:border-amber-800/30 shadow-sm text-right">
+                  <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm p-4 rounded-xl border border-purple-200/50 dark:border-purple-800/30 shadow-sm text-right">
                     <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">ยอดรวมที่เสนอ (Net Amount)</div>
                     <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
                       {Number(qcData?.vq_total_amount || initialData?.vq_total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}

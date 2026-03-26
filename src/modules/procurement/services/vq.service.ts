@@ -1,6 +1,6 @@
 import api from '@/core/api/api';
 import { USE_MOCK } from '@/core/api/api';
-import type { VQListParams, VQListResponse, VQCreateData, VQListItem, VQPendingQueueResponse } from '@/modules/procurement/types';
+import type { VQListParams, VQListResponse, VQCreateData, VQListItem, VQPendingQueueResponse, VQPendingQueueItem } from '@/modules/procurement/types';
 import { logger } from '@/shared/utils/logger';
 import type { SuccessResponse } from '@/shared/types/api-response.types';
 import { applyClientFilters, applyClientPagination, extractArrayFromResponse } from '@/shared/utils/clientFilterUtils';
@@ -19,11 +19,15 @@ const ENDPOINTS = {
 export const VQService = {
   getList: async (params?: VQListParams): Promise<VQListResponse> => {
     logger.info('[VQService] Fetching VQ List', params);
-    const apiParams = { ...params };
-    if (apiParams.status === 'RECORDED') {
-        delete apiParams.status;
-    }
-    logger.debug("[VQService] getList params:", apiParams);
+    
+    // 🧹 Extract ONLY safe pagination/sorting for backend
+    // Search params (vq_no, rfq_no, etc.) are handled client-side in the Hybrid Fallback below
+    const apiParams: Record<string, string | number | boolean | undefined | null> = {};
+    if (params?.page) apiParams.page = params.page;
+    if (params?.limit) apiParams.limit = params.limit;
+    if (params?.sort) apiParams.sort = params.sort;
+
+    logger.debug("[VQService] getList backend params:", apiParams);
     const response = await api.get<VQListResponse>(ENDPOINTS.list, { params: apiParams });
 
 
@@ -31,6 +35,16 @@ export const VQService = {
     // 🎯 HYBRID FALLBACK: Apply Client-Side Filtering when using Real API
     if (!USE_MOCK && params) {
       const allItems = extractArrayFromResponse<VQListItem>(response);
+      
+      // 🎯 NORMALIZATION: Ensure searchable fields are at the root for applyClientFilters
+      // Backend may return these nested in 'rfq', 'pr', or 'vendor' objects
+      const normalizedItems = allItems.map(item => ({
+        ...item,
+        rfq_no: item.rfq_no || item.rfq?.rfq_no || '',
+        pr_no: item.pr_no || item.pr?.pr_no || '',
+        vendor_name: item.vendor_name || item.vendor?.vendor_name || ''
+      }));
+
       const filterParams: Record<string, string | number | boolean | undefined | null> = {};
       
       if (params?.vq_no) filterParams.vq_no = params.vq_no;
@@ -43,9 +57,9 @@ export const VQService = {
       if (params?.limit) filterParams.limit = params.limit;
       if (params?.sort) filterParams.sort = params.sort;
 
-      let filteredItems = allItems;
+      let filteredItems = normalizedItems;
       if (params?.status && params.status !== 'ALL') {
-          filteredItems = allItems.filter(item => 
+          filteredItems = normalizedItems.filter(item => 
               params.status === 'RECORDED' 
                 ? (item.status === 'RECORDED' || item.status === 'DRAFT')
                 : item.status === params.status
@@ -66,9 +80,9 @@ export const VQService = {
     return applyClientPagination<VQListItem>(allItems, page, limit, response.total);
   },
 
-  getVQsByRfqId: async (rfqId: number): Promise<VQListResponse> => {
-    logger.info(`[VQService] Fetching VQs for RFQ ID: ${rfqId}`);
-    const response = await api.get<VQListResponse | VQListItem[]>(ENDPOINTS.list, { params: { rfq_id: rfqId } });
+  getVQsByRfqNo: async (rfqNo: string): Promise<VQListResponse> => {
+    logger.info(`[VQService] Fetching VQs for RFQ No: ${rfqNo}`);
+    const response = await api.get<VQListResponse | VQListItem[]>(ENDPOINTS.list, { params: { rfq_no: rfqNo } });
     
     // Safely extract array and wrap in VQListResponse (No pagination)
     const rawData = response;
@@ -89,10 +103,23 @@ export const VQService = {
     const response = await api.get<ApiResponse>(ENDPOINTS.waitingForRfq, { params });
     
     // Safely unwrap if the pagination payload is nested inside another data layer
+    let result = response as VQPendingQueueResponse;
     if (response && 'data' in response && response.data && !Array.isArray(response.data)) {
-       return response.data;
+       result = response.data as VQPendingQueueResponse;
     }
-    return response as VQPendingQueueResponse;
+
+    // 🎯 HYBRID FALLBACK: Apply Client-Side Filtering
+    if (!USE_MOCK && params) {
+        const allItems = extractArrayFromResponse<VQPendingQueueItem>(result);
+        const filterParams = { ...params } as Record<string, string | number | boolean | undefined | null>;
+        return applyClientFilters<VQPendingQueueItem>(allItems, filterParams, {
+            searchableFields: ['rfq_no', 'pr_no', 'vendor_name'],
+            dateField: 'created_at',
+            backendTotal: result.total
+        }) as unknown as VQPendingQueueResponse;
+    }
+
+    return result;
   },
 
   getWaitingForVQ: async (params?: VQListParams): Promise<VQPendingQueueResponse> => {
@@ -101,10 +128,23 @@ export const VQService = {
     const response = await api.get<ApiResponse>(ENDPOINTS.waitingForVq, { params });
     
     // Safely unwrap if the pagination payload is nested inside another data layer
+    let result = response as VQPendingQueueResponse;
     if (response && 'data' in response && response.data && !Array.isArray(response.data)) {
-       return response.data;
+       result = response.data as VQPendingQueueResponse;
     }
-    return response as VQPendingQueueResponse;
+
+    // 🎯 HYBRID FALLBACK: Apply Client-Side Filtering
+    if (!USE_MOCK && params) {
+        const allItems = extractArrayFromResponse<VQPendingQueueItem>(result);
+        const filterParams = { ...params } as Record<string, string | number | boolean | undefined | null>;
+        return applyClientFilters<VQPendingQueueItem>(allItems, filterParams, {
+            searchableFields: ['rfq_no', 'pr_no', 'vendor_name'],
+            dateField: 'created_at',
+            backendTotal: result.total
+        }) as unknown as VQPendingQueueResponse;
+    }
+
+    return result;
   },
 
   getById: async (id: number): Promise<VQListItem> => {
@@ -133,14 +173,14 @@ export const VQService = {
     return await api.post<SuccessResponse>(`${ENDPOINTS.list}/${id}/cancel`, {});
   },
 
-  getModalWaitingForRFQ: async (params?: any): Promise<any> => {
+  getModalWaitingForRFQ: async (params?: VQListParams): Promise<VQPendingQueueResponse> => {
     logger.info('[VQService] Fetching Modal Waiting for RFQ', params);
-    return await api.get<any>(ENDPOINTS.modalWaitingForRfq, { params });
+    return await api.get<VQPendingQueueResponse>(ENDPOINTS.modalWaitingForRfq, { params });
   },
 
-  getModalWaitingForRFQVendor: async (id: number): Promise<any> => {
+  getModalWaitingForRFQVendor: async (id: number): Promise<VQPendingQueueResponse> => {
     logger.info(`[VQService] Fetching Modal Waiting for RFQ Vendor ${id}`);
-    return await api.get<any>(ENDPOINTS.modalWaitingForRfqVendor(id));
+    return await api.get<VQPendingQueueResponse>(ENDPOINTS.modalWaitingForRfqVendor(id));
   }
 };
 
