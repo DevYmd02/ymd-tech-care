@@ -151,7 +151,7 @@ export default function GRNListPage() {
                     </button>
                 </div>
             ),
-            size: 80,
+            size: 120,
             enableSorting: false,
         }),
     ], [columnHelper, filters.page, filters.limit]);

@@ -248,6 +248,7 @@ export interface PRFormValues {
 // LINE ITEM — Only fields the backend DTO accepts (Postman-aligned)
 // ═══════════════════════════════════════════════════════════════════════════════
 export interface CreatePRLineItem {
+    pr_line_id?: number;            // INTEGER @id (Added for update support)
     item_id: number;                // INTEGER
     qty: number;                    // decimal
     est_unit_price: number;         // decimal

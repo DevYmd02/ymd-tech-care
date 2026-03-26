@@ -47,7 +47,7 @@ export const PRFormSummary: React.FC<PRFormSummaryProps> = ({ isViewMode = false
                   <span className={labelClass}>รวม</span>
                   <input 
                     {...register('pr_sub_total')}
-                    value={subTotalState?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    value={subTotalState?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '0.00'}
                     readOnly 
                     className={`w-32 ${inputReadonlyClass} bg-yellow-50 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-600 text-gray-900 dark:text-yellow-200`} 
                   />
@@ -69,7 +69,7 @@ export const PRFormSummary: React.FC<PRFormSummaryProps> = ({ isViewMode = false
                     {/* Field 2: Read-only — calculated discount amount from this input */}
                     <input 
                       {...register('pr_discount_amount')}
-                      value={discountAmountState?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      value={discountAmountState?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '0.00'}
                       readOnly 
                       className={`w-24 ${inputReadonlyClass}`} 
                     />
@@ -99,7 +99,7 @@ export const PRFormSummary: React.FC<PRFormSummaryProps> = ({ isViewMode = false
                     )}
                     {vatRate > 0 && <span className="text-gray-400 dark:text-gray-500">-</span>}
                     <input 
-                      value={taxAmountState?.toLocaleString(undefined, { minimumFractionDigits: 2 })} 
+                      value={taxAmountState?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '0.00'} 
                       readOnly 
                       className={`w-28 ${inputReadonlyClass}`} 
                     />
@@ -111,7 +111,7 @@ export const PRFormSummary: React.FC<PRFormSummaryProps> = ({ isViewMode = false
                   <span className="font-bold text-gray-700 dark:text-gray-300">รวมทั้งสิ้น</span>
                   <input 
                     {...register('total_amount')}
-                    value={grandTotalState?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    value={grandTotalState?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '0.00'}
                     readOnly 
                     className="w-32 h-8 px-2 text-right font-bold bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-400 dark:border-yellow-600 rounded text-blue-600 dark:text-yellow-200" 
                   />

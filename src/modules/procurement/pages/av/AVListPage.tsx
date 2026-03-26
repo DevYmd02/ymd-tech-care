@@ -48,15 +48,35 @@ export default function AVListPage() {
             // ====================================================
             // 🎯 ALWAYS fetch both sources in parallel for dedup
             // ====================================================
-            const [pendingRes, approvalRes] = await Promise.all([
-                // Source 1: PR headers that are waiting for approval action (status=PENDING from PR table)
+            // ====================================================
+            // 🎯 TRIPLE-SOURCE FETCH: 
+            // 1. Actionable PRs (Pending for current user)
+            // 2. Approval History (Already processed)
+            // 3. All Pending PRs (Source of truth for resubmissions)
+            // ====================================================
+            const [pendingRes, approvalRes, allPendingPRsRes] = await Promise.all([
                 AVService.getPendingApprovalPRs(),
-                // Source 2: Completed approval records (status from AV/pr-approval table)
-                AVService.getApprovalList({ limit: 1000, page: 1, status: undefined })
+                AVService.getApprovalList({ limit: 1000, page: 1, status: undefined }),
+                AVService.getPendingPRs({ limit: 1000, page: 1 })
             ]);
 
             const pendingPRs: any[] = pendingRes || [];
             const approvalRecords: any[] = approvalRes?.data || [];
+            const allPendingPRs: any[] = allPendingPRsRes?.data || allPendingPRsRes || [];
+
+            // 🎯 NEW: Merged Set of IDs that are "Pending" in the main PR table
+            const pendingPRIdSet = new Set<number>([
+                ...pendingPRs.map((p: any) => Number(p.pr_id)),
+                ...allPendingPRs.map((p: any) => Number(p.pr_id))
+            ]);
+
+            console.log('🔍 [AVListPage] Triple-Source Data:', {
+                actionableCount: pendingPRs.length,
+                approvalHistoryCount: approvalRecords.length,
+                mainPendingCount: allPendingPRs.length,
+                pendingPRIdSetSize: pendingPRIdSet.size
+            });
+
 
             // Build a map of pr_id -> approval record for fast lookup
             // This is the GROUND TRUTH of what has been processed
@@ -73,11 +93,14 @@ export default function AVListPage() {
             }
 
             // PRs that have been FULLY processed (approved/rejected — no more pending items)
+            // 🎯 FIX: A PR is only "fully handled" if it's NOT in the pendingPRs list.
+            // If it's in the pending list (Source 1), it's NOT fully handled anymore.
             const fullyHandledPRIds = new Set<number>(
                 [...approvalByPRId.entries()]
-                    .filter(([, rec]) => {
+                    .filter(([prId, rec]) => {
                         const s = (rec.status || '').toUpperCase();
-                        return s === 'APPROVED' || s === 'REJECTED';
+                        const isHandledStatus = s === 'APPROVED' || s === 'REJECTED';
+                        return isHandledStatus && !pendingPRIdSet.has(prId);
                     })
                     .map(([prId]) => prId)
             );
@@ -90,8 +113,7 @@ export default function AVListPage() {
             );
 
             // Pending items: all PRs currently awaiting action
-            // Exclude fully handled ones (rejected or fully approved)
-            // Include partially approved (they still need another approval round)
+            // Exclude truly handled ones (rejected or fully approved AFTER checking pending list)
             const trulyPendingPRs = pendingPRs
                 .filter((p: any) => {
                     const prId = Number(p.pr_id);
@@ -105,11 +127,20 @@ export default function AVListPage() {
                 }));
 
             // Approval records: all completed/partial approval entries
-            const approvalItems = approvalRecords.map((a: any) => ({
-                ...a,
-                pr_no: a.pr?.pr_no || a.pr_no || '',
-                row_key: `approved-${a.approval_id || a.pr_id}`,
-            }));
+            // 🎯 FIX: Filter out stale REJECTED/APPROVED records if the PR is now PENDING again
+            const approvalItems = approvalRecords
+                .filter((a: any) => {
+                    const prId = Number(a.pr_id);
+                    const s = (a.status || '').toUpperCase();
+                    // If PR is pending, don't show the old REJECTED/APPROVED row in the main list
+                    if (pendingPRIdSet.has(prId) && (s === 'REJECTED' || s === 'APPROVED')) return false;
+                    return true;
+                })
+                .map((a: any) => ({
+                    ...a,
+                    pr_no: a.pr?.pr_no || a.pr_no || '',
+                    row_key: `approved-${a.approval_id || a.pr_id}`,
+                }));
 
             // ====================================================
             // 🎯 CLIENT-SIDE FILTER: Search & Status filter
@@ -322,7 +353,7 @@ export default function AVListPage() {
                     </button>
                 </div>
             ),
-            size: 100, 
+            size: 180, 
             enableSorting: false,
         }),
     ], [columnHelper, filters.page, filters.limit, handleApprove, handleViewHistory]);

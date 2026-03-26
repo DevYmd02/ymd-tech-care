@@ -203,7 +203,7 @@ export const getColumns = (context: VQColumnsContext): ColumnDef<VQListItem, any
                      </div>
                  );
             },
-            size: 140,
+            size: 180,
             enableSorting: false,
         }),
     ];
@@ -341,7 +341,7 @@ export const getPendingColumns = (tab: 'WAITING_VQ' | 'WAITING_RFQ', context: VQ
                 }
                 return <div className="text-center text-gray-400 font-bold">-</div>;
             },
-            size: 140,
+            size: 180,
         }),
     ];
 };
