@@ -3,6 +3,7 @@ import type { TaxCode, TaxGroup } from '@/modules/master-data/tax/types/tax-type
 export const MOCK_TAX_CODES: TaxCode[] = [
     {
         tax_id: '1',
+        tax_code_id: 1,
         tax_code: 'VAT-OUT-7',
         tax_name: 'ภาษีขาย 7%',
         tax_type: 'SALES',
@@ -15,6 +16,7 @@ export const MOCK_TAX_CODES: TaxCode[] = [
     },
     {
         tax_id: '2',
+        tax_code_id: 2,
         tax_code: 'VAT-IN-7',
         tax_name: 'ภาษีซื้อ 7%',
         tax_type: 'PURCHASE',
@@ -27,6 +29,7 @@ export const MOCK_TAX_CODES: TaxCode[] = [
     },
     {
         tax_id: '3',
+        tax_code_id: 3,
         tax_code: 'EXEMPT',
         tax_name: 'ได้รับยกเว้นภาษี',
         tax_type: 'EXEMPT',
@@ -39,6 +42,7 @@ export const MOCK_TAX_CODES: TaxCode[] = [
     },
     {
         tax_id: '4',
+        tax_code_id: 4,
         tax_code: 'VAT-OUT-10',
         tax_name: 'ภาษีขาย 10% (อนาคต)',
         tax_type: 'SALES',
@@ -51,6 +55,7 @@ export const MOCK_TAX_CODES: TaxCode[] = [
     },
     {
         tax_id: '5',
+        tax_code_id: 5,
         tax_code: 'VAT-OUT-0',
         tax_name: 'ภาษีขาย 0% (ส่งออก)',
         tax_type: 'SALES',

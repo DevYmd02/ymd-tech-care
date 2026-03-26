@@ -20,6 +20,7 @@ import { useAuth } from '@/core/auth/contexts/AuthContext';
 import { logger } from '@/shared/utils/logger';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { extractErrorMessage } from '@/core/api/api';
+import { calculatePricingSummary, parseDiscountAmount } from '@/modules/procurement/utils/pricing.utils';
 import type { Currency } from '@/modules/master-data/types/master-data-types';
 
 // ====================================================================================
@@ -173,6 +174,7 @@ export const usePOForm = ({
                     initialPOLines = lines.map((l: any, idx: number) => ({
                         line_no:         idx + 1,
                         item_id:         Number(l.item_id || 0),
+                        id:              Number(l.item_id || 0),
                         item_code:       l.item_code || l.item?.item_code || '',
                         item_name:       l.item_name || l.item?.item_name || '',
                         description:     l.description || l.remark || '',
@@ -193,7 +195,12 @@ export const usePOForm = ({
             }
             // Phase 1: Direct PO Lines from internal or partial initialValues
             else if (initialValues?.po_lines && initialValues.po_lines.length > 0) {
-                initialPOLines = initialValues.po_lines as POFormData['po_lines'];
+                initialPOLines = initialValues.po_lines.map((l: any, idx: number) => ({
+                    ...l,
+                    id: Number(l.id || l.item_id || 0),
+                    item_id: Number(l.item_id || l.id || 0),
+                    line_no: l.line_no || idx + 1,
+                }));
             } 
             // Phase 2: Derive from RFQ/VQ inheritance
             else if (inheritedQC && (inheritedQC.vq_lines || inheritedQC.lines)) {
@@ -201,6 +208,7 @@ export const usePOForm = ({
                 initialPOLines = sourceLines.map((l: QuotationLine, idx: number) => ({
                     line_no:         idx + 1,
                     item_id:         Number(l.item_id || 0),
+                    id:              Number(l.item_id || 0),
                     item_code:       l.item?.item_code || l.item_code || '',
                     item_name:       l.item?.item_name || l.item_name || '',
                     description:     l.remark || l.item?.item_name || l.item_name || '',
@@ -224,6 +232,7 @@ export const usePOForm = ({
                 initialPOLines = [{
                     line_no:         1,
                     item_id:         0,
+                    id:              0,
                     item_code:       '',
                     item_name:       '',
                     description:     '',
@@ -242,11 +251,12 @@ export const usePOForm = ({
                 }];
             }
 
-            const detail = existingPO as any;
+            const detail = (existingPO as any) || {};
+            const cleanD = (d: any) => (typeof d === 'string' && d.includes('T')) ? d.split('T')[0] : d;
 
             reset({
                 po_no:                detail?.po_no                       ?? initialValues?.po_no                ?? undefined,
-                po_date:              detail?.po_date                     ?? initialValues?.po_date              ?? new Date().toISOString().split('T')[0],
+                po_date:              cleanD(detail?.po_date)              ?? cleanD(initialValues?.po_date)      ?? new Date().toISOString().split('T')[0],
                 rfq_id:               detail?.rfq_id                      ?? initialValues?.rfq_id               ?? inheritedQC?.rfq_id ?? undefined,
                 winning_vq_id:        detail?.winning_vq_id               ?? initialValues?.winning_vq_id        ?? inheritedQC?.vq_header_id ?? inheritedQC?.quotation_id ?? undefined,
                 pr_id:                detail?.pr_id                       ?? (inheritedQC?.pr_id || initialValues?.pr_id) ?? undefined,
@@ -262,13 +272,13 @@ export const usePOForm = ({
                 base_currency_code:   inheritedQC?.base_currency_code     || 'THB',
                 quote_currency_code:  inheritedQC?.quote_currency_code    || inheritedQC?.currency || 'THB',
                 target_currency:      'THB',
-                exchange_rate_date:   new Date().toISOString().split('T')[0],
+                exchange_rate_date:   cleanD(detail?.exchange_rate_date)  ?? cleanD(initialValues?.exchange_rate_date) ?? new Date().toISOString().split('T')[0],
                 exchange_rate:        Number(detail?.exchange_rate        || inheritedQC?.exchange_rate || initialValues?.exchange_rate || 1),
                 payment_term_days:    Number(detail?.payment_term_days    || inheritedQC?.payment_term_days || initialValues?.payment_term_days || 30),
-                delivery_date:        detail?.delivery_date               ? detail.delivery_date.split('T')[0] : (initialValues?.delivery_date ?? ''),
+                delivery_date:        cleanD(detail?.delivery_date)       || cleanD(initialValues?.delivery_date) || '',
                 remarks:              detail?.remarks                     ?? initialValues?.remarks ?? '',
                 discount_expression:  detail?.discount_expression         ?? initialValues?.discount_expression ?? '0',
-                tax_code_id:          detail?.tax_code_id                 ?? detail?.tax_id ?? initialValues?.tax_code_id ?? inheritedQC?.tax_code_id ?? initialPOLines[0]?.tax_code_id ?? undefined,
+                tax_code_id:          Number(detail?.tax_code_id || detail?.tax_id || initialValues?.tax_code_id || inheritedQC?.tax_code_id || initialPOLines[0]?.tax_code_id) || undefined,
                 created_by:           detail?.created_by                  ?? initialValues?.created_by,
                 created_by_name:      detail?.created_by_name             ?? initialValues?.created_by_name ?? (user?.employee?.employee_fullname || user?.username || ''),
                 po_lines:             initialPOLines,
@@ -280,13 +290,27 @@ export const usePOForm = ({
     // ── Enforce THB when Multicurrency is OFF ─────────────────────────────────
     useEffect(() => {
         if (!watchIsMulticurrency) {
-            setValue('pr_id', undefined);
-            setValue('pr_no', undefined);
             setValue('currency_code', 'THB');
             setValue('exchange_rate', 1);
             setValue('target_currency', 'THB');
         }
     }, [watchIsMulticurrency, setValue]);
+    
+    // ── Propagate Header Tax to all Lines ─────────────────────────────────────
+    const watchHeaderTaxCodeId = useWatch({ control, name: 'tax_code_id' });
+    useEffect(() => {
+        if (watchHeaderTaxCodeId !== undefined) {
+             const currentLines = getValues('po_lines') || [];
+             const needsUpdate = currentLines.some(l => Number(l.tax_code_id) !== Number(watchHeaderTaxCodeId));
+             if (needsUpdate) {
+                 const updatedLines = currentLines.map(l => ({
+                     ...l,
+                     tax_code_id: watchHeaderTaxCodeId
+                 }));
+                 setValue('po_lines', updatedLines as any, { shouldDirty: true });
+             }
+        }
+    }, [watchHeaderTaxCodeId, setValue, getValues]);
 
     // ── Currency Exchange Rate Auto-Calculation triggers ─────────────────────
     const prevCurrencyId = useRef<string | undefined>(undefined);
@@ -401,7 +425,7 @@ export const usePOForm = ({
             const creditDays = Number(fullPR.credit_days ?? 0);
             const finalCreditDays = leadTime > 0 ? leadTime : creditDays;
             
-            const taxCodeId = Number(winningVQ?.tax_code_id ?? fullPR.pr_tax_code_id);
+            const taxCodeId = Number(winningVQ?.tax_code_id ?? (winningVQ as any)?.tax_id ?? fullPR.pr_tax_code_id ?? (fullPR as any).pr_tax_id);
 
             setValue('payment_term_days', creditTerm);
             setValue('credit_days', finalCreditDays);
@@ -778,6 +802,17 @@ export const usePOForm = ({
                 return isNaN(num) || num === 0 ? undefined : num;
             };
 
+            // 🏷️ Calculation Summary (Matches UI POSummaryPanel strategy)
+            const summaryItems = (pendingPayload.po_lines || []).map((l: POLine) => {
+                const qty = Number(l.qty_ordered ?? l.qty ?? 0);
+                const price = Number(l.unit_price ?? 0);
+                const disc = parseDiscountAmount(l.discount_expression ?? '0', qty * price);
+                return { qty, unit_price: price, discount: disc };
+            });
+            const selectedTax = taxCodes.find(t => Number(t.tax_code_id) === Number(pendingPayload.tax_code_id));
+            const taxRate = selectedTax ? Number(selectedTax.tax_rate) : 0;
+            const pricingSummary = calculatePricingSummary(summaryItems, taxRate, false);
+
             // STRICT PAYLOAD ARCHITECTURE (Aligned with Backend Contract 100%)
             const fullPayload: CreatePOPayload = {
                 pr_id:              safeId(pendingPayload.pr_id),
@@ -795,6 +830,14 @@ export const usePOForm = ({
                 created_at:         new Date().toISOString(),
                 created_by:         (poId ? (getValues('created_by') ? Number(getValues('created_by')) : undefined) : (user?.id ? Number(user.id) : undefined)) as unknown as number,
                 winning_vq_id:      safeId(pendingPayload.winning_vq_id),
+                
+                // 💰 Pricing Summary Injection (Explictly cast to include summary fields for backend)
+                ...({
+                    subtotal:     Number(pricingSummary.subtotal || 0),
+                    tax_amount:   Number(pricingSummary.taxAmount || 0),
+                } as Record<string, unknown>),
+                total_amount:       Number(pricingSummary.totalAmount || 0),
+
                 po_lines: (pendingPayload.po_lines || []).map((item: POLine, index: number) => ({
                     line_no:        index + 1,
                     item_id:        Number(item.item_id),
@@ -803,7 +846,7 @@ export const usePOForm = ({
                     qty:            Number(item.qty || item.qty_ordered || 0),
                     uom_id:         Number(item.uom_id),
                     unit_price:     Number(item.unit_price),
-                    tax_code_id:    item.tax_code_id ? Number(item.tax_code_id) : Number(pendingPayload.tax_code_id),
+                    tax_code_id:    pendingPayload.tax_code_id !== undefined ? Number(pendingPayload.tax_code_id) : Number(item.tax_code_id),
                     discount_expression: String(item.discount_expression || "0"),
                     required_receipt_type: item.required_receipt_type || "FULL",
                     description:    String(item.description || "")
@@ -835,10 +878,28 @@ export const usePOForm = ({
 
             logger.info("FINAL_PO_PAYLOAD (Cleaned + Null Override):", finalizedPayload);
 
-            // 🛡️ Pre-flight validation
-            CreatePOSchema.parse(finalizedPayload);
+            if (poId) {
+                // 🔄 UPDATE FLOW (Deep Scan Patch)
+                logger.info(`[usePOForm] Updating existing PO: ${poId}`);
+                
+                // 🛡️ Data Integrity: Remove Forbidden properties, add Mandatory ones
+                // Backend PATCH forbids 'created_by' but requires 'status', 'created_at', and 'updated_by'
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                const { created_by, ...patchCandidate } = finalizedPayload;
+                
+                const updatePayload = {
+                    ...patchCandidate,
+                    updated_by: Number(user?.id || 1), // 🛡️ Mandatory for PATCH
+                    // Ensure these are present as the backend says "should not be empty"
+                    status:     finalizedPayload.status || (existingPO as any)?.status || 'DRAFT',
+                    created_at: finalizedPayload.created_at || (existingPO as any)?.created_at || new Date().toISOString(),
+                };
 
-            await POService.create(finalizedPayload as unknown as CreatePOPayload);
+                await POService.update(Number(poId), updatePayload as any);
+            } else {
+                CreatePOSchema.parse(finalizedPayload);
+                await POService.create(finalizedPayload as unknown as CreatePOPayload);
+            }
 
             queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
             toast('บันทึกใบสั่งซื้อสำเร็จ', 'success');
@@ -874,11 +935,17 @@ export const usePOForm = ({
             for (const key in errs) {
                 const error = errs[key];
                 if (error?.message && typeof error.message === 'string') {
-                    // 🛡️ ระบบกรองคำภาษาอังกฤษที่อาจหลุดมา
+                    // 🛡️ เพิ่มชื่อ Field เพื่อให้ Debug ง่ายขึ้น (เฉพาะตอน dev หรือ สำหรับ Admin)
+                    const fieldName = key;
                     let msg = error.message;
+                    
+                    if (fieldName && !msg.includes(fieldName)) {
+                        msg = `[${fieldName}] ${msg}`;
+                    }
+
                     const lowerMsg = msg.toLowerCase();
                     if (lowerMsg.includes('invalid input') || lowerMsg.includes('expected number') || lowerMsg.includes('received string') || lowerMsg.includes('received nan')) {
-                        msg = 'กรุณาระบุข้อมูลให้ถูกต้อง';
+                        msg = `[${fieldName}] กรุณาระบุข้อมูลตัวเลขให้ถูกต้อง`;
                     }
                     messages.push(msg);
                 } else if (typeof error === 'object' && error !== null) {

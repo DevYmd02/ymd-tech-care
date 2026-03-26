@@ -229,7 +229,15 @@ export default function POFormModal({
             <WindowFormLayout
                 isOpen={isOpen}
                 onClose={onClose}
-                title={isView ? 'รายละเอียดใบสั่งซื้อ (VIEW PO)' : watchQcNo ? 'สร้างใบสั่งซื้อจากใบ QC (CREATE PO FROM QC)' : 'สร้างใบสั่งซื้อ (CREATE PURCHASE ORDER)'}
+                title={
+                    isView 
+                        ? 'รายละเอียดใบสั่งซื้อ (VIEW PO)' 
+                        : poId 
+                            ? 'แก้ไขใบสั่งซื้อ (EDIT PURCHASE ORDER)' 
+                            : watchQcNo 
+                                ? 'สร้างใบสั่งซื้อจากใบ QC (CREATE PO FROM QC)' 
+                                : 'สร้างใบสั่งซื้อ (CREATE PURCHASE ORDER)'
+                }
                 titleIcon={
                     <div className="bg-white/20 p-1 rounded-md shadow-sm">
                         <FileText size={14} strokeWidth={3} className="text-white" />
@@ -412,7 +420,7 @@ export default function POFormModal({
                                                     <option value="">{isLoadingTaxCodes ? 'กำลังโหลด...' : '— เลือกประเภทภาษี —'}</option>
                                                     {taxCodes.map((o: TaxCode) => (
                                                         <option key={o.tax_code_id} value={o.tax_code_id}>
-                                                            {o.tax_name} ({o.tax_rate}%)
+                                                            {o.tax_code}
                                                         </option>
                                                     ))}
                                                 </select>
@@ -445,14 +453,14 @@ export default function POFormModal({
                                         <label className={ui.label}>รหัสสกุลเงิน <span className="text-red-500">*</span></label>
                                         <select {...register('currency_code')} className={ui.select} disabled={isView || isLoadingCurrencies}>
                                             <option value="">{isLoadingCurrencies ? 'โหลด...' : 'เลือกสกุลเงิน'}</option>
-                                            {currencies.map((o: Currency) => <option key={o.currency_code} value={o.currency_code}>{o.currency_code} - {o.name_en}</option>)}
+                                            {currencies.map((o: Currency) => <option key={o.currency_code} value={o.currency_code}>{o.currency_code} - {o.name_th}</option>)}
                                         </select>
                                     </div>
                                     <div>
                                         <label className={ui.label}>ไปที่สกุลเงิน (Target)</label>
                                         <select {...register('target_currency')} className={ui.select} disabled={isView || isLoadingCurrencies}>
                                             <option value="">{isLoadingCurrencies ? 'โหลด...' : 'เลือกสกุลเงิน'}</option>
-                                            {currencies.map((o: Currency) => <option key={o.currency_code} value={o.currency_code}>{o.currency_code} - {o.name_en}</option>)}
+                                            {currencies.map((o: Currency) => <option key={o.currency_code} value={o.currency_code}>{o.currency_code} - {o.name_th}</option>)}
                                         </select>
                                     </div>
                                     <div>

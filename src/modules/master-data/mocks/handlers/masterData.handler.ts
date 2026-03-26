@@ -64,10 +64,10 @@ export const setupMasterDataHandlers = (mock: MockAdapter) => {
 
   // --- CURRENCY ---
   const mockCurrencies = [
-    { currency_id: '1', currency_code: 'THB', name_th: 'บาทไทย', name_en: 'Thai Baht', symbol: '฿', is_active: true, created_at: '2026-01-01', updated_at: '2026-01-01' },
-    { currency_id: '2', currency_code: 'USD', name_th: 'ดอลลาร์สหรัฐ', name_en: 'US Dollar', symbol: '$', is_active: true, created_at: '2026-01-01', updated_at: '2026-01-01' },
-    { currency_id: '3', currency_code: 'EUR', name_th: 'ยูโร', name_en: 'Euro', symbol: '€', is_active: true, created_at: '2026-01-01', updated_at: '2026-01-01' },
-    { currency_id: '4', currency_code: 'JPY', name_th: 'เยนญี่ปุ่น', name_en: 'Japanese Yen', symbol: '¥', is_active: true, created_at: '2026-01-01', updated_at: '2026-01-01' },
+    { currency_id: '1', currency_code: 'THB', currency_name: 'บาทไทย', currency_nameeng: 'Thai Baht', symbol: '฿', exchange_rate: 1, is_active: true, created_at: '2026-01-01', updated_at: '2026-01-01' },
+    { currency_id: '2', currency_code: 'USD', currency_name: 'ดอลลาร์สหรัฐ', currency_nameeng: 'US Dollar', symbol: '$', exchange_rate: 35.5, is_active: true, created_at: '2026-01-01', updated_at: '2026-01-01' },
+    { currency_id: '3', currency_code: 'EUR', currency_name: 'ยูโร', currency_nameeng: 'Euro', symbol: '€', exchange_rate: 38.2, is_active: true, created_at: '2026-01-01', updated_at: '2026-01-01' },
+    { currency_id: '4', currency_code: 'JPY', currency_name: 'เยนญี่ปุ่น', currency_nameeng: 'Japanese Yen', symbol: '¥', exchange_rate: 0.24, is_active: true, created_at: '2026-01-01', updated_at: '2026-01-01' },
   ];
 
   mock.onGet('/master-data/currency').reply((config) => {

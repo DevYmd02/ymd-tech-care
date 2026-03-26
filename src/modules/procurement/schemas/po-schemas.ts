@@ -125,7 +125,7 @@ export type POTransaction = z.infer<typeof POTransactionSchema>;
 // ====================================================================================
 
 export const POLineSchema = z.object({
-    id:              z.number().optional(), // Dual mapping for UI compatibility (matches item_id)
+    id:              z.coerce.number().optional().nullable(), // Dual mapping for UI compatibility (matches item_id)
     code:            z.string().optional(), // Dual mapping for UI compatibility (matches item_code)
     line_no: z.coerce.number().min(1),
     item_id: z.coerce.number().min(1, "กรุณาเลือกรหัสสินค้าจากตาราง"),
