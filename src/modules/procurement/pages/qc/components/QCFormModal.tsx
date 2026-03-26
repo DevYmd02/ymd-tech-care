@@ -557,7 +557,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
             <Scale size={16} strokeWidth={2} />
           </div>
         }
-        headerColor={`${mode === 'view' ? 'bg-slate-700' : 'bg-blue-600'} [&_div.flex.items-center.space-x-1>button:not(:last-child)]:hidden`}
+        headerColor={`${mode === 'view' ? 'bg-purple-600' : 'bg-blue-600'} [&_div.flex.items-center.space-x-1>button:not(:last-child)]:hidden`}
         footer={
           <div className="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-end items-center bg-white dark:bg-gray-900 sticky bottom-0 z-10 gap-x-2">
             <button
@@ -590,18 +590,18 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
             return (
               <div className={`rounded-xl border-2 p-6 transition-all shadow-lg ${
                 hasWinner 
-                  ? 'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-300 dark:from-amber-900/10 dark:to-orange-900/10 dark:border-amber-700' 
+                  ? 'bg-gradient-to-br from-indigo-50 to-purple-50 border-purple-300 dark:from-indigo-900/10 dark:to-purple-900/10 dark:border-purple-700' 
                   : 'bg-gray-50 border-gray-200 dark:bg-gray-900/50 dark:border-gray-800'
               }`}>
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                   <div className="flex items-start gap-4">
                     <div className={`p-3 rounded-full shrink-0 ${
-                      hasWinner ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-gray-200 dark:bg-gray-800'
+                      hasWinner ? 'bg-indigo-100 dark:bg-indigo-900/30' : 'bg-gray-200 dark:bg-gray-800'
                     }`}>
-                      <Trophy size={32} className={hasWinner ? 'text-amber-500 fill-amber-400' : 'text-gray-400'} />
+                      <Trophy size={32} className={hasWinner ? 'text-purple-500 fill-purple-400' : 'text-gray-400'} />
                     </div>
                     <div>
-                      <h2 className="text-sm font-bold text-amber-800 dark:text-amber-500 uppercase tracking-widest mb-1">
+                      <h2 className="text-sm font-bold text-indigo-800 dark:text-indigo-400 uppercase tracking-widest mb-1">
                         {hasWinner ? 'ผู้ชนะการเสนอราคา (Winner Selected)' : 'ยังไม่มีการเลือกผู้ชนะ'}
                       </h2>
                     {qcData?.winning_vq_id || initialData?.vq_header_id || winnerVQId ? (() => {
@@ -627,7 +627,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
                 </div>
 
                 { !!(qcData?.winning_vq_id || initialData?.vq_header_id) && (
-                  <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm p-4 rounded-xl border border-amber-200/50 dark:border-amber-800/30 shadow-sm text-right">
+                  <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm p-4 rounded-xl border border-purple-200/50 dark:border-purple-800/30 shadow-sm text-right">
                     <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">ยอดรวมที่เสนอ (Net Amount)</div>
                     <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
                       {Number(qcData?.vq_total_amount || initialData?.vq_total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}

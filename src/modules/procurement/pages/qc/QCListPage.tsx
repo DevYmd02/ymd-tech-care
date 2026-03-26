@@ -212,7 +212,7 @@ export default function QCListPage() {
         }),
         columnHelper.accessor(row => row.status, {
             id: 'status',
-            header: 'สถานะ',
+            header: () => <div className="text-center w-full">สถานะ</div>,
             cell: (info) => {
                 const item = info.row.original;
                 const isConfirmed = !!item.vq_header_id;
@@ -238,7 +238,7 @@ export default function QCListPage() {
                     <div className="flex items-center justify-center gap-2">
                         <button
                             onClick={() => handleView(item)}
-                            className="p-1 px-1.5 rounded-md text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                            className="p-1 px-1.5 rounded-md text-indigo-400 hover:text-purple-600 dark:text-indigo-500/70 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                             title="ดูรายละเอียด"
                         >
                             <Eye className="w-4 h-4" />

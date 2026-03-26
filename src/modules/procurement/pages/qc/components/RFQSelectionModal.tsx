@@ -96,7 +96,7 @@ export function RFQSelectionModal({
                       <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider w-1/6">วันที่ (Date)</th>
                       <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider w-32">จำนวนผู้ขาย</th>
                       <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider flex-1">เรื่อง/วัตถุประสงค์</th>
-                      <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider text-right">จัดการ</th>
+                      <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider text-center">จัดการ</th>
                    </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50 dark:divide-gray-800/50">
@@ -127,7 +127,7 @@ export function RFQSelectionModal({
                               </span>
                            </td>
 
-                           <td className="px-6 py-4 text-right whitespace-nowrap">
+                           <td className="px-6 py-4 text-center whitespace-nowrap">
                               <button 
                                  onClick={() => onSelect(item)}
                                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-sm shadow-indigo-200 dark:shadow-none transition-all hover:scale-105 active:scale-95"
