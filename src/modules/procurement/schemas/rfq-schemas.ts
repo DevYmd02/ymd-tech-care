@@ -93,6 +93,7 @@ export const RFQFormSchema = z.object({
     incoterm: z.string().optional().or(z.literal('')),
     remarks: z.string().optional().or(z.literal('')),
     purpose: z.string().optional().or(z.literal('')),
+    target_delivery_date: z.string().optional().or(z.literal('')), // 🆕 Added for AV Header sync/template
 
     // Currency — always has defaults, optional for multicurrency fields
     rfq_base_currency_code: z.string().min(1, MESSAGES.REQUIRED),
@@ -168,6 +169,7 @@ export const getRFQDefaultFormValues = (): RFQFormValues => ({
     payment_term_hint: '',
     incoterm: '',
     remarks: '',
+    target_delivery_date: '',
     isMulticurrency: false,
     purpose: '',
     rfqLines: [],

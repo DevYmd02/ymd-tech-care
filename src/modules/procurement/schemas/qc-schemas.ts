@@ -210,6 +210,7 @@ export interface IReadyForPOPR {
     winning_vq_id: number;
     winning_vendor_id?: number;
     status: string;
+    raw_status?: string;
     created_at: string;
   }[] | null;
 }

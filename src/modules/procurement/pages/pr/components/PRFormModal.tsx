@@ -46,7 +46,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
 
   // V-04: Force readOnly if status is not DRAFT (prevent editing APPROVED/PENDING PRs)
   const currentStatus = watch('status');
-  const readOnly = readOnlyProp || (!!id && currentStatus !== undefined && currentStatus !== 'DRAFT');
+  const readOnly = readOnlyProp || (!!id && currentStatus !== undefined && !['DRAFT', 'PENDING', 'REJECTED'].includes(currentStatus));
 
   // Action permissions — decoupled from readOnly (which is only for input fields)
   const canSaveDraft = !readOnly; // Only editable forms can save

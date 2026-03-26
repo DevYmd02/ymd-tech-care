@@ -298,53 +298,65 @@ export const PRService = {
     logger.debug('[PRService.getDetail] RAW response keys:', Object.keys(response as object || {}));
     logger.debug('[PRService.getDetail] RAW response (first 500 chars):', JSON.stringify(response).slice(0, 500));
     
+    let finalResult: PRHeaderExtended | null = null;
     const raw = response as Record<string, unknown>;
 
     // ─── Shape 1: Already unwrapped by interceptor → { pr_id, pr_no, ... } ─────
     if (raw && 'pr_id' in raw) {
-      const result = raw as unknown as PRHeaderExtended;
-      logger.debug('[PRService.getDetail] Shape 1 (direct): pr_no=', result.pr_no, 'lines=', result.lines?.length ?? 0);
-      return result;
+      finalResult = raw as unknown as PRHeaderExtended;
+      logger.debug('[PRService.getDetail] Shape 1 (direct): pr_no=', finalResult.pr_no, 'lines=', finalResult.lines?.length ?? 0);
     }
     
     // ─── Shape 2: Single envelope { data: { pr_id, pr_no, ... } } ───────────────
-    if (raw && 'data' in raw && raw.data && typeof raw.data === 'object') {
+    else if (raw && 'data' in raw && raw.data && typeof raw.data === 'object') {
       const inner = raw.data as Record<string, unknown>;
       if ('pr_id' in inner) {
-        const result = inner as unknown as PRHeaderExtended;
-        logger.debug('[PRService.getDetail] Shape 2 (data envelope): pr_no=', result.pr_no, 'lines=', result.lines?.length ?? 0);
-        return result;
+        finalResult = inner as unknown as PRHeaderExtended;
+        logger.debug('[PRService.getDetail] Shape 2 (data envelope): pr_no=', finalResult.pr_no, 'lines=', finalResult.lines?.length ?? 0);
       }
       
       // ─── Shape 3: Double envelope { data: { data: { pr_id, ... } } } ───────── 
-      if ('data' in inner && inner.data && typeof inner.data === 'object') {
+      else if ('data' in inner && inner.data && typeof inner.data === 'object') {
         const deepInner = inner.data as Record<string, unknown>;
         if ('pr_id' in deepInner) {
-          const result = deepInner as unknown as PRHeaderExtended;
-          logger.debug('[PRService.getDetail] Shape 3 (double envelope): pr_no=', result.pr_no, 'lines=', result.lines?.length ?? 0);
-          return result;
+          finalResult = deepInner as unknown as PRHeaderExtended;
+          logger.debug('[PRService.getDetail] Shape 3 (double envelope): pr_no=', finalResult.pr_no, 'lines=', finalResult.lines?.length ?? 0);
         }
       }
     }
 
     // ─── Shape 4: { header: { pr_id, pr_no, ... }, lines: [...] } ────────────────
     // ✅ CONFIRMED: Real NestJS backend returns this shape (seen in browser log)
-    if (raw && 'header' in raw && raw.header && typeof raw.header === 'object') {
+    else if (raw && 'header' in raw && raw.header && typeof raw.header === 'object') {
       const header = raw.header as Record<string, unknown>;
       if ('pr_id' in header) {
-        const result = {
+        finalResult = {
           ...header,
           // Merge lines from the top-level `lines` key into the PRHeader
           lines: Array.isArray(raw.lines) ? raw.lines : [],
         } as unknown as PRHeaderExtended;
-        logger.debug('[PRService.getDetail] Shape 4 (header+lines): pr_no=', result.pr_no, 'lines=', result.lines?.length ?? 0);
-        return result;
+        logger.debug('[PRService.getDetail] Shape 4 (header+lines): pr_no=', finalResult.pr_no, 'lines=', finalResult.lines?.length ?? 0);
       }
     }
 
     // ─── Fallback: Return as-is and let TS handle it ─────────────────────────────
-    logger.warn('[PRService.getDetail] Could not determine response shape — using raw as PRHeader');
-    return raw as unknown as PRHeaderExtended;
+    if (!finalResult) {
+        logger.warn('[PRService.getDetail] Could not determine response shape — using raw as PRHeader');
+        finalResult = raw as unknown as PRHeaderExtended;
+    }
+
+    // 🎯 AV STATUS HYDRATION (Detail): Overlay correct status from AV module
+    if (!USE_MOCK) {
+        try {
+            const avStatusMap = await buildAVStatusMap();
+            const hydrated = overlayAVStatus([finalResult as unknown as PRHeader], avStatusMap);
+            finalResult = hydrated[0] as unknown as PRHeaderExtended;
+        } catch (err) {
+            logger.warn('[PRService.getDetail] AV status hydration failed:', err);
+        }
+    }
+
+    return finalResult;
   },
 
 

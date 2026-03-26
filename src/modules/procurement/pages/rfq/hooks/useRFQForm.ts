@@ -12,7 +12,6 @@ import type { PRHeader } from '@/modules/procurement/types';
 import type { Resolver } from 'react-hook-form';
 import { PRService } from '@/modules/procurement/services/pr.service';
 import { RFQService, type RFQCreateDTO, type RFQLineDTO } from '@/modules/procurement/services/rfq.service';
-import { AVService } from '@/modules/procurement/services/av.service';
 import { logger } from '@/shared/utils/logger';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { useQuery } from '@tanstack/react-query';
@@ -172,37 +171,6 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         enabled: isOpen,
     });
 
-    // --- 🔗 [NEW] AV Hydration logic: Fetch Approval No if missing but PR reference exists ---
-    const currentPrNo = methods.watch('pr_no');
-    const currentApprovedPrNo = methods.watch('approved_pr_no');
-    
-    const { data: approvalHydrationData } = useQuery({
-        queryKey: ['rfq-av-hydration', currentPrNo],
-        queryFn: async () => {
-            if (!currentPrNo) return null;
-            const res = await AVService.getApprovalList({ pr_no: currentPrNo });
-            return res.data || [];
-        },
-        enabled: isOpen && !!(currentPrNo && !currentApprovedPrNo),
-        staleTime: 5 * 60 * 1000,
-    });
-
-    useEffect(() => {
-        if (isOpen && currentPrNo && !currentApprovedPrNo && approvalHydrationData && approvalHydrationData.length > 0) {
-            const firstAV = approvalHydrationData[0];
-            const avNo = firstAV.approval_no;
-            const avId = firstAV.approval_id;
-
-            if (avNo) {
-                logger.info(`[useRFQForm] Hydrating missing AV for PR ${currentPrNo}: ${avNo}`);
-                // Use { shouldDirty: false } to prevent tracking this hydration as a user change (especially in View mode)
-                methods.setValue('approved_pr_no', avNo, { shouldValidate: true, shouldDirty: false });
-                if (avId) {
-                    methods.setValue('pr_approval_id', Number(avId), { shouldDirty: false });
-                }
-            }
-        }
-    }, [isOpen, currentPrNo, currentApprovedPrNo, approvalHydrationData, methods]);
 
     // Exchange Rate Sync logic
     const sourceCurrency = methods.watch('rfq_base_currency_code');
@@ -240,17 +208,36 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         setValue('approved_pr_no', approvedNo, { shouldValidate: true, shouldDirty: true });
         setValue('pr_approval_id', record.approval_id ? Number(record.approval_id) : undefined, { shouldDirty: true });
         
-        // 🔄 SYNC LINES: If AV record has lines, override form lines
-        const avLines = record.prApprovalLines || record.lines || record.pr_approval_lines || [];
-        logger.info("💎 [DIAGNOSTIC] AV Record Keys:", Object.keys(record));
-        if (avLines.length > 0) {
-            logger.info("💎 [DIAGNOSTIC] First Line Keys:", Object.keys(avLines[0]));
-            logger.info("💎 [DIAGNOSTIC] First Line Data:", JSON.stringify(avLines[0]));
+        // 🆕 Auto-populate header target_delivery_date from AV's "วันที่กำหนดส่ง" (need_by_date)
+        // 🧪 DIAGNOSTIC: Try more potential field names from backend
+        const rawDate = record.need_by_date || record.delivery_date || record.due_date || record.needByDate || 
+                        record.pr?.need_by_date || record.pr?.delivery_date || '';
+        const avDate = rawDate ? rawDate.toString().split('T')[0] : '';
+        
+        logger.info("💎 [DIAGNOSTIC] AV Record Data for Date:", {
+            record_id: record.approval_id,
+            rawDate,
+            avDate,
+            all_keys: Object.keys(record)
+        });
+
+        if (avDate) {
+            setValue('target_delivery_date', avDate, { shouldDirty: true });
         }
         
+        // 🔄 SYNC LINES: If AV record has lines, override form lines
+        const avLines = record.prApprovalLines || record.lines || record.pr_approval_lines || [];
+        
         if (avLines.length > 0) {
+            logger.info("💎 [DIAGNOSTIC] AV Record Keys:", Object.keys(record));
+            logger.info("💎 [DIAGNOSTIC] First Line Keys:", Object.keys(avLines[0]));
+            logger.info("💎 [DIAGNOSTIC] First Line Data:", JSON.stringify(avLines[0]));
+
             // Get original PR lines to preserve item details
             const currentPrLines = originalPRLines || [];
+
+            // 🆕 Auto-populate target_delivery_date from AV's "วันที่กำหนดส่ง" (need_by_date)
+            const avDate = record.need_by_date ? record.need_by_date.split('T')[0] : '';
             
             const matchedLines: RFQLineValues[] = avLines.map((avLine: any, index: number) => {
                 // 🛡️ DISAMBIGUATION: Separating source PR Line ID from this Approval Line's own ID
@@ -272,7 +259,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                     uom: originalLine?.uom || avLine.uom || '',
                     uom_id: originalLine?.uom_id || avLine.uom_id || 0,
                     required_receipt_type: originalLine?.required_receipt_type || 'FULL',
-                    target_delivery_date: originalLine?.target_delivery_date || '',
+                    target_delivery_date: avDate || originalLine?.target_delivery_date || '', // 🎯 Use AV Header Date
                     note_to_vendor: originalLine?.note_to_vendor || '',
                     item_id: originalLine?.item_id || avLine.item_id,
                     pr_line_id: prLineId ? Number(prLineId) : undefined,
@@ -292,6 +279,36 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         
         setIsApprovedPRModalOpen(false);
     }, [setValue, originalPRLines, toast]);
+
+    // --- 🔗 [NEW] AV Hydration logic: Fetch Approval No if missing but PR reference exists ---
+    const currentPrId = methods.watch('pr_id');
+    const currentPrNo = methods.watch('pr_no');
+    const currentApprovedPrNo = methods.watch('approved_pr_no');
+    
+    const { data: approvalHydrationData } = useQuery({
+        queryKey: ['rfq-av-hydration', currentPrId],
+        queryFn: async () => {
+            if (!currentPrId) return null;
+            // Use getPRApprovalDetail to get the exact same data (including lines) as the modal
+            const res = await RFQService.getPRApprovalDetail(Number(currentPrId));
+            return res || [];
+        },
+        enabled: isOpen && !!(currentPrId && !currentApprovedPrNo),
+        staleTime: 5 * 60 * 1000,
+    });
+
+    useEffect(() => {
+        if (isOpen && currentPrNo && !currentApprovedPrNo && approvalHydrationData && approvalHydrationData.length > 0) {
+            const firstAV = approvalHydrationData[0];
+            const avNo = firstAV.approval_no || firstAV.approved_pr_no || firstAV.approval_id?.toString();
+
+            if (avNo) {
+                logger.info(`[useRFQForm] Auto-Hydrating full AV details for PR ${currentPrNo}: ${avNo}`);
+                // Call the existing selection handler to perform FULL mapping (including approval_line_id for lines)
+                handleApprovedPRSelect(firstAV);
+            }
+        }
+    }, [isOpen, currentPrNo, currentApprovedPrNo, approvalHydrationData, handleApprovedPRSelect]);
 
     // Fetch Master Data
     useEffect(() => {

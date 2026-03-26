@@ -82,13 +82,10 @@ export const VendorSearch: React.FC<VendorSearchProps> = ({
   };
 
   const handleSelect = (vendor: VendorMaster) => {
-    // Safety check: Prevent selecting non-active vendors
-    if (vendor.status !== 'ACTIVE') {
-      console.warn('[VendorSearch] Cannot select non-active vendor:', vendor);
-      return;
-    }
+    const isActive = vendor.status === 'ACTIVE';
+    const displayName = isActive ? vendor.vendor_name : `${vendor.vendor_name} (ไม่ใช้งาน)`;
 
-    setQuery(vendor.vendor_name);
+    setQuery(displayName);
     setResults([]);
     setIsOpen(false);
     
@@ -96,7 +93,7 @@ export const VendorSearch: React.FC<VendorSearchProps> = ({
     const selection: VendorSelection = {
         vendor_id: vendor.vendor_id,
         vendor_code: vendor.vendor_code,
-        vendor_name: vendor.vendor_name,
+        vendor_name: displayName,
         tax_id: vendor.tax_id,
         payment_term_days: vendor.payment_term_days
     };
@@ -126,7 +123,7 @@ export const VendorSearch: React.FC<VendorSearchProps> = ({
             onFocus={() => !disabled && setIsOpen(true)}
             disabled={disabled}
             placeholder={placeholder}
-            className={`h-8 w-full pl-8 pr-8 text-sm border border-gray-300 dark:border-gray-600 rounded-l-md focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white ${error ? 'border-red-500' : ''}`}
+            className={`h-8 w-full pl-8 pr-8 text-sm border border-gray-300 dark:border-gray-600 rounded-l-md focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white ${error ? 'border-red-500' : ''} ${query.includes('(ไม่ใช้งาน)') ? 'text-gray-400 italic' : ''}`}
           />
           <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400">
             {isLoading ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
@@ -165,11 +162,12 @@ export const VendorSearch: React.FC<VendorSearchProps> = ({
                 key={vendor.vendor_id}
                 type="button"
                 onClick={() => handleSelect(vendor)}
-                className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 dark:hover:bg-gray-700 flex flex-col border-b border-gray-100 dark:border-gray-700 last:border-0"
+                disabled={vendor.status !== 'ACTIVE' || vendor.is_active === false}
+                className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-50 dark:hover:bg-gray-700 flex flex-col border-b border-gray-100 dark:border-gray-700 last:border-0 ${(vendor.status !== 'ACTIVE' || vendor.is_active === false) ? 'opacity-60 bg-gray-50 cursor-not-allowed' : ''}`}
               >
-                <div className="font-medium text-gray-900 dark:text-white flex justify-between">
-                  <span>{vendor.vendor_name}</span>
-                  <span className="text-xs text-blue-600 dark:text-blue-400">{vendor.vendor_code}</span>
+                <div className={`font-medium flex justify-between ${(vendor.status !== 'ACTIVE' || vendor.is_active === false) ? 'text-gray-400 italic' : 'text-gray-900 dark:text-white'}`}>
+                  <span>{vendor.vendor_name} {(vendor.status !== 'ACTIVE' || vendor.is_active === false) && '(ไม่ใช้งาน)'}</span>
+                  <span className={`text-xs ${(vendor.status !== 'ACTIVE' || vendor.is_active === false) ? 'text-gray-400' : 'text-blue-600 dark:text-blue-400'}`}>{vendor.vendor_code}</span>
                 </div>
                 {vendor.tax_id && (
                   <div className="text-[10px] text-gray-500 dark:text-gray-400">

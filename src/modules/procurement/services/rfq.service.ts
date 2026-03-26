@@ -276,7 +276,7 @@ export const RFQService = {
     try {
       // 🎯 FIX: Postman shows backend returns 'approval_no', not 'approved_pr_no'
       // 🎯 FIX: Postman shows backend returns 'approval_no', not 'approved_pr_no'
-      const res = await api.get<{ data: { approval_no?: string; approved_pr_no?: string; approval_id?: number | string }[] }>(ENDPOINTS.prApprovalDetail(prId));
+      const res = await api.get<{ data: { approval_no?: string; approved_pr_no?: string; approval_id?: number | string; need_by_date?: string }[] }>(ENDPOINTS.prApprovalDetail(prId));
       
       const items = res.data || [];
       if (!Array.isArray(items)) {

@@ -135,8 +135,7 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ branches, currenci
                 </div>
             </div>
 
-            {/* Row 3: วันครบกำหนดส่งใบเสนอราคา, สถานที่รับของ */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                 <div>
                     <label className={labelStyle}>วันครบกำหนดใบเสนอราคา <span className="text-red-500">*</span></label>
                     <Controller
@@ -151,6 +150,21 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ branches, currenci
                         )}
                     />
                     {errors.quotation_due_date && <p className={errorMsgClass}>{errors.quotation_due_date.message}</p>}
+                </div>
+                <div>
+                    <label className={labelStyle}>วันที่กำหนดส่ง (จาก AV)</label>
+                    <Controller
+                        name="target_delivery_date"
+                        render={({ field }) => (
+                            <CustomDateInput
+                                value={field.value || ''}
+                                onChange={field.onChange}
+                                disabled={isLocked}
+                                className={inputStyle}
+                                placeholder="ดึงข้อมูลจาก AV"
+                            />
+                        )}
+                    />
                 </div>
                 <div className="md:col-span-2">
                     <label className={labelStyle}>สถานที่รับของ</label>

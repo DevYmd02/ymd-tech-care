@@ -54,11 +54,17 @@ export const PRHeader: React.FC<Props> = ({ prId, costCenters, projects, onVendo
           <h2 className={`font-bold text-sm ${
               watch('cancelflag') === 'Y' || watch('status') === 'CANCELLED' ? 'text-red-500' :
               watch('status') === 'APPROVED' ? 'text-green-500' :
+              watch('status') === 'PENDING' ? 'text-blue-500' :
+              watch('status') === 'REJECTED' ? 'text-orange-600' :
+              watch('status') === 'PARTIAL' ? 'text-indigo-500' :
               watch('is_on_hold') === 'Y' ? 'text-orange-500' : 'text-pink-600 dark:text-pink-400'
           }`}>
             สถานะ : {
                 watch('cancelflag') === 'Y' || watch('status') === 'CANCELLED' ? 'ยกเลิก (VOID)' :
                 watch('status') === 'APPROVED' ? 'อนุมัติแล้ว (APPROVED)' :
+                watch('status') === 'PENDING' ? 'รออนุมัติ (PENDING)' :
+                watch('status') === 'REJECTED' ? 'ไม่อนุมัติ (REJECTED)' :
+                watch('status') === 'PARTIAL' ? 'อนุมัติบางส่วน (PARTIAL)' :
                 watch('is_on_hold') === 'Y' ? 'พักเรื่อง (ON HOLD)' : 'ร่าง (DRAFT)'
             }
           </h2>

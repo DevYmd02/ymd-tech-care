@@ -7,7 +7,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/react-query';
-import { FileText, Plus, Search, Send, AlertTriangle, Eye } from 'lucide-react';
+import { FileText, Plus, Search, Send, AlertTriangle, Eye, Edit } from 'lucide-react';
 import { PageListLayout, SmartTable, PRStatusBadge, FilterField, MobileListCard, MobileListContainer } from '@ui';
 import { useTableFilters } from '@/shared/hooks';
 import RFQFormModal from '@/modules/procurement/pages/rfq/components/RFQFormModal';
@@ -561,21 +561,21 @@ export default function PRListPage() {
                                             >
                                                 <Eye size={14} /> ดู
                                             </button>
+                                            {(item.status === 'DRAFT' || item.status === 'REJECTED') && (
+                                                <button
+                                                    onClick={() => handleEdit(item.pr_id)}
+                                                    className="flex-1 bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1"
+                                                >
+                                                    <Edit size={14} /> {item.status === 'REJECTED' ? 'แก้ไขและส่งอนุมัติใหม่' : 'แก้ไข'}
+                                                </button>
+                                            )}
                                             {item.status === 'DRAFT' && (
-                                                <>
-                                                    <button
-                                                        onClick={() => handleEdit(item.pr_id)}
-                                                        className="flex-1 bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1"
-                                                    >
-                                                        <Send size={14} /> แก้ไข
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleSendApproval(item)}
-                                                        className="flex-[2] bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
-                                                    >
-                                                        <Send size={14} /> ส่งอนุมัติ
-                                                    </button>
-                                                </>
+                                                <button
+                                                    onClick={() => handleSendApproval(item)}
+                                                    className="flex-[2] bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
+                                                >
+                                                    <Send size={14} /> ส่งอนุมัติ
+                                                </button>
                                             )}
                                             {/* PENDING approval actions removed for Mobile View to enforce AV Module usage */}
                                             {item.status === 'APPROVED' && (

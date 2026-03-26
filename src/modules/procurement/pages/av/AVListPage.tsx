@@ -216,7 +216,7 @@ export default function AVListPage() {
         }),
         columnHelper.accessor(row => (row as any).approval_no || '-', {
             id: 'av_no',
-            header: 'เลขที่อนุมัติ PR',
+            header: 'เลขที่อนุมัติ AV',
             cell: (info) => {
                 const val = info.getValue();
                 if (!val || val === '-') {
@@ -347,7 +347,7 @@ export default function AVListPage() {
                             accentColor="emerald"
                         />
                         <FilterField
-                            label="เลขที่อนุมัติ PR"
+                            label="เลขที่อนุมัติ AV"
                             value={localFilters.search2 || ''}
                             onChange={(val: string) => handleFilterChange('search2', val)}
                             placeholder="AV-xxx"
@@ -438,7 +438,7 @@ export default function AVListPage() {
                                 statusBadge={<PRStatusBadge status={item.status} />}
                                 details={[
                                     {
-                                        label: 'เลขที่อนุมัติ PR:',
+                                        label: 'เลขที่อนุมัติ AV:',
                                         value: (item as any).approval_no || (item as any).av_no ? (
                                             <span className="font-bold text-emerald-600 dark:text-emerald-400">
                                                 {(item as any).approval_no || (item as any).av_no}

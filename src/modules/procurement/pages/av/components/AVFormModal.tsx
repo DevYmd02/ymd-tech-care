@@ -131,9 +131,9 @@ export const AVFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, a
 
             <div className={`${cardClass} p-3`}>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
-                    {/* Item 0: เลขที่อนุมัติ PR */}
+                    {/* Item 0: เลขที่อนุมัติ AV */}
                     <div>
-                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">เลขที่อนุมัติ PR <span className="text-red-500">*</span></label>
+                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">เลขที่อนุมัติ AV <span className="text-red-500">*</span></label>
                         <div className="flex items-center gap-1">
                             <input 
                                 {...register('av_no')}

@@ -43,27 +43,27 @@ export const PRActionsCell = ({
                 </button>
             )}
 
-            {/* 2. DRAFT Actions: Edit, Delete, Send Approval */}
+            {/* 2. EDIT: Available for DRAFT, REJECTED (PENDING is locked to prevent Approval Drift) */}
+            {(item.status === 'DRAFT' || item.status === 'REJECTED') && (
+                <button 
+                    onClick={() => onEdit(item.pr_id)}
+                    className="flex items-center gap-1 pl-1.5 pr-2 py-1 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded shadow-sm border border-transparent hover:border-amber-200 dark:hover:border-amber-800 transition-all whitespace-nowrap"
+                    title={item.status === 'REJECTED' ? 'แก้ไขและส่งอนุมัติใหม่' : 'แก้ไข'}
+                >
+                    <Edit size={14} /> 
+                    <span className="text-[10px] font-bold">{item.status === 'REJECTED' ? 'แก้ไขและส่งอนุมัติใหม่' : 'แก้ไข'}</span>
+                </button>
+            )}
+
+            {/* 3. SEND APPROVAL: Only for DRAFT */}
             {item.status === 'DRAFT' && (
-                <>
-                    <button 
-                        onClick={() => onEdit(item.pr_id)}
-                        className="flex items-center gap-1 pl-1.5 pr-2 py-1 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded shadow-sm border border-transparent hover:border-amber-200 dark:hover:border-amber-800 transition-all whitespace-nowrap"
-                        title="แก้ไข"
-                    >
-                        <Edit size={14} /> 
-                        <span className="text-[10px] font-bold">แก้ไข</span>
-                    </button>
-
-
-                    <button 
-                        onClick={() => onSendApproval(item)}
-                        className="flex items-center gap-1 pl-1.5 pr-2 py-1 ml-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap"
-                        title="ส่งอนุมัติ"
-                    >
-                        <Send size={12} /> ส่งอนุมัติ
-                    </button>
-                </>
+                <button 
+                    onClick={() => onSendApproval(item)}
+                    className="flex items-center gap-1 pl-1.5 pr-2 py-1 ml-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap"
+                    title="ส่งอนุมัติ"
+                >
+                    <Send size={12} /> ส่งอนุมัติ
+                </button>
             )}
 
             {/* 3. PENDING: Handled by AV Module */}
