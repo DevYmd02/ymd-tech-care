@@ -37,9 +37,7 @@ interface QCFormModalProps {
 }
 
 const generateQCNumber = (): string => {
-  const now = new Date();
-  // Using 5 Xs to indicate auto-generation as per UI standard or a random placeholder
-  return `QC${now.getFullYear()}-XXXXX (Auto Generate)`;
+  return 'ระบบจะกรอกอัตโนมัติ';
 };
 
 const getTodayFormatted = (): string => {
@@ -74,13 +72,13 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
 
   // Display States (UI only)
   const [qcNo, setQCNo] = useState('');
-  const [prNo, setPRNo] = useState('');
+  const [avNo, setAVNo] = useState('');
   const [rfqNo, setRFQNo] = useState('');
   const [qcDate, setQCDate] = useState(getTodayFormatted());
   const [createdBy, setCreatedBy] = useState('');
 
   const [isRFQSelectorOpen, setIsRFQSelectorOpen] = useState(false);
-  const [isPRSelectorOpen, setIsPRSelectorOpen] = useState(false);
+  const [isAVSelectorOpen, setIsAVSelectorOpen] = useState(false);
   const [selectedVQIds, setSelectedVQIds] = useState<number[]>([]);
 
   // Fetch Existing QC Data — Only fetch full detail when in EDIT mode where we need to update.
@@ -98,7 +96,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
     if (qcData && (mode === 'edit')) {
       const actualQCData = (qcData as any)?.data || qcData;
       setQCNo(actualQCData.qc_no || '');
-      setPRNo(actualQCData.pr_no || '');
+      setAVNo(actualQCData.approved_pr_no || actualQCData.ref_pr_no || actualQCData.pr_no || '');
       setValue('pr_id', actualQCData.pr_id || null);
       setRFQNo(actualQCData.rfq_no || '');
 
@@ -124,7 +122,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
       const mappedWinnerId = actualInitial.winning_vq_id || actualInitial.vq_header_id;
 
       setQCNo(actualInitial.qc_no || '');
-      setPRNo(actualInitial.pr_no || actualInitial.ref_pr_no || '');
+      setAVNo(actualInitial.approved_pr_no || actualInitial.ref_pr_no || actualInitial.pr_no || '');
       setRFQNo(actualInitial.rfq_no || '');
       setQCDate(actualInitial.comparison_date ? new Date(actualInitial.comparison_date).toLocaleDateString('en-GB') : (actualInitial.created_at ? new Date(actualInitial.created_at).toLocaleDateString('en-GB') : getTodayFormatted()));
       
@@ -255,12 +253,12 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
         setValue('pr_id', Number(recoveredPrId));
 
         
-        if (!prNo || prNo === 'อ้างอิงจาก RFQ' || prNo === '-') {
-          setPRNo(recoveredPrNo || `PR-ID: ${recoveredPrId}`);
+        if (!avNo || avNo === 'อ้างอิงจาก RFQ' || avNo === '-') {
+          setAVNo(actualRfq.approved_pr_no || recoveredPrNo || `PR-ID: ${recoveredPrId}`);
         }
       }
     }
-  }, [rfqDetail, rfqId, prId, prNo, setValue]);
+  }, [rfqDetail, rfqId, prId, avNo, setValue]);
 
   // 🗺️ VENDOR MAP: Deep data recovery for vendor names
   const rfqVendorMap = useMemo(() => {
@@ -369,7 +367,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
     if (!isOpen) {
       // Strict Reset on Close to prevent data bleeding
       setQCNo('');
-      setPRNo('');
+      setAVNo('');
       setValue('pr_id', null);
       setRFQNo('');
 
@@ -383,7 +381,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
 
     if (mode === 'create') {
       setQCNo(generateQCNumber());
-      setPRNo(initialPRNo || '');
+      setAVNo(initialPRNo || '');
       setValue('pr_id', null);
       setRFQNo(initialRFQNo || '');
 
@@ -434,9 +432,9 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
     const parentDeptId = rfq.pr?.department_id || (rfq as unknown as Record<string, number>).department_id;
 
     if (parentPrNo) {
-        setPRNo(parentPrNo);
+        setAVNo(rfq.approved_pr_no || parentPrNo);
     } else {
-        setPRNo('อ้างอิงจาก RFQ');
+        setAVNo('อ้างอิงจาก RFQ');
     }
     setValue('pr_id', parentPrId ? Number(parentPrId) : null);
 
@@ -453,18 +451,18 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
   };
 
 
-  const handleSelectPR = (item: RFQHeader) => {
+  const handleSelectAV = (item: RFQHeader) => {
     const parentPrNo = item.ref_pr_no || item.pr_no || '';
     const parentPrId = item.pr_id;
     
-    setPRNo(parentPrNo || 'อ้างอิงจาก RFQ');
+    setAVNo((item as any).av_no || item.approved_pr_no || parentPrNo || 'อ้างอิงจาก RFQ');
     setValue('pr_id', parentPrId ? Number(parentPrId) : null);
     
     // Also set RFQ if available in the same item row
     if (item.rfq_no) {
         setRFQNo(item.rfq_no);
         setValue('rfq_id', item.rfq_id, { shouldValidate: true });
-        toast(`เลือก PR และดึงข้อมูล RFQ ${item.rfq_no} สำเร็จ`, 'success');
+        toast(`เลือก AV และดึงข้อมูล RFQ ${item.rfq_no} สำเร็จ`, 'success');
     } else {
         setRFQNo('');
         setValue('rfq_id', 0);
@@ -472,12 +470,12 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
     
     setSelectedVQIds([]);
     setValue('winning_vq_id', 0);
-    setIsPRSelectorOpen(false);
+    setIsAVSelectorOpen(false);
   };
 
 
-  const handleClearPR = () => {
-    setPRNo('');
+  const handleClearAV = () => {
+    setAVNo('');
     setValue('pr_id', null);
     setRFQNo('');
 
@@ -655,38 +653,38 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
                   value={qcNo}
                   readOnly
                   disabled={true}
-                  className={`${inputClass} font-bold text-indigo-600 bg-gray-50`}
+                  className={`${inputClass} font-bold text-indigo-600 bg-gray-50 ${qcNo.includes('ระบบ') ? 'italic font-normal' : ''}`}
                 />
               </div>
 
-              {/* เลขที่ PR อ้างอิง */}
+              {/* เลขที่ AV อ้างอิง */}
               <div>
-                <label className={labelClass}>เลขที่ PR อ้างอิง *</label>
+                <label className={labelClass}>เลขที่ AV อ้างอิง *</label>
                 <div className="relative group">
                   <input
                     type="text"
-                    value={prNo}
+                    value={avNo}
                     readOnly
                     disabled={mode === 'view'}
-                    placeholder="คลิกเลือก PR..."
+                    placeholder="คลิกเลือก AV..."
                     className={`${inputClass} pr-10 cursor-pointer group-hover:border-blue-400 transition-colors`}
-                    onClick={() => mode !== 'view' && setIsPRSelectorOpen(true)}
+                    onClick={() => mode !== 'view' && setIsAVSelectorOpen(true)}
                   />
                   {mode !== 'view' && (
                     <div className="absolute right-0 top-0 h-full flex items-center pr-1 gap-1">
-                      {prNo && (
+                      {avNo && (
                         <button
                           type="button"
-                          onClick={handleClearPR}
+                          onClick={handleClearAV}
                           className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-md transition-colors"
-                          title="ล้างค่า PR"
+                          title="ล้างค่า AV"
                         >
                           <X size={14} />
                         </button>
                       )}
                       <button
                         type="button"
-                        onClick={() => setIsPRSelectorOpen(true)}
+                        onClick={() => setIsAVSelectorOpen(true)}
                         className="h-7 px-2 text-blue-600 hover:text-blue-800 transition-colors bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md flex items-center gap-1 text-xs font-bold"
                       >
                         <Search size={14} /> เลือก
@@ -821,7 +819,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
               </div>
             ) : availableVQs.length === 0 ? (
               <div className="text-gray-400 text-sm text-center py-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-dashed border-gray-300 dark:border-gray-600">
-                กรุณาเลือก PR หรือ RFQ อ้างอิงด้านบนเพื่อโหลดใบเสนอราคา
+                กรุณาเลือก AV หรือ RFQ อ้างอิงด้านบนเพื่อโหลดใบเสนอราคา
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -1072,23 +1070,31 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
         data={waitingList || []}
         isLoading={isWaitingListLoading}
         prId={prId}
-        prNo={prNo}
+        prNo={avNo}
       />
 
-      {/* PR Selector Modal */}
       <SelectionModal<RFQHeader>
-        isOpen={isPRSelectorOpen}
-        onClose={() => setIsPRSelectorOpen(false)}
-        title="เลือกเลขที่ PR อ้างอิง"
-        subtitle="ค้นหาใบขอซื้อที่ต้องการอ้างอิง"
+        isOpen={isAVSelectorOpen}
+        onClose={() => setIsAVSelectorOpen(false)}
+        title="เลือกเลขที่ AV อ้างอิง"
+        subtitle="ค้นหาเอกสารอนุมัติ (Approved PR) ที่ต้องการอ้างอิง"
         data={waitingList || []}
-        searchPlaceholder="ค้นหาด้วยเลขที่ PR, RFQ หรือหัวข้อ..."
-        searchKeys={['pr_no', 'ref_pr_no', 'rfq_no', 'purpose', 'remarks', 'rfq_remark' as any]}
-        onSelect={handleSelectPR}
+        searchPlaceholder="ค้นหาด้วยเลขที่ AV, PR, RFQ หรือหัวข้อ..."
+        searchKeys={['av_no' as any, 'approved_pr_no', 'pr_no', 'ref_pr_no', 'rfq_no', 'purpose', 'remarks', 'rfq_remark' as any]}
+        onSelect={handleSelectAV}
         keyExtractor={(item) => item.rfq_id}
         columns={[
-          { label: 'เลขที่ PR', key: (item) => item.ref_pr_no || item.pr_no || '-', className: 'w-1/4' },
-          { label: 'เลขที่ RFQ', key: 'rfq_no', className: 'w-1/4' },
+          { label: 'เลขที่ AV', key: (item: any) => item.av_no || item.approved_pr_no || '-', className: 'w-1/4' },
+          { 
+            label: 'เลขที่ PR / RFQ', 
+            key: (item) => (
+              <div className="flex flex-col">
+                <span className="font-bold">{item.ref_pr_no || item.pr_no || '-'}</span>
+                <span className="text-[10px] text-gray-400 font-normal">{item.rfq_no || '-'}</span>
+              </div>
+            ), 
+            className: 'w-1/4' 
+          },
           { label: 'วัตถุประสงค์', key: (item: any) => item.purpose || item.remarks || item.rfq_remark || '-', className: 'flex-1' },
 
         ]}

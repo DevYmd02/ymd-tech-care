@@ -13,13 +13,13 @@ export const VendorGroupService = {
     /**
      * Get all vendor groups
      */
-    getAll: async (): Promise<ListResponse<VendorGroupMaster>> => {
+    getAll: async (params?: import('@/shared/types/common-master.types').MasterDataListParams): Promise<ListResponse<VendorGroupMaster>> => {
         if (USE_MOCK) {
             logger.info('🎭 [Mock Mode] Serving Vendor Groups');
             return localVendorGroups; 
         }
         try {
-            const response = await api.get<any>('/vendor-group');
+            const response = await api.get<any>('/vendor-group', { params });
             
             const rawData = response?.data || response;
             const items = Array.isArray(rawData) ? rawData : (rawData?.items || []);

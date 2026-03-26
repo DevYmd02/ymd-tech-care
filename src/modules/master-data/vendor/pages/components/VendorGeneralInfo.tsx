@@ -7,9 +7,9 @@ interface VendorGeneralInfoProps {
     formData: Partial<VendorFormData>;
     onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void;
     errors: { [key: string]: string };
-    vendorTypeOptions?: { label: string, value: number }[];
-    vendorGroupOptions?: { label: string, value: number }[];
-    currencyOptions?: { label: string, value: number | string }[];
+    vendorTypeOptions?: { label: string, value: number, isActive?: boolean }[];
+    vendorGroupOptions?: { label: string, value: number, isActive?: boolean }[];
+    currencyOptions?: { label: string, value: number | string, isActive?: boolean }[];
     isLoading?: boolean;
 }
 
@@ -20,8 +20,13 @@ export const VendorGeneralInfo: React.FC<VendorGeneralInfoProps> = ({
     vendorTypeOptions = [], 
     vendorGroupOptions = [], 
     currencyOptions = [],
-    isLoading 
+    isLoading = false
 }) => {
+    // Check if current selections are inactive to apply styling
+    const isGroupInactive = vendorGroupOptions.find(opt => String(opt.value) === String(formData.vendorGroupId))?.isActive === false;
+    const isTypeInactive = vendorTypeOptions.find(opt => String(opt.value) === String(formData.vendorTypeId))?.isActive === false;
+    const isCurrencyInactive = currencyOptions.find(opt => String(opt.value) === String(formData.currencyId))?.isActive === false;
+
     return (
         <section>
             <div className="flex items-center gap-2 mb-4 text-blue-600 dark:text-blue-400">
@@ -72,7 +77,7 @@ export const VendorGeneralInfo: React.FC<VendorGeneralInfoProps> = ({
                             name="vendorGroupId" 
                             value={formData.vendorGroupId || ""} 
                             onChange={onChange} 
-                            className={`${styles.inputSelect} ${errors.vendorGroupId ? 'border-red-500 focus:ring-red-500' : ''}`}
+                            className={`${styles.inputSelect} ${isGroupInactive ? 'text-gray-400 dark:text-gray-500 italic' : ''} ${errors.vendorGroupId ? 'border-red-500 focus:ring-red-500' : ''}`}
                             required
                         >
                             <option value="" disabled>{isLoading ? 'กำลังโหลด...' : 'เลือกกลุ่มเจ้าหนี้'}</option>
@@ -91,7 +96,7 @@ export const VendorGeneralInfo: React.FC<VendorGeneralInfoProps> = ({
                         name="vendorTypeId" 
                         value={formData.vendorTypeId || ""} 
                         onChange={onChange} 
-                        className={`${styles.inputSelect} ${errors.vendorTypeId ? 'border-red-500 focus:ring-red-500' : ''}`}
+                        className={`${styles.inputSelect} ${isTypeInactive ? 'text-gray-400 dark:text-gray-500 italic' : ''} ${errors.vendorTypeId ? 'border-red-500 focus:ring-red-500' : ''}`}
                         required
                     >
                         <option value="" disabled>{isLoading ? 'กำลังโหลด...' : 'เลือกประเภทเจ้าหนี้'}</option>
@@ -139,7 +144,7 @@ export const VendorGeneralInfo: React.FC<VendorGeneralInfoProps> = ({
                         name="currencyId" 
                         value={formData.currencyId || ""} 
                         onChange={onChange} 
-                        className={`${styles.inputSelect} ${errors.currencyId ? 'border-red-500 focus:ring-red-500' : ''}`}
+                        className={`${styles.inputSelect} ${isCurrencyInactive ? 'text-gray-400 dark:text-gray-500 italic' : ''} ${errors.currencyId ? 'border-red-500 focus:ring-red-500' : ''}`}
                         required
                     >
                         <option value="" disabled>{isLoading ? 'กำลังโหลด...' : 'เลือกสกุลเงิน'}</option>

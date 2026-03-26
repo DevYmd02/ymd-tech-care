@@ -27,21 +27,24 @@ export type Vendor = VendorSearchItem;
 // HELPER: Transform VendorMaster to VendorSearchItem
 // ====================================================================================
 
-const transformVendor = (v: VendorListItem): VendorSearchItem => ({
-    vendor_id: v.vendor_id,
-    code: v.vendor_code,
-    vendor_code: v.vendor_code,
-    name: v.vendor_name,
-    name_en: v.vendor_name_en,
-    address: v.address_line1 || '-',
-    phone: v.phone,
-    email: v.email,
-    taxId: v.tax_id,
-    payment_term_days: v.payment_term_days,
-    vat_registered: v.vat_registered,
-    is_active: v.is_active ?? v.status === 'ACTIVE',
-    status: v.status,
-});
+const transformVendor = (v: VendorListItem): VendorSearchItem => {
+    const isActive = v.is_active ?? v.status === 'ACTIVE';
+    return {
+        vendor_id: v.vendor_id,
+        code: v.vendor_code,
+        vendor_code: v.vendor_code,
+        name: isActive ? v.vendor_name : `${v.vendor_name} (ไม่ใช้งาน)`,
+        name_en: v.vendor_name_en,
+        address: v.address_line1 || '-',
+        phone: v.phone,
+        email: v.email,
+        taxId: v.tax_id,
+        payment_term_days: v.payment_term_days,
+        vat_registered: v.vat_registered,
+        is_active: isActive,
+        status: v.status,
+    };
+};
 
 // ====================================================================================
 // PROPS
@@ -219,7 +222,7 @@ export const VendorSearchModalBase: React.FC<VendorSearchModalBaseProps> = ({
                                 {filteredData.length > 0 ? (
                                     filteredData.map((vendor , index) => {
                                         const isExcluded = excludeIds?.includes(Number(vendor.vendor_id));
-                                        const isSelectable = vendor.status === 'ACTIVE' && !isExcluded;
+                                        const isSelectable = vendor.is_active && !isExcluded;
                                         
                                         return (
                                             <tr 
@@ -252,7 +255,7 @@ export const VendorSearchModalBase: React.FC<VendorSearchModalBaseProps> = ({
                                                     </span>
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <div className="font-medium text-gray-800 dark:text-gray-200">
+                                                    <div className={`font-medium ${!vendor.is_active ? 'text-gray-400 italic' : 'text-gray-800 dark:text-gray-200'}`}>
                                                         {vendor.name}
                                                     </div>
                                                     {vendor.name_en && (

@@ -118,7 +118,7 @@ export default function POListPage() {
         columnHelper.accessor('po_no', {
             header: () => <div className="text-left whitespace-nowrap">เลขที่ PO</div>,
             cell: (info) => (
-                <span className="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline cursor-pointer whitespace-nowrap" title={info.getValue()}>
+                <span className="font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline cursor-pointer whitespace-nowrap" title={info.getValue()}>
                     {info.getValue()}
                 </span>
             ),
@@ -147,8 +147,8 @@ export default function POListPage() {
                     <div className="flex flex-col whitespace-nowrap">
                         {prDisplay ? (
                             <>
-                                <span className="font-semibold text-slate-700 dark:text-gray-200 leading-tight">
-                                    PR: {prDisplay}
+                                <span className="font-medium text-indigo-500/90 dark:text-indigo-400/80 leading-tight">
+                                    {prDisplay}
                                 </span>
                                 {qcDisplay && (
                                     <span className="text-[10px] text-blue-600 dark:text-blue-400 mt-0.5 hover:text-blue-800 hover:underline cursor-pointer leading-tight">
@@ -183,7 +183,7 @@ export default function POListPage() {
                     </div>
                 );
             },
-            size: 200,
+            size: 180,
             enableSorting: false,
         }),
         columnHelper.accessor(row => row.status, {
@@ -228,7 +228,7 @@ export default function POListPage() {
                     </div>
                 );
             },
-            size: 130,
+            size: 80,
             enableSorting: false,
         }),
         columnHelper.display({
@@ -459,10 +459,10 @@ export default function POListPage() {
                                                 {item.qc_no ? (
                                                     <>
                                                         <span className="font-semibold text-blue-600 dark:text-blue-400">QC: {item.qc_no}</span>
-                                                        {item.pr_no && <span className="text-xs text-slate-500">PR: {item.pr_no}</span>}
+                                                        {item.pr_no && <span className="text-xs text-indigo-500/90 dark:text-indigo-400/80 font-medium">PR: {item.pr_no}</span>}
                                                     </>
                                                 ) : item.pr_no ? (
-                                                    <span className="font-semibold text-slate-700 dark:text-gray-200">PR: {item.pr_no}</span>
+                                                    <span className="font-medium text-indigo-500/90 dark:text-indigo-400/80">{item.pr_no}</span>
                                                 ) : (
                                                     <span className="text-gray-400">-</span>
                                                 )}

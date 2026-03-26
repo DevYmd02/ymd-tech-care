@@ -13,13 +13,13 @@ export const VendorTypeService = {
     /**
      * Get all vendor types
      */
-    getAll: async (): Promise<ListResponse<VendorTypeMaster>> => {
+    getAll: async (params?: import('@/shared/types/common-master.types').MasterDataListParams): Promise<ListResponse<VendorTypeMaster>> => {
         if (USE_MOCK) {
             logger.info('🎭 [Mock Mode] Serving Vendor Types');
             return localVendorTypes;
         }
         try {
-            const response = await api.get<ListResponse<VendorTypeMaster> | VendorTypeMaster[]>('/vendor-type');
+            const response = await api.get<ListResponse<VendorTypeMaster> | VendorTypeMaster[]>('/vendor-type', { params });
             
             // If response is an array (directly from API), wrap it
             if (Array.isArray(response)) {

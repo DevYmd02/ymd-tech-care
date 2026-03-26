@@ -40,6 +40,7 @@ function mapVendorToApi(data: any): any {
         phone: data.phone || '',
         phone_extension: data.mobile || data.phone_extension || '',
         email: data.email || '',
+        website: data.website || '',
         is_subject_to_wht: Boolean(data.is_subject_to_wht ?? data.whtRegistered ?? false),
         is_active: data.is_active !== undefined ? Boolean(data.is_active) : true,
 
@@ -279,6 +280,7 @@ export const VendorService = {
             phone: data.phone,
             phone_extension: data.phone_extension || data.mobile,
             email: data.email,
+            website: data.website,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
             updated_by: 1, // System Admin ID

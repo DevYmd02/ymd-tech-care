@@ -103,13 +103,13 @@ const POSummaryPanel = ({ control, taxCodes }: { control: Control<POFormData>; t
             <div className="flex justify-between text-sm">
                 <span className="text-gray-600 dark:text-slate-400">รวมเป็นเงิน</span>
                 <span className="font-medium text-gray-900 dark:text-white">
-                    {grossTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    {grossTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
             </div>
             <div className="flex justify-between text-sm">
                 <span className="text-gray-600 dark:text-slate-400">ส่วนลด</span>
                 <span className={`font-medium ${totalDiscount > 0 ? 'text-red-500' : 'text-gray-900 dark:text-white'}`}>
-                    {totalDiscount > 0 ? '-' : ''}{totalDiscount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    {totalDiscount > 0 ? '-' : ''}{totalDiscount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
             </div>
             <div className="flex justify-between text-sm">
@@ -117,13 +117,13 @@ const POSummaryPanel = ({ control, taxCodes }: { control: Control<POFormData>; t
                     ภาษีมูลค่าเพิ่ม {taxRate ? `(${taxRate}%)` : ''}
                 </span>
                 <span className="font-medium text-gray-900 dark:text-white">
-                    {taxAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    {taxAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
             </div>
             <div className="border-t border-gray-200 dark:border-slate-700 pt-3 flex justify-between items-baseline">
                 <span className="text-base font-bold text-gray-800 dark:text-slate-200">รวมสุทธิ</span>
                 <span className="text-xl font-bold text-blue-600 dark:text-blue-400">
-                    {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
             </div>
         </div>
@@ -517,13 +517,13 @@ export default function POFormModal({
                                             <th className="px-2 py-2 text-center w-28 border-r border-slate-200 dark:border-slate-800 font-medium">
                                                 ประเภท<br />
                                             </th>
-                                            {!isView && <th className="px-2 py-2 text-center w-12"></th>}
+                                            {!isView && !isLockedByQC && <th className="px-2 py-2 text-center w-12 text-[11px] uppercase tracking-wider"></th>}
                                         </tr>
                                     </thead>
                                     <tbody>
                                             {fields.length === 0 && (
                                             <tr>
-                                                <td colSpan={isView ? 10 : 11} className="px-4 py-12 text-center text-gray-400">
+                                                <td colSpan={isView || isLockedByQC ? 10 : 11} className="px-4 py-12 text-center text-gray-400">
                                                     <FileText size={40} className="mx-auto mb-2 text-gray-300" />
                                                     <p>ยังไม่มีรายการสินค้า</p>
                                                     {!isView && !isLockedByQC && (

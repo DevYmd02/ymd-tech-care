@@ -39,13 +39,18 @@ export default function QCListPage() {
     // URL-based Filter State
     const { filters, localFilters, handleFilterChange, handleApplyFilters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<QCStatus>({
         defaultStatus: 'ALL',
+        customParamKeys: {
+            search: 'qc_no',
+            search2: 'pr_no',
+            search3: 'rfq_no',
+        }
     });
 
     // Convert to API filter format
     const apiFilters: QCListParams = {
-        qc_no: filters.search || undefined,
-        pr_no: filters.search2 || undefined,
-        rfq_no: filters.search3 || undefined,
+        qc_no: filters.search || undefined, // filters.search is now mapped to 'qc_no' URL param
+        pr_no: filters.search2 || undefined, // filters.search2 is now mapped to 'pr_no' URL param
+        rfq_no: filters.search3 || undefined, // filters.search3 is now mapped to 'rfq_no' URL param
         status: filters.status === 'ALL' ? undefined : filters.status,
         date_from: filters.date_start || undefined,
         date_to: filters.date_end || undefined,
@@ -145,7 +150,7 @@ export default function QCListPage() {
             cell: ({ row }) => (
                 <div className="flex flex-col gap-0.5 py-1">
                     <div className="flex items-center gap-1.5 line-clamp-1">
-                        <span className="text-xs font-bold text-blue-600 dark:text-blue-400">RFQ: {row.original.rfq_no || '-'}</span>
+                        <span className="text-xs font-bold text-blue-600 dark:text-blue-400">{row.original.rfq_no || '-'}</span>
                     </div>
                     {row.original.pr_no && (
                         <div className="text-[10px] text-gray-500 dark:text-gray-400 italic">

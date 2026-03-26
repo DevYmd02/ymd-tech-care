@@ -399,6 +399,7 @@ export function toVendorCreateRequest(form: VendorFormData): VendorCreateRequest
         phone: form.phone || undefined,
         phone_extension: form.mobile || undefined,
         email: form.email || undefined,
+        website: form.website || undefined,
         payment_term_days,
     };
 }

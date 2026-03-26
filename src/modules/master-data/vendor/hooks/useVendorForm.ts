@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useForm, useWatch, type Path, type SubmitHandler, type FieldErrors, type FieldError } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { VendorService } from '../services/vendor.service';
@@ -43,6 +43,7 @@ export function useVendorForm({
 }: UseVendorFormProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [headerTitle, setHeaderTitle] = useState('เพิ่มเจ้าหนี้ใหม่');
+    const [fetchedVendor, setFetchedVendor] = useState<VendorMaster | null>(initialData || null);
     
     // RHF Setup
     const { 
@@ -71,13 +72,13 @@ export function useVendorForm({
     // Fetch Master Data
     const { data: vendorTypesData, isLoading: isLoadingVT } = useQuery({
         queryKey: ['vendor-types'],
-        queryFn: () => VendorTypeService.getAll(),
+        queryFn: () => VendorTypeService.getAll({ status: 'ALL' }),
         staleTime: 1000 * 60 * 5 // 5 minutes cache
     });
 
     const { data: vendorGroupsData, isLoading: isLoadingVG } = useQuery({
         queryKey: ['vendor-groups'],
-        queryFn: () => VendorGroupService.getAll(),
+        queryFn: () => VendorGroupService.getAll({ status: 'ALL' }),
         staleTime: 1000 * 60 * 5 // 5 minutes cache
     });
 
@@ -87,24 +88,54 @@ export function useVendorForm({
         staleTime: 1000 * 60 * 5
     });
 
-    const rawVendorTypes = Array.isArray(vendorTypesData) ? vendorTypesData : (vendorTypesData?.items || (vendorTypesData as any)?.data || []);
-    const vendorTypeOptions = rawVendorTypes.map((item: any) => ({
-        label: item.vendor_type_nameeng 
-               ? `${item.vendor_type_name} (${item.vendor_type_nameeng})` 
-               : item.vendor_type_name,
-        value: item.vendor_type_id || item.id
-    }));
+    // --- Master Data Options with Selection Logic ---
+    
+    // Vendor Type Options
+    const vendorTypeOptions = useMemo(() => {
+        const rawItems = Array.isArray(vendorTypesData) ? vendorTypesData : (vendorTypesData?.items || []);
+        const currentTypeId = Number(fetchedVendor?.vendor_type_id || initialData?.vendor_type_id || 0);
 
-    const rawVendorGroups = Array.isArray(vendorGroupsData) ? vendorGroupsData : (vendorGroupsData?.items || (vendorGroupsData as any)?.data || []);
-    const vendorGroupOptions = rawVendorGroups.map((item: any) => ({
-        label: item.vendor_group_name,
-        value: item.vendor_group_id || item.id
-    }));
+        return rawItems
+            .filter((item) => item.is_active || (item.vendor_type_id || item.id) === currentTypeId)
+            .map((item) => ({
+                label: (item.vendor_type_nameeng 
+                       ? `${item.vendor_type_name} (${item.vendor_type_nameeng})` 
+                       : item.vendor_type_name) + (item.is_active === false ? ' (ไม่ใช้งาน)' : ''),
+                value: item.vendor_type_id || item.id,
+                disabled: item.is_active === false,
+                isActive: item.is_active !== false
+            }));
+    }, [vendorTypesData, fetchedVendor?.vendor_type_id, initialData?.vendor_type_id]);
 
-    const currencyOptions = currenciesData?.items.map((item: any) => ({
-        label: `${item.code} - ${item.name_th}`,
-        value: item.id
-    })) || [];
+    // Vendor Group Options
+    const vendorGroupOptions = useMemo(() => {
+        const rawItems = Array.isArray(vendorGroupsData) ? vendorGroupsData : (vendorGroupsData?.items || []);
+        const currentGroupId = Number(fetchedVendor?.vendor_group_id || initialData?.vendor_group_id || 0);
+
+        return rawItems
+            .filter((item) => item.is_active || (item.vendor_group_id || item.id) === currentGroupId)
+            .map((item) => ({
+                label: item.vendor_group_name + (item.is_active === false ? ' (ไม่ใช้งาน)' : ''),
+                value: item.vendor_group_id || item.id,
+                disabled: item.is_active === false,
+                isActive: item.is_active !== false
+            }));
+    }, [vendorGroupsData, fetchedVendor?.vendor_group_id, initialData?.vendor_group_id]);
+
+    // Currency Options
+    const currencyOptions = useMemo(() => {
+        const rawItems = currenciesData?.items || [];
+        const currentCurrencyId = Number(fetchedVendor?.currency_id || initialData?.currency_id || 0);
+
+        return rawItems
+            .filter((item) => item.is_active || Number(item.currency_id || item.id) === currentCurrencyId)
+            .map((item) => ({
+                label: `${item.code} - ${item.name_th}${item.is_active === false ? ' (ไม่ใช้งาน)' : ''}`,
+                value: item.currency_id || item.id,
+                disabled: item.is_active === false,
+                isActive: item.is_active !== false
+            }));
+    }, [currenciesData, fetchedVendor?.currency_id, initialData?.currency_id]);
 
     const isLoadingMasterData = isLoadingVT || isLoadingVG || isLoadingCurrency;
 
@@ -123,6 +154,7 @@ export function useVendorForm({
                     try {
                         const vendor = await VendorService.getById(vendorId);
                         if (vendor) {
+                            setFetchedVendor(vendor);
                             const apiData = mapToFormData(vendor);
                             reset(apiData);
                         }
@@ -135,6 +167,7 @@ export function useVendorForm({
                 fetchData();
             } else {
                 setHeaderTitle('เพิ่มเจ้าหนี้ใหม่');
+                setFetchedVendor(null);
                 reset({
                     ...initialVendorFormData,
                     vendorCode: predictedVendorId || initialVendorFormData.vendorCode || ''

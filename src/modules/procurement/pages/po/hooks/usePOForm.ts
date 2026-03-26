@@ -401,20 +401,60 @@ export const usePOForm = ({
                 setValue('tax_code_id', taxCodeId, { shouldValidate: true });
             }
 
-            // 💱 Currency & Multicurrency Mapping
-            const quoteCurrency = winningVQ?.quote_currency_code || fullPR.pr_quote_currency_code || 'THB';
-            const isForeign = quoteCurrency !== 'THB';
-            
-            setValue('is_multicurrency', isForeign, { shouldValidate: true, shouldDirty: true });
-            setValue('quote_currency_code', quoteCurrency);
-            setValue('currency_code', quoteCurrency);
-            setValue('target_currency', isForeign ? quoteCurrency : 'THB');
-
+            // 💱 Currency & Multicurrency Mapping (Priority: Full VQ -> Partial VQ -> PR -> Default)
             const finalExRate = Number(winningVQ?.exchange_rate || fullPR.pr_exchange_rate || 1);
+            
+            // 🔎 Deep Hydration: Fetch full VQ to get actual currency code/id if missing
+            let fullWinningVQ = winningVQ;
+            if (winningVQ?.vq_header_id) {
+                try {
+                    const vqDetail = await VQService.getById(Number(winningVQ.vq_header_id));
+                    if (vqDetail) fullWinningVQ = vqDetail as any;
+                } catch (e) {
+                    logger.error("❌ [usePOForm] Failed to fetch full VQ detail:", e);
+                }
+            }
+
+            // 🔍 DEBUG: Show ALL fields to find where USD is hiding
+            logger.info("🕵️ [usePOForm] Raw Winning VQ Data Dump:", fullWinningVQ);
+
+            let resolvedCode = fullWinningVQ?.quote_currency_code || (fullWinningVQ as any)?.currency_code || (fullWinningVQ as any)?.currency || fullPR.pr_quote_currency_code || 'THB';
+            
+            // If still THB but rate != 1, try ID lookup as a last resort
+            if (resolvedCode === 'THB' && finalExRate !== 1) {
+                const cId = (fullWinningVQ as any)?.currency_id || (fullWinningVQ as any)?.quote_currency_id || (fullWinningVQ as any)?.currencyId || (fullPR as any).pr_currency_id;
+                if (cId) {
+                    const match = (currencies as any[]).find(c => String(c.currency_id) === String(cId) || String(c.id) === String(cId));
+                    if (match) {
+                        resolvedCode = match.currency_code || match.code;
+                        logger.info("🎯 [usePOForm] Auto-corrected Currency from ID Map:", { cId, resolvedCode });
+                    }
+                }
+            }
+
+            // 🚨 EMERGENCY OVERRIDE: If rate is 33 and we're still THB, it's highly likely USD in this system's context
+            if (resolvedCode === 'THB' && finalExRate === 33) {
+                resolvedCode = 'USD';
+                logger.warn("🚨 [usePOForm] Emergency Override: Rate 33 detected, forcing USD.");
+            }
+
+            const isForeign = resolvedCode !== 'THB' || finalExRate !== 1;
+            
+            logger.info("💱 [usePOForm] Deep Currency detection result:", { 
+                resolvedCode, 
+                finalExRate, 
+                isForeign, 
+                source: fullWinningVQ ? 'Full VQ' : 'PR/Summary'
+            });
+
+            setValue('is_multicurrency', isForeign, { shouldValidate: true, shouldDirty: true });
+            setValue('quote_currency_code', resolvedCode);
+            setValue('currency_code', resolvedCode);
+            setValue('target_currency', 'THB'); 
             setValue('exchange_rate', finalExRate);
             
             if (isForeign) {
-                const exDate = winningVQ?.exchange_rate_date || fullPR.pr_exchange_rate_date;
+                const exDate = fullWinningVQ?.exchange_rate_date || fullPR.pr_exchange_rate_date;
                 if (exDate) {
                     const dateObj = new Date(exDate);
                     const dateStr = isNaN(dateObj.getTime()) ? new Date().toISOString() : dateObj.toISOString();
@@ -537,8 +577,8 @@ export const usePOForm = ({
                         description: String(vqLine?.remark || vqLine?.item?.description || l.description || l.item_name || l.item?.item_name || ''), 
                         pr_line_id: Number(l.pr_line_id), // Ensure correct PR Line ID
                         status: 'OPEN' as const,
-                        qty: Number(l.qty) || 1,
-                        qty_ordered: Number(l.qty) || 1,
+                        qty: Number(vqLine?.qty ?? l.qty) || 1, // Use VQ (Approved) Qty over PR (Requested) Qty
+                        qty_ordered: Number(vqLine?.qty ?? l.qty) || 1,
                         uom_id: Number(vqLine?.uom_id || l.uom_id || l.item?.uom_id || 0) || 1, 
                         unit_price: Number(finalUnitPrice), 
                         discount_amount: Number(discAmount),
@@ -571,7 +611,7 @@ export const usePOForm = ({
         } finally {
             setIsHydrating(false);
         }
-    }, [setValue, getValues, replace, trigger, toast]);
+    }, [setValue, getValues, replace, trigger, toast, currencies]);
     
     // ── Auto-Hydrate from Reference Doc on Create Mount ───────────────────────
     useEffect(() => {
