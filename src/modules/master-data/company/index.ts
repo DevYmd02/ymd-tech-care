@@ -17,6 +17,9 @@ export {
     OrgEmployeeService,
 } from './services/company.service';
 
+// Dashboard
+export { default as CompanyDashboard } from './pages/CompanyDashboard';
+
 // Branch Pages
 export { BranchForm, BranchFormModal, BranchList } from './pages/branch';
 

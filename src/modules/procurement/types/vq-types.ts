@@ -33,6 +33,7 @@ export interface QuotationHeader {
     rfq_id: number | null;              // Relation ID
     pr_id: number | null;               // Relation ID
     rfq_vendor_id?: number | null;      // Relation ID
+    av_id?: number | null;              // Relation ID (ID Reference to pr_approval)
 
     // Nested Objects (Anticipating JOINs)
     vendor?: { vendor_id: number; vendor_name: string; vendor_code?: string; vendor_name_th?: string; name_th?: string; payment_term_days?: number | null; };
@@ -106,6 +107,7 @@ export interface QuotationLine {
     quotation_id?: number;              // INTEGER
     pr_line_id?: number;                // INTEGER
     rfq_line_id?: number;               // INTEGER (Reference to specific RFQ line)
+    av_line_id?: number;                // INTEGER (Reference to PR Approval Line)
     item_id?: number;                   // INTEGER
     item_code: string;                  // Required
     item_name: string;                  // Required
