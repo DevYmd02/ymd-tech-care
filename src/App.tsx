@@ -366,6 +366,11 @@ function AppContent() {
               <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
             ))}
 
+            {/* Tax Placeholders */}
+            {placeholderRoutes.tax.map(({ path, title }: { path: string; title: string }) => (
+              <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
+            ))}
+
 
           </Route>
         </Routes>

@@ -20,6 +20,7 @@ import { useToast } from '@/shared/components/ui/feedback/Toast';
 import type { VQListItem, VQStatus, QuotationLine, QuotationHeader } from '@/modules/procurement/types/vq-types';
 import { useVQMasterData } from './useVQMasterData';
 import { calculatePricingSummary, parseDiscountAmount } from '@/modules/procurement/utils/pricing.utils';
+import { unwrapResponseData, extractLinesArray } from '@/shared/utils/apiUtils';
 
 import type { VendorMaster } from '@/modules/master-data/vendor/types/vendor-types';
 
@@ -105,43 +106,7 @@ interface RawVQResponse extends Omit<Partial<QuotationHeader>, 'vq_lines' | 'lin
 // ============================================================================
 // DATA UNWRAPPING & EXTRACTION UTILITIES
 // ============================================================================
-
-/**
- * Helper to recursively unwrap nested API responses.
- * Sometimes the backend wraps responses in `{ data: { data: ... } }`.
- */
-const unwrapResponseData = (response: any): any => {
-    if (!response) return response;
-    let unwrapped = response;
-    let depth = 0;
-    while (unwrapped && unwrapped.data !== undefined && !Array.isArray(unwrapped.data) && typeof unwrapped.data === 'object' && depth < 3) {
-        unwrapped = unwrapped.data;
-        depth++;
-    }
-    if (unwrapped && unwrapped.data !== undefined) {
-        return unwrapped.data;
-    }
-    return unwrapped;
-};
-
-/**
- * Scan an object for any array property that looks like line items.
- * Guards against inconsistent snake_case / camelCase keys from the backend.
- */
-const extractLinesArray = (data: any): any[] => {
-    if (!data || typeof data !== 'object') return [];
-    const possibleArrays = [
-        data.lines, data.rfqLines, data.rfq_lines, data.items, 
-        data.rfq_items, data.vq_lines, data.vqLines, data.po_lines, data.poLines
-    ];
-    for (const arr of possibleArrays) {
-        if (Array.isArray(arr) && arr.length > 0) return arr;
-    }
-    for (const arr of possibleArrays) {
-        if (Array.isArray(arr)) return arr;
-    }
-    return [];
-};
+// (Migrated to @/shared/utils/apiUtils)
 
 export const useVQForm = (
   isOpen: boolean, 

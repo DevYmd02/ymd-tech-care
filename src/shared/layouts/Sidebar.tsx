@@ -24,6 +24,8 @@ import type { MenuItem, SubMenuItem } from '@/core/config/navigation.config';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import { useTheme } from '@/core/contexts/ThemeContext';
+import { useToast } from '@/shared/components/ui/feedback/Toast';
+import { Logo } from '@/shared/components/ui/branding/Logo';
 
 // ====================================================================================
 // COMPONENT - Sidebar
@@ -39,6 +41,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
     const { user, logout } = useAuth();
     const { confirm } = useConfirmation();
     const { theme, setTheme } = useTheme();
+    const { toast } = useToast();
 
     // State เก็บรายการเมนูที่กำลังเปิดอยู่ (expanded)
     const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
@@ -70,6 +73,18 @@ export default function Sidebar({ isOpen }: SidebarProps) {
         if (isConfirmed) {
             logout();
         }
+    };
+
+    /**
+     * Handle "Coming Soon" features
+     */
+    const handleComingSoon = (featureName: string) => {
+        toast(
+            `ฟีเจอร์ "${featureName}" กำลังอยู่ระหว่างการพัฒนา จะเปิดให้ใช้งานเร็วๆ นี้`,
+            'info',
+            'Coming Soon'
+        );
+        setIsProfileOpen(false);
     };
 
     /**
@@ -209,14 +224,20 @@ export default function Sidebar({ isOpen }: SidebarProps) {
         >
 
             {/* ==================== HEADER (Logo & Brand) ==================== */}
-            <div className="bg-blue-600 text-white p-4 flex items-center space-x-3 flex-shrink-0">
-                <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center font-bold text-sm text-blue-600 flex-shrink-0">
-                    YMD
+            <div className="relative group/header overflow-hidden flex-shrink-0">
+                {/* Premium Blue Anchor Background */}
+                <div className="absolute inset-0 bg-[#0055A4]" />
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-400/20 via-transparent to-black/20" />
+                
+                {/* Animated Mesh Glow */}
+                <div className="absolute top-[-50%] left-[-50%] w-[200%] h-[200%] bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.1)_0%,_transparent_50%)] animate-[spin_10s_linear_infinite] opacity-50" />
+
+                <div className={`relative p-5 border-b backdrop-blur-sm transition-colors duration-500 ${theme === 'dark' ? 'border-white/10' : 'border-blue-900/20 shadow-lg'}`}>
+                    <Logo size="md" />
                 </div>
-                <div className="flex-1 min-w-0">
-                    <div className="text-sm font-bold whitespace-nowrap">YMD Tech Care</div>
-                    <div className="text-xs text-blue-50 whitespace-nowrap truncate">ERP System v1.0</div>
-                </div>
+                
+                {/* Subtle Bottom Glow Line */}
+                <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
             </div>
 
             {/* ==================== MENU ITEMS ==================== */}
@@ -232,7 +253,10 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                     ${isProfileOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0 pointer-events-none'}
                 `}>
                     <div className="p-2 space-y-1">
-                        <button className="w-full flex items-center gap-3 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors group">
+                        <button 
+                            onClick={() => handleComingSoon('โปรไฟล์ของฉัน')}
+                            className="w-full flex items-center gap-3 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors group"
+                        >
                             <div className="p-1.5 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-md group-hover:scale-110 transition-transform">
                                 <User size={14} />
                             </div>
@@ -252,7 +276,10 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                             <span className="ml-auto text-[10px] text-gray-400 uppercase">{theme}</span>
                         </button>
 
-                        <button className="w-full flex items-center gap-3 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors group">
+                        <button 
+                            onClick={() => handleComingSoon('ตั้งค่าการใช้งาน')}
+                            className="w-full flex items-center gap-3 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors group"
+                        >
                             <div className="p-1.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-md">
                                 <Settings size={14} />
                             </div>
