@@ -309,8 +309,8 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                     `}
                 >
                     {/* Avatar */}
-                    <div className="w-9 h-9 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0 shadow-lg shadow-blue-500/20 ring-2 ring-white dark:ring-gray-800">
-                        {user?.employee?.employee_fullname?.charAt(0) || 'A'}
+                    <div className="w-9 h-9 bg-blue-600 rounded-full flex items-center justify-center text-white flex-shrink-0 shadow-lg shadow-blue-500/20 ring-2 ring-white dark:ring-gray-800 overflow-hidden">
+                        <User size={20} strokeWidth={2.5} />
                     </div>
                     {/* User Info */}
                     <div className="flex-1 min-w-0 text-left">

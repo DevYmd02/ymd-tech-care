@@ -70,7 +70,7 @@ export const applyClientFilters = <T extends object>(
   }
 
   // 2. Specific Field Filters (mirrors mockUtils logic exactly)
-  const excludeKeys = ['page', 'limit', 'sort', 'q', 'date_from', 'date_to', 'total'];
+  const excludeKeys = ['page', 'limit', 'sort', 'q', 'date_from', 'date_to', 'date_start', 'date_end', 'start_date', 'end_date', 'total'];
 
   Object.keys(params).forEach(key => {
     if (excludeKeys.includes(key)) return;
