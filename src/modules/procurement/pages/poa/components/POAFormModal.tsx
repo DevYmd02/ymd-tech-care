@@ -1,6 +1,6 @@
 import { FormProvider, useWatch, Controller } from 'react-hook-form';
 import { 
-    CheckCircle, XCircle, FileText, Loader2
+    CheckCircle, XCircle, FileText, Loader2, Search
 } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { parseDiscountAmount } from '@/modules/procurement/utils/pricing.utils';
@@ -9,15 +9,18 @@ import { useMemo } from 'react';
 import { WindowFormLayout } from '@/shared/components/ui/layout/WindowFormLayout';
 import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal';
 import { usePOAForm } from '../hooks/usePOAForm';
-import type { POListItem } from '@/modules/procurement/types';
+import { POSearchModal } from './POSearchModal';
 import { CustomDateInput } from '@/shared/components/forms/CustomDateInput';
 import type { Currency } from '@/modules/master-data/types/master-data-types';
+import { cn } from '@/shared/utils/cn';
+
 
 const ui = {
     label: 'text-sm font-medium text-blue-700 dark:text-blue-300 mb-1 block',
     input: 'w-full h-8 px-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:text-white transition-all',
     inputRO: 'w-full h-8 px-3 text-sm bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-800 rounded-lg cursor-not-allowed font-medium',
     select: 'w-full h-8 px-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:text-white cursor-pointer transition-all',
+    searchBtn: 'px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors shrink-0 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1',
     error: 'text-red-500 text-[10px] mt-0.5 font-medium',
 };
 
@@ -64,17 +67,16 @@ interface POAFormModalProps {
     onClose: () => void;
     onSuccess?: () => void;
     poId?: number;
-    initialValues?: Partial<POListItem>;
+    initialValues?: any;
 }
 
-export const POAFormModal = ({
+export default function POAFormModal({
     isOpen,
     onClose,
     onSuccess,
     poId,
     initialValues,
-}: POAFormModalProps) => {
-
+}: POAFormModalProps) {
     const {
         formMethods,
         control,
@@ -84,19 +86,27 @@ export const POAFormModal = ({
         fields,
         onSubmit,
         onInvalidSubmit,
+
         isConfirmModalOpen,
         setIsConfirmModalOpen,
         handleConfirmApprove,
+
         isRejectModalOpen,
         setIsRejectModalOpen,
         handleRejectInit,
         handleConfirmReject,
+
         isSubmitting,
         detailData,
         isLoadingDetail,
+
+        isPOSearchModalOpen,
+        setIsPOSearchModalOpen,
+        handlePOSelect,
+
         currencies,
         isLoadingCurrencies,
-    } = usePOAForm({ isOpen, onClose, onSuccess, poId: Number(poId), initialValues });
+    } = usePOAForm({ isOpen, onClose, onSuccess, poId, initialValues });
 
     const poLinesValues = useWatch({ control, name: 'po_lines' });
 
@@ -107,20 +117,20 @@ export const POAFormModal = ({
             <WindowFormLayout
                 isOpen={isOpen}
                 onClose={onClose}
-                title={'พิจารณาอนุมัติใบสั่งซื้อ (Purchase Order Approval)'}
+                title="รายการอนุมัติใบสั่งซื้อ (Purchase Order Approval)"
                 titleIcon={
                     <div className="bg-white/20 p-1 rounded-md shadow-sm">
-                        <CheckCircle size={14} strokeWidth={3} className="text-white" />
+                        <FileText size={14} strokeWidth={3} className="text-white" />
                     </div>
                 }
-                headerColor="bg-emerald-600"
+                headerColor="bg-blue-600"
                 footer={
-                    <div className="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-end items-center bg-slate-100 dark:bg-gray-900 sticky bottom-0 z-10 gap-x-2">
-                        <div className="flex gap-2">
+                    <div className="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-end items-center bg-slate-100 dark:bg-gray-900 sticky bottom-0 z-10">
+                        <div className="flex gap-3">
                             <button
                                 type="button"
                                 onClick={onClose}
-                                className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md text-sm font-medium transition-colors"
+                                className="px-6 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all font-medium"
                             >
                                 ยกเลิก
                             </button>
@@ -128,53 +138,63 @@ export const POAFormModal = ({
                                 type="button"
                                 onClick={handleRejectInit}
                                 disabled={isSubmitting}
-                                className="px-4 py-2 bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/40 hover:border-red-500 rounded-md text-sm font-medium transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="px-6 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400 transition-all font-medium flex items-center gap-2 disabled:opacity-50"
                             >
-                                <XCircle size={14} /> ไม่อนุมัติ
+                                <XCircle size={18} />
+                                ไม่อนุมัติ
                             </button>
                             <button
                                 type="button"
                                 onClick={handleSubmit(onSubmit, onInvalidSubmit)}
                                 disabled={isSubmitting}
-                                className="px-6 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-md text-sm font-medium shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="px-8 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 transition-all font-semibold flex items-center gap-2 disabled:opacity-50"
                             >
-                                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle size={14} />} 
-                                {isSubmitting ? 'กำลังประมวลผล...' : 'อนุมัติ (Approve)'}
+                                {isSubmitting ? (
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                ) : (
+                                    <CheckCircle size={18} />
+                                )}
+                                อนุมัติรายการ
                             </button>
                         </div>
                     </div>
                 }
             >
                 <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6">
-
-                    {/* ════════════════════════════════════════════════════════
-                        CARD 1 — PO Header
-                    ════════════════════════════════════════════════════════ */}
+                    {/* Header Card */}
                     <div className="bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden shadow-sm">
                         <div className="p-5 space-y-4">
-                            {/* Card Title */}
-                            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 border-b border-gray-200 dark:border-gray-700 pb-3">
+                            <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 border-b border-gray-200 dark:border-gray-700 pb-3">
                                 <FileText size={18} />
-                                <span className="font-semibold">ส่วนหัวเอกสาร — Header PO (Purchase Order)</span>
+                                <span className="font-semibold">ข้อมูลทั่วไป (General Information)</span>
                             </div>
 
                             {isLoadingDetail ? (
-                                <div className="flex justify-center items-center py-12">
-                                    <Loader2 className="animate-spin text-emerald-600 mr-2" size={20} />
-                                    <span className="text-sm text-slate-500 font-medium">กำลังโหลดข้อมูล...</span>
+                                <div className="py-20 flex flex-col items-center justify-center gap-3">
+                                    <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
+                                    <p className="text-gray-500 font-medium">กำลังโหลดข้อมูล...</p>
                                 </div>
                             ) : (
-                                <>
-                                    {/* ── Row 1: เลขที่ PO | วันที่ PO | อ้างอิง PR | อ้างอิง QC ── */}
-                                    {/* ── Row 1: เลขที่อนุมัติ PO | เลขที่ PO | วันที่ PO | อ้างอิง PR | อ้างอิง QC ── */}
-                                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                                        <div>
-                                            <label className={ui.label}>เลขที่อนุมัติ PO</label>
-                                            <input value={(detailData as any)?.poa_no || '-'} className={ui.inputRO} readOnly placeholder="-" />
-                                        </div>
+                                <div className="space-y-4">
+                                    {/* Row 1 */}
+                                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 pt-2">
                                         <div>
                                             <label className={ui.label}>เลขที่ PO</label>
-                                            <input value={detailData?.po_no || '-'} className={ui.inputRO} readOnly placeholder="ระบบจะสร้างอัตโนมัติ" />
+                                            <div className="flex gap-2">
+                                                <input value={detailData?.po_no || '-'} className={ui.inputRO} readOnly placeholder="-" />
+                                                <button 
+                                                    type="button" 
+                                                    className={ui.searchBtn} 
+                                                    title="ค้นหารายการ PO"
+                                                    onClick={() => setIsPOSearchModalOpen(true)}
+                                                >
+                                                    <Search size={14} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className={ui.label}>เลขที่อนุมัติ POA</label>
+                                            <input value={detailData?.poa_no || '-'} className={ui.inputRO} readOnly />
                                         </div>
                                         <div>
                                             <label className={ui.label}>วันที่ PO</label>
@@ -182,48 +202,47 @@ export const POAFormModal = ({
                                         </div>
                                         <div>
                                             <label className={ui.label}>อ้างอิง PR</label>
-                                            <input value={detailData?.pr_no || '-'} className={ui.inputRO} readOnly placeholder="-" />
+                                            <input value={detailData?.pr_no || '-'} className={ui.inputRO} readOnly />
                                         </div>
                                         <div>
                                             <label className={ui.label}>อ้างอิง QC</label>
-                                            <input value={detailData?.qc_no || '-'} className={ui.inputRO} readOnly placeholder="-" />
+                                            <input value={detailData?.qc_no || '-'} className={ui.inputRO} readOnly />
                                         </div>
                                     </div>
 
-                                    {/* ── Row 2: ผู้ขาย | สาขา | คลังสินค้าปลายทาง ── */}
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    {/* Row 2 */}
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-gray-50 dark:border-gray-800 pt-4">
                                         <div>
-                                            <label className={ui.label}>ผู้ขาย</label>
-                                            <input value={detailData?.vendor_name || '-'} className={ui.inputRO} readOnly />
+                                            <label className={ui.label}>ผู้ขาย (Vendor)</label>
+                                            <input value={`${detailData?.vendor_name || '-'} (${detailData?.vendor_id || '-'})`} className={ui.inputRO} readOnly />
                                         </div>
                                         <div>
-                                            <label className={ui.label}>สาขา</label>
-                                            <input value={(detailData as any)?.branch?.branch_name || (detailData as any)?.branch_name || '-'} className={ui.inputRO} readOnly />
+                                            <label className={ui.label}>สาขา (Branch)</label>
+                                            <input value={detailData?.branch_name || '-'} className={ui.inputRO} readOnly />
                                         </div>
                                         <div>
-                                            <label className={ui.label}>ผู้จัดทำ</label>
-                                            <input value={(detailData as any)?.created_by_name || '-'} className={ui.inputRO} readOnly />
+                                            <label className={ui.label}>ผู้จัดทำ (Prepared By)</label>
+                                            <input value={detailData?.created_by_name || '-'} className={ui.inputRO} readOnly />
                                         </div>
                                     </div>
 
-                                    {/* ── Row 3: เครดิตเทอม | กำหนดส่งของ | ประเภทภาษี ── */}
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    {/* Row 3 */}
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-gray-50 dark:border-gray-800 pt-4">
                                         <div>
                                             <label className={ui.label}>เครดิตเทอม (วัน)</label>
-                                            <input value={(detailData as any)?.payment_term_days || '-'} className={`${ui.inputRO} text-right`} readOnly />
+                                            <input value={detailData?.payment_term_days || '-'} className={`${ui.inputRO} text-right`} readOnly />
                                         </div>
                                         <div>
                                             <label className={ui.label}>กำหนดส่งของ</label>
-                                            <input value={(detailData as any)?.delivery_date ? formatThaiDate((detailData as any).delivery_date) : '-'} className={ui.inputRO} readOnly />
+                                            <input value={detailData?.delivery_date ? formatThaiDate(detailData.delivery_date) : '-'} className={ui.inputRO} readOnly />
                                         </div>
                                         <div>
                                             <label className={ui.label}>ประเภทภาษี</label>
-                                            <input value={(detailData as any)?.tax_code?.tax_name || (detailData as any)?.tax_name || '-'} className={ui.inputRO} readOnly />
+                                            <input value={detailData?.tax_name || detailData?.tax_code?.tax_name || '-'} className={ui.inputRO} readOnly />
                                         </div>
-
                                     </div>
 
-                                    {/* ── Row 4: Currency Detail Fields ── */}
+                                    {/* Row 4: Currency Selection */}
                                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-lg">
                                         <div>
                                             <label className={ui.label}>วันที่อัตราแลกเปลี่ยน</label>
@@ -232,51 +251,80 @@ export const POAFormModal = ({
                                                     name="exchange_rate_date"
                                                     control={control}
                                                     render={({ field }) => (
-                                                        <CustomDateInput value={field.value || ''} onChange={field.onChange} disabled={false} className={ui.input} />
+                                                        <CustomDateInput 
+                                                            value={field.value || ''} 
+                                                            onChange={field.onChange} 
+                                                            disabled={false} 
+                                                            className={cn(ui.input, errors.exchange_rate_date && "border-red-500 focus:ring-red-500/20 focus:border-red-500")} 
+                                                        />
                                                     )}
                                                 />
                                             </div>
                                         </div>
                                         <div>
                                             <label className={ui.label}>รหัสสกุลเงิน <span className="text-red-500">*</span></label>
-                                            <select {...register('currency_code')} className={ui.select} disabled={isLoadingCurrencies}>
+                                            <select 
+                                                {...register('currency_code')} 
+                                                className={cn(ui.select, errors.currency_code && "border-red-500 focus:ring-red-500/20 focus:border-red-500")} 
+                                                disabled={isLoadingCurrencies}
+                                            >
                                                 <option value="">{isLoadingCurrencies ? 'โหลด...' : 'เลือกสกุลเงิน'}</option>
-                                                {currencies.map((o: Currency) => <option key={o.currency_code} value={o.currency_code}>{o.currency_code} - {o.name_en}</option>)}
+                                                {currencies.map((o: Currency) => (
+                                                    <option key={o.currency_code} value={o.currency_code}>
+                                                        {o.currency_code} - {o.name_th}
+                                                    </option>
+                                                ))}
                                             </select>
                                         </div>
                                         <div>
                                             <label className={ui.label}>ไปที่สกุลเงิน (Target)</label>
-                                            <select {...register('target_currency')} className={ui.select} disabled={isLoadingCurrencies}>
+                                            <select 
+                                                {...register('target_currency')} 
+                                                className={cn(ui.select, errors.target_currency && "border-red-500 focus:ring-red-500/20 focus:border-red-500")} 
+                                                disabled={isLoadingCurrencies}
+                                            >
                                                 <option value="">{isLoadingCurrencies ? 'โหลด...' : 'เลือกสกุลเงิน'}</option>
-                                                {currencies.map((o: Currency) => <option key={o.currency_code} value={o.currency_code}>{o.currency_code} - {o.name_en}</option>)}
+                                                {currencies.map((o: Currency) => (
+                                                    <option key={o.currency_code} value={o.currency_code}>
+                                                        {o.currency_code} - {o.name_th}
+                                                    </option>
+                                                ))}
                                             </select>
                                         </div>
                                         <div>
                                             <label className={ui.label}>อัตราแลกเปลี่ยน <span className="text-red-500">*</span></label>
-                                            <input type="number" step="0.0001" {...register('exchange_rate', { valueAsNumber: true })}
-                                                className={`${ui.input} text-right`} placeholder="1" />
-                                            {errors?.exchange_rate && <p className={ui.error}>{(errors.exchange_rate as any).message}</p>}
+                                            <input 
+                                                type="number" step="0.0001" 
+                                                {...register('exchange_rate', { valueAsNumber: true })}
+                                                className={cn(ui.input, "text-right", errors.exchange_rate && "border-red-500 focus:ring-red-500/20 focus:border-red-500")} 
+                                                placeholder="1" 
+                                            />
+                                            {errors.exchange_rate && <p className={ui.error}>{(errors.exchange_rate as any).message}</p>}
                                         </div>
                                     </div>
 
-                                    {/* Remarks */}
-                                    <div className="grid grid-cols-1 gap-4">
-                                        <div>
-                                            <label className={ui.label}>หมายเหตุที่ไม่อนุมัติ <span className="text-red-500">*</span></label>
-                                            <textarea 
-                                                {...register('reject_reason')} 
-                                                className={`w-full text-sm bg-white dark:bg-slate-900 border ${errors?.reject_reason ? 'border-red-500 focus:ring-red-500/20 focus:border-red-500' : 'border-slate-300 dark:border-slate-700 focus:ring-emerald-500/20 focus:border-emerald-500'} rounded-lg p-2 focus:outline-none focus:ring-2 dark:text-white min-h-[60px]`}
-                                                placeholder="ระบุเหตุผล... (กรณีไม่อนุมัติ)"
-                                            />
-                                            {errors?.reject_reason && <p className={ui.error}>{(errors.reject_reason as any).message}</p>}
-                                        </div>
+                                    {/* Remarks Section (Previous Reject Reason) */}
+                                    <div>
+                                        <label className={ui.label}>หมายเหตุ (Remarks)</label>
+                                        <textarea
+                                            {...register('reject_reason')}
+                                            className={cn(
+                                                "w-full min-h-[60px] p-3 text-sm bg-slate-50 dark:bg-slate-900 border rounded-lg focus:outline-none focus:ring-2 transition-all",
+                                                errors.reject_reason 
+                                                ? "border-red-500 focus:ring-red-500/20 focus:border-red-500" 
+                                                : "border-slate-200 dark:border-slate-700 focus:ring-blue-500/20 focus:border-blue-500"
+                                            )}
+                                            placeholder="ระบุหมายเหตุหรือเหตุผลการอนุมัติ/ไม่อนุมัติ..."
+                                        />
+                                        {errors.reject_reason && <p className="text-red-500 text-[12px] mt-1 ml-1">{errors.reject_reason.message}</p>}
                                     </div>
-                                </>
+                                </div>
                             )}
                         </div>
                     </div>
 
-                    {/* Lines */}
+
+                    {/* Lines Card */}
                     <div className="bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden shadow-sm">
                         <div className="p-4">
                             <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 border-b border-gray-200 dark:border-gray-700 pb-3 mb-4">
@@ -290,24 +338,12 @@ export const POAFormModal = ({
                                         <tr>
                                             <th className="px-2 py-2 w-10 text-center border-r border-blue-500/40 font-semibold">✓</th>
                                             <th className="px-2 py-2 text-center w-12 border-r border-blue-500/40 font-semibold">ลำดับ</th>
-                                            <th className="px-3 py-2 text-left border-r border-blue-500/40 font-semibold">
-                                                ชื่อสินค้า/บริการ
-                                            </th>
-                                            <th className="px-2 py-2 text-center w-24 border-r border-blue-500/40 font-semibold">
-                                                จำนวนที่สั่ง
-                                            </th>
-                                            <th className="px-2 py-2 text-center w-28 border-r border-blue-500/40 bg-emerald-500 text-white font-semibold">
-                                                ยอดอนุมัติ
-                                            </th>
-                                            <th className="px-2 py-2 text-center w-28 border-r border-blue-500/40 font-semibold">
-                                                ราคา/หน่วย
-                                            </th>
-                                            <th className="px-2 py-2 text-center w-32 border-r border-blue-500/40 font-semibold">
-                                                ยอดสุทธิ
-                                            </th>
-                                            <th className="px-2 py-2 text-center w-48 font-semibold">
-                                                หมายเหตุ
-                                            </th>
+                                            <th className="px-3 py-2 text-left border-r border-blue-500/40 font-semibold">ชื่อสินค้า/บริการ</th>
+                                            <th className="px-2 py-2 text-center w-24 border-r border-blue-500/40 font-semibold">จำนวนที่สั่ง</th>
+                                            <th className="px-2 py-2 text-center w-28 border-r border-blue-500/40 bg-emerald-500 text-white font-semibold">ยอดอนุมัติ</th>
+                                            <th className="px-2 py-2 text-center w-28 border-r border-blue-500/40 font-semibold">ราคา/หน่วย</th>
+                                            <th className="px-2 py-2 text-center w-32 border-r border-blue-500/40 font-semibold">ยอดสุทธิ</th>
+                                            <th className="px-2 py-2 text-center w-48 font-semibold">หมายเหตุ</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -343,15 +379,12 @@ export const POAFormModal = ({
                                                     </td>
                                                     <td className="px-3 py-2 text-center text-[13px] text-gray-600 font-medium border-r border-gray-200 dark:border-gray-700">{idx + 1}</td>
                                                     <td className="px-3 py-2 border-r border-gray-200 dark:border-gray-700 text-slate-700 dark:text-slate-300">
-                                                         {field.item_name || field.description || field.item_code}
-                                                     </td>
-
-                                                     {/* จำนวนที่ขอ */}
-                                                     <td className="px-2 py-2 text-center border-r border-gray-200 dark:border-gray-700 text-slate-700 dark:text-slate-300 font-medium">
-                                                         {(detailData as any)?.po_lines?.[idx]?.qty_ordered ?? (detailData as any)?.lines?.[idx]?.qty_ordered ?? field.qty_ordered ?? '0'}
-                                                     </td>
-
-                                                     <td className="px-2 py-2 border-r border-gray-200 dark:border-gray-700">
+                                                        {(field as any).item_name || (field as any).description || (field as any).item_code}
+                                                    </td>
+                                                    <td className="px-2 py-2 text-center border-r border-gray-200 dark:border-gray-700 text-slate-700 dark:text-slate-300 font-medium">
+                                                        {detailData?.po_lines?.[idx]?.qty_ordered ?? (field as any).qty_ordered ?? '0'}
+                                                    </td>
+                                                    <td className="px-2 py-2 border-r border-gray-200 dark:border-gray-700">
                                                         <Controller
                                                             name={`po_lines.${idx}.qty_ordered`}
                                                             control={control}
@@ -361,13 +394,17 @@ export const POAFormModal = ({
                                                                     value={value ?? ''}
                                                                     onChange={e => onChange(e.target.valueAsNumber)}
                                                                     disabled={!isApproved}
-                                                                    className={`${ui.input} !h-9 text-center text-[14px] font-semibold text-emerald-700 dark:text-emerald-400 border-emerald-500 bg-emerald-50/30 dark:bg-emerald-950/20 focus:border-emerald-500 focus:ring-emerald-500/20 shadow-sm disabled:opacity-50`}
+                                                                    className={cn(
+                                                                        ui.input, 
+                                                                        "!h-9 text-center text-[14px] font-semibold text-emerald-700 dark:text-emerald-400 border-emerald-500 bg-emerald-50/30 dark:bg-emerald-950/20 focus:border-emerald-500 focus:ring-emerald-500/20 shadow-sm disabled:opacity-50",
+                                                                        errors.po_lines?.[idx]?.qty_ordered && "border-red-500 focus:ring-red-500/20 focus:border-red-500"
+                                                                    )}
                                                                 />
                                                             )}
                                                         />
                                                     </td>
                                                     <td className="px-3 py-2 text-right border-r border-gray-200 dark:border-gray-700 text-slate-700 dark:text-slate-300">
-                                                        {Number(field.unit_price || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                        {Number((field as any).unit_price || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                     </td>
                                                     <td className="px-3 py-2 text-right font-semibold text-emerald-700 dark:text-emerald-400 text-[13px] bg-emerald-50/10 dark:bg-emerald-900/10 border-r border-gray-200 dark:border-gray-700">
                                                         {total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
@@ -383,7 +420,11 @@ export const POAFormModal = ({
                                                                     onChange={onChange}
                                                                     disabled={!isApproved}
                                                                     placeholder="หมายเหตุ..."
-                                                                    className={`${ui.input} !h-9 text-sm disabled:opacity-50`}
+                                                                    className={cn(
+                                                                        ui.input, 
+                                                                        "!h-9 text-sm disabled:opacity-50",
+                                                                        errors.po_lines?.[idx]?.line_remark && "border-red-500 focus:ring-red-500/20 focus:border-red-500"
+                                                                    )}
                                                                 />
                                                             )}
                                                         />
@@ -395,13 +436,14 @@ export const POAFormModal = ({
                                 </table>
                             </div>
 
-                            {/* Summary Footer Panel */}
                             <div className="flex justify-end p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/10 rounded-b-lg">
                                 <POSummaryPanel control={control} detailData={detailData} />
                             </div>
                         </div>
                     </div>
+
                 </div>
+
 
                 {/* Modals */}
                 <ConfirmationModal
@@ -424,8 +466,12 @@ export const POAFormModal = ({
                     variant="danger"
                 />
 
+                <POSearchModal
+                    isOpen={isPOSearchModalOpen}
+                    onClose={() => setIsPOSearchModalOpen(false)}
+                    onSelect={handlePOSelect}
+                />
             </WindowFormLayout>
         </FormProvider>
     );
-};
-
+}

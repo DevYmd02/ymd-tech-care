@@ -31,12 +31,18 @@ export const usePOAForm = ({
 
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+    const [isPOSearchModalOpen, setIsPOSearchModalOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [currentPoId, setCurrentPoId] = useState<number | undefined>(poId);
+
+    useEffect(() => {
+        if (poId) setCurrentPoId(poId);
+    }, [poId]);
 
     const { data: detailData, isLoading: isLoadingDetail } = useQuery({
-        queryKey: ['poa-detail', poId],
-        queryFn: () => POAService.getById(poId!),
-        enabled: isOpen && !!poId,
+        queryKey: ['poa-detail', currentPoId],
+        queryFn: () => POAService.getById(currentPoId!),
+        enabled: isOpen && !!currentPoId,
     });
 
     const { data: currencies = [], isLoading: isLoadingCurrencies } = useQuery({
@@ -151,18 +157,18 @@ export const usePOAForm = ({
     }, [currencies, watchCurrencyCode, watchTargetCurrency, setValue, getFieldState]);
 
     const handleConfirmApprove = async () => {
-        if (!poId) return;
+        if (!currentPoId) return;
         try {
             setIsSubmitting(true);
             
             // If form is dirty (qty or remarks changed), update first
             if (isDirty) {
                 const data = getValues();
-                await POAService.update(poId, data);
+                await POAService.update(currentPoId, data);
             }
 
             // Approve
-            await POAService.approve(poId);
+            await POAService.approve(currentPoId);
             queryClient.invalidateQueries({ queryKey: ['poa-list'] });
             toast('อนุมัติใบสั่งซื้อสำเร็จ', 'success');
             
@@ -178,7 +184,7 @@ export const usePOAForm = ({
     };
 
     const handleConfirmReject = async () => {
-        if (!poId) return;
+        if (!currentPoId) return;
         const reason = getValues('reject_reason');
         if (!reason) {
             toast('กรุณาระบุเหตุผลที่ไม่อนุมัติ', 'error');
@@ -187,7 +193,7 @@ export const usePOAForm = ({
 
         try {
             setIsSubmitting(true);
-            await POAService.reject(poId, reason);
+            await POAService.reject(currentPoId, reason);
             queryClient.invalidateQueries({ queryKey: ['poa-list'] });
             toast('ปฏิเสธใบสั่งซื้อสำเร็จ', 'success');
             
@@ -199,6 +205,13 @@ export const usePOAForm = ({
             toast(extractErrorMessage(error), 'error');
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const handlePOSelect = (po: POListItem) => {
+        if (po.po_id) {
+            setCurrentPoId(po.po_id);
+            setIsPOSearchModalOpen(false);
         }
     };
 
@@ -246,6 +259,10 @@ export const usePOAForm = ({
         isSubmitting,
         detailData,
         isLoadingDetail,
+
+        isPOSearchModalOpen,
+        setIsPOSearchModalOpen,
+        handlePOSelect,
 
         currencies,
         isLoadingCurrencies,

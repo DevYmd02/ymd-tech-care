@@ -87,21 +87,26 @@ export const POService = {
             if (!mappedItem.qc_no && mappedItem.pr_no) {
                 try {
                     const qcsRes = await QCService.getList({ pr_no: mappedItem.pr_no });
-                    let qcs: import('@/modules/procurement/schemas/qc-schemas').QCListItem[] = [];
+                    let qcs: any[] = [];
                     
                     if (Array.isArray(qcsRes)) {
                         qcs = qcsRes;
                     } else {
                         const qcsResObj = qcsRes as unknown as Record<string, unknown>;
                         if (qcsResObj && 'data' in qcsResObj && Array.isArray(qcsResObj.data)) {
-                            qcs = qcsResObj.data as import('@/modules/procurement/schemas/qc-schemas').QCListItem[];
+                            qcs = qcsResObj.data;
                         }
                     }
 
-                    const approvedQc = qcs.find((q) => q.status === 'COMPLETED');
-                    if (approvedQc?.qc_no) {
-                        mappedItem.qc_no = approvedQc.qc_no;
-                        if (approvedQc.qc_id) mappedItem.qc_id = approvedQc.qc_id;
+                    // 🎯 Strategy: Find COMPLETED first, then DRAFT as fallback
+                    const activeQc = qcs.find((q) => q.status === 'COMPLETED') || qcs.find((q) => q.status === 'DRAFT');
+                    
+                    if (activeQc?.qc_no) {
+                        logger.debug(`[POService] Backup QC Found for PR ${mappedItem.pr_no}: ${activeQc.qc_no}`, { status: activeQc.status });
+                        mappedItem.qc_no = activeQc.qc_no;
+                        if (activeQc.qc_id || (activeQc as any).qc_header_id) {
+                            mappedItem.qc_id = activeQc.qc_id || (activeQc as any).qc_header_id;
+                        }
                     }
                 } catch (err) {
                     logger.debug(`[POService] Backup QC lookup failed for PR ${mappedItem.pr_no}`, err);
@@ -129,6 +134,7 @@ export const POService = {
         if (params) {
             const filterParams: Record<string, string | number | boolean | undefined | null> = {};
             if (params.po_no) filterParams.po_no = params.po_no;
+            if (params.poa_no) filterParams.poa_no = params.poa_no;
             if (params.pr_no) filterParams.pr_no = params.pr_no;
             if (params.vendor_name) filterParams.vendor_name = params.vendor_name;
             if (params.status && params.status !== 'ALL') filterParams.status = params.status;
@@ -139,7 +145,7 @@ export const POService = {
             if (params.sort) filterParams.sort = params.sort;
 
             return applyClientFilters<POListItem>(allItems, filterParams, {
-                searchableFields: ['po_no', 'vendor_name', 'qc_no', 'pr_no'],
+                searchableFields: ['po_no', 'vendor_name', 'qc_no', 'pr_no', 'poa_no'],
                 dateField: 'po_date',
                 backendTotal: response.total
             });

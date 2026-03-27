@@ -151,14 +151,14 @@ export default function POListPage() {
                                     {prDisplay}
                                 </span>
                                 {qcDisplay && (
-                                    <span className="text-[10px] text-blue-600 dark:text-blue-400 mt-0.5 hover:text-blue-800 hover:underline cursor-pointer leading-tight">
-                                        QC: {qcDisplay}
+                                    <span className="text-[10px] text-slate-500/80 dark:text-slate-400/80 mt-0.5 hover:text-slate-700 hover:underline cursor-pointer leading-tight">
+                                        {qcDisplay}
                                     </span>
                                 )}
                             </>
                         ) : qcDisplay ? (
-                            <span className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline cursor-pointer leading-tight">
-                                QC: {qcDisplay}
+                            <span className="font-semibold text-slate-500/80 dark:text-slate-400/80 hover:text-slate-700 hover:underline cursor-pointer leading-tight">
+                                {qcDisplay}
                             </span>
                         ) : (
                             <span className="text-gray-400">-</span>
@@ -456,13 +456,21 @@ export default function POListPage() {
                                         label: 'เอกสารอ้างอิง:',
                                         value: (
                                             <div className="flex flex-col items-end">
-                                                {item.qc_no ? (
+                                                {item.pr_no ? (
                                                     <>
-                                                        <span className="font-semibold text-blue-600 dark:text-blue-400">QC: {item.qc_no}</span>
-                                                        {item.pr_no && <span className="text-xs text-indigo-500/90 dark:text-indigo-400/80 font-medium">PR: {item.pr_no}</span>}
+                                                        <span className="font-medium text-indigo-500/90 dark:text-indigo-400/80 leading-tight">
+                                                            {item.pr_no}
+                                                        </span>
+                                                        {item.qc_no && (
+                                                            <span className="text-[10px] text-slate-500/80 dark:text-slate-400/80 mt-0.5 font-semibold leading-tight">
+                                                                {item.qc_no}
+                                                            </span>
+                                                        )}
                                                     </>
-                                                ) : item.pr_no ? (
-                                                    <span className="font-medium text-indigo-500/90 dark:text-indigo-400/80">{item.pr_no}</span>
+                                                ) : item.qc_no ? (
+                                                    <span className="font-semibold text-slate-500/80 dark:text-slate-400/80 leading-tight">
+                                                        {item.qc_no}
+                                                    </span>
                                                 ) : (
                                                     <span className="text-gray-400">-</span>
                                                 )}
