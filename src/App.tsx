@@ -61,6 +61,7 @@ const JobList = React.lazy(() => import('@/modules/master-data/company/pages/job
 const EmployeeList = React.lazy(() => import('@/modules/master-data/company/pages/employee/EmployeeList'));
 const EmployeeGroupList = React.lazy(() => import('@/modules/master-data/company/pages/employee-group/EmployeeGroupList'));
 const PositionList = React.lazy(() => import('@/modules/master-data/company/pages/position/PositionList'));
+const CompanyDashboard = React.lazy(() => import('@/modules/master-data/company/pages/CompanyDashboard'));
 // Sales Pages (from master-data)
 const SalesAreaList = React.lazy(() => import('@/modules/master-data/sales/pages/area/SalesAreaList'));
 const SalesChannelList = React.lazy(() => import('@/modules/master-data/sales/pages/channel/SalesChannelList'));
@@ -99,6 +100,13 @@ const BusinessTypeList = React.lazy(() => import('@customer/pages/business-type/
 const CustomerTypeList = React.lazy(() => import('@customer/pages/customer-type/CustomerTypeList'));
 const CustomerGroupList = React.lazy(() => import('@customer/pages/customer-group/CustomerGroupList'));
 const BillingGroupList = React.lazy(() => import('@customer/pages/billing-group/BillingGroupList'));
+
+// Sales Module Pages
+const InquiryListPage = React.lazy(() => import('@/modules/sales/pages/inquiry/InquiryListPage'));
+const EstimateListPage = React.lazy(() => import('@/modules/sales/pages/estimate/EstimateListPage'));
+const QuotationListPage = React.lazy(() => import('@/modules/sales/pages/quotation/QuotationListPage'));
+const ReservationListPage = React.lazy(() => import('@/modules/sales/pages/reservation/ReservationListPage'));
+const SalesOrderListPage = React.lazy(() => import('@/modules/sales/pages/sales-order/SalesOrderListPage'));
 
 // Auth Pages (from modules)
 const LoginPage = React.lazy(() => import('@/modules/auth/pages/LoginPage'));
@@ -233,6 +241,12 @@ function AppContent() {
             <Route path="master-data/employee" element={<EmployeeList />} />
             <Route path="master-data/employee-group" element={<EmployeeGroupList />} />
             <Route path="master-data/position" element={<PositionList />} />
+            <Route path="master-data/company" element={<CompanyDashboard />} />
+            <Route path="master-data/company-info" element={<PlaceholderPage title="กำหนดข้อมูลบริษัท" />} />
+            <Route path="master-data/general-settings" element={<PlaceholderPage title="กำหนดตั้งค่าทั่วไป" />} />
+            <Route path="master-data/standard-cost" element={<PlaceholderPage title="กำหนดราคาซื้อและต้นทุนมาตรฐาน" />} />
+            <Route path="master-data/price-level" element={<PlaceholderPage title="กำหนดราคาสินค้า (Price Level)" />} />
+            <Route path="master-data/price-list" element={<PlaceholderPage title="กำหนดราคาสินค้า (Price List)" />} />
 
             {/* Sales Master Data */}
             <Route path="master-data/sales-area" element={<SalesAreaList />} />
@@ -304,6 +318,13 @@ function AppContent() {
             {placeholderRoutes.audit.map(({ path, title }: { path: string; title: string }) => (
               <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
             ))}
+
+            {/* Sales Module */}
+            <Route path="sales/inquiry" element={<InquiryListPage />} />
+            <Route path="sales/estimate" element={<EstimateListPage />} />
+            <Route path="sales/quotation" element={<QuotationListPage />} />
+            <Route path="sales/reservation" element={<ReservationListPage />} />
+            <Route path="sales/order" element={<SalesOrderListPage />} />
 
             {/* Sales Placeholders */}
             {placeholderRoutes.sales.map(({ path, title }: { path: string; title: string }) => (

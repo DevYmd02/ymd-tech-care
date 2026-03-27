@@ -16,8 +16,6 @@ import {
     Clock,
     CheckCircle,
     AlertTriangle,
-    XCircle,
-    ChevronRight,
 } from 'lucide-react';
 import { Card } from '@ui';
 import { StatCard } from '@ui';
@@ -26,14 +24,11 @@ import { StatCard } from '@ui';
 const ProcurementCharts = lazy(() => import('./components/ProcurementCharts'));
 
 const ChartSkeleton = () => (
-    <div className="space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="h-[400px] bg-gray-100 dark:bg-gray-800 animate-pulse rounded-xl" />
-            <div className="h-[400px] bg-gray-100 dark:bg-gray-800 animate-pulse rounded-xl" />
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="h-[400px] bg-gray-100 dark:bg-gray-800 animate-pulse rounded-xl" />
-        </div>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="h-[400px] bg-gray-100 dark:bg-gray-800 animate-pulse rounded-xl" />
+        <div className="h-[400px] bg-gray-100 dark:bg-gray-800 animate-pulse rounded-xl" />
+        <div className="h-[400px] bg-gray-100 dark:bg-gray-800 animate-pulse rounded-xl" />
+        <div className="h-[400px] bg-gray-100 dark:bg-gray-800 animate-pulse rounded-xl" />
     </div>
 );
 
@@ -148,40 +143,6 @@ function StatusCard() {
     );
 }
 
-function ApprovalItem({ id, type, requester, approver, amount }: {
-    id: string;
-    type: string;
-    requester: string;
-    approver: string;
-    amount: number;
-}) {
-    return (
-        <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg mb-3">
-            <div className="flex justify-between items-start mb-2">
-                <div className="flex items-center gap-2">
-                    <span className={`px-2 py-1 text-xs font-semibold rounded ${
-                        type === 'PR' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400' 
-                                       : 'bg-orange-100 text-orange-600 dark:bg-orange-900/50 dark:text-orange-400'
-                    }`}>
-                        {type}
-                    </span>
-                    <span className="font-semibold text-gray-900 dark:text-white">{id}</span>
-                </div>
-                <span className="font-bold text-gray-900 dark:text-white">฿{amount.toLocaleString()}</span>
-            </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">ผู้ขอ: {requester}</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">ผู้อนุมัติ: {approver}</p>
-            <div className="flex gap-2">
-                <button className="flex-1 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-medium rounded-lg flex items-center justify-center gap-1">
-                    <CheckCircle className="w-4 h-4" /> อนุมัติ
-                </button>
-                <button className="flex-1 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg flex items-center justify-center gap-1">
-                    <XCircle className="w-4 h-4" /> ไม่อนุมัติ
-                </button>
-            </div>
-        </div>
-    );
-}
 
 // ====================================================================================
 // MAIN COMPONENT
@@ -250,29 +211,10 @@ export default function ProcurementDashboard() {
                     vendorPieData={vendorPieData}
                     trendData={trendData}
                     leadTimeData={leadTimeData}
+                    pendingApprovals={pendingApprovals}
                 />
             </Suspense>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* This empty div matches the grid layout if needed, 
-                    or we can keep the Pending Approvals here which was originally next to the Bar Chart */}
-                <div className="hidden lg:block h-0" /> 
-                
-                {/* Pending Approvals */}
-                <Card>
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">งานรออนุมัติ</h3>
-                        <button className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
-                            ดูทั้งหมด <ChevronRight className="w-4 h-4" />
-                        </button>
-                    </div>
-                    <div className="max-h-[280px] overflow-y-auto">
-                        {pendingApprovals.map((item, index) => (
-                            <ApprovalItem key={index} {...item} />
-                        ))}
-                    </div>
-                </Card>
-            </div>
 
             {/* Alert Section */}
             <Card className="bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">

@@ -1,0 +1,38 @@
+/**
+ * @file estimate.service.ts
+ * @description Service สำหรับจัดการข้อมูลประมาณการราคา (Sales Estimate)
+ */
+
+export interface EstimateListParams {
+    estimate_no?: string;
+    inquiry_no?: string;
+    status?: string;
+    page?: number;
+    limit?: number;
+}
+
+export interface EstimateHeader {
+    id: number;
+    estimate_no: string;
+    inquiry_no: string;
+    markup: number;
+    total_price: number;
+    status: 'DRAFT' | 'SUBMITTED';
+}
+
+export const EstimateService = {
+    /**
+     * ดึงรายการ Estimate
+     */
+    getList: async (_params: EstimateListParams = {}) => {
+        // สำหรับนักพัฒนา: เชื่อมต่อ API จริงได้ที่นี่
+        console.log('Fetching estimates with params:', _params);
+        
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        return {
+            data: [], // คืนค่าว่างตามที่ผู้ใช้ต้องการ (ไม่เอา Mock ที่ Hardcode ใน UI)
+            total: 0
+        };
+    }
+};

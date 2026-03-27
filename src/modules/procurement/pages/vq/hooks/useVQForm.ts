@@ -57,7 +57,8 @@ const createEmptyLine = (): QuotationLineFormData => ({
   status: 'OPEN',
   remark: '',
   pr_line_id: 0,
-  rfq_line_id: 0
+  rfq_line_id: 0,
+  av_line_id: 0
 });
 
 interface RawVQLine {
@@ -88,6 +89,7 @@ interface RawVQLine {
     remark?: string | null;
     pr_line_id?: number | string | null;
     rfq_line_id?: number | string | null;
+    av_line_id?: number | string | null;
     line_no?: number | string | null;
 }
 
@@ -395,7 +397,8 @@ export const useVQForm = (
                     status: String(l.status || 'OPEN'),
                     remark: String(l.remark || ''),
                     pr_line_id: Number(l.pr_line_id) || 0,
-                    rfq_line_id: Number(l.rfq_line_id) || 0
+                    rfq_line_id: Number(l.rfq_line_id) || 0,
+                    av_line_id: Number(l.av_line_id || (l as any).approval_line_id) || 0
                 };
             });
 
@@ -439,6 +442,7 @@ export const useVQForm = (
                 valid_until: data.quotation_expiry_date || '', 
                 qc_id: Number(data.qc_id || 0),
                 rfq_id: Number(data.rfq_id || 0),
+                av_id: Number(data.av_id || (data as any).pr_approval_id || 0), // 🎯 Map av_id
                 rfq_no: data.rfq_no || '',
                 discount_expression: String(data.discount_expression || '0'),
                 tax_code_id: Number(data.tax_code_id || 0),
@@ -519,6 +523,7 @@ export const useVQForm = (
                         reference_price: Number(line.est_unit_price) || 0,
                         pr_line_id: Number(line.pr_line_id) || 0,
                         rfq_line_id: Number(line.rfq_line_id) || 0,
+                        av_line_id: Number((line as any).approval_line_id || (line as any).av_line_id || 0),
                         status: 'OPEN',
                         remark: String(line.description || '')
                     };
@@ -560,6 +565,7 @@ export const useVQForm = (
                 qc_id: 0,
                 pr_id: fullRFQ.pr_id ? Number(fullRFQ.pr_id) : undefined,
                 rfq_id: Number(fullRFQ.rfq_id) || 0,
+                av_id: Number(fullRFQ.pr_approval_id || (fullRFQ as any).av_id || 0), // 🎯 Map av_id from rfq
                 rfq_vendor_id: Number(selectedVendor?.rfq_vendor_id || initialRFQ.rfq_vendor_id || 0), // 🎯 Map rfq_vendor_id
                 rfq_no: fullRFQ.rfq_no || '',
                 remark: fullRFQ.remarks || '',
@@ -740,6 +746,7 @@ export const useVQForm = (
       uom_id: Number(line.uom_id) || 0,
       unit_price: price,
       discount_expression: String(absDiscount || 0),
+      av_line_id: line.av_line_id ? Number(line.av_line_id) : undefined,
     };
   };
 
@@ -759,6 +766,7 @@ export const useVQForm = (
       rfq_vendor_id: (data as any).rfq_vendor_id ? Number((data as any).rfq_vendor_id) : undefined, // 🎯 Add rfq_vendor_id
       pr_id: data.pr_id ? Number(data.pr_id) : undefined,
       rfq_id: data.rfq_id ? Number(data.rfq_id) : undefined,
+      av_id: (data as any).av_id ? Number((data as any).av_id) : undefined, // 🎯 Add av_id
       lead_time_days: Number(data.lead_time_days || data.delivery_days) || 0,
       payment_term_days: Number(data.payment_term_days || (data.payment_terms ? String(data.payment_terms).replace(/\D/g, '') : 0)) || 0,
       base_currency_code: String(data.currency || "THB"),

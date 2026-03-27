@@ -34,6 +34,7 @@ export const QuotationLineSchema = z.object({
   remark: z.string().optional().default(""),
   pr_line_id: z.coerce.number().optional().default(0),
   rfq_line_id: z.coerce.number().optional().default(0),
+  av_line_id: z.coerce.number().optional().default(0),
 }).refine(data => {
   // 🛡️ @Agent_Line_Guard: If this is NOT a ghost line (has some data), it must have an ID or Code
   const isGhost = !data.item_id && !data.item_code;
@@ -69,6 +70,7 @@ export const QuotationHeaderSchema = z.object({
   rfq_id: z.coerce.number().optional(), // FK to Request For Quotation
   pr_id: z.coerce.number().optional(), // FK to Purchase Request
   rfq_vendor_id: z.coerce.number().optional(), // 🎯 Pivot relation reference
+  av_id: z.coerce.number().optional(), // 🎯 Approval Reference
 
   rfq_no: z.string().min(1, 'กรุณาเลือกเลขที่ RFQ'), // Human-readable Ref RFQ
   currency: z.string().min(1, 'กรุณาระบุสกุลเงิน'),

@@ -100,15 +100,15 @@ export const sidebarMenuItems: MenuItem[] = [
         subItems: [
             { id: 'sales-dashboard', label: 'Sales Dashboard', path: '/sales/dashboard' },
             { id: 'inquiry', label: 'สำรวจความต้องการ (Inquiry)', path: '/sales/inquiry' },
-            { id: 'estimate', label: 'ประมาณราคา (Estimate)', path: '/sales/estimate' },
+            { id: 'estimate', label: 'ประมาณการราคา (Estimate)', path: '/sales/estimate' },
             { id: 'quotation', label: 'ใบเสนอราคา (Quotation)', path: '/sales/quotation' },
+            { id: 'quotation-approval', label: 'อนุมัติใบเสนอราคา', path: '/sales/quotation-approval' },
+            { id: 'reservation', label: 'ใบสั่งจอง (Reservation)', path: '/sales/reservation' },
             { id: 'sales-order', label: 'คำสั่งขาย (Sales Order)', path: '/sales/order' },
             { id: 'delivery', label: 'จัดส่งสินค้า (Delivery / DO)', path: '/sales/delivery' },
             { id: 'sales-invoice', label: 'วางบิล/ใบแจ้งหนี้ (Invoice)', path: '/sales/invoice' },
             { id: 'sales-return', label: 'รับคืนสินค้า/ลดหนี้ (Sales Return)', path: '/sales/return' },
             { id: 'pricing', label: 'เงื่อนไขราคา/โปรโมชัน', path: '/sales/pricing' },
-            { id: 'customer', label: 'ลูกค้า (Customer Master)', path: '/sales/customer' },
-            { id: 'sales-approval', label: 'อนุมัติฝ่ายขาย', path: '/sales/approval' },
             { id: 'sales-reports', label: 'รายงานขาย (Sales Reports)', path: '/sales/reports' },
         ]
     },
@@ -269,53 +269,71 @@ export const sidebarMenuItems: MenuItem[] = [
             {
                 id: 'master-data-company',
                 label: 'Master Data Company',
+                path: '/master-data/company',
                 subItems: [
+                    { id: 'company-info', label: 'กำหนดข้อมูลบริษัท', path: '/master-data/company-info' },
                     { id: 'branch-code', label: 'กำหนดรหัสสาขา', path: '/master-data/branch' },
+                    { id: 'general-settings', label: 'กำหนดตั้งค่าทั่วไป', path: '/master-data/general-settings' },
                     {
-                    id: 'employee-side',
-                    label: 'กำหนดรหัสฝ่าย (Employee Side)',
-                    path: '/master-data/employee-side',
-                },
-                {
-                    id: 'section-code',
-                    label: 'กำหนดรหัสแผนก (Section)',
-                    path: '/master-data/section',
-                },
-                {
-                    id: 'job-code',
-                    label: 'กำหนดรหัส Job',
-                    path: '/master-data/job',
-                },
-                {
-                    id: 'employee-code',
-                    label: 'กำหนดรหัสพนักงาน',
-                    path: '/master-data/employee',
-                },
-                {
-                    id: 'employee-group',
-                    label: 'กำหนดรหัสกลุ่มพนักงาน',
-                    path: '/master-data/employee-group',
-                },
-                {
-                    id: 'position',
-                    label: 'กำหนดรหัสตำแหน่ง',
-                    path: '/master-data/position',
-                },
-                {
-                    id: 'sales-area',
-                    label: 'กำหนดเขตการขาย',
-                    path: '/master-data/sales-area',
-                },
-                {
-                    id: 'sales-channel',
-                    label: 'กำหนดช่องทางการขาย',
-                    path: '/master-data/sales-channel',
-                },
-                {
-                    id: 'sales-target',
-                    label: 'กำหนดรหัสเป้าการขาย',
-                    path: '/master-data/sales-target',
-                },
+                        id: 'employee-side',
+                        label: 'กำหนดรหัสฝ่าย (Employee Side)',
+                        path: '/master-data/employee-side',
+                    },
+                    {
+                        id: 'section-code',
+                        label: 'กำหนดรหัสแผนก (Section)',
+                        path: '/master-data/section',
+                    },
+                    {
+                        id: 'job-code',
+                        label: 'กำหนดรหัส Job',
+                        path: '/master-data/job',
+                    },
+                    {
+                        id: 'employee-code',
+                        label: 'กำหนดรหัสพนักงาน',
+                        path: '/master-data/employee',
+                    },
+                    {
+                        id: 'employee-group',
+                        label: 'กำหนดรหัสกลุ่มพนักงาน',
+                        path: '/master-data/employee-group',
+                    },
+                    {
+                        id: 'position',
+                        label: 'กำหนดรหัสตำแหน่ง',
+                        path: '/master-data/position',
+                    },
+                    {
+                        id: 'sales-area',
+                        label: 'กำหนดเขตการขาย',
+                        path: '/master-data/sales-area',
+                    },
+                    {
+                        id: 'sales-channel',
+                        label: 'กำหนดช่องทางการขาย',
+                        path: '/master-data/sales-channel',
+                    },
+                    {
+                        id: 'sales-target',
+                        label: 'กำหนดรหัสเป้าการขาย',
+                        path: '/master-data/sales-target',
+                    },
+                    {
+                        id: 'standard-cost',
+                        label: 'กำหนดราคาซื้อและต้นทุนมาตรฐาน',
+                        path: '/master-data/standard-cost',
+                    },
+                    {
+                        id: 'price-level',
+                        label: 'กำหนดราคาสินค้า (Price Level)',
+                        path: '/master-data/price-level',
+                    },
+                    {
+                        id: 'pricelist',
+                        label: 'กำหนดราคาสินค้า (Price List)',
+                        path: '/master-data/price-list',
+                    },
                 ]
             },
             {

@@ -69,9 +69,15 @@ export const ROUTES = {
   },
   MASTER_DATA: {
     DASHBOARD: '/master-data',
+    COMPANY: '/master-data/company',
+    COMPANY_INFO: '/master-data/company-info',
+    GENERAL_SETTINGS: '/master-data/general-settings',
     VENDOR: '/master-data/vendor',
     BRANCH: '/master-data/branch',
     SECTION: '/master-data/section',
+    STANDARD_COST: '/master-data/standard-cost',
+    PRICE_LEVEL: '/master-data/price-level',
+    PRICE_LIST: '/master-data/price-list',
   }
 } as const;
 
@@ -126,16 +132,16 @@ export const placeholderRoutes: Record<string, PlaceholderRoute[]> = {
     ],
     sales: [
         { path: 'sales/dashboard', title: 'Sales Dashboard' },
-        { path: 'sales/quotation', title: 'Quotation' },
         { path: 'sales/inquiry', title: 'Inquiry' },
         { path: 'sales/estimate', title: 'Estimate' },
+        { path: 'sales/quotation', title: 'Quotation' },
+        { path: 'sales/quotation-approval', title: 'Quotation Approval' },
+        { path: 'sales/reservation', title: 'Reservation' },
         { path: 'sales/order', title: 'Sales Order' },
         { path: 'sales/delivery', title: 'Delivery / DO' },
         { path: 'sales/invoice', title: 'Sales Invoice' },
         { path: 'sales/return', title: 'Sales Return' },
         { path: 'sales/pricing', title: 'Pricing & Promotion' },
-        { path: 'sales/customer', title: 'Customer Master' },
-        { path: 'sales/approval', title: 'Sales Approval' },
         { path: 'sales/reports', title: 'Sales Reports' },
     ],
     mrp: [
