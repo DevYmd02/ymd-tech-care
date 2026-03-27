@@ -26,12 +26,12 @@ export const CostCenterTab: React.FC<CostCenterTabProps> = ({
     return (
         <div className="space-y-4">
             {data.map((cc) => {
-                const isExpanded = expandedId === cc.id;
+                const isExpanded = expandedId === cc.cost_center_id;
                 return (
-                    <div key={cc.id} className={`bg-white dark:bg-gray-800 rounded-xl border ${cc.is_active ? 'border-gray-200 dark:border-gray-700' : 'border-red-200 dark:border-red-900/30 opacity-75'} overflow-hidden transition-all shadow-sm hover:shadow-md`}>
+                    <div key={cc.cost_center_id} className={`bg-white dark:bg-gray-800 rounded-xl border ${cc.is_active ? 'border-gray-200 dark:border-gray-700' : 'border-red-200 dark:border-red-900/30 opacity-75'} overflow-hidden transition-all shadow-sm hover:shadow-md`}>
                         <div 
                             className="p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                            onClick={() => toggleExpand(cc.id)}
+                            onClick={() => toggleExpand(cc.cost_center_id)}
                         >
                             <div className="flex items-start justify-between gap-2">
                                 <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
@@ -59,21 +59,21 @@ export const CostCenterTab: React.FC<CostCenterTabProps> = ({
                                 </div>
                                 <div className="flex items-center gap-1 shrink-0 mt-1" onClick={(e) => e.stopPropagation()}>
                                     <button 
-                                        onClick={() => handleEdit(cc.id)}
+                                        onClick={() => handleEdit(cc.cost_center_id)}
                                         className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                                         title="แก้ไข"
                                     >
                                         <Database size={16} />
                                     </button>
                                     <button 
-                                        onClick={() => handleDelete(cc.id)}
+                                        onClick={() => handleDelete(cc.cost_center_id)}
                                         className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                                         title="ลบ"
                                     >
                                         <Trash2 size={16} />
                                     </button>
                                     <button 
-                                        onClick={() => toggleExpand(cc.id)}
+                                        onClick={() => toggleExpand(cc.cost_center_id)}
                                         className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                                         title={isExpanded ? 'ย่อ' : 'ขยาย'}
                                     >
@@ -94,6 +94,27 @@ export const CostCenterTab: React.FC<CostCenterTabProps> = ({
                                         <p className="text-sm font-bold text-gray-900 dark:text-white">
                                             {Number(cc.budget_amount || 0).toLocaleString('en-US', { style: 'currency', currency: 'THB' })}
                                         </p>
+                                    </div>
+                                </div>
+                                
+                                <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <Database size={16} className="text-gray-500" />
+                                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Database Relations</span>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-4 text-sm">
+                                        <div className="p-3 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                                            <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Table</p>
+                                            <p className="text-purple-600 dark:text-purple-400 font-mono text-xs">{dbRelation.dbTable}</p>
+                                        </div>
+                                        <div className="p-3 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                                            <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Relations</p>
+                                            <p className="text-purple-600 dark:text-purple-400 font-mono text-[10px]">{dbRelation.relations.join(', ')}</p>
+                                        </div>
+                                        <div className="p-3 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                                            <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">FK</p>
+                                            <p className="text-purple-600 dark:text-purple-400 font-mono text-xs">{dbRelation.fk}</p>
+                                        </div>
                                     </div>
                                 </div>
                                 

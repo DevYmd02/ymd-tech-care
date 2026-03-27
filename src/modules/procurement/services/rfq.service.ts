@@ -113,13 +113,32 @@ export const RFQService = {
     // 🧹 Clean Parameters to prevent "undefined" in URL
     const cleanedParams = cleanParams(params || {});
     
-    // 🧹 Extract ONLY safe pagination/sorting for backend to prevent flaky filter breakage
-    const apiParams: Record<string, string | number | boolean | undefined | null> = {};
-    if (cleanedParams.page) apiParams.page = cleanedParams.page;
-    if (cleanedParams.limit) apiParams.limit = cleanedParams.limit;
-    if (cleanedParams.sort) apiParams.sort = cleanedParams.sort;
+    // 🧹 Extract API Params — include all filters but keep pagination/sorting as core
+    const apiParams: Record<string, string | number | boolean | undefined | null> = { ...cleanedParams };
 
-    // ⚡ PHASE 2: Let backend do pagination
+    const needsClientFilter = !!(
+        params?.rfq_no || 
+        params?.pr_no || 
+        params?.ref_pr_no || 
+        params?.creator_name || 
+        params?.status || 
+        params?.date_start || 
+        params?.date_end
+    );
+
+    // 🎯 HYBRID FALLBACK: Strip filters from API call if client filtering is active
+    // Backend may not support these yet or may have inconsistent internal status (e.g. 'DRAFT' vs UI 'SENT')
+    if (needsClientFilter && !USE_MOCK) {
+        delete apiParams.rfq_no;
+        delete apiParams.pr_no;
+        delete apiParams.ref_pr_no;
+        delete apiParams.creator_name;
+        delete apiParams.status;
+        delete apiParams.date_start;
+        delete apiParams.date_end;
+    }
+
+    // ⚡ PHASE 2: Fetch data from backend
     const res = await api.get<RFQListResponse & { pageSize?: number }>(ENDPOINTS.list, { 
         params: apiParams 
     });
@@ -127,52 +146,42 @@ export const RFQService = {
     // 🎯 Trusting Backend + Normalizing for UI (The Pipeline Fix)
     const items = extractArrayFromResponse<RFQHeader>(res);
 
-    // 🎯 HYBRID FALLBACK: Apply Client-Side Filtering when using Real API
-    if (params) {
-        const normalizedItems = items.map((item) => {
-            const u = item.requested_by_user;
-            const creatorName = u
-                ? `${u.employee_firstname_th} ${u.employee_lastname_th}`.trim()
-                : (item.created_by_name || item.creator_name || '-');
+    // 🎯 HYBRID FALLBACK: Apply Client-Side Filtering when using Real API or Mock
+    const normalizedItems = items.map((item) => {
+        const u = item.requested_by_user;
+        const creatorName = u
+            ? `${u.employee_firstname_th} ${u.employee_lastname_th}`.trim()
+            : (item.created_by_name || item.creator_name || '-');
 
-            // 🎯 Dynamic Status Matching (Mirroring Layout Logic)
-            const sentCount = item.vendor_sent ?? item.sent_vendors_count ?? 0;
-            const total = item.vendor_total ?? item.vendor_count ?? 0;
-            let currentStatus = item.status;
-            if (!['CLOSED', 'CANCELLED'].includes(item.status) && total > 0 && sentCount > 0) {
-                 currentStatus = 'SENT';
-            }
-
-            return {
-                ...item,
-                creator_name: creatorName,
-                status: currentStatus, // Overwrite with dynamic status
-                ref_pr_no: item.ref_pr_no || item.pr_no || item.pr?.pr_no || null,
-                pr_no: item.ref_pr_no || item.pr_no || item.pr?.pr_no || null,
-            };
-        });
-
-        // ⚡ PHASE 2: Server-Side Pagination & Filtering (Real API)
-        if (!USE_MOCK) {
-            return {
-                data: normalizedItems,
-                total: res.total ?? items.length,
-                page: res.page ?? 1,
-                limit: res.limit ?? 20,
-                totalPages: res.totalPages ?? 1
-            } as unknown as RFQListResponse;
+        // 🎯 Dynamic Status Matching (Mirroring Layout Logic)
+        const sentCount = item.vendor_sent ?? item.sent_vendors_count ?? 0;
+        const total = item.vendor_total ?? item.vendor_count ?? 0;
+        let currentStatus = item.status;
+        if (!['CLOSED', 'CANCELLED'].includes(item.status) && total > 0 && sentCount > 0) {
+              currentStatus = 'SENT';
         }
 
+        return {
+            ...item,
+            creator_name: creatorName,
+            status: currentStatus, // Overwrite with dynamic status
+            ref_pr_no: item.ref_pr_no || item.pr_no || item.pr?.pr_no || null,
+            pr_no: item.ref_pr_no || item.pr_no || item.pr?.pr_no || null,
+        };
+    });
+
+    if (needsClientFilter || USE_MOCK) {
         const filterParams: Record<string, string | number | boolean | undefined | null> = {};
-        if (params.rfq_no) filterParams.rfq_no = params.rfq_no;
-        if (params.pr_no) filterParams.pr_no = params.pr_no;
-        if (params.creator_name) filterParams.creator_name = params.creator_name;
-        if (params.status && params.status !== 'ALL') filterParams.status = params.status;
-        if (params.date_start) filterParams.date_start = params.date_start;
-        if (params.date_end) filterParams.date_end = params.date_end;
-        if (params.page) filterParams.page = params.page;
-        if (params.limit) filterParams.limit = params.limit;
-        if (params.sort) filterParams.sort = params.sort;
+        if (params?.rfq_no) filterParams.rfq_no = params.rfq_no;
+        if (params?.pr_no) filterParams.pr_no = params.pr_no;
+        if (params?.ref_pr_no) filterParams.pr_no = params.ref_pr_no; // Map ref_pr_no to pr_no for filter
+        if (params?.creator_name) filterParams.creator_name = params.creator_name;
+        if (params?.status && params.status !== 'ALL') filterParams.status = params.status;
+        if (params?.date_start) filterParams.date_start = params.date_start;
+        if (params?.date_end) filterParams.date_end = params.date_end;
+        if (params?.page) filterParams.page = params.page;
+        if (params?.limit) filterParams.limit = params.limit;
+        if (params?.sort) filterParams.sort = params.sort;
 
         return applyClientFilters<RFQHeader>(normalizedItems, filterParams, {
             searchableFields: ['rfq_no', 'pr_no', 'creator_name'],
@@ -184,13 +193,8 @@ export const RFQService = {
     const total = typeof res?.total === 'number' ? res.total : items.length;
     const limit = res?.limit || res?.pageSize || Number(cleanedParams.limit) || 20;
 
-    const defaultNormalizedItems = items.map((item) => ({
-        ...item,
-        ref_pr_no: item.ref_pr_no || item.pr_no || item.pr?.pr_no || null,
-    }));
-
     return {
-        data: defaultNormalizedItems,
+        data: normalizedItems,
         total: total,
         page: res?.page || Number(cleanedParams.page) || 1,
         limit: limit,
