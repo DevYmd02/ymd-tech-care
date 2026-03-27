@@ -124,6 +124,9 @@ export const VQFormLines: React.FC<VQFormLinesProps> = ({
                                                             )}
                                                         />
                                                         <input type="hidden" {...register(`vq_lines.${index}.item_id`, { valueAsNumber: true })} />
+                                                        <input type="hidden" {...register(`vq_lines.${index}.pr_line_id`, { valueAsNumber: true })} />
+                                                        <input type="hidden" {...register(`vq_lines.${index}.rfq_line_id`, { valueAsNumber: true })} />
+                                                        <input type="hidden" {...register(`vq_lines.${index}.pr_approval_line_id`, { valueAsNumber: true })} />
                                                         {!isItemLocked && (
                                                             <button type="button" onClick={() => onOpenProductSearch(index)} className="absolute right-1 top-1 h-[24px] w-[24px] flex items-center justify-center bg-gray-200 dark:bg-slate-700 group-hover/search:bg-indigo-600 dark:group-hover/search:bg-indigo-600 text-gray-600 group-hover/search:text-white dark:text-white rounded transition-all duration-200">
                                                                 <Search size={14} />

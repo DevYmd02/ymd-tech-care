@@ -313,7 +313,8 @@ export const getPendingColumns = (tab: 'WAITING_VQ' | 'WAITING_RFQ', context: VQ
                                         setInitialRFQForCreate({ 
                                             ...rfqInit, 
                                             vendor_id: item.vendor_id, 
-                                            rfq_vendor_id: item.rfq_vendor_id 
+                                            rfq_vendor_id: item.rfq_vendor_id,
+                                            pr_approval_id: item.pr_approval_id
                                         } as RFQHeader);
                                         
                                         setSelectedVqId(null);

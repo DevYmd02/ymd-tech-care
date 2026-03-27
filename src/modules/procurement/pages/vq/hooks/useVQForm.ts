@@ -58,7 +58,7 @@ const createEmptyLine = (): QuotationLineFormData => ({
   remark: '',
   pr_line_id: 0,
   rfq_line_id: 0,
-  av_line_id: 0
+  pr_approval_line_id: 0
 });
 
 interface RawVQLine {
@@ -89,7 +89,7 @@ interface RawVQLine {
     remark?: string | null;
     pr_line_id?: number | string | null;
     rfq_line_id?: number | string | null;
-    av_line_id?: number | string | null;
+    pr_approval_line_id?: number | string | null;
     line_no?: number | string | null;
 }
 
@@ -244,15 +244,23 @@ export const useVQForm = (
     }
   }, [watchCurrency, setValue, getValues]);
 
-  const handleSelectRFQVendor = useCallback(async (vendorId: number) => {
+  const handleSelectRFQVendor = useCallback(async (vendorId: number, manualRfqVendorId?: number) => {
     try {
       const vendorDetails = await VendorService.getById(vendorId);
       setValue('vendor_id', vendorId, { shouldValidate: true });
       
       // 🎯 Lookup and set rfq_vendor_id from availableVendors list
-      const listVendor = availableVendors.find(v => Number(v.vendor_id) === Number(vendorId));
-      if (listVendor?.rfq_vendor_id) {
-          setValue('rfq_vendor_id', Number(listVendor.rfq_vendor_id), { shouldValidate: true });
+      // 🔄 FIX: If manualRfqVendorId is provided (e.g., during init/auto-select), use it directly
+      if (manualRfqVendorId) {
+          setValue('rfq_vendor_id', manualRfqVendorId, { shouldValidate: true });
+          logger.debug('🎯 [useVQForm] Manual Vendor select VQ-RFQLINK (Injected):', { vendor_id: vendorId, rfq_vendor_id: manualRfqVendorId });
+      } else {
+          const listVendor = availableVendors.find(v => Number(v.vendor_id) === Number(vendorId));
+          if (listVendor) {
+              const rfqVendorId = Number(listVendor.rfq_vendor_id || (listVendor as any).rfqVendorId || (listVendor as any).id) || undefined;
+              logger.debug('🎯 [useVQForm] Manual Vendor select VQ-RFQLINK (State Lookup):', { vendor_id: vendorId, rfq_vendor_id: rfqVendorId });
+              setValue('rfq_vendor_id', rfqVendorId, { shouldValidate: true });
+          }
       }
 
       setValue('vendor_code', vendorDetails?.vendor_code || '', { shouldValidate: true });
@@ -398,7 +406,7 @@ export const useVQForm = (
                     remark: String(l.remark || ''),
                     pr_line_id: Number(l.pr_line_id) || 0,
                     rfq_line_id: Number(l.rfq_line_id) || 0,
-                    av_line_id: Number(l.av_line_id || (l as any).approval_line_id) || 0
+                    pr_approval_line_id: Number(l.pr_approval_line_id || (l as any).approval_line_id || (l as any).av_line_id) || 0
                 };
             });
 
@@ -442,7 +450,12 @@ export const useVQForm = (
                 valid_until: data.quotation_expiry_date || '', 
                 qc_id: Number(data.qc_id || 0),
                 rfq_id: Number(data.rfq_id || 0),
-                av_id: Number(data.av_id || (data as any).pr_approval_id || 0), // 🎯 Map av_id
+                pr_approval_id: (() => {
+                    const raw = data.pr_approval_id || (data as any).av_id || (data as any).approval_id || 0;
+                    const num = Number(raw);
+                    return Number.isFinite(num) && num > 0 ? num : 0;
+                })(),
+                rfq_vendor_id: Number(data.rfq_vendor_id || (data as any).rfqVendorId || 0),
                 rfq_no: data.rfq_no || '',
                 discount_expression: String(data.discount_expression || '0'),
                 tax_code_id: Number(data.tax_code_id || 0),
@@ -495,6 +508,13 @@ export const useVQForm = (
             VQService.getVQsByRfqNo(initialRFQ.rfq_no || '').catch(() => ({ data: [] }))
         ]).then(async ([rawRFQ, itemsRes, existingVQsRes]) => {
             const fullRFQ = unwrapResponseData(rawRFQ);
+            logger.debug('🎯 [useVQForm] RFQ Hydration Payload:', {
+                rfq_id: fullRFQ?.rfq_id,
+                pr_approval_id: fullRFQ?.pr_approval_id,
+                av_id: (fullRFQ as any)?.av_id,
+                approval_id: (fullRFQ as any)?.approval_id,
+                pr_id: fullRFQ?.pr_id
+            });
             const masterItems = Array.isArray(itemsRes) ? itemsRes : [];
             const existingVendorIds = ((existingVQsRes as any)?.data || [])
                 .filter((v: any) => v.status !== 'CANCELLED')
@@ -523,7 +543,11 @@ export const useVQForm = (
                         reference_price: Number(line.est_unit_price) || 0,
                         pr_line_id: Number(line.pr_line_id) || 0,
                         rfq_line_id: Number(line.rfq_line_id) || 0,
-                        av_line_id: Number((line as any).approval_line_id || (line as any).av_line_id || 0),
+                        pr_approval_line_id: (() => {
+                            const raw = (line as any).pr_approval_line_id || (line as any).approval_line_id || (line as any).av_line_id || 0;
+                            const num = Number(raw);
+                            return Number.isFinite(num) ? num : 0;
+                        })(),
                         status: 'OPEN',
                         remark: String(line.description || '')
                     };
@@ -560,13 +584,21 @@ export const useVQForm = (
                 target_currency: fullRFQ.rfq_quote_currency_code || 'THB',
                 exchange_rate: Number(fullRFQ.rfq_exchange_rate) || 1,
                 vq_lines: mappedLines,
-                payment_term_days: 0,
-                lead_time_days: 0,
                 qc_id: 0,
-                pr_id: fullRFQ.pr_id ? Number(fullRFQ.pr_id) : undefined,
-                rfq_id: Number(fullRFQ.rfq_id) || 0,
-                av_id: Number(fullRFQ.pr_approval_id || (fullRFQ as any).av_id || 0), // 🎯 Map av_id from rfq
-                rfq_vendor_id: Number(selectedVendor?.rfq_vendor_id || initialRFQ.rfq_vendor_id || 0), // 🎯 Map rfq_vendor_id
+                pr_id: fullRFQ.pr_id ? Number(fullRFQ.pr_id) : (initialRFQ.pr_id ? Number(initialRFQ.pr_id) : null),
+                rfq_id: Number(fullRFQ.rfq_id || initialRFQ.rfq_id) || 0,
+                pr_approval_id: (() => {
+                    // 💧 Multi-scan for Approval ID across common backend naming variants
+                    const raw = initialRFQ.pr_approval_id || 
+                               fullRFQ.pr_approval_id || 
+                               (fullRFQ as any).av_id || 
+                               (fullRFQ as any).approval_id || 
+                               (fullRFQ as any).approvalId ||
+                               (fullRFQ as any).pr?.pr_approval_id;
+                    const num = Number(raw);
+                    return Number.isFinite(num) && num > 0 ? num : undefined;
+                })(),
+                rfq_vendor_id: Number(initialRFQ.rfq_vendor_id || selectedVendor?.rfq_vendor_id || (selectedVendor as any)?.rfqVendorId || (selectedVendor as any)?.id) || undefined,
                 rfq_no: fullRFQ.rfq_no || '',
                 remark: fullRFQ.remarks || '',
                 valid_until: formatDateForInputHelper(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
@@ -581,7 +613,7 @@ export const useVQForm = (
 
             // 🔄 FETCH FULL VENDOR DETAILS for accurate code and name
             if (initialRFQ.vendor_id) {
-                await handleSelectRFQVendor(initialRFQ.vendor_id);
+                await handleSelectRFQVendor(Number(initialRFQ.vendor_id), Number(initialRFQ.rfq_vendor_id || (initialRFQ as any).id));
             }
 
             setIsDataLoading(false);
@@ -730,24 +762,26 @@ export const useVQForm = (
   };
 
   // 🧹 @Agent_Payload_Purifier: Strict Sanitization
-  const sanitizeLine = (line: QuotationLineFormData, index: number): Partial<QuotationLine> => {
+  const sanitizeLine = (line: QuotationLineFormData, index: number): any => {
     const qty = Number(line.qty) || 0;
     const price = Number(line.unit_price) || 0;
-    const base = qty * price;
-    // 🎯 Frontend flattening: Evaluate percentage to sum to prevent backend parseDiscountRaw crash
-    const absDiscount = parseDiscountAmount(line.discount_expression, base);
-
-    return {
-      line_no: index + 1, 
+    
+    // Whitelist-only mapping to satisfy strict backend DTO validation
+    const result: any = {
+      line_no: index + 1,
       item_id: Number(line.item_id) || 0,
-      pr_line_id: line.pr_line_id ? Number(line.pr_line_id) : undefined,
-      status: "OPEN", 
-      qty,
-      uom_id: Number(line.uom_id) || 0,
+      qty: qty,
       unit_price: price,
-      discount_expression: String(absDiscount || 0),
-      av_line_id: line.av_line_id ? Number(line.av_line_id) : undefined,
+      uom_id: Number(line.uom_id) || 0,
+      discount_expression: line.discount_expression || '0',
+      status: "OPEN", 
     };
+
+    // Optional but strictly named IDs
+    if (line.pr_line_id) result.pr_line_id = Number(line.pr_line_id);
+    if (line.pr_approval_line_id) result.approval_line_id = Number(line.pr_approval_line_id);
+
+    return result;
   };
 
 
@@ -763,10 +797,10 @@ export const useVQForm = (
       quotation_date: data.quotation_date ? new Date(data.quotation_date).toISOString() : new Date().toISOString(),
       quotation_expiry_date: data.valid_until ? new Date(data.valid_until).toISOString() : undefined,
       vendor_id: Number(data.vendor_id),
-      rfq_vendor_id: (data as any).rfq_vendor_id ? Number((data as any).rfq_vendor_id) : undefined, // 🎯 Add rfq_vendor_id
-      pr_id: data.pr_id ? Number(data.pr_id) : undefined,
-      rfq_id: data.rfq_id ? Number(data.rfq_id) : undefined,
-      av_id: (data as any).av_id ? Number((data as any).av_id) : undefined, // 🎯 Add av_id
+      rfq_vendor_id: Number(data.rfq_vendor_id) || undefined,
+      pr_id: Number(data.pr_id) || undefined,
+      rfq_id: Number(data.rfq_id) || undefined,
+      pr_approval_id: Number(data.pr_approval_id) || undefined,
       lead_time_days: Number(data.lead_time_days || data.delivery_days) || 0,
       payment_term_days: Number(data.payment_term_days || (data.payment_terms ? String(data.payment_terms).replace(/\D/g, '') : 0)) || 0,
       base_currency_code: String(data.currency || "THB"),
@@ -806,11 +840,22 @@ export const useVQForm = (
       }
 
 
-
       const validLines = data.vq_lines.filter(l => (l.item_id && Number(l.item_id) > 0) || (l.item_code && l.item_code.trim() !== ""));
       if (validLines.length === 0) {
           showAlert('ต้องมีรายการสินค้าอย่างน้อย 1 รายการ');
           return;
+      }
+
+      // 🚨 REFERENTIAL INTEGRITY GUARD: Check for mandatory IDs before sending
+      if (!data.rfq_vendor_id && !vqId) {
+          logger.error('💥 [useVQForm] MISSING MANDATORY ID: rfq_vendor_id', { data });
+          showAlert('ไม่พบ ID ผู้ขายใน RFQ (rfq_vendor_id) กรุณาติดต่อผู้ช่วยสอนเพื่อตรวจสอบข้อมูลต้นทาง');
+          return;
+      }
+      if (!data.pr_approval_id && !vqId) {
+          logger.warn('⚠️ [useVQForm] MISSING OPTIONAL-BUT-STRICT ID: pr_approval_id', { data });
+          // If the backend strictly requires it (400), we should warn. 
+          // But some RFQs might not have a PR. If it's mandatory, showAlert.
       }
       
       // 🧼 Sanitize Payload before sending
@@ -917,9 +962,11 @@ export const useVQForm = (
           })
       );
 
-      // 3. Map Vendors with hasVQ flag (INSTEAD of filtering out)
+      // 3. Map Vendors with all junction ID variants normalized
       const mappedVendors = vendorsWithDetails.map((v) => ({
           ...v,
+          vendor_id: Number(v.vendor_id),
+          rfq_vendor_id: Number(v.rfq_vendor_id || v.rfqVendorId || v.id),
           hasVQ: existingVendorIds.includes(Number(v.vendor_id)),
           status: v.status || 'ACTIVE'
       }));
@@ -947,6 +994,11 @@ export const useVQForm = (
           reference_price: Number(line.est_unit_price) || 0,
           pr_line_id: line.pr_line_id ? Number(line.pr_line_id) : 0,
           rfq_line_id: line.rfq_line_id ? Number(line.rfq_line_id) : 0,
+          pr_approval_line_id: (() => {
+              const raw = (line as any).pr_approval_line_id || (line as any).approval_line_id || (line as any).av_line_id || 0;
+              const num = Number(raw);
+              return Number.isFinite(num) ? num : 0;
+          })(),
           status: 'OPEN',
           remark: String(line.description || '')
           };
@@ -956,6 +1008,11 @@ export const useVQForm = (
       setValue('rfq_id', Number(fullRFQ.rfq_id), { shouldValidate: true });
       setValue('rfq_no', fullRFQ.rfq_no || '', { shouldValidate: true });
       setValue('pr_id', fullRFQ.pr_id ? Number(fullRFQ.pr_id) : 0, { shouldValidate: true });
+      setValue('pr_approval_id', (() => {
+          const raw = fullRFQ.pr_approval_id || (fullRFQ as any).av_id || (fullRFQ as any).approval_id || (fullRFQ as any).approvalId || (fullRFQ as any).pr?.pr_approval_id;
+          const num = Number(raw);
+          return Number.isFinite(num) && num > 0 ? num : undefined;
+      })(), { shouldValidate: true });
       setValue('qc_id', 0, { shouldValidate: true });
       
       setValue('currency', fullRFQ.rfq_base_currency_code || 'THB', { shouldValidate: true });
@@ -976,7 +1033,7 @@ export const useVQForm = (
       const unvqd = mappedVendors.filter((v) => !v.hasVQ);
       if (unvqd.length === 1) {
           const singleVendor = unvqd[0];
-          await handleSelectRFQVendor(singleVendor.vendor_id);
+          await handleSelectRFQVendor(singleVendor.vendor_id, singleVendor.rfq_vendor_id);
       }
 
       setTimeout(() => trigger('vq_lines'), 0);
