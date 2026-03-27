@@ -413,6 +413,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                     note_to_vendor: line.note_to_vendor || '',
                     item_id: line.item_id || undefined,
                     pr_line_id: line.pr_line_id || undefined,
+                    approval_line_id: line.approval_line_id || undefined,
                 }));
 
                 // Fetch PR detail if pr_id exists but pr_no is missing from backend response 
@@ -440,6 +441,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                     rfq_date: rfq.rfq_date?.split('T')[0] || new Date().toLocaleDateString('en-CA'),
                     pr_id: rfq.pr_id || null,
                     pr_no: fetchedPrNo,
+                    pr_approval_id: rfq.pr_approval_id || null,
                     approved_pr_no: (rfq as unknown as Record<string, unknown>).approved_pr_no as string || null,
                     branch_id: rfq.branch_id ? Number(rfq.branch_id) : 0,
                     status: (rfq.status as RFQStatus) || 'DRAFT',

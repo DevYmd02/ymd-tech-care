@@ -275,16 +275,16 @@ export default function VQListPage() {
                 // 🎯 FILTER: Only show SENT vendors that don't have a VQ created yet
                 if (isSent && !hasVq) {
                     flattened.push({
-                        rfq_vendor_id: v.rfq_vendor_id,
+                        rfq_vendor_id: v.rfq_vendor_id || v.rfqVendorId || v.id,
                         pr_id: rfq.pr_id,
                         pr_no: rfq.pr_no,
                         rfq_id: rfq.rfq_id,
                         rfq_no: rfq.rfq_no,
                         vendor_id: v.vendor_id,
-                        vendor_code: v.vendor_code,
                         vendor_name: v.vendor_name,
                         status: v.status,
                         created_at: rfq.created_at,
+                        pr_approval_id: rfq.pr_approval_id || rfq.av_id || (rfq as any).approval_id || (rfq as any).approvalId,
                     } as VQPendingQueueItem);
                 }
             });

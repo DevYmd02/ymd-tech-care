@@ -148,6 +148,8 @@ export const VQFormHeader: React.FC<VQFormHeaderProps> = ({
                         <label className="text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-1 block">ชื่อผู้ขาย (Vendor) <span className="text-red-500">*</span></label>
                         <div className="flex gap-2">
                             <input type="hidden" {...register('vendor_id')} />
+                            <input type="hidden" {...register('rfq_vendor_id')} />
+                            <input type="hidden" {...register('pr_approval_id')} />
                             <input 
                                 value={watchVendorCode || ''}
                                 placeholder="รหัสผู้ขาย" 

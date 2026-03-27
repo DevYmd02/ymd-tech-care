@@ -33,7 +33,7 @@ export interface QuotationHeader {
     rfq_id: number | null;              // Relation ID
     pr_id: number | null;               // Relation ID
     rfq_vendor_id?: number | null;      // Relation ID
-    av_id?: number | null;              // Relation ID (ID Reference to pr_approval)
+    pr_approval_id?: number | null;     // 🎯 Corrected: ID Reference to pr_approval
 
     // Nested Objects (Anticipating JOINs)
     vendor?: { vendor_id: number; vendor_name: string; vendor_code?: string; vendor_name_th?: string; name_th?: string; payment_term_days?: number | null; };
@@ -107,7 +107,8 @@ export interface QuotationLine {
     quotation_id?: number;              // INTEGER
     pr_line_id?: number;                // INTEGER
     rfq_line_id?: number;               // INTEGER (Reference to specific RFQ line)
-    av_line_id?: number;                // INTEGER (Reference to PR Approval Line)
+    pr_approval_line_id?: number;       // UI/Form State Reference
+    approval_line_id?: number;          // 🎯 Backend DTO Reference
     item_id?: number;                   // INTEGER
     item_code: string;                  // Required
     item_name: string;                  // Required
@@ -197,6 +198,7 @@ export interface VQPendingQueueItem {
     created_at: string;
     vq_no?: string;                     // Added for filtering logic
     vq_header_id?: number;              // Added for navigation/linkage
+    pr_approval_id?: number | null;     // 🎯 SURFACED for referential integrity
 }
 
 export interface VQPendingQueueResponse {
