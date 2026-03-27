@@ -20,6 +20,8 @@ import { VendorSearchModal } from '@/modules/master-data/vendor/components/selec
 import { ProductSearchModal } from './ProductSearchModal';
 import { PRSearchModal } from './PRSearchModal';
 import { calculatePricingSummary, parseDiscountAmount } from '@/modules/procurement/utils/pricing.utils';
+import { cn } from '@/shared/utils/cn';
+
 
 import type { POFormData, POLine } from '@/modules/procurement/schemas/po-schemas';
 import { usePOForm } from '../hooks/usePOForm';
@@ -295,8 +297,12 @@ export default function POFormModal({
                                                     value={field.value || ''}
                                                     onChange={field.onChange}
                                                     disabled={isView}
-                                                    className={`${ui.input} ${errors.po_date ? 'border-red-500 ring-1 ring-red-500' : ''}`}
+                                                    className={cn(
+                                                        ui.input,
+                                                        errors.po_date && "border-red-500 focus:ring-red-500/20 focus:border-red-500"
+                                                    )}
                                                 />
+
                                             )}
                                         />
                                     </div>
@@ -358,10 +364,18 @@ export default function POFormModal({
                                 </div>
                                 <div>
                                     <label className={ui.label}>สาขา</label>
-                                    <select {...register('branch_id', { valueAsNumber: true })} className={`${ui.select} ${errors.branch_id ? 'border-red-500' : ''}`} disabled={isView || isLoadingBranches}>
+                                    <select 
+                                        {...register('branch_id', { valueAsNumber: true })} 
+                                        className={cn(
+                                            ui.select, 
+                                            errors.branch_id && "border-red-500 focus:ring-red-500/20 focus:border-red-500"
+                                        )} 
+                                        disabled={isView || isLoadingBranches}
+                                    >
                                         <option value="">{isLoadingBranches ? 'กำลังโหลด...' : '— เลือกสาขา —'}</option>
                                         {branches.map((o: BranchListItem) => <option key={o.branch_id} value={o.branch_id}>{o.branch_name}</option>)}
                                     </select>
+
                                     {errors.branch_id && <p className={ui.error}>{errors.branch_id.message}</p>}
                                 </div>
                                 <div>
@@ -389,8 +403,12 @@ export default function POFormModal({
                                                     value={field.value || ''} 
                                                     onChange={field.onChange} 
                                                     disabled={isView} 
-                                                    className={`${ui.input} ${errors.delivery_date ? 'border-red-500 ring-1 ring-red-500' : ''}`} 
+                                                    className={cn(
+                                                        ui.input, 
+                                                        errors.delivery_date && "border-red-500 focus:ring-red-500/20 focus:border-red-500"
+                                                    )} 
                                                 />
+
                                             )}
                                         />
                                     </div>
@@ -407,8 +425,12 @@ export default function POFormModal({
                                                     {...field}
                                                     value={field.value || ''}
                                                     onChange={(e) => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))}
-                                                    className={`${ui.select} ${errors.tax_code_id ? 'border-red-500' : ''}`}
+                                                    className={cn(
+                                                        ui.select, 
+                                                        errors.tax_code_id && "border-red-500 focus:ring-red-500/20 focus:border-red-500"
+                                                    )}
                                                     disabled={isView || isLoadingTaxCodes}
+
                                                 >
                                                     <option value="">{isLoadingTaxCodes ? 'กำลังโหลด...' : '— เลือกประเภทภาษี —'}</option>
                                                     {taxCodes.map((o: TaxCode) => (
@@ -434,29 +456,62 @@ export default function POFormModal({
                                                 name="exchange_rate_date"
                                                 control={control}
                                                 render={({ field }) => (
-                                                    <CustomDateInput value={field.value || ''} onChange={field.onChange} disabled={isView} className={ui.input} />
+                                                    <CustomDateInput 
+                                                        value={field.value || ''} 
+                                                        onChange={field.onChange} 
+                                                        disabled={isView} 
+                                                        className={cn(
+                                                            ui.input,
+                                                            errors.exchange_rate_date && "border-red-500 focus:ring-red-500/20 focus:border-red-500"
+                                                        )} 
+                                                    />
                                                 )}
                                             />
                                         </div>
                                     </div>
                                     <div>
                                         <label className={ui.label}>รหัสสกุลเงิน <span className="text-red-500">*</span></label>
-                                        <select {...register('currency_code')} className={ui.select} disabled={isView || isLoadingCurrencies}>
+                                        <select 
+                                            {...register('currency_code')} 
+                                            className={cn(
+                                                ui.select,
+                                                errors.currency_code && "border-red-500 focus:ring-red-500/20 focus:border-red-500"
+                                            )} 
+                                            disabled={isView || isLoadingCurrencies}
+                                        >
                                             <option value="">{isLoadingCurrencies ? 'โหลด...' : 'เลือกสกุลเงิน'}</option>
                                             {currencies.map((o: Currency) => <option key={o.currency_code} value={o.currency_code}>{o.currency_code} - {o.name_th}</option>)}
                                         </select>
+
                                     </div>
                                     <div>
                                         <label className={ui.label}>ไปที่สกุลเงิน (Target)</label>
-                                        <select {...register('target_currency')} className={ui.select} disabled={isView || isLoadingCurrencies}>
+                                        <select 
+                                            {...register('target_currency')} 
+                                            className={cn(
+                                                ui.select,
+                                                errors.target_currency && "border-red-500 focus:ring-red-500/20 focus:border-red-500"
+                                            )} 
+                                            disabled={isView || isLoadingCurrencies}
+                                        >
                                             <option value="">{isLoadingCurrencies ? 'โหลด...' : 'เลือกสกุลเงิน'}</option>
                                             {currencies.map((o: Currency) => <option key={o.currency_code} value={o.currency_code}>{o.currency_code} - {o.name_th}</option>)}
                                         </select>
+
                                     </div>
                                     <div>
                                         <label className={ui.label}>อัตราแลกเปลี่ยน <span className="text-red-500">*</span></label>
-                                        <input type="number" step="0.0001" {...register('exchange_rate', { valueAsNumber: true })}
-                                            className={`${ui.input} text-right`} disabled={isView} placeholder="1" />
+                                        <input 
+                                            type="number" step="0.0001" 
+                                            {...register('exchange_rate', { valueAsNumber: true })} 
+                                            className={cn(
+                                                ui.input,
+                                                errors.exchange_rate && "border-red-500 focus:ring-red-500/20 focus:border-red-500"
+                                            )}
+                                            disabled={isView}
+                                            placeholder="1"
+                                        />
+
                                         {errors.exchange_rate && <p className={ui.error}>{errors.exchange_rate.message}</p>}
                                     </div>
                             </div>
@@ -539,7 +594,10 @@ export default function POFormModal({
                                                     <div className="relative w-full flex items-center">
                                                         <input
                                                             value={watchedLines?.[idx]?.item_code || watchedLines?.[idx]?.code || field.code || field.item_code || ''}
-                                                            className="w-full pr-10 border rounded px-3 !h-9 text-[13px] bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+                                                            className={cn(
+                                                                "w-full pr-10 border rounded px-3 !h-9 text-[13px] bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 shadow-sm",
+                                                                errors.po_lines?.[idx]?.item_id ? "border-red-500 focus:ring-red-500/20 focus:border-red-500" : "border-slate-300 dark:border-slate-700 focus:ring-blue-500"
+                                                            )}
                                                             placeholder="ค้นหารหัส..."
                                                             readOnly
                                                         />
@@ -570,7 +628,10 @@ export default function POFormModal({
                                                 <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
                                                     <input
                                                         {...register(`po_lines.${idx}.description`)}
-                                                        className={`${ui.input} !h-9 text-[13px] border-slate-300 shadow-sm`}
+                                                        className={cn(
+                                                            `${ui.input} !h-9 text-[13px] shadow-sm`,
+                                                            errors.po_lines?.[idx]?.description ? "border-red-500 focus:ring-red-500/20 focus:border-red-500" : "border-slate-300"
+                                                        )}
                                                         placeholder="รายละเอียดเพิ่มเติม"
                                                         readOnly={isView}
                                                     />
@@ -579,7 +640,10 @@ export default function POFormModal({
                                                     <input
                                                         type="number" step="any"
                                                         {...register(`po_lines.${idx}.qty_ordered`, { valueAsNumber: true })}
-                                                        className={`${ui.input} !h-9 text-center text-[13px] border-slate-300 shadow-sm`}
+                                                        className={cn(
+                                                            `${ui.input} !h-9 text-center text-[13px] shadow-sm`,
+                                                            errors.po_lines?.[idx]?.qty_ordered ? "border-red-500 focus:ring-red-500/20 focus:border-red-500" : "border-slate-300"
+                                                        )}
                                                         placeholder="0.000"
                                                         readOnly={isView || isLockedByQC}
                                                     />
@@ -592,7 +656,10 @@ export default function POFormModal({
                                                             const val = e.target.value === '' ? 0 : Number(e.target.value);
                                                             setValue(`po_lines.${idx}.uom_id`, val, { shouldValidate: true });
                                                         }}
-                                                        className={`${ui.select} !h-9 text-center px-1 text-[13px] border-slate-300 shadow-sm`}
+                                                        className={cn(
+                                                            `${ui.select} !h-9 text-center px-1 text-[13px] shadow-sm`,
+                                                            errors.po_lines?.[idx]?.uom_id ? "border-red-500 focus:ring-red-500/20 focus:border-red-500" : "border-slate-300"
+                                                        )}
                                                         disabled={isView || isLockedByQC || isLoadingUnits}
                                                     >
                                                         <option value="">{isLoadingUnits ? 'โหลด...' : 'หน่วย'}</option>
@@ -603,7 +670,10 @@ export default function POFormModal({
                                                     <input
                                                         type="number" step="any"
                                                         {...register(`po_lines.${idx}.unit_price`, { valueAsNumber: true })}
-                                                        className={`${ui.input} !h-9 text-right text-[13px] border-slate-300 shadow-sm`}
+                                                        className={cn(
+                                                            `${ui.input} !h-9 text-right text-[13px] shadow-sm`,
+                                                            errors.po_lines?.[idx]?.unit_price ? "border-red-500 focus:ring-red-500/20 focus:border-red-500" : "border-slate-300"
+                                                        )}
                                                         placeholder="0.0000"
                                                         readOnly={isView || isLockedByQC}
                                                     />
@@ -612,7 +682,10 @@ export default function POFormModal({
                                                     <input
                                                         type="text"
                                                         {...register(`po_lines.${idx}.discount_expression`)}
-                                                        className={`${ui.input} !h-9 text-right text-[13px] border-slate-300 shadow-sm`}
+                                                        className={cn(
+                                                            `${ui.input} !h-9 text-right text-[13px] shadow-sm`,
+                                                            errors.po_lines?.[idx]?.discount_expression ? "border-red-500 focus:ring-red-500/20 focus:border-red-500" : "border-slate-300"
+                                                        )}
                                                         placeholder="0 หรือ 5%"
                                                         readOnly={isView || isLockedByQC}
                                                     />
@@ -623,7 +696,10 @@ export default function POFormModal({
                                                 <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
                                                     <select
                                                         {...register(`po_lines.${idx}.receipt_type`)}
-                                                        className={`${ui.select} !h-9 text-center px-1 text-[13px] border-slate-300 shadow-sm bg-white dark:bg-slate-800`}
+                                                        className={cn(
+                                                            `${ui.select} !h-9 text-center px-1 text-[13px] shadow-sm bg-white dark:bg-slate-800`,
+                                                            errors.po_lines?.[idx]?.receipt_type ? "border-red-500 focus:ring-red-500/20 focus:border-red-500" : "border-slate-300"
+                                                        )}
                                                         disabled={isView}
                                                     >
                                                         <option value="GOODS">GOODS</option>

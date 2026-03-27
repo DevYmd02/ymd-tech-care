@@ -829,6 +829,8 @@ export const usePOForm = ({
                 created_at:         new Date().toISOString(),
                 created_by:         (poId ? (getValues('created_by') ? Number(getValues('created_by')) : undefined) : (user?.id ? Number(user.id) : undefined)) as unknown as number,
                 winning_vq_id:      safeId(pendingPayload.winning_vq_id),
+                qc_id:              safeId(pendingPayload.qc_id),
+                qc_no:              pendingPayload.qc_no || undefined,
                 
                 // 💰 Pricing Summary Injection (Explictly cast to include summary fields for backend)
                 ...({

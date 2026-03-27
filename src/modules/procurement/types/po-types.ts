@@ -55,8 +55,18 @@ export interface POHeader {
     // QC Traceability (Source document)
     qc_id?: number;                 // INTEGER — FK -> qc_header
     qc_no?: string;                 // Display Only
+    poa_no?: string;                // Display Only
     rfq_id?: number;                // FK -> rfq
     winning_vq_id?: number;         // FK -> quotation_header
+
+    // Detail Fields (Returned by getById)
+    delivery_date?: string;
+    tax_name?: string;
+    tax_code?: {
+        tax_name: string;
+        tax_rate: number;
+    };
+    po_lines?: POLine[];
 
     // Aggregates for List View
     item_count?: number;
@@ -106,6 +116,7 @@ export type POListItem = POHeader;
 /** PO Listing Parameters */
 export interface POListParams {
     po_no?: string;
+    poa_no?: string;
     pr_no?: string;
     vendor_name?: string;
     status?: POStatus | 'ALL';

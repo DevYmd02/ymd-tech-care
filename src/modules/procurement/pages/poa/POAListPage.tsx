@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, CheckCircle } from 'lucide-react';
+import { Search, CheckCircle, ShieldCheck } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { PageListLayout, SmartTable, FilterField, MobileListCard, MobileListContainer } from '@ui';
 import { POStatusBadge } from '@ui';
@@ -200,6 +200,13 @@ export default function POAListPage() {
                     <form onSubmit={(e) => { e.preventDefault(); handleApplyFilters(); }} className="w-full">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                             <FilterField
+                                label="เลขที่อนุมัติ POA"
+                                value={localFilters.search4}
+                                onChange={(val: string) => handleFilterChange('search4', val)}
+                                placeholder="กรอกเลขที่อนุมัติ"
+                                accentColor="emerald"
+                            />
+                            <FilterField
                                 label="เลขที่เอกสาร PO"
                                 value={localFilters.search}
                                 onChange={(val: string) => handleFilterChange('search', val)}
@@ -228,15 +235,8 @@ export default function POAListPage() {
                                 options={POA_STATUS_OPTIONS}
                                 accentColor="emerald"
                             />
-                            <div className="md:col-span-2 lg:col-span-4 flex flex-col sm:flex-row flex-wrap justify-end gap-2 items-center">
+                            <div className="md:col-span-2 lg:col-span-3 flex flex-col sm:flex-row flex-wrap justify-end gap-2 items-center">
                                 <div className="flex gap-2 w-full sm:w-auto">
-                                    <button
-                                        type="button"
-                                        onClick={handleTestOpenModal}
-                                        className="flex-1 sm:flex-none h-10 px-4 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
-                                    >
-                                        เปิด Modal (ทดสอบ)
-                                    </button>
                                     <button
                                         type="button"
                                         onClick={resetFilters}
@@ -249,6 +249,13 @@ export default function POAListPage() {
                                         className="flex-1 sm:flex-none h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
                                     >
                                         <Search size={18} /> ค้นหา
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleTestOpenModal}
+                                        className="flex-1 sm:flex-none h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+                                    >
+                                        <ShieldCheck size={18} /> รายการอนุมัติใบสั่งซื้อ
                                     </button>
                                 </div>
                             </div>

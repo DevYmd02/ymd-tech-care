@@ -35,12 +35,14 @@ export const usePOAList = () => {
         customParamKeys: {
             search: 'po_no',
             search2: 'pr_no',
-            search3: 'vendor_name'
+            search3: 'vendor_name',
+            search4: 'poa_no'
         }
     });
 
     const apiFilters: POListParams = useMemo(() => ({
         po_no: filters.search || undefined,
+        poa_no: filters.search4 || undefined,
         pr_no: filters.search2 || undefined,
         vendor_name: filters.search3 || undefined,
         status: filters.status === 'ALL' ? undefined : (filters.status || 'PENDING_APPROVAL') as any,

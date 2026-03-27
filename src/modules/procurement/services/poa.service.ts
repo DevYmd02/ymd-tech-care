@@ -37,6 +37,7 @@ export const POAService = {
         if (!USE_MOCK && params) {
             const filterParams: Record<string, string | number | boolean | undefined | null> = {};
             if (params.po_no) filterParams.po_no = params.po_no;
+            if (params.poa_no) filterParams.poa_no = params.poa_no;
             if (params.pr_no) filterParams.pr_no = params.pr_no;
             if (params.vendor_name) filterParams.vendor_name = params.vendor_name;
             filterParams.status = params.status || 'PENDING_APPROVAL';
@@ -48,7 +49,7 @@ export const POAService = {
             if (params.sort) filterParams.sort = params.sort;
 
             return applyClientFilters<POListItem>(allItems, filterParams, {
-                searchableFields: ['po_no', 'vendor_name', 'qc_no', 'pr_no'],
+                searchableFields: ['po_no', 'vendor_name', 'qc_no', 'pr_no', 'poa_no'],
                 dateField: 'po_date',
                 backendTotal: response.total
             });
