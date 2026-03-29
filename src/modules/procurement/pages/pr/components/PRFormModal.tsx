@@ -131,7 +131,6 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
           <div className="flex-1 overflow-auto bg-gray-100 dark:bg-gray-800 p-1.5 space-y-1">
             <div className={cardClass}>
                 <PRHeader 
-                    prId={id}
                     costCenters={costCenters}
                     projects={projects}
                     onVendorSelect={handleVendorSelect}

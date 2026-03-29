@@ -64,7 +64,7 @@ let lastVendorFetchTime = 0;
 const VENDOR_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 // 🎯 AV STATUS CACHE: Cache pr_id → effective status from AV approval records
-let cachedAVStatusMap: Map<number, string> | null = null;
+let cachedAVStatusMap: Map<number, { status: string; av_no?: string }> | null = null;
 let lastAVStatusFetchTime = 0;
 const AV_STATUS_CACHE_TTL = 30 * 1000; // 30 seconds (shorter TTL to catch recent approvals)
 
@@ -74,23 +74,22 @@ const AV_STATUS_CACHE_TTL = 30 * 1000; // 30 seconds (shorter TTL to catch recen
  * will have their status overridden here, since the PR header table may lag
  * behind (e.g., still showing PENDING after a partial approval).
  */
-async function buildAVStatusMap(): Promise<Map<number, string>> {
+async function buildAVStatusMap(): Promise<Map<number, { status: string; av_no?: string }>> {
   const now = Date.now();
   if (cachedAVStatusMap && (now - lastAVStatusFetchTime < AV_STATUS_CACHE_TTL)) {
-    return cachedAVStatusMap;
+    return cachedAVStatusMap as Map<number, { status: string; av_no?: string }>;
   }
   try {
     const avRes: ApprovalListResponse = await api.get<ApprovalListResponse>('/pr-approval', { params: { limit: 1000, page: 1 } });
-    const map = new Map<number, { status: string; id: number; no?: string }>();
+    const tempMap = new Map<number, { status: string; id: number; no?: string }>();
     const records = avRes?.data || [];
     for (const rec of records) {
       const prId = Number(rec.pr_id);
       if (!isNaN(prId) && rec.status) {
         // 🎯 LATEST WINS: If multiple records exist, we keep the one with the highest approval_id
-        // (assuming records are sorted or we check ID)
-        const existingId = map.get(prId)?.id || 0;
+        const existingId = tempMap.get(prId)?.id || 0;
         if (Number(rec.approval_id) >= existingId) {
-          map.set(prId, { 
+          tempMap.set(prId, { 
             status: rec.status.toUpperCase(), 
             id: Number(rec.approval_id),
             no: rec.approval_no 
@@ -99,10 +98,8 @@ async function buildAVStatusMap(): Promise<Map<number, string>> {
       }
     }
     
-    // Convert complex map back to simple status map for backward compatibility 
-    // but keep the latest logic intact inside the loop above
-    const finalMap = new Map<number, string>();
-    map.forEach((value, key) => finalMap.set(key, value.status));
+    const finalMap = new Map<number, { status: string; av_no?: string }>();
+    tempMap.forEach((value, key) => finalMap.set(key, { status: value.status, av_no: value.no }));
 
     cachedAVStatusMap = finalMap;
     lastAVStatusFetchTime = now;
@@ -128,27 +125,30 @@ export function clearPRServiceAVCache() {
  * If a PR has an AV record, its status comes from the AV table (PARTIAL/APPROVED/REJECTED).
  * PRs with no AV record keep their original status from the PR header table.
  */
-function overlayAVStatus(items: PRHeader[], avStatusMap: Map<number, string>): PRHeader[] {
+function overlayAVStatus(items: PRHeader[], avStatusMap: Map<number, { status: string; av_no?: string }>): PRHeader[] {
   if (avStatusMap.size === 0) return items;
   return items.map(item => {
-    const avStatus = avStatusMap.get(Number(item.pr_id));
+    const avData = avStatusMap.get(Number(item.pr_id));
     
-    if (avStatus && avStatus !== item.status) {
-      // 🎯 STALE REJECTION FIX:
-      // If the PR Header is 'PENDING' but the AV record is 'REJECTED', 
-      // it means the rejection is likely from a previous cycle and should be ignored.
-      // We only override if the AV status is positive (APPROVED/PARTIAL) or 
-      // if the PR is still DRAFT/PENDING and someone JUST rejected it (handled by backend usually).
-      
-      const isStaleRejection = item.status === 'PENDING' && avStatus === 'REJECTED';
-      
-      if (isStaleRejection) {
-        logger.debug(`[PRService] ⏭️ Skipping stale AV rejection for PR ${item.pr_no} (Header is already PENDING)`);
-        return item;
-      }
+    if (avData) {
+      const avStatus = avData.status;
+      const avNo = avData.av_no;
 
-      logger.info(`[PRService] 🔄 Overriding PR ${item.pr_no} status: ${item.status} → ${avStatus} (from AV record)`);
-      return { ...item, status: avStatus as PRHeader['status'] };
+      // 🛡️ Always attach AV No if we found it, even if status is same
+      const newItem = { ...item };
+      if (avNo) newItem.av_no = avNo;
+
+      if (avStatus && avStatus !== item.status) {
+        const isStaleRejection = item.status === 'PENDING' && avStatus === 'REJECTED';
+        if (isStaleRejection) {
+          logger.debug(`[PRService] ⏭️ Skipping stale AV rejection for PR ${item.pr_no} (Header is already PENDING)`);
+          return newItem;
+        }
+
+        logger.info(`[PRService] 🔄 Overriding PR ${item.pr_no} status: ${item.status} → ${avStatus} (from AV record)`);
+        newItem.status = avStatus as PRHeader['status'];
+      }
+      return newItem;
     }
     return item;
   });

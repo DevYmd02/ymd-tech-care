@@ -392,6 +392,7 @@ export const usePOForm = ({
             // 2. Map Header IDs
             setValue('pr_id', Number(fullPR.pr_id));
             setValue('pr_no', fullPR.pr_no);
+            setValue('approve_pr_id', (fullPR as any).approve_pr_id ? Number((fullPR as any).approve_pr_id) : undefined);
             setValue('rfq_id', (Number(qcId || fullPR.rfq_id) || undefined) as unknown as number);
             setValue('qc_id', (Number(qcId || fullPR.qc_id) || undefined) as unknown as number);
             setValue('winning_vq_id', (Number(winningVqId || fullPR.winning_vq_id) || undefined) as unknown as number);
@@ -607,6 +608,7 @@ export const usePOForm = ({
                         item_name: String(vqLine?.item_name || vqLine?.item?.item_name || l.item_name || l.item?.item_name || ''), 
                         description: String(vqLine?.remark || vqLine?.item?.description || l.description || l.item_name || l.item?.item_name || ''), 
                         pr_line_id: Number(l.pr_line_id), // Ensure correct PR Line ID
+                        rfq_line_id: vqLine?.rfq_line_id ? Number(vqLine.rfq_line_id) : undefined, // Provided by Vendor Quotation relation
                         status: 'OPEN' as const,
                         qty: Number(vqLine?.qty ?? l.qty) || 1, // Use VQ (Approved) Qty over PR (Requested) Qty
                         qty_ordered: Number(vqLine?.qty ?? l.qty) || 1,

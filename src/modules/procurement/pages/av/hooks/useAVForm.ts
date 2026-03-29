@@ -223,6 +223,7 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess, approvalItem }: UseA
           preparer_name: source.preparer_name || source.requester_name || source.employee_name || '',
           requester_name: source.requester_name || source.employee_name || '',
           is_on_hold: source.status === 'DRAFT' ? 'Y' : 'N',
+          status: itemArg?.status || source.status || 'PENDING',
           shipping_method: source.shipping_method || '',
           pr_tax_code_id: source.pr_tax_code_id ? Number(source.pr_tax_code_id) : undefined,
           pr_tax_rate: (() => {
@@ -239,6 +240,11 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess, approvalItem }: UseA
       setIsSubmitting(false);
     }
   }, [reset, masterItems, masterUnits, warehouses, showAlert, purchaseTaxOptions]);
+
+  const loadAVData = useCallback(async (av: any) => {
+    if (!av.pr_id) return;
+    await loadPRData(av.pr_id, av);
+  }, [loadPRData]);
 
   useEffect(() => {
     if (isOpen && id && !isMasterDataLoading && !prevIsOpenRef.current) {
@@ -424,6 +430,7 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess, approvalItem }: UseA
     lines,
     handleFormError,
     loadPRData,
+    loadAVData,
     activeId,
   };
 };

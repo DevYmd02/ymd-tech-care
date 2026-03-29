@@ -312,7 +312,7 @@ export default function POFormModal({
                                     <label className={ui.label}>อ้างอิง PR </label>
                                     <div className="flex gap-2">
                                         <input {...register('pr_no')} className={ui.inputRO} readOnly placeholder="PR2024-xxx" />
-                                        {!isView && (
+                                        {!isView && !isLockedByQC && (
                                             <button 
                                                 type="button" 
                                                 title="ค้นหา PR" 
@@ -323,7 +323,7 @@ export default function POFormModal({
                                                 {isHydrating ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
                                             </button>
                                         )}
-                                        {watchPrNo && !isView && (
+                                        {watchPrNo && !isView && !isLockedByQC && (
                                             <button type="button" onClick={() => { setValue('pr_id', undefined); setValue('pr_no', ''); }}
                                                 className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors border border-red-200 dark:border-red-800/50" title="ล้างข้อมูล PR">
                                                 <XIcon size={14} />

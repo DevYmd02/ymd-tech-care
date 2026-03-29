@@ -14,7 +14,6 @@ import { StatusCheckbox } from '@ui';
 
 
 interface Props {
-  prId?: number;
   costCenters: CostCenter[];
   projects: Project[];
   onVendorSelect: (vendor: VendorSelection | null) => void;
@@ -23,7 +22,7 @@ interface Props {
   readOnly?: boolean;
 }
 
-export const PRHeader: React.FC<Props> = ({ prId, costCenters, projects, onVendorSelect, isEditMode, onVoid, readOnly = false }) => {
+export const PRHeader: React.FC<Props> = ({ costCenters, projects, onVendorSelect, isEditMode, onVoid, readOnly = false }) => {
   const { register, watch, control, formState: { errors } } = useFormContext<PRFormData>();
   // Watch for vendor values to display in the selector
   const preferredVendorId = watch("preferred_vendor_id");
@@ -50,25 +49,27 @@ export const PRHeader: React.FC<Props> = ({ prId, costCenters, projects, onVendo
     <div className="p-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm font-sans">
       {/* Document Status & Logo */}
       <div className="flex justify-between items-center mb-2">
-        <div className="flex flex-col gap-0.5">
-          <h2 className={`font-bold text-sm ${
-              watch('cancelflag') === 'Y' || watch('status') === 'CANCELLED' ? 'text-red-500' :
-              watch('status') === 'APPROVED' ? 'text-green-500' :
-              watch('status') === 'PENDING' ? 'text-blue-500' :
-              watch('status') === 'REJECTED' ? 'text-orange-600' :
-              watch('status') === 'PARTIAL' ? 'text-indigo-500' :
-              watch('is_on_hold') === 'Y' ? 'text-orange-500' : 'text-pink-600 dark:text-pink-400'
-          }`}>
-            สถานะ : {
-                watch('cancelflag') === 'Y' || watch('status') === 'CANCELLED' ? 'ยกเลิก (VOID)' :
-                watch('status') === 'APPROVED' ? 'อนุมัติแล้ว (APPROVED)' :
-                watch('status') === 'PENDING' ? 'รออนุมัติ (PENDING)' :
-                watch('status') === 'REJECTED' ? 'ไม่อนุมัติ (REJECTED)' :
-                watch('status') === 'PARTIAL' ? 'อนุมัติบางส่วน (PARTIAL)' :
-                watch('is_on_hold') === 'Y' ? 'พักเรื่อง (ON HOLD)' : 'ร่าง (DRAFT)'
-            }
-          </h2>
-        </div>
+        {isEditMode ? (
+          <div className="flex flex-col gap-0.5">
+            <h2 className={`font-bold text-sm ${
+                watch('cancelflag') === 'Y' || watch('status') === 'CANCELLED' ? 'text-red-500' :
+                watch('status') === 'APPROVED' ? 'text-green-500' :
+                watch('status') === 'PENDING' ? 'text-blue-500' :
+                watch('status') === 'REJECTED' ? 'text-orange-600' :
+                watch('status') === 'PARTIAL' ? 'text-indigo-500' :
+                watch('is_on_hold') === 'Y' ? 'text-orange-500' : 'text-pink-600 dark:text-pink-400'
+            }`}>
+              สถานะ : {
+                  watch('cancelflag') === 'Y' || watch('status') === 'CANCELLED' ? 'ยกเลิก (VOID)' :
+                  watch('status') === 'APPROVED' ? 'อนุมัติแล้ว (APPROVED)' :
+                  watch('status') === 'PENDING' ? 'รออนุมัติ (PENDING)' :
+                  watch('status') === 'REJECTED' ? 'ไม่อนุมัติ (REJECTED)' :
+                  watch('status') === 'PARTIAL' ? 'อนุมัติบางส่วน (PARTIAL)' :
+                  watch('is_on_hold') === 'Y' ? 'พักเรื่อง (ON HOLD)' : 'ร่าง (DRAFT)'
+              }
+            </h2>
+          </div>
+        ) : <div />}
         
 
         <div className="text-right">
@@ -86,7 +87,7 @@ export const PRHeader: React.FC<Props> = ({ prId, costCenters, projects, onVendo
         {/* Row 1: เลขที่เอกสาร, วันที่ขอซื้อ, วันที่ต้องการใช้, สกุลเงิน */}
         <div className="col-span-12 md:col-span-3">
           <label className={labelClass}>
-            เลขที่เอกสาร {(prId || (watch as any)('id') || (watch as any)('pr_id')) ? <span className="text-gray-500 font-normal ml-1 text-[10px]">(ID: {prId || (watch as any)('id') || (watch as any)('pr_id')})</span> : ''}
+            เลขที่เอกสาร
           </label>
           <div className="relative">
             <input 
