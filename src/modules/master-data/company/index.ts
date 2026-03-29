@@ -12,13 +12,14 @@ export {
     EmployeeGroupService,
     PositionService,
     SalesZoneService,
-    SalesChannelService,
     SalesTargetService,
     OrgEmployeeService,
 } from './services/company.service';
+export { CompanyInfoService } from './services/company-info.service';
 
 // Dashboard
 export { default as CompanyDashboard } from './pages/CompanyDashboard';
+export { default as CompanyInfoPage } from './pages/CompanyInfoPage';
 
 // Branch Pages
 export { BranchForm, BranchFormModal, BranchList } from './pages/branch';
