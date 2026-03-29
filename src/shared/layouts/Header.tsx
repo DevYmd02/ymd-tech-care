@@ -14,6 +14,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Bell, Settings, Moon, Sun, ChevronDown, Menu, ChevronLeft } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { useTheme } from '@/core/contexts/ThemeContext';
 
 // ====================================================================================
@@ -98,6 +99,10 @@ export default function Header({ isSidebarOpen, onToggleSidebar }: HeaderProps) 
 
                 {/* Notifications Button */}
                 <button 
+                    onClick={() => toast.success('ฟีเจอร์การแจ้งเตือนกำลังอยู่ในการพัฒนา', {
+                        icon: '🚧',
+                        duration: 2000,
+                    })}
                     className="px-2 sm:px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex items-center space-x-1 transition-colors"
                     aria-label="Notifications"
                 >

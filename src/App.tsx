@@ -62,6 +62,7 @@ const EmployeeList = React.lazy(() => import('@/modules/master-data/company/page
 const EmployeeGroupList = React.lazy(() => import('@/modules/master-data/company/pages/employee-group/EmployeeGroupList'));
 const PositionList = React.lazy(() => import('@/modules/master-data/company/pages/position/PositionList'));
 const CompanyDashboard = React.lazy(() => import('@/modules/master-data/company/pages/CompanyDashboard'));
+const CompanyInfoPage = React.lazy(() => import('@/modules/master-data/company/pages/CompanyInfoPage'));
 // Sales Pages (from master-data)
 const SalesAreaList = React.lazy(() => import('@/modules/master-data/sales/pages/area/SalesAreaList'));
 const SalesChannelList = React.lazy(() => import('@/modules/master-data/sales/pages/channel/SalesChannelList'));
@@ -242,7 +243,7 @@ function AppContent() {
             <Route path="master-data/employee-group" element={<EmployeeGroupList />} />
             <Route path="master-data/position" element={<PositionList />} />
             <Route path="master-data/company" element={<CompanyDashboard />} />
-            <Route path="master-data/company-info" element={<PlaceholderPage title="กำหนดข้อมูลบริษัท" />} />
+            <Route path="master-data/company-info" element={<CompanyInfoPage />} />
             <Route path="master-data/general-settings" element={<PlaceholderPage title="กำหนดตั้งค่าทั่วไป" />} />
             <Route path="master-data/standard-cost" element={<PlaceholderPage title="กำหนดราคาซื้อและต้นทุนมาตรฐาน" />} />
             <Route path="master-data/price-level" element={<PlaceholderPage title="กำหนดราคาสินค้า (Price Level)" />} />
