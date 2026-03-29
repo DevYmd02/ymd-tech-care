@@ -145,6 +145,8 @@ export const POLineSchema = z.object({
     discount_amount: optionalNumberSchema,
     line_total:      z.number().nonnegative().optional(),
     receipt_type:    z.enum(['GOODS', 'SERVICE']).optional(),
+    // Backend Required Fields
+    rfq_line_id:     optionalIdSchema,
 });
 
 export type POLine = z.infer<typeof POLineSchema>;
@@ -219,6 +221,7 @@ export const CreatePOSchema = z.object({
     order_date:     z.string().optional(),
     currency_code:  z.string().optional(),
     total_amount:   z.number().optional(),
+    approve_pr_id:  optionalIdSchema,
 });
 
 export type CreatePOData = z.infer<typeof CreatePOSchema>;
@@ -258,6 +261,7 @@ export const POFormSchema = z.object({
     discount_expression: z.string().default('0'),
     created_by: optionalIdSchema,
     created_by_name: z.string().optional(),
+    approve_pr_id: optionalIdSchema,
     po_lines: z.array(POLineSchema).min(1, 'ต้องมีรายการสินค้าอย่างน้อย 1 รายการ'),
 });
 

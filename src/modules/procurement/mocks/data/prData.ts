@@ -120,6 +120,7 @@ const _mockPRs: PRHeader[] = [
     total_amount: calculatePRTotal(_prLinesOffice), pr_tax_rate: 7, pr_tax_code_id: 7,
     attachment_count: 0,
     created_at: '2026-02-15T09:00:00Z', updated_at: '2026-02-15T11:00:00Z', created_by_user_id: 1, updated_by_user_id: 2,
+    av_no: 'AV-202603-0010',
     lines: getLinesForPR(15, _prLinesOffice)
   },
   {
@@ -143,6 +144,7 @@ const _mockPRs: PRHeader[] = [
     total_amount: calculatePRTotal(_prLinesOffice), pr_tax_rate: 7, pr_tax_code_id: 7,
     attachment_count: 0,
     created_at: '2026-03-10T10:00:00Z', updated_at: '2026-03-11T11:00:00Z', created_by_user_id: 2, updated_by_user_id: 3,
+    av_no: 'AV-202603-0009',
     lines: getLinesForPR(12, _prLinesOffice)
   },
   {
@@ -206,6 +208,7 @@ const _mockPRs: PRHeader[] = [
     total_amount: calculatePRTotal(_prLinesFactory), pr_tax_rate: 7, pr_tax_code_id: 7,
     attachment_count: 0,
     created_at: '2026-02-03T10:00:00Z', updated_at: '2026-02-04T15:00:00Z', created_by_user_id: 3, updated_by_user_id: 2,
+    av_no: 'AV-202602-0001',
     lines: getLinesForPR(5, _prLinesFactory)
   },
   {

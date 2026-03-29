@@ -73,6 +73,8 @@ export interface PRHeader {
   user_id?: string | number;        // Alternative key for user FK
   suggested_vendor?: string;        // Alternative key for vendor name
   vendor_id?: string | number;      // FK → vendor (for fallback display)
+  av_no?: string;                   // Approval Voucher Number
+
 
   // Relations (populated by API)
   lines?: PRLine[];

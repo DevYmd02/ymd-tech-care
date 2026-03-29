@@ -19,7 +19,7 @@ interface Props {
   readOnly?: boolean;
 }
 
-export const AVHeader: React.FC<Props> = ({ prId, onSearchPRClick, costCenters, projects, onVendorSelect, readOnly = true }) => {
+export const AVHeader: React.FC<Props> = ({ onSearchPRClick, costCenters, projects, onVendorSelect, readOnly = true }) => {
   const { register, watch, control, formState: { errors } } = useFormContext<AVFormData>();
   const preferredVendorId = watch("preferred_vendor_id");
   const vendorName = watch("vendor_name");
@@ -46,11 +46,13 @@ export const AVHeader: React.FC<Props> = ({ prId, onSearchPRClick, costCenters, 
           <h2 className={`font-bold text-sm ${
               watch('cancelflag') === 'Y' || watch('status') === 'CANCELLED' ? 'text-red-500' :
               watch('status') === 'APPROVED' ? 'text-green-500' :
+              watch('status') === 'PARTIAL' ? 'text-orange-500' :
               watch('is_on_hold') === 'Y' ? 'text-orange-500' : 'text-pink-600 dark:text-pink-400'
           }`}>
             สถานะ : {
                 watch('cancelflag') === 'Y' || watch('status') === 'CANCELLED' ? 'ยกเลิก (VOID)' :
                 watch('status') === 'APPROVED' ? 'อนุมัติแล้ว (APPROVED)' :
+                watch('status') === 'PARTIAL' ? 'อนุมัติบางส่วน (PARTIAL)' :
                 watch('is_on_hold') === 'Y' ? 'พักเรื่อง (ON HOLD)' : 'รออนุมัติ (PENDING)'
             }
           </h2>
@@ -69,7 +71,7 @@ export const AVHeader: React.FC<Props> = ({ prId, onSearchPRClick, costCenters, 
       <div className="grid grid-cols-12 gap-x-4 gap-y-2">
         <div className="col-span-12 md:col-span-3">
           <label className={labelClass}>
-            เลขที่เอกสาร {(prId || (watch as any)('id') || (watch as any)('pr_id')) ? <span className="text-gray-500 font-normal ml-1 text-[10px]">(ID: {prId || (watch as any)('id') || (watch as any)('pr_id')})</span> : ''}
+            เลขที่เอกสาร
           </label>
           <div className="flex items-center gap-1">
             <input 

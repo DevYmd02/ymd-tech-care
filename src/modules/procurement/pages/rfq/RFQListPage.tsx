@@ -7,6 +7,7 @@
  */
 
 import { useState, useMemo, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/react-query';
 import { FileText, Eye, Send, Edit, Search, Plus } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
@@ -155,6 +156,18 @@ const AVNumberCell = ({ prNo, fallbackNo }: { prNo?: string | null, fallbackNo?:
 // ====================================================================================
 
 export default function RFQListPage() {
+    const [searchParams, setSearchParams] = useSearchParams();
+    const activeTab = (searchParams.get('tab') as 'ALL' | 'WAITING_CREATE') || 'ALL';
+
+    const handleTabChange = useCallback((newTab: 'ALL' | 'WAITING_CREATE') => {
+        setSearchParams((prev) => {
+            const next = new URLSearchParams(prev);
+            next.set('tab', newTab);
+            next.set('page', '1');
+            return next;
+        }, { replace: true });
+    }, [setSearchParams]);
+
     // URL-based Filter State
     const { filters, localFilters, handleFilterChange, handleApplyFilters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<RFQStatus>({
         defaultStatus: 'ALL',
@@ -185,12 +198,79 @@ export default function RFQListPage() {
         placeholderData: keepPreviousData,
     });
 
+    const { data: waitingCreateDataRaw, isLoading: isWaitingCreateLoading } = useQuery({
+        queryKey: ['waiting-create-rfq'],
+        queryFn: async () => {
+            logger.info('[RFQListPage] Fetching APPROVED and PARTIAL PRs for WAITING_CREATE tab');
+            const [approvedRes, partialPRsRes, avListRes] = await Promise.all([
+                RFQService.getApprovedPRsWithoutRFQ(),
+                AVService.getPendingApprovalPRs(),
+                AVService.getApprovalList({ status: 'PARTIAL', limit: 50 })
+            ]);
+
+            const approvedPRs = approvedRes.data || [];
+            
+            const pendingPartials = (partialPRsRes || []).map(p => ({
+                ...p,
+                status: 'PARTIAL' as const
+            }));
+
+            const avPartials = (avListRes?.data || []).map((a: any) => ({
+                ...a,
+                ...a.pr,
+                pr_id: a.pr_id,
+                pr_no: a.pr?.pr_no || '-',
+                pr_date: a.approval_date || a.created_at,
+                requester_name: a.approval_emp_name || '-',
+                total_amount: Number(a.base_total_amount || 0),
+                status: 'PARTIAL' as const
+            }));
+
+            const combined = [...approvedPRs];
+            const seenIds = new Set(approvedPRs.map((p: any) => p.pr_id));
+
+            for (const pr of [...pendingPartials, ...avPartials]) {
+                const prId = Number(pr.pr_id);
+                if (prId && !seenIds.has(prId)) {
+                    combined.push(pr);
+                    seenIds.add(prId);
+                }
+            }
+            
+            combined.sort((a, b) => {
+                const dateA = new Date(a.pr_date || 0);
+                const dateB = new Date(b.pr_date || 0);
+                return dateB.getTime() - dateA.getTime();
+            });
+
+            return combined;
+        },
+        enabled: activeTab === 'WAITING_CREATE',
+        staleTime: 1 * 60 * 1000,
+    });
+
+    const waitingCreateData = useMemo(() => {
+        let list = waitingCreateDataRaw || [];
+        // Support searching by PR No. when on WAITING_CREATE tab
+        const searchPR = localFilters.search2?.toLowerCase() || '';
+        
+        if (searchPR) {
+            list = list.filter((pr: any) => pr.pr_no && pr.pr_no.toLowerCase().includes(searchPR));
+        }
+        return list;
+    }, [waitingCreateDataRaw, localFilters.search2]);
+
+    const currentWaitingCreatePageData = useMemo(() => {
+        return waitingCreateData.slice((filters.page - 1) * filters.limit, filters.page * filters.limit);
+    }, [waitingCreateData, filters.page, filters.limit]);
+
     const queryClient = useQueryClient();
     const { toast } = useToast();
 
     // Modal States (RFQ Form only — QT modal removed, belongs to QT page)
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedRFQId, setSelectedRFQId] = useState<number | null>(null);
+    const [initialPRForCreate, setInitialPRForCreate] = useState<any | null>(null);
     const [isReadOnly, setIsReadOnly] = useState(false);
     const [isInviteMode, setIsInviteMode] = useState(false);
 
@@ -200,11 +280,20 @@ export default function RFQListPage() {
     // Handlers
 
     const handleCreate = () => {
+        setInitialPRForCreate(null);
         setSelectedRFQId(null);
         setIsReadOnly(false);
         setIsInviteMode(false);
         setIsModalOpen(true);
     };
+
+    const handleCreateWithPR = useCallback((pr: any) => {
+        setInitialPRForCreate(pr);
+        setSelectedRFQId(null);
+        setIsReadOnly(false);
+        setIsInviteMode(false);
+        setIsModalOpen(true);
+    }, []);
 
     const handleView = useCallback((id: number) => {
         setSelectedRFQId(id);
@@ -224,6 +313,7 @@ export default function RFQListPage() {
     const handleCloseModal = () => {
         setIsModalOpen(false);
         setSelectedRFQId(null);
+        setInitialPRForCreate(null);
         setIsReadOnly(false);
         setIsInviteMode(false);
     };
@@ -497,6 +587,107 @@ export default function RFQListPage() {
         }),
     ], [columnHelper, filters.page, filters.limit, handleView, handleEdit, handleSendRFQ]);
 
+    const prColumnHelper = createColumnHelper<any>();
+
+    const waitingCreateColumns = useMemo(() => [
+        prColumnHelper.display({
+            id: 'index',
+            header: () => <div className="flex justify-center items-center h-full w-full">ลำดับ</div>,
+            cell: (info) => <div className="flex justify-center items-center h-full w-full">{info.row.index + 1 + (filters.page - 1) * filters.limit}</div>,
+            size: 60,
+            enableSorting: false,
+        }),
+        prColumnHelper.accessor('pr_no', {
+            header: 'เลขที่ PR',
+            cell: (info) => (
+                <span className="font-bold text-teal-700 dark:text-teal-400 py-2 block whitespace-nowrap">
+                    {info.getValue() as string}
+                </span>
+            ),
+            size: 150,
+            enableSorting: false,
+        }),
+        prColumnHelper.accessor('pr_date', {
+            header: 'วันที่',
+            cell: (info) => {
+                const val = info.getValue() as string;
+                if (!val) return <span className="text-gray-400 py-2 block whitespace-nowrap">-</span>;
+                // Some pr_date might be full ISO, we just want the date part
+                return (
+                    <span className="text-gray-600 dark:text-gray-300 py-2 block whitespace-nowrap">
+                        {val.includes('T') ? val.split('T')[0] : val}
+                    </span>
+                );
+            },
+            size: 120,
+            enableSorting: false,
+        }),
+        prColumnHelper.accessor('requester_name', {
+            header: 'ผู้ขอ',
+            cell: (info) => (
+                <span className="text-gray-600 dark:text-gray-300 py-2 block whitespace-nowrap">
+                    {info.getValue() as string || '-'}
+                </span>
+            ),
+            size: 150,
+            enableSorting: false,
+        }),
+        prColumnHelper.display({
+            id: 'purpose',
+            header: 'วัตถุประสงค์ / หมายเหตุ',
+            cell: ({ row }) => {
+                const item = row.original as any;
+                const displayRemark = item.remark || item.purpose || '-';
+                return (
+                    <div className="max-w-[250px] truncate py-2 text-gray-500 dark:text-gray-400" title={displayRemark}>
+                        {displayRemark}
+                    </div>
+                );
+            },
+            size: 200,
+            enableSorting: false,
+        }),
+        prColumnHelper.display({
+            id: 'total_amount',
+            header: () => <div className="flex justify-end items-center h-full w-full">ยอดรวม</div>,
+            cell: ({ row }) => {
+                const item = row.original as any;
+                const amount = item.total_amount != null ? item.total_amount : item.pr_base_total_amount;
+                const displayTotal = amount != null && amount !== ''
+                    ? Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                    : '-';
+                return (
+                    <div className="flex justify-end items-center h-full text-gray-600 dark:text-gray-300 font-mono text-sm py-2">
+                        {displayTotal}
+                    </div>
+                );
+            },
+            size: 120,
+            enableSorting: false,
+        }),
+        prColumnHelper.display({
+            id: 'actions',
+            header: () => <div className="flex justify-center items-center h-full w-full">จัดการ</div>,
+            cell: ({ row }) => {
+                const pr = row.original;
+                return (
+                    <div className="flex justify-center items-center h-full py-1">
+                        <button
+                            type="button"
+                            onClick={() => handleCreateWithPR(pr)}
+                            className="inline-flex items-center justify-center px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-bold transition-colors shadow-sm"
+                        >
+                            <Plus size={14} className="mr-1" />
+                            สร้าง RFQ
+                        </button>
+                    </div>
+                );
+            },
+            size: 120,
+            enableSorting: false,
+        })
+    ], [prColumnHelper, filters.page, filters.limit, handleCreateWithPR]);
+
     // ====================================================================================
     // RENDER
     // ====================================================================================
@@ -511,8 +702,8 @@ export default function RFQListPage() {
                 subtitle="Request for Quotation (RFQ)"
                 icon={FileText}
                 accentColor="blue"
-                totalCount={data?.total}
-                totalCountLoading={isLoading}
+                totalCount={activeTab === 'WAITING_CREATE' ? waitingCreateData.length : data?.total}
+                totalCountLoading={activeTab === 'WAITING_CREATE' ? isWaitingCreateLoading : isLoading}
                 searchForm={
                     <form onSubmit={(e) => { e.preventDefault(); handleApplyFilters(); }} className="w-full">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
@@ -522,6 +713,7 @@ export default function RFQListPage() {
                             onChange={(val: string) => handleFilterChange('search', val)}
                             placeholder="RFQ-xxx"
                             accentColor="blue"
+                            disabled={activeTab === 'WAITING_CREATE'}
                         />
                         <FilterField
                             label="PR อ้างอิง"
@@ -536,6 +728,7 @@ export default function RFQListPage() {
                             onChange={(val: string) => handleFilterChange('search3', val)}
                             placeholder="ชื่อผู้สร้าง"
                             accentColor="blue"
+                            disabled={activeTab === 'WAITING_CREATE'}
                         />
                         <FilterField
                             label="สถานะ"
@@ -544,6 +737,7 @@ export default function RFQListPage() {
                             onChange={(val: string) => handleFilterChange('status', val)}
                             options={RFQ_STATUS_OPTIONS}
                             accentColor="blue"
+                            disabled={activeTab === 'WAITING_CREATE'}
                         />
                         <FilterField
                             label="วันที่เริ่มต้น"
@@ -551,6 +745,7 @@ export default function RFQListPage() {
                             value={localFilters.date_start || ''}
                             onChange={(val: string) => handleFilterChange('date_start', val)}
                             accentColor="blue"
+                            disabled={activeTab === 'WAITING_CREATE'}
                         />
                         <FilterField
                             label="วันที่สิ้นสุด"
@@ -558,6 +753,7 @@ export default function RFQListPage() {
                             value={localFilters.date_end || ''}
                             onChange={(val: string) => handleFilterChange('date_end', val)}
                             accentColor="blue"
+                            disabled={activeTab === 'WAITING_CREATE'}
                         />
                         
                         {/* Action Buttons Group */}
@@ -592,32 +788,75 @@ export default function RFQListPage() {
                 }
             >
                 <div className="h-full flex flex-col">
+                    {/* ===== Tabs Header ===== */}
+                    <div className="flex space-x-1 border-b border-gray-200 dark:border-gray-700 mb-4 px-2">
+                        <button
+                            onClick={() => handleTabChange('ALL')}
+                            className={`flex items-center gap-2 py-2.5 px-4 text-sm font-medium border-b-2 transition-colors ${
+                                activeTab === 'ALL'
+                                    ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                            }`}
+                        >
+                            รายการขอใบเสนอราคาทั้งหมด
+                        </button>
+                        <button
+                            onClick={() => handleTabChange('WAITING_CREATE')}
+                            className={`flex justify-between items-center py-2.5 px-4 text-sm font-medium border-b-2 transition-colors ${
+                                activeTab === 'WAITING_CREATE'
+                                    ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                            }`}
+                        >
+                            รอสร้างใบเสนอราคา
+                        </button>
+                    </div>
+
                     {/* Desktop View: Table */}
                     <div className="hidden md:block flex-1 overflow-hidden">
-                        <SmartTable
-                            data={data?.data ?? []}
-                            columns={columns}
-                            isLoading={isLoading}
-                            pagination={{
-                                pageIndex: filters.page,
-                                pageSize: filters.limit,
-                                totalCount: data?.total ?? 0,
-                                onPageChange: handlePageChange,
-                                onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 })
-                            }}
-                            sortConfig={sortConfig}
-                            onSortChange={handleSortChange}
-                            rowIdField="rfq_id"
-                            className="flex-1"
-                        />
+                        {activeTab === 'ALL' && (
+                            <SmartTable
+                                data={data?.data ?? []}
+                                columns={columns}
+                                isLoading={isLoading}
+                                pagination={{
+                                    pageIndex: filters.page,
+                                    pageSize: filters.limit,
+                                    totalCount: data?.total ?? 0,
+                                    onPageChange: handlePageChange,
+                                    onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 })
+                                }}
+                                sortConfig={sortConfig}
+                                onSortChange={handleSortChange}
+                                rowIdField="rfq_id"
+                                className="flex-1"
+                            />
+                        )}
+                        {activeTab === 'WAITING_CREATE' && (
+                            <SmartTable
+                                data={currentWaitingCreatePageData as any[]}
+                                columns={waitingCreateColumns as any}
+                                isLoading={isWaitingCreateLoading}
+                                pagination={{
+                                    pageIndex: filters.page,
+                                    pageSize: filters.limit,
+                                    totalCount: waitingCreateData.length,
+                                    onPageChange: handlePageChange,
+                                    onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 })
+                                }}
+                                rowIdField="pr_id"
+                                className="flex-1"
+                            />
+                        )}
                     </div>
 
                     {/* Mobile View: Cards (shared MobileListContainer + MobileListCard) */}
-                    <MobileListContainer
-                        isLoading={isLoading}
-                        isEmpty={!data?.data.length}
-                        pagination={data?.total ? { page: filters.page, total: data.total, limit: filters.limit, onPageChange: handlePageChange } : undefined}
-                    >
+                    {activeTab === 'ALL' && (
+                        <MobileListContainer
+                            isLoading={isLoading}
+                            isEmpty={!data?.data.length}
+                            pagination={data?.total ? { page: filters.page, total: data.total, limit: filters.limit, onPageChange: handlePageChange } : undefined}
+                        >
                         {data?.data.map((item) => {
                             const prNumber = item.ref_pr_no || item.pr_no || item.pr?.pr_no;
                             const dynamicStatus = getDynamicStatus(item);
@@ -690,7 +929,45 @@ export default function RFQListPage() {
                                 />
                             );
                         })}
-                    </MobileListContainer>
+                        </MobileListContainer>
+                    )}
+
+                    {activeTab === 'WAITING_CREATE' && (
+                        <MobileListContainer
+                            isLoading={isWaitingCreateLoading}
+                            isEmpty={!currentWaitingCreatePageData.length}
+                            pagination={waitingCreateData.length ? { page: filters.page, total: waitingCreateData.length, limit: filters.limit, onPageChange: handlePageChange } : undefined}
+                        >
+                            {currentWaitingCreatePageData.map((item: any) => {
+                                const amount = item.total_amount != null ? item.total_amount : item.pr_base_total_amount;
+                                const displayTotal = amount != null && amount !== ''
+                                    ? Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                                    : '-';
+                                    
+                                return (
+                                    <MobileListCard
+                                        key={item.pr_id}
+                                        title={<span className="font-bold text-teal-700 dark:text-teal-400">{item.pr_no}</span>}
+                                        subtitle={item.pr_date?.includes('T') ? item.pr_date.split('T')[0] : item.pr_date}
+                                        statusBadge={<span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200 whitespace-nowrap">รอสร้าง</span>}
+                                        details={[
+                                            { label: 'ผู้ขอ:', value: item.requester_name || '-' },
+                                            { label: 'ยอดรวม:', value: displayTotal },
+                                            { label: 'วัตถุประสงค์:', value: item.remark || item.purpose || '-' }
+                                        ]}
+                                        actions={
+                                            <button
+                                                onClick={() => handleCreateWithPR(item)}
+                                                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
+                                            >
+                                                <Plus size={14} /> สร้าง RFQ
+                                            </button>
+                                        }
+                                    />
+                                );
+                            })}
+                        </MobileListContainer>
+                    )}
                 </div>
 
             </PageListLayout>
@@ -700,6 +977,7 @@ export default function RFQListPage() {
                     isOpen={isModalOpen}
                     onClose={handleCloseModal}
                     editId={selectedRFQId}
+                    initialPR={initialPRForCreate}
                     readOnly={isReadOnly}
                     isInviteMode={isInviteMode}
                     onSuccess={() => {

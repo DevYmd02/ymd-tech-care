@@ -5,6 +5,7 @@ import { PRService } from '@/modules/procurement/services/pr.service';
 import type { PRHeader } from '@/modules/procurement/types/pr-types';
 import { DialogFormLayout } from '@ui';
 import { Search, Loader2, Calendar, User, FileText } from 'lucide-react';
+import { logger } from '@/shared/utils/logger';
 
 interface PRSearchModalProps {
   isOpen: boolean;
@@ -37,14 +38,32 @@ export const PRSearchModal: React.FC<PRSearchModalProps> = ({
       const response = await PRService.getList({
         q: debouncedSearch,
         status: 'APPROVED',
-        limit: 50,
+        limit: 100, // Increase limit to find more potential matches
       });
       const items = response.data || [];
-      // 🛡️ Safety fallback: Case-Insensitive Multi-mode guarantees APPROVED status only
-      return items.filter((pr: PRHeader) => String(pr.status || '').toUpperCase() === 'APPROVED');
+      logger.info(`🔍 [PRSearchModal] API returned ${items.length} PRs. Applying local AV filter...`);
+      
+      // 🛡️ Safety fallback: Case-Insensitive Multi-mode guarantees APPROVED status only AND has AV number
+      const filtered = items.filter((pr: PRHeader) => {
+          const isApproved = String(pr.status || '').toUpperCase() === 'APPROVED';
+          const hasAV = Boolean(pr.av_no);
+          if (isApproved && !hasAV) {
+              logger.debug(`[PRSearchModal] PR ${pr.pr_no} is APPROVED but missing av_no. Filtering out.`);
+          }
+          return isApproved && hasAV;
+      });
+
+      logger.info(`🔍 [PRSearchModal] Local filter completed. ${filtered.length} items remain.`);
+      return {
+          items: filtered,
+          rawCount: items.length
+      };
     },
     enabled: isOpen,
   });
+
+  const items = prResults?.items || [];
+  const rawCount = prResults?.rawCount || 0;
 
   return (
     <DialogFormLayout
@@ -80,6 +99,7 @@ export const PRSearchModal: React.FC<PRSearchModalProps> = ({
               <tr className="text-gray-500 dark:text-gray-400">
                 <th className="px-4 py-3.5 text-center font-semibold w-24">เลือก</th>
                 <th className="px-4 py-3.5 text-left font-semibold">เลขที่ PR</th>
+                <th className="px-4 py-3.5 text-left font-semibold">เลขที่ใบอนุมัติ (AV)</th>
                 <th className="px-4 py-3.5 text-left font-semibold">วันที่</th>
                 <th className="px-4 py-3.5 text-left font-semibold">ผู้ขอซื้อ</th>
                 <th className="px-4 py-3.5 text-right font-semibold">ยอดรวม</th>
@@ -88,15 +108,15 @@ export const PRSearchModal: React.FC<PRSearchModalProps> = ({
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {isLoading ? (
                 <tr>
-                  <td colSpan={5} className="py-20 text-center">
+                  <td colSpan={6} className="py-20 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
                       <span className="text-gray-500 font-medium">กำลังค้นหาข้อมูล...</span>
                     </div>
                   </td>
                 </tr>
-              ) : prResults && prResults.length > 0 ? (
-                prResults.map((pr) => (
+              ) : items && items.length > 0 ? (
+                items.map((pr) => (
                   <tr 
                     key={pr.pr_id} 
                     className="hover:bg-blue-50 dark:hover:bg-blue-900/10 cursor-pointer transition-colors group"
@@ -113,6 +133,11 @@ export const PRSearchModal: React.FC<PRSearchModalProps> = ({
                       <div className="flex items-center gap-2">
                         <FileText size={16} className="text-gray-400" />
                         <span className="font-bold text-gray-900 dark:text-white">{pr.pr_no}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded text-xs">{pr.av_no}</span>
                       </div>
                     </td>
                     <td className="px-4 py-4">
@@ -136,12 +161,15 @@ export const PRSearchModal: React.FC<PRSearchModalProps> = ({
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="py-20 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan={6} className="py-20 text-center text-gray-500 dark:text-gray-400">
                     <div className="flex flex-col items-center gap-2 opacity-60">
                       <Search size={40} className="mb-2" />
-                      <span className="text-lg font-medium">ไม่พบข้อมูล PR ที่ได้รับการอนุมัติ</span>
+                      <span className="text-lg font-medium">ไม่พบข้อมูล PR ที่แนะนำให้สร้าง PO (ต้องมีใบ AV)</span>
                       <span className="text-xs text-gray-400 mt-1">
-                        (พบข้อมูลดิบ {prResults?.length ?? 0} รายการ - ค้นหา: "{debouncedSearch}" - โหมด: {import.meta.env.VITE_USE_MOCK === 'true' ? 'จำลอง (Mock)' : 'เซิร์ฟเวอร์จริง (Real)'})
+                        (จากระบบทั้งหมด {rawCount} รายการ - ค้นหา: "{debouncedSearch}" - โหมด: {import.meta.env.VITE_USE_MOCK === 'true' ? 'จำลอง (Mock)' : 'เซิร์ฟเวอร์จริง (Real)'})
+                      </span>
+                      <span className="text-[10px] text-gray-400 mt-1 max-w-md">
+                        หากคุณมั่นใจว่ามี PR ที่อนุมัติแล้วแต่ไม่ขึ้นในรายการ โปรดตรวจสอบว่า PR ดังกล่าวมีเลขใบอ้างอิง AV และสถานะเป็น "อนุมัติแล้ว" (APPROVED) สมบูรณ์แล้วหรือไม่
                       </span>
                       <span className="text-sm">ลองเปลี่ยนคำค้นหา หรือตรวจสอบสถานะ PR อีกครั้ง</span>
                     </div>

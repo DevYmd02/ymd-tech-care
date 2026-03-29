@@ -123,13 +123,13 @@ export const VendorSearch: React.FC<VendorSearchProps> = ({
             onFocus={() => !disabled && setIsOpen(true)}
             disabled={disabled}
             placeholder={placeholder}
-            className={`h-8 w-full pl-8 pr-8 text-sm border border-gray-300 dark:border-gray-600 rounded-l-md focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white ${error ? 'border-red-500' : ''} ${query.includes('(ไม่ใช้งาน)') ? 'text-gray-400 italic' : ''}`}
+            className={`h-8 w-full pl-8 pr-8 text-sm border border-gray-300 dark:border-gray-600 ${!disabled ? 'rounded-l-md' : 'rounded-md'} focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white ${error ? 'border-red-500' : ''} ${query.includes('(ไม่ใช้งาน)') ? 'text-gray-400 italic' : ''}`}
           />
           <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400">
             {isLoading ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
           </div>
           
-          {query && (
+          {query && !disabled && (
             <button
               type="button"
               onClick={handleClear}
@@ -140,15 +140,17 @@ export const VendorSearch: React.FC<VendorSearchProps> = ({
           )}
         </div>
         
-        <button
-          type="button"
-          onClick={() => !disabled && setIsModalOpen(true)}
-          disabled={disabled}
-          className="h-8 w-8 bg-blue-600 text-white rounded-r-md flex items-center justify-center hover:bg-blue-700 transition-colors border border-blue-600"
-          title="ค้นหาขั้นสูง"
-        >
-          <Building2 size={14} />
-        </button>
+        {!disabled && (
+          <button
+            type="button"
+            onClick={() => !disabled && setIsModalOpen(true)}
+            disabled={disabled}
+            className="h-8 w-8 bg-blue-600 text-white rounded-r-md flex items-center justify-center hover:bg-blue-700 transition-colors border border-blue-600"
+            title="ค้นหาขั้นสูง"
+          >
+            <Building2 size={14} />
+          </button>
+        )}
       </div>
 
       {error && <p className="mt-1 text-xs text-red-500">{error}</p>}

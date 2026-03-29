@@ -10,6 +10,7 @@ import { SharedRemarksTab } from '@/shared/components/forms/SharedRemarksTab';
 import { useAVForm } from '../hooks/useAVForm';
 import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal';
 import { PendingPRSearchModal } from './PendingPRSearchModal';
+import { ExistingAVSearchModal } from './ExistingAVSearchModal';
 import { ApprovalHistoryModal } from '@/modules/procurement/shared/components/ApprovalHistoryModal';
 
 const SHIPPING_OPTIONS = [
@@ -39,6 +40,7 @@ export const AVFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, a
     handleRejectInit, handleConfirmReject, isConfirmRejectOpen, setIsConfirmRejectOpen, isRejecting,
     lines,
     loadPRData,
+    loadAVData,
     activeId
   } = useAVForm({ id, isOpen, onClose, onSuccess, approvalItem });
 
@@ -47,6 +49,7 @@ export const AVFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, a
   // Tabs state
   const [activeTab, setActiveTab] = useState('detail');
   const [isPRSearchOpen, setIsPRSearchOpen] = useState(false);
+  const [isAVSearchOpen, setIsAVSearchOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   const cardClass = 'bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-sm overflow-hidden';
@@ -135,15 +138,28 @@ export const AVFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, a
                     <div>
                         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">เลขที่อนุมัติ AV <span className="text-red-500">*</span></label>
                         <div className="flex items-center gap-1">
-                            <input 
-                                {...register('av_no')}
-                                type="text" 
-                                placeholder="ระบบจะกรอกอัตโนมัติ"
-                                readOnly={true}
-                                className="w-full h-9 px-3 text-sm bg-gray-50 dark:bg-gray-800/50 border border-gray-300 dark:border-gray-600 rounded text-gray-500 dark:text-gray-400 italic cursor-not-allowed"
+                            <Controller
+                                name="av_no"
+                                control={control}
+                                render={({ field }) => (
+                                    <input 
+                                        {...field}
+                                        type="text" 
+                                        placeholder="ระบบจะกรอกอัตโนมัติ"
+                                        readOnly={true}
+                                        value={field.value || ''}
+                                        className="w-full h-9 px-3 text-sm bg-gray-50 dark:bg-gray-800/50 border border-gray-300 dark:border-gray-600 rounded text-gray-500 dark:text-gray-400 italic cursor-not-allowed"
+                                    />
+                                )}
                             />
-                            <button type="button" className="h-9 px-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 transition-colors">
-                                <Search size={14} />
+                            <button 
+                                type="button" 
+                                onClick={() => id && setIsAVSearchOpen(true)}
+                                disabled={!id}
+                                className="h-9 px-2.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center z-10 hover:scale-105 active:scale-95 shadow-sm"
+                                title="หาเลขที่อนุมัติเดิมของ PR นี้"
+                            >
+                                <Search size={15} />
                             </button>
                         </div>
                     </div>
@@ -398,6 +414,15 @@ export const AVFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, a
             prNo={watch('pr_no')}
         />
     )}
+    <ExistingAVSearchModal 
+        isOpen={isAVSearchOpen}
+        onClose={() => setIsAVSearchOpen(false)}
+        prId={id as number}
+        onSelect={(av) => {
+            loadAVData(av);
+            setIsAVSearchOpen(false);
+        }}
+    />
     </>
   );
 };
