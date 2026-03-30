@@ -110,7 +110,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
       setValue('winning_vq_id', actualQCData.winning_vq_id || actualQCData.vq_header_id || 0);
       
       const remarkVal = actualQCData?.remark || actualQCData?.remarks || '';
-      setValue('remark', remarkVal);
+      setValue('remarks', remarkVal);
       
       const creatorName = actualQCData?.created_by_name || actualQCData?.creator_name || actualQCData?.employee_name || '';
       if (creatorName) setCreatedBy(creatorName);
@@ -136,7 +136,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
       setValue('winning_vq_id', Number(mappedWinnerId) || 0);
 
       const remarkVal = actualInitial.remark || actualInitial.remarks || '';
-      setValue('remark', remarkVal);
+      setValue('remarks', remarkVal);
 
       const creatorName = actualInitial.created_by_name || actualInitial.creator_name || actualInitial.employee_name || '';
       if (creatorName) setCreatedBy(creatorName);
@@ -779,7 +779,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
                   เลขที่ RFQ อ้างอิง * 
                   {rfqDetail && (
                     <span className="text-xs font-normal text-gray-500 ml-2">
-                      ({rfqDetail._count?.rfqVendors || rfqDetail.vendor_count || rfqDetail.vendor_total || rfqDetail.sent_vendors_count || rfqDetail.responded_vendors_count || rfqDetail.rfqVendors?.length || rfqDetail.vendors?.length || (rfqDetail.vendor_name ? rfqDetail.vendor_name.split(',').length : 0)} ราย)
+                      ({rfqDetail._count?.rfqVendors || rfqDetail.vendor_count || rfqDetail.vendor_total || (rfqDetail as any).rfq_vendor_count || rfqDetail.sent_vendors_count || rfqDetail.responded_vendors_count || rfqDetail.rfqVendors?.length || rfqDetail.vendors?.length || (rfqDetail.vendor_name ? rfqDetail.vendor_name.split(',').length : 0)} ราย)
                     </span>
                   )}
                 </label>
@@ -882,7 +882,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
               <div className="md:col-span-3">
                 <label className={labelClass}>หมายเหตุ (Remark)</label>
                 <textarea
-                  {...methods.register('remark')}
+                  {...methods.register('remarks')}
                   placeholder="ระบุหมายเหตุเพิ่มเติม (ถ้ามี)..."
                   disabled={mode === 'view'}
                   rows={2}

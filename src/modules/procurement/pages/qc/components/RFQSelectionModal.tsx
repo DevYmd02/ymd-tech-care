@@ -3,6 +3,12 @@ import { createPortal } from 'react-dom';
 import { Search, X, FileText } from 'lucide-react';
 import type { RFQHeader } from '@/modules/procurement/types';
 
+interface ExtendedRFQHeader extends Omit<RFQHeader, 'purpose'> {
+  purpose?: string | null;
+  rfq_vendor_count?: number;
+  remarks?: string;
+  rfq_remark?: string;
+}
 
 interface RFQSelectionModalProps {
   isOpen: boolean;
@@ -32,9 +38,10 @@ export function RFQSelectionModal({
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
     const matchesRFQ = item.rfq_no.toLowerCase().includes(term);
-    const matchesPurpose = (item.purpose || item.remarks || (item as any).rfq_remark || '').toLowerCase().includes(term);
+    const extItem = item as ExtendedRFQHeader;
+    const matchesPurpose = (extItem.purpose || extItem.remarks || extItem.rfq_remark || '').toLowerCase().includes(term);
     const matchesVendor = item.vendor_name?.toLowerCase().includes(term);
-    const matchesPR = (item.pr_no || item.ref_pr_no || '').toLowerCase().includes(term);
+    const matchesPR = (extItem.pr?.pr_no || item.pr_no || item.ref_pr_no || '').toLowerCase().includes(term);
     
     return matchesRFQ || matchesPurpose || matchesVendor || matchesPR;
   });
@@ -118,13 +125,18 @@ export function RFQSelectionModal({
                            </td>
                            <td className="px-6 py-4">
                               <span className="text-sm font-semibold text-indigo-600 bg-indigo-50 dark:bg-indigo-900/40 dark:text-indigo-300 px-3 py-1 rounded-full whitespace-nowrap">
-                                {item._count?.rfqVendors || item.vendor_count || item.vendor_total || item.sent_vendors_count || item.responded_vendors_count || item.rfqVendors?.length || item.vendors?.length || (item.vendor_name ? item.vendor_name.split(',').length : 0)} ราย
+                                {item._count?.rfqVendors || item.vendor_count || item.vendor_total || (item as ExtendedRFQHeader).rfq_vendor_count || item.sent_vendors_count || item.responded_vendors_count || item.rfqVendors?.length || item.vendors?.length || (item.vendor_name ? item.vendor_name.split(',').length : 0)} ราย
                               </span>
                            </td>
                            <td className="px-6 py-4">
                               <span className="text-sm text-gray-600 dark:text-gray-300">
-                                {(item as any).purpose || (item as any).remarks || (item as any).rfq_remark || '-'}
+                                {(item as ExtendedRFQHeader).purpose || (item as ExtendedRFQHeader).remarks || (item as ExtendedRFQHeader).rfq_remark || '-'}
                               </span>
+                              {((item as ExtendedRFQHeader).pr?.pr_no || item.pr_no || item.ref_pr_no) && (
+                                <div className="text-xs text-indigo-400/80 dark:text-indigo-400/50 mt-0.5 font-medium">
+                                  [อ้างอิง: {((item as ExtendedRFQHeader).pr?.pr_no || item.pr_no || item.ref_pr_no)}]
+                                </div>
+                              )}
                            </td>
 
                            <td className="px-6 py-4 text-center whitespace-nowrap">

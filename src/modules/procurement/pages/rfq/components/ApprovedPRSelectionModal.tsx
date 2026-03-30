@@ -130,7 +130,7 @@ export const ApprovedPRSelectionModal: React.FC<ApprovedPRSelectionModalProps> =
                                 const approvedNo = record.approval_no || record.approved_pr_no || record.approval_id?.toString() || '-';
                                 return (
                                     <tr key={i} className="hover:bg-teal-50/50 dark:hover:bg-gray-700/50 transition-colors">
-                                        <td className="px-5 py-3 font-medium text-teal-700 dark:text-teal-400">
+                                        <td className="px-5 py-3 font-medium text-teal-700 dark:text-teal-400 tabular-nums">
                                             {approvedNo}
                                         </td>
                                         <td className="px-5 py-3">
