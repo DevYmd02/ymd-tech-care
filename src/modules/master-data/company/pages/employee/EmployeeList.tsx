@@ -3,20 +3,21 @@
  * @description List page for Employee Master Data
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { 
     Edit2, 
     Trash2, 
     User
 } from 'lucide-react';
 import { EmployeeFormModal } from './EmployeeFormModal';
-import { OrgEmployeeService } from '@/modules/master-data/company/services/company.service';
+import { useEmployeeList } from '../../hooks/useEmployeeList';
 import type { EmployeeListItem } from '@/modules/master-data/types/master-data-types';
 import { ActiveStatusBadge } from '@ui';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
+import { OrgEmployeeService } from '../../services/employee.service';
 
 // ====================================================================================
 // CONFIG
@@ -46,9 +47,7 @@ export default function EmployeeList() {
         }
     });
 
-    const [allEmployees, setAllEmployees] = useState<EmployeeListItem[]>([]);
-    const [totalCount, setTotalCount] = useState(0);
-    const [isLoading, setIsLoading] = useState(true);
+    const { employees, totalCount, isLoading, refetch } = useEmployeeList(filters);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
 
@@ -74,26 +73,8 @@ export default function EmployeeList() {
         },
     ], []);
 
-    // ==================== DATA FETCHING ====================
-    const fetchData = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const response = await OrgEmployeeService.getList(filters);
-            setAllEmployees(response.items);
-            setTotalCount(response.total);
-        } catch (error) {
-            console.error('Failed to fetch employees:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [filters]);
-
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
-
     // ==================== DATA MAPPING ====================
-    const tableData = useMemo(() => allEmployees, [allEmployees]);
+    const tableData = useMemo(() => employees, [employees]);
 
     // ==================== HANDLERS ====================
     const handleCreateNew = () => {
@@ -106,11 +87,17 @@ export default function EmployeeList() {
         setIsModalOpen(true);
     };
 
-    const handleDelete = useCallback((id: number) => {
+    const handleDelete = useCallback(async (id: number) => {
         if (confirm('คุณต้องการลบข้อมูลพนักงานนี้หรือไม่?')) {
-            OrgEmployeeService.delete(id).then(() => fetchData());
+            try {
+                await OrgEmployeeService.delete(id);
+                refetch();
+            } catch (error) {
+                console.error('Failed to delete employee:', error);
+                alert('ไม่สามารถลบข้อมูลได้ในขณะนี้');
+            }
         }
-    }, [fetchData]);
+    }, [refetch]);
 
     const handleModalClose = () => {
         setIsModalOpen(false);
@@ -240,7 +227,7 @@ export default function EmployeeList() {
                 isOpen={isModalOpen} 
                 onClose={handleModalClose}
                 editId={editingId}
-                onSuccess={fetchData}
+                onSuccess={refetch}
             />
         </div>
     );

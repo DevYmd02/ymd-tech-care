@@ -4,20 +4,21 @@
  * @module company
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { 
     Edit2, 
     Trash2, 
     Building
 } from 'lucide-react';
 import { EmployeeSideFormModal } from './EmployeeSideFormModal';
-import { DepartmentService } from '@/modules/master-data/company/services/company.service';
-import type { DepartmentListItem } from '@/modules/master-data/types/master-data-types';
+import { useEmployeeSideList } from '../../hooks/useEmployeeSideList';
+import type { EmployeeSideListItem } from '@/modules/master-data/types/master-data-types';
 import { ActiveStatusBadge } from '@ui';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
+import { EmployeeSideService } from '../../services/employee-side.service';
 
 // ====================================================================================
 // CONFIG
@@ -42,16 +43,14 @@ export default function EmployeeSideList() {
         resetFilters
     } = useTableFilters({
         customParamKeys: {
-          search: 'department_code',
-          search2: 'department_name'
+          search: 'side_code',
+          search2: 'side_name'
         }
     });
 
-    const [allDepartments, setAllDepartments] = useState<DepartmentListItem[]>([]);
-    const [totalCount, setTotalCount] = useState(0);
-    const [isLoading, setIsLoading] = useState(true);
+    const { sides, totalCount, isLoading, refetch } = useEmployeeSideList(filters);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingId, setEditingId] = useState<number | null>(null);
+    const [editingId, setEditingId] = useState<string | number | null>(null);
 
     // ==================== FILTER CONFIG ====================
     const filterConfig: FilterFieldConfig<keyof typeof filters>[] = useMemo(() => [
@@ -75,26 +74,8 @@ export default function EmployeeSideList() {
         },
     ], []);
 
-    // ==================== DATA FETCHING ====================
-    const fetchData = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const response = await DepartmentService.getList(filters);
-            setAllDepartments(response.items);
-            setTotalCount(response.total);
-        } catch (error) {
-            console.error('Failed to fetch departments:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [filters]);
-
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
-
     // ==================== DATA MAPPING ====================
-    const tableData = useMemo(() => allDepartments, [allDepartments]);
+    const tableData = useMemo(() => sides, [sides]);
 
     // ==================== HANDLERS ====================
     const handleCreateNew = () => {
@@ -102,16 +83,22 @@ export default function EmployeeSideList() {
         setIsModalOpen(true);
     };
 
-    const handleEdit = (id: number) => {
+    const handleEdit = (id: string | number) => {
         setEditingId(id);
         setIsModalOpen(true);
     };
 
-    const handleDelete = useCallback((id: number) => {
+    const handleDelete = useCallback(async (id: string | number) => {
         if (confirm('คุณต้องการลบข้อมูลฝ่ายนี้หรือไม่?')) {
-            DepartmentService.delete(id).then(() => fetchData());
+            try {
+                await EmployeeSideService.delete(id);
+                refetch();
+            } catch (error) {
+                console.error('Failed to delete department:', error);
+                alert('ไม่สามารถลบข้อมูลได้ในขณะนี้');
+            }
         }
-    }, [fetchData]);
+    }, [refetch]);
 
     const handleModalClose = () => {
         setIsModalOpen(false);
@@ -119,7 +106,7 @@ export default function EmployeeSideList() {
     };
 
     // ==================== TABLE COLUMNS ====================
-    const columns = useMemo<ColumnDef<DepartmentListItem>[]>(() => [
+    const columns = useMemo<ColumnDef<EmployeeSideListItem>[]>(() => [
         {
             id: 'sequence',
             header: 'ลำดับ',
@@ -127,22 +114,23 @@ export default function EmployeeSideList() {
             size: 60,
         },
         {
-            accessorKey: 'department_code',
+            accessorKey: 'side_code', // DB Primary Field
             header: 'รหัสฝ่าย',
-            cell: ({ getValue }) => (
+            cell: ({ row }) => (
                 <span className="font-medium text-blue-600 dark:text-blue-400">
-                    {getValue() as string}
+                    {row.original.side_code || row.original.department_code}
                 </span>
             ),
         },
         {
-            accessorKey: 'department_name',
+            accessorKey: 'side_name', // DB Primary Field
             header: 'ชื่อฝ่าย (ไทย)',
+            cell: ({ row }) => row.original.side_name || row.original.department_name,
         },
         {
-            accessorKey: 'department_name_en',
+            accessorKey: 'side_nameeng', // DB Schema naming
             header: 'ชื่อฝ่าย (EN)',
-            cell: ({ getValue }) => <span className="text-gray-500">{getValue() as string || '-'}</span>
+            cell: ({ row }) => <span className="text-gray-500">{row.original.side_nameeng || row.original.department_name_en || '-'}</span>
         },
         {
             accessorKey: 'is_active',
@@ -247,7 +235,7 @@ export default function EmployeeSideList() {
                 isOpen={isModalOpen} 
                 onClose={handleModalClose}
                 editId={editingId}
-                onSuccess={fetchData}
+                onSuccess={refetch}
             />
         </div>
     );

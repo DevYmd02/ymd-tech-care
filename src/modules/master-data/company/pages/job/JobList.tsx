@@ -4,20 +4,21 @@
  * @module company
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { 
     Edit2, 
     Trash2, 
     Briefcase
 } from 'lucide-react';
 import { JobFormModal } from './JobFormModal';
-import { JobService } from '@/modules/master-data/company/services/company.service';
+import { useJobList } from '../../hooks/useJobList';
 import type { JobListItem } from '@/modules/master-data/types/master-data-types';
 import { ActiveStatusBadge } from '@ui';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
+import { JobService } from '../../services/job.service';
 
 // ====================================================================================
 // CONFIG
@@ -47,9 +48,7 @@ export default function JobList() {
         }
     });
 
-    const [allJobs, setAllJobs] = useState<JobListItem[]>([]);
-    const [totalCount, setTotalCount] = useState(0);
-    const [isLoading, setIsLoading] = useState(true);
+    const { jobs, totalCount, isLoading, refetch } = useJobList(filters);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
 
@@ -75,26 +74,8 @@ export default function JobList() {
         },
     ], []);
 
-    // ==================== DATA FETCHING ====================
-    const fetchData = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const response = await JobService.getList(filters);
-            setAllJobs(response.items);
-            setTotalCount(response.total);
-        } catch (error) {
-            console.error('Failed to fetch jobs:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [filters]);
-
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
-
     // ==================== DATA MAPPING ====================
-    const tableData = useMemo(() => allJobs, [allJobs]);
+    const tableData = useMemo(() => jobs, [jobs]);
 
     // ==================== HANDLERS ====================
     const handleCreateNew = () => {
@@ -107,11 +88,17 @@ export default function JobList() {
         setIsModalOpen(true);
     };
 
-    const handleDelete = useCallback((id: number) => {
+    const handleDelete = useCallback(async (id: number) => {
         if (confirm('คุณต้องการลบข้อมูล Job นี้หรือไม่?')) {
-            JobService.delete(id).then(() => fetchData());
+            try {
+                await JobService.delete(id);
+                refetch();
+            } catch (error) {
+                console.error('Failed to delete job:', error);
+                alert('ไม่สามารถลบข้อมูลได้ในขณะนี้');
+            }
         }
-    }, [fetchData]);
+    }, [refetch]);
 
     const handleModalClose = () => {
         setIsModalOpen(false);
@@ -242,7 +229,7 @@ export default function JobList() {
                 isOpen={isModalOpen} 
                 onClose={handleModalClose}
                 editId={editingId}
-                onSuccess={fetchData}
+                onSuccess={refetch}
             />
         </div>
     );

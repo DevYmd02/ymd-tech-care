@@ -4,20 +4,21 @@
  * @module company
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { 
     Edit2, 
     Trash2, 
     UsersRound
 } from 'lucide-react';
 import { EmployeeGroupFormModal } from './EmployeeGroupFormModal';
-import { EmployeeGroupService } from '@/modules/master-data/company/services/company.service';
+import { useEmployeeGroupList } from '../../hooks/useEmployeeGroupList';
 import type { EmployeeGroupListItem } from '@/modules/master-data/types/master-data-types';
 import { ActiveStatusBadge } from '@ui';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
+import { EmployeeGroupService } from '../../services/employee-group.service';
 
 // ====================================================================================
 // CONFIG
@@ -47,9 +48,7 @@ export default function EmployeeGroupList() {
         }
     });
 
-    const [allGroups, setAllGroups] = useState<EmployeeGroupListItem[]>([]);
-    const [totalCount, setTotalCount] = useState(0);
-    const [isLoading, setIsLoading] = useState(true);
+    const { groups, totalCount, isLoading, refetch } = useEmployeeGroupList(filters);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
 
@@ -75,26 +74,8 @@ export default function EmployeeGroupList() {
         },
     ], []);
 
-    // ==================== DATA FETCHING ====================
-    const fetchData = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const response = await EmployeeGroupService.getList(filters);
-            setAllGroups(response.items);
-            setTotalCount(response.total);
-        } catch (error) {
-            console.error('Failed to fetch employee groups:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [filters]);
-
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
-
     // ==================== DATA MAPPING ====================
-    const tableData = useMemo(() => allGroups, [allGroups]);
+    const tableData = useMemo(() => groups, [groups]);
 
     // ==================== HANDLERS ====================
     const handleCreateNew = () => {
@@ -107,11 +88,17 @@ export default function EmployeeGroupList() {
         setIsModalOpen(true);
     };
 
-    const handleDelete = useCallback((id: number) => {
+    const handleDelete = useCallback(async (id: number) => {
         if (confirm('คุณต้องการลบกลุ่มพนักงานนี้หรือไม่?')) {
-            EmployeeGroupService.delete(id).then(() => fetchData());
+            try {
+                await EmployeeGroupService.delete(id);
+                refetch();
+            } catch (error) {
+                console.error('Failed to delete employee group:', error);
+                alert('ไม่สามารถลบข้อมูลได้ในขณะนี้');
+            }
         }
-    }, [fetchData]);
+    }, [refetch]);
 
     const handleModalClose = () => {
         setIsModalOpen(false);
@@ -240,7 +227,7 @@ export default function EmployeeGroupList() {
                 isOpen={isModalOpen} 
                 onClose={handleModalClose}
                 editId={editingId}
-                onSuccess={fetchData}
+                onSuccess={refetch}
             />
         </div>
     );

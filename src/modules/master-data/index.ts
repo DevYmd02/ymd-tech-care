@@ -1,6 +1,12 @@
 
 // -- Company & Org Structure --
-export * from './company/services/company.service';
+export * from './company/services/employee-side.service';
+export * from './company/services/employee-dept.service';
+export * from './company/services/job.service';
+export * from './company/services/position.service';
+export * from './company/services/employee-group.service';
+export * from './company/services/employee.service';
+export * from './company/services/sales-org.service';
 export * from './company/services/branch.service';
 export * from './accounting/services/cost-center.service'; // Moved here for logical grouping
 

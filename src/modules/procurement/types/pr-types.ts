@@ -100,6 +100,30 @@ export interface PRHeader {
 /** PRHeaderExtended - PR Header with QC/VQ metadata for hydration */
 export type PRHeaderExtended = PRHeader;
 
+/** PRWaitingForQC - Response from /api/po/pr/waiting-for-qc */
+export interface PRWaitingForQC {
+  qc_id: number;
+  qc_no: string;
+  qc_status: string;
+  pr_id: number;
+  pr_no: string;
+  rfq_id: number;
+  rfq_no: string;
+  approval_no: string | null;
+  approval_status: string | null;
+  vendor_name: string;
+  vq_no: string;
+  total_amount: string | number;
+  vq_count: number;
+  winning_vq_id?: number;
+  vendor_id?: number;
+  // Fallback for UI components expecting PRHeader
+  created_at?: string;
+  pr_date?: string;
+  requester_name?: string;
+}
+
+
 // ====================================================================================
 // PR LINE - ตาม pr_line table
 // ====================================================================================

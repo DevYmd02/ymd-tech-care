@@ -331,14 +331,24 @@ export const PRService = {
     
     // 🔍 DIAGNOSTIC: Log the raw response structure to identify unwrap issues
     logger.debug('[PRService.getDetail] RAW response keys:', Object.keys(response as object || {}));
-    logger.debug('[PRService.getDetail] RAW response (first 500 chars):', JSON.stringify(response).slice(0, 500));
     
     let finalResult: PRHeaderExtended | null = null;
     const raw = response as Record<string, unknown>;
 
+    // 🛡️ Helper to find lines in any object structure
+    const extractLines = (obj: any) => {
+        if (!obj) return [];
+        return Array.isArray(obj.lines) ? obj.lines : 
+               (Array.isArray(obj.pr_lines) ? obj.pr_lines : 
+               (Array.isArray(obj.line_items) ? obj.line_items : []));
+    };
+
     // ─── Shape 1: Already unwrapped by interceptor → { pr_id, pr_no, ... } ─────
     if (raw && 'pr_id' in raw) {
-      finalResult = raw as unknown as PRHeaderExtended;
+      finalResult = {
+        ...raw,
+        lines: extractLines(raw),
+      } as unknown as PRHeaderExtended;
       logger.debug('[PRService.getDetail] Shape 1 (direct): pr_no=', finalResult.pr_no, 'lines=', finalResult.lines?.length ?? 0);
     }
     
@@ -346,7 +356,10 @@ export const PRService = {
     else if (raw && 'data' in raw && raw.data && typeof raw.data === 'object') {
       const inner = raw.data as Record<string, unknown>;
       if ('pr_id' in inner) {
-        finalResult = inner as unknown as PRHeaderExtended;
+        finalResult = {
+            ...inner,
+            lines: extractLines(inner),
+        } as unknown as PRHeaderExtended;
         logger.debug('[PRService.getDetail] Shape 2 (data envelope): pr_no=', finalResult.pr_no, 'lines=', finalResult.lines?.length ?? 0);
       }
       
@@ -354,12 +367,15 @@ export const PRService = {
       else if ('data' in inner && inner.data && typeof inner.data === 'object') {
         const deepInner = inner.data as Record<string, unknown>;
         if ('pr_id' in deepInner) {
-          finalResult = deepInner as unknown as PRHeaderExtended;
+          finalResult = {
+              ...deepInner,
+              lines: extractLines(deepInner),
+          } as unknown as PRHeaderExtended;
           logger.debug('[PRService.getDetail] Shape 3 (double envelope): pr_no=', finalResult.pr_no, 'lines=', finalResult.lines?.length ?? 0);
         }
       }
     }
-
+ 
     // ─── Shape 4: { header: { pr_id, pr_no, ... }, lines: [...] } ────────────────
     // ✅ CONFIRMED: Real NestJS backend returns this shape (seen in browser log)
     else if (raw && 'header' in raw && raw.header && typeof raw.header === 'object') {
@@ -367,8 +383,8 @@ export const PRService = {
       if ('pr_id' in header) {
         finalResult = {
           ...header,
-          // Merge lines from the top-level `lines` key into the PRHeader
-          lines: Array.isArray(raw.lines) ? raw.lines : [],
+          // Merge lines from the top-level `lines` or fallbacks key into the PRHeader
+          lines: extractLines(raw) || extractLines(header),
         } as unknown as PRHeaderExtended;
         logger.debug('[PRService.getDetail] Shape 4 (header+lines): pr_no=', finalResult.pr_no, 'lines=', finalResult.lines?.length ?? 0);
       }
@@ -377,7 +393,10 @@ export const PRService = {
     // ─── Fallback: Return as-is and let TS handle it ─────────────────────────────
     if (!finalResult) {
         logger.warn('[PRService.getDetail] Could not determine response shape — using raw as PRHeader');
-        finalResult = raw as unknown as PRHeaderExtended;
+        finalResult = {
+            ...raw,
+            lines: extractLines(raw)
+        } as unknown as PRHeaderExtended;
     }
 
     // 🎯 AV STATUS HYDRATION (Detail): Overlay correct status from AV module

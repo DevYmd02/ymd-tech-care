@@ -4,20 +4,21 @@
  * @module company
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { 
     Edit2, 
     Trash2, 
     Briefcase
 } from 'lucide-react';
 import { PositionFormModal } from './PositionFormModal';
-import { PositionService } from '@/modules/master-data/company/services/company.service';
+import { usePositionList } from '../../hooks/usePositionList';
 import type { PositionListItem } from '@/modules/master-data/types/master-data-types';
 import { ActiveStatusBadge } from '@ui';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
+import { PositionService } from '../../services/position.service';
 
 // ====================================================================================
 // CONFIG
@@ -47,9 +48,7 @@ export default function PositionList() {
         }
     });
 
-    const [allPositions, setAllPositions] = useState<PositionListItem[]>([]);
-    const [totalCount, setTotalCount] = useState(0);
-    const [isLoading, setIsLoading] = useState(true);
+    const { positions, totalCount, isLoading, refetch } = usePositionList(filters);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
 
@@ -75,26 +74,8 @@ export default function PositionList() {
         },
     ], []);
 
-    // ==================== DATA FETCHING ====================
-    const fetchData = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const response = await PositionService.getList(filters);
-            setAllPositions(response.items);
-            setTotalCount(response.total);
-        } catch (error) {
-            console.error('Failed to fetch positions:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [filters]);
-
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
-
     // ==================== DATA MAPPING ====================
-    const tableData = useMemo(() => allPositions, [allPositions]);
+    const tableData = useMemo(() => positions, [positions]);
 
     // ==================== HANDLERS ====================
     const handleCreateNew = () => {
@@ -107,11 +88,17 @@ export default function PositionList() {
         setIsModalOpen(true);
     };
 
-    const handleDelete = useCallback((id: number) => {
+    const handleDelete = useCallback(async (id: number) => {
         if (confirm('คุณต้องการลบตำแหน่งนี้หรือไม่?')) {
-            PositionService.delete(id).then(() => fetchData());
+            try {
+                await PositionService.delete(id);
+                refetch();
+            } catch (error) {
+                console.error('Failed to delete position:', error);
+                alert('ไม่สามารถลบข้อมูลได้ในขณะนี้');
+            }
         }
-    }, [fetchData]);
+    }, [refetch]);
 
     const handleModalClose = () => {
         setIsModalOpen(false);
@@ -240,7 +227,7 @@ export default function PositionList() {
                 isOpen={isModalOpen} 
                 onClose={handleModalClose}
                 editId={editingId}
-                onSuccess={fetchData}
+                onSuccess={refetch}
             />
         </div>
     );

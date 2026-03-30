@@ -5,7 +5,7 @@
  *   - '@/shared/types/common-master.types' for base types
  *   - '@/shared/types/approval-types' for approval workflow
  *   - '@/modules/master-data/company/types/branch-types' for branch types
- *   - '@/modules/master-data/company/types/company-structure.types' for company org types
+ *   - '@/modules/master-data/company/types/[entity].types' for company org types
  *   - '@/modules/master-data/sales/types/sales-structure.types' for sales org types
  *   - '@/modules/master-data/inventory/types/warehouse-types' for warehouse types
  *   - '@/modules/master-data/inventory/types/product-types' for product/item types
@@ -22,7 +22,12 @@ export * from '@/shared/types/approval-types';
 // RE-EXPORTS FROM COMPANY MODULE
 // ====================================================================================
 export * from '@/modules/master-data/company/types/branch-types';
-export * from '@/modules/master-data/company/types/company-structure.types';
+export * from '@/modules/master-data/company/types/employee-side.types';
+export * from '@/modules/master-data/company/types/employee-dept.types';
+export * from '@/modules/master-data/company/types/job.types';
+export * from '@/modules/master-data/company/types/position.types';
+export * from '@/modules/master-data/company/types/employee-group.types';
+export * from '@/modules/master-data/company/types/employee.types';
 
 // ====================================================================================
 // RE-EXPORTS FROM SALES MODULE

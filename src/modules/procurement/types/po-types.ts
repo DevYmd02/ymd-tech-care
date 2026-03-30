@@ -104,6 +104,7 @@ export interface POLine {
     line_total?: number;            // numeric(18,2)
     
     required_receipt_type: 'FULL' | 'PARTIAL'; // varchar(20)
+    rfq_line_id?: number | null;    // FK -> rfq_line (Required for QC Traceability)
 }
 
 // ====================================================================================
@@ -171,7 +172,7 @@ export interface CreatePOPayload {
     rfq_id?: number;
     vendor_id: number;
     branch_id: number;
-    warehouse_id: number;
+    warehouse_id?: number;
     base_currency_code: string;
     quote_currency_code: string;
     exchange_rate: number;
@@ -182,6 +183,7 @@ export interface CreatePOPayload {
     created_at: string;
     created_by: number;
     winning_vq_id?: number;
+    po_date?: string;               // date (Required for Backend Contract)
     po_lines: POLine[];
 
     // Legacy/Fallback for UI

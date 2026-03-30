@@ -10,6 +10,8 @@ import { VendorService } from '@/modules/master-data/vendor/services/vendor.serv
 import { PRService } from './pr.service';
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import { QCService } from './qc.service';
+import type { PRWaitingForQC } from '@/modules/procurement/types/pr-types';
+
 
 // ---------------------------------------------------------------------------
 // NOTE on Zod Boundary Design (per Architect's guidance):
@@ -29,7 +31,9 @@ const ENDPOINTS = {
     reject:   (id: number) => `/po/${id}/reject`,
     complete: (id: number) => `/po/${id}/complete`,
     pending:  (id: number) => `/po/${id}/pending`,
+    waitingForQC: '/po/pr/waiting-for-qc',
 };
+
 
 export const POService = {
     getList: async (params?: POListParams): Promise<POListResponse> => {
@@ -104,8 +108,14 @@ export const POService = {
                     if (activeQc?.qc_no) {
                         logger.debug(`[POService] Backup QC Found for PR ${mappedItem.pr_no}: ${activeQc.qc_no}`, { status: activeQc.status });
                         mappedItem.qc_no = activeQc.qc_no;
-                        if (activeQc.qc_id || (activeQc as any).qc_header_id) {
-                            mappedItem.qc_id = activeQc.qc_id || (activeQc as any).qc_header_id;
+                        const vqId = activeQc.winning_vq_id || (activeQc as any).vq_header_id || (activeQc as any).winning_vq_header_id;
+                        const vId = activeQc.winning_vendor_id || (activeQc as any).vendor_id;
+                        
+                        if (vqId) mappedItem.winning_vq_id = Number(vqId);
+                        if (vId) mappedItem.vendor_id = Number(vId);
+
+                        if (activeQc.qc_id || (activeQc as any).qc_header_id || (activeQc as any).id) {
+                            mappedItem.qc_id = activeQc.qc_id || (activeQc as any).qc_header_id || (activeQc as any).id;
                         }
                     }
                 } catch (err) {
@@ -312,4 +322,12 @@ export const POService = {
         logger.info(`[POService] Completing PO: ${id}`);
         return await api.post<SuccessResponse>(ENDPOINTS.complete(id));
     },
+
+    getWaitingForQC: async (params?: { q?: string }): Promise<PRWaitingForQC[]> => {
+        logger.info('[POService] Fetching PRs waiting for QC', params);
+        // The API returns a direct array based on the Postman screenshot
+        return await api.get<PRWaitingForQC[]>(ENDPOINTS.waitingForQC, { params });
+    },
+
 };
+
