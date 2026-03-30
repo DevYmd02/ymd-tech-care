@@ -653,8 +653,12 @@ export const useVQForm = (
     const taxOption = purchaseTaxOptions.find(o => Number(o.value || 0) === Number(watchTaxCodeId || 0));
     const taxRatePercent = taxOption ? (Number(taxOption.original?.tax_rate) || 0) : 0;
 
+    // 🎯 Detect if the tax code is Inclusive (IN) or Exclusive (EX)
+    const taxCodeStr = String(taxOption?.original?.tax_code || taxOption?.label || '').toUpperCase();
+    const isInclusive = taxCodeStr.includes('IN') || taxCodeStr.includes('INCLUSIVE');
+
     // 6. Use pricing.utils core engine for totals (Raw floats, consistency with PO)
-    const summary = calculatePricingSummary(items, taxRatePercent, false, billDiscount);
+    const summary = calculatePricingSummary(items, taxRatePercent, isInclusive, billDiscount);
 
     return {
       subtotal: summary.subtotal,

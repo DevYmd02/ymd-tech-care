@@ -12,6 +12,7 @@ export interface VQFormLinesProps {
     updateLineCalculation: (index: number) => void;
     createEmptyLine: () => QuotationFormData['vq_lines'][0];
     totals: {
+        subtotal: number;
         billDiscount: number;
         taxAmount: number;
         grandTotal: number;
@@ -44,10 +45,10 @@ export const VQFormLines: React.FC<VQFormLinesProps> = ({
     const watchVqLines = useMemo(() => watchVqLinesRaw || [], [watchVqLinesRaw]);
     const watchedLines = watchVqLines; // Alias for consistent naming
 
-    const watchExchangeRate = useWatch({ control, name: 'exchange_rate' }) || 1;
+
     
     const {
-        totalGross,
+        subtotal,
         billDiscount: discountAmount,
         taxAmount: vatAmount,
         grandTotal,
@@ -332,7 +333,7 @@ export const VQFormLines: React.FC<VQFormLinesProps> = ({
                                 <div className="flex justify-between items-center">
                                     <span className={labelClass}>รวม (Subtotal)</span>
                                     <input 
-                                        value={(Number(totalGross) * Number(watchExchangeRate)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
+                                        value={(Number(subtotal)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
                                         readOnly 
                                         className={`w-36 ${inputReadonlyClass} bg-yellow-50 dark:bg-yellow-900/10 border-yellow-300 dark:border-yellow-600 text-slate-800 dark:text-yellow-200 font-medium`} 
                                     />
@@ -357,13 +358,13 @@ export const VQFormLines: React.FC<VQFormLinesProps> = ({
                                         />
                                         <span className="text-gray-400 dark:text-gray-500">-</span>
                                         <input 
-                                            value={(Number(discountAmount) * Number(watchExchangeRate)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
+                                            value={(Number(discountAmount)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
                                             readOnly 
                                             className={`w-28 ${inputReadonlyClass} dark:text-white`} 
                                         />
                                         <span className="text-gray-400 dark:text-gray-500">-</span>
                                         <input 
-                                            value={((Number(totalLineDiscount || 0) + Number(discountAmount || 0)) * Number(watchExchangeRate)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
+                                            value={(Number(totalLineDiscount || 0) + Number(discountAmount || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
                                             readOnly 
                                             className={`w-28 ${inputReadonlyClass} text-red-600 dark:text-red-400 font-bold`} 
                                         />
@@ -388,7 +389,7 @@ export const VQFormLines: React.FC<VQFormLinesProps> = ({
                                             <span className="text-gray-400 dark:text-gray-500">-</span>
                                         )}
                                         <input 
-                                            value={(Number(vatAmount) * Number(watchExchangeRate)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
+                                            value={(Number(vatAmount)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
                                             readOnly 
                                             className={`w-36 ${inputReadonlyClass} bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-900/50 text-blue-700 dark:text-blue-300 font-medium text-right`} 
                                         />
@@ -403,7 +404,7 @@ export const VQFormLines: React.FC<VQFormLinesProps> = ({
                                          </div>
                                          <div className="flex items-center gap-1">
                                              <input 
-                                                 value={(Number(grandTotal) * Number(watchExchangeRate)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
+                                                 value={(Number(grandTotal)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
                                                  readOnly 
                                                  className="w-36 h-8 px-2 text-right font-bold bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-400 dark:border-yellow-600 rounded text-blue-600 dark:text-yellow-200 text-lg shadow-inner" 
                                              />

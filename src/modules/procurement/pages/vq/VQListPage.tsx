@@ -264,30 +264,43 @@ export default function VQListPage() {
 
         const flattened: VQPendingQueueItem[] = [];
 
-        rawData.forEach((rfq: any) => {
-            const vendors = rfq.vendors || [];
-            vendors.forEach((v: any) => {
-                const hasVq = createdVqKeys.has(`${rfq.rfq_id}-${v.vendor_id}`) || 
-                              createdVqKeys.has(`${rfq.rfq_no}-${v.vendor_id}`);
+        rawData.forEach((item: any) => {
+            // Case 1: Nested (RFQ with vendors array) - This is what the current implementation expects
+            const nestedVendors = item.vendors || item.rfqVendors || [];
+            if (nestedVendors.length > 0) {
+                nestedVendors.forEach((v: any) => {
+                    const hasVq = createdVqKeys.has(`${item.rfq_id}-${v.vendor_id}`) || 
+                                  createdVqKeys.has(`${item.rfq_no}-${v.vendor_id}`);
 
-                const isSent = v.status === 'SENT';
+                    const isSent = v.status === 'SENT';
 
-                // 🎯 FILTER: Only show SENT vendors that don't have a VQ created yet
+                    // 🎯 FILTER: Only show SENT vendors that don't have a VQ created yet
+                    if (isSent && !hasVq) {
+                        flattened.push({
+                            rfq_vendor_id: v.rfq_vendor_id || v.rfqVendorId || v.id,
+                            pr_id: item.pr_id,
+                            pr_no: item.pr_no,
+                            rfq_id: item.rfq_id,
+                            rfq_no: item.rfq_no,
+                            vendor_id: v.vendor_id,
+                            vendor_name: v.vendor_name,
+                            status: v.status,
+                            created_at: item.created_at,
+                            pr_approval_id: item.pr_approval_id || item.av_id || (item as any).approval_id || (item as any).approvalId,
+                        } as VQPendingQueueItem);
+                    }
+                });
+            } else if (item.rfq_vendor_id || item.vendor_id) {
+                // Case 2: Flat (Backend might return individual vendor-rfq pairs)
+                const hasVq = createdVqKeys.has(`${item.rfq_id}-${item.vendor_id}`) || 
+                              createdVqKeys.has(`${item.rfq_no}-${item.vendor_id}`);
+
+                const isSent = item.status === 'SENT';
+
                 if (isSent && !hasVq) {
-                    flattened.push({
-                        rfq_vendor_id: v.rfq_vendor_id || v.rfqVendorId || v.id,
-                        pr_id: rfq.pr_id,
-                        pr_no: rfq.pr_no,
-                        rfq_id: rfq.rfq_id,
-                        rfq_no: rfq.rfq_no,
-                        vendor_id: v.vendor_id,
-                        vendor_name: v.vendor_name,
-                        status: v.status,
-                        created_at: rfq.created_at,
-                        pr_approval_id: rfq.pr_approval_id || rfq.av_id || (rfq as any).approval_id || (rfq as any).approvalId,
-                    } as VQPendingQueueItem);
+                    flattened.push(item as VQPendingQueueItem);
                 }
-            });
+            }
         });
 
         return flattened;
@@ -315,6 +328,7 @@ export default function VQListPage() {
         refetchWaitingRfq();
         queryClient.invalidateQueries({ queryKey: ['waiting-for-vq-vendor'] });
         queryClient.invalidateQueries({ queryKey: ['waiting-for-rfq-vendor'] });
+        queryClient.invalidateQueries({ queryKey: ['all-vendor-quotations-lookup'] });
         
         // 2. Refresh RFQ Tracking if open
         if (selectedRfqId) {
