@@ -14,9 +14,7 @@ import { WindowFormLayout } from '@ui';
 import { QCService } from '@/modules/procurement/services/qc.service';
 import { VQService } from '@/modules/procurement/services/vq.service';
 import { RFQService } from '@/modules/procurement/services/rfq.service';
-import { AVService } from '@/modules/procurement/services/av.service';
 import type { RFQHeader, VQListItem, RFQDetailResponse } from '@/modules/procurement/types';
-import type { ApprovalHeader } from '@/modules/procurement/types/av-types';
 
 import type { QCListItem } from '@/modules/procurement/schemas/qc-schemas';
 import { SelectionModal } from './SelectionModal';
@@ -169,57 +167,27 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
   const { data: waitingList, isLoading: isWaitingListLoading } = useQuery({
     queryKey: ['waiting-for-qc-list', isOpen],
     queryFn: async () => {
-      // 🎯 BROADER SCAN: Fetch from both specialized and general endpoints to catch missing items
       try {
-        const [waitingData, allRFQData] = await Promise.all([
-          QCService.getWaitingForQC(),
-          RFQService.getList({ limit: 100 })
-        ]);
-
-        const waitingItems = Array.isArray(waitingData) ? waitingData : [];
-        const allItems = Array.isArray(allRFQData?.data) ? allRFQData.data : [];
-
-        // Merge and deduplicate by rfq_id
-        const merged = [...waitingItems];
-        allItems.forEach((item: RFQHeader) => {
-          if (!merged.find(m => m.rfq_id === item.rfq_id)) {
-            merged.push(item);
-          }
-        });
-
-        // 🔍 DEBUG: Log specifically if our target RFQ is found
-        const targetRFQ = merged.find(m => m.rfq_no === 'RFQ-001-202603-0009');
-        if (targetRFQ) {
-          console.log('✅ [QCFormModal] Found target RFQ-001-202603-0009 in merged list!', targetRFQ);
-        } else {
-          console.warn('❌ [QCFormModal] RFQ-001-202603-0009 still NOT found in merged list of', merged.length, 'items');
-        }
-
-        return merged;
+        const response: any = await QCService.getWaitingForQC();
+        
+        // 🎯 EXACT API BINDING: Use strictly the documents returned by the waiting-for-qc endpoint.
+        // The backend already implements the business rules on what is eligible for QC creation.
+        // (Previously, this failed because the response is { data: [...] } not an array itself)
+        const waitingItems = Array.isArray(response) ? response : (response?.data || []);
+        
+        return waitingItems;
       } catch (err) {
-        console.error('❌ [QCFormModal] Failed to fetch lists:', err);
+        console.error('❌ [QCFormModal] Failed to fetch waiting list:', err);
         return [];
       }
     },
     enabled: isOpen,
   });
 
-  // 📝 NEW QUERIES: Fetch all AVs to populate the AV selector fully
-  const { data: avListResponse } = useQuery({
-    queryKey: ['av-list-for-qc', isOpen],
-    queryFn: async () => {
-      try {
-        const response = await AVService.getApprovalList({ limit: 500 });
-        return response?.data || [];
-      } catch (err) {
-        console.error('❌ [QCFormModal] Failed to fetch AV list:', err);
-        return [];
-      }
-    },
-    enabled: isOpen,
-  });
+  // 📝 NEW QUERIES: AV selector now uses the 'waitingList' directly per user request.
+  // We no longer fetch from AVService specifically, to ensure all 3 fields draw from the exact same API node.
   
-  const avList = avListResponse || [];  // Data Integrity Bridge: Clear selected VQs and winner if RFQ No changes
+  // Data Integrity Bridge: Clear selected VQs and winner if RFQ No changes
   useEffect(() => {
     setSelectedVQIds([]);
     setValue('winning_vq_id', 0, { shouldValidate: true });
@@ -521,27 +489,23 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
 
 
 
-  const handleSelectActualAV = (item: ApprovalHeader | any) => {
-    // Expected to receive an ApprovalHeader from AVService
-    const prId = item.pr_id;
-    const parentPrNo = item.pr?.pr_no || item.pr_no || item.ref_pr_no || '';
-    const parentAvNo = item.approval_no || item.av_no || item.approved_pr_no || '';
+  const handleSelectActualAV = (item: RFQHeader) => {
+    // Both PR, AV, and RFQ inputs share the exact same source of truth object
+    const parentPrNo = item.ref_pr_no || item.pr_no || '';
+    const parentPrId = item.pr_id;
+    const parentAvNo = (item as any).av_no || item.approved_pr_no || '';
     
     setPRNo(parentPrNo || '-');
-    setAVNo(parentAvNo || '-');
-    setValue('pr_id', prId ? Number(prId) : null);
+    setAVNo(parentAvNo || (parentPrNo ? `รอ AV (${parentPrNo})` : 'อ้างอิงจาก RFQ'));
+    setValue('pr_id', parentPrId ? Number(parentPrId) : null);
     
-    // Now try to gently autocomplete RFQ if there's a matching one in waitingList
-    const matchingRFQ = Array.isArray(waitingList) ? waitingList.find((req: any) => req.pr_id === prId) : undefined;
-    
-    if (matchingRFQ && matchingRFQ.rfq_no) {
-        setRFQNo(matchingRFQ.rfq_no);
-        setValue('rfq_id', matchingRFQ.rfq_id, { shouldValidate: true });
-        toast(`เลือก AV และพบ RFQ ที่เกี่ยวข้อง: ${matchingRFQ.rfq_no}`, 'success');
+    if (item.rfq_no) {
+        setRFQNo(item.rfq_no);
+        setValue('rfq_id', item.rfq_id, { shouldValidate: true });
+        toast(`เลือก AV และดึงข้อมูลที่เกี่ยวข้องสำเร็จ`, 'success');
     } else {
         setRFQNo('');
         setValue('rfq_id', 0);
-        toast(`เลือก AV สำเร็จ (กรุณาเลือก RFQ เพิ่มเติม)`, 'info');
     }
     
     setSelectedVQIds([]);
@@ -1214,30 +1178,33 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
         ]}
       />
 
-      <SelectionModal<ApprovalHeader | any>
+      <SelectionModal<RFQHeader | any>
         isOpen={isAVSelectorOpen}
         onClose={() => setIsAVSelectorOpen(false)}
         title="เลือกเลขที่ AV อ้างอิง"
-        subtitle="ค้นหาเอกสารอนุมัติ (Approved PR) ที่ต้องการอ้างอิง"
-        data={avList}
+        subtitle="ค้นหาเอกสารอนุมัติ (Approved PR) ที่รอตรวจสอบ QC"
+        data={waitingList || []}
         searchPlaceholder="ค้นหาด้วยเลขที่ AV, PR หรือหัวข้อ..."
-        searchKeys={['approval_no', 'av_no', 'pr.pr_no', 'pr_no', 'remarks'] as any}
+        searchKeys={['av_no', 'approved_pr_no', 'pr_no', 'ref_pr_no', 'rfq_no', 'remarks', 'purpose'] as any}
         onSelect={handleSelectActualAV}
-        keyExtractor={(item) => item.approval_id || item.rfq_id || item.av_no}
+        keyExtractor={(item) => item.rfq_id || (item as any).av_no}
         columns={[
-          { label: 'เลขที่ AV', key: (item: any) => item.approval_no || item.av_no || item.approved_pr_no || '-', className: 'w-1/4' },
+          { label: 'เลขที่ AV / PR', key: (item: any) => (
+              <div className="flex flex-col">
+                <span className="font-bold">{item.av_no || item.approved_pr_no || '-'}</span>
+                <span className="text-[10px] text-gray-400 font-normal">{item.pr_no || item.ref_pr_no || '-'}</span>
+              </div>
+          ), className: 'w-1/4' },
           { 
-            label: 'เลขที่ PR', 
+            label: 'เลขที่ RFQ', 
             key: (item: any) => (
               <div className="flex flex-col">
-                <span className="font-bold">{item.pr?.pr_no || item.pr_no || item.ref_pr_no || '-'}</span>
-                {item.rfq_no && <span className="text-[10px] text-gray-400 font-normal">{item.rfq_no}</span>}
+                <span className="font-bold">{item.rfq_no || '-'}</span>
+                {item.creator_name && <span className="text-[10px] text-gray-400 font-normal">{item.creator_name}</span>}
               </div>
             ), 
             className: 'w-1/4' 
           },
-          { label: 'หมายเหตุ / วัตถุประสงค์', key: (item: any) => item.remarks || item.purpose || '-', className: 'flex-1' },
-
         ]}
       />
 
