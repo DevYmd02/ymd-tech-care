@@ -11,7 +11,7 @@ import {
     MapPin
 } from 'lucide-react';
 import { SalesAreaFormModal } from './SalesAreaFormModal';
-import { SalesZoneService } from '@/modules/master-data/company/services/company.service';
+import { SalesZoneService } from '@/modules/master-data/company/services/sales-org.service';
 import type { SalesZoneListItem } from '@/modules/master-data/types/master-data-types';
 import { ActiveStatusBadge } from '@ui';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';

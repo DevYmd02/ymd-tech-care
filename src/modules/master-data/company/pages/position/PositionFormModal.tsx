@@ -4,14 +4,11 @@
  * @module company
  */
 
-import { useEffect } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { useWatch } from 'react-hook-form';
 import { Save, X, Briefcase } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
-import { PositionService } from '@/modules/master-data/company/services/company.service';
+import { usePositionForm } from '../../hooks/usePositionForm';
 
 interface PositionFormModalProps {
     isOpen: boolean;
@@ -20,81 +17,19 @@ interface PositionFormModalProps {
     editId?: number | null;
 }
 
-const positionSchema = z.object({
-    positionCode: z.string().min(1, 'กรุณากรอกรหัสตำแหน่ง').max(20, 'รหัสตำแหน่งต้องไม่เกิน 20 ตัวอักษร'),
-    positionName: z.string().min(1, 'กรุณากรอกชื่อตำแหน่ง').max(100, 'ชื่อตำแหน่งต้องไม่เกิน 100 ตัวอักษร'),
-    positionNameEn: z.string().max(100, 'ชื่อตำแหน่ง (English) ต้องไม่เกิน 100 ตัวอักษร'),
-    isActive: z.boolean(),
-});
-
-type PositionFormValues = z.infer<typeof positionSchema>;
-
 export const PositionFormModal = ({ isOpen, onClose, onSuccess, editId }: PositionFormModalProps) => {
     const isEdit = !!editId;
 
     const {
         register,
-        handleSubmit,
-        reset,
-        formState: { errors, isSubmitting },
+        errors,
+        isSubmitting,
+        handleSave,
         setValue,
-        control,
-    } = useForm<PositionFormValues>({
-        resolver: zodResolver(positionSchema),
-        defaultValues: {
-            positionCode: '',
-            positionName: '',
-            positionNameEn: '',
-            isActive: true,
-        },
-    });
+        control
+    } = usePositionForm(editId ?? null, isOpen, onSuccess);
 
     const isActive = useWatch({ control, name: 'isActive' });
-
-    useEffect(() => {
-        if (isOpen) {
-            if (isEdit && editId) {
-                // Fetch data for edit
-                PositionService.get(editId).then((data) => {
-                    if (data) {
-                        setValue('positionCode', data.position_code);
-                        setValue('positionName', data.position_name);
-                        setValue('positionNameEn', data.position_name_en || '');
-                        setValue('isActive', data.is_active);
-                    }
-                });
-            } else {
-                // Reset for create
-                reset({
-                    positionCode: '',
-                    positionName: '',
-                    positionNameEn: '',
-                    isActive: true,
-                });
-            }
-        }
-    }, [isOpen, isEdit, editId, reset, setValue]);
-
-    const onSubmit = async (data: PositionFormValues) => {
-        try {
-            let res;
-            if (isEdit && editId) {
-                res = await PositionService.update(editId, data as any);
-            } else {
-                res = await PositionService.create(data as any);
-            }
-
-            if (res.success) {
-                onSuccess();
-                onClose();
-            } else {
-                alert(res.message || 'บันทึกไม่สำเร็จ');
-            }
-        } catch (error) {
-            console.error('Error saving position:', error);
-            alert('เกิดข้อผิดพลาดในการบันทึก');
-        }
-    };
 
     // Header Icon
     const TitleIcon = <Briefcase className="w-5 h-5 text-white" />;
@@ -113,7 +48,7 @@ export const PositionFormModal = ({ isOpen, onClose, onSuccess, editId }: Positi
             <button
                 type="button"
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50"
-                onClick={handleSubmit(onSubmit)}
+                onClick={handleSave}
                 disabled={isSubmitting}
             >
                 {isSubmitting ? (

@@ -4,16 +4,11 @@
  * @module company
  */
 
-import { useEffect } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { useWatch } from 'react-hook-form';
 import { Save, X, Briefcase } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
-import { JobService } from '@/modules/master-data/company/services/company.service';
-
-
+import { useJobForm } from '../../hooks/useJobForm';
 
 interface JobFormModalProps {
     isOpen: boolean;
@@ -22,77 +17,19 @@ interface JobFormModalProps {
     editId?: number | null;
 }
 
-const jobSchema = z.object({
-    jobCode: z.string().min(1, 'กรุณากรอกรหัส Job').max(20, 'รหัส Job ต้องไม่เกิน 20 ตัวอักษร'),
-    jobName: z.string().min(1, 'กรุณากรอกชื่อ Job').max(100, 'ชื่อ Job ต้องไม่เกิน 100 ตัวอักษร'),
-    isActive: z.boolean(),
-});
-
-type JobFormValues = z.infer<typeof jobSchema>;
-
 export const JobFormModal = ({ isOpen, onClose, onSuccess, editId }: JobFormModalProps) => {
     const isEdit = !!editId;
 
     const {
         register,
-        handleSubmit,
-        reset,
-        formState: { errors, isSubmitting },
+        errors,
+        isSubmitting,
+        handleSave,
         setValue,
-        control,
-    } = useForm<JobFormValues>({
-        resolver: zodResolver(jobSchema),
-        defaultValues: {
-            jobCode: '',
-            jobName: '',
-            isActive: true,
-        },
-    });
+        control
+    } = useJobForm(editId ?? null, isOpen, onSuccess);
 
     const isActive = useWatch({ control, name: 'isActive' });
-
-    useEffect(() => {
-        if (isOpen) {
-            if (isEdit && editId) {
-                // Fetch data for edit
-                JobService.get(editId).then((data) => {
-                    if (data) {
-                        setValue('jobCode', data.job_code);
-                        setValue('jobName', data.job_name);
-                        setValue('isActive', data.is_active);
-                    }
-                });
-            } else {
-                // Reset for create
-                reset({
-                    jobCode: '',
-                    jobName: '',
-                    isActive: true,
-                });
-            }
-        }
-    }, [isOpen, isEdit, editId, reset, setValue]);
-
-    const onSubmit = async (data: JobFormValues) => {
-        try {
-            let res;
-            if (isEdit && editId) {
-                res = await JobService.update(editId, data as any);
-            } else {
-                res = await JobService.create(data as any);
-            }
-
-            if (res.success) {
-                onSuccess();
-                onClose();
-            } else {
-                alert(res.message || 'บันทึกไม่สำเร็จ');
-            }
-        } catch (error) {
-            console.error('Error saving job:', error);
-            alert('เกิดข้อผิดพลาดในการบันทึก');
-        }
-    };
 
     // Header Icon
     const TitleIcon = <Briefcase className="w-5 h-5 text-white" />;
@@ -111,7 +48,7 @@ export const JobFormModal = ({ isOpen, onClose, onSuccess, editId }: JobFormModa
             <button
                 type="button"
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50"
-                onClick={handleSubmit(onSubmit)}
+                onClick={handleSave}
                 disabled={isSubmitting}
             >
                 {isSubmitting ? (

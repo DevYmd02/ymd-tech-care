@@ -196,6 +196,7 @@ export type CreateQCFormSchemaType = z.infer<typeof CreateQCFormSchema>;
 export interface IReadyForPOPR {
   pr_id: number;
   pr_no: string;
+  approval_no?: string;
   base_currency_code: string;
   pr_base_total_amount: number;
   requester_name: string;

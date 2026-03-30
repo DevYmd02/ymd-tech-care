@@ -23,7 +23,7 @@ const COMPANY_SECTIONS = [
         description: 'Manage departments and job roles',
         items: [
             { id: 'employee-side', label: 'Employee Side', labelTh: 'รหัสฝ่าย', icon: Briefcase, path: '/master-data/employee-side' },
-            { id: 'section', label: 'Section', labelTh: 'รหัสแผนก', icon: LayoutGrid, path: '/master-data/section' },
+            { id: 'employee-dept', label: 'Employee Dept', labelTh: 'รหัสแผนก', icon: LayoutGrid, path: '/master-data/employee-dept' },
             { id: 'job', label: 'Job', labelTh: 'รหัส Job', icon: FileText, path: '/master-data/job' },
         ]
     },

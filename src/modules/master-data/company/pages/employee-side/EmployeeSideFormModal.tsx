@@ -4,99 +4,32 @@
  * @module company
  */
 
-import { useEffect } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { useWatch } from 'react-hook-form';
 import { Save, X, Building } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
-import { DepartmentService } from '@/modules/master-data/company/services/company.service';
-
-
+import { useEmployeeSideForm } from '../../hooks/useEmployeeSideForm';
 
 interface EmployeeSideFormModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
-    editId?: number | null;
+    editId?: string | number | null;
 }
-
-const employeeSideSchema = z.object({
-    departmentCode: z.string().min(1, 'กรุณากรอกรหัสฝ่าย').max(20, 'รหัสฝ่ายต้องไม่เกิน 20 ตัวอักษร'),
-    departmentName: z.string().min(1, 'กรุณากรอกชื่อฝ่าย').max(100, 'ชื่อฝ่ายต้องไม่เกิน 100 ตัวอักษร'),
-    departmentNameEn: z.string().max(100, 'ชื่อฝ่าย (English) ต้องไม่เกิน 100 ตัวอักษร'),
-    isActive: z.boolean(),
-});
-
-type EmployeeSideFormValues = z.infer<typeof employeeSideSchema>;
 
 export const EmployeeSideFormModal = ({ isOpen, onClose, onSuccess, editId }: EmployeeSideFormModalProps) => {
     const isEdit = !!editId;
 
     const {
         register,
-        handleSubmit,
-        reset,
-        formState: { errors, isSubmitting },
+        errors,
+        isSubmitting,
+        handleSave,
         setValue,
-        control,
-    } = useForm<EmployeeSideFormValues>({
-        resolver: zodResolver(employeeSideSchema),
-        defaultValues: {
-            departmentCode: '',
-            departmentName: '',
-            departmentNameEn: '',
-            isActive: true,
-        },
-    });
+        control
+    } = useEmployeeSideForm(editId ?? null, isOpen, onSuccess);
 
     const isActive = useWatch({ control, name: 'isActive' });
-
-    useEffect(() => {
-        if (isOpen) {
-            if (isEdit && editId) {
-                // Fetch data for edit
-                DepartmentService.get(editId).then((data) => {
-                    if (data) {
-                        setValue('departmentCode', data.department_code);
-                        setValue('departmentName', data.department_name);
-                        setValue('departmentNameEn', data.department_name_en || '');
-                        setValue('isActive', data.is_active);
-                    }
-                });
-            } else {
-                // Reset for create
-                reset({
-                    departmentCode: '',
-                    departmentName: '',
-                    departmentNameEn: '',
-                    isActive: true,
-                });
-            }
-        }
-    }, [isOpen, isEdit, editId, reset, setValue]);
-
-    const onSubmit = async (data: EmployeeSideFormValues) => {
-        try {
-            let res;
-            if (isEdit && editId) {
-                res = await DepartmentService.update(editId, data as any);
-            } else {
-                res = await DepartmentService.create(data as any);
-            }
-
-            if (res.success) {
-                onSuccess();
-                onClose();
-            } else {
-                alert(res.message || 'บันทึกไม่สำเร็จ');
-            }
-        } catch (error) {
-            console.error('Error saving employee-side:', error);
-            alert('เกิดข้อผิดพลาดในการบันทึก');
-        }
-    };
 
     // Header Icon
     const TitleIcon = <Building className="w-5 h-5 text-white" />;
@@ -115,7 +48,7 @@ export const EmployeeSideFormModal = ({ isOpen, onClose, onSuccess, editId }: Em
             <button
                 type="button"
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50"
-                onClick={handleSubmit(onSubmit)}
+                onClick={handleSave}
                 disabled={isSubmitting}
             >
                 {isSubmitting ? (
@@ -137,53 +70,53 @@ export const EmployeeSideFormModal = ({ isOpen, onClose, onSuccess, editId }: Em
             footer={FormFooter}
         >
             <div className="p-6 space-y-6">
-                {/* Department Code */}
+                {/* Side Code */}
                 <div>
                     <label className={styles.label}>
                         รหัสฝ่าย <span className="text-red-500">*</span>
                     </label>
                     <input
-                        {...register('departmentCode')}
+                        {...register('sideCode')}
                         type="text"
                         placeholder="กรอกรหัสฝ่าย (เช่น FIN, HR, IT)"
-                        className={`${styles.input} ${errors.departmentCode ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        className={`${styles.input} ${errors.sideCode ? 'border-red-500 focus:ring-red-200' : ''}`}
                         disabled={isEdit}
                     />
-                    {errors.departmentCode ? (
-                        <p className="text-red-500 text-xs mt-1">{errors.departmentCode.message}</p>
+                    {errors.sideCode ? (
+                        <p className="text-red-500 text-xs mt-1">{errors.sideCode.message}</p>
                     ) : (
                         <p className="text-gray-400 text-xs mt-1">varchar(25) - รหัสฝ่าย</p>
                     )}
                 </div>
 
-                {/* Department Name (Thai) */}
+                {/* Side Name (Thai) */}
                 <div>
                     <label className={styles.label}>
                         ชื่อฝ่าย (ภาษาไทย) <span className="text-red-500">*</span>
                     </label>
                     <input
-                        {...register('departmentName')}
+                        {...register('sideName')}
                         type="text"
                         placeholder="กรอกชื่อฝ่าย"
-                        className={`${styles.input} ${errors.departmentName ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        className={`${styles.input} ${errors.sideName ? 'border-red-500 focus:ring-red-200' : ''}`}
                     />
-                    {errors.departmentName ? (
-                        <p className="text-red-500 text-xs mt-1">{errors.departmentName.message}</p>
+                    {errors.sideName ? (
+                        <p className="text-red-500 text-xs mt-1">{errors.sideName.message}</p>
                     ) : (
                         <p className="text-gray-400 text-xs mt-1">varchar(255) - ชื่อฝ่าย</p>
                     )}
                 </div>
 
-                {/* Department Name (English) */}
+                {/* Side Name (English) */}
                 <div>
                     <label className={styles.label}>
                         ชื่อฝ่าย (ภาษาอังกฤษ)
                     </label>
                     <input
-                        {...register('departmentNameEn')}
+                        {...register('sideNameEn')}
                         type="text"
                         placeholder="Enter department name in English"
-                        className={`${styles.input} ${errors.departmentNameEn ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        className={`${styles.input} ${errors.sideNameEn ? 'border-red-500 focus:ring-red-200' : ''}`}
                     />
                     <p className="text-gray-400 text-xs mt-1">varchar(255) - ชื่อฝ่าย (Eng)</p>
                 </div>

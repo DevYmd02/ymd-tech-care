@@ -125,8 +125,119 @@ export const QCService = {
 
   cancel: async (id: number): Promise<SuccessResponse> => {
     logger.info(`[QCService] Cancelling QC: ${id}`);
-    return await api.post<SuccessResponse>(ENDPOINTS.cancel(id), {});
+    return await api.get<SuccessResponse>(ENDPOINTS.cancel(id), {});
   },
+
+  /**
+   * 🏆 ADVANCED DISCOVERY (Triple Scan Logic)
+   * Centralized logic to find PRs that are truly ready for PO by merging:
+   * 1. Direct "Ready for PO" API (Primary)
+   * 2. Draft QCs (Discovery)
+   * 3. Approved PRs (Authority)
+   */
+  getAdvancedReadyPRs: async (): Promise<IReadyForPOPR[]> => {
+    const PRService = (await import('./pr.service')).PRService;
+    logger.info('🚀 [QCService] Executing Advanced Triple-Scan Discovery');
+    
+    try {
+        // 📡 Parallel Fetch (Authority + Discovery)
+        const [items1, items2Res, items3Res] = await Promise.all([
+            api.get<IReadyForPOPR[]>('/po/pr/waiting-for-qc'), // Ready for PO
+            api.get<QCListResponse>('/qc/qc-all', { params: { status: 'DRAFT', limit: 100 } }), // Draft QCs
+            PRService.getList({ status: 'APPROVED', limit: 100 }) // Approved PRs
+        ]);
+
+        const items2 = extractArrayFromResponse<QCListItem>(items2Res);
+        const items3 = extractArrayFromResponse<any>(items3Res);
+        
+        const mergedMap = new Map<string, IReadyForPOPR>();
+
+        // 1. Map Primary Items (The "Golden" list)
+        items1.forEach(item => {
+            const key = item.pr_no || `ID_${item.pr_id}`;
+            if (key) mergedMap.set(key, { ...item });
+        });
+
+        // 2. Overlay Draft QCs (Enrichment)
+        items2.forEach(qc => {
+            const key = qc.pr_no;
+            if (key && mergedMap.has(key)) {
+                const existing = mergedMap.get(key)!;
+                const winnerVqId = Number(qc.winning_vq_id || qc.vq_header_id || 0);
+                const winnerVendorId = Number(qc.winning_vendor_id || (qc as any).vendor_id || 0);
+                
+                // 🎯 DATA ENRICHMENT: If the PR record lacks vendor/amount (which is common in waiting list),
+                // overlay it with the "Awarded" data from the discovered QC.
+                if (qc.vendor_name && (!existing.preferred_vendor || !existing.preferred_vendor.vendor_name)) {
+                    existing.preferred_vendor = {
+                        vendor_id: winnerVendorId,
+                        vendor_name: qc.vendor_name
+                    };
+                }
+                
+                if (qc.vq_total_amount && Number(qc.vq_total_amount) > 0) {
+                    existing.pr_base_total_amount = Number(qc.vq_total_amount);
+                }
+
+                const hasThisQC = existing.qcHeaders?.some(h => String(h.qc_no) === String(qc.qc_no));
+                if (!hasThisQC) {
+                    if (!existing.qcHeaders) existing.qcHeaders = [];
+                    existing.qcHeaders.push({
+                        qc_id: Number(qc.qc_id || (qc as any).id || 0),
+                        qc_no: qc.qc_no || 'QC-UNKNOWN',
+                        pr_id: existing.pr_id,
+                        winning_vq_id: winnerVqId,
+                        winning_vendor_id: winnerVendorId,
+                        status: qc.status,
+                        raw_status: qc.status,
+                        created_at: qc.created_at || ''
+                    });
+                }
+            }
+        });
+
+        // 3. Authority Overlay (Approved PRs)
+        items3.forEach(pr => {
+            const key = pr.pr_no || `ID_${pr.pr_id}`;
+            if (key && !mergedMap.has(key)) {
+                const qcs = (pr.qcHeaders as IReadyForPOPR['qcHeaders']) || [];
+                const readyPrKeys = new Set(items1.map(i => i.pr_no || `ID_${i.pr_id}`));
+                
+                const isApproved = pr.status === 'APPROVED';
+                const isDiscoveryStatus = pr.status === 'PARTIAL' || pr.status === 'DRAFT';
+                
+                if (isApproved && !readyPrKeys.has(key)) return;
+                if (!isApproved && !isDiscoveryStatus) return;
+
+                mergedMap.set(key, {
+                    pr_id: Number(pr.pr_id),
+                    pr_no: pr.pr_no,
+                    base_currency_code: pr.pr_base_currency_code || 'THB',
+                    pr_base_total_amount: Number(pr.pr_base_total_amount || pr.total_amount || 0),
+                    requester_name: pr.requester_name || '-',
+                    preferred_vendor: pr.preferred_vendor_id ? {
+                        vendor_id: Number(pr.preferred_vendor_id),
+                        vendor_name: pr.vendor_name || 'ไม่ระบุชื่อผู้ขาย'
+                    } : null,
+                    qcHeaders: qcs as any
+                });
+            }
+        });
+
+        const mergedResult = Array.from(mergedMap.values()).filter(pr => {
+            const key = pr.pr_no || `ID_${pr.pr_id}`;
+            const isReadyByAPI = items1.some(i => (i.pr_no || `ID_${i.pr_id}`) === key);
+            if (isReadyByAPI) return true;
+            return pr.qcHeaders?.some(h => (h.raw_status || h.status) === 'DRAFT');
+        });
+
+        logger.info(`✅ [QCService] Triple-Scan Success: Found ${mergedResult.length} Advanced Ready PRs`);
+        return mergedResult;
+    } catch (err) {
+        logger.error('[QCService] Triple-Scan Critical Failure, falling back to basic API', err);
+        return await api.get<IReadyForPOPR[]>('/po/pr/waiting-for-qc');
+    }
+  }
 };
 
 export type { QCListParams, QCListResponse, CreateQCPayload as QCCreateData };

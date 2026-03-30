@@ -11,7 +11,7 @@ import {
     Target
 } from 'lucide-react';
 import { SalesTargetFormModal } from './SalesTargetFormModal';
-import { SalesTargetService } from '@/modules/master-data/company/services/company.service';
+import { SalesTargetService } from '@/modules/master-data/company/services/sales-org.service';
 import type { SalesTargetListItem } from '@/modules/master-data/types/master-data-types';
 import { ActiveStatusBadge } from '@ui';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
@@ -78,14 +78,14 @@ export default function SalesTargetList() {
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
-            const data = await SalesTargetService.getList();
-            setAllTargets(data);
+            const response = await SalesTargetService.getList(filters);
+            setAllTargets(response.items || []);
         } catch (error) {
             console.error('Failed to fetch sales targets:', error);
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [filters]);
 
     useEffect(() => {
         fetchData();

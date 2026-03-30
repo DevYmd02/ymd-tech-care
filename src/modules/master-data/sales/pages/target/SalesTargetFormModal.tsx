@@ -11,7 +11,7 @@ import { z } from 'zod';
 import { Target, Save, X } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
-import { SalesTargetService } from '@/modules/master-data/company/services/company.service';
+import { SalesTargetService } from '@/modules/master-data/company/services/sales-org.service';
 import type { SalesTargetFormData } from '@/modules/master-data/types/master-data-types';
 
 // ====================================================================================

@@ -1,28 +1,29 @@
 /**
- * @file SectionList.tsx
- * @description หน้ารายการข้อมูลส่วนงาน (Section Master Data List) - Refactored for Standardization
+ * @file EmployeeDeptList.tsx
+ * @description หน้ารายการข้อมูลส่วนงาน/แผนก (Employee Dept Master Data List)
  * @module company
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { 
     Edit2, 
     Trash2, 
     Layers
 } from 'lucide-react';
-import { SectionFormModal } from './SectionFormModal';
-import { SectionService } from '@/modules/master-data/company/services/company.service';
-import type { SectionListItem } from '@/modules/master-data/types/master-data-types';
+import { EmployeeDeptFormModal } from './EmployeeDeptFormModal';
+import { useEmployeeDeptList } from '../../hooks/useEmployeeDeptList';
+import type { EmployeeDeptListItem } from '@/modules/master-data/types/master-data-types';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
+import { EmployeeDeptService } from '../../services/employee-dept.service';
 
 // ====================================================================================
 // CONFIG
 // ====================================================================================
 
-export default function SectionList() {
+export default function EmployeeDeptList() {
     // ==================== STATE ====================
     const { 
         filters, 
@@ -31,32 +32,30 @@ export default function SectionList() {
         resetFilters
     } = useTableFilters({
         customParamKeys: {
-          search: 'section_code',
-          search2: 'section_name',
-          search3: 'department_code'
+          search: 'dept_code',
+          search2: 'dept_name',
+          search3: 'side_code'
         }
     });
 
-    const [allSections, setAllSections] = useState<SectionListItem[]>([]);
-    const [totalCount, setTotalCount] = useState(0);
-    const [isLoading, setIsLoading] = useState(true);
+    const { depts, totalCount, isLoading, refetch } = useEmployeeDeptList(filters);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingId, setEditingId] = useState<number | null>(null);
+    const [editingId, setEditingId] = useState<string | number | null>(null);
 
     // ==================== FILTER CONFIG ====================
     const filterConfig: FilterFieldConfig<Extract<keyof typeof filters, string>>[] = useMemo(() => [
         { 
             name: 'search', 
-            label: 'รหัสส่วนงาน/แผนก', 
+            label: 'รหัสแผนก', 
             type: 'text', 
-            placeholder: 'กรอกรหัสส่วนงาน',
+            placeholder: 'กรอกรหัสแผนก',
             colSpan: 1
         },
         { 
             name: 'search2', 
-            label: 'ชื่อส่วนงาน/แผนก', 
+            label: 'ชื่อแผนก', 
             type: 'text', 
-            placeholder: 'กรอกชื่อส่วนงาน',
+            placeholder: 'กรอกชื่อแผนก',
             colSpan: 1
         },
         { 
@@ -68,26 +67,8 @@ export default function SectionList() {
         },
     ], []);
 
-    // ==================== DATA FETCHING ====================
-    const fetchData = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const response = await SectionService.getList(filters);
-            setAllSections(response.items);
-            setTotalCount(response.total);
-        } catch (error) {
-            console.error('Failed to fetch sections:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [filters]);
-
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
-
     // ==================== DATA MAPPING ====================
-    const tableData = useMemo(() => allSections, [allSections]);
+    const tableData = useMemo(() => depts, [depts]);
 
     // ==================== HANDLERS ====================
     const handleCreateNew = () => {
@@ -95,24 +76,30 @@ export default function SectionList() {
         setIsModalOpen(true);
     };
 
-    const handleEdit = (id: number) => {
+    const handleEdit = (id: string | number) => {
         setEditingId(id);
         setIsModalOpen(true);
     };
 
-    const handleDelete = useCallback((id: number) => {
-        if (confirm('คุณต้องการลบข้อมูลแผนก/ส่วนงานนี้หรือไม่?')) {
-            SectionService.delete(id).then(() => fetchData());
+    const handleDelete = useCallback(async (id: string | number) => {
+        if (confirm('คุณต้องการลบข้อมูลแผนกนี้หรือไม่?')) {
+            try {
+                await EmployeeDeptService.delete(id);
+                refetch();
+            } catch (error) {
+                console.error('Failed to delete department:', error);
+                alert('ไม่สามารถลบข้อมูลได้ในขณะนี้');
+            }
         }
-    }, [fetchData]);
+    }, [refetch]);
 
     const handleModalClose = () => {
         setIsModalOpen(false);
         setEditingId(null);
     };
 
-    // ==================== TABLE COLUMNS (Matching Image 0) ====================
-    const columns = useMemo<ColumnDef<SectionListItem>[]>(() => [
+    // ==================== TABLE COLUMNS (Matching DB Schema) ====================
+    const columns = useMemo<ColumnDef<EmployeeDeptListItem>[]>(() => [
         {
             id: 'sequence',
             header: 'ลำดับ',
@@ -120,35 +107,37 @@ export default function SectionList() {
             size: 60,
         },
         {
-            accessorKey: 'section_code',
+            accessorKey: 'dept_code', // Primary DB Field
             header: 'รหัสแผนก',
-            cell: ({ getValue }) => (
+            cell: ({ row }) => (
                 <span className="font-medium text-blue-600 dark:text-blue-400">
-                    {getValue() as string}
+                    {row.original.dept_code || row.original.section_code}
                 </span>
             ),
         },
         {
-            accessorKey: 'section_name',
+            accessorKey: 'dept_name', // Primary DB Field
             header: 'ชื่อแผนก (ไทย)',
+            cell: ({ row }) => row.original.dept_name || row.original.section_name,
         },
         {
-            accessorKey: 'section_name_en',
+            accessorKey: 'dept_nameeng', // DB Schema naming
             header: 'ชื่อแผนก (EN)',
-            cell: ({ getValue }) => <span className="text-gray-500">{getValue() as string || '-'}</span>
+            cell: ({ row }) => <span className="text-gray-500">{row.original.dept_nameeng || row.original.section_name_en || '-'}</span>
         },
         {
-            accessorKey: 'department_code',
+            accessorKey: 'side_code', // DB Schema naming
             header: 'รหัสฝ่าย',
-            cell: ({ getValue }) => (
+            cell: ({ row }) => (
                 <span className="px-2 py-1 bg-blue-50 text-blue-600 rounded text-xs font-medium border border-blue-100 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400">
-                    {getValue() as string || '-'}
+                    {row.original.side_code || row.original.department_code || '-'}
                 </span>
             )
         },
         {
-            accessorKey: 'department_name',
+            accessorKey: 'side_name', // DB Schema naming
             header: 'ชื่อฝ่าย',
+            cell: ({ row }) => row.original.side_name || row.original.department_name,
         },
         {
             id: 'actions',
@@ -184,7 +173,7 @@ export default function SectionList() {
                 <div>
                     <h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
                         <Layers className="text-blue-600" />
-                        กำหนดรหัสแผนก (Department Master)
+                        กำหนดรหัสแผนก (Employee Dept Master)
                     </h1>
                     <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">
                         จัดการข้อมูลแผนกต่างๆ ในแต่ละฝ่าย
@@ -236,11 +225,11 @@ export default function SectionList() {
             </div>
 
             {/* Modal */}
-            <SectionFormModal 
+            <EmployeeDeptFormModal 
                 isOpen={isModalOpen} 
                 onClose={handleModalClose}
                 editId={editingId}
-                onSuccess={fetchData}
+                onSuccess={refetch}
             />
         </div>
     );

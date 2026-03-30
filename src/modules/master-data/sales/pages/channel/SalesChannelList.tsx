@@ -11,7 +11,7 @@ import {
     Store
 } from 'lucide-react';
 import { SalesChannelFormModal } from './SalesChannelFormModal';
-import { SalesChannelService } from '@/modules/master-data/company/services/company.service';
+import { SalesChannelService } from '@/modules/master-data/company/services/sales-org.service';
 import type { SalesChannelListItem } from '@/modules/master-data/types/master-data-types';
 import { ActiveStatusBadge } from '@ui';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';

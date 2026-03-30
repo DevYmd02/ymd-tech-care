@@ -56,7 +56,7 @@ const VendorGroupList = React.lazy(() => import('@/modules/master-data/vendor/pa
 // Company Pages (from master-data)
 const BranchList = React.lazy(() => import('@/modules/master-data/company/pages/branch/BranchList'));
 const EmployeeSideList = React.lazy(() => import('@/modules/master-data/company/pages/employee-side/EmployeeSideList'));
-const SectionList = React.lazy(() => import('@/modules/master-data/company/pages/section/SectionList'));
+const EmployeeDeptList = React.lazy(() => import('@/modules/master-data/company/pages/employee-dept/EmployeeDeptList'));
 const JobList = React.lazy(() => import('@/modules/master-data/company/pages/job/JobList'));
 const EmployeeList = React.lazy(() => import('@/modules/master-data/company/pages/employee/EmployeeList'));
 const EmployeeGroupList = React.lazy(() => import('@/modules/master-data/company/pages/employee-group/EmployeeGroupList'));
@@ -185,6 +185,7 @@ function AppContent() {
           <Route path="/login" element={<Navigate to={ROUTES.AUTH.LOGIN} replace />} />
           <Route path="/register" element={<Navigate to={ROUTES.AUTH.REGISTER} replace />} />
           <Route path="/forgot-password" element={<Navigate to={ROUTES.AUTH.FORGOT_PASSWORD} replace />} />
+          <Route path="/master-data/section" element={<Navigate to={ROUTES.MASTER_DATA.EMPLOYEE_DEPT} replace />} />
 
 
           {/* Main Layout Routes - Protected */}
@@ -235,9 +236,9 @@ function AppContent() {
             <Route path="master-data/vendor" element={<VendorList />} />
             {/* <Route path="master-data/vendor/list" element={<VendorList />} /> */}
 
-            <Route path="master-data/branch" element={<BranchList />} />
-            <Route path="master-data/employee-side" element={<EmployeeSideList />} />
-            <Route path="master-data/section" element={<SectionList />} />
+            <Route path={ROUTES.MASTER_DATA.BRANCH} element={<BranchList />} />
+            <Route path={ROUTES.MASTER_DATA.EMPLOYEE_SIDE} element={<EmployeeSideList />} />
+            <Route path={ROUTES.MASTER_DATA.EMPLOYEE_DEPT} element={<EmployeeDeptList />} />
             <Route path="master-data/job" element={<JobList />} />
             <Route path="master-data/employee" element={<EmployeeList />} />
             <Route path="master-data/employee-group" element={<EmployeeGroupList />} />

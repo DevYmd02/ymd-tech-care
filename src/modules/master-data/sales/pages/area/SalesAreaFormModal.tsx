@@ -11,7 +11,7 @@ import { z } from 'zod';
 import { MapPin, Save, X } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
-import { SalesZoneService } from '@/modules/master-data/company/services/company.service';
+import { SalesZoneService } from '@/modules/master-data/company/services/sales-org.service';
 import type { SalesZoneFormData } from '@/modules/master-data/types/master-data-types';
 
 // ====================================================================================

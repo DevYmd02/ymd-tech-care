@@ -21,7 +21,7 @@ import { CostCenterService } from '@/modules/master-data/accounting/services/cos
 import { ProjectService } from '@/modules/master-data/project/services/project.service';
 import { ProductCategoryService } from '@/modules/master-data/inventory/services/product-category.service';
 import { ItemTypeService } from '@/modules/master-data/inventory/services/item-type.service';
-import { DepartmentService } from '@/modules/master-data/company/services/company.service';
+import { EmployeeSideService as DepartmentService } from '@/modules/master-data/company/services/employee-side.service';
 import { CurrencyService } from '@/modules/master-data/currency/services/currency.service';
 
 export const MasterDataService = {

@@ -3,18 +3,11 @@
  * @description Modal for creating/editing Employee data (Standarized)
  */
 
-import { useEffect, useState } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import type { SubmitHandler } from 'react-hook-form';
+import { useWatch } from 'react-hook-form';
 import { Save, X, User } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
-import { OrgEmployeeService, DepartmentService, PositionService } from '@/modules/master-data/company/services/company.service';
-import type { DepartmentListItem, PositionListItem, EmployeeFormData } from '@/modules/master-data/types/master-data-types';
-
-
+import { useEmployeeForm } from '../../hooks/useEmployeeForm';
 
 interface EmployeeFormModalProps {
     isOpen: boolean;
@@ -23,108 +16,21 @@ interface EmployeeFormModalProps {
     editId?: number | null;
 }
 
-const employeeSchema = z.object({
-    employeeCode: z.string().min(1, 'กรุณากรอกรหัสพนักงาน').max(20, 'รหัสพนักงานต้องไม่เกิน 20 ตัวอักษร'),
-    firstName: z.string().min(1, 'กรุณากรอกชื่อ'),
-    lastName: z.string().min(1, 'กรุณากรอกนามสกุล'),
-    email: z.string().email('รูปแบบอีเมลไม่ถูกต้อง').or(z.literal('')),
-    phone: z.string().max(20).or(z.literal('')),
-    positionId: z.number().min(1, 'กรุณาเลือกตำแหน่ง'),
-    departmentId: z.number().min(1, 'กรุณาเลือกฝ่าย'),
-    isActive: z.boolean(),
-});
-
-type EmployeeFormValues = z.infer<typeof employeeSchema>;
-
 export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: EmployeeFormModalProps) => {
     const isEdit = !!editId;
-    const [departments, setDepartments] = useState<DepartmentListItem[]>([]);
-    const [positions, setPositions] = useState<PositionListItem[]>([]);
 
     const {
         register,
-        handleSubmit,
-        reset,
-        formState: { errors, isSubmitting },
+        errors,
+        sides,
+        positions,
+        isSubmitting,
+        handleSave,
         setValue,
-        control,
-    } = useForm<EmployeeFormData>({
-        resolver: zodResolver(employeeSchema),
-        defaultValues: {
-            employeeCode: '',
-            firstName: '',
-            lastName: '',
-            email: '',
-            phone: '',
-            positionId: 0,
-            departmentId: 0,
-            isActive: true,
-        },
-    });
+        control
+    } = useEmployeeForm(editId ?? null, isOpen, onSuccess);
 
     const isActive = useWatch({ control, name: 'isActive' });
-
-    useEffect(() => {
-        if (isOpen) {
-            // Fetch dependencies
-            Promise.all([
-                DepartmentService.getList(),
-                PositionService.getList()
-            ]).then(([deptResponse, posResponse]) => {
-                setDepartments(deptResponse.items);
-                setPositions(posResponse.items);
-            });
-
-            if (isEdit && editId) {
-                // Fetch data for edit
-                OrgEmployeeService.get(editId).then((data) => {
-                    if (data) {
-                        setValue('employeeCode', data.employee_code);
-                        setValue('firstName', data.first_name || '');
-                        setValue('lastName', data.last_name || '');
-                        setValue('email', data.email || '');
-                        setValue('phone', data.phone || '');
-                        setValue('positionId', data.position_id || 0);
-                        setValue('departmentId', data.department_id || 0);
-                        setValue('isActive', data.is_active || false);
-                    }
-                });
-            } else {
-                // Reset for create
-                reset({
-                    employeeCode: '',
-                    firstName: '',
-                    lastName: '',
-                    email: '',
-                    phone: '',
-                    positionId: 0,
-                    departmentId: 0,
-                    isActive: true,
-                });
-            }
-        }
-    }, [isOpen, isEdit, editId, reset, setValue]);
-
-    const onSubmit: SubmitHandler<EmployeeFormValues> = async (data) => {
-        try {
-            let res;
-            if (isEdit && editId) {
-                res = await OrgEmployeeService.update(editId, data);
-            } else {
-                res = await OrgEmployeeService.create(data);
-            }
-
-            if (res.success) {
-                onSuccess();
-                onClose();
-            } else {
-                alert(res.message || 'บันทึกไม่สำเร็จ');
-            }
-        } catch (error) {
-            console.error('Error saving employee:', error);
-            alert('เกิดข้อผิดพลาดในการบันทึก');
-        }
-    };
 
     // Header Icon
     const TitleIcon = <User className="w-5 h-5 text-white" />;
@@ -143,7 +49,7 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
             <button
                 type="button"
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50"
-                onClick={handleSubmit(onSubmit)}
+                onClick={handleSave}
                 disabled={isSubmitting}
             >
                 {isSubmitting ? (
@@ -253,26 +159,26 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
 
                 {/* Department & Position Row */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Department Dropdown */}
-                    <div>
-                        <label className={styles.label}>
-                            ฝ่าย <span className="text-red-500">*</span>
-                        </label>
-                        <select
-                            className={`${styles.input} cursor-pointer ${errors.departmentId ? 'border-red-500 focus:ring-red-200' : ''}`}
-                            {...register('departmentId', { valueAsNumber: true })}
-                        >
-                            <option value="">เลือกฝ่าย</option>
-                            {departments.map(dept => (
-                                <option key={dept.department_id} value={dept.department_id}>
-                                    {dept.department_code} - {dept.department_name}
-                                </option>
-                            ))}
-                        </select>
-                        {errors.departmentId && (
-                            <p className="text-red-500 text-xs mt-1">{errors.departmentId.message}</p>
-                        )}
-                    </div>
+                {/* Side Dropdown */}
+                <div>
+                    <label className={styles.label}>
+                        ฝ่าย <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                        className={`${styles.input} cursor-pointer ${errors.sideId ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        {...register('sideId')}
+                    >
+                        <option value="">เลือกฝ่าย</option>
+                        {sides.map(side => (
+                            <option key={side.side_id || side.department_id} value={side.side_id || side.department_id}>
+                                {(side.side_code || side.department_code)} - {(side.side_name || side.department_name)}
+                            </option>
+                        ))}
+                    </select>
+                    {errors.sideId && (
+                        <p className="text-red-500 text-xs mt-1">{errors.sideId.message}</p>
+                    )}
+                </div>
 
                     {/* Position Dropdown */}
                     <div>

@@ -26,7 +26,6 @@ import { cn } from '@/shared/utils/cn';
 import type { POFormData, POLine } from '@/modules/procurement/schemas/po-schemas';
 import { usePOForm } from '../hooks/usePOForm';
 import type {
-    BranchListItem,
     UnitListItem,
     Currency
 } from '@/modules/master-data/types/master-data-types';
@@ -172,6 +171,7 @@ export default function POFormModal({
         watchVendorName,
         watchPrNo,
         handleSelectReferenceDoc,
+        handleClearReference,
         handleVendorSelect,
         handleAddLine,
         onSubmit,
@@ -201,7 +201,6 @@ export default function POFormModal({
 
     const watchQcNo = useWatch({ control, name: 'qc_no' });
     const watchedLines = useWatch({ control, name: 'po_lines' });
-    const { getValues } = formMethods;
 
     // 🔒 Audit Lock: Lock prices & quantity if this PO is associated with a winning QC
     const isLockedByQC = !!watchQcNo && watchQcNo !== 'ไม่ได้ผ่าน QC';
@@ -312,7 +311,7 @@ export default function POFormModal({
                                     <label className={ui.label}>อ้างอิง PR </label>
                                     <div className="flex gap-2">
                                         <input {...register('pr_no')} className={ui.inputRO} readOnly placeholder="PR2024-xxx" />
-                                        {!isView && !isLockedByQC && (
+                                        {!isView && (
                                             <button 
                                                 type="button" 
                                                 title="ค้นหา PR" 
@@ -323,8 +322,8 @@ export default function POFormModal({
                                                 {isHydrating ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
                                             </button>
                                         )}
-                                        {watchPrNo && !isView && !isLockedByQC && (
-                                            <button type="button" onClick={() => { setValue('pr_id', undefined); setValue('pr_no', ''); }}
+                                        {watchPrNo && !isView && (
+                                            <button type="button" onClick={handleClearReference}
                                                 className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors border border-red-200 dark:border-red-800/50" title="ล้างข้อมูล PR">
                                                 <XIcon size={14} />
                                             </button>
@@ -334,7 +333,7 @@ export default function POFormModal({
                                 <div>
                                     <label className={ui.label}>อ้างอิง QC </label>
                                     <input 
-                                        value={watchQcNo || (getValues('pr_id') ? "ไม่ได้ผ่าน QC" : "-")} 
+                                        value={watchQcNo || (watchPrNo ? "ไม่ได้ผ่าน QC" : "-")} 
                                         className={ui.inputRO} 
                                         readOnly 
                                         placeholder="-" 
@@ -373,9 +372,8 @@ export default function POFormModal({
                                         disabled={isView || isLoadingBranches}
                                     >
                                         <option value="">{isLoadingBranches ? 'กำลังโหลด...' : '— เลือกสาขา —'}</option>
-                                        {branches.map((o: BranchListItem) => <option key={o.branch_id} value={o.branch_id}>{o.branch_name}</option>)}
+                                        {branches.map((o: any) => <option key={o.branch_id} value={o.branch_id}>{o.branch_name}</option>)}
                                     </select>
-
                                     {errors.branch_id && <p className={ui.error}>{errors.branch_id.message}</p>}
                                 </div>
                                 <div>
@@ -752,14 +750,25 @@ export default function POFormModal({
                     <PRSearchModal
                         isOpen={isPRModalOpen}
                         onClose={() => setIsPRModalOpen(false)}
-                        onSelect={(pr) => {
-                            const id = pr.id || pr.pr_id;
-                            if (id) {
-                                handleSelectReferenceDoc(id, 'PR');
+                        onSelect={(record) => {
+                            const firstQC = record.qcHeaders?.[0];
+                            if (firstQC) {
+                                handleSelectReferenceDoc(
+                                    record.pr_id, 
+                                    'QC', 
+                                    firstQC.qc_id, 
+                                    firstQC.winning_vendor_id ? Number(firstQC.winning_vendor_id) : undefined, 
+                                    firstQC.winning_vq_id ? Number(firstQC.winning_vq_id) : undefined, 
+                                    firstQC.qc_no, 
+                                    record.approval_no || undefined
+                                );
+                            } else {
+                                handleSelectReferenceDoc(record.pr_id, 'PR', undefined, undefined, undefined, undefined, record.approval_no || undefined);
                             }
                             setIsPRModalOpen(false);
                         }}
                     />
+
 
                     <VendorSearchModal
                         isOpen={isVendorModalOpen}

@@ -280,9 +280,9 @@ export const sidebarMenuItems: MenuItem[] = [
                         path: '/master-data/employee-side',
                     },
                     {
-                        id: 'section-code',
-                        label: 'กำหนดรหัสแผนก (Section)',
-                        path: '/master-data/section',
+                        id: 'employee-dept',
+                        label: 'กำหนดรหัสแผนก (Employee Dept)',
+                        path: '/master-data/employee-dept',
                     },
                     {
                         id: 'job-code',

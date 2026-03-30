@@ -19,7 +19,7 @@ import type { RFQHeader, VQListItem, RFQDetailResponse } from '@/modules/procure
 import type { QCListItem } from '@/modules/procurement/schemas/qc-schemas';
 import { SelectionModal } from './SelectionModal';
 import { RFQSelectionModal } from './RFQSelectionModal';
-import { OrgEmployeeService } from '@/modules/master-data/company/services/company.service';
+import { OrgEmployeeService } from '@/modules/master-data/company/services/employee.service';
 import { useQCForm } from '../hooks/useQCForm';
 import { useConfirmation } from '@/shared/hooks';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
@@ -206,11 +206,6 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
     },
     enabled: !!rfqId && isOpen,
   });
-
-
-
-
-
 
   // 🔍 DATA RECOVERY: Fetch full RFQ details to get vendor names (if VQ API is missing them)
   const { data: rfqDetail } = useQuery({

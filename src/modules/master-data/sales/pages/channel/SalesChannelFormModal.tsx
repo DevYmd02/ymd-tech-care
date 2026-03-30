@@ -11,7 +11,7 @@ import { z } from 'zod';
 import { Store, Save, X } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
-import { SalesChannelService } from '@/modules/master-data/company/services/company.service';
+import { SalesChannelService } from '@/modules/master-data/company/services/sales-org.service';
 import type { SalesChannelFormData } from '@/modules/master-data/types/master-data-types';
 
 // ====================================================================================

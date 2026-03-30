@@ -4,14 +4,11 @@
  * @module company
  */
 
-import { useEffect } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { useWatch } from 'react-hook-form';
 import { Save, X, UsersRound } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
-import { EmployeeGroupService } from '@/modules/master-data/company/services/company.service';
+import { useEmployeeGroupForm } from '../../hooks/useEmployeeGroupForm';
 
 interface EmployeeGroupFormModalProps {
     isOpen: boolean;
@@ -20,81 +17,19 @@ interface EmployeeGroupFormModalProps {
     editId?: number | null;
 }
 
-const employeeGroupSchema = z.object({
-    groupCode: z.string().min(1, 'กรุณากรอกรหัสกลุ่มพนักงาน').max(20, 'รหัสกลุ่มพนักงานต้องไม่เกิน 20 ตัวอักษร'),
-    groupName: z.string().min(1, 'กรุณากรอกชื่อกลุ่มพนักงาน').max(100, 'ชื่อกลุ่มพนักงานต้องไม่เกิน 100 ตัวอักษร'),
-    groupNameEn: z.string().max(100, 'ชื่อกลุ่มพนักงาน (English) ต้องไม่เกิน 100 ตัวอักษร'),
-    isActive: z.boolean(),
-});
-
-type EmployeeGroupFormValues = z.infer<typeof employeeGroupSchema>;
-
 export const EmployeeGroupFormModal = ({ isOpen, onClose, onSuccess, editId }: EmployeeGroupFormModalProps) => {
     const isEdit = !!editId;
 
     const {
         register,
-        handleSubmit,
-        reset,
-        formState: { errors, isSubmitting },
+        errors,
+        isSubmitting,
+        handleSave,
         setValue,
-        control,
-    } = useForm<EmployeeGroupFormValues>({
-        resolver: zodResolver(employeeGroupSchema),
-        defaultValues: {
-            groupCode: '',
-            groupName: '',
-            groupNameEn: '',
-            isActive: true,
-        },
-    });
+        control
+    } = useEmployeeGroupForm(editId ?? null, isOpen, onSuccess);
 
     const isActive = useWatch({ control, name: 'isActive' });
-
-    useEffect(() => {
-        if (isOpen) {
-            if (isEdit && editId) {
-                // Fetch data for edit
-                EmployeeGroupService.get(editId).then((data) => {
-                    if (data) {
-                        setValue('groupCode', data.group_code);
-                        setValue('groupName', data.group_name);
-                        setValue('groupNameEn', data.group_name_en || '');
-                        setValue('isActive', data.is_active);
-                    }
-                });
-            } else {
-                // Reset for create
-                reset({
-                    groupCode: '',
-                    groupName: '',
-                    groupNameEn: '',
-                    isActive: true,
-                });
-            }
-        }
-    }, [isOpen, isEdit, editId, reset, setValue]);
-
-    const onSubmit = async (data: EmployeeGroupFormValues) => {
-        try {
-            let res;
-            if (isEdit && editId) {
-                res = await EmployeeGroupService.update(editId, data as any);
-            } else {
-                res = await EmployeeGroupService.create(data as any);
-            }
-
-            if (res.success) {
-                onSuccess();
-                onClose();
-            } else {
-                alert(res.message || 'บันทึกไม่สำเร็จ');
-            }
-        } catch (error) {
-            console.error('Error saving employee group:', error);
-            alert('เกิดข้อผิดพลาดในการบันทึก');
-        }
-    };
 
     // Header Icon
     const TitleIcon = <UsersRound className="w-5 h-5 text-white" />;
@@ -113,7 +48,7 @@ export const EmployeeGroupFormModal = ({ isOpen, onClose, onSuccess, editId }: E
             <button
                 type="button"
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50"
-                onClick={handleSubmit(onSubmit)}
+                onClick={handleSave}
                 disabled={isSubmitting}
             >
                 {isSubmitting ? (

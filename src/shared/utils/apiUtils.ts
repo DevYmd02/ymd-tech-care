@@ -25,8 +25,11 @@ export const unwrapResponseData = (response: any): any => {
 export const extractLinesArray = (data: any): any[] => {
     if (!data || typeof data !== 'object') return [];
     const possibleArrays = [
-        data.lines, data.rfqLines, data.rfq_lines, data.items, 
-        data.rfq_items, data.vq_lines, data.vqLines, data.po_lines, data.poLines
+        data.lines, data.vqLines, data.vq_lines, 
+        data.prLines, data.pr_lines, data.prLinesRaw,
+        data.line_items, data.items, data.detailLines,
+        data.rfqLines, data.rfq_lines, data.rfq_items,
+        data.po_lines, data.poLines
     ];
     for (const arr of possibleArrays) {
         if (Array.isArray(arr) && arr.length > 0) return arr;
