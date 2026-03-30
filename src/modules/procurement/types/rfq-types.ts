@@ -35,6 +35,7 @@ export interface RFQHeader {
     created_by_user_id?: number | null;  // INTEGER
     created_at: string;                 // TIMESTAMP
     updated_at: string;                 // TIMESTAMP
+    target_delivery_date?: string | null; // DATE - วันที่กำหนดส่ง
     
     // Extended fields for UI display (from JOINs)
     pr_no?: string | null;              // เลขที่ PR (UI อาจใช้ ref_pr_no เพื่อความชัดเจนใน Filter)
@@ -197,6 +198,7 @@ export interface RFQFormData {
     incoterm: string;
     remarks: string;
     isMulticurrency: boolean;
+    target_delivery_date?: string; // วันที่กำหนดส่ง (Header)
     
     // V-07: Fields carried over from PR
     purpose?: string;              // วัตถุประสงค์ (จาก PR)

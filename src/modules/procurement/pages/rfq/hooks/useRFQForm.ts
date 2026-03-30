@@ -62,6 +62,8 @@ export const mapPRToRFQFormData = (
             ? `${pr.remark}\n[PR: ${pr.pr_no}]` 
             : `Generated from PR: ${pr.pr_no}`,
 
+        target_delivery_date: (pr.need_by_date || (pr as any).delivery_date || '').toString().split('T')[0] || '',
+
         // ⚠️ Safety: Do NOT map IDs for new RFQ record
         rfqLines: (pr.lines || []).map((line, index) => {
             // ── Enrich from master data if backend omitted these fields ──────
@@ -132,10 +134,12 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
 
     // Track original PR lines for potential reset feature
     const [originalPRLines, setOriginalPRLines] = useState<RFQLineValues[]>([]);
+    const hasInitialHydrated = React.useRef(false);
 
     // Vendor Tracking (for View Mode Only)
     const [trackingVendors, setTrackingVendors] = useState<Array<RFQVendor & { vendor_code?: string; vendor_name?: string }>>([]);
     const [rfq, setRfq] = useState<RFQDetailResponse | null>(null);
+    const [rawRfqData, setRawRfqData] = useState<RFQDetailResponse | null>(null);
 
     // 🏗️ React Hook Form Setup
     const methods = useForm<RFQFormValues>({
@@ -208,60 +212,65 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         setValue('approved_pr_no', approvedNo, { shouldValidate: true, shouldDirty: true });
         setValue('pr_approval_id', record.approval_id ? Number(record.approval_id) : undefined, { shouldDirty: true });
         
-        // 🆕 Auto-populate header target_delivery_date from AV's "วันที่กำหนดส่ง" (need_by_date)
-        // 🧪 DIAGNOSTIC: Try more potential field names from backend
+        // 🆕 Extract AV approved delivery date with deep scanning — prioritizing AV header dates over PR fallbacks
         const rawDate = record.need_by_date || record.delivery_date || record.due_date || record.needByDate || 
                         record.pr?.need_by_date || record.pr?.delivery_date || '';
-        const avDate = rawDate ? rawDate.toString().split('T')[0] : '';
+        const finalAVDate = rawDate ? rawDate.toString().split('T')[0] : '';
         
-        logger.info("💎 [DIAGNOSTIC] AV Record Data for Date:", {
+        logger.info("💎 [DIAGNOSTIC] AV Selection Date Extraction:", {
             record_id: record.approval_id,
             rawDate,
-            avDate,
+            finalAVDate,
             all_keys: Object.keys(record)
         });
 
-        if (avDate) {
-            setValue('target_delivery_date', avDate, { shouldDirty: true });
+        // 🎯 Header Level Update
+        if (finalAVDate) {
+            setValue('target_delivery_date', finalAVDate, { shouldDirty: true });
         }
         
         // 🔄 SYNC LINES: If AV record has lines, override form lines
         const avLines = record.prApprovalLines || record.lines || record.pr_approval_lines || [];
         
         if (avLines.length > 0) {
-            logger.info("💎 [DIAGNOSTIC] AV Record Keys:", Object.keys(record));
-            logger.info("💎 [DIAGNOSTIC] First Line Keys:", Object.keys(avLines[0]));
-            logger.info("💎 [DIAGNOSTIC] First Line Data:", JSON.stringify(avLines[0]));
+            logger.info("💎 [DIAGNOSTIC] AV Record sync lines start:", { count: avLines.length });
 
             // Get original PR lines to preserve item details
             const currentPrLines = originalPRLines || [];
 
-            // 🆕 Auto-populate target_delivery_date from AV's "วันที่กำหนดส่ง" (need_by_date)
-            const avDate = record.need_by_date ? record.need_by_date.split('T')[0] : '';
-            
             const matchedLines: RFQLineValues[] = avLines.map((avLine: any, index: number) => {
                 // 🛡️ DISAMBIGUATION: Separating source PR Line ID from this Approval Line's own ID
-                // PR Lines usually have 'pr_line_id'. Approval Lines are the 'records' themselves so they have 'id'
                 const prLineId = avLine.pr_line_id || avLine.item_id || 0; 
                 const avLineId = Number(avLine.id || avLine.approval_line_id || avLine.pr_approval_line_id || 0);
 
                 // Use loose equality or Number conversion to be safe
-                const originalLine = currentPrLines.find(l => Number(l.pr_line_id) === Number(prLineId));
+                const originalLine = currentPrLines.find(l => Number(l.pr_line_id) === Number(prLineId) || Number(l.item_id) === Number(avLine.item_id));
                 
+                // 💧 MASTER DATA FALLBACK: If both sources lack names, try master list
+                const masterItem = items.find(it => Number(it.item_id) === Number(avLine.item_id));
+
                 const qty = Number(avLine.approved_qty || avLine.qty || 0);
                 
                 return {
                     line_no: index + 1,
-                    item_code: originalLine?.item_code || avLine.item_code || '',
-                    item_name: originalLine?.item_name || avLine.item_name || avLine.description || '',
-                    description: originalLine?.description || avLine.description || '',
+                    item_code: originalLine?.item_code || avLine.item_code || masterItem?.item_code || '',
+                    item_name: originalLine?.item_name || avLine.item_name || avLine.description || masterItem?.item_name || '',
+                    description: originalLine?.description || avLine.description || masterItem?.item_name || '',
                     qty: qty, // 🎯 This is the new quantity from AV
-                    uom: originalLine?.uom || avLine.uom || '',
+                    uom: originalLine?.uom || avLine.uom || masterItem?.unit_name || '',
                     uom_id: originalLine?.uom_id || avLine.uom_id || 0,
                     required_receipt_type: originalLine?.required_receipt_type || 'FULL',
-                    target_delivery_date: avDate || originalLine?.target_delivery_date || '', // 🎯 Use AV Header Date
+                    // 🎯 IMPROVED: Look for date in AV Line first, then AV Header, then PR Line
+                    target_delivery_date: (
+                        avLine.need_by_date || 
+                        avLine.delivery_date || 
+                        avLine.line_needed_date || 
+                        finalAVDate || 
+                        originalLine?.target_delivery_date || 
+                        ''
+                    ).toString().split('T')[0] || '', 
                     note_to_vendor: originalLine?.note_to_vendor || '',
-                    item_id: originalLine?.item_id || avLine.item_id,
+                    item_id: originalLine?.item_id || avLine.item_id || masterItem?.item_id,
                     pr_line_id: prLineId ? Number(prLineId) : undefined,
                     // 🔗 Record ID of the PR Approval Line (CRITICAL FOR BACKEND)
                     approval_line_id: avLineId > 0 ? avLineId : undefined,
@@ -278,7 +287,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         }
         
         setIsApprovedPRModalOpen(false);
-    }, [setValue, originalPRLines, toast]);
+    }, [setValue, originalPRLines, toast, items]);
 
     // --- 🔗 [NEW] AV Hydration logic: Fetch Approval No if missing but PR reference exists ---
     const currentPrId = methods.watch('pr_id');
@@ -297,18 +306,53 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         staleTime: 5 * 60 * 1000,
     });
 
-    useEffect(() => {
-        if (isOpen && currentPrNo && !currentApprovedPrNo && approvalHydrationData && approvalHydrationData.length > 0) {
-            const firstAV = approvalHydrationData[0];
-            const avNo = firstAV.approval_no || firstAV.approved_pr_no || firstAV.approval_id?.toString();
+    const lastSyncedAVNo = React.useRef<string | null>(null);
 
-            if (avNo) {
-                logger.info(`[useRFQForm] Auto-Hydrating full AV details for PR ${currentPrNo}: ${avNo}`);
-                // Call the existing selection handler to perform FULL mapping (including approval_line_id for lines)
-                handleApprovedPRSelect(firstAV);
+    useEffect(() => {
+        // 🛡️ STOP: Don't auto-sync if we're in Edit Mode and already hydrated 
+        // OR if there's no data to sync
+        if (!isOpen || !currentPrNo || !approvalHydrationData || approvalHydrationData.length === 0) return;
+        if (editId && hasInitialHydrated.current) return;
+
+        // Find the AV we want to sync (either the specific one chosen in PR, or the first one)
+        const targetAV = currentApprovedPrNo 
+            ? approvalHydrationData.find(av => (av.approval_no || av.approved_pr_no || av.approval_id?.toString()) === currentApprovedPrNo)
+            : approvalHydrationData[0];
+
+        if (targetAV) {
+            const avNo = targetAV.approval_no || targetAV.approved_pr_no || targetAV.approval_id?.toString();
+            
+            // 🎯 Only sync if this AV hasn't been synced for the current PR to avoid infinite loops
+            if (avNo && lastSyncedAVNo.current !== `${currentPrNo}_${avNo}`) {
+                logger.info(`[useRFQForm] Syncing AV details for PR ${currentPrNo}: ${avNo}`);
+                handleApprovedPRSelect(targetAV);
+                lastSyncedAVNo.current = `${currentPrNo}_${avNo}`;
             }
         }
-    }, [isOpen, currentPrNo, currentApprovedPrNo, approvalHydrationData, handleApprovedPRSelect]);
+    }, [isOpen, currentPrNo, currentApprovedPrNo, approvalHydrationData, handleApprovedPRSelect, editId]);
+
+    // 🔄 AUTO-SYNC: Header Delivery Date -> All Lines
+    const headerDeliveryDate = methods.watch('target_delivery_date');
+    useEffect(() => {
+        // Only sync if hydration is complete and we have a valid date
+        if (!hasInitialHydrated.current || !headerDeliveryDate) return;
+
+        const currentLines = getValues('rfqLines') || [];
+        if (currentLines.length === 0) return;
+
+        // Check if any line actually needs updating to prevent redundant setValue calls
+        const needsUpdate = currentLines.some(line => line.target_delivery_date !== headerDeliveryDate);
+        
+        if (needsUpdate) {
+            const updatedLines = currentLines.map(line => ({
+                ...line,
+                target_delivery_date: headerDeliveryDate
+            }));
+            
+            logger.debug(`[useRFQForm] Auto-syncing ${updatedLines.length} lines to header date: ${headerDeliveryDate}`);
+            setValue('rfqLines', updatedLines, { shouldDirty: true, shouldValidate: true });
+        }
+    }, [headerDeliveryDate, setValue, getValues]);
 
     // Fetch Master Data
     useEffect(() => {
@@ -333,44 +377,92 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
     // ========================================================================
     // BRANCH 1: Edit Existing RFQ
     // ========================================================================
+    // ========================================================================
+    // BRANCH 1: Edit Existing RFQ - Fetch and Rescue Phase
+    // ========================================================================
     useEffect(() => {
-        if (!isOpen || !editId) return;
+        if (!isOpen || !editId) {
+            setRawRfqData(null);
+            setRfq(null);
+            hasInitialHydrated.current = false;
+            return;
+        }
 
         const fetchRFQDetails = async () => {
             setIsLoadingEdit(true);
             try {
                 const rfqId = Number(editId);
-                const rfq = await RFQService.getById(rfqId) as RFQDetailResponse;
-                if (!rfq) return;
-                setRfq(rfq); // Save to state for executeSave fallback scope
+                const rfqRes = await RFQService.getById(rfqId) as RFQDetailResponse;
+                if (!rfqRes) return;
 
-                // 🎯 MERGE LOGIC: Combine master vendors and junction rfqVendors, prioritizing rfqVendors for sent status/dates
-                const vendorMap = new Map<number, any>();
+                // 🎯 BRANCH A: Extract Initial Lines from RFQ
+                let sourceLines = (rfqRes.rfqLines && rfqRes.rfqLines.length > 0) 
+                    ? rfqRes.rfqLines 
+                    : (rfqRes.lines && rfqRes.lines.length > 0)
+                        ? rfqRes.lines
+                        : (rfqRes as any).rfq_lines || (rfqRes as any).rfq_line || (rfqRes as any).items || (rfqRes as any).rfq_items || [];
+
+                // 🚀 AGGRESSIVE RESCUE: Check if lines from backend are "Broken" (No ID, No Code)
+                const isBroken = sourceLines.length > 0 && sourceLines.every((l: any) => !l.item_id && !l.item_code);
                 
-                // 1. Add master vendors first (base info)
+                if ((sourceLines.length === 0 || isBroken) && rfqRes.pr_id) {
+                    logger.warn(`🛟 [useRFQForm] RFQ ${editId} has ${isBroken ? 'BROKEN' : 'NO'} lines. Forcing Rescue from PR: ${rfqRes.pr_id}`);
+                    try {
+                        const prData = await PRService.getDetail(Number(rfqRes.pr_id));
+                        const rescuedLines = prData?.lines || (prData as any)?.pr_lines || (prData as any)?.items || [];
+                        if (rescuedLines.length > 0) {
+                            sourceLines = rescuedLines;
+                            logger.info(`✅ [useRFQForm] Successfully rescued ${sourceLines.length} lines from PR.`);
+                        }
+                    } catch (e) {
+                         logger.error('💥 [useRFQForm] Aggressive rescue failed:', e);
+                    }
+                }
+
+                // Inject the fixed lines back into the object for the hydration effect
+                rfqRes.rfqLines = sourceLines;
+                
+                setRawRfqData(rfqRes);
+                setRfq(rfqRes); 
+            } catch (error) {
+                logger.error('Failed to fetch RFQ for edit:', error);
+                toast('ไม่สามารถดึงข้อมูล RFQ ได้', 'error');
+            } finally {
+                setIsLoadingEdit(false);
+            }
+        };
+
+        fetchRFQDetails();
+    }, [isOpen, editId, toast]);
+
+    // ========================================================================
+    // 💧 HYDRATION ENGINE: Reactive Mapping when Raw Data + Master Data ready
+    // ========================================================================
+    useEffect(() => {
+        if (!isOpen || !rawRfqData || items.length === 0 || hasInitialHydrated.current) return;
+
+        const hydrateForm = async () => {
+            try {
+                // Safeguard against double resets causing flickering
+                hasInitialHydrated.current = true;
+                
+                const rfq = rawRfqData;
+                const sourceLines = rfq.rfqLines || [];
+                
+                // Hydrate vendor details if missing from backend
+                const vendorMap = new Map<number, any>();
                 (rfq.vendors || []).forEach(v => {
                     if (v.vendor_id) vendorMap.set(Number(v.vendor_id), v);
                 });
-                
-                // 2. Overwrite/Merge with rfqVendors (has sent_date, email_sent_to, status)
                 (rfq.rfqVendors || []).forEach(v => {
                     const vendorId = Number(v.vendor_id);
                     const existing = vendorMap.get(vendorId) || {};
                     vendorMap.set(vendorId, { ...existing, ...v });
                 });
 
-                const uniqueVendors = Array.from(vendorMap.values());
-                const sourceVendors = uniqueVendors;
-                const sourceLines = (rfq.rfqLines && rfq.rfqLines.length > 0) ? rfq.rfqLines : (rfq.lines || []);
-                
-                logger.debug('[useRFQForm] Merged uniqueVendors:', uniqueVendors);
-
-                // Hydrate vendor details if missing from backend (since standard backend list only has vendor_id)
-                const enhancedVendors = await Promise.all(sourceVendors.map(async (v) => {
-                    // 🎯 HYDRATION RULE: If essential names are missing, OR if SENT status exists but email is missing, try to fetch from Master Data
+                const enhancedVendors = await Promise.all(Array.from(vendorMap.values()).map(async (v) => {
                     const isSent = v.status === 'SENT' || v.status === 'RESPONDED';
                     const hasEmail = Boolean(v.email_sent_to || (v as any).email);
-                    
                     if (v.vendor_name && v.vendor_code && (isSent ? hasEmail : true)) return v;
                     
                     try {
@@ -400,23 +492,46 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                     is_existing: true,
                 }));
 
-                const mappedLines: RFQLineValues[] = sourceLines.map((line: RFQLine, i: number) => ({
-                    line_no: i + 1,
-                    item_code: line.item_code,
-                    item_name: line.item_name,
-                    description: line.description || '',
-                    qty: line.qty,
-                    uom: line.uom,
-                    uom_id: line.uom_id || 0,
-                    required_receipt_type: 'FULL',
-                    target_delivery_date: line.target_delivery_date?.split('T')[0] || '',
-                    note_to_vendor: line.note_to_vendor || '',
-                    item_id: line.item_id || undefined,
-                    pr_line_id: line.pr_line_id || undefined,
-                    approval_line_id: line.approval_line_id || undefined,
-                }));
+                const mappedLines: RFQLineValues[] = sourceLines.map((line: RFQLine, i: number) => {
+                    const item_id = line.item_id ? Number(line.item_id) : undefined;
+                    const uom_id = Number(line.uom_id) || 0;
 
-                // Fetch PR detail if pr_id exists but pr_no is missing from backend response 
+                    // 🎯 Master Data Lookup
+                    const masterItem = items.find(it => Number(it.item_id) === item_id || it.id === item_id);
+                    const masterUnit = units.find(u => Number(u.unit_id) === uom_id || u.id === uom_id);
+
+                    const item_code = line.item_code || line.itemCode || line.product_code || 
+                                     (line.item as any)?.item_code || (line.product as any)?.product_code || 
+                                     masterItem?.item_code || '';
+                    
+                    const item_name = line.item_name || line.itemName || line.product_name || 
+                                     (line.item as any)?.item_name || (line.product as any)?.product_name || 
+                                     masterItem?.item_name || '';
+                    
+                    const uom       = line.uom || masterUnit?.unit_name || (masterItem as any)?.unit_name || '';
+
+                    return {
+                        line_no: i + 1,
+                        item_code,
+                        item_name,
+                        description: line.description || item_name || '',
+                        qty: line.qty,
+                        uom,
+                        uom_id: uom_id,
+                        required_receipt_type: (line as any).required_receipt_type || 'FULL',
+                        target_delivery_date: line.target_delivery_date?.split('T')[0] || '',
+                        note_to_vendor: line.note_to_vendor || '',
+                        item_id: item_id,
+                        pr_line_id: line.pr_line_id || undefined,
+                        approval_line_id: line.approval_line_id || undefined,
+                        rfq_line_id: (line as any).rfq_line_id || undefined,
+                    };
+                });
+
+                // 🎯 Memory Sync: Keep original lines for AV sync reference
+                setOriginalPRLines(mappedLines);
+
+                // Fetch PR detail for pr_no if missing
                 let fetchedPrNo = rfq.pr?.pr_no || rfq.ref_pr_no || rfq.pr_no || null;
                 if (rfq.pr_id && !fetchedPrNo) {
                     try {
@@ -425,7 +540,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                             fetchedPrNo = prData.pr_no;
                         }
                     } catch (e) {
-                        logger.warn('Failed to fetch PR details for mapping pr_no:', e);
+                         logger.warn('Failed sync PR details:', e);
                     }
                 }
 
@@ -437,12 +552,11 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                     ...getRFQDefaultFormValues(),
                     rfq_no: rfq.rfq_no,
                     requested_by: creatorName,
-                    requested_by_user_id: rfq.requested_by_user?.employee_id || rfq.created_by_user_id || undefined,
+                    requested_by_user_id: (rfq.requested_by_user as any)?.employee_id || rfq.created_by_user_id || undefined,
                     rfq_date: rfq.rfq_date?.split('T')[0] || new Date().toLocaleDateString('en-CA'),
                     pr_id: rfq.pr_id || null,
                     pr_no: fetchedPrNo,
-                    pr_approval_id: rfq.pr_approval_id || null,
-                    approved_pr_no: (rfq as unknown as Record<string, unknown>).approved_pr_no as string || null,
+                    pr_approval_id: rfq.pr_approval_id || (rfq as any).approval_id || null,
                     branch_id: rfq.branch_id ? Number(rfq.branch_id) : 0,
                     status: (rfq.status as RFQStatus) || 'DRAFT',
                     quotation_due_date: rfq.quotation_due_date?.split('T')[0] || '',
@@ -456,19 +570,20 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                     purpose: rfq.purpose || '',
                     receive_location: rfq.receive_location || '',
                     isMulticurrency: (rfq.rfq_base_currency_code || 'THB') !== 'THB',
+                    // 🎯 SMART DERIVATION v2: Force priority to Line Dates (since Header date is not updateable via API)
+                    target_delivery_date: (mappedLines[0]?.target_delivery_date || rfq.target_delivery_date || '').split('T')[0] || '',
                     rfqLines: mappedLines,
                     vendors: mappedVendors,
                 });
 
+                setActiveTab('detail');
             } catch (error) {
-                logger.error('Failed to fetch RFQ for edit:', error);
-                toast('ไม่สามารถดึงข้อมูล RFQ ได้', 'error');
-            } finally {
-                setIsLoadingEdit(false);
+                logger.error('Hydration Engine failed:', error);
             }
         };
-        fetchRFQDetails();
-    }, [isOpen, editId, reset, toast]);
+
+        hydrateForm();
+    }, [isOpen, rawRfqData, items, units, reset]);
 
     // ========================================================================
     // BRANCH 2: Create from PR Auto-Hydration
@@ -743,8 +858,10 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                 receive_location: stagedPayload.receive_location,
                 payment_term_hint: stagedPayload.payment_term_hint,
                 incoterm: stagedPayload.incoterm,
-                // ❌ approved_pr_no: REMOVED - backend rejects this field (UI usage ONLY)
-                pr_approval_id: stagedPayload.pr_approval_id ? Number(stagedPayload.pr_approval_id) : undefined, // 🔗 Send AV Header ID
+                // 🔗 Send AV Header ID (Linkage persistence)
+                pr_approval_id: stagedPayload.pr_approval_id 
+                    ? Number(stagedPayload.pr_approval_id) 
+                    : (rfq?.pr_approval_id ? Number(rfq.pr_approval_id) : undefined), 
                 // ❌ purpose     — backend rejects this field
                 // ❌ project_id  — backend rejects this field
 
@@ -774,7 +891,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                 rfq_no_placeholder: payload.rfq_date // tracing timestamp
             });
 
-            logger.info("💎 [DIAGNOSTIC] Final RFQ Creation Payload:", JSON.stringify(payload));
+            logger.info("💎 [DIAGNOSTIC] Final RFQ Save Payload:", JSON.stringify(payload, null, 2));
 
             if (editId) {
                 await RFQService.update(editId, payload);

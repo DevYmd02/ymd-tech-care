@@ -154,8 +154,11 @@ export const RFQService = {
             : (item.created_by_name || item.creator_name || '-');
 
         // 🎯 Dynamic Status Matching (Mirroring Layout Logic)
-        const sentCount = item.vendor_sent ?? item.sent_vendors_count ?? 0;
+        // 🔒 FIX: Prioritize 'sent_vendors_count' (REQUIRED field) over legacy 'vendor_sent'
+        // '??' with 0 correctly picks 0 if present, but we should prioritize the most reliable fields first.
+        const sentCount = item.sent_vendors_count ?? item.vendor_sent ?? 0;
         const total = item.vendor_total ?? item.vendor_count ?? 0;
+        
         let currentStatus = item.status;
         if (!['CLOSED', 'CANCELLED'].includes(item.status) && total > 0 && sentCount > 0) {
               currentStatus = 'SENT';

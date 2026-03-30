@@ -197,7 +197,7 @@ export const PRService = {
         if (params?.sort) filterParams.sort = params.sort;
         if (params?.q) filterParams.q = params.q;
 
-        // 🎯 Client-Side Vendor Hydration for filtering
+        // 🎯 1. Client-Side Vendor Hydration for filtering
         let hydratedItems = [...allItems];
         try {
             const now = Date.now();
@@ -247,17 +247,20 @@ export const PRService = {
             logger.error('[PRService] Failed to hydrate vendors for filtering:', err);
         }
 
-        // 🎯 AV STATUS HYDRATION: Overlay correct status from AV approval records
-        // This fixes cases where PR header is still PENDING but was already approved/partially approved
+        // 🎯 2. AV STATUS HYDRATION: Overlay correct status from AV approval records
+        // IMPORTANT: This MUST happen BEFORE filtering to ensure correctly transitioned statuses
+        // (like PARTIAL or APPROVED) are properly captured by the filter logic.
         try {
             if (!USE_MOCK) {
                 const avStatusMap = await buildAVStatusMap();
                 hydratedItems = overlayAVStatus(hydratedItems, avStatusMap);
+                logger.debug(`🚀 [PRService] AV Status Overlay completed for ${hydratedItems.length} items`);
             }
         } catch (err) {
             logger.warn('[PRService] AV status hydration failed (non-critical):', err);
         }
 
+        // 🎯 3. FINAL FILTERING (Using fully hydrated items)
         return applyClientFilters<PRHeader>(hydratedItems, filterParams, {
             searchableFields: ['pr_no', 'requester_name', 'purpose'],
             dateField: 'need_by_date',
