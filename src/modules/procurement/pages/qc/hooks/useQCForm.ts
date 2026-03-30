@@ -17,7 +17,7 @@ export const useQCForm = (onSuccess?: () => void, onClose?: () => void) => {
     defaultValues: {
       rfq_id: 0,
       winning_vq_id: 0,
-      remark: '',
+      remarks: '',
       pr_id: null,
       department_id: null,
       created_by: null,
@@ -84,7 +84,7 @@ export const useQCForm = (onSuccess?: () => void, onClose?: () => void) => {
       pr_id: data.pr_id ? Number(data.pr_id) : 0,
       department_id: data.department_id ? Number(data.department_id) : Number(user?.employee?.department_id || 1),
       created_by: data.created_by ? Number(data.created_by) : Number(user?.employee_id || 1),
-      remark: data.remark || '',
+      remarks: data.remarks || '',
     };
 
     logger.info('[useQCForm] Submitting Purified QC Payload:', payload);

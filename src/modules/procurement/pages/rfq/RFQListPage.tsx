@@ -252,13 +252,37 @@ export default function RFQListPage() {
     const waitingCreateData = useMemo(() => {
         let list = waitingCreateDataRaw || [];
         // Support searching by PR No. when on WAITING_CREATE tab
-        const searchPR = localFilters.search2?.toLowerCase() || '';
+        // Use 'filters' instead of 'localFilters' to wait for explicit search click/enter
+        const searchPR = filters.search2?.toLowerCase() || '';
+        const dateStart = filters.date_start ? new Date(filters.date_start) : null;
+        const dateEnd = filters.date_end ? new Date(filters.date_end) : null;
         
         if (searchPR) {
             list = list.filter((pr: any) => pr.pr_no && pr.pr_no.toLowerCase().includes(searchPR));
         }
+
+        if (dateStart || dateEnd) {
+            list = list.filter((pr: any) => {
+                if (!pr.pr_date) return false;
+                const prDate = new Date(pr.pr_date);
+                prDate.setHours(0, 0, 0, 0); // Normalize to start of day
+                
+                if (dateStart) {
+                    dateStart.setHours(0, 0, 0, 0);
+                    if (prDate < dateStart) return false;
+                }
+                
+                if (dateEnd) {
+                    dateEnd.setHours(0, 0, 0, 0);
+                    if (prDate > dateEnd) return false;
+                }
+                
+                return true;
+            });
+        }
+
         return list;
-    }, [waitingCreateDataRaw, localFilters.search2]);
+    }, [waitingCreateDataRaw, filters.search2, filters.date_start, filters.date_end]);
 
     const currentWaitingCreatePageData = useMemo(() => {
         return waitingCreateData.slice((filters.page - 1) * filters.limit, filters.page * filters.limit);
@@ -386,7 +410,7 @@ export default function RFQListPage() {
         columnHelper.display({
             id: 'index',
             header: () => <div className="flex justify-center items-center h-full w-full">ลำดับ</div>,
-            cell: (info) => <div className="flex justify-center items-center h-full w-full">{info.row.index + 1 + (filters.page - 1) * filters.limit}</div>,
+            cell: (info) => <div className="flex justify-center items-center h-full w-full tabular-nums text-sm text-gray-600 dark:text-gray-400">{info.row.index + 1 + (filters.page - 1) * filters.limit}</div>,
             size: 60,
             enableSorting: false,
         }),
@@ -500,7 +524,7 @@ export default function RFQListPage() {
 
                 return (
                     <div className="flex flex-col items-center justify-center h-full py-2">
-                        <span className="text-gray-700 dark:text-gray-300 font-medium leading-none mb-0.5">
+                        <span className="text-gray-700 dark:text-gray-300 font-medium tabular-nums leading-none mb-0.5">
                             {`${sentCount} / ${total}`}
                         </span>
                     </div>
@@ -593,7 +617,7 @@ export default function RFQListPage() {
         prColumnHelper.display({
             id: 'index',
             header: () => <div className="flex justify-center items-center h-full w-full">ลำดับ</div>,
-            cell: (info) => <div className="flex justify-center items-center h-full w-full">{info.row.index + 1 + (filters.page - 1) * filters.limit}</div>,
+            cell: (info) => <div className="flex justify-center items-center h-full w-full tabular-nums text-sm text-gray-600 dark:text-gray-400">{info.row.index + 1 + (filters.page - 1) * filters.limit}</div>,
             size: 60,
             enableSorting: false,
         }),
@@ -611,11 +635,9 @@ export default function RFQListPage() {
             header: 'วันที่',
             cell: (info) => {
                 const val = info.getValue() as string;
-                if (!val) return <span className="text-gray-400 py-2 block whitespace-nowrap">-</span>;
-                // Some pr_date might be full ISO, we just want the date part
                 return (
-                    <span className="text-gray-600 dark:text-gray-300 py-2 block whitespace-nowrap">
-                        {val.includes('T') ? val.split('T')[0] : val}
+                    <span className="text-gray-600 dark:text-gray-300 py-2 block whitespace-nowrap tabular-nums">
+                        {formatThaiDate(val)}
                     </span>
                 );
             },
@@ -657,12 +679,12 @@ export default function RFQListPage() {
                     ? Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                     : '-';
                 return (
-                    <div className="flex justify-end items-center h-full text-gray-600 dark:text-gray-300 font-mono text-sm py-2">
+                    <div className="flex justify-end items-center h-full text-gray-700 dark:text-gray-200 font-bold tabular-nums text-sm py-2 pr-2">
                         {displayTotal}
                     </div>
                 );
             },
-            size: 120,
+            size: 50,
             enableSorting: false,
         }),
         prColumnHelper.display({
@@ -745,7 +767,6 @@ export default function RFQListPage() {
                             value={localFilters.date_start || ''}
                             onChange={(val: string) => handleFilterChange('date_start', val)}
                             accentColor="blue"
-                            disabled={activeTab === 'WAITING_CREATE'}
                         />
                         <FilterField
                             label="วันที่สิ้นสุด"
@@ -753,7 +774,6 @@ export default function RFQListPage() {
                             value={localFilters.date_end || ''}
                             onChange={(val: string) => handleFilterChange('date_end', val)}
                             accentColor="blue"
-                            disabled={activeTab === 'WAITING_CREATE'}
                         />
                         
                         {/* Action Buttons Group */}

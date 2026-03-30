@@ -133,7 +133,7 @@ export const QCListItemSchema = QCHeaderSchema.extend({
  */
 export const CreateQCFormSchema = QCHeaderSchema.extend({
   items: z.array(QCMatrixRowSchema).optional(),
-  remark: z.string().optional(),
+  remarks: z.string().optional(),
   rfq_no: z.string().optional(),
   pr_no: z.string().optional(),
 });
@@ -145,7 +145,7 @@ export const CreateQCFormSchema = QCHeaderSchema.extend({
 export const CreateQCSchema = z.object({
   rfq_id: z.number(),
   winning_vq_id: z.number().min(1, "กรุณาเลือกผู้ชนะการเสนอราคา"),
-  remark: z.string().optional(),
+  remarks: z.string().optional(),
   pr_id: z.number().nullable().optional(),
   department_id: z.number().nullable().optional(),
   created_by: z.number().nullable().optional(),

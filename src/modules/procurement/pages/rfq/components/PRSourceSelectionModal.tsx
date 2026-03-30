@@ -6,6 +6,7 @@ import { AVService } from '@/modules/procurement/services/av.service';
 import type { ApprovalHeader } from '@/modules/procurement/types/av-types';
 import { ModalLayout } from '@/shared/components/ui/layout/ModalLayout';
 import { logger } from '@/shared/utils/logger';
+import { formatThaiDate } from '@/shared/utils/dateUtils';
 
 interface PRSourceSelectionModalProps {
     isOpen: boolean;
@@ -197,15 +198,15 @@ export const PRSourceSelectionModal: React.FC<PRSourceSelectionModalProps> = ({ 
                                     : '-';
                                 return (
                                     <tr key={pr.pr_id} className="hover:bg-teal-50/50 dark:hover:bg-gray-700/50 transition-colors">
-                                        <td className="px-5 py-3 font-medium text-teal-700 dark:text-teal-400 whitespace-nowrap">{pr.pr_no}</td>
-                                        <td className="px-5 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">{pr.pr_date?.split('T')[0]}</td>
+                                        <td className="px-5 py-3 font-medium text-teal-700 dark:text-teal-400 whitespace-nowrap tabular-nums">{pr.pr_no}</td>
+                                        <td className="px-5 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap tabular-nums">{formatThaiDate(pr.pr_date)}</td>
                                         <td className="px-5 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">{pr.requester_name}</td>
                                         <td className="px-5 py-3 text-gray-500 dark:text-gray-400">
                                             <div className="truncate max-w-[200px]" title={displayRemark}>
                                                 {displayRemark}
                                             </div>
                                         </td>
-                                        <td className="px-5 py-3 text-right text-gray-600 dark:text-gray-300 whitespace-nowrap font-mono text-xs">
+                                        <td className="px-5 py-3 text-right text-gray-700 dark:text-gray-200 whitespace-nowrap font-bold tabular-nums text-sm">
                                             {displayTotal}
                                         </td>
                                         <td className="px-5 py-3 text-center">
