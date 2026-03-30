@@ -23,8 +23,11 @@ export const THAI_MONTHS_FULL = ['มกราคม', 'กุมภาพัน
  * @param isoDate - วันที่รูปแบบ ISO เช่น "2026-01-15"
  * @returns วันที่รูปแบบไทย เช่น "15 ม.ค. 2569"
  */
-export function formatThaiDate(isoDate: string): string {
+export function formatThaiDate(isoDate: string | null | undefined): string {
+    if (!isoDate) return '-';
     const date = new Date(isoDate);
+    if (isNaN(date.getTime())) return '-';
+    
     const day = date.getDate();
     const month = THAI_MONTHS[date.getMonth()];
     const year = date.getFullYear() + 543; // แปลงเป็น พ.ศ.

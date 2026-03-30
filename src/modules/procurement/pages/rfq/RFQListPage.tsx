@@ -54,14 +54,24 @@ const RFQ_STATUS_OPTIONS = [
 // HELPERS
 // ====================================================================================
 
+const deriveRFQCounter = (item: RFQHeader) => {
+    // 🔒 FIX: Prioritize 'sent_vendors_count' (REQUIRED field) over legacy 'vendor_sent'
+    // This ensures that when the backend is updated, the frontend picks up the new value correctly.
+    const total = item.vendor_total ?? item.vendor_count ?? item.rfqVendors?.length ?? 0;
+    const sentCount = item.sent_vendors_count ?? item.vendor_sent ?? item.rfqVendors?.filter((v: any) => 
+        ['SENT', 'RESPONDED', 'DECLINED', 'CLOSED'].includes(String(v.status || '').toUpperCase())
+    ).length ?? 0;
+    
+    return { total, sentCount };
+};
+
 const getDynamicStatus = (item: RFQHeader) => {
     // 1. Respect terminal statuses FIRST
     if (['CLOSED', 'CANCELLED'].includes(item.status)) {
         return item.status;
     }
     
-    const sentCount = item.vendor_sent ?? item.sent_vendors_count ?? 0;
-    const total = item.vendor_total ?? item.vendor_count ?? 0;
+    const { sentCount, total } = deriveRFQCounter(item);
     
     // 2. Apply dynamic logic for DRAFT vs SENT
     if (total > 0 && sentCount > 0) {
@@ -515,12 +525,7 @@ export default function RFQListPage() {
             header: () => <div className="flex justify-center items-center w-full h-full">ผู้ขาย (ส่ง/ทั้งหมด)</div>,
             cell: ({ row }) => {
                 const item = row.original;
-                
-                // 💧 Client-side derivation fallback if rfqVendors relation is present
-                const total = item.rfqVendors?.length ?? item.vendor_total ?? item.vendor_count ?? 0;
-                const sentCount = item.rfqVendors?.filter((v: { status?: string }) => 
-                    ['SENT', 'RESPONDED', 'DECLINED', 'CLOSED'].includes(String(v.status || '').toUpperCase())
-                ).length ?? item.vendor_sent ?? item.sent_vendors_count ?? 0;
+                const { sentCount, total } = deriveRFQCounter(item);
 
                 return (
                     <div className="flex flex-col items-center justify-center h-full py-2">
@@ -561,10 +566,7 @@ export default function RFQListPage() {
             cell: ({ row }) => {
                 const item = row.original;
                 // const dynamicStatus = getDynamicStatus(item); // Unused for actions but available if needed
-                const total = item.rfqVendors?.length ?? item.vendor_total ?? item.vendor_count ?? 0;
-                const sentCount = item.rfqVendors?.filter((v: any) => 
-                    ['SENT', 'RESPONDED', 'DECLINED', 'CLOSED'].includes(String(v.status || '').toUpperCase())
-                ).length ?? item.vendor_sent ?? item.sent_vendors_count ?? 0;
+                const { sentCount, total } = deriveRFQCounter(item);
                 const isTerminal = ['CLOSED', 'CANCELLED', 'COMPLETED'].includes(item.status);
                 
                 return (

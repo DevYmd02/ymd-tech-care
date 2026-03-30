@@ -46,14 +46,14 @@ export const PRSourceSelectionModal: React.FC<PRSourceSelectionModalProps> = ({ 
                     status: 'PARTIAL' as const
                 }));
 
-                // Map PRs from AV List records
-                // 🎯 FIX: AV record has pr_id at top level; its nested pr object is often empty or just pr_no
+                // Map PRs from AV List records (Partial Approvals)
                 const avPartials = (avListRes?.data || []).map((a: ApprovalHeader) => ({
                     ...a,
                     ...a.pr,
                     pr_id: a.pr_id, // Ensure ID is present
                     pr_no: a.pr?.pr_no || '-',
                     pr_date: a.approval_date || a.created_at,
+                    approval_date: a.approval_date, // 🎯 Ensure approval_date is passed (08/04)
                     requester_name: a.approval_emp_name || '-',
                     total_amount: Number(a.base_total_amount || 0),
                     status: 'PARTIAL' as const

@@ -225,7 +225,7 @@ export default function PRListPage() {
                         {/* Bottom Line: PR Date & Need By Urgency */}
                         <div className="flex flex-col mt-1">
                             <span className="text-xs text-gray-500 dark:text-gray-400">
-                                {formatThaiDate(prDateStr)}
+                                {prDateStr ? formatThaiDate(prDateStr) : '-'}
                             </span>
                             {needByDateStr && (
                                 <span className={`text-[10px] flex items-center mt-1 ${urgencyClass}`}>
@@ -264,10 +264,10 @@ export default function PRListPage() {
 
                 // ── Aggressive Requester Name Hydration ──
                 const reqName = row.requester_name || row.created_by_name || row.employee_name;
-                const reqId = row.requester_user_id || row.user_id;
+                const reqId = row.requester_user_id || row.user_id || (row as any).created_by;
                 const displayReq = reqName
                     ? String(reqName)
-                    : (reqId ? `User ID: ${reqId}` : 'ไม่ระบุผู้ขอ');
+                    : (reqId ? `ID: ${reqId}` : 'ไม่ระบุผู้ขอ');
 
                 return (
                     <div className="flex flex-col py-2 gap-0.5">
