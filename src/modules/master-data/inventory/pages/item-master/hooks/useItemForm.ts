@@ -9,8 +9,9 @@ import { logger } from '@/shared/utils/logger';
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
 import { ProductCategoryService } from '@/modules/master-data/inventory/services/product-category.service';
+import { ItemBarcodeService } from '@/modules/master-data/inventory/services/item-barcode.service';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
-import type { ItemMaster, ItemMasterFormData } from '@/modules/master-data/types/master-data-types';
+import type { ItemMaster, ItemMasterFormData, ItemBarcodeListItem } from '@/modules/master-data/types/master-data-types';
 import { extractErrorMessage } from '@/core/api/api';
 
 export const itemMasterSchema = z.object({
@@ -59,6 +60,12 @@ export const itemMasterSchema = z.object({
 
     // Other fields
     barcode_default: z.string().optional().default(''),
+    barcodes: z.array(z.object({
+        barcode_id: z.number().optional(),
+        uom_id: z.coerce.number().min(1, 'กรุณาเลือกหน่วยนับ'),
+        barcode: z.string().min(1, 'กรุณากรอกบาร์โค้ด'),
+        is_active: z.boolean().default(true),
+    })).default([]),
     is_active: z.boolean().default(true),
     
     is_batch_control: z.boolean().default(false),
@@ -123,8 +130,7 @@ const initialFormData: ItemFormData = {
     is_buddy: false,
     is_on_hold: false,
     costing_method: 'FIFO',
-
-    
+    barcodes: [],
 };
 
 export function useItemForm(editId: number | null, onSuccess?: () => void) {
@@ -252,15 +258,74 @@ export function useItemForm(editId: number | null, onSuccess?: () => void) {
                 is_expiry_control: item.is_expiry_control || false,
                 is_serial_control: item.is_serial_control || false,
                 costing_method: item.costing_method || 'FIFO',
+                barcodes: [], // Will be filled by separate query below
             });
         }
     }, [existingItem, reset]);
 
+    // Fetch barcodes for this item if editing
+    const { data: itemBarcodes } = useQuery({
+        queryKey: ['item-barcodes-form', editId],
+        queryFn: async () => {
+            if (!editId) return [];
+            const res = await ItemBarcodeService.getAll({ item_id: editId });
+            return res.items.map((b: ItemBarcodeListItem) => ({
+                barcode_id: b.barcode_id || b.id,
+                uom_id: b.unit_id || 0,
+                barcode: b.barcode,
+                is_active: b.is_active
+            }));
+        },
+        enabled: !!editId
+    });
+
+    useEffect(() => {
+        if (itemBarcodes && itemBarcodes.length > 0) {
+            setValue('barcodes', itemBarcodes, { shouldDirty: false });
+        }
+    }, [itemBarcodes, setValue]);
+
     const saveMutation = useMutation({
-        mutationFn: (data: ItemFormData) => {
-            return editId 
-                ? ItemMasterService.update(editId, data as ItemMasterFormData)
-                : ItemMasterService.create(data as ItemMasterFormData);
+        mutationFn: async (data: ItemFormData) => {
+            // 1. Save Item
+            const itemResponse = editId 
+                ? await ItemMasterService.update(editId, data as ItemMasterFormData)
+                : await ItemMasterService.create(data as ItemMasterFormData);
+
+            // 2. Handle Barcodes Sync (Post-Save)
+            const targetItemId = editId || (typeof itemResponse === 'number' ? itemResponse : null);
+            
+            if (targetItemId) {
+                const barcodes = data.barcodes || [];
+                const originalBarcodes = itemBarcodes || [];
+
+                // Delete removed (only if updating)
+                if (editId) {
+                    const toDelete = originalBarcodes.filter((ob) => !barcodes.find(b => b.barcode_id === ob.barcode_id));
+                    for (const b of toDelete) {
+                        await ItemBarcodeService.delete(b.barcode_id!);
+                    }
+                }
+
+                // Add or Update
+                for (const b of barcodes) {
+                    if (b.barcode_id && editId) {
+                        await ItemBarcodeService.update(b.barcode_id, {
+                            barcode: b.barcode,
+                            uom_id: b.uom_id,
+                        });
+                    } else {
+                        await ItemBarcodeService.create({
+                            item_id: targetItemId,
+                            barcode: b.barcode,
+                            uom_id: b.uom_id,
+                            is_default: false
+                        });
+                    }
+                }
+            }
+
+            return !!itemResponse;
         },
         onSuccess: async (success) => {
             if (success) {
@@ -333,6 +398,8 @@ export function useItemForm(editId: number | null, onSuccess?: () => void) {
         clearForm,
         register,
         units,
-        categories
+        categories,
+        control,
+        setValue
     };
 }
