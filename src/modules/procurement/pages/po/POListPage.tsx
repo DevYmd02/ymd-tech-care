@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { FileText, Eye, Send, CheckCircle, Package, Edit, Search, Plus } from 'lucide-react';
+import { FileText, Eye, Send, Package, Edit, Search, Plus, Clock } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { PageListLayout, SmartTable, FilterField, MobileListCard, MobileListContainer } from '@ui';
 import { POStatusBadge } from '@ui';
@@ -9,7 +9,8 @@ import type { POListItem } from '@/modules/procurement/types';
 import type { POFormData } from '@/modules/procurement/schemas/po-schemas';
 import { createColumnHelper } from '@tanstack/react-table';
 import type { ColumnDef } from '@tanstack/react-table';
-import { POFormModal, POApprovalModal, DocumentSourceSelectorModal } from './components';
+import { POFormModal, DocumentSourceSelectorModal } from './components';
+import { POAHistoryModal } from '@/modules/procurement/shared/components/POAHistoryModal';
 import GRNFormModal from '@/modules/procurement/pages/grn/components/GRNFormModal';
 
 export default function POListPage() {
@@ -23,7 +24,7 @@ export default function POListPage() {
         handlePageChange, handleSortChange, sortConfig,
     } = usePOList();
 
-    const { handleIssuePO, handleDirectSubmit } = usePOActions();
+    const { handleDirectSubmit } = usePOActions();
 
     // ── Modal State (URL Driven) ──────────────────────────────────────────────
     const isCreateInterceptorOpen = searchParams.get('mode') === 'select-source';
@@ -78,9 +79,11 @@ export default function POListPage() {
     const [isGRNModalOpen, setIsGRNModalOpen] = useState(false);
     const [selectedPOIdForGRN, setSelectedPOIdForGRN] = useState<number | undefined>(undefined);
 
-    // ── Approval Modal State ──────────────────────────────────────────────────
-    const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
-    const [selectedPOIdForApproval, setSelectedPOIdForApproval] = useState<number | undefined>(undefined);
+    // ── Approval History Modal State ─────────────────────────────────────────
+    const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+    const [historyPoNo, setHistoryPoNo] = useState<string | undefined>(undefined);
+    const [historyPoId, setHistoryPoId] = useState<number | undefined>(undefined);
+
 
     // ── Action Handlers (UI-only: open modals) ────────────────────────────────
     const handleView = useCallback((id: number) => {
@@ -93,14 +96,16 @@ export default function POListPage() {
         setIsEditModalOpen(true);
     }, []);
 
-    const handleApprove = useCallback((id: number) => {
-        setSelectedPOIdForApproval(id);
-        setIsApprovalModalOpen(true);
-    }, []);
 
     const handleGRN = useCallback((id: number) => {
         setSelectedPOIdForGRN(id);
         setIsGRNModalOpen(true);
+    }, []);
+
+    const handleViewHistory = useCallback((id: number, poNo?: string) => {
+        setHistoryPoId(id);
+        setHistoryPoNo(poNo);
+        setIsHistoryModalOpen(true);
     }, []);
 
     // ── Columns ───────────────────────────────────────────────────────────────
@@ -238,13 +243,24 @@ export default function POListPage() {
                 const item = row.original;
                 return (
                     <div className="flex items-center justify-center gap-1">
+                        {/* History Button (Show for non-DRAFT) */}
+                        {item.status !== 'DRAFT' && (
+                            <button
+                                onClick={() => handleViewHistory(item.po_id, item.po_no)}
+                                className="p-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded transition-all"
+                                title="ดูประวัติการอนุมัติ"
+                            >
+                                <Clock size={16} />
+                            </button>
+                        )}
+                        
                         {/* Eye — PR pattern */}
                         <button
                             onClick={() => handleView(item.po_id)}
                             className="p-1 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-all"
                             title="ดูรายละเอียด"
                         >
-                            <Eye size={14} />
+                            <Eye size={16} />
                         </button>
 
                         {/* DRAFT only: Edit (amber) + ส่งอนุมัติ (emerald) */}
@@ -252,54 +268,30 @@ export default function POListPage() {
                             <>
                                 <button
                                     onClick={() => handleEdit(item.po_id)}
-                                    className="flex items-center gap-1 px-1.5 py-1 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded shadow-sm border border-transparent hover:border-amber-200 transition-all"
+                                    className="flex items-center gap-1.5 px-2 py-1 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded shadow-sm border border-transparent hover:border-amber-200 transition-all font-bold"
                                     title="แก้ไข"
                                 >
-                                    <Edit size={12} />
-                                    <span className="text-[10px] font-bold">แก้ไข</span>
+                                    <Edit size={14} />
+                                    <span className="text-[11px]">แก้ไข</span>
                                 </button>
                                 <button
                                     onClick={() => handleDirectSubmit(item)}
-                                    className="flex items-center gap-1 px-1.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded shadow-sm transition-all"
+                                    className="flex items-center gap-1.5 px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold rounded shadow-sm transition-all"
                                 >
-                                    <Send size={10} />
+                                    <Send size={12} />
                                     ส่งอนุมัติ
                                 </button>
                             </>
-                        )}
-
-                        {/* PENDING_APPROVAL: อนุมัติ (emerald) */}
-                        {item.status === 'PENDING_APPROVAL' && (
-                            <button
-                                onClick={() => handleApprove(item.po_id)}
-                                className="flex items-center gap-1 px-1.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded shadow-sm transition-all"
-                                title="อนุมัติ PO"
-                            >
-                                <CheckCircle size={10} />
-                                อนุมัติ
-                            </button>
-                        )}
-
-                        {/* APPROVED: ออก PO (blue = create next doc) */}
-                        {item.status === 'APPROVED' && (
-                            <button
-                                onClick={() => handleIssuePO(item)}
-                                className="flex items-center gap-1 px-1.5 py-1 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded shadow-sm transition-all"
-                                title="ออก PO"
-                            >
-                                <Send size={10} />
-                                ออก PO
-                            </button>
                         )}
 
                         {/* ISSUED: เปิด GRN (violet = special process) */}
                         {item.status === 'ISSUED' && (
                             <button
                                 onClick={() => handleGRN(item.po_id)}
-                                className="flex items-center gap-1 px-1.5 py-1 bg-violet-600 hover:bg-violet-700 text-white text-[10px] font-bold rounded shadow-sm transition-all"
+                                className="flex items-center gap-1.5 px-2 py-1 bg-violet-600 hover:bg-violet-700 text-white text-[11px] font-bold rounded shadow-sm transition-all"
                                 title="เปิดใบรับสินค้า"
                             >
-                                <Package size={10} />
+                                <Package size={12} />
                                 เปิด GRN
                             </button>
                         )}
@@ -323,7 +315,7 @@ export default function POListPage() {
             size: 200,
             enableSorting: false,
         }),
-    ], [columnHelper, filters.page, filters.limit, data?.data, handleGRN, handleApprove, handleIssuePO, handleDirectSubmit, handleView, handleEdit]);
+    ], [columnHelper, filters.page, filters.limit, data?.data, handleGRN, handleDirectSubmit, handleView, handleEdit, handleViewHistory]);
 
     return (
         <>
@@ -486,54 +478,48 @@ export default function POListPage() {
                                     </span>
                                 }
                                 actions={
-                                    <>
+                                    <div className="flex flex-wrap gap-2 w-full font-bold tracking-wide">
                                         <button
                                             onClick={() => handleView(item.po_id)}
-                                            className="flex-1 bg-gray-50 dark:bg-slate-700 hover:bg-gray-100 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1 border border-gray-200 dark:border-slate-600"
+                                            className="flex-1 min-w-[70px] bg-gray-50 dark:bg-slate-700 hover:bg-gray-100 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 border border-gray-200 dark:border-slate-600"
                                         >
-                                            <Eye size={14} /> ดู
+                                            <Eye size={16} /> ดูข้อมูล
                                         </button>
+                                        
+                                        {item.status !== 'DRAFT' && (
+                                            <button
+                                                onClick={() => handleViewHistory(item.po_id, item.po_no)}
+                                                className="flex-1 min-w-[70px] bg-emerald-50 dark:bg-emerald-900/30 hover:bg-emerald-100 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                                            >
+                                                <Clock size={16} /> ประวัติ
+                                            </button>
+                                        )}
+
                                         {item.status === 'DRAFT' && (
                                             <>
                                                 <button
                                                     onClick={() => handleEdit(item.po_id)}
-                                                    className="flex-1 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1"
+                                                    className="flex-1 min-w-[70px] bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 text-amber-600 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5"
                                                 >
-                                                    <Edit size={14} /> แก้ไข
+                                                    <Edit size={16} /> แก้ไข
                                                 </button>
                                                 <button
                                                     onClick={() => handleDirectSubmit(item)}
-                                                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm whitespace-nowrap"
+                                                    className="flex-[2] min-w-[120px] bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm whitespace-nowrap"
                                                 >
-                                                    <Send size={14} /> ส่งอนุมัติ
+                                                    <Send size={16} /> ส่งอนุมัติ
                                                 </button>
                                             </>
-                                        )}
-                                        {item.status === 'PENDING_APPROVAL' && (
-                                            <button
-                                                onClick={() => handleApprove(item.po_id)}
-                                                className="flex-[2] bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
-                                            >
-                                                <CheckCircle size={14} /> อนุมัติ
-                                            </button>
-                                        )}
-                                        {item.status === 'APPROVED' && (
-                                            <button
-                                                onClick={() => handleIssuePO(item)}
-                                                className="flex-[2] bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
-                                            >
-                                                <Send size={14} /> ออก PO
-                                            </button>
                                         )}
                                         {item.status === 'ISSUED' && (
                                             <button
                                                 onClick={() => handleGRN(item.po_id)}
-                                                className="flex-[2] bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
+                                                className="flex-[2] min-w-[120px] bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm"
                                             >
-                                                <Package size={14} /> เปิด GRN
+                                                <Package size={16} /> เปิด GRN
                                             </button>
                                         )}
-                                    </>
+                                    </div>
                                 }
                             />
                         ))}
@@ -605,18 +591,12 @@ export default function POListPage() {
                 }}
             />
 
-            {selectedPOIdForApproval && (
-                <POApprovalModal
-                    isOpen={isApprovalModalOpen}
-                    onClose={() => {
-                        setIsApprovalModalOpen(false);
-                        setSelectedPOIdForApproval(undefined);
-                    }}
-                    poId={selectedPOIdForApproval}
-                    onSuccess={() => {
-                        setIsApprovalModalOpen(false);
-                        handleApplyFilters();
-                    }}
+            {isHistoryModalOpen && historyPoNo && (
+                <POAHistoryModal
+                    isOpen={isHistoryModalOpen}
+                    onClose={() => setIsHistoryModalOpen(false)}
+                    poId={historyPoId}
+                    poNo={historyPoNo}
                 />
             )}
         </>

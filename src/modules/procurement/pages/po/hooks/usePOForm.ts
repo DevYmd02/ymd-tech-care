@@ -191,7 +191,8 @@ export const usePOForm = ({
                     initialPOLines = lines.map((l: any, idx: number) => ({
                         line_no:         idx + 1,
                         item_id:         Number(l.item_id || 0),
-                        id:              Number(l.item_id || 0),
+                        po_line_id:      l.po_line_id ? Number(l.po_line_id) : undefined,
+                        id:              Number(l.po_line_id || l.item_id || 0),
                         item_code:       l.item_code || l.item?.item_code || '',
                         item_name:       l.item_name || l.item?.item_name || '',
                         description:     l.description || l.remark || '',
@@ -214,7 +215,8 @@ export const usePOForm = ({
             else if (initialValues?.po_lines && initialValues.po_lines.length > 0) {
                 initialPOLines = initialValues.po_lines.map((l: any, idx: number) => ({
                     ...l,
-                    id: Number(l.id || l.item_id || 0),
+                    po_line_id: Number(l.po_line_id || (l.id && l.id !== l.item_id ? l.id : undefined) || 0) || undefined,
+                    id: Number(l.po_line_id || l.id || l.item_id || 0),
                     item_id: Number(l.item_id || l.id || 0),
                     line_no: l.line_no || idx + 1,
                 }));
@@ -225,6 +227,7 @@ export const usePOForm = ({
                 initialPOLines = sourceLines.map((l: QuotationLine, idx: number) => ({
                     line_no:         idx + 1,
                     item_id:         Number(l.item_id || 0),
+                    po_line_id:      undefined, // New PO line
                     id:              Number(l.item_id || 0),
                     item_code:       l.item?.item_code || l.item_code || '',
                     item_name:       l.item?.item_name || l.item_name || '',
@@ -672,6 +675,7 @@ export const usePOForm = ({
                     }
 
                     return {
+                        po_line_id: undefined, // New lines from Reference Doc
                         id: (finalItemId || 0) as number, // 🚀 Dual Mapping
                         item_id: (finalItemId || 0) as number,
                         code: finalCode, // 🚀 Dual Mapping

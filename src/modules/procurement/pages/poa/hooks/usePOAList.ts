@@ -9,6 +9,7 @@ export const POA_STATUS_OPTIONS = [
     { value: 'ALL', label: 'ทั้งหมด' },
     { value: 'PENDING_APPROVAL', label: 'รออนุมัติ' },
     { value: 'APPROVED', label: 'อนุมัติแล้ว' },
+    { value: 'PARTIAL', label: 'อนุมัติบางส่วน' },
     { value: 'REJECTED', label: 'ไม่อนุมัติ' },
 ];
 
@@ -45,7 +46,7 @@ export const usePOAList = () => {
         poa_no: filters.search4 || undefined,
         pr_no: filters.search2 || undefined,
         vendor_name: filters.search3 || undefined,
-        status: filters.status === 'ALL' ? undefined : (filters.status || 'PENDING_APPROVAL') as any,
+        status: filters.status as any, // Pass directly, service will handle mapping
         date_from: filters.date_start || undefined,
         date_to: filters.date_end || undefined,
         page: filters.page,

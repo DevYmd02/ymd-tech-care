@@ -1,6 +1,6 @@
 import { FormProvider, useWatch, Controller } from 'react-hook-form';
 import { 
-    CheckCircle, XCircle, FileText, Loader2, Search
+    CheckCircle, XCircle, FileText, Loader2, Search, Package
 } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { parseDiscountAmount } from '@/modules/procurement/utils/pricing.utils';
@@ -62,6 +62,100 @@ const POSummaryPanel = ({ control, detailData }: { control: any; detailData: any
     );
 };
 
+interface POLineRowProps {
+    field: Record<string, any>;
+    idx: number;
+    control: any;
+    isReadOnly: boolean;
+    detailData: any;
+    errors: any;
+}
+
+/** Isolated row component — watches only its own slice of form state to prevent full-modal re-renders */
+const POLineRow: React.FC<POLineRowProps> = ({ field, idx, control, isReadOnly, detailData, errors }) => {
+    const lineVal = useWatch({ control, name: `po_lines.${idx}` as any });
+    const qty = lineVal?.qty_ordered ?? field.qty_ordered ?? 0;
+    const price = lineVal?.unit_price ?? field.unit_price ?? 0;
+    const total = (Number(qty) || 0) * (Number(price) || 0);
+    const isApproved = !!(lineVal?.is_approved ?? field.is_approved);
+
+    return (
+        <tr className={`border-b border-gray-100 dark:border-gray-800 transition-colors ${!isApproved ? 'bg-gray-100/50 dark:bg-gray-800/50 opacity-60' : ''}`}>
+            <td className="px-2 py-2 text-center border-r border-gray-200 dark:border-gray-700">
+                <Controller
+                    name={`po_lines.${idx}.is_approved`}
+                    control={control}
+                    render={({ field: { value, onChange } }) => (
+                        <input
+                            type="checkbox"
+                            checked={!!value}
+                            onChange={e => onChange(e.target.checked)}
+                            disabled={isReadOnly}
+                            className={cn('w-4 h-4 text-emerald-600 rounded', isReadOnly ? 'cursor-not-allowed opacity-50' : 'cursor-pointer')}
+                        />
+                    )}
+                />
+            </td>
+            <td className="px-3 py-2 text-center text-[13px] text-gray-600 font-medium border-r border-gray-200 dark:border-gray-700">{idx + 1}</td>
+            <td className="px-3 py-2 border-r border-gray-200 dark:border-gray-700 text-slate-700 dark:text-slate-300">
+                {field.item_name || field.description || field.item_code}
+            </td>
+            <td className="px-2 py-2 text-center border-r border-gray-200 dark:border-gray-700 text-slate-700 dark:text-slate-300 font-medium">
+                {detailData?.po_lines?.[idx]?.qty_ordered ?? field.qty_ordered ?? '0'}
+            </td>
+            <td className="px-2 py-2 border-r border-gray-200 dark:border-gray-700">
+                <Controller
+                    name={`po_lines.${idx}.qty_ordered`}
+                    control={control}
+                    render={({ field: { value, onChange } }) => (
+                        <input
+                            type="number" step="any"
+                            value={value ?? ''}
+                            onChange={e => onChange(e.target.valueAsNumber)}
+                            disabled={isReadOnly}
+                            className={cn(
+                                ui.input,
+                                '!h-9 text-center text-[14px] font-semibold',
+                                !isReadOnly && 'text-emerald-700 dark:text-emerald-400 border-emerald-500 bg-emerald-50/30 dark:bg-emerald-950/20 focus:border-emerald-500 focus:ring-emerald-500/20 shadow-sm',
+                                isReadOnly && ui.inputRO,
+                                errors.po_lines?.[idx]?.qty_ordered && 'border-red-500 focus:ring-red-500/20 focus:border-red-500'
+                            )}
+                        />
+                    )}
+                />
+            </td>
+            <td className="px-3 py-2 text-right border-r border-gray-200 dark:border-gray-700 text-slate-700 dark:text-slate-300">
+                {Number(field.unit_price || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </td>
+            <td className="px-3 py-2 text-right font-semibold text-emerald-700 dark:text-emerald-400 text-[13px] bg-emerald-50/10 dark:bg-emerald-900/10 border-r border-gray-200 dark:border-gray-700">
+                {total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </td>
+            <td className="px-2 py-2">
+                <Controller
+                    name={`po_lines.${idx}.line_remark`}
+                    control={control}
+                    render={({ field: { value, onChange } }) => (
+                        <input
+                            type="text"
+                            value={value ?? ''}
+                            onChange={onChange}
+                            disabled={isReadOnly}
+                            placeholder={isReadOnly ? '' : 'หมายเหตุ...'}
+                            className={cn(
+                                ui.input,
+                                '!h-9 text-sm',
+                                isReadOnly && ui.inputRO,
+                                errors.po_lines?.[idx]?.line_remark && 'border-red-500 focus:ring-red-500/20 focus:border-red-500'
+                            )}
+                        />
+                    )}
+                />
+            </td>
+        </tr>
+    );
+};
+
+
 interface POAFormModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -106,9 +200,11 @@ export default function POAFormModal({
 
         currencies,
         isLoadingCurrencies,
+        isReadOnly,
     } = usePOAForm({ isOpen, onClose, onSuccess, poId, initialValues });
 
-    const poLinesValues = useWatch({ control, name: 'po_lines' });
+    // NOTE: Do NOT add useWatch for 'po_lines' here — POSummaryPanel already watches it.
+    // Adding another root-level useWatch causes the entire modal to re-render on every keystroke.
 
     if (!isOpen) return null;
 
@@ -132,30 +228,34 @@ export default function POAFormModal({
                                 onClick={onClose}
                                 className="px-6 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all font-medium"
                             >
-                                ยกเลิก
+                                {isReadOnly ? 'ปิดหน้าต่าง' : 'ยกเลิก'}
                             </button>
-                            <button
-                                type="button"
-                                onClick={handleRejectInit}
-                                disabled={isSubmitting}
-                                className="px-6 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400 transition-all font-medium flex items-center gap-2 disabled:opacity-50"
-                            >
-                                <XCircle size={18} />
-                                ไม่อนุมัติ
-                            </button>
-                            <button
-                                type="button"
-                                onClick={handleSubmit(onSubmit, onInvalidSubmit)}
-                                disabled={isSubmitting}
-                                className="px-8 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 transition-all font-semibold flex items-center gap-2 disabled:opacity-50"
-                            >
-                                {isSubmitting ? (
-                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                ) : (
-                                    <CheckCircle size={18} />
-                                )}
-                                อนุมัติรายการ
-                            </button>
+                            {!isReadOnly && (
+                                <>
+                                    <button
+                                        type="button"
+                                        onClick={handleRejectInit}
+                                        disabled={isSubmitting}
+                                        className="px-6 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400 transition-all font-medium flex items-center gap-2 disabled:opacity-50"
+                                    >
+                                        <XCircle size={18} />
+                                        ไม่อนุมัติ
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleSubmit(onSubmit, onInvalidSubmit)}
+                                        disabled={isSubmitting}
+                                        className="px-8 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 transition-all font-semibold flex items-center gap-2 disabled:opacity-50"
+                                    >
+                                        {isSubmitting ? (
+                                            <Loader2 className="w-5 h-5 animate-spin" />
+                                        ) : (
+                                            <CheckCircle size={18} />
+                                        )}
+                                        อนุมัติรายการ
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
                 }
@@ -164,9 +264,28 @@ export default function POAFormModal({
                     {/* Header Card */}
                     <div className="bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden shadow-sm">
                         <div className="p-5 space-y-4">
-                            <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 border-b border-gray-200 dark:border-gray-700 pb-3">
-                                <FileText size={18} />
-                                <span className="font-semibold">ข้อมูลทั่วไป (General Information)</span>
+                            <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 pb-3">
+                                <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                                    <FileText size={18} />
+                                    <span className="font-semibold">ข้อมูลทั่วไป (General Information)</span>
+                                </div>
+                                {(detailData?.status || initialValues?.status) && (
+                                    <div className="flex items-center">
+                                        <label className="text-[10px] text-gray-400 uppercase tracking-wider mr-2 font-medium">สถานะหลัก</label>
+                                        <div className={cn(
+                                            "px-2 py-0.5 rounded text-[11px] font-bold uppercase border shadow-sm",
+                                            detailData?.status === 'APPROVED' ? "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800" :
+                                            detailData?.status === 'PARTIAL' ? "bg-orange-50 text-orange-600 border-orange-200 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-800" :
+                                            detailData?.status === 'REJECTED' ? "bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800" :
+                                            "bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800"
+                                        )}>
+                                            {detailData?.status === 'APPROVED' ? 'อนุมัติแล้ว' : 
+                                             detailData?.status === 'PARTIAL' ? 'อนุมัติบางส่วน' :
+                                             detailData?.status === 'REJECTED' ? 'ไม่อนุมัติ' :
+                                             detailData?.status || initialValues?.status || 'รอดำเนินการ'}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {isLoadingDetail ? (
@@ -181,15 +300,17 @@ export default function POAFormModal({
                                         <div>
                                             <label className={ui.label}>เลขที่ PO</label>
                                             <div className="flex gap-2">
-                                                <input value={detailData?.po_no || '-'} className={ui.inputRO} readOnly placeholder="-" />
-                                                <button 
-                                                    type="button" 
-                                                    className={ui.searchBtn} 
-                                                    title="ค้นหารายการ PO"
-                                                    onClick={() => setIsPOSearchModalOpen(true)}
-                                                >
-                                                    <Search size={14} />
-                                                </button>
+                                                <input value={detailData?.po_no || initialValues?.po_no || '-'} className={ui.inputRO} readOnly placeholder="-" />
+                                                {!isReadOnly && (
+                                                    <button 
+                                                        type="button" 
+                                                        className={ui.searchBtn} 
+                                                        title="ค้นหารายการ PO"
+                                                        onClick={() => setIsPOSearchModalOpen(true)}
+                                                    >
+                                                        <Search size={14} />
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                         <div>
@@ -254,7 +375,7 @@ export default function POAFormModal({
                                                         <CustomDateInput 
                                                             value={field.value || ''} 
                                                             onChange={field.onChange} 
-                                                            disabled={false} 
+                                                            disabled={isReadOnly} 
                                                             className={cn(ui.input, errors.exchange_rate_date && "border-red-500 focus:ring-red-500/20 focus:border-red-500")} 
                                                         />
                                                     )}
@@ -266,7 +387,7 @@ export default function POAFormModal({
                                             <select 
                                                 {...register('currency_code')} 
                                                 className={cn(ui.select, errors.currency_code && "border-red-500 focus:ring-red-500/20 focus:border-red-500")} 
-                                                disabled={isLoadingCurrencies}
+                                                disabled={isLoadingCurrencies || isReadOnly}
                                             >
                                                 <option value="">{isLoadingCurrencies ? 'โหลด...' : 'เลือกสกุลเงิน'}</option>
                                                 {currencies.map((o: Currency) => (
@@ -281,7 +402,7 @@ export default function POAFormModal({
                                             <select 
                                                 {...register('target_currency')} 
                                                 className={cn(ui.select, errors.target_currency && "border-red-500 focus:ring-red-500/20 focus:border-red-500")} 
-                                                disabled={isLoadingCurrencies}
+                                                disabled={isLoadingCurrencies || isReadOnly}
                                             >
                                                 <option value="">{isLoadingCurrencies ? 'โหลด...' : 'เลือกสกุลเงิน'}</option>
                                                 {currencies.map((o: Currency) => (
@@ -298,6 +419,7 @@ export default function POAFormModal({
                                                 {...register('exchange_rate', { valueAsNumber: true })}
                                                 className={cn(ui.input, "text-right", errors.exchange_rate && "border-red-500 focus:ring-red-500/20 focus:border-red-500")} 
                                                 placeholder="1" 
+                                                disabled={isReadOnly}
                                             />
                                             {errors.exchange_rate && <p className={ui.error}>{(errors.exchange_rate as any).message}</p>}
                                         </div>
@@ -308,13 +430,15 @@ export default function POAFormModal({
                                         <label className={ui.label}>หมายเหตุ (Remarks)</label>
                                         <textarea
                                             {...register('reject_reason')}
+                                            disabled={isReadOnly}
                                             className={cn(
                                                 "w-full min-h-[60px] p-3 text-sm bg-slate-50 dark:bg-slate-900 border rounded-lg focus:outline-none focus:ring-2 transition-all",
+                                                isReadOnly && "bg-slate-50/50 dark:bg-slate-950/30 text-slate-500 dark:text-slate-400 cursor-not-allowed",
                                                 errors.reject_reason 
                                                 ? "border-red-500 focus:ring-red-500/20 focus:border-red-500" 
                                                 : "border-slate-200 dark:border-slate-700 focus:ring-blue-500/20 focus:border-blue-500"
                                             )}
-                                            placeholder="ระบุหมายเหตุหรือเหตุผลการอนุมัติ/ไม่อนุมัติ..."
+                                            placeholder={isReadOnly ? "" : "ระบุหมายเหตุหรือเหตุผลการอนุมัติ/ไม่อนุมัติ..."}
                                         />
                                         {errors.reject_reason && <p className="text-red-500 text-[12px] mt-1 ml-1">{errors.reject_reason.message}</p>}
                                     </div>
@@ -349,89 +473,30 @@ export default function POAFormModal({
                                     <tbody>
                                         {fields.length === 0 && (
                                             <tr>
-                                                <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
-                                                    กำลังโหลดรายการสินค้า...
+                                                <td colSpan={8} className="px-4 py-12 text-center text-gray-400">
+                                                    <div className="flex flex-col items-center gap-2">
+                                                        <Package className="w-8 h-8 opacity-20 mb-1" />
+                                                        <span className="font-medium">
+                                                            {isLoadingDetail ? "กำลังโหลดรายการสินค้า..." : "ไม่พบรายการสินค้า"}
+                                                        </span>
+                                                        <span className="text-xs opacity-60">
+                                                            {isLoadingDetail ? "กรุณารอสักครู่ขณะเราดึงข้อมูลจากระบบ" : "ไม่พบข้อมูลรายการในภูมิภาคเอกสารนี้"}
+                                                        </span>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         )}
-                                        {fields.map((field, idx: number) => {
-                                            const lineVal = poLinesValues?.[idx] || {};
-                                            const qty = lineVal.qty_ordered ?? 0;
-                                            const price = lineVal.unit_price ?? 0;
-                                            const total = (Number(qty) || 0) * (Number(price) || 0);
-                                            const isApproved = !!lineVal.is_approved;
-
-                                            return (
-                                                <tr key={field.id} className={`border-b border-gray-100 dark:border-gray-800 transition-colors ${!isApproved ? 'bg-gray-100/50 dark:bg-gray-800/50 opacity-60' : ''}`}>
-                                                    <td className="px-2 py-2 text-center border-r border-gray-200 dark:border-gray-700">
-                                                        <Controller
-                                                            name={`po_lines.${idx}.is_approved`}
-                                                            control={control}
-                                                            render={({ field: { value, onChange } }) => (
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={!!value}
-                                                                    onChange={e => onChange(e.target.checked)}
-                                                                    className="w-4 h-4 text-emerald-600 rounded cursor-pointer"
-                                                                />
-                                                            )}
-                                                        />
-                                                    </td>
-                                                    <td className="px-3 py-2 text-center text-[13px] text-gray-600 font-medium border-r border-gray-200 dark:border-gray-700">{idx + 1}</td>
-                                                    <td className="px-3 py-2 border-r border-gray-200 dark:border-gray-700 text-slate-700 dark:text-slate-300">
-                                                        {(field as any).item_name || (field as any).description || (field as any).item_code}
-                                                    </td>
-                                                    <td className="px-2 py-2 text-center border-r border-gray-200 dark:border-gray-700 text-slate-700 dark:text-slate-300 font-medium">
-                                                        {detailData?.po_lines?.[idx]?.qty_ordered ?? (field as any).qty_ordered ?? '0'}
-                                                    </td>
-                                                    <td className="px-2 py-2 border-r border-gray-200 dark:border-gray-700">
-                                                        <Controller
-                                                            name={`po_lines.${idx}.qty_ordered`}
-                                                            control={control}
-                                                            render={({ field: { value, onChange } }) => (
-                                                                <input
-                                                                    type="number" step="any"
-                                                                    value={value ?? ''}
-                                                                    onChange={e => onChange(e.target.valueAsNumber)}
-                                                                    disabled={!isApproved}
-                                                                    className={cn(
-                                                                        ui.input, 
-                                                                        "!h-9 text-center text-[14px] font-semibold text-emerald-700 dark:text-emerald-400 border-emerald-500 bg-emerald-50/30 dark:bg-emerald-950/20 focus:border-emerald-500 focus:ring-emerald-500/20 shadow-sm disabled:opacity-50",
-                                                                        errors.po_lines?.[idx]?.qty_ordered && "border-red-500 focus:ring-red-500/20 focus:border-red-500"
-                                                                    )}
-                                                                />
-                                                            )}
-                                                        />
-                                                    </td>
-                                                    <td className="px-3 py-2 text-right border-r border-gray-200 dark:border-gray-700 text-slate-700 dark:text-slate-300">
-                                                        {Number((field as any).unit_price || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                                    </td>
-                                                    <td className="px-3 py-2 text-right font-semibold text-emerald-700 dark:text-emerald-400 text-[13px] bg-emerald-50/10 dark:bg-emerald-900/10 border-r border-gray-200 dark:border-gray-700">
-                                                        {total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                                    </td>
-                                                    <td className="px-2 py-2">
-                                                        <Controller
-                                                            name={`po_lines.${idx}.line_remark`}
-                                                            control={control}
-                                                            render={({ field: { value, onChange } }) => (
-                                                                <input
-                                                                    type="text"
-                                                                    value={value ?? ''}
-                                                                    onChange={onChange}
-                                                                    disabled={!isApproved}
-                                                                    placeholder="หมายเหตุ..."
-                                                                    className={cn(
-                                                                        ui.input, 
-                                                                        "!h-9 text-sm disabled:opacity-50",
-                                                                        errors.po_lines?.[idx]?.line_remark && "border-red-500 focus:ring-red-500/20 focus:border-red-500"
-                                                                    )}
-                                                                />
-                                                            )}
-                                                        />
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
+                                        {fields.map((field, idx: number) => (
+                                            <POLineRow
+                                                key={field.id}
+                                                field={field as any}
+                                                idx={idx}
+                                                control={control}
+                                                isReadOnly={isReadOnly}
+                                                detailData={detailData}
+                                                errors={errors}
+                                            />
+                                        ))}
                                     </tbody>
                                 </table>
                             </div>

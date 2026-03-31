@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { Search, CheckCircle, ShieldCheck } from 'lucide-react';
+import { useState, useMemo, useCallback } from 'react';
+import { Search, CheckCircle, Eye, Clock } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { PageListLayout, SmartTable, FilterField, MobileListCard, MobileListContainer } from '@ui';
 import { POStatusBadge } from '@ui';
@@ -8,6 +8,9 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { usePOAList, POA_STATUS_OPTIONS } from './hooks/usePOAList';
 import type { POListItem } from '@/modules/procurement/types';
 import { POAFormModal } from './components';
+import { POAHistoryModal } from '@/modules/procurement/shared/components/POAHistoryModal';
+
+const columnHelper = createColumnHelper<POListItem>();
 
 export default function POAListPage() {
     // ── Hooks (Business Logic) ────────────────────────────────────────────────
@@ -21,54 +24,26 @@ export default function POAListPage() {
     // ── View / Approve Modal State ─────────────────────────────────────────
     const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
     const [selectedPO, setSelectedPO] = useState<POListItem | undefined>(undefined);
+    
+    // ── Approval History Modal State ─────────────────────────────────────────
+    const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+    const [historyPoId, setHistoryPoId] = useState<number | undefined>(undefined);
+    const [historyPoNo, setHistoryPoNo] = useState<string | undefined>(undefined);
 
-    const handleApprove = (item: POListItem) => {
+    const handleApprove = useCallback((item: POListItem) => {
         setSelectedPO(item);
         setIsApprovalModalOpen(true);
-    };
+    }, []);
 
-    const handleTestOpenModal = () => {
-        const mockItem: POListItem = {
-            po_id: 99999,
-            po_no: 'PO-TEST-001',
-            po_date: new Date().toISOString(),
-            vendor_name: 'บริษัท ทดสอบ จำกัด (Vendor Test)',
-            status: 'PENDING_APPROVAL',
-            subtotal: 1000,
-            total_amount: 1070,
-            currency_code: 'THB',
-        } as any;
-        
-        (mockItem as any).po_lines = [
-            {
-                id: 1,
-                item_id: 101,
-                item_code: 'ITEM001',
-                item_name: 'สินค้าทดสอบ 1 (Test Product 1)',
-                qty_ordered: 10,
-                unit_price: 100,
-                is_approved: true,
-                line_remark: 'ด่วน',
-                line_no: 1
-            },
-            {
-                id: 2,
-                item_id: 102,
-                item_code: 'ITEM002',
-                item_name: 'สินค้าทดสอบ 2 (Test Product 2)',
-                qty_ordered: 5,
-                unit_price: 200,
-                is_approved: true,
-                line_no: 2
-            }
-        ];
-        
-        setSelectedPO(mockItem);
-        setIsApprovalModalOpen(true);
-    };
+    const handleViewHistory = useCallback((id: number, poNo?: string) => {
+        setHistoryPoId(id);
+        setHistoryPoNo(poNo);
+        setIsHistoryModalOpen(true);
+    }, []);
+
+
 
     // ── Columns ───────────────────────────────────────────────────────────────
-    const columnHelper = createColumnHelper<POListItem>();
     
     const columns = useMemo(() => [
         columnHelper.display({
@@ -77,6 +52,17 @@ export default function POAListPage() {
             cell: (info) => <div className="text-center w-full">{info.row.index + 1 + (filters.page - 1) * (filters.limit || 10)}</div>,
             size: 50,
             enableSorting: false,
+        }),
+        columnHelper.accessor((row: any) => row.poa_no, {
+            id: 'poa_no',
+            header: () => <div className="text-left whitespace-nowrap">เลขที่อนุมัติ POA</div>,
+            cell: (info) => (
+                <span className="font-semibold text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
+                    {info.getValue() || '-'}
+                </span>
+            ),
+            size: 130,
+            enableSorting: true,
         }),
         columnHelper.accessor('po_no', {
             header: () => <div className="text-left whitespace-nowrap">เลขที่ PO</div>,
@@ -98,45 +84,18 @@ export default function POAListPage() {
             size: 100,
             enableSorting: true,
         }),
-        columnHelper.accessor('qc_no', {
-            id: 'ref_docs',
-            header: () => <div className="text-left whitespace-nowrap">เอกสารอ้างอิง</div>,
+        columnHelper.accessor((row: POListItem) => (row as Record<string, any>).approval_emp_name, {
+            id: 'approval_emp_name',
+            header: 'ผู้จัดทำ',
             cell: (info) => {
-                const item = info.row.original;
-                const prDisplay = item.pr_no || (item.pr_id ? `ID: ${item.pr_id}` : null);
-                const qcDisplay = item.qc_no || (item.qc_id ? `ID: ${item.qc_id}` : null);
-                
+                const name = info.getValue() as string || '-';
                 return (
-                    <div className="flex flex-col whitespace-nowrap">
-                        {qcDisplay ? (
-                            <>
-                                <span className="font-semibold text-slate-700 dark:text-gray-200 leading-tight">QC: {qcDisplay}</span>
-                                {prDisplay && <span className="text-[10px] text-slate-500 mt-0.5">PR: {prDisplay}</span>}
-                            </>
-                        ) : prDisplay ? (
-                            <span className="font-semibold text-slate-700 dark:text-gray-200 leading-tight">PR: {prDisplay}</span>
-                        ) : (
-                            <span className="text-gray-400">-</span>
-                        )}
+                    <div className="truncate font-medium text-slate-700 dark:text-gray-200 text-left max-w-[180px]" title={name}>
+                        {name}
                     </div>
                 );
             },
-            size: 130,
-            enableSorting: false,
-        }),
-        columnHelper.accessor('vendor_name', {
-            header: 'ชื่อผู้ขาย',
-            cell: (info) => {
-                const item = info.row.original;
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const vendorDisplayName = (item as any).vendor?.vendor_name || item.vendor_name || (item.vendor_id ? `Vendor ID: ${item.vendor_id}` : '-');
-                return (
-                    <div className="truncate font-medium text-slate-700 dark:text-gray-200 text-left max-w-[200px]" title={vendorDisplayName}>
-                        {vendorDisplayName}
-                    </div>
-                );
-            },
-            size: 220,
+            size: 180,
             enableSorting: true,
         }),
         columnHelper.accessor(row => row.status, {
@@ -153,8 +112,7 @@ export default function POAListPage() {
         columnHelper.accessor('total_amount', {
             header: () => <div className="text-right w-full whitespace-nowrap">ยอดรวม (บาท)</div>,
             cell: (info) => {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const val = Number((info.row.original as any).base_total_amount || info.getValue() || 0);
+                const val = Number((info.row.original as Record<string, any>).base_total_amount || info.getValue() || 0);
                 return (
                     <div className="text-right font-bold text-gray-800 dark:text-white whitespace-nowrap w-full text-xs">
                         {new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val)}
@@ -169,14 +127,43 @@ export default function POAListPage() {
             header: () => <div className="text-center w-full">จัดการ</div>,
             cell: ({ row }) => {
                 const item = row.original;
+                if (item.status === 'APPROVED' || item.status === 'PARTIAL' || item.status === 'REJECTED') {
+                    return (
+                        <div className="flex items-center justify-center gap-1">
+                            <button
+                                onClick={() => handleViewHistory(item.po_id, item.po_no)}
+                                className="p-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded transition-all"
+                                title="ประวัติการอนุมัติ"
+                            >
+                                <Clock size={18} />
+                            </button>
+                            <button
+                                onClick={() => handleApprove(item)}
+                                className="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-all"
+                                title="ดูรายละเอียด"
+                            >
+                                <Eye size={18} />
+                            </button>
+                        </div>
+                    );
+                }
                 return (
-                    <div className="flex items-center justify-center">
+                    <div className="flex items-center justify-center gap-1.5">
+                        {item.po_no && item.po_no !== '-' && (
+                            <button
+                                onClick={() => handleViewHistory(item.po_id, item.po_no)}
+                                className="p-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded transition-all"
+                                title="ประวัติการอนุมัติ"
+                            >
+                                <Clock size={18} />
+                            </button>
+                        )}
                         <button
                             onClick={() => handleApprove(item)}
-                            className="flex items-center gap-1 px-2 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-md shadow-sm transition-all whitespace-nowrap"
+                            className="flex items-center gap-1.5 px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold rounded-md shadow-sm transition-all whitespace-nowrap"
                             title="อนุมัติเอกสาร"
                         >
-                            <CheckCircle size={12} /> พิจารณาอนุมัติ
+                            <CheckCircle size={14} /> พิจารณาอนุมัติ
                         </button>
                     </div>
                 );
@@ -184,7 +171,7 @@ export default function POAListPage() {
             size: 150,
             enableSorting: false,
         }),
-    ], [columnHelper, filters.page, filters.limit]);
+    ], [filters.page, filters.limit, handleApprove, handleViewHistory]);
 
     return (
         <>
@@ -231,7 +218,7 @@ export default function POAListPage() {
                                 label="สถานะ"
                                 type="select"
                                 value={localFilters.status || ''}
-                                onChange={(val: string) => handleFilterChange('status', val as any)}
+                                onChange={(val: string) => handleFilterChange('status', val)}
                                 options={POA_STATUS_OPTIONS}
                                 accentColor="emerald"
                             />
@@ -249,13 +236,6 @@ export default function POAListPage() {
                                         className="flex-1 sm:flex-none h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
                                     >
                                         <Search size={18} /> ค้นหา
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={handleTestOpenModal}
-                                        className="flex-1 sm:flex-none h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
-                                    >
-                                        <ShieldCheck size={18} /> รายการอนุมัติใบสั่งซื้อ
                                     </button>
                                 </div>
                             </div>
@@ -293,17 +273,44 @@ export default function POAListPage() {
                                 subtitle={formatThaiDate(item.po_date)}
                                 statusBadge={<POStatusBadge status={item.status} />}
                                 details={[
-                                    { label: 'ผู้ขาย:', value: item.vendor_name || '-' },
-                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                    { label: 'ยอดรวมสุทธิ', value: <span className="font-bold text-emerald-600">{Number((item as any).base_total_amount || item.total_amount || 0).toLocaleString()}</span> }
+                                    { label: 'เลขที่ POA:', value: (item as Record<string, any>).poa_no || '-' },
+                                    { label: 'ผู้จัดทำ:', value: (item as Record<string, any>).approval_emp_name || '-' },
+                                    { label: 'ยอดรวมสุทธิ', value: <span className="font-bold text-emerald-600">{Number((item as Record<string, any>).base_total_amount || item.total_amount || 0).toLocaleString()}</span> }
                                 ]}
                                 actions={
-                                    <button
-                                        onClick={() => handleApprove(item)}
-                                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 rounded-lg flex items-center justify-center gap-1 shadow-sm"
-                                    >
-                                        <CheckCircle size={14} /> พิจารณาอนุมัติ
-                                    </button>
+                                    item.status === 'APPROVED' || item.status === 'PARTIAL' || item.status === 'REJECTED' ? (
+                                        <div className="flex justify-end w-full gap-2 font-bold tracking-wide">
+                                            <button
+                                                onClick={() => handleViewHistory(item.po_id, item.po_no)}
+                                                className="flex-1 bg-emerald-50 dark:bg-emerald-950/30 hover:bg-emerald-100 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 text-xs py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 font-bold"
+                                            >
+                                                <Clock size={16} /> ประวัติ
+                                            </button>
+                                            <button
+                                                onClick={() => handleApprove(item)}
+                                                className="flex-1 bg-gray-50 dark:bg-slate-700 hover:bg-gray-100 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 text-xs py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 border border-gray-200 dark:border-slate-600 font-bold"
+                                            >
+                                                <Eye size={16} /> ดูข้อมูล
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col gap-2 w-full font-bold tracking-wide">
+                                            {item.po_no && item.po_no !== '-' && (
+                                                <button
+                                                    onClick={() => handleViewHistory(item.po_id, item.po_no)}
+                                                    className="w-full bg-emerald-50 dark:bg-emerald-950/30 hover:bg-emerald-100 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 text-xs py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 font-bold"
+                                                >
+                                                    <Clock size={16} /> ดูประวัติการอนุมัติ
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={() => handleApprove(item)}
+                                                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 rounded-lg flex items-center justify-center gap-1.5 shadow-sm"
+                                            >
+                                                <CheckCircle size={16} /> พิจารณาอนุมัติ
+                                            </button>
+                                        </div>
+                                    )
                                 }
                             />
                         ))}
@@ -324,6 +331,15 @@ export default function POAListPage() {
                     }}
                     poId={selectedPO.po_id}
                     initialValues={selectedPO}
+                />
+            )}
+
+            {isHistoryModalOpen && historyPoNo && (
+                <POAHistoryModal
+                    isOpen={isHistoryModalOpen}
+                    onClose={() => setIsHistoryModalOpen(false)}
+                    poId={historyPoId}
+                    poNo={historyPoNo}
                 />
             )}
         </>

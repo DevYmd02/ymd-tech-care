@@ -56,6 +56,7 @@ export interface POHeader {
     qc_id?: number;                 // INTEGER — FK -> qc_header
     qc_no?: string;                 // Display Only
     poa_no?: string;                // Display Only
+    approval_emp_name?: string;     // Display Only (Joined)
     rfq_id?: number;                // FK -> rfq
     winning_vq_id?: number;         // FK -> quotation_header
 
@@ -121,6 +122,8 @@ export interface POListParams {
     pr_no?: string;
     vendor_name?: string;
     status?: POStatus | 'ALL';
+    q?: string;      // Unified Search (Backend)
+    search?: string; // Unified Search (Frontend Fallback)
     date_from?: string;
     date_to?: string;
     page?: number;

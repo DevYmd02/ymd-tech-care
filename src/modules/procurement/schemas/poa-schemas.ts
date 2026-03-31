@@ -22,6 +22,7 @@ export const POAFormSchema = z.object({
     target_currency: z.string().optional(),
     exchange_rate_date: z.string().optional(),
     exchange_rate: z.number().optional(),
+    status: z.string().optional(), // Added for unified approval payload
     po_lines: z.array(POALineSchema),
 });
 
