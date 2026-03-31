@@ -211,49 +211,16 @@ export default function RFQListPage() {
     const { data: waitingCreateDataRaw, isLoading: isWaitingCreateLoading } = useQuery({
         queryKey: ['waiting-create-rfq'],
         queryFn: async () => {
-            logger.info('[RFQListPage] Fetching APPROVED and PARTIAL PRs for WAITING_CREATE tab');
-            const [approvedRes, partialPRsRes, avListRes] = await Promise.all([
-                RFQService.getApprovedPRsWithoutRFQ(),
-                AVService.getPendingApprovalPRs(),
-                AVService.getApprovalList({ status: 'PARTIAL', limit: 50 })
-            ]);
-
-            const approvedPRs = approvedRes.data || [];
+            logger.info('[RFQListPage] Fetching PRs without RFQ from backend');
+            const res = await RFQService.getApprovedPRsWithoutRFQ();
+            const list = res.data || [];
             
-            const pendingPartials = (partialPRsRes || []).map(p => ({
-                ...p,
-                status: 'PARTIAL' as const
-            }));
-
-            const avPartials = (avListRes?.data || []).map((a: any) => ({
-                ...a,
-                ...a.pr,
-                pr_id: a.pr_id,
-                pr_no: a.pr?.pr_no || '-',
-                pr_date: a.approval_date || a.created_at,
-                requester_name: a.approval_emp_name || '-',
-                total_amount: Number(a.base_total_amount || 0),
-                status: 'PARTIAL' as const
-            }));
-
-            const combined = [...approvedPRs];
-            const seenIds = new Set(approvedPRs.map((p: any) => p.pr_id));
-
-            for (const pr of [...pendingPartials, ...avPartials]) {
-                const prId = Number(pr.pr_id);
-                if (prId && !seenIds.has(prId)) {
-                    combined.push(pr);
-                    seenIds.add(prId);
-                }
-            }
-            
-            combined.sort((a, b) => {
+            // Sort by date descending (Newest first)
+            return [...list].sort((a, b) => {
                 const dateA = new Date(a.pr_date || 0);
                 const dateB = new Date(b.pr_date || 0);
                 return dateB.getTime() - dateA.getTime();
             });
-
-            return combined;
         },
         enabled: activeTab === 'WAITING_CREATE',
         staleTime: 1 * 60 * 1000,

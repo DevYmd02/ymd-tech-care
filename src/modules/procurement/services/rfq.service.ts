@@ -11,7 +11,7 @@ const ENDPOINTS = {
   create: '/rfq',
   addVendors: (id: number) => `/rfq/${id}/vendors`,
   sendToVendor: (rfqVendorId: number) => `/rfq/${rfqVendorId}/send-to-vendor`,
-  approvedPRsWithoutRFQ: '/rfq/pr-approved/without-rfq',
+  approvedPRsWithoutRFQ: '/rfq/pr/without-rfq',
   prApprovalDetail: (prId: number) => `/rfq/pr-approved/${prId}/without-rfq`,
 };
 
