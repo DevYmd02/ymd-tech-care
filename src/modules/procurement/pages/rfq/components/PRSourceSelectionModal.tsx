@@ -2,8 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Search, Check, FileText, Loader2 } from 'lucide-react';
 import type { PRHeader } from '@/modules/procurement/types';
 import { RFQService } from '@/modules/procurement/services/rfq.service';
-import { AVService } from '@/modules/procurement/services/av.service';
-import type { ApprovalHeader } from '@/modules/procurement/types/av-types';
 import { ModalLayout } from '@/shared/components/ui/layout/ModalLayout';
 import { logger } from '@/shared/utils/logger';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
@@ -29,60 +27,21 @@ export const PRSourceSelectionModal: React.FC<PRSourceSelectionModalProps> = ({ 
             setIsLoading(true);
             setFetchError(null);
             try {
-                logger.info('[PRSourceSelectionModal] Deep Scanning for APPROVED and PARTIAL PRs');
-                
-                // 🎯 DEEP FETCH: Combine sources to capture all visible "Approved/Partial" PRs
-                const [approvedRes, partialPRsRes, avListRes] = await Promise.all([
-                    RFQService.getApprovedPRsWithoutRFQ(),
-                    AVService.getPendingApprovalPRs(), // PRs that are partially handled but still in pending flow
-                    AVService.getApprovalList({ status: 'PARTIAL', limit: 50 }) // Real partial approval records
-                ]);
-
-                const approvedPRs = approvedRes.data || [];
-                
-                // Map Pending Approval PRs
-                const pendingPartials = (partialPRsRes || []).map(p => ({
-                    ...p,
-                    status: 'PARTIAL' as const
-                }));
-
-                // Map PRs from AV List records (Partial Approvals)
-                const avPartials = (avListRes?.data || []).map((a: ApprovalHeader) => ({
-                    ...a,
-                    ...a.pr,
-                    pr_id: a.pr_id, // Ensure ID is present
-                    pr_no: a.pr?.pr_no || '-',
-                    pr_date: a.approval_date || a.created_at,
-                    approval_date: a.approval_date, // 🎯 Ensure approval_date is passed (08/04)
-                    requester_name: a.approval_emp_name || '-',
-                    total_amount: Number(a.base_total_amount || 0),
-                    status: 'PARTIAL' as const
-                }));
-
-                // Merge and Deduplicate by pr_id
-                const combined = [...approvedPRs];
-                const seenIds = new Set(approvedPRs.map((p: PRHeader) => p.pr_id));
-
-                for (const pr of [...pendingPartials, ...avPartials]) {
-                    const typedPr = pr as unknown as PRHeader;
-                    const prId = Number(typedPr.pr_id);
-                    if (prId && !seenIds.has(prId)) {
-                        combined.push(typedPr);
-                        seenIds.add(prId);
-                    }
-                }
+                logger.info('[PRSourceSelectionModal] Fetching PRs without RFQ from backend');
+                const res = await RFQService.getApprovedPRsWithoutRFQ();
+                const list = res.data || [];
                 
                 // Sort by date descending
-                combined.sort((a, b) => {
+                const sortedList = [...list].sort((a, b) => {
                     const dateA = new Date(a.pr_date || 0);
                     const dateB = new Date(b.pr_date || 0);
                     return dateB.getTime() - dateA.getTime();
                 });
 
-                setPrList(combined);
+                setPrList(sortedList);
                 setLinkedPrNos(new Set()); 
                 
-                logger.info(`[PRSourceSelectionModal] Loaded ${combined.length} PRs (Approved: ${approvedPRs.length}, Partial: ${combined.length - approvedPRs.length})`);
+                logger.info(`[PRSourceSelectionModal] Loaded ${sortedList.length} PRs from backend`);
             } catch (error) {
                 logger.error('[PRSourceSelectionModal] Failed to fetch data:', error);
                 setFetchError('ไม่สามารถดึงข้อมูลได้ กรุณาลองใหม่อีกครั้ง');
