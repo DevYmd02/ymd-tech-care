@@ -195,18 +195,60 @@ export const POService = {
                 if (!itemWithDelivery.delivery_date && prDetail?.delivery_date) {
                     itemWithDelivery.delivery_date = prDetail.delivery_date;
                 }
+                // Hydrate missing payment terms and tax codes from PR
+                const pr = prDetail as any;
+                if (!mappedItem.payment_term_days && (pr.payment_term_days || pr.credit_days)) {
+                    mappedItem.payment_term_days = Number(pr.payment_term_days || pr.credit_days);
+                }
+                if (!mappedItem.tax_code_id && (pr.tax_code_id || pr.pr_tax_code_id)) {
+                    mappedItem.tax_code_id = Number(pr.tax_code_id || pr.pr_tax_code_id);
+                }
             } catch (error) {
                 logger.error('[POService] PR hydration failed', error);
             }
         }
 
-        const qcId = mappedItem.qc_id || (mappedItem as any).qc_header_id as number | undefined;
+        const qcId = mappedItem.qc_id || (mappedItem as any).qc_header_id || (mappedItem as any).qc_id || (mappedItem as any).id as number | undefined;
         if (qcId && !mappedItem.qc_no) {
             try {
-                const qcDetail = await QCService.getById(qcId);
+                const qcDetail = await QCService.getById(Number(qcId));
                 if (qcDetail?.qc_no) mappedItem.qc_no = qcDetail.qc_no;
             } catch (error) {
                 logger.error('[POService] QC hydration failed', error);
+            }
+        }
+
+        // Backup QC lookup (if po record missing qc_id but has pr_no)
+        if (!mappedItem.qc_no && mappedItem.pr_no) {
+            try {
+                const qcsRes = await QCService.getList({ pr_no: mappedItem.pr_no });
+                let qcs: Record<string, any>[] = [];
+                
+                if (Array.isArray(qcsRes)) {
+                    qcs = qcsRes;
+                } else {
+                    const qcsResObj = qcsRes as unknown as Record<string, unknown>;
+                    if (qcsResObj && 'data' in qcsResObj && Array.isArray(qcsResObj.data)) {
+                        qcs = qcsResObj.data as Record<string, any>[];
+                    }
+                }
+
+                if (qcs.length > 0) {
+                    // Try to find a completed/draft one, otherwise take the first available
+                    const activeQc = qcs.find((q: Record<string, unknown>) => q.status === 'COMPLETED') || 
+                                     qcs.find((q: Record<string, unknown>) => q.status === 'DRAFT') ||
+                                     qcs[0];
+                    if (activeQc?.qc_no) {
+                        mappedItem.qc_no = activeQc.qc_no as string;
+                        if (!mappedItem.qc_id && (activeQc.qc_id || activeQc.qc_header_id || activeQc.id)) {
+                            mappedItem.qc_id = Number(activeQc.qc_id || activeQc.qc_header_id || activeQc.id);
+                        }
+                        const vqId = activeQc.winning_vq_id || activeQc.vq_header_id || activeQc.winning_vq_header_id;
+                        if (vqId && !mappedItem.winning_vq_id) mappedItem.winning_vq_id = Number(vqId);
+                    }
+                }
+            } catch (err) {
+                logger.debug(`[POService] Backup QC lookup failed for PR ${mappedItem.pr_no}`, err);
             }
         }
 
@@ -218,14 +260,22 @@ export const POService = {
             itemWithLines[linesKey] = await Promise.all(
                 lines.map(async (line: unknown) => {
                     const l = line as Record<string, unknown>;
-                    if (l.item_id && (!l.item_code || !l.item_name)) {
+                    // Robust check: hydrate if item_id is present and any core metadata is missing or a placeholder
+                    const needsHydration = l.item_id && (
+                        !l.item_code || l.item_code === '-' || 
+                        !l.item_name || l.item_name === '-' || 
+                        !l.unit_name || l.unit_name === '-'
+                    );
+                    
+                    if (needsHydration) {
                         try {
                             const item = await ItemMasterService.getById(Number(l.item_id));
                             if (item) {
                                 return {
                                     ...l,
-                                    item_code: item.item_code || l.item_code || '',
-                                    item_name: item.item_name || l.item_name || '',
+                                    item_code: item.item_code || (l.item_code !== '-' ? l.item_code : ''),
+                                    item_name: item.item_name || (l.item_name !== '-' ? l.item_name : ''),
+                                    unit_name: item.unit_name || (l.unit_name !== '-' ? l.unit_name : ''),
                                 };
                             }
                         } catch (e) {

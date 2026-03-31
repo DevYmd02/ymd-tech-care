@@ -40,6 +40,7 @@ export const usePOAForm = ({
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isFetchingRate, setIsFetchingRate] = useState(false);
     const [currentPoId, setCurrentPoId] = useState<number | undefined>(poId);
+    const [isPartialApproval, setIsPartialApproval] = useState(false);
     
     // Previous refs for change detection
     const prevCurrencyId = useRef<string | undefined>(undefined);
@@ -98,6 +99,7 @@ export const usePOAForm = ({
         reset,
         setValue,
         getValues,
+        clearErrors,
         formState: { errors },
     } = formMethods;
 
@@ -106,10 +108,24 @@ export const usePOAForm = ({
     useEffect(() => {
         if (isOpen && (initialValues || detailData)) {
             const sourceObj = (detailData || initialValues || {}) as any;
-            const initialLines = (sourceObj.po_lines || sourceObj.lines || []).map((l: any) => ({
-                ...l,
-                is_approved: l.is_approved !== undefined ? l.is_approved : true
-            }));
+            const isPending = (sourceObj.status === 'PENDING_APPROVAL' || !sourceObj.status);
+            const initialLines = (sourceObj.po_lines || sourceObj.lines || []).map((l: any) => {
+                // For history records, if it was approved/partial, it should stay checked
+                const wasApproved = (l.status === 'APPROVED' || l.status === 'PARTIAL');
+                const hasRemaining = l.remaining_qty !== undefined ? Number(l.remaining_qty) > 0 : true;
+
+                // 🎯 DEFAULT FULL QTY: For PENDING_APPROVAL, pre-fill approved qty = full ordered qty
+                // This lets the approver see the full amount and reduce only if doing partial approval.
+                // For already-approved records we respect the recorded qty_ordered from the POA.
+                const fullQty = Number(l.qty || l.qty_ordered || 0);
+                const defaultQty = isPending ? fullQty : Number(l.qty_ordered || l.qty || 0);
+                
+                return {
+                    ...l,
+                    qty_ordered: defaultQty,
+                    is_approved: l.is_approved !== undefined ? !!l.is_approved : (wasApproved || fullQty > 0 || hasRemaining)
+                };
+            });
 
             reset({
                 po_no: sourceObj.po_no || '',
@@ -122,12 +138,17 @@ export const usePOAForm = ({
                 pr_no: sourceObj.pr_no || '',
                 qc_no: sourceObj.qc_no || '',
                 branch_id: sourceObj.branch_id,
-                branch_name: sourceObj.branch_name || '',
-                payment_term_days: Number(sourceObj.payment_term_days || 0),
+                branch_name: (sourceObj.branch_name && sourceObj.branch_name !== '-') ? sourceObj.branch_name : '',
+                payment_term_days: Number(sourceObj.payment_term_days ?? 0),
                 delivery_date: sourceObj.delivery_date || '',
                 tax_code_id: sourceObj.tax_code_id,
-                tax_name: sourceObj.tax_name || '',
-                created_by_name: sourceObj.created_by_name || sourceObj.created_by || '',
+                tax_name: (sourceObj.tax_name && sourceObj.tax_name !== '-' && sourceObj.tax_name !== 'undefined') ? sourceObj.tax_name : 
+                          (sourceObj.tax_code as any)?.tax_name || 
+                          (sourceObj.tax_code as any)?.name ||
+                          (sourceObj.poHeader as any)?.tax_name || 
+                          (sourceObj.poHeader as any)?.tax_code?.tax_name || '-',
+                created_by_name: (sourceObj.created_by_name && sourceObj.created_by_name !== '-' && sourceObj.created_by_name !== 'undefined') ? sourceObj.created_by_name : 
+                                 (sourceObj.approval_emp_name && sourceObj.approval_emp_name !== '-' && sourceObj.approval_emp_name !== 'undefined') ? sourceObj.approval_emp_name : '-',
                 exchange_rate_date: sourceObj.exchange_rate_date ? new Date(sourceObj.exchange_rate_date).toISOString().split('T')[0] : (new Date().toISOString().split('T')[0]),
                 currency_code: sourceObj.currency_code || 'THB',
                 target_currency: sourceObj.target_currency || 'THB',
@@ -142,6 +163,20 @@ export const usePOAForm = ({
     const watchCurrencyCode    = useWatch({ control, name: 'currency_code' }) as string | undefined;
     const watchTargetCurrency  = useWatch({ control, name: 'target_currency' }) as string | undefined;
     const watchRateDate        = useWatch({ control, name: 'exchange_rate_date' }) as string | undefined;
+    const watchLines           = useWatch({ control, name: 'po_lines' });
+
+    // ── Partial Approval Detection (Pattern matched with AV/PR) ────────────────
+    useEffect(() => {
+        if (!watchLines || !detailData) return;
+        
+        const isAllSelectedFull = watchLines.every((l: any, idx: number) => {
+            const originalQty = Number(detailData?.po_lines?.[idx]?.qty_ordered || detailData?.po_lines?.[idx]?.qty || 0);
+            const approvedQty = Number(l.qty_ordered || l.qty || 0);
+            return !!l.is_approved && approvedQty === originalQty && originalQty > 0;
+        });
+        
+        setIsPartialApproval(!isAllSelectedFull);
+    }, [watchLines, detailData]);
 
     // ── Currency Exchange Rate Auto-Calculation triggers ─────────────────────
     useEffect(() => {
@@ -217,7 +252,18 @@ export const usePOAForm = ({
             const formData = getValues();
             const now = new Date().toISOString();
             
-            // 🎯 NEW: Dynamic Status Calculation (Logic similar to AV/PR)
+            // 🎯 NEW: Dynamic Status Calculation (Pattern matched with AV/PR)
+            // Check if at least one item is checked
+            const hasCheckedItem = formData.po_lines.some((l: any) => !!l.is_approved);
+            if (!hasCheckedItem) {
+                toast('กรุณาเลือกรายการที่ต้องการอนุมัติอย่างน้อย 1 รายการ', 'error');
+                setIsSubmitting(false);
+                return;
+            }
+
+            // Calculation Logic:
+            // APPROVED = All items are checked AND all approved quantities equal ordered quantities.
+            // PARTIAL  = At least one item checked AND (some items unchecked OR some quantities reduced).
             const isAllApproved = formData.po_lines.every((l: any, idx: number) => {
                 const originalQty = Number(detailData?.po_lines?.[idx]?.qty_ordered || detailData?.po_lines?.[idx]?.qty || 0);
                 const approvedQty = Number(l.qty_ordered || l.qty || 0);
@@ -245,10 +291,10 @@ export const usePOAForm = ({
                 discount_expression: (formData as any).discount_expression || '0',
                 lines: formData.po_lines.map((l: any) => ({
                     po_line_id: l.id || l.po_line_id,
-                    approved_qty: Number(l.qty_ordered || l.qty || 0),
+                    // If unchecked, approved_qty MUST be 0 (Backend requirement for PARTIAL)
+                    approved_qty: l.is_approved ? Number(l.qty_ordered || l.qty || 0) : 0,
                     remarks: l.line_remark || (l.is_approved ? 'Approved' : 'Rejected/Skipped'),
                     approval_date: now,
-                    is_approved: !!l.is_approved
                 }))
             };
 
@@ -301,7 +347,8 @@ export const usePOAForm = ({
                 tax_code_id: (formData as any).tax_code_id || 0,
                 discount_expression: (formData as any).discount_expression || '0',
                 lines: formData.po_lines.map((l: any) => ({
-                    po_line_id: l.id || l.po_line_id,
+                    // 🛡️ Always use the business integer po_line_id, NOT the RHF string field.id
+                    po_line_id: l.po_line_id || l.id,
                     approved_qty: 0, // Reject sets approved qty to 0
                     remarks: reason,
                     approval_date: now
@@ -311,6 +358,7 @@ export const usePOAForm = ({
             await POAService.submitApproval(payload);
             
             queryClient.invalidateQueries({ queryKey: ['poa-list'] });
+            queryClient.invalidateQueries({ queryKey: ['purchase-orders'] }); // sync POListPage status
             toast('ปฏิเสธใบสั่งซื้อสำเร็จ', 'success');
             
             setIsRejectModalOpen(false);
@@ -348,6 +396,8 @@ export const usePOAForm = ({
             formMethods.setFocus('reject_reason');
             return;
         }
+        // 🧹 Clear validation error before opening confirm modal (user already typed reason)
+        clearErrors('reject_reason');
         setIsRejectModalOpen(true);
     };
 
@@ -384,5 +434,6 @@ export const usePOAForm = ({
         currencies,
         isLoadingCurrencies,
         isReadOnly,
+        isPartialApproval,
     };
 };

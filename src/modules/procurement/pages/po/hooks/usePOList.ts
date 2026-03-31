@@ -4,6 +4,8 @@ import { useTableFilters, type TableFilters } from '@/shared/hooks';
 import { POService } from '@/modules/procurement/services';
 import type { POListParams, POStatus } from '@/modules/procurement/types';
 import type { FilterFieldConfig } from '@ui';
+import api from '@/core/api/api';
+import { extractArrayFromResponse } from '@/shared/utils/clientFilterUtils';
 
 // ====================================================================================
 // CONSTANTS
@@ -31,6 +33,9 @@ export const PO_FILTER_CONFIG: FilterFieldConfig<POFilterKeys>[] = [
     { name: 'date_start', label: 'วันที่เอกสาร จาก', type: 'date' },
     { name: 'date_end', label: 'ถึงวันที่', type: 'date' },
 ];
+
+// Status priority: POA approval records override raw PO status
+const OVERRIDABLE_STATUSES = new Set(['APPROVED', 'PARTIAL', 'REJECTED', 'COMPLETED', 'ISSUED']);
 
 // ====================================================================================
 // HOOK
@@ -69,12 +74,52 @@ export const usePOList = () => {
         sort: filters.sort || undefined,
     }), [filters]);
 
-    // Data Fetching
+    // Main PO list
     const { data, isLoading } = useQuery({
         queryKey: ['purchase-orders', apiFilters],
         queryFn: () => POService.getList(apiFilters),
         placeholderData: keepPreviousData,
     });
+
+    // 🛡️ POA Status Overlay: fetch approval records to get the true status
+    // Backend /po endpoint may return PENDING_APPROVAL even when POA has REJECTED/APPROVED it
+    const { data: approvalRaw } = useQuery({
+        queryKey: ['po-approval-status-overlay'],
+        queryFn: () => api.get<Record<string, unknown>>('/po-approval', { params: { limit: 1000, page: 1 } }),
+        staleTime: 30_000,
+    });
+
+    // Build po_header_id → corrected status map
+    const poaStatusMap = useMemo(() => {
+        const map = new Map<number, POStatus>();
+        const items = extractArrayFromResponse<Record<string, unknown>>(approvalRaw ?? {});
+        items.forEach((a) => {
+            const poId = Number(a.po_header_id || 0);
+            const rawStatus = String(a.status || '').toUpperCase().trim();
+            if (poId && OVERRIDABLE_STATUSES.has(rawStatus)) {
+                map.set(poId, rawStatus as POStatus);
+            }
+        });
+        return map;
+    }, [approvalRaw]);
+
+    // Merge POA status onto PO list items
+    const enrichedData = useMemo(() => {
+        if (!data || poaStatusMap.size === 0) return data;
+        const enrichedItems = data.data.map(item => {
+            const overrideStatus = poaStatusMap.get(item.po_id) ?? poaStatusMap.get(item.po_header_id);
+            if (!overrideStatus) return item;
+            // REJECTED items should show 0 amount
+            const total_amount = overrideStatus === 'REJECTED' ? 0 : item.total_amount;
+            return { ...item, status: overrideStatus, total_amount };
+        });
+        // If status filter is active, re-filter after overlay
+        const status = filters.status;
+        const finalItems = (status && status !== 'ALL')
+            ? enrichedItems.filter(i => i.status === status)
+            : enrichedItems;
+        return { ...data, data: finalItems, total: finalItems.length };
+    }, [data, poaStatusMap, filters.status]);
 
     // handleFilterChange wrapper: typed for POFilterKeys
     const handleFilterChange = useCallback((name: POFilterKeys, value: string) => {
@@ -82,7 +127,7 @@ export const usePOList = () => {
     }, [hookHandleFilterChange]);
 
     return {
-        data,
+        data: enrichedData,
         isLoading,
         filters,
         localFilters,

@@ -333,7 +333,7 @@ export default function POFormModal({
                                 <div>
                                     <label className={ui.label}>อ้างอิง QC </label>
                                     <input 
-                                        value={watchQcNo || (watchPrNo ? "ไม่ได้ผ่าน QC" : "-")} 
+                                        value={watchQcNo || (isHydrating ? "กำลังโหลด..." : (watchPrNo ? "ไม่ได้ผ่าน QC" : "-"))} 
                                         className={ui.inputRO} 
                                         readOnly 
                                         placeholder="-" 

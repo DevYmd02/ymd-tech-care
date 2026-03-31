@@ -102,7 +102,7 @@ export const POAHistoryModal: React.FC<POAHistoryModalProps> = ({
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800 table-auto">
                   <thead className="bg-gray-50 dark:bg-slate-800/50 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">
                     <tr>
-                      <th className="px-5 py-4 text-center w-16">#</th>
+                      <th className="px-5 py-4 text-center w-16">ลำดับ</th>
                       <th className="px-5 py-4 text-left">เลขที่อนุมัติ POA</th>
                       <th className="px-5 py-4 text-left">วันที่อนุมัติ</th>
                       <th className="px-5 py-4 text-left">ผู้อนุมัติ</th>
@@ -112,24 +112,7 @@ export const POAHistoryModal: React.FC<POAHistoryModalProps> = ({
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800 text-sm">
                     {historyItems.map((item: POListItem, index: number) => (
-                      <tr key={item.po_id || index} className="hover:bg-gray-50 dark:hover:bg-emerald-950/5 transition-all group">
-                        <td className="px-5 py-4 text-center text-gray-400 font-medium group-hover:text-emerald-500 transition-colors">{index + 1}</td>
-                        <td className="px-5 py-4 font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-                          {item.poa_no || '-'}
-                        </td>
-                        <td className="px-5 py-4 text-gray-600 dark:text-gray-300 whitespace-nowrap">
-                          {formatThaiDate(item.po_date)}
-                        </td>
-                        <td className="px-5 py-4 font-medium text-gray-800 dark:text-gray-200">
-                          {item.approval_emp_name || '-'}
-                        </td>
-                        <td className="px-5 py-4 text-right font-black text-gray-900 dark:text-white whitespace-nowrap">
-                          {new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(item.total_amount || 0))}
-                        </td>
-                        <td className="px-5 py-4 text-center">
-                            <POStatusBadge status={item.status} className="scale-90" />
-                        </td>
-                      </tr>
+                      <POAHistoryRow key={item.poa_no || index} item={item} index={index} />
                     ))}
                   </tbody>
                 </table>
@@ -151,5 +134,56 @@ export const POAHistoryModal: React.FC<POAHistoryModalProps> = ({
       </div>
     </div>,
     document.body
+  );
+};
+
+/**
+ * Sub-component for a single row in the history table.
+ * Implements Deep Hydration to ensure totals are accurate by fetching full detail.
+ */
+const POAHistoryRow: React.FC<{ item: POListItem; index: number }> = ({ item, index }) => {
+  const itemAny = item as any;
+  const poaId = Number(itemAny.approval_id || item.po_id);
+  const isOfficialPOA = !!item.poa_no && item.poa_no !== '-';
+
+  // Fetch full detail for this specific record to get the real total_amount
+  const { data: detail, isLoading } = useQuery({
+    queryKey: ['poa', 'detail', poaId],
+    queryFn: () => POAService.getById(poaId),
+    enabled: !!poaId && isOfficialPOA,
+    staleTime: 60 * 1000,
+  });
+
+  // Use detail data if available, fallback to list item
+  const displayTotal = detail?.total_amount ?? item.total_amount ?? 0;
+
+  return (
+    <tr className="hover:bg-gray-50 dark:hover:bg-emerald-950/5 transition-all group">
+      <td className="px-5 py-4 text-center text-gray-400 font-medium group-hover:text-emerald-500 transition-colors">
+        {index + 1}
+      </td>
+      <td className="px-5 py-4 font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+        {item.poa_no || item.po_no || '-'}
+      </td>
+      <td className="px-5 py-4 text-gray-600 dark:text-gray-300 whitespace-nowrap">
+        {formatThaiDate(item.po_date)}
+      </td>
+      <td className="px-5 py-4 font-medium text-gray-800 dark:text-gray-200">
+        {item.approval_emp_name || '-'}
+      </td>
+      <td className="px-5 py-4 text-right font-black text-gray-900 dark:text-white whitespace-nowrap">
+        {isLoading ? (
+          <div className="w-16 h-4 bg-gray-100 dark:bg-slate-800 animate-pulse rounded ml-auto" />
+        ) : (
+          new Intl.NumberFormat('th-TH', { 
+            minimumFractionDigits: 2, 
+            maximumFractionDigits: 2 
+          }).format(Number(displayTotal))
+        )}
+      </td>
+      <td className="px-5 py-4 text-center">
+        <POStatusBadge status={item.status} className="scale-90" />
+      </td>
+    </tr>
   );
 };

@@ -42,9 +42,20 @@ const POSummaryPanel = ({ control, detailData }: { control: Control<POAFormData>
             return sum + parseDiscountAmount(l.discount_expression || '0', lineGross);
         }, 0);
         const subtotal = grossTotal - totalDiscount;
-        const taxRate = (detailData as any)?.tax_code?.tax_rate ?? (detailData as any)?.tax_rate ?? 7;
-        const taxAmount = subtotal * (Number(taxRate) / 100);
-        return { grossTotal, totalDiscount, taxAmount, totalAmount: subtotal + taxAmount, taxRate };
+        const rawRate = Number((detailData as any)?.tax_code?.tax_rate ?? (detailData as any)?.tax_rate ?? 7);
+        // Normalize: if rate is 0.07, treat as 7%
+        const normalizedRate = (rawRate > 0 && rawRate < 1) ? (rawRate * 100) : rawRate;
+        const taxRate = parseFloat(normalizedRate.toFixed(4));
+        // 🛡️ Round to 2dp (ERP Currency Precision Standard)
+        const taxAmount   = Math.round(subtotal * (taxRate / 100) * 100) / 100;
+        const totalAmount = Math.round((subtotal + taxAmount) * 100) / 100;
+        return {
+            grossTotal:    Math.round(grossTotal    * 100) / 100,
+            totalDiscount: Math.round(totalDiscount * 100) / 100,
+            taxAmount,
+            totalAmount,
+            taxRate,
+        };
     }, [poLines, detailData]);
 
     return (
@@ -87,8 +98,9 @@ const POLineRow: React.FC<POLineRowProps> = ({ field, idx, control, isReadOnly, 
     const isApproved = !!(lineVal?.is_approved ?? field.is_approved);
 
     return (
-        <tr className={`border-b border-gray-100 dark:border-gray-800 transition-colors ${!isApproved ? 'bg-gray-100/50 dark:bg-gray-800/50 opacity-60' : ''}`}>
-            <td className="px-2 py-2 text-center border-r border-gray-200 dark:border-gray-700">
+        <tr className={`border-b border-gray-100 dark:border-gray-800 transition-colors ${!isApproved ? 'bg-gray-100/50 dark:bg-gray-800/50 opacity-60' : ''}`} data-line-idx={idx} data-testid={`po-line-${idx}`}>
+            {/* 1. Selection */}
+            <td data-col="1" data-label="Check" className="px-2 py-2 text-center border-r border-gray-200 dark:border-gray-700 w-10 min-w-[40px]">
                 <Controller
                     name={`po_lines.${idx}.is_approved`}
                     control={control}
@@ -103,14 +115,34 @@ const POLineRow: React.FC<POLineRowProps> = ({ field, idx, control, isReadOnly, 
                     )}
                 />
             </td>
-            <td className="px-3 py-2 text-center text-[13px] text-gray-600 font-medium border-r border-gray-200 dark:border-gray-700">{idx + 1}</td>
-            <td className="px-3 py-2 border-r border-gray-200 dark:border-gray-700 text-slate-700 dark:text-slate-300">
-                {field.item_name || field.description || field.item_code}
+            
+            {/* 2. Order Number */}
+            <td data-col="2" data-label="Idx" className="px-3 py-2 text-center text-[13px] text-gray-600 font-medium border-r border-gray-200 dark:border-gray-700 w-12 min-w-[48px]">
+                {idx + 1}
             </td>
-            <td className="px-2 py-2 text-center border-r border-gray-200 dark:border-gray-700 text-slate-700 dark:text-slate-300 font-medium">
-                {detailData?.po_lines?.[idx]?.qty_ordered ?? field.qty_ordered ?? '0'}
+            
+            {/* 3. Item Code */}
+            <td data-col="3" data-label="Code" className="px-3 py-2 border-r border-gray-200 dark:border-gray-700 text-slate-600 dark:text-slate-400 text-xs w-28 min-w-[112px] text-nowrap">
+                {field.item_code || '-'}
             </td>
-            <td className="px-2 py-2 border-r border-gray-200 dark:border-gray-700">
+
+            {/* 4. Item Name */}
+            <td data-col="4" data-label="Name" className="px-3 py-2 border-r border-gray-200 dark:border-gray-700 text-slate-700 dark:text-slate-300 min-w-[200px]">
+                {field.item_name || field.description || '-'}
+            </td>
+
+            {/* 5. Qty Ordered (Static Reference from Parent PO) */}
+            <td data-col="5" data-label="Qty" className="px-2 py-2 text-center border-r border-gray-200 dark:border-gray-700 text-slate-700 dark:text-slate-300 font-medium w-20 min-w-[80px]">
+                {detailData?.po_lines?.[idx]?.qty ?? field.qty ?? '0'}
+            </td>
+
+            {/* 6. Unit */}
+            <td data-col="6" data-label="Unit" className="px-2 py-2 text-center border-r border-gray-200 dark:border-gray-700 text-slate-600 dark:text-slate-400 text-xs text-nowrap w-20 min-w-[80px]">
+                {field.uom_name || '-'}
+            </td>
+
+            {/* 7. Approved Qty (Editable) */}
+            <td data-col="7" data-label="ApproveQty" className="px-2 py-2 border-r border-gray-200 dark:border-gray-700 bg-emerald-50/10 w-24 min-w-[96px]">
                 <Controller
                     name={`po_lines.${idx}.qty_ordered`}
                     control={control}
@@ -131,13 +163,29 @@ const POLineRow: React.FC<POLineRowProps> = ({ field, idx, control, isReadOnly, 
                     )}
                 />
             </td>
-            <td className="px-3 py-2 text-right border-r border-gray-200 dark:border-gray-700 text-slate-700 dark:text-slate-300">
+
+            {/* 8. Unit Price */}
+            <td data-col="8" data-label="Price" className="px-3 py-2 text-right border-r border-gray-200 dark:border-gray-700 text-slate-700 dark:text-slate-300 w-24 min-w-[96px]">
                 {Number(field.unit_price || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </td>
-            <td className="px-3 py-2 text-right font-semibold text-emerald-700 dark:text-emerald-400 text-[13px] bg-emerald-50/10 dark:bg-emerald-900/10 border-r border-gray-200 dark:border-gray-700">
+
+            {/* 9. Discount */}
+            <td data-col="9" data-label="Disc" className="px-2 py-2 text-center border-r border-gray-200 dark:border-gray-700 text-slate-600 dark:text-slate-400 text-xs w-20 min-w-[80px]">
+                {field.discount_expression || '0'}
+            </td>
+
+            {/* 10. Net Total */}
+            <td data-col="10" data-label="Total" className="px-3 py-2 text-right font-semibold text-emerald-700 dark:text-emerald-400 text-[13px] bg-emerald-50/10 dark:bg-emerald-900/10 border-r border-gray-200 dark:border-gray-700 w-28 min-w-[112px]">
                 {total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </td>
-            <td className="px-2 py-2">
+
+            {/* 11. Type */}
+            <td data-col="11" data-label="Type" className="px-2 py-2 text-center border-r border-gray-200 dark:border-gray-700 text-slate-500 dark:text-slate-500 text-[10px] font-bold w-20 min-w-[80px]">
+                {field.receipt_type || 'GOODS'}
+            </td>
+
+            {/* 12. Remark */}
+            <td data-col="12" data-label="Remark" className="px-2 py-2 w-40 min-w-[160px]">
                 <Controller
                     name={`po_lines.${idx}.line_remark`}
                     control={control}
@@ -211,6 +259,7 @@ export default function POAFormModal({
         isLoadingCurrencies,
         isReadOnly,
         isFetchingRate,
+        isPartialApproval,
     } = usePOAForm({ isOpen, onClose, onSuccess, poId, initialValues, readOnly });
 
     const formValues = useWatch({ control });
@@ -291,6 +340,7 @@ export default function POAFormModal({
                                             {detailData?.status === 'APPROVED' ? 'อนุมัติแล้ว' : 
                                              detailData?.status === 'PARTIAL' ? 'อนุมัติบางส่วน' :
                                              detailData?.status === 'REJECTED' ? 'ไม่อนุมัติ' :
+                                             (detailData?.status === 'PENDING_APPROVAL' || initialValues?.status === 'PENDING_APPROVAL') ? 'รออนุมัติ' :
                                              detailData?.status || initialValues?.status || 'รอดำเนินการ'}
                                         </div>
                                     </div>
@@ -448,8 +498,8 @@ export default function POAFormModal({
                                             {...register('reject_reason')}
                                             disabled={isReadOnly}
                                             className={cn(
-                                                "w-full min-h-[60px] p-3 text-sm bg-slate-50 dark:bg-slate-900 border rounded-lg focus:outline-none focus:ring-2 transition-all",
-                                                isReadOnly && "bg-slate-50/50 dark:bg-slate-950/30 text-slate-500 dark:text-slate-400 cursor-not-allowed",
+                                                "w-full min-h-[60px] p-3 text-sm text-gray-900 dark:text-white bg-slate-50 dark:bg-slate-900 border rounded-lg focus:outline-none focus:ring-2 transition-all",
+                                                isReadOnly && "bg-slate-50/50 dark:bg-slate-950/30 !text-slate-500 dark:!text-slate-400 cursor-not-allowed",
                                                 errors.reject_reason 
                                                 ? "border-red-500 focus:ring-red-500/20 focus:border-red-500" 
                                                 : "border-slate-200 dark:border-slate-700 focus:ring-blue-500/20 focus:border-blue-500"
@@ -478,18 +528,24 @@ export default function POAFormModal({
                                         <tr>
                                             <th className="px-2 py-2 w-10 text-center border-r border-blue-500/40 font-semibold">✓</th>
                                             <th className="px-2 py-2 text-center w-12 border-r border-blue-500/40 font-semibold">ลำดับ</th>
+                                            <th className="px-3 py-2 text-left w-28 border-r border-blue-500/40 font-semibold">รหัสสินค้า</th>
                                             <th className="px-3 py-2 text-left border-r border-blue-500/40 font-semibold">ชื่อสินค้า/บริการ</th>
-                                            <th className="px-2 py-2 text-center w-24 border-r border-blue-500/40 font-semibold">จำนวนที่สั่ง</th>
-                                            <th className="px-2 py-2 text-center w-28 border-r border-blue-500/40 bg-emerald-500 text-white font-semibold">ยอดอนุมัติ</th>
-                                            <th className="px-2 py-2 text-center w-28 border-r border-blue-500/40 font-semibold">ราคา/หน่วย</th>
-                                            <th className="px-2 py-2 text-center w-32 border-r border-blue-500/40 font-semibold">ยอดสุทธิ</th>
-                                            <th className="px-2 py-2 text-center w-48 font-semibold">หมายเหตุ</th>
+                                            <th className="px-2 py-2 text-center w-20 border-r border-blue-500/40 font-semibold">
+                                                {isPartialApproval ? "จำนวนคงเหลือ" : "จำนวนสั่ง"}
+                                            </th>
+                                            <th className="px-2 py-2 text-center w-20 border-r border-blue-500/40 font-semibold">หน่วย</th>
+                                            <th className="px-2 py-2 text-center w-24 border-r border-blue-500/40 bg-emerald-500 text-white font-semibold">ยอดอนุมัติ</th>
+                                            <th className="px-2 py-2 text-center w-24 border-r border-blue-500/40 font-semibold">ราคา/หน่วย</th>
+                                            <th className="px-2 py-2 text-center w-20 border-r border-blue-500/40 font-semibold">ส่วนลด</th>
+                                            <th className="px-2 py-2 text-center w-28 border-r border-blue-500/40 font-semibold">ยอดสุทธิ</th>
+                                            <th className="px-2 py-2 text-center w-20 border-r border-blue-500/40 font-semibold">ประเภท</th>
+                                            <th className="px-2 py-2 text-center w-40 font-semibold">หมายเหตุ</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {fields.length === 0 && (
                                             <tr>
-                                                <td colSpan={8} className="px-4 py-12 text-center text-gray-400">
+                                                <td colSpan={12} className="px-4 py-12 text-center text-gray-400">
                                                     <div className="flex flex-col items-center gap-2">
                                                         <Package className="w-8 h-8 opacity-20 mb-1" />
                                                         <span className="font-medium">
@@ -531,9 +587,12 @@ export default function POAFormModal({
                     isOpen={isConfirmModalOpen}
                     onClose={() => setIsConfirmModalOpen(false)}
                     onConfirm={handleConfirmApprove}
-                    title="ยืนยันการอนุมัติใบสั่งซื้อ"
-                    description="คุณแน่ใจหรือไม่ว่าต้องการอนุมัติใบสั่งซื้อนี้? ข้อมูลจะถูกบันทึกและเปลี่ยนสถานะเป็นอนุมัติแล้ว"
-                    confirmText="ยืนยันอนุมัติ"
+                    title={isPartialApproval ? "ยืนยันการอนุมัติบางส่วน" : "ยืนยันการอนุมัติใบสั่งซื้อ"}
+                    description={isPartialApproval 
+                        ? "คุณแน่ใจหรือไม่ว่าต้องการอนุมัติใบสั่งซื้อนี้แบบบางส่วน? รายการที่ไม่เลือกหรือมียอดลดลงจะถูกบันทึกตามจริง" 
+                        : "คุณแน่ใจหรือไม่ว่าต้องการอนุมัติใบสั่งซื้อนี้? ข้อมูลจะถูกบันทึกและเปลี่ยนสถานะเป็นอนุมัติแล้ว"
+                    }
+                    confirmText={isPartialApproval ? "ยืนยันอนุมัติบางส่วน" : "ยืนยันอนุมัติ"}
                 />
 
                 <ConfirmationModal
