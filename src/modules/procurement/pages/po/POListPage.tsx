@@ -286,6 +286,18 @@ export default function POListPage() {
                             </>
                         )}
 
+                        {/* REJECTED: แก้ไขและส่งอนุมัติใหม่ */}
+                        {item.status === 'REJECTED' && (
+                            <button
+                                onClick={() => handleEdit(item.po_id)}
+                                className="flex items-center gap-1.5 px-2 py-1 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded shadow-sm border border-transparent hover:border-amber-200 transition-all font-bold"
+                                title="แก้ไขและส่งอนุมัติใหม่"
+                            >
+                                <Edit size={14} />
+                                <span className="text-[11px]">แก้ไขและส่งอนุมัติใหม่</span>
+                            </button>
+                        )}
+
                         {/* ISSUED: เปิด GRN (violet = special process) */}
                         {item.status === 'ISSUED' && (
                             <button
@@ -514,6 +526,15 @@ export default function POListPage() {
                                                     </button>
                                                 )}
                                             </>
+                                        )}
+
+                                        {item.status === 'REJECTED' && (
+                                            <button
+                                                onClick={() => handleEdit(item.po_id)}
+                                                className="w-full bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 text-amber-600 dark:text-amber-400 border border-amber-500 dark:border-amber-600 text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                                            >
+                                                <Edit size={16} /> แก้ไขและส่งอนุมัติใหม่
+                                            </button>
                                         )}
                                         {item.status === 'ISSUED' && (
                                             <button

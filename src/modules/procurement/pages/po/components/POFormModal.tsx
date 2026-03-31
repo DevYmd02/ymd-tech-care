@@ -197,6 +197,7 @@ export default function POFormModal({
         isLoadingUnits,
         taxCodes,
         isLoadingTaxCodes,
+        existingPO,
     } = usePOForm({ isOpen, onClose, onSuccess, poId, initialValues, isViewMode });
 
     const watchQcNo = useWatch({ control, name: 'qc_no' });
@@ -204,6 +205,8 @@ export default function POFormModal({
 
     // 🔒 Audit Lock: Lock prices & quantity if this PO is associated with a winning QC
     const isLockedByQC = !!watchQcNo && watchQcNo !== 'ไม่ได้ผ่าน QC';
+
+    const isRejected = (existingPO as any)?.status === 'REJECTED';
 
     const [isProductModalOpen, setIsProductModalOpen] = useState(false);
     const [activeSearchIndex, setActiveSearchIndex] = useState<number | null>(null);
@@ -259,7 +262,7 @@ export default function POFormModal({
                                 className="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md text-sm font-medium shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {(isHydrating || isSubmitting) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save size={14} />} 
-                                {(isHydrating || isSubmitting) ? 'กำลังประมวลผล...' : 'บันทึก'}
+                                {(isHydrating || isSubmitting) ? 'กำลังประมวลผล...' : (isRejected ? 'บันทึกและส่งอนุมัติใหม่' : 'บันทึก')}
                             </button>
                         )}
                     </div>
