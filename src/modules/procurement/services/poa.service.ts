@@ -3,6 +3,7 @@
  * @description Service for Purchase Order Approval (POA) module
  */
 import api from '@/core/api/api';
+import { POService } from './po.service';
 import type { POListParams, POListResponse, POListItem } from '@/modules/procurement/types';
 import type { POAFormData } from '@/modules/procurement/schemas/poa-schemas';
 import { logger } from '@/shared/utils/logger';
@@ -56,7 +57,13 @@ const mapPOAResponseToListItem = (item: Record<string, any>): POListItem => {
         po_no: String(poHeader.po_no || item.po_no || '-'),
         poa_no: String(item.approval_no || item.poa_no || '-'),
         po_date: String(item.approval_date || poHeader.po_date || item.po_date || item.created_at || ''),
-        status: normalizePOStatus(item.status as string),
+        status: (() => {
+            const s = normalizePOStatus(item.status as string);
+            const poaNo = String(item.approval_no || item.poa_no || '-');
+            // Business rule: has poa_no + PENDING → APPROVED (backend inconsistent states)
+            if (s === 'PENDING_APPROVAL' && poaNo && poaNo !== '-') return 'APPROVED';
+            return s;
+        })(),
         
         // Currency & Finance
         // ⚠️ Convention: quote_currency_code = PO/vendor currency (e.g. USD)
@@ -154,14 +161,8 @@ export const POAService = {
         const rawItems = extractArrayFromResponse<Record<string, unknown>>(response);
 
         // Map and correct status
-        // Business rule: has poa_no + backend says PENDING → APPROVED (backend inconsistency)
-        const correctedItems: POListItem[] = rawItems.map(item => {
-            const mapped = mapPOAResponseToListItem(item);
-            if (mapped.status === 'PENDING_APPROVAL' && mapped.poa_no && mapped.poa_no !== '-') {
-                return { ...mapped, status: 'APPROVED' as const };
-            }
-            return mapped;
-        });
+        // Map using standardized mapper (which now handles status correction)
+        const correctedItems: POListItem[] = rawItems.map(item => mapPOAResponseToListItem(item));
 
         // Status filter
         let filtered: POListItem[];
@@ -209,25 +210,25 @@ export const POAService = {
             id
         );
 
-        // 3. Fetch full PO data from /po/:id to get po_lines (approval endpoint may not return them)
-        let poRes: Record<string, any> = {};
+        // 3. Fetch fully hydrated PO data from POService (handles vendors, branches, refs, etc.)
+        let poRes: any = {};
         try {
-            poRes = await api.get<Record<string, any>>(`/po/${poHeaderId}`);
-            logger.info(`[POAService] Fetched full PO detail for lines: /po/${poHeaderId}`);
+            poRes = await POService.getById(poHeaderId);
+            logger.info(`[POAService] Fetched hydrated PO detail for POA: ${poHeaderId}`);
         } catch (e) {
-            logger.warn(`[POAService] Could not fetch /po/${poHeaderId} for lines, using approval data only`, e);
+            logger.warn(`[POAService] Could not fetch PO ${poHeaderId} via POService, using approval data only`, e);
         }
 
         // 4. Merge: approval-specific fields take priority for status/approval info,
-        //    PO data supplies the full line items
+        //    PO data supplies the full body (header info, hydration, lines)
         const merged: Record<string, any> = {
-            ...poRes,           // base: full PO data (vendor, branch, lines, etc.)
-            ...approvalRes,     // override: approval-specific data wins (status, poa_no, currencies)
-            // Lines: prefer PO endpoint (more complete) over approval endpoint
-            poLines: poRes.poLines || poRes.po_lines || approvalRes.poLines || undefined,
+            ...poRes,           // base: hydrated PO data (vendor_name, branch_name, etc.)
+            ...approvalRes,     // override: approval-specific data wins (status, approval_no, currencies)
+            // Lines: prefer hydrated PO source
+            poLines: poRes.po_lines || poRes.poLines || approvalRes.po_lines || undefined,
             po_lines: poRes.po_lines || poRes.poLines || approvalRes.po_lines || undefined,
             // Preserve nested poHeader from whichever source has it
-            poHeader: approvalRes.poHeader || poRes.poHeader || approvalRes.po_header || poRes.po_header || {},
+            poHeader: approvalRes.poHeader || poRes.poHeader || approvalRes.po_header || poRes.po_header || poRes || {},
         };
 
         return mapPOAResponseToListItem(merged);

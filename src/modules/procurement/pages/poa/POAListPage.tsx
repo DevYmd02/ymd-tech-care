@@ -24,13 +24,15 @@ export default function POAListPage() {
     // ── View / Approve Modal State ─────────────────────────────────────────
     const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
     const [selectedPO, setSelectedPO] = useState<POListItem | undefined>(undefined);
+    const [isViewOnly, setIsViewOnly] = useState(false);
     
     // ── Approval History Modal State ─────────────────────────────────────────
     const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
     const [historyPoId, setHistoryPoId] = useState<number | undefined>(undefined);
     const [historyPoNo, setHistoryPoNo] = useState<string | undefined>(undefined);
 
-    const handleApprove = useCallback((item: POListItem) => {
+    const handleApprove = useCallback((item: POListItem, mode: 'view' | 'approve' = 'approve') => {
+        setIsViewOnly(mode === 'view');
         setSelectedPO(item);
         setIsApprovalModalOpen(true);
     }, []);
@@ -138,7 +140,7 @@ export default function POAListPage() {
                                 <Clock size={18} />
                             </button>
                             <button
-                                onClick={() => handleApprove(item)}
+                                onClick={() => handleApprove(item, 'view')}
                                 className="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-all"
                                 title="ดูรายละเอียด"
                             >
@@ -159,7 +161,7 @@ export default function POAListPage() {
                             </button>
                         )}
                         <button
-                            onClick={() => handleApprove(item)}
+                            onClick={() => handleApprove(item, 'approve')}
                             className="flex items-center gap-1.5 px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold rounded-md shadow-sm transition-all whitespace-nowrap"
                             title="อนุมัติเอกสาร"
                         >
@@ -238,6 +240,13 @@ export default function POAListPage() {
                                         <Search size={18} /> ค้นหา
                                     </button>
                                 </div>
+                                <button
+                                    type="button"
+                                    onClick={() => { setIsViewOnly(false); setSelectedPO(undefined); setIsApprovalModalOpen(true); }}
+                                    className="w-full sm:w-auto h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+                                >
+                                    <CheckCircle size={18} /> รายการอนุมัติใบสั่งซื้อ
+                                </button>
                             </div>
                         </div>
                     </form>
@@ -287,7 +296,7 @@ export default function POAListPage() {
                                                 <Clock size={16} /> ประวัติ
                                             </button>
                                             <button
-                                                onClick={() => handleApprove(item)}
+                                                onClick={() => handleApprove(item, 'view')}
                                                 className="flex-1 bg-gray-50 dark:bg-slate-700 hover:bg-gray-100 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 text-xs py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 border border-gray-200 dark:border-slate-600 font-bold"
                                             >
                                                 <Eye size={16} /> ดูข้อมูล
@@ -304,7 +313,7 @@ export default function POAListPage() {
                                                 </button>
                                             )}
                                             <button
-                                                onClick={() => handleApprove(item)}
+                                                onClick={() => handleApprove(item, 'approve')}
                                                 className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 rounded-lg flex items-center justify-center gap-1.5 shadow-sm"
                                             >
                                                 <CheckCircle size={16} /> พิจารณาอนุมัติ
@@ -318,7 +327,7 @@ export default function POAListPage() {
                 </div>
             </PageListLayout>
 
-            {isApprovalModalOpen && selectedPO && (
+            {isApprovalModalOpen && (
                 <POAFormModal
                     isOpen={isApprovalModalOpen}
                     onClose={() => {
@@ -329,8 +338,9 @@ export default function POAListPage() {
                         setIsApprovalModalOpen(false);
                         handleApplyFilters();
                     }}
-                    poId={selectedPO.po_id}
+                    poId={selectedPO?.po_id}
                     initialValues={selectedPO}
+                    readOnly={isViewOnly}
                 />
             )}
 
