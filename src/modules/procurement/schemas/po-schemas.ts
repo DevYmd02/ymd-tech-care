@@ -144,9 +144,10 @@ export const POLineSchema = z.object({
     required_receipt_type: z.enum(['FULL', 'PARTIAL']).default('FULL'),
     // Internal UI fields
     qty_ordered:     z.number().optional(),
+    uom_name:        z.string().optional(),
     discount_amount: optionalNumberSchema,
     line_total:      z.number().nonnegative().optional(),
-    receipt_type:    z.enum(['GOODS', 'SERVICE']).optional(),
+    receipt_type:    z.enum(['GOODS', 'SERVICE']).optional().default('GOODS'),
     // Backend Required Fields
     rfq_line_id:     optionalIdSchema,
 });
@@ -194,6 +195,7 @@ export type POListItem = z.infer<typeof POListItemSchema>;
 // ====================================================================================
 
 export const CreatePOSchema = z.object({
+    po_date: z.string().min(1, 'กรุณาระบุวันที่ PO'),
     pr_id: optionalIdSchema,
     rfq_id: optionalIdSchema,
     vendor_id: z.preprocess((val) => (val === "" || val === null || Number(val) === 0 ? undefined : Number(val)), z.number({ message: 'กรุณาเลือกผู้ขาย' }).min(1, 'กรุณาเลือกผู้ขาย')),

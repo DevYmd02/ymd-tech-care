@@ -914,8 +914,8 @@ export const usePOForm = ({
 
             // STRICT PAYLOAD ARCHITECTURE (Aligned with Backend Contract 100%)
             const fullPayload: CreatePOPayload = {
+                po_date:            pendingPayload.po_date ? new Date(pendingPayload.po_date).toISOString() : new Date().toISOString(),
                 pr_id:              safeId(pendingPayload.pr_id),
-                rfq_id:             safeId(pendingPayload.rfq_id),
                 vendor_id:          Number(pendingPayload.vendor_id),
                 branch_id:          Number(pendingPayload.branch_id),
                 warehouse_id:       Number(pendingPayload.ship_to_warehouse_id),
@@ -928,9 +928,12 @@ export const usePOForm = ({
                 status:             "DRAFT", // Hardcode DRAFT for new creation
                 created_at:         new Date().toISOString(),
                 created_by:         (poId ? (getValues('created_by') ? Number(getValues('created_by')) : undefined) : (user?.id ? Number(user.id) : undefined)) as unknown as number,
-                winning_vq_id:      safeId(pendingPayload.winning_vq_id),
-                qc_id:              safeId(pendingPayload.qc_id),
-                qc_no:              pendingPayload.qc_no || undefined,
+                
+                // 🚫 FORBIDDEN PROPERTIES: Backend DTO strictly rejects these in the header for PO creation.
+                // Traceability is handled via pr_id and line-level rfq_line_id.
+                // rfq_id:          safeId(pendingPayload.rfq_id),
+                // winning_vq_id:   safeId(pendingPayload.winning_vq_id),
+                // qc_no:           pendingPayload.qc_no || undefined,
                 
                 // 🚫 SUMMARY FIELDS REMOVED: Backend calculates subtotal, tax_amount, total_amount automatically.
                 // Property subtotal should not exist. property tax_amount should not exist. property total_amount should not exist.
@@ -1000,6 +1003,7 @@ export const usePOForm = ({
             }
 
             queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
+            queryClient.invalidateQueries({ queryKey: ['pr-ready-for-po-triple'] });
             toast('บันทึกใบสั่งซื้อสำเร็จ', 'success');
 
             setIsConfirmModalOpen(false);

@@ -243,17 +243,6 @@ export default function POListPage() {
                 const item = row.original;
                 return (
                     <div className="flex items-center justify-center gap-1">
-                        {/* History Button (Show for non-DRAFT) */}
-                        {item.status !== 'DRAFT' && (
-                            <button
-                                onClick={() => handleViewHistory(item.po_id, item.po_no)}
-                                className="p-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded transition-all"
-                                title="ดูประวัติการอนุมัติ"
-                            >
-                                <Clock size={16} />
-                            </button>
-                        )}
-                        
                         {/* Eye — PR pattern */}
                         <button
                             onClick={() => handleView(item.po_id)}
@@ -263,8 +252,19 @@ export default function POListPage() {
                             <Eye size={16} />
                         </button>
 
-                        {/* DRAFT only: Edit (amber) + ส่งอนุมัติ (emerald) */}
-                        {item.status === 'DRAFT' && (
+                        {/* History Button (Show for non-DRAFT and non-PENDING) */}
+                        {item.status !== 'DRAFT' && item.status !== 'PENDING_APPROVAL' && (
+                            <button
+                                onClick={() => handleViewHistory(item.po_id, item.po_no)}
+                                className="p-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded transition-all"
+                                title="ดูประวัติการอนุมัติ"
+                            >
+                                <Clock size={16} />
+                            </button>
+                        )}
+
+                        {/* DRAFT / PENDING: Edit (amber) + ส่งอนุมัติ (emerald) */}
+                        {(item.status === 'DRAFT' || item.status === 'PENDING_APPROVAL') && (
                             <>
                                 <button
                                     onClick={() => handleEdit(item.po_id)}
@@ -274,13 +274,15 @@ export default function POListPage() {
                                     <Edit size={14} />
                                     <span className="text-[11px]">แก้ไข</span>
                                 </button>
-                                <button
-                                    onClick={() => handleDirectSubmit(item)}
-                                    className="flex items-center gap-1.5 px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold rounded shadow-sm transition-all"
-                                >
-                                    <Send size={12} />
-                                    ส่งอนุมัติ
-                                </button>
+                                {item.status === 'DRAFT' && (
+                                    <button
+                                        onClick={() => handleDirectSubmit(item)}
+                                        className="flex items-center gap-1.5 px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold rounded shadow-sm transition-all"
+                                    >
+                                        <Send size={12} />
+                                        ส่งอนุมัติ
+                                    </button>
+                                )}
                             </>
                         )}
 
@@ -486,7 +488,7 @@ export default function POListPage() {
                                             <Eye size={16} /> ดูข้อมูล
                                         </button>
                                         
-                                        {item.status !== 'DRAFT' && (
+                                        {item.status !== 'DRAFT' && item.status !== 'PENDING_APPROVAL' && (
                                             <button
                                                 onClick={() => handleViewHistory(item.po_id, item.po_no)}
                                                 className="flex-1 min-w-[70px] bg-emerald-50 dark:bg-emerald-900/30 hover:bg-emerald-100 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm"
@@ -495,7 +497,7 @@ export default function POListPage() {
                                             </button>
                                         )}
 
-                                        {item.status === 'DRAFT' && (
+                                        {(item.status === 'DRAFT' || item.status === 'PENDING_APPROVAL') && (
                                             <>
                                                 <button
                                                     onClick={() => handleEdit(item.po_id)}
@@ -503,12 +505,14 @@ export default function POListPage() {
                                                 >
                                                     <Edit size={16} /> แก้ไข
                                                 </button>
-                                                <button
-                                                    onClick={() => handleDirectSubmit(item)}
-                                                    className="flex-[2] min-w-[120px] bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm whitespace-nowrap"
-                                                >
-                                                    <Send size={16} /> ส่งอนุมัติ
-                                                </button>
+                                                {item.status === 'DRAFT' && (
+                                                    <button
+                                                        onClick={() => handleDirectSubmit(item)}
+                                                        className="flex-[2] min-w-[120px] bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm whitespace-nowrap"
+                                                    >
+                                                        <Send size={16} /> ส่งอนุมัติ
+                                                    </button>
+                                                )}
                                             </>
                                         )}
                                         {item.status === 'ISSUED' && (
