@@ -22,7 +22,19 @@ export const POAFormSchema = z.object({
     target_currency: z.string().optional(),
     exchange_rate_date: z.string().optional(),
     exchange_rate: z.number().optional(),
-    status: z.string().optional(), // Added for unified approval payload
+    status: z.string().optional(),
+    
+    // Header Sync Fields
+    branch_id: z.number().optional(),
+    branch_name: z.string().optional(),
+    payment_term_days: z.number().optional(),
+    delivery_date: z.string().optional(),
+    tax_code_id: z.number().optional(),
+    tax_name: z.string().optional(),
+    pr_no: z.string().optional(),
+    qc_no: z.string().optional(),
+    created_by_name: z.string().optional(),
+    
     po_lines: z.array(POALineSchema),
 });
 

@@ -1,3 +1,8 @@
+/**
+ * @file POAFormModal.tsx
+ * @description High-fidelity POA Form Modal — VQ-Style 3-column layout
+ *  Header synchronization from PO (Vendor, Branch, Warehouse, etc.)
+ */
 import { FormProvider, useWatch, Controller } from 'react-hook-form';
 import { 
     CheckCircle, XCircle, FileText, Loader2, Search, Package
@@ -11,7 +16,9 @@ import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal'
 import { usePOAForm } from '../hooks/usePOAForm';
 import { POSearchModal } from './POSearchModal';
 import { CustomDateInput } from '@/shared/components/forms/CustomDateInput';
+import type { Control, FieldErrors } from 'react-hook-form';
 import type { Currency } from '@/modules/master-data/types/master-data-types';
+import type { POAFormData } from '@/modules/procurement/schemas/poa-schemas';
 import { cn } from '@/shared/utils/cn';
 
 
@@ -24,18 +31,18 @@ const ui = {
     error: 'text-red-500 text-[10px] mt-0.5 font-medium',
 };
 
-const POSummaryPanel = ({ control, detailData }: { control: any; detailData: any }) => {
+const POSummaryPanel = ({ control, detailData }: { control: Control<POAFormData>; detailData?: any }) => {
     const poLines = useWatch({ control, name: 'po_lines' });
 
     const { grossTotal, totalDiscount, taxAmount, totalAmount, taxRate } = useMemo(() => {
-        const approvedLines = (poLines ?? []).filter((l: any) => !!l.is_approved);
-        const grossTotal = approvedLines.reduce((sum: number, l: any) => sum + (Number(l.qty_ordered ?? 0) * Number(l.unit_price ?? 0)), 0);
-        const totalDiscount = approvedLines.reduce((sum: number, l: any) => {
+        const approvedLines = (poLines ?? []).filter((l) => !!l.is_approved);
+        const grossTotal = approvedLines.reduce((sum: number, l) => sum + (Number(l.qty_ordered ?? 0) * Number(l.unit_price ?? 0)), 0);
+        const totalDiscount = approvedLines.reduce((sum: number, l) => {
             const lineGross = Number(l.qty_ordered ?? 0) * Number(l.unit_price ?? 0);
             return sum + parseDiscountAmount(l.discount_expression || '0', lineGross);
         }, 0);
         const subtotal = grossTotal - totalDiscount;
-        const taxRate = detailData?.tax_code?.tax_rate ?? detailData?.tax_rate ?? 7;
+        const taxRate = (detailData as any)?.tax_code?.tax_rate ?? (detailData as any)?.tax_rate ?? 7;
         const taxAmount = subtotal * (Number(taxRate) / 100);
         return { grossTotal, totalDiscount, taxAmount, totalAmount: subtotal + taxAmount, taxRate };
     }, [poLines, detailData]);
@@ -63,12 +70,12 @@ const POSummaryPanel = ({ control, detailData }: { control: any; detailData: any
 };
 
 interface POLineRowProps {
-    field: Record<string, any>;
+    field: POAFormData['po_lines'][number];
     idx: number;
-    control: any;
+    control: Control<POAFormData>;
     isReadOnly: boolean;
-    detailData: any;
-    errors: any;
+    detailData?: any;
+    errors: FieldErrors<POAFormData>;
 }
 
 /** Isolated row component — watches only its own slice of form state to prevent full-modal re-renders */
@@ -162,6 +169,7 @@ interface POAFormModalProps {
     onSuccess?: () => void;
     poId?: number;
     initialValues?: any;
+    readOnly?: boolean;
 }
 
 export default function POAFormModal({
@@ -170,6 +178,7 @@ export default function POAFormModal({
     onSuccess,
     poId,
     initialValues,
+    readOnly,
 }: POAFormModalProps) {
     const {
         formMethods,
@@ -201,10 +210,10 @@ export default function POAFormModal({
         currencies,
         isLoadingCurrencies,
         isReadOnly,
-    } = usePOAForm({ isOpen, onClose, onSuccess, poId, initialValues });
+        isFetchingRate,
+    } = usePOAForm({ isOpen, onClose, onSuccess, poId, initialValues, readOnly });
 
-    // NOTE: Do NOT add useWatch for 'po_lines' here — POSummaryPanel already watches it.
-    // Adding another root-level useWatch causes the entire modal to re-render on every keystroke.
+    const formValues = useWatch({ control });
 
     if (!isOpen) return null;
 
@@ -331,35 +340,35 @@ export default function POAFormModal({
                                         </div>
                                     </div>
 
-                                    {/* Row 2 */}
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-gray-50 dark:border-gray-800 pt-4">
+                                    {/* Row 2: Vendor | Branch | Warehouse */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-gray-50 dark:border-gray-800 pt-4">
                                         <div>
                                             <label className={ui.label}>ผู้ขาย (Vendor)</label>
-                                            <input value={`${detailData?.vendor_name || '-'} (${detailData?.vendor_id || '-'})`} className={ui.inputRO} readOnly />
+                                            <input value={formValues.vendor_name || '-'} className={ui.inputRO} readOnly />
                                         </div>
                                         <div>
                                             <label className={ui.label}>สาขา (Branch)</label>
-                                            <input value={detailData?.branch_name || '-'} className={ui.inputRO} readOnly />
-                                        </div>
-                                        <div>
-                                            <label className={ui.label}>ผู้จัดทำ (Prepared By)</label>
-                                            <input value={detailData?.created_by_name || '-'} className={ui.inputRO} readOnly />
+                                            <input value={formValues.branch_name || '-'} className={ui.inputRO} readOnly />
                                         </div>
                                     </div>
 
-                                    {/* Row 3 */}
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-gray-50 dark:border-gray-800 pt-4">
+                                    {/* Row 3: Prepared By | Credit Term | Delivery Date | Tax Type */}
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 border-t border-gray-50 dark:border-gray-800 pt-4">
+                                        <div>
+                                            <label className={ui.label}>ผู้จัดทำ (Prepared By)</label>
+                                            <input value={formValues.created_by_name || '-'} className={ui.inputRO} readOnly />
+                                        </div>
                                         <div>
                                             <label className={ui.label}>เครดิตเทอม (วัน)</label>
-                                            <input value={detailData?.payment_term_days || '-'} className={`${ui.inputRO} text-right`} readOnly />
+                                            <input value={formValues.payment_term_days ?? '-'} className={`${ui.inputRO} text-right`} readOnly />
                                         </div>
                                         <div>
                                             <label className={ui.label}>กำหนดส่งของ</label>
-                                            <input value={detailData?.delivery_date ? formatThaiDate(detailData.delivery_date) : '-'} className={ui.inputRO} readOnly />
+                                            <input value={formValues.delivery_date ? formatThaiDate(formValues.delivery_date) : '-'} className={ui.inputRO} readOnly />
                                         </div>
                                         <div>
                                             <label className={ui.label}>ประเภทภาษี</label>
-                                            <input value={detailData?.tax_name || detailData?.tax_code?.tax_name || '-'} className={ui.inputRO} readOnly />
+                                            <input value={formValues.tax_name || '-'} className={ui.inputRO} readOnly />
                                         </div>
                                     </div>
 
@@ -414,14 +423,21 @@ export default function POAFormModal({
                                         </div>
                                         <div>
                                             <label className={ui.label}>อัตราแลกเปลี่ยน <span className="text-red-500">*</span></label>
-                                            <input 
-                                                type="number" step="0.0001" 
-                                                {...register('exchange_rate', { valueAsNumber: true })}
-                                                className={cn(ui.input, "text-right", errors.exchange_rate && "border-red-500 focus:ring-red-500/20 focus:border-red-500")} 
-                                                placeholder="1" 
-                                                disabled={isReadOnly}
-                                            />
-                                            {errors.exchange_rate && <p className={ui.error}>{(errors.exchange_rate as any).message}</p>}
+                                            <div className="relative">
+                                                <input 
+                                                    type="number" step="0.0001" 
+                                                    {...register('exchange_rate', { valueAsNumber: true })}
+                                                    className={cn(ui.input, "text-right pr-8", errors.exchange_rate && "border-red-500 focus:ring-red-500/20 focus:border-red-500")} 
+                                                    placeholder="1" 
+                                                    disabled={isReadOnly || isFetchingRate}
+                                                />
+                                                {isFetchingRate && (
+                                                    <div className="absolute right-2 top-1.5">
+                                                        <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                            {errors.exchange_rate && <p className={ui.error}>{errors.exchange_rate.message}</p>}
                                         </div>
                                     </div>
 

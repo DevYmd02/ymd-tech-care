@@ -11,6 +11,7 @@ import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { extractErrorMessage } from '@/core/api/api';
 import { MasterDataService } from '@/modules/master-data/services/master-data.service';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
+import { CurrencyService } from '@/modules/master-data/currency/services/currency.service';
 
 interface UsePOAFormOptions {
     isOpen: boolean;
@@ -18,6 +19,7 @@ interface UsePOAFormOptions {
     onSuccess?: () => void;
     poId?: number;
     initialValues?: Partial<POListItem>;
+    readOnly?: boolean;
 }
 
 export const usePOAForm = ({
@@ -26,6 +28,7 @@ export const usePOAForm = ({
     onSuccess,
     poId,
     initialValues,
+    readOnly,
 }: UsePOAFormOptions) => {
     const queryClient = useQueryClient();
     const { toast } = useToast();
@@ -35,7 +38,13 @@ export const usePOAForm = ({
     const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
     const [isPOSearchModalOpen, setIsPOSearchModalOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isFetchingRate, setIsFetchingRate] = useState(false);
     const [currentPoId, setCurrentPoId] = useState<number | undefined>(poId);
+    
+    // Previous refs for change detection
+    const prevCurrencyId = useRef<string | undefined>(undefined);
+    const prevTargetCurrency = useRef<string | undefined>(undefined);
+    const prevRateDate = useRef<string | undefined>(undefined);
 
     useEffect(() => {
         if (poId) setCurrentPoId(poId);
@@ -46,6 +55,8 @@ export const usePOAForm = ({
         queryFn: () => POAService.getById(currentPoId!),
         enabled: isOpen && !!currentPoId,
     });
+
+    const isReadOnly = readOnly || ['APPROVED', 'PARTIAL', 'REJECTED', 'COMPLETED', 'CANCELLED', 'ISSUED'].includes(detailData?.status || initialValues?.status || '');
 
     const { data: currencies = [], isLoading: isLoadingCurrencies } = useQuery({
         queryKey: ['master-currencies'],
@@ -66,6 +77,16 @@ export const usePOAForm = ({
             target_currency: 'THB',
             exchange_rate_date: new Date().toISOString().split('T')[0],
             exchange_rate: 1,
+            // Header Sync Fields
+            branch_id: undefined,
+            branch_name: '',
+            payment_term_days: 30,
+            delivery_date: '',
+            tax_code_id: undefined,
+            tax_name: '',
+            pr_no: '',
+            qc_no: '',
+            created_by_name: '',
             po_lines: [],
         },
     });
@@ -84,37 +105,35 @@ export const usePOAForm = ({
 
     useEffect(() => {
         if (isOpen && (initialValues || detailData)) {
-            const source = detailData || initialValues || {};
-            const initialLines = ((source as any).po_lines || (source as any).lines || []).map((l: any) => ({
+            const sourceObj = (detailData || initialValues || {}) as any;
+            const initialLines = (sourceObj.po_lines || sourceObj.lines || []).map((l: any) => ({
                 ...l,
                 is_approved: l.is_approved !== undefined ? l.is_approved : true
             }));
 
             reset({
-                po_no: source.po_no || '',
-                po_date: source.po_date || '',
-                vendor_id: source.vendor_id,
-                vendor_name: source.vendor_name || '',
-                remarks: source.remarks || '',
-                reject_reason: (source as any).reject_reason || '',
+                po_no: sourceObj.po_no || '',
+                po_date: sourceObj.po_date || '',
+                vendor_id: sourceObj.vendor_id,
+                vendor_name: sourceObj.vendor_name || '',
+                remarks: sourceObj.remarks || '',
+                reject_reason: sourceObj.reject_reason || '',
                 po_lines: initialLines,
-                // Add fields that might not be in defaults but are useful for display
-                pr_no: (source as any).pr_no || '',
-                qc_no: (source as any).qc_no || '',
-                branch_id: (source as any).branch_id,
-                branch_name: (source as any).branch_name || '',
-                ship_to_warehouse_id: (source as any).ship_to_warehouse_id,
-                payment_term_days: (source as any).payment_term_days,
-                delivery_date: (source as any).delivery_date || '',
-                tax_code_id: (source as any).tax_code_id,
-                tax_name: (source as any).tax_name || '',
-                created_by_name: (source as any).created_by_name || (source as any).created_by || '',
-                exchange_rate_date: (source as any).exchange_rate_date ? new Date((source as any).exchange_rate_date).toISOString().split('T')[0] : (new Date().toISOString().split('T')[0]),
-                currency_code: source.currency_code || 'THB',
-                target_currency: (source as any).target_currency || 'THB',
-                exchange_rate: source.exchange_rate || 1,
-                status: source.status || 'PENDING_APPROVAL',
-            } as any);
+                pr_no: sourceObj.pr_no || '',
+                qc_no: sourceObj.qc_no || '',
+                branch_id: sourceObj.branch_id,
+                branch_name: sourceObj.branch_name || '',
+                payment_term_days: Number(sourceObj.payment_term_days || 0),
+                delivery_date: sourceObj.delivery_date || '',
+                tax_code_id: sourceObj.tax_code_id,
+                tax_name: sourceObj.tax_name || '',
+                created_by_name: sourceObj.created_by_name || sourceObj.created_by || '',
+                exchange_rate_date: sourceObj.exchange_rate_date ? new Date(sourceObj.exchange_rate_date).toISOString().split('T')[0] : (new Date().toISOString().split('T')[0]),
+                currency_code: sourceObj.currency_code || 'THB',
+                target_currency: sourceObj.target_currency || 'THB',
+                exchange_rate: Number(sourceObj.exchange_rate || 1),
+                status: sourceObj.status || 'PENDING_APPROVAL',
+            });
         } else if (!isOpen) {
             reset();
         }
@@ -122,40 +141,72 @@ export const usePOAForm = ({
 
     const watchCurrencyCode    = useWatch({ control, name: 'currency_code' }) as string | undefined;
     const watchTargetCurrency  = useWatch({ control, name: 'target_currency' }) as string | undefined;
+    const watchRateDate        = useWatch({ control, name: 'exchange_rate_date' }) as string | undefined;
 
     // ── Currency Exchange Rate Auto-Calculation triggers ─────────────────────
-    const prevCurrencyId = useRef<string | undefined>(undefined);
-    const prevTargetCurrency = useRef<string | undefined>(undefined);
-
     useEffect(() => {
-        if (!watchCurrencyCode) return;
+        if (!watchCurrencyCode || isReadOnly) return;
 
         const sameAsBefore =
             prevCurrencyId.current === watchCurrencyCode &&
-            prevTargetCurrency.current === watchTargetCurrency;
+            prevTargetCurrency.current === watchTargetCurrency &&
+            prevRateDate.current === watchRateDate;
 
-        if (sameAsBefore) return; // ← guard: don't run if nothing changed
+        if (sameAsBefore) return;
 
-        prevCurrencyId.current = watchCurrencyCode;
-        prevTargetCurrency.current = watchTargetCurrency;
+        const fetchRate = async () => {
+            try {
+                setIsFetchingRate(true);
+                
+                // 1. If Same currencies -> Rate is 1
+                if (watchCurrencyCode === watchTargetCurrency || !watchTargetCurrency) {
+                    setValue('exchange_rate', 1, { shouldDirty: false });
+                    return;
+                }
 
-        // Equal currencies → reset Rate to 1
-        if (watchCurrencyCode === watchTargetCurrency || !watchTargetCurrency) {
-            setValue('exchange_rate', 1, { shouldDirty: false });
-            return;
-        }
+                // 2. Fetch latest rate from service (API or Mock)
+                // Logic: We fetch rate for watchCurrencyCode (source) at watchRateDate
+                // Target is usually base (THB). 
+                // If the system supports arbitrary pairs, we'd fetch both and divide.
+                // For now, let's try the direct pair or individual fetch.
+                
+                const res = await CurrencyService.getLatestExchangeRate(watchCurrencyCode, watchRateDate);
+                
+                if (res && typeof res.rate === 'number') {
+                    let finalRate = res.rate;
+                    
+                    // If target is NOT the base currency (e.g. USD to EUR), 
+                    // we might need to fetch target rate and divide.
+                    if (watchTargetCurrency !== 'THB') {
+                        const targetRes = await CurrencyService.getLatestExchangeRate(watchTargetCurrency, watchRateDate);
+                        if (targetRes && typeof targetRes.rate === 'number' && targetRes.rate !== 0) {
+                            finalRate = res.rate / targetRes.rate;
+                        }
+                    }
+                    
+                    setValue('exchange_rate', Number(finalRate.toFixed(6)), { shouldDirty: false, shouldValidate: true });
+                } else {
+                    // Fallback to static master data if API fails or returns nothing
+                    const sourceObj = currencies.find((c: any) => c.currency_code === watchCurrencyCode);
+                    const targetObj = currencies.find((c: any) => c.currency_code === watchTargetCurrency);
+                    const fromRate = sourceObj?.exchange_rate || 1;
+                    const toRate = targetObj?.exchange_rate || 1;
+                    const fallbackRate = fromRate / toRate;
+                    setValue('exchange_rate', Number(fallbackRate.toFixed(6)), { shouldDirty: false });
+                }
+            } catch (error) {
+                logger.error('[usePOAForm] Failed to fetch latest exchange rate:', error);
+            } finally {
+                setIsFetchingRate(false);
+                prevCurrencyId.current = watchCurrencyCode;
+                prevTargetCurrency.current = watchTargetCurrency;
+                prevRateDate.current = watchRateDate;
+            }
+        };
 
-        const sourceObj = currencies.find((c: any) => c.currency_code === watchCurrencyCode);
-        const targetObj = currencies.find((c: any) => c.currency_code === watchTargetCurrency);
-        const fromRate = sourceObj?.exchange_rate || 1;
-        const toRate = targetObj?.exchange_rate || 1;
-        const calculatedRate = fromRate / toRate;
-
-        if (!isNaN(calculatedRate)) {
-            setValue('exchange_rate', Number(calculatedRate.toFixed(6)), { shouldDirty: false });
-        }
+        fetchRate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currencies, watchCurrencyCode, watchTargetCurrency]);
+    }, [watchCurrencyCode, watchTargetCurrency, watchRateDate, isReadOnly, currencies]);
 
 
     const handleConfirmApprove = async () => {
@@ -322,6 +373,7 @@ export const usePOAForm = ({
         handleConfirmReject,
 
         isSubmitting,
+        isFetchingRate,
         detailData,
         isLoadingDetail,
 
@@ -331,6 +383,6 @@ export const usePOAForm = ({
 
         currencies,
         isLoadingCurrencies,
-        isReadOnly: ['APPROVED', 'PARTIAL', 'REJECTED', 'COMPLETED', 'CANCELLED', 'ISSUED'].includes(detailData?.status || initialValues?.status || ''),
+        isReadOnly,
     };
 };

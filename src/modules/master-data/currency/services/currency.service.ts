@@ -232,5 +232,19 @@ export const CurrencyService = {
             logger.error('[CurrencyService] deleteExchangeRate error:', error);
             return { success: false, message: 'เกิดข้อผิดพลาดในการลบข้อมูล' };
         }
+    },
+
+    getLatestExchangeRate: async (currencyId: string, rateDate?: string): Promise<{ rate: number; source?: string } | null> => {
+        try {
+            const res = await api.get<any>('/master-data/exchange-rate/latest', {
+                params: { currency_id: currencyId, rate_date: rateDate }
+            });
+            // Handle if response is wrapped in { data: ... }
+            const result = res?.data || res;
+            return result;
+        } catch (error) {
+            logger.error('[CurrencyService] getLatestExchangeRate error:', error);
+            return null;
+        }
     }
 };
