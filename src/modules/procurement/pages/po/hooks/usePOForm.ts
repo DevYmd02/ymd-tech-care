@@ -997,6 +997,12 @@ export const usePOForm = ({
                 };
 
                 await POService.update(Number(poId), updatePayload as any);
+                
+                // 🌟 Auto-submit if it was REJECTED
+                if ((existingPO as any)?.status === 'REJECTED') {
+                    logger.info(`[usePOForm] Auto-submitting PO ${poId} from REJECTED state`);
+                    await POService.submit(Number(poId));
+                }
             } else {
                 CreatePOSchema.parse(finalizedPayload);
                 await POService.create(finalizedPayload as unknown as CreatePOPayload);
@@ -1129,5 +1135,6 @@ export const usePOForm = ({
         // Initial Data for UI (Conditional disabling logic)
         isInherited: !!watchRfqId || !!watchWinningVqId,
         isViewMode,
+        existingPO,
     };
 };
