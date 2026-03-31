@@ -91,13 +91,14 @@ export const optionalNumberSchema = z.preprocess((val) => {
 // 1. STATUS ENUM (Canonical — Single Source of Truth)
 // ====================================================================================
 
-export const POStatusEnum = z.enum(['DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'ISSUED', 'COMPLETED', 'CANCELLED', 'REJECTED']);
+export const POStatusEnum = z.enum(['DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'PARTIAL', 'ISSUED', 'COMPLETED', 'CANCELLED', 'REJECTED']);
 export type POStatus = z.infer<typeof POStatusEnum>;
 
 export const PO_STATUS_OPTIONS = [
     { value: 'DRAFT',            label: 'แบบร่าง' },
     { value: 'PENDING_APPROVAL', label: 'รออนุมัติ' },
     { value: 'APPROVED',         label: 'อนุมัติแล้ว' },
+    { value: 'PARTIAL',          label: 'อนุมัติบางส่วน' },
     { value: 'REJECTED',         label: 'ไม่อนุมัติ' },
     { value: 'ISSUED',           label: 'ออก PO แล้ว' },
     { value: 'COMPLETED',        label: 'ปิดรายการ' },
@@ -125,7 +126,8 @@ export type POTransaction = z.infer<typeof POTransactionSchema>;
 // ====================================================================================
 
 export const POLineSchema = z.object({
-    id:              z.coerce.number().optional().nullable(), // Dual mapping for UI compatibility (matches item_id)
+    id:              z.coerce.number().optional().nullable(), // Dual mapping for UI compatibility (synced with po_line_id if exists, otherwise item_id)
+    po_line_id:      optionalIdSchema,
     code:            z.string().optional(), // Dual mapping for UI compatibility (matches item_code)
     line_no: z.coerce.number().min(1),
     item_id: z.coerce.number().min(1, "กรุณาเลือกรหัสสินค้าจากตาราง"),

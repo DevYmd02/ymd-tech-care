@@ -10,6 +10,7 @@ import { logger } from '@/shared/utils/logger';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { extractErrorMessage } from '@/core/api/api';
 import { MasterDataService } from '@/modules/master-data/services/master-data.service';
+import { useAuth } from '@/core/auth/contexts/AuthContext';
 
 interface UsePOAFormOptions {
     isOpen: boolean;
@@ -28,6 +29,7 @@ export const usePOAForm = ({
 }: UsePOAFormOptions) => {
     const queryClient = useQueryClient();
     const { toast } = useToast();
+    const { user } = useAuth();
 
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
@@ -75,8 +77,7 @@ export const usePOAForm = ({
         reset,
         setValue,
         getValues,
-        getFieldState,
-        formState: { errors, isDirty },
+        formState: { errors },
     } = formMethods;
 
     const { fields } = useFieldArray({ control, name: 'po_lines' });
@@ -95,21 +96,24 @@ export const usePOAForm = ({
                 vendor_id: source.vendor_id,
                 vendor_name: source.vendor_name || '',
                 remarks: source.remarks || '',
-                reject_reason: '',
+                reject_reason: (source as any).reject_reason || '',
                 po_lines: initialLines,
                 // Add fields that might not be in defaults but are useful for display
                 pr_no: (source as any).pr_no || '',
                 qc_no: (source as any).qc_no || '',
                 branch_id: (source as any).branch_id,
+                branch_name: (source as any).branch_name || '',
                 ship_to_warehouse_id: (source as any).ship_to_warehouse_id,
                 payment_term_days: (source as any).payment_term_days,
                 delivery_date: (source as any).delivery_date || '',
                 tax_code_id: (source as any).tax_code_id,
+                tax_name: (source as any).tax_name || '',
                 created_by_name: (source as any).created_by_name || (source as any).created_by || '',
                 exchange_rate_date: (source as any).exchange_rate_date ? new Date((source as any).exchange_rate_date).toISOString().split('T')[0] : (new Date().toISOString().split('T')[0]),
                 currency_code: source.currency_code || 'THB',
                 target_currency: (source as any).target_currency || 'THB',
                 exchange_rate: source.exchange_rate || 1,
+                status: source.status || 'PENDING_APPROVAL',
             } as any);
         } else if (!isOpen) {
             reset();
@@ -125,50 +129,81 @@ export const usePOAForm = ({
 
     useEffect(() => {
         if (!watchCurrencyCode) return;
-        
-        // Equal currencies reset Rate to 1
-        if (watchCurrencyCode === watchTargetCurrency || !watchTargetCurrency) {
-            setValue('exchange_rate', 1, { shouldDirty: false });
-            prevCurrencyId.current = watchCurrencyCode;
-            prevTargetCurrency.current = watchTargetCurrency;
-            return;
-        }
 
-        const isSourceChanged = prevCurrencyId.current !== watchCurrencyCode;
-        const isTargetChanged = prevTargetCurrency.current !== watchTargetCurrency;
+        const sameAsBefore =
+            prevCurrencyId.current === watchCurrencyCode &&
+            prevTargetCurrency.current === watchTargetCurrency;
 
-        const { isDirty } = getFieldState('exchange_rate');
-        if (isSourceChanged || isTargetChanged || !isDirty) {
-            const sourceObj = currencies.find((c: any) => c.currency_code === watchCurrencyCode);
-            const targetObj = currencies.find((c: any) => c.currency_code === watchTargetCurrency);
-
-            const fromRate = sourceObj?.exchange_rate || 1;
-            const toRate = targetObj?.exchange_rate || 1;
-
-            const calculatedRate = fromRate / toRate;
-
-            if (calculatedRate !== undefined && !isNaN(calculatedRate)) {
-                setValue('exchange_rate', Number(calculatedRate.toFixed(6)), { shouldValidate: true, shouldDirty: false });
-            }
-        }
+        if (sameAsBefore) return; // ← guard: don't run if nothing changed
 
         prevCurrencyId.current = watchCurrencyCode;
         prevTargetCurrency.current = watchTargetCurrency;
-    }, [currencies, watchCurrencyCode, watchTargetCurrency, setValue, getFieldState]);
+
+        // Equal currencies → reset Rate to 1
+        if (watchCurrencyCode === watchTargetCurrency || !watchTargetCurrency) {
+            setValue('exchange_rate', 1, { shouldDirty: false });
+            return;
+        }
+
+        const sourceObj = currencies.find((c: any) => c.currency_code === watchCurrencyCode);
+        const targetObj = currencies.find((c: any) => c.currency_code === watchTargetCurrency);
+        const fromRate = sourceObj?.exchange_rate || 1;
+        const toRate = targetObj?.exchange_rate || 1;
+        const calculatedRate = fromRate / toRate;
+
+        if (!isNaN(calculatedRate)) {
+            setValue('exchange_rate', Number(calculatedRate.toFixed(6)), { shouldDirty: false });
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currencies, watchCurrencyCode, watchTargetCurrency]);
+
 
     const handleConfirmApprove = async () => {
         if (!currentPoId) return;
         try {
             setIsSubmitting(true);
             
-            // If form is dirty (qty or remarks changed), update first
-            if (isDirty) {
-                const data = getValues();
-                await POAService.update(currentPoId, data);
-            }
+            const formData = getValues();
+            const now = new Date().toISOString();
+            
+            // 🎯 NEW: Dynamic Status Calculation (Logic similar to AV/PR)
+            const isAllApproved = formData.po_lines.every((l: any, idx: number) => {
+                const originalQty = Number(detailData?.po_lines?.[idx]?.qty_ordered || detailData?.po_lines?.[idx]?.qty || 0);
+                const approvedQty = Number(l.qty_ordered || l.qty || 0);
+                return !!l.is_approved && approvedQty === originalQty && originalQty > 0;
+            });
+            
+            const submissionStatus = isAllApproved ? 'APPROVED' : 'PARTIAL';
 
-            // Approve
-            await POAService.approve(currentPoId);
+            // Prepare enriched unified approval payload
+            const payload: any = {
+                po_header_id: currentPoId,
+                status: submissionStatus,
+                remarks: formData.remarks || (submissionStatus === 'PARTIAL' ? 'Partially Approved via POA' : 'Approved via POA'),
+                approval_date: now,
+                need_by_date: (formData as any).delivery_date || (formData as any).po_date || now,
+                approval_emp_id: user?.employee_id || user?.id || 0,
+                approval_emp_name: user?.employee?.employee_fullname || user?.username || 'System',
+                // After the currency swap fix: form field currency_code = PO/quote currency (e.g. USD)
+                // form field target_currency = domestic/base currency (e.g. THB)
+                // Backend expects: base_currency_code = THB, quote_currency_code = USD
+                base_currency_code: (formData as any).target_currency || 'THB',
+                quote_currency_code: formData.currency_code || 'THB',
+                exchange_rate: formData.exchange_rate || 1,
+                tax_code_id: (formData as any).tax_code_id || 0,
+                discount_expression: (formData as any).discount_expression || '0',
+                lines: formData.po_lines.map((l: any) => ({
+                    po_line_id: l.id || l.po_line_id,
+                    approved_qty: Number(l.qty_ordered || l.qty || 0),
+                    remarks: l.line_remark || (l.is_approved ? 'Approved' : 'Rejected/Skipped'),
+                    approval_date: now,
+                    is_approved: !!l.is_approved
+                }))
+            };
+
+            // Submit using enriched unified endpoint
+            await POAService.submitApproval(payload);
+            
             queryClient.invalidateQueries({ queryKey: ['poa-list'] });
             toast('อนุมัติใบสั่งซื้อสำเร็จ', 'success');
             
@@ -185,7 +220,10 @@ export const usePOAForm = ({
 
     const handleConfirmReject = async () => {
         if (!currentPoId) return;
-        const reason = getValues('reject_reason');
+        const formData = getValues();
+        const reason = formData.reject_reason;
+        const now = new Date().toISOString();
+
         if (!reason) {
             toast('กรุณาระบุเหตุผลที่ไม่อนุมัติ', 'error');
             return;
@@ -193,7 +231,34 @@ export const usePOAForm = ({
 
         try {
             setIsSubmitting(true);
-            await POAService.reject(currentPoId, reason);
+            
+            // Prepare enriched unified rejection payload
+            const payload: any = {
+                po_header_id: currentPoId,
+                status: 'REJECTED',
+                remarks: reason,
+                approval_date: now,
+                need_by_date: (formData as any).delivery_date || (formData as any).po_date || now,
+                approval_emp_id: user?.employee_id || user?.id || 0,
+                approval_emp_name: user?.employee?.employee_fullname || user?.username || 'System',
+                // After the currency swap fix: form field currency_code = PO/quote currency (e.g. USD)
+                // form field target_currency = domestic/base currency (e.g. THB)
+                // Backend expects: base_currency_code = THB, quote_currency_code = USD
+                base_currency_code: (formData as any).target_currency || 'THB',
+                quote_currency_code: formData.currency_code || 'THB',
+                exchange_rate: formData.exchange_rate || 1,
+                tax_code_id: (formData as any).tax_code_id || 0,
+                discount_expression: (formData as any).discount_expression || '0',
+                lines: formData.po_lines.map((l: any) => ({
+                    po_line_id: l.id || l.po_line_id,
+                    approved_qty: 0, // Reject sets approved qty to 0
+                    remarks: reason,
+                    approval_date: now
+                }))
+            };
+
+            await POAService.submitApproval(payload);
+            
             queryClient.invalidateQueries({ queryKey: ['poa-list'] });
             toast('ปฏิเสธใบสั่งซื้อสำเร็จ', 'success');
             
@@ -266,5 +331,6 @@ export const usePOAForm = ({
 
         currencies,
         isLoadingCurrencies,
+        isReadOnly: ['APPROVED', 'PARTIAL', 'REJECTED', 'COMPLETED', 'CANCELLED', 'ISSUED'].includes(detailData?.status || initialValues?.status || ''),
     };
 };

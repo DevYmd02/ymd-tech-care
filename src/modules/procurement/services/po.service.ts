@@ -1,7 +1,7 @@
 import api from '@/core/api/api';
 import { USE_MOCK } from '@/core/api/api';
 import type { POListParams, POListResponse, POListItem } from '@/modules/procurement/types';
-import { CreatePOSchema } from '@/modules/procurement/schemas/po-schemas';
+import { CreatePOSchema, type POStatus } from '@/modules/procurement/schemas/po-schemas';
 import type { CreatePOPayload } from '@/modules/procurement/types';
 import { logger } from '@/shared/utils/logger';
 import type { SuccessResponse } from '@/shared/types/api-response.types';
@@ -12,15 +12,36 @@ import { ItemMasterService } from '@/modules/master-data/inventory/services/item
 import { QCService } from './qc.service';
 import type { PRWaitingForQC } from '@/modules/procurement/types/pr-types';
 
-
-// ---------------------------------------------------------------------------
-// NOTE on Zod Boundary Design (per Architect's guidance):
-//   • Request  side: CreatePOSchema.parse(data) — throws ZodError before the
-//     HTTP call if the payload is malformed. Prevents dirty data reaching API.
-//   • Response side: safeParse() used as a WARNING LOGGER ONLY.
-//     The original typed return value is always returned unchanged so that UI
-//     components receive exactly the shape they TypeScript-expect.
-// ---------------------------------------------------------------------------
+/**
+ * Helper: Status Normalization
+ * Standardizes backend status variations to canonical frontend POStatus union.
+ */
+const normalizePOStatus = (status?: string): POStatus => {
+    if (!status) return 'DRAFT';
+    const s = status.toUpperCase();
+    
+    // Core Mapping Logic: Ensure all 'Waiting' or 'Pending' variations match UI label 'รออนุมัติ'
+    if (
+        s === 'PENDING' || 
+        s === 'PENDING_APPROVAL' || 
+        s === 'WAITING' || 
+        s === 'WAITING_FOR_APPROVE' ||
+        s === 'WAITING_APPROVAL' ||
+        s === 'WAITING_FOR_APPROVAL' ||
+        (s.includes('APPROV') && !s.includes('ED')) ||
+        s.startsWith('PENDING_')
+    ) {
+        return 'PENDING_APPROVAL';
+    }
+    
+    if (s === 'APPROVED') return 'APPROVED';
+    if (s === 'REJECTED') return 'REJECTED';
+    if (s === 'ISSUED') return 'ISSUED';
+    if (s === 'COMPLETED') return 'COMPLETED';
+    if (s === 'CANCELLED') return 'CANCELLED';
+    
+    return (status as POStatus) || 'DRAFT';
+};
 
 const ENDPOINTS = {
     list:     '/po',
@@ -34,16 +55,18 @@ const ENDPOINTS = {
     waitingForQC: '/po/pr/waiting-for-qc',
 };
 
-
 export const POService = {
+    /**
+     * Fetch PO List with full data hydration (Vendors, PRs, QCs).
+     * Applies normalization layer for status consistency.
+     */
     getList: async (params?: POListParams): Promise<POListResponse> => {
         logger.info('[POService] Fetching PO List', params);
         const response = await api.get<POListResponse>(ENDPOINTS.list, { params });
 
-        // 🎯 DATA NORMALIZATION: Guarantee po_id is set inside mapped UI item
         const rawItems = extractArrayFromResponse<POListItem>(response);
 
-        // 1. Hydrate Vendors (Batch All)
+        // 1. Hydrate Vendors
         const vendorMap: Record<number, string> = {};
         try {
             const vendorsRes = await VendorService.getList();
@@ -58,12 +81,13 @@ export const POService = {
             logger.debug('[POService] Vendor hydration error', err);
         }
 
-        // 2. Hydrate PRs and QCs (Async Batch Page Items)
+        // 2. Hydrate PRs and QCs
         const allItems = await Promise.all(rawItems.map(async (item) => {
             const mappedItem = {
                 ...item,
                 po_id: item.po_id ?? (item as unknown as { po_header_id?: number }).po_header_id as number,
-                vendor_name: item.vendor_name || vendorMap[item.vendor_id] || undefined
+                vendor_name: item.vendor_name || vendorMap[item.vendor_id] || undefined,
+                status: normalizePOStatus(item.status)
             };
 
             // Inflate pr_no
@@ -87,35 +111,30 @@ export const POService = {
                 }
             }
 
-            // 🌟 BACKUP LOOKUP: Deduce qc_no using inflated pr_no
+            // Backup QC lookup
             if (!mappedItem.qc_no && mappedItem.pr_no) {
                 try {
                     const qcsRes = await QCService.getList({ pr_no: mappedItem.pr_no });
-                    let qcs: any[] = [];
+                    let qcs: Record<string, any>[] = [];
                     
                     if (Array.isArray(qcsRes)) {
                         qcs = qcsRes;
                     } else {
                         const qcsResObj = qcsRes as unknown as Record<string, unknown>;
                         if (qcsResObj && 'data' in qcsResObj && Array.isArray(qcsResObj.data)) {
-                            qcs = qcsResObj.data;
+                            qcs = qcsResObj.data as Record<string, any>[];
                         }
                     }
 
-                    // 🎯 Strategy: Find COMPLETED first, then DRAFT as fallback
-                    const activeQc = qcs.find((q) => q.status === 'COMPLETED') || qcs.find((q) => q.status === 'DRAFT');
-                    
+                    const activeQc = qcs.find((q: Record<string, unknown>) => q.status === 'COMPLETED') || qcs.find((q: Record<string, unknown>) => q.status === 'DRAFT');
                     if (activeQc?.qc_no) {
-                        logger.debug(`[POService] Backup QC Found for PR ${mappedItem.pr_no}: ${activeQc.qc_no}`, { status: activeQc.status });
-                        mappedItem.qc_no = activeQc.qc_no;
-                        const vqId = activeQc.winning_vq_id || (activeQc as any).vq_header_id || (activeQc as any).winning_vq_header_id;
-                        const vId = activeQc.winning_vendor_id || (activeQc as any).vendor_id;
-                        
+                        mappedItem.qc_no = activeQc.qc_no as string;
+                        const vqId = activeQc.winning_vq_id || activeQc.vq_header_id || activeQc.winning_vq_header_id;
+                        const vId = activeQc.winning_vendor_id || activeQc.vendor_id;
                         if (vqId) mappedItem.winning_vq_id = Number(vqId);
                         if (vId) mappedItem.vendor_id = Number(vId);
-
-                        if (activeQc.qc_id || (activeQc as any).qc_header_id || (activeQc as any).id) {
-                            mappedItem.qc_id = activeQc.qc_id || (activeQc as any).qc_header_id || (activeQc as any).id;
+                        if (activeQc.qc_id || activeQc.qc_header_id || activeQc.id) {
+                            mappedItem.qc_id = Number(activeQc.qc_id || activeQc.qc_header_id || activeQc.id);
                         }
                     }
                 } catch (err) {
@@ -126,7 +145,6 @@ export const POService = {
             return mappedItem;
         }));
 
-        // ⚡ PHASE 2: Server-Side Pagination & Filtering (Real API)
         if (!USE_MOCK) {
             const responseObj = response as unknown as Record<string, unknown>;
             const total = typeof responseObj?.total === 'number' ? responseObj.total : allItems.length;
@@ -140,30 +158,15 @@ export const POService = {
             };
         }
 
-        // 🎯 HYBRID FALLBACK: Apply Client-Side Filtering when using Mock Data
         if (params) {
-            const filterParams: Record<string, string | number | boolean | undefined | null> = {};
-            if (params.po_no) filterParams.po_no = params.po_no;
-            if (params.poa_no) filterParams.poa_no = params.poa_no;
-            if (params.pr_no) filterParams.pr_no = params.pr_no;
-            if (params.vendor_name) filterParams.vendor_name = params.vendor_name;
-            if (params.status && params.status !== 'ALL') filterParams.status = params.status;
-            if (params.date_from) filterParams.date_from = params.date_from;
-            if (params.date_to) filterParams.date_to = params.date_to;
-            if (params.page) filterParams.page = params.page;
-            if (params.limit) filterParams.limit = params.limit;
-            if (params.sort) filterParams.sort = params.sort;
-
-            return applyClientFilters<POListItem>(allItems, filterParams, {
+            return applyClientFilters<POListItem>(allItems, params as any, {
                 searchableFields: ['po_no', 'vendor_name', 'qc_no', 'pr_no', 'poa_no'],
                 dateField: 'po_date',
                 backendTotal: response.total
             });
         }
 
-        const page = 1;
-        const limit = 20;
-        return applyClientPagination<POListItem>(allItems, page, limit, response.total);
+        return applyClientPagination<POListItem>(allItems, 1, 20, response.total);
     },
 
     getById: async (id: number): Promise<POListItem> => {
@@ -171,98 +174,65 @@ export const POService = {
         const res = await api.get<POListItem>(ENDPOINTS.detail(id));
         const mappedItem = {
             ...res,
-            po_id: res.po_id ?? (res as unknown as { po_header_id?: number }).po_header_id as number
+            po_id: res.po_id ?? (res as unknown as { po_header_id?: number }).po_header_id as number,
+            status: normalizePOStatus(res.status)
         };
 
-        // 1. Hydrate Vendor Name
         if (mappedItem.vendor_id && !mappedItem.vendor_name) {
             try {
                 const vendorRes = await VendorService.getById(mappedItem.vendor_id);
-                if (vendorRes?.vendor_name) {
-                    mappedItem.vendor_name = vendorRes.vendor_name;
-                }
+                if (vendorRes?.vendor_name) mappedItem.vendor_name = vendorRes.vendor_name;
             } catch (error) {
-                logger.error('[POService] Hydrate Vendor failed during getById:', error);
+                logger.error('[POService] Vendor hydration failed', error);
             }
         }
 
-        // 2. Hydrate PR Reference (and delivery_date)
         if (mappedItem.pr_id) {
+            const itemWithDelivery = mappedItem as unknown as { delivery_date?: string };
             try {
                 const prDetail = await PRService.getDetail(mappedItem.pr_id);
-                if (prDetail?.pr_no && !mappedItem.pr_no) {
-                    mappedItem.pr_no = prDetail.pr_no;
-                }
-                // 📅 Fallback delivery_date from PR if PO is missing it
-                if (!(mappedItem as any).delivery_date && prDetail?.delivery_date) {
-                    (mappedItem as any).delivery_date = prDetail.delivery_date;
+                if (prDetail?.pr_no && !mappedItem.pr_no) mappedItem.pr_no = prDetail.pr_no;
+                if (!itemWithDelivery.delivery_date && prDetail?.delivery_date) {
+                    itemWithDelivery.delivery_date = prDetail.delivery_date;
                 }
             } catch (error) {
-                logger.error('[POService] Hydrate PR failed during getById:', error);
+                logger.error('[POService] PR hydration failed', error);
             }
         }
 
-        // 3. Hydrate QC Reference (If qc_id/qc_header_id exists)
         const qcId = mappedItem.qc_id || (mappedItem as any).qc_header_id as number | undefined;
         if (qcId && !mappedItem.qc_no) {
             try {
                 const qcDetail = await QCService.getById(qcId);
-                if (qcDetail?.qc_no) {
-                    mappedItem.qc_no = qcDetail.qc_no;
-                }
+                if (qcDetail?.qc_no) mappedItem.qc_no = qcDetail.qc_no;
             } catch (error) {
-                logger.error('[POService] Hydrate QC failed during getById:', error);
+                logger.error('[POService] QC hydration failed', error);
             }
         }
 
-        // 4. Backup QC lookup using pr_no (Backup relationship chain)
-        if (!mappedItem.qc_no && mappedItem.pr_no) {
-            try {
-                const qcsRes = await QCService.getList({ pr_no: mappedItem.pr_no });
-                let qcs: any[] = [];
-                if (Array.isArray(qcsRes)) {
-                    qcs = qcsRes;
-                } else if (qcsRes && typeof qcsRes === 'object' && Array.isArray((qcsRes as any).data)) {
-                    qcs = (qcsRes as any).data;
-                }
-                
-                // 🎯 Strictly match by pr_no to ensure correct PO-PR-QC relationship mapping
-                const matchingQc = qcs.find((q: any) => q.pr_no === mappedItem.pr_no);
-                if (matchingQc?.qc_no) {
-                    logger.debug(`[POService] Backup QC Found: ${matchingQc.qc_no}`, matchingQc);
-                    mappedItem.qc_no = matchingQc.qc_no;
-                    // 🔥 FIX: Also hydrate IDs to prevent missing FKs on save
-                    if (!mappedItem.qc_id) mappedItem.qc_id = matchingQc.qc_id || (matchingQc as any).qc_header_id;
-                    if (!mappedItem.winning_vq_id) mappedItem.winning_vq_id = matchingQc.winning_vq_id || (matchingQc as any).vq_header_id || (matchingQc as any).quotation_id;
-                    if (!mappedItem.rfq_id) mappedItem.rfq_id = matchingQc.rfq_id || (matchingQc as any).rfq_header_id;
-                }
-            } catch (error) {
-                logger.error('[POService] Backup QC hydration failed during getById:', error);
-            }
-        }
-
-        // 5. Hydrate Line Items for accurate Item Code/Name display
-        const linesKey = (mappedItem as any).poLines ? 'poLines' : 'po_lines';
-        const lines = (mappedItem as any)[linesKey];
+        const itemWithLines = mappedItem as unknown as { poLines?: unknown[]; po_lines?: unknown[] };
+        const linesKey = itemWithLines.poLines ? 'poLines' : 'po_lines';
+        const lines = itemWithLines[linesKey];
 
         if (lines && Array.isArray(lines)) {
-            (mappedItem as any)[linesKey] = await Promise.all(
-                lines.map(async (line: any) => {
-                    if (line.item_id && (!line.item_code || !line.item_name)) {
+            itemWithLines[linesKey] = await Promise.all(
+                lines.map(async (line: unknown) => {
+                    const l = line as Record<string, unknown>;
+                    if (l.item_id && (!l.item_code || !l.item_name)) {
                         try {
-                            const item = await ItemMasterService.getById(line.item_id);
+                            const item = await ItemMasterService.getById(Number(l.item_id));
                             if (item) {
                                 return {
-                                    ...line,
-                                    item_code: item.item_code || line.item_code || '',
-                                    item_name: item.item_name || line.item_name || '',
+                                    ...l,
+                                    item_code: item.item_code || l.item_code || '',
+                                    item_name: item.item_name || l.item_name || '',
                                 };
                             }
                         } catch (e) {
-                            logger.error(`[POService] Failed to hydrate item ${line.item_id}`, e);
+                            logger.error(`[POService] Failed to hydrate item ${l.item_id}`, e);
                         }
                     }
-                    return line;
+                    return l;
                 })
             );
         }
@@ -270,64 +240,43 @@ export const POService = {
         return mappedItem;
     },
 
-    /**
-     * Creates a new PO.
-     * Validates payload against CreatePOSchema BEFORE sending — throws ZodError
-     * on bad input (missing qc_id / vendor_id etc.) so the UI error handler fires.
-     * Return type stays `POListItem` exactly as before.
-     */
     create: async (data: CreatePOPayload): Promise<POListItem> => {
-        logger.info('[POService] Creating PO — validating payload…');
-        // 🛡️ Request boundary: throws if required FKs are missing
+        logger.info('[POService] Creating PO');
         CreatePOSchema.parse(data);
-        logger.info('[POService] Payload valid — posting to API');
         return await api.post<POListItem>(ENDPOINTS.create, data);
     },
 
-    /** Updates an existing PO (Partial supported by backend usually) */
     update: async (id: number, data: Partial<CreatePOPayload>): Promise<POListItem> => {
         logger.info(`[POService] Updating PO: ${id}`);
-        // 🛡️ Skip strict Create schema check as it's an update
         return await api.patch<POListItem>(ENDPOINTS.detail(id), data);
     },
 
-    /** Transition: DRAFT → ISSUED (send PO to vendor) */
     issue: async (id: number, remark?: string): Promise<SuccessResponse> => {
         logger.info(`[POService] Issuing PO: ${id}`);
         return await api.post<SuccessResponse>(ENDPOINTS.issue(id), { remark });
     },
 
-    /** Transition: DRAFT → PENDING_APPROVAL (send PO for approval) */
     submit: async (id: number): Promise<SuccessResponse> => {
         logger.info(`[POService] Submitting PO: ${id}`);
-        // 🎯 GOLD PATTERN: PATCH with EMPTY BODY {}
         return await api.patch<SuccessResponse>(ENDPOINTS.pending(id), {});
     },
 
-    /** Transition: ISSUED → APPROVED (internal approval) */
     approve: async (id: number): Promise<SuccessResponse> => {
         logger.info(`[POService] Approving PO: ${id}`);
-        // 🎯 FIX: Send EMPTY BODY {} to avoid 400 Bad Request (consistent with PR module)
         return await api.post<SuccessResponse>(ENDPOINTS.approve(id), {});
     },
 
-    /** Transition: ANY → CANCELLED */
     reject: async (id: number, remark?: string): Promise<SuccessResponse> => {
-        logger.info(`[POService] Rejecting/Cancelling PO: ${id}`);
+        logger.info(`[POService] Rejecting PO: ${id}`);
         return await api.post<SuccessResponse>(ENDPOINTS.reject(id), { remark });
     },
 
-    /** Transition: APPROVED → COMPLETED (goods fully received via GRN) */
     complete: async (id: number): Promise<SuccessResponse> => {
         logger.info(`[POService] Completing PO: ${id}`);
         return await api.post<SuccessResponse>(ENDPOINTS.complete(id));
     },
 
     getWaitingForQC: async (params?: { q?: string }): Promise<PRWaitingForQC[]> => {
-        logger.info('[POService] Fetching PRs waiting for QC', params);
-        // The API returns a direct array based on the Postman screenshot
         return await api.get<PRWaitingForQC[]>(ENDPOINTS.waitingForQC, { params });
     },
-
 };
-
