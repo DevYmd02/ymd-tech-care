@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { Package } from 'lucide-react';
 import { DialogFormLayout } from '@ui';
 import { useItemForm } from './hooks/useItemForm';
@@ -8,7 +8,7 @@ import { ItemStockDetails } from './components/ItemStockDetails';
 import { ItemFinancials } from './components/ItemFinancials';
 import { ItemStatusControl } from './components/ItemStatusControl';
 import { useMasterData } from './hooks/useMasterData';
-import { ItemBarcodeSubListModal } from './components/ItemBarcodeSubListModal';
+import { ItemBarcodeFieldArray } from './components/ItemBarcodeFieldArray';
 
 interface ItemMasterFormModalProps {
     isOpen: boolean;
@@ -23,7 +23,6 @@ interface ItemMasterFormModalProps {
  * Uses DialogFormLayout with max-w-7xl for the complex 3-column layout
  */
 export function ItemMasterFormModal({ isOpen, onClose, editId, onSuccess }: ItemMasterFormModalProps) {
-    const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
     const {
         formData,
         isSaving,
@@ -31,7 +30,11 @@ export function ItemMasterFormModal({ isOpen, onClose, editId, onSuccess }: Item
         handleInputChange,
         handleSave,
         clearForm,
-        categories
+        register,
+        categories,
+        control,
+        setValue,
+        getValues
     } = useItemForm(editId ?? null, () => {
         if (onSuccess) onSuccess();
         onClose();
@@ -127,7 +130,6 @@ export function ItemMasterFormModal({ isOpen, onClose, editId, onSuccess }: Item
                             errors={errors}
                             uom={uom}
                             editId={editId}
-                            onManageBarcodes={() => setIsBarcodeModalOpen(true)}
                         />
                     </div>
 
@@ -146,15 +148,16 @@ export function ItemMasterFormModal({ isOpen, onClose, editId, onSuccess }: Item
                     </div>
                 </div>
 
-                {editId && (
-                    <ItemBarcodeSubListModal 
-                        isOpen={isBarcodeModalOpen}
-                        onClose={() => setIsBarcodeModalOpen(false)}
-                        item_id={Number(editId)}
-                        item_code={formData.item_code}
-                        item_name={formData.item_name}
-                    />
-                )}
+                {/* 3. Barcode Management Section */}
+                <ItemBarcodeFieldArray 
+                    control={control}
+                    register={register}
+                    setValue={setValue}
+                    getValues={getValues}
+                    errors={errors}
+                    units={uom}
+                    editId={editId}
+                />
             </div>
         </DialogFormLayout>
     );

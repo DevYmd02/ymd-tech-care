@@ -815,6 +815,7 @@ export interface ItemBarcodeCreateRequest {
     barcode: string;
     uom_id?: number | null;
     is_default?: boolean;
+    is_active?: boolean;
 }
 
 export interface ItemBarcodeUpdateRequest extends Partial<ItemBarcodeCreateRequest> {

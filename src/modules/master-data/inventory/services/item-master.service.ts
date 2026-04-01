@@ -189,39 +189,32 @@ export const ItemMasterService = {
     }
   },
 
-  create: async (data: ItemMasterFormData): Promise<boolean> => {
+  create: async (data: ItemMasterFormData): Promise<number | null> => {
     if (USE_MOCK) {
       logger.info('🎭 [Mock Mode] Create Item:', data);
-      return true;
+      return Math.floor(Math.random() * 1000);
     }
     try {
       const payload = {
+        // ... (rest of the payload logic remains same)
         item_code: data.item_code,
         item_name: data.item_name,
-
         item_type_id: data.item_type_id ? Number(data.item_type_id) : null,
         item_group_id: data.item_group_id ? Number(data.item_group_id) : null,
         item_category_id: data.item_category_id ? Number(data.item_category_id) : null,
-
         base_uom_id: Number(data.base_uom_id),
         sale_uom_id: data.sale_uom_id ? Number(data.sale_uom_id) : null,
-
         tax_code_id: data.tax_code_id ? Number(data.tax_code_id) : null,
         barcode_default: data.barcode_default || null,
-
         is_batch_control: Boolean(data.is_batch_control),
         is_expiry_control: Boolean(data.is_expiry_control),
         is_serial_control: Boolean(data.is_serial_control),
-
         standard_cost: Number(data.standard_cost) || 0,
         shelf_life_days: Number(data.shelf_life_days) || 0,
-
         default_issue_policy: data.default_issue_policy,
         lot_tracking_level: data.lot_tracking_level,
         serial_tracking_level: data.serial_tracking_level,
-
         is_active: Boolean(data.is_active),
-
         item_brand_id: data.item_brand_id ? Number(data.item_brand_id) : null,
         item_pattern_id: data.item_pattern_id ? Number(data.item_pattern_id) : null,
         item_design_id: data.item_design_id ? Number(data.item_design_id) : null,
@@ -230,8 +223,9 @@ export const ItemMasterService = {
         item_color_id: data.item_color_id ? Number(data.item_color_id) : null,
         item_grade_id: data.item_grade_id ? Number(data.item_grade_id) : null
       };
-      await api.post<SuccessResponse>('/item-master', payload);
-      return true;
+      const response = await api.post<SuccessResponse & { item_id?: number }>('/item-master', payload);
+      // Backend returns item_id, but SuccessResponse expects id. Support both.
+      return Number(response.id || response.item_id);
     } catch (error) {
       logger.error('[ItemMasterService] create error:', error);
       throw error;
@@ -248,37 +242,37 @@ export const ItemMasterService = {
         item_code: data.item_code,
         item_name: data.item_name,
 
-        item_type_id: data.item_type_id ? Number(data.item_type_id) : null,
-        item_group_id: data.item_group_id ? Number(data.item_group_id) : null,
-        item_category_id: data.item_category_id ? Number(data.item_category_id) : null,
+        item_type_id: data.item_type_id ? Number(data.item_type_id) : undefined,
+        item_group_id: data.item_group_id ? Number(data.item_group_id) : undefined,
+        item_category_id: data.item_category_id ? Number(data.item_category_id) : undefined,
 
-        base_uom_id: Number(data.base_uom_id),
-        sale_uom_id: data.sale_uom_id ? Number(data.sale_uom_id) : null,
+        base_uom_id: data.base_uom_id ? Number(data.base_uom_id) : undefined,
+        sale_uom_id: data.sale_uom_id ? Number(data.sale_uom_id) : undefined,
 
-        tax_code_id: data.tax_code_id ? Number(data.tax_code_id) : null,
-        barcode_default: data.barcode_default || null,
+        tax_code_id: data.tax_code_id ? Number(data.tax_code_id) : undefined,
+        barcode_default: data.barcode_default || undefined,
 
-        is_batch_control: Boolean(data.is_batch_control),
-        is_expiry_control: Boolean(data.is_expiry_control),
-        is_serial_control: Boolean(data.is_serial_control),
+        is_batch_control: data.is_batch_control !== undefined ? Boolean(data.is_batch_control) : undefined,
+        is_expiry_control: data.is_expiry_control !== undefined ? Boolean(data.is_expiry_control) : undefined,
+        is_serial_control: data.is_serial_control !== undefined ? Boolean(data.is_serial_control) : undefined,
 
-        standard_cost: Number(data.standard_cost) || 0,
-        shelf_life_days: Number(data.shelf_life_days) || 0,
+        standard_cost: data.standard_cost !== undefined ? Number(data.standard_cost) : undefined,
+        shelf_life_days: data.shelf_life_days !== undefined ? Number(data.shelf_life_days) : undefined,
 
         default_issue_policy: data.default_issue_policy,
         lot_tracking_level: data.lot_tracking_level,
         serial_tracking_level: data.serial_tracking_level,
 
-        is_active: Boolean(data.is_active),
-
-        item_brand_id: data.item_brand_id ? Number(data.item_brand_id) : null,
-        item_pattern_id: data.item_pattern_id ? Number(data.item_pattern_id) : null,
-        item_design_id: data.item_design_id ? Number(data.item_design_id) : null,
-        item_class_id: data.item_class_id ? Number(data.item_class_id) : null,
-        item_size_id: data.item_size_id ? Number(data.item_size_id) : null,
-        item_color_id: data.item_color_id ? Number(data.item_color_id) : null,
-        item_grade_id: data.item_grade_id ? Number(data.item_grade_id) : null
+        item_brand_id: data.item_brand_id ? Number(data.item_brand_id) : undefined,
+        item_pattern_id: data.item_pattern_id ? Number(data.item_pattern_id) : undefined,
+        item_design_id: data.item_design_id ? Number(data.item_design_id) : undefined,
+        item_class_id: data.item_class_id ? Number(data.item_class_id) : undefined,
+        item_size_id: data.item_size_id ? Number(data.item_size_id) : undefined,
+        item_color_id: data.item_color_id ? Number(data.item_color_id) : undefined,
+        item_grade_id: data.item_grade_id ? Number(data.item_grade_id) : undefined,
+        is_active: data.is_active !== undefined ? Boolean(data.is_active) : undefined,
       };
+
       await api.patch<SuccessResponse>(`/item-master/${id}`, payload);
       return true;
     } catch (error) {
