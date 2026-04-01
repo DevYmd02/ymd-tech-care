@@ -95,6 +95,18 @@ const mapPOAResponseToListItem = (
             // Normalization Layer: If rate is like 0.07, treat it as 7%
             return (rawRate > 0 && rawRate < 1) ? rawRate * 100 : rawRate;
         })(),
+        exchange_rate: Number(
+            poHeader.exchange_rate || poHeader.exchangeRate || poHeader.quote_currency_rate || poHeader.rate ||
+            item.exchange_rate || item.exchangeRate || item.quote_currency_rate || item.rate || 1
+        ),
+        quote_currency_code: String(
+            poHeader.quote_currency_code || poHeader.currency_code || poHeader.quoteCurrencyCode || poHeader.currencyCode ||
+            item.quote_currency_code || item.currency_code || item.quoteCurrencyCode || item.currencyCode || 'THB'
+        ),
+        base_currency_code: String(
+            poHeader.base_currency_code || poHeader.target_currency || poHeader.baseCurrencyCode || poHeader.targetCurrency ||
+            item.base_currency_code || item.target_currency || item.baseCurrencyCode || item.targetCurrency || 'THB'
+        ),
     };
 
     const mappedLines = lines.map((l: any, idx: number) => {

@@ -12,6 +12,7 @@ import {
     Save, Search, Trash2, FileText,
     Loader2, Plus, X as XIcon
 } from 'lucide-react';
+import { POStatusBadge } from '@ui';
 
 import { WindowFormLayout } from '@/shared/components/ui/layout/WindowFormLayout';
 import { CustomDateInput } from '@/shared/components/forms/CustomDateInput';
@@ -58,7 +59,7 @@ const RowTotal = ({ control, index }: { control: Control<POFormData>; index: num
     const price = useWatch({ control, name: `po_lines.${index}.unit_price` }) ?? 0;
     const expr  = useWatch({ control, name: `po_lines.${index}.discount_expression` }) ?? '0';
     const disc  = parseDiscountAmount(expr, qty * price);
-    const total = qty * price - disc;
+    const total = Math.max(0, qty * price - disc);
     return <>{total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>;
 };
 
@@ -206,7 +207,7 @@ export default function POFormModal({
     // 🔒 Audit Lock: Lock prices & quantity if this PO is associated with a winning QC
     const isLockedByQC = !!watchQcNo && watchQcNo !== 'ไม่ได้ผ่าน QC';
 
-    const isRejected = (existingPO as any)?.status === 'REJECTED';
+    const isRejected = existingPO?.status === 'REJECTED';
 
     const [isProductModalOpen, setIsProductModalOpen] = useState(false);
     const [activeSearchIndex, setActiveSearchIndex] = useState<number | null>(null);
@@ -276,9 +277,17 @@ export default function POFormModal({
                     <div className="bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden shadow-sm">
                         <div className="p-5 space-y-4">
                             {/* Card Title */}
-                            <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 border-b border-gray-200 dark:border-gray-700 pb-3">
-                                <FileText size={18} />
-                                <span className="font-semibold">ส่วนหัวเอกสาร — Header PO (Purchase Order)</span>
+                            <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 pb-3">
+                                <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                                    <FileText size={18} />
+                                    <span className="font-semibold">ส่วนหัวเอกสาร — Header PO (Purchase Order)</span>
+                                </div>
+                                {existingPO?.status && (
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">สถานะเอกสาร</span>
+                                        <POStatusBadge status={existingPO.status} className="scale-90 shadow-sm" />
+                                    </div>
+                                )}
                             </div>
 
                             {/* ── Row 1: เลขที่ PO | วันที่ PO | อ้างอิง PR/QC ── */}
@@ -375,7 +384,7 @@ export default function POFormModal({
                                         disabled={isView || isLoadingBranches}
                                     >
                                         <option value="">{isLoadingBranches ? 'กำลังโหลด...' : '— เลือกสาขา —'}</option>
-                                        {branches.map((o: any) => <option key={o.branch_id} value={o.branch_id}>{o.branch_name}</option>)}
+                                        {branches.map((o) => <option key={o.branch_id} value={o.branch_id}>{o.branch_name}</option>)}
                                     </select>
                                     {errors.branch_id && <p className={ui.error}>{errors.branch_id.message}</p>}
                                 </div>

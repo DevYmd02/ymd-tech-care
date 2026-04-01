@@ -25,6 +25,11 @@ export default function POAListPage() {
     const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
     const [selectedPO, setSelectedPO] = useState<POListItem | undefined>(undefined);
     const [isViewOnly, setIsViewOnly] = useState(false);
+
+    // 🎯 FILTER: Do not show 'DRAFT' status in POA list
+    const filteredData = useMemo(() => {
+        return (data?.data ?? []).filter(item => item.status !== 'DRAFT');
+    }, [data?.data]);
     
     // ── Approval History Modal State ─────────────────────────────────────────
     const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
@@ -55,60 +60,75 @@ export default function POAListPage() {
             size: 50,
             enableSorting: false,
         }),
-        columnHelper.accessor((row: any) => row.poa_no, {
+        columnHelper.accessor(row => row.poa_no, {
             id: 'poa_no',
             header: () => <div className="text-left whitespace-nowrap">เลขที่อนุมัติ POA</div>,
             cell: (info) => (
-                <span className="font-semibold text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
+                <span className="font-bold text-emerald-700 dark:text-emerald-400 whitespace-nowrap text-sm">
                     {info.getValue() || '-'}
                 </span>
             ),
-            size: 130,
+            size: 150,
             enableSorting: false
         }),
         columnHelper.accessor('po_no', {
             header: () => <div className="text-left whitespace-nowrap">เลขที่ PO</div>,
             cell: (info) => (
-                <span className="font-medium text-blue-600 dark:text-blue-400 whitespace-nowrap" title={info.getValue()}>
+                <span className="font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap text-sm" title={info.getValue()}>
                     {info.getValue()}
                 </span>
             ),
-            size: 140,
+            size: 150,
             enableSorting: false,
         }),
         columnHelper.accessor('po_date', {
             header: 'วันที่',
             cell: (info) => (
-                <span className="text-gray-600 dark:text-gray-300 whitespace-nowrap text-xs">
+                <span className="text-gray-600 dark:text-gray-300 whitespace-nowrap text-sm">
                     {formatThaiDate(info.getValue())}
                 </span>
             ),
-            size: 100,
+            size: 120,
             enableSorting: false,
         }),
         columnHelper.accessor((row: POListItem) => {
-            const r = row as Record<string, any>;
             // PENDING_APPROVAL rows have no approver yet — fall back to PO creator
-            return r.approval_emp_name || r.created_by_name || '-';
+            return row.approval_emp_name || row.created_by_name || '-';
         }, {
             id: 'approval_emp_name',
             header: 'ผู้จัดทำ',
             cell: (info) => {
-                const isPending = (info.row.original as any).status === 'PENDING_APPROVAL';
-                const name = info.getValue() as string || '-';
+                const isPending = info.row.original.status === 'PENDING_APPROVAL';
+                const name = info.getValue() || '-';
                 return (
                     <div
-                        className="truncate font-medium text-left max-w-[180px] text-slate-700 dark:text-gray-200"
+                        className="truncate font-semibold text-left max-w-[220px] text-slate-700 dark:text-gray-200 text-sm"
                         title={name}
                     >
                         {name}
                         {isPending && name !== '-' && (
-                            <span className="ml-1.5 text-[10px] text-amber-500 dark:text-amber-400 font-normal">(ผู้สร้าง)</span>
+                            <span className="ml-1.5 text-[11px] text-amber-500 dark:text-amber-400 font-medium">(ผู้สร้าง)</span>
                         )}
                     </div>
                 );
             },
-            size: 180,
+            size: 220,
+            enableSorting: false,
+        }),
+        columnHelper.accessor('total_amount', {
+            header: () => <div className="text-right w-full whitespace-nowrap">ยอดรวม (บาท)</div>,
+            cell: (info) => {
+                const item = info.row.original;
+                // 🛡️ REJECTED always = 0.00 (approved_qty=0 would create negative discount math)
+                // @ts-expect-error - handle dynamic field from joined results
+                const val = item.status === 'REJECTED' ? 0 : Number(item.base_total_amount || info.getValue() || 0);
+                return (
+                    <div className="text-right font-bold text-gray-800 dark:text-white whitespace-nowrap w-full text-sm">
+                        {new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val)}
+                    </div>
+                );
+            },
+            size: 140,
             enableSorting: false,
         }),
         columnHelper.accessor(row => row.status, {
@@ -116,27 +136,10 @@ export default function POAListPage() {
             header: () => <div className="text-center w-full">สถานะ</div>,
             cell: (info) => (
                 <div className="flex justify-center">
-                    <POStatusBadge status={info.getValue()} className="whitespace-nowrap scale-[0.9]" />
+                    <POStatusBadge status={info.getValue()} className="whitespace-nowrap scale-[0.95]" />
                 </div>
             ),
-            size: 100,
-            enableSorting: false,
-        }),
-        columnHelper.accessor('total_amount', {
-            header: () => <div className="text-right w-full whitespace-nowrap">ยอดรวม (บาท)</div>,
-            cell: (info) => {
-                const item = info.row.original as Record<string, any>;
-                // 🛡️ REJECTED always = 0.00 (approved_qty=0 would create negative discount math)
-                const val = item.status === 'REJECTED'
-                    ? 0
-                    : Number(item.base_total_amount || info.getValue() || 0);
-                return (
-                    <div className="text-right font-bold text-gray-800 dark:text-white whitespace-nowrap w-full text-xs">
-                        {new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val)}
-                    </div>
-                );
-            },
-            size: 130,
+            size: 120,
             enableSorting: false,
         }),
         columnHelper.display({
@@ -270,7 +273,7 @@ export default function POAListPage() {
                 <div className="h-full flex flex-col">
                     <div className="hidden md:block flex-1 overflow-hidden">
                         <SmartTable
-                            data={data?.data ?? []}
+                            data={filteredData}
                             columns={columns as ColumnDef<POListItem>[]}
                             isLoading={isLoading}
                             enableRowSelection={false}
@@ -287,19 +290,27 @@ export default function POAListPage() {
 
                     <MobileListContainer
                         isLoading={isLoading}
-                        isEmpty={!data?.data.length}
+                        isEmpty={!filteredData.length}
                         pagination={data?.total ? { page: filters.page, total: data.total, limit: filters.limit, onPageChange: handlePageChange } : undefined}
                     >
-                        {data?.data.map((item) => (
+                        {filteredData.map((item) => (
                             <MobileListCard
                                 key={item.po_id}
                                 title={item.po_no}
                                 subtitle={formatThaiDate(item.po_date)}
                                 statusBadge={<POStatusBadge status={item.status} />}
                                 details={[
-                                    { label: 'เลขที่ POA:', value: (item as Record<string, any>).poa_no || '-' },
-                                    { label: 'ผู้จัดทำ:', value: (item as Record<string, any>).approval_emp_name || '-' },
-                                    { label: 'ยอดรวมสุทธิ', value: <span className="font-bold text-emerald-600">{Number((item as Record<string, any>).base_total_amount || item.total_amount || 0).toLocaleString()}</span> }
+                                    { label: 'เลขที่ POA:', value: item.poa_no || '-' },
+                                    { label: 'ผู้จัดทำ:', value: item.approval_emp_name || '-' },
+                                    { 
+                                        label: 'ยอดรวมสุทธิ', 
+                                        value: (
+                                            <span className="font-bold text-emerald-600">
+                                                {/* @ts-expect-error - dynamic base_total_amount mapping */}
+                                                {Number(item.base_total_amount || item.total_amount || 0).toLocaleString()}
+                                            </span>
+                                        ) 
+                                    }
                                 ]}
                                 actions={
                                     item.status === 'APPROVED' || item.status === 'PARTIAL' || item.status === 'REJECTED' ? (

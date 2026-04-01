@@ -20,7 +20,7 @@ export interface PricingSummary {
  * Calculates the line total for a single item.
  */
 export const calculateLineTotal = (qty: number, price: number, discount: number = 0): number => {
-    return (qty * price) - discount;
+    return Math.max(0, (qty * price) - discount);
 };
 
 /**

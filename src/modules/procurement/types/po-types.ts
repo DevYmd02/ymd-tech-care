@@ -201,6 +201,7 @@ export interface CreatePOPayload {
     currency_code?: string;
     total_amount?:  number;
     items?: CreatePOLineItem[]; 
+    remark?: string; 
     remarks?: string;
 }
 

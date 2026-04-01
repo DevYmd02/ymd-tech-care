@@ -11,7 +11,6 @@ import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { extractErrorMessage } from '@/core/api/api';
 import { MasterDataService } from '@/modules/master-data/services/master-data.service';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
-import { CurrencyService } from '@/modules/master-data/currency/services/currency.service';
 
 interface UsePOAFormOptions {
     isOpen: boolean;
@@ -38,9 +37,9 @@ export const usePOAForm = ({
     const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
     const [isPOSearchModalOpen, setIsPOSearchModalOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isFetchingRate, setIsFetchingRate] = useState(false);
     const [currentPoId, setCurrentPoId] = useState<number | undefined>(poId);
     const [isPartialApproval, setIsPartialApproval] = useState(false);
+    const isInitialLoad = useRef(true);
     
     // Previous refs for change detection
     const prevCurrencyId = useRef<string | undefined>(undefined);
@@ -150,19 +149,25 @@ export const usePOAForm = ({
                 created_by_name: (sourceObj.created_by_name && sourceObj.created_by_name !== '-' && sourceObj.created_by_name !== 'undefined') ? sourceObj.created_by_name : 
                                  (sourceObj.approval_emp_name && sourceObj.approval_emp_name !== '-' && sourceObj.approval_emp_name !== 'undefined') ? sourceObj.approval_emp_name : '-',
                 exchange_rate_date: sourceObj.exchange_rate_date ? new Date(sourceObj.exchange_rate_date).toISOString().split('T')[0] : (new Date().toISOString().split('T')[0]),
-                currency_code: sourceObj.currency_code || 'THB',
-                target_currency: sourceObj.target_currency || 'THB',
+                currency_code: sourceObj.quote_currency_code || sourceObj.currency_code || 'THB',
+                target_currency: sourceObj.base_currency_code || sourceObj.target_currency || 'THB',
                 exchange_rate: Number(sourceObj.exchange_rate || 1),
-                status: sourceObj.status || 'PENDING_APPROVAL',
             });
+            // 🎯 Latch: Sync refs immediately to prevent useEffect from firing
+            prevCurrencyId.current = sourceObj.quote_currency_code || sourceObj.currency_code || 'THB';
+            prevTargetCurrency.current = sourceObj.base_currency_code || sourceObj.target_currency || 'THB';
+            prevRateDate.current = sourceObj.exchange_rate_date ? new Date(sourceObj.exchange_rate_date).toISOString().split('T')[0] : (new Date().toISOString().split('T')[0]);
+            
+            isInitialLoad.current = false;
         } else if (!isOpen) {
             reset();
+            isInitialLoad.current = true;
+            prevCurrencyId.current = undefined;
+            prevTargetCurrency.current = undefined;
+            prevRateDate.current = undefined;
         }
     }, [isOpen, initialValues, detailData, reset]);
 
-    const watchCurrencyCode    = useWatch({ control, name: 'currency_code' }) as string | undefined;
-    const watchTargetCurrency  = useWatch({ control, name: 'target_currency' }) as string | undefined;
-    const watchRateDate        = useWatch({ control, name: 'exchange_rate_date' }) as string | undefined;
     const watchLines           = useWatch({ control, name: 'po_lines' });
 
     // ── Partial Approval Detection (Pattern matched with AV/PR) ────────────────
@@ -178,70 +183,15 @@ export const usePOAForm = ({
         setIsPartialApproval(!isAllSelectedFull);
     }, [watchLines, detailData]);
 
-    // ── Currency Exchange Rate Auto-Calculation triggers ─────────────────────
+    // ── Currency Exchange Rate Auto-Calculation triggers (DISABLED FOR POA) ──────
+    // Note: Approvers should see the rate from the original PO. 
+    // Manual changes to currency will not auto-fetch to avoid overriding historical PO rates.
+    /* 
     useEffect(() => {
-        if (!watchCurrencyCode || isReadOnly) return;
-
-        const sameAsBefore =
-            prevCurrencyId.current === watchCurrencyCode &&
-            prevTargetCurrency.current === watchTargetCurrency &&
-            prevRateDate.current === watchRateDate;
-
-        if (sameAsBefore) return;
-
-        const fetchRate = async () => {
-            try {
-                setIsFetchingRate(true);
-                
-                // 1. If Same currencies -> Rate is 1
-                if (watchCurrencyCode === watchTargetCurrency || !watchTargetCurrency) {
-                    setValue('exchange_rate', 1, { shouldDirty: false });
-                    return;
-                }
-
-                // 2. Fetch latest rate from service (API or Mock)
-                // Logic: We fetch rate for watchCurrencyCode (source) at watchRateDate
-                // Target is usually base (THB). 
-                // If the system supports arbitrary pairs, we'd fetch both and divide.
-                // For now, let's try the direct pair or individual fetch.
-                
-                const res = await CurrencyService.getLatestExchangeRate(watchCurrencyCode, watchRateDate);
-                
-                if (res && typeof res.rate === 'number') {
-                    let finalRate = res.rate;
-                    
-                    // If target is NOT the base currency (e.g. USD to EUR), 
-                    // we might need to fetch target rate and divide.
-                    if (watchTargetCurrency !== 'THB') {
-                        const targetRes = await CurrencyService.getLatestExchangeRate(watchTargetCurrency, watchRateDate);
-                        if (targetRes && typeof targetRes.rate === 'number' && targetRes.rate !== 0) {
-                            finalRate = res.rate / targetRes.rate;
-                        }
-                    }
-                    
-                    setValue('exchange_rate', Number(finalRate.toFixed(6)), { shouldDirty: false, shouldValidate: true });
-                } else {
-                    // Fallback to static master data if API fails or returns nothing
-                    const sourceObj = currencies.find((c: any) => c.currency_code === watchCurrencyCode);
-                    const targetObj = currencies.find((c: any) => c.currency_code === watchTargetCurrency);
-                    const fromRate = sourceObj?.exchange_rate || 1;
-                    const toRate = targetObj?.exchange_rate || 1;
-                    const fallbackRate = fromRate / toRate;
-                    setValue('exchange_rate', Number(fallbackRate.toFixed(6)), { shouldDirty: false });
-                }
-            } catch (error) {
-                logger.error('[usePOAForm] Failed to fetch latest exchange rate:', error);
-            } finally {
-                setIsFetchingRate(false);
-                prevCurrencyId.current = watchCurrencyCode;
-                prevTargetCurrency.current = watchTargetCurrency;
-                prevRateDate.current = watchRateDate;
-            }
-        };
-
-        fetchRate();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        if (!watchCurrencyCode || isReadOnly || isInitialLoad.current) return;
+        // ... (Disabled to prevent overriding PO data with master data defaults like 35)
     }, [watchCurrencyCode, watchTargetCurrency, watchRateDate, isReadOnly, currencies]);
+    */
 
 
     const handleConfirmApprove = async () => {
@@ -423,7 +373,6 @@ export const usePOAForm = ({
         handleConfirmReject,
 
         isSubmitting,
-        isFetchingRate,
         detailData,
         isLoadingDetail,
 
