@@ -9,8 +9,9 @@ import { POLineSchema } from './po-schemas';
 export const POALineSchema = POLineSchema.extend({
     is_approved: z.boolean().optional(),
     line_remark: z.string().optional(),
-    remaining_qty: z.number().optional(),
-    previously_approved_qty: z.number().optional(),
+    remaining_qty: z.coerce.number().optional(),
+    previously_approved_qty: z.coerce.number().optional(),
+    is_processed: z.boolean().optional(),
 });
 
 export const POAFormSchema = z.object({
