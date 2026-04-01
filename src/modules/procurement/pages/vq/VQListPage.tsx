@@ -572,23 +572,25 @@ export default function VQListPage() {
                             </div>
 
                             {/* The Button Group (Isolated & Full Width) */}
-                            <div className="flex justify-end items-center gap-4 border-t border-slate-200 dark:border-slate-700/60 pt-5 mt-5">
-                                {/* 1. ล้างค่า (Clear) */}
-                                <button
-                                    type="button"
-                                    onClick={resetFilters}
-                                    className="h-10 px-6 flex items-center justify-center text-base font-medium rounded-md transition-colors bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 dark:bg-white dark:text-slate-900 dark:border-transparent dark:hover:bg-slate-200 whitespace-nowrap"
-                                >
-                                    ล้างค่า
-                                </button>
-                                
-                                {/* 2. ค้นหา (Search) */}
-                                <button
-                                    type="submit"
-                                    className="h-10 px-6 flex items-center justify-center gap-2 text-base font-medium rounded-md transition-colors bg-blue-600 text-white hover:bg-blue-700 whitespace-nowrap"
-                                >
-                                    <Search className="w-4 h-4" /> ค้นหา
-                                </button>
+                            <div className="flex flex-col sm:flex-row flex-wrap justify-end items-center gap-3 sm:gap-4 border-t border-slate-200 dark:border-slate-700/60 pt-5 mt-5">
+                                <div className="flex gap-2 w-full sm:w-auto">
+                                    {/* 1. ล้างค่า (Clear) */}
+                                    <button
+                                        type="button"
+                                        onClick={resetFilters}
+                                        className="flex-1 sm:flex-none h-10 px-6 flex items-center justify-center text-base font-medium rounded-md transition-colors bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 dark:bg-white dark:text-slate-900 dark:border-transparent dark:hover:bg-slate-200 whitespace-nowrap"
+                                    >
+                                        ล้างค่า
+                                    </button>
+                                    
+                                    {/* 2. ค้นหา (Search) */}
+                                    <button
+                                        type="submit"
+                                        className="flex-1 sm:flex-none h-10 px-6 flex items-center justify-center gap-2 text-base font-medium rounded-md transition-colors bg-blue-600 text-white hover:bg-blue-700 whitespace-nowrap"
+                                    >
+                                        <Search className="w-4 h-4" /> ค้นหา
+                                    </button>
+                                </div>
                                 
                                 {/* 3. สร้างใบเสนอราคาใหม่ (Create) */}
                                 <button

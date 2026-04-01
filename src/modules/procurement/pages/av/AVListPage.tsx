@@ -415,25 +415,27 @@ export default function AVListPage() {
                             accentColor="emerald"
                         />
                         
-                        <div className="md:col-span-1 lg:col-span-3 flex justify-end gap-2 items-center">
-                            <button
-                                type="button"
-                                onClick={resetFilters}
-                                className="h-10 px-4 bg-white hover:bg-gray-50 text-gray-700 rounded-lg font-medium transition-colors border border-gray-300 shadow-sm whitespace-nowrap"
-                            >
-                                ล้างค่า
-                            </button>
-                            <button
-                                type="submit"
-                                className="h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap mr-2"
-                            >
-                                <Search size={18} />
-                                ค้นหา
-                            </button>
+                        <div className="md:col-span-2 lg:col-span-3 flex flex-col sm:flex-row flex-wrap justify-end gap-2 items-center">
+                            <div className="flex gap-2 w-full sm:w-auto">
+                                <button
+                                    type="button"
+                                    onClick={resetFilters}
+                                    className="flex-1 sm:flex-none h-10 px-4 bg-white hover:bg-gray-50 text-gray-700 rounded-lg font-medium transition-colors border border-gray-300 shadow-sm whitespace-nowrap"
+                                >
+                                    ล้างค่า
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 sm:flex-none h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+                                >
+                                    <Search size={18} />
+                                    ค้นหา
+                                </button>
+                            </div>
                             <button
                                 type="button"
                                 onClick={() => { setSelectedPRId(undefined); setIsAVModalOpen(true); }}
-                                className="h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+                                className="w-full sm:w-auto h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
                             >
                                 <ShieldCheck size={18} />
                                 รายการอนุมัติใบขอซื้อ
