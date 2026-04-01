@@ -117,20 +117,26 @@ export const usePOAForm = ({
             const sourceObj = (detailData || initialValues || {}) as any;
             const isPending = (sourceObj.status === 'PENDING_APPROVAL' || !sourceObj.status);
             const initialLines = (sourceObj.po_lines || sourceObj.lines || []).map((l: any) => {
-                // For history records, if it was approved/partial, it should stay checked
-                const wasApproved = (l.status === 'APPROVED' || l.status === 'PARTIAL');
-
-                // 🎯 DEFAULT BAL QTY: For PENDING_APPROVAL, pre-fill approved qty = remaining qty
-                // This lets the approver see the actual balance left to approve.
-                // For already-approved records we respect the recorded qty_ordered from the POA.
                 const originalQty = Number(l.qty || l.qty_ordered || 0);
-                const remainingQty = l.remaining_qty !== undefined ? Number(l.remaining_qty) : originalQty;
-                const defaultQty = isPending ? remainingQty : Number(l.qty_ordered || l.qty || 0);
+                const remQty      = l.remaining_qty !== undefined ? Number(l.remaining_qty) : originalQty;
+                
+                // 🎯 Logic: Is Processed?
+                // If it's a follow-up round (isPending but some already approved), 
+                // remQty == 0 means it's completely finished in a previous round.
+                const isProcessed = remQty === 0 && originalQty > 0;
+
+                // For a "New" approval (no processed items yet), default to originalQty.
+                // For a "Follow-up" (processed exists), default to remaining balance.
+                const currentQty  = Number(l.qty_ordered || l.qty || 0);
+                const defaultQty  = isPending ? (isProcessed ? 0 : remQty) : currentQty;
                 
                 return {
                     ...l,
+                    qty: originalQty,
                     qty_ordered: defaultQty,
-                    is_approved: l.is_approved !== undefined ? !!l.is_approved : (wasApproved || remainingQty > 0)
+                    remaining_qty: remQty,
+                    is_processed: isProcessed,
+                    is_approved: l.is_approved !== undefined ? !!l.is_approved : (isProcessed || defaultQty > 0)
                 };
             });
 

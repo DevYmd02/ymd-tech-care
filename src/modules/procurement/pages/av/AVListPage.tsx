@@ -105,13 +105,6 @@ export default function AVListPage() {
                     .map(([prId]) => prId)
             );
 
-            // PRs that are partially approved (still have pending items)
-            const partialPRIds = new Set<number>(
-                [...approvalByPRId.entries()]
-                    .filter(([, rec]) => rec.status?.toUpperCase() === 'PARTIAL')
-                    .map(([prId]) => prId)
-            );
-
             // Pending items: all PRs currently awaiting action
             // Exclude truly handled ones (rejected or fully approved AFTER checking pending list)
             const trulyPendingPRs = pendingPRs
@@ -121,7 +114,7 @@ export default function AVListPage() {
                 })
                 .map((p: any) => ({
                     ...p,
-                    status: partialPRIds.has(Number(p.pr_id)) ? 'PARTIAL' : 'PENDING',
+                    status: (p.av_no || p.approval_no) ? 'PARTIAL' : 'PENDING',
                     row_key: `pending-${p.pr_id}`,
                     pr_no: p.pr_no,
                 }));
@@ -177,8 +170,8 @@ export default function AVListPage() {
             const hasAvSearch = !!apiFilters.approval_no;
 
             if (selectedStatus === 'PENDING' && !hasAvSearch) {
-                // Show only truly pending PRs (no approval record at all, or still waiting)
-                combined = trulyPendingPRs.filter((p: any) => p.status === 'PENDING');
+                // Show all pending PRs waiting for action (both PENDING and PARTIAL)
+                combined = trulyPendingPRs;
             } else if (selectedStatus === 'PARTIAL' && !hasAvSearch) {
                 // Show partially approved items: from both pending list (with PARTIAL status) and approval records
                 const partialFromPending = trulyPendingPRs.filter((p: any) => p.status === 'PARTIAL');
@@ -351,13 +344,13 @@ export default function AVListPage() {
                     <button
                         onClick={() => handleApprove(row.original.pr_id, row.original)}
                         className={`p-1.5 rounded-md transition-colors flex items-center justify-center ${
-                            row.original.status === 'PENDING'
+                            row.original.row_key?.startsWith('pending-')
                             ? "text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-300"
                             : "text-blue-600 hover:bg-blue-50 hover:text-blue-700 dark:text-blue-400 dark:hover:bg-blue-900/30 dark:hover:text-blue-300"
                         }`}
-                        title={row.original.status === 'PENDING' ? "พิจารณาอนุมัติ" : "ดูรายละเอียด"}
+                        title={row.original.row_key?.startsWith('pending-') ? "พิจารณาอนุมัติ" : "ดูรายละเอียด"}
                     >
-                        {row.original.status === 'PENDING' ? <ShieldCheck size={18} /> : <Eye size={18} />}
+                        {row.original.row_key?.startsWith('pending-') ? <ShieldCheck size={18} /> : <Eye size={18} />}
                     </button>
                 </div>
             ),

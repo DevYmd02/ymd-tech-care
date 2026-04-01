@@ -91,7 +91,7 @@ export const AVFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, a
             <div className="flex items-center gap-2">
                 <button type="button" onClick={onClose} disabled={isSubmitting || isRejecting} className="px-4 py-2 border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-md text-sm font-medium">ปิด</button>
 
-                {activeId && (!approvalItem || !approvalItem.status || approvalItem.status === 'PENDING') && (
+                {activeId && (!approvalItem || !approvalItem.status || approvalItem.status === 'PENDING' || approvalItem.status === 'PARTIAL') && (
                   <>
                     <button 
                         type="button" 

@@ -19,7 +19,7 @@ export const AVFormLines: React.FC<AVFormLinesProps> = React.memo(({
     const headerVendorId = watchForm('preferred_vendor_id');
     const avNo = watchForm('av_no');
 
-    const isExistingAV = !!avNo && String(avNo).trim() !== '';
+    const isExistingAV = !!avNo && String(avNo).trim() !== '' && String(avNo).trim() !== 'ระบบจะกรอกอัตโนมัติ';
 
     // A PR is considered partial if it's NOT an existing AV and HAS other AVs on the list
     const hasOtherAVs = watchForm('hasOtherAVs');
@@ -70,7 +70,7 @@ export const AVFormLines: React.FC<AVFormLinesProps> = React.memo(({
                                 const isApproved = !!line.is_approved;
 
                                 const approvedQty = Number(line.approved_qty) || 0;
-                                const requestedQty = Number(showRequestedQty ? (line.requested_qty ?? line.qty) : (line.remaining_qty ?? line.requested_qty ?? line.qty)) ?? 0;
+                                const requestedQty = Number(showRequestedQty ? (line.requested_qty ?? line.qty) : (line.remaining_qty ?? line.requested_qty ?? line.qty)) || 0;
 
                                 if (!isExistingAV && requestedQty === 0) return null;
                                 if (isExistingAV && !isApproved) return null;
