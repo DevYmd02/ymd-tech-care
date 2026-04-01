@@ -62,7 +62,7 @@ export const mapPRToRFQFormData = (
             ? `${pr.remark}\n[PR: ${pr.pr_no}]` 
             : `Generated from PR: ${pr.pr_no}`,
 
-        target_delivery_date: (pr.need_by_date || (pr as any).delivery_date || '').toString().split('T')[0] || '',
+        target_delivery_date: ((pr as any).delivery_date || (pr as any).deliveryDate || pr.need_by_date || '').toString().split('T')[0] || '',
 
         // ⚠️ Safety: Do NOT map IDs for new RFQ record
         rfqLines: (pr.lines || []).map((line, index) => {
@@ -98,6 +98,7 @@ export const mapPRToRFQFormData = (
                 required_receipt_type: line.required_receipt_type || 'FULL',
                 // Real API may use `needed_date`, `line_needed_date`, or the backend uses another key
                 target_delivery_date: (
+                    (line as any).delivery_date ||
                     line.needed_date ||
                     (line as unknown as Record<string, unknown>).line_needed_date as string ||
                     ''
@@ -133,6 +134,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
     const [stagedPayload, setStagedPayload] = useState<RFQFormValues | null>(null);
 
     // Track original PR lines for potential reset feature
+    const [activePR, setActivePR] = useState<PRHeader | null>(initialPR || null);
     const [originalPRLines, setOriginalPRLines] = useState<RFQLineValues[]>([]);
     const hasInitialHydrated = React.useRef(false);
 
@@ -213,8 +215,17 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         setValue('pr_approval_id', record.approval_id ? Number(record.approval_id) : undefined, { shouldDirty: true });
         
         // 🆕 Extract AV approved delivery date with deep scanning — prioritizing AV header dates over PR fallbacks
-        const rawDate = record.need_by_date || record.delivery_date || record.due_date || record.needByDate || 
-                        record.pr?.need_by_date || record.pr?.delivery_date || '';
+        // 🆕 Extract AV approved delivery date with deep scanning — prioritizing Delivery Date
+        // If the AV record only has need_by_date (Required Date), we fallback to PR's delivery_date if available
+        const rawDate = record.delivery_date || 
+                        record.deliveryDate || 
+                        activePR?.delivery_date || 
+                        initialPR?.delivery_date || 
+                        record.need_by_date || 
+                        record.needByDate || 
+                        record.due_date || 
+                        record.pr?.delivery_date || 
+                        record.pr?.need_by_date || '';
         const finalAVDate = rawDate ? rawDate.toString().split('T')[0] : '';
         
         logger.info("💎 [DIAGNOSTIC] AV Selection Date Extraction:", {
@@ -262,11 +273,11 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                     required_receipt_type: originalLine?.required_receipt_type || 'FULL',
                     // 🎯 IMPROVED: Look for date in AV Line first, then AV Header, then PR Line
                     target_delivery_date: (
-                        avLine.need_by_date || 
                         avLine.delivery_date || 
+                        originalLine?.target_delivery_date || // PR Line's date is often the correct one
                         avLine.line_needed_date || 
+                        avLine.need_by_date || 
                         finalAVDate || 
-                        originalLine?.target_delivery_date || 
                         ''
                     ).toString().split('T')[0] || '', 
                     note_to_vendor: originalLine?.note_to_vendor || '',
@@ -287,7 +298,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         }
         
         setIsApprovedPRModalOpen(false);
-    }, [setValue, originalPRLines, toast, items]);
+    }, [setValue, originalPRLines, toast, items, initialPR, activePR]);
 
     // --- 🔗 [NEW] AV Hydration logic: Fetch Approval No if missing but PR reference exists ---
     const currentPrId = methods.watch('pr_id');
@@ -531,13 +542,15 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                 // 🎯 Memory Sync: Keep original lines for AV sync reference
                 setOriginalPRLines(mappedLines);
 
-                // Fetch PR detail for pr_no if missing
+                // Fetch PR detail for pr_no if missing AND preserve for date fallback
                 let fetchedPrNo = rfq.pr?.pr_no || rfq.ref_pr_no || rfq.pr_no || null;
-                if (rfq.pr_id && !fetchedPrNo) {
+                let fullPRData = null;
+                if (rfq.pr_id) {
                     try {
-                        const prData = await PRService.getDetail(rfq.pr_id);
-                        if (prData && prData.pr_no) {
-                            fetchedPrNo = prData.pr_no;
+                        fullPRData = await PRService.getDetail(rfq.pr_id);
+                        if (fullPRData) {
+                            setActivePR(fullPRData);
+                            if (fullPRData.pr_no) fetchedPrNo = fullPRData.pr_no;
                         }
                     } catch (e) {
                          logger.warn('Failed sync PR details:', e);
@@ -571,7 +584,13 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                     receive_location: rfq.receive_location || '',
                     isMulticurrency: (rfq.rfq_base_currency_code || 'THB') !== 'THB',
                     // 🎯 SMART DERIVATION v2: Force priority to Line Dates (since Header date is not updateable via API)
-                    target_delivery_date: (mappedLines[0]?.target_delivery_date || rfq.target_delivery_date || '').split('T')[0] || '',
+                    // 🔒 FIX: If Header shows 23 but PR shows 21, prioritize PR's delivery_date
+                    target_delivery_date: (
+                        fullPRData?.delivery_date || 
+                        mappedLines[0]?.target_delivery_date || 
+                        rfq.target_delivery_date || 
+                        ''
+                    ).split('T')[0] || '',
                     rfqLines: mappedLines,
                     vendors: mappedVendors,
                 });

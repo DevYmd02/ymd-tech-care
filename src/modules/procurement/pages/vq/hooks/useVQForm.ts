@@ -161,9 +161,6 @@ export const useVQForm = (
     // 🛡️ ONLY auto-toggle if it's currently false (don't accidentally collapse if user manually opened it)
     if (different && !isMulticurrency) {
         setValue('isMulticurrency', true);
-    } else if (!different && isMulticurrency && (Number(getValues('exchange_rate')) === 1 || !getValues('exchange_rate'))) {
-        // Only auto-collapse if rate is 1 or empty
-        setValue('isMulticurrency', false);
     }
   }, [watchCurrency, watchTargetCurrency, setValue, isViewMode, isMulticurrency, getValues]);
 
@@ -774,7 +771,6 @@ export const useVQForm = (
     const payload: VQCreateData = {
       // 🛡️ @Agent_Ultimate_Purifier: STRICT DTO MAPPING (Header)
       ...(vqId ? { vq_no: data.vq_no } : {}), // Omit vq_no if creating to satisfy backend
-      isMulticurrency: data.isMulticurrency, // 💱 Persist the multicurrency state
       discount_expression: String(globalDiscountAmount || 0), // 🎯 Explicit Header Discount
       quotation_no: data.quotation_no && data.quotation_no.trim() !== '' ? data.quotation_no : '-', 
       quotation_date: data.quotation_date ? new Date(data.quotation_date).toISOString() : new Date().toISOString(),

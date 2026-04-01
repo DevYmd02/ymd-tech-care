@@ -182,7 +182,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
                         <input 
                             {...register('credit_days')}
                             disabled={readOnly}
-                            placeholder="ระบุจำนวนวัน"
+                            placeholder="-"
                             className={`w-full h-9 px-3 text-sm border rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-colors ${readOnly ? 'bg-gray-50 dark:bg-gray-800/50 italic text-gray-500 cursor-not-allowed' : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600'}`}
                         />
                     </div>

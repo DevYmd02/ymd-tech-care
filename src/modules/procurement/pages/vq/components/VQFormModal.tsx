@@ -138,7 +138,7 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
   const isPending = vqStatus === 'PENDING';
   const isRecorded = vqStatus === 'RECORDED';
   const isTerminalStatus = vqStatus === 'EXPIRED' || vqStatus === 'DECLINED' || vqStatus === 'CANCELLED';
-  const forceViewMode = isViewMode || isTerminalStatus || isRecorded;
+  const forceViewMode = isViewMode || isTerminalStatus;
   const isLineReadonly = !!watchRfqNo || forceViewMode;
 
   const modalTitle = forceViewMode 

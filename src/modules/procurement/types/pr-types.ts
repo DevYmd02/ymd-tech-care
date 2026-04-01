@@ -320,8 +320,8 @@ export interface CreatePRPayload {
 
     // ── Terms (Postman-aligned) ──
     pr_discount_raw: string;        // Discount string e.g. "10%" or "500"
-    payment_term_days: number;      // Integer, min 0
-    credit_days: number;            // Integer — credit days (Postman: credit_days)
+    payment_term_days?: number;      // Integer, min 0
+    credit_days?: number;            // Integer — credit days (Postman: credit_days)
     vendor_quote_no: string;        // VARCHAR
     shipping_method: string;        // VARCHAR
     delivery_date?: string;         // YYYY-MM-DD (Postman: delivery_date)

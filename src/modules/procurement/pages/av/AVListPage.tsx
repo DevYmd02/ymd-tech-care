@@ -56,7 +56,12 @@ export default function AVListPage() {
             // ====================================================
             const [pendingRes, approvalRes, allPendingPRsRes] = await Promise.all([
                 AVService.getPendingApprovalPRs(),
-                AVService.getApprovalList({ limit: 1000, page: 1, status: undefined }),
+                AVService.getApprovalList({ 
+                    ...apiFilters,
+                    limit: 1000, 
+                    page: 1, 
+                    status: undefined // We want all statuses to handle the merging logic
+                }),
                 AVService.getPendingPRs({ limit: 1000, page: 1 })
             ]);
 
@@ -70,12 +75,7 @@ export default function AVListPage() {
                 ...allPendingPRs.map((p: any) => Number(p.pr_id))
             ]);
 
-            console.log('🔍 [AVListPage] Triple-Source Data:', {
-                actionableCount: pendingPRs.length,
-                approvalHistoryCount: approvalRecords.length,
-                mainPendingCount: allPendingPRs.length,
-                pendingPRIdSetSize: pendingPRIdSet.size
-            });
+
 
 
             // Build a map of pr_id -> approval record for fast lookup
@@ -132,7 +132,14 @@ export default function AVListPage() {
                 .filter((a: any) => {
                     const prId = Number(a.pr_id);
                     const s = (a.status || '').toUpperCase();
-                    // If PR is pending, don't show the old REJECTED/APPROVED row in the main list
+                    
+                    // 🎯 FIX: Don't filter out records if searching specifically or viewing 'ALL' / status-specific lists
+                    if (apiFilters.approval_no || apiFilters.pr_no) return true;
+                    if (filters.status === 'ALL') return true;
+                    if (filters.status === s) return true;
+
+                    // If PR is pending, don't show the old REJECTED/APPROVED row in the main "General" list
+                    // (prevents clutter when a PR has been fixed and resubmitted)
                     if (pendingPRIdSet.has(prId) && (s === 'REJECTED' || s === 'APPROVED')) return false;
                     return true;
                 })
@@ -167,21 +174,22 @@ export default function AVListPage() {
             let combined: any[];
 
             const selectedStatus = filters.status;
+            const hasAvSearch = !!apiFilters.approval_no;
 
-            if (selectedStatus === 'PENDING') {
+            if (selectedStatus === 'PENDING' && !hasAvSearch) {
                 // Show only truly pending PRs (no approval record at all, or still waiting)
                 combined = trulyPendingPRs.filter((p: any) => p.status === 'PENDING');
-            } else if (selectedStatus === 'PARTIAL') {
+            } else if (selectedStatus === 'PARTIAL' && !hasAvSearch) {
                 // Show partially approved items: from both pending list (with PARTIAL status) and approval records
                 const partialFromPending = trulyPendingPRs.filter((p: any) => p.status === 'PARTIAL');
                 const partialFromApproval = approvalItems.filter((a: any) => a.status?.toUpperCase() === 'PARTIAL');
                 combined = [...partialFromPending, ...partialFromApproval];
-            } else if (selectedStatus === 'APPROVED') {
+            } else if (selectedStatus === 'APPROVED' && !hasAvSearch) {
                 combined = approvalItems.filter((a: any) => a.status?.toUpperCase() === 'APPROVED');
-            } else if (selectedStatus === 'REJECTED') {
+            } else if (selectedStatus === 'REJECTED' && !hasAvSearch) {
                 combined = approvalItems.filter((a: any) => a.status?.toUpperCase() === 'REJECTED');
             } else {
-                // ALL: merge — pending (not handled) + all approval records
+                // ALL or searching specifically: merge — pending (not handled) + all approval records
                 combined = [...trulyPendingPRs, ...approvalItems];
             }
 
@@ -463,7 +471,7 @@ export default function AVListPage() {
                     >
                         {data?.data.map((item) => (
                             <MobileListCard
-                                key={(item as any).approval_id || (item as any).pr_id}
+                                key={(item as any).row_key}
                                 title={(item as any).pr?.pr_no || (item as any).pr_no || '-'}
                                 subtitle={formatThaiDate((item as any).approval_date || (item as any).pr_date)}
                                 statusBadge={<PRStatusBadge status={item.status} />}
