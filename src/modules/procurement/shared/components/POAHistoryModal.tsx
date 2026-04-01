@@ -34,7 +34,8 @@ export const POAHistoryModal: React.FC<POAHistoryModalProps> = ({
 
   if (!isOpen) return null;
 
-  const historyItems = data?.data || [];
+  // 🎯 Filter: Only show official POA records in history (exclude virtual "Waiting" rows)
+  const historyItems = (data?.data || []).filter(item => !!item.poa_no && item.poa_no !== '-');
 
   return createPortal(
     <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
