@@ -28,7 +28,7 @@ export const itemMasterSchema = z.object({
 
     // Tax
     tax_code_id: z.coerce.number().optional(),
-    tax_rate: z.coerce.number().optional().default(7), // Used for UI calculation, not sent
+    tax_rate: z.coerce.number().optional().default(0), // Used for UI calculation, not sent
 
     // Attributes
     item_type_id: z.coerce.number().optional(),
@@ -64,7 +64,7 @@ export const itemMasterSchema = z.object({
         barcode_id: z.number().optional(),
         uom_id: z.coerce.number().min(1, 'กรุณาเลือกหน่วยนับ'),
         barcode: z.string().min(1, 'กรุณากรอกบาร์โค้ด'),
-        is_active: z.boolean().default(true),
+        is_primary: z.boolean().default(false),
     })).default([]),
     is_active: z.boolean().default(true),
     
@@ -93,7 +93,7 @@ const initialFormData: ItemFormData = {
     purchase_uom_id: 0,
     sale_uom_id: 0,
     tax_code_id: 0,
-    tax_rate: 7,
+    tax_rate: 0,
     item_type_id: 0,
     item_type_code: '',
     item_category_id: 0,
@@ -143,6 +143,7 @@ export function useItemForm(editId: number | null, onSuccess?: () => void) {
         reset,
         control,
         setValue,
+        getValues,
         setError,
         clearErrors,
         formState: { errors }
@@ -269,12 +270,14 @@ export function useItemForm(editId: number | null, onSuccess?: () => void) {
         queryFn: async () => {
             if (!editId) return [];
             const res = await ItemBarcodeService.getAll({ item_id: editId });
-            return res.items.map((b: ItemBarcodeListItem) => ({
-                barcode_id: b.barcode_id || b.id,
-                uom_id: b.unit_id || 0,
-                barcode: b.barcode,
-                is_active: b.is_active
-            }));
+            return res.items
+                .filter((b: ItemBarcodeListItem) => b.is_active !== false)
+                .map((b: ItemBarcodeListItem) => ({
+                    barcode_id: b.barcode_id || b.id,
+                    uom_id: b.unit_id || 0,
+                    barcode: b.barcode,
+                    is_primary: b.is_primary ?? false
+                }));
         },
         enabled: !!editId
     });
@@ -299,11 +302,12 @@ export function useItemForm(editId: number | null, onSuccess?: () => void) {
                 const barcodes = data.barcodes || [];
                 const originalBarcodes = itemBarcodes || [];
 
-                // Delete removed (only if updating)
+                // Soft Delete removed (only if updating)
                 if (editId) {
                     const toDelete = originalBarcodes.filter((ob) => !barcodes.find(b => b.barcode_id === ob.barcode_id));
                     for (const b of toDelete) {
-                        await ItemBarcodeService.delete(b.barcode_id!);
+                        // Backend Soft Delete instead of physical removal
+                        await ItemBarcodeService.update(b.barcode_id!, { is_active: false });
                     }
                 }
 
@@ -313,13 +317,14 @@ export function useItemForm(editId: number | null, onSuccess?: () => void) {
                         await ItemBarcodeService.update(b.barcode_id, {
                             barcode: b.barcode,
                             uom_id: b.uom_id,
+                            is_default: b.is_primary
                         });
                     } else {
                         await ItemBarcodeService.create({
                             item_id: targetItemId,
                             barcode: b.barcode,
                             uom_id: b.uom_id,
-                            is_default: false
+                            is_default: b.is_primary
                         });
                     }
                 }
@@ -340,6 +345,7 @@ export function useItemForm(editId: number | null, onSuccess?: () => void) {
                 queryClient.invalidateQueries({ queryKey: ['items'] });
                 if (editId) {
                     queryClient.invalidateQueries({ queryKey: ['item-detail', editId] });
+                    queryClient.invalidateQueries({ queryKey: ['item-barcodes', editId] });
                 }
                 if (onSuccess) onSuccess();
             } else {
@@ -350,7 +356,7 @@ export function useItemForm(editId: number | null, onSuccess?: () => void) {
             logger.error('Save item error:', error);
             const apiError = extractErrorMessage(error);
             const errorMsg = apiError.toLowerCase();
-            const isDuplicate = errorMsg.includes('duplicate') || errorMsg.includes('ซ้ำ');
+            const isDuplicate = errorMsg.includes('duplicate') || errorMsg.includes('ซ้ำ') || errorMsg.includes('unique constraint');
             
             if (isDuplicate) {
                 setError('item_code', { message: 'รหัสสินค้าซ้ำในระบบ' });
@@ -400,6 +406,7 @@ export function useItemForm(editId: number | null, onSuccess?: () => void) {
         units,
         categories,
         control,
-        setValue
+        setValue,
+        getValues
     };
 }

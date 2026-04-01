@@ -23,41 +23,55 @@ export const ItemBarcodeService = {
        };
     }
     try {
-      const response = await api.get<ListResponse<ItemBarcodeListItem>>('/item-barcodes', { params });
+      // Reverting to /item-barcode as requested by user
+      const response = await api.get<any>('/item-barcode', { params });
+      
+      let rawItems: any[] = [];
       if (Array.isArray(response)) {
-          let items = response as ItemBarcodeListItem[];
-          if (params?.item_id) {
-              items = items.filter(i => i.item_id === params.item_id);
-          }
-          return { items, total: items.length, page: 1, limit: 10 };
+          rawItems = response;
+      } else if (response && response.items) {
+          rawItems = response.items;
+      } else if (response && response.data) {
+          rawItems = response.data;
       }
-      return response;
+
+      // Map DB fields to our frontend format (ItemBarcodeListItem)
+      const items: ItemBarcodeListItem[] = rawItems.map((b: any) => ({
+          id: b.id || b.barcode_id || b.item_barcode_id, // Primary ID for table rows
+          barcode_id: b.barcode_id || b.item_barcode_id || b.id,
+          item_id: b.item_id,
+          item_code: b.item_code || '',
+          item_name: b.item_name || '',
+          barcode: b.barcode || b.item_barcode_code,
+          unit_id: b.uom_id || b.unit_id,
+          unit_name: b.unit_name || '',
+          is_primary: b.is_primary || b.is_default || false,
+          is_active: b.is_active ?? true,
+          created_at: b.created_at || new Date().toISOString()
+      }));
+
+      return { items, total: items.length, page: 1, limit: items.length };
     } catch (error) {
-      logger.error('[ItemBarcodeService] getAll error:', error);
+      logger.error('[ItemBarcodeService] getAll error (trying /item-barcode):', error);
       return { items: [], total: 0 };
     }
   },
 
   getById: async (id: number): Promise<ItemBarcode | null> => {
-      if (USE_MOCK) {
-          const found = mockItemBarcodes.find(b => b.barcode_id === id);
-          if (!found) return null;
-          return {
-              barcode_id: found.barcode_id,
-              item_id: found.id, // Mock doesn't have item_id, mapping id as item_id for preview
-              item_code: found.item_code,
-              item_name: found.item_name,
-              barcode: found.barcode,
-              unit_name: found.unit_name,
-              is_primary: found.is_primary,
-              is_active: found.is_active,
-              created_at: found.created_at,
-              updated_at: found.created_at
-          };
-      }
       try {
-          const response = await api.get<ItemBarcode>(`/item-barcodes/${id}`);
-          return response;
+          const response = await api.get<any>(`/item-barcode/${id}`);
+          return {
+              barcode_id: response.barcode_id || response.item_barcode_id || response.id,
+              item_id: response.item_id,
+              barcode: response.barcode || response.item_barcode_code,
+              is_primary: response.is_primary || response.is_default || false,
+              is_active: response.is_active ?? true,
+              item_code: response.item_code || '',
+              item_name: response.item_name || '',
+              unit_name: response.unit_name || '',
+              created_at: response.created_at || new Date().toISOString(),
+              updated_at: response.updated_at || new Date().toISOString()
+          };
       } catch (error) {
           logger.error('[ItemBarcodeService] getById error:', error);
           return null;
@@ -65,12 +79,8 @@ export const ItemBarcodeService = {
   },
 
   create: async (data: ItemBarcodeCreateRequest): Promise<boolean> => {
-      if (USE_MOCK) {
-          logger.info('🎭 [Mock Mode] Create Item Barcode', data);
-          return true;
-      }
       try {
-          await api.post<SuccessResponse>('/item-barcodes', data);
+          await api.post<SuccessResponse>('/item-barcode', data);
           return true;
       } catch (error) {
           logger.error('[ItemBarcodeService] create error:', error);
@@ -79,12 +89,8 @@ export const ItemBarcodeService = {
   },
 
   update: async (id: number, data: Partial<ItemBarcodeUpdateRequest>): Promise<boolean> => {
-      if (USE_MOCK) {
-          logger.info('🎭 [Mock Mode] Update Item Barcode', id, data);
-          return true;
-      }
       try {
-          await api.patch<SuccessResponse>(`/item-barcodes/${id}`, data);
+          await api.patch<SuccessResponse>(`/item-barcode/${id}`, data);
           return true;
       } catch (error) {
           logger.error('[ItemBarcodeService] update error:', error);
@@ -93,9 +99,8 @@ export const ItemBarcodeService = {
   },
 
   delete: async (id: number): Promise<boolean> => {
-    if (USE_MOCK) return true;
     try {
-      await api.delete<SuccessResponse>(`/item-barcodes/${id}`);
+      await api.delete<SuccessResponse>(`/item-barcode/${id}`);
       return true;
     } catch (error) {
       logger.error('[ItemBarcodeService] delete error:', error);

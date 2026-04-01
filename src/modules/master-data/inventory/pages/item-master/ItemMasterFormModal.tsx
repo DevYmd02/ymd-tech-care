@@ -33,7 +33,8 @@ export function ItemMasterFormModal({ isOpen, onClose, editId, onSuccess }: Item
         register,
         categories,
         control,
-        setValue
+        setValue,
+        getValues
     } = useItemForm(editId ?? null, () => {
         if (onSuccess) onSuccess();
         onClose();
@@ -152,6 +153,7 @@ export function ItemMasterFormModal({ isOpen, onClose, editId, onSuccess }: Item
                     control={control}
                     register={register}
                     setValue={setValue}
+                    getValues={getValues}
                     errors={errors}
                     units={uom}
                     editId={editId}

@@ -152,16 +152,20 @@ export const useVQForm = (
 
   // 💱 Auto-toggle Multicurrency based on Currency Selection
   useEffect(() => {
-    if (!watchCurrency || !watchTargetCurrency) return;
+    // 🛡️ @Agent_Guard: Skip auto-toggle if viewing existing record (respect saved DB state)
+    if (isViewMode || !watchCurrency || !watchTargetCurrency) return;
     
     // It is multicurrency if the two currencies are different
-    const different = watchCurrency !== watchTargetCurrency;
-    setValue('isMulticurrency', different);
-
-    if (!different) {
-        setValue('exchange_rate', 1);
+    const different = String(watchCurrency).toUpperCase() !== String(watchTargetCurrency).toUpperCase();
+    
+    // 🛡️ ONLY auto-toggle if it's currently false (don't accidentally collapse if user manually opened it)
+    if (different && !isMulticurrency) {
+        setValue('isMulticurrency', true);
+    } else if (!different && isMulticurrency && (Number(getValues('exchange_rate')) === 1 || !getValues('exchange_rate'))) {
+        // Only auto-collapse if rate is 1 or empty
+        setValue('isMulticurrency', false);
     }
-  }, [watchCurrency, watchTargetCurrency, setValue]);
+  }, [watchCurrency, watchTargetCurrency, setValue, isViewMode, isMulticurrency, getValues]);
 
   // 💱 Auto-calculate Exchange Rate when currencies change
   useEffect(() => {
@@ -402,10 +406,19 @@ export const useVQForm = (
                 contact_person: data.contact_person || (data.vendor as any)?.contact_person || '',
                 contact_phone: data.contact_phone || (data.vendor as any)?.contact_phone || '',
                 contact_email: data.contact_email || (data.vendor as any)?.contact_email || '',
-                currency: data.currency || data.base_currency_code || 'THB',
-                isMulticurrency: Boolean((data.currency || data.base_currency_code || 'THB') !== 'THB'),
+                // 💱 @Agent_Currency_Prioritizer: Prefer explicit VQ fields (base/quote) over generic join fields
+                currency: data.base_currency_code || data.currency || 'THB',
+                isMulticurrency: Boolean(
+                    (data as any).is_multicurrency || 
+                    (data as any).isMulticurrency || 
+                    (data.base_currency_code && String(data.base_currency_code).toUpperCase() !== 'THB') ||
+                    (data.quote_currency_code && String(data.quote_currency_code).toUpperCase() !== 'THB') ||
+                    (data.currency && String(data.currency).toUpperCase() !== 'THB') ||
+                    (data.target_currency && String(data.target_currency).toUpperCase() !== 'THB') ||
+                    (Number(data.exchange_rate || 1) !== 1)
+                ),
                 exchange_rate_date: data.exchange_rate_date || '',
-                target_currency: data.target_currency || '',
+                target_currency: data.quote_currency_code || data.target_currency || 'THB',
                 exchange_rate: Number(data.exchange_rate) || 1,
                 payment_term_days: data.payment_term_days || 0,
                 lead_time_days: data.lead_time_days || 0,
@@ -761,6 +774,7 @@ export const useVQForm = (
     const payload: VQCreateData = {
       // 🛡️ @Agent_Ultimate_Purifier: STRICT DTO MAPPING (Header)
       ...(vqId ? { vq_no: data.vq_no } : {}), // Omit vq_no if creating to satisfy backend
+      isMulticurrency: data.isMulticurrency, // 💱 Persist the multicurrency state
       discount_expression: String(globalDiscountAmount || 0), // 🎯 Explicit Header Discount
       quotation_no: data.quotation_no && data.quotation_no.trim() !== '' ? data.quotation_no : '-', 
       quotation_date: data.quotation_date ? new Date(data.quotation_date).toISOString() : new Date().toISOString(),
