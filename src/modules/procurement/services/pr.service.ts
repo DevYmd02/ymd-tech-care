@@ -168,7 +168,15 @@ export const PRService = {
     // is active. The backend may not support PARTIAL/custom statuses or join-based vendor filtering,
     // so we fetch ALL items from the backend and apply filters client-side to prevent 0-result issues.
     if (needsClientFilter && !USE_MOCK) {
-        logger.debug('🚀 [PRService] Hybrid Fallback Triggered: ALL filters will be applied client-side.');
+        logger.debug('🚀 [PRService] Hybrid Fallback Triggered: Increasing search window to 500 items.');
+        
+        // 🎯 SEARCH WINDOW OPTIMIZATION:
+        // We fetch a larger chunk (500 items) from the backend starting from page 1,
+        // then apply all filters client-side. This ensures we find the records the user
+        // is looking for even if they are buried under hundreds of unfiltered items.
+        apiParams.limit = 500;
+        apiParams.page = 1;
+
         delete apiParams.vendor_code;
         delete apiParams.vendor_name;
         delete apiParams.status;
@@ -265,7 +273,8 @@ export const PRService = {
         return applyClientFilters<PRHeader>(hydratedItems, filterParams, {
             searchableFields: ['pr_no', 'requester_name', 'purpose'],
             dateField: 'need_by_date',
-            backendTotal: response.total
+            backendTotal: response.total,
+            exactMatchFields: ['status']
         });
     }
 

@@ -8,7 +8,7 @@ import type { POListParams, POListResponse, POListItem } from '@/modules/procure
 import type { POAFormData } from '@/modules/procurement/schemas/poa-schemas';
 import { logger } from '@/shared/utils/logger';
 import type { SuccessResponse } from '@/shared/types/api-response.types';
-import { extractArrayFromResponse } from '@/shared/utils/clientFilterUtils';
+import { extractArrayFromResponse, applyClientFilters } from '@/shared/utils/clientFilterUtils';
 import type { POStatus } from '@/modules/procurement/schemas/po-schemas';
 import { EmployeeService } from '@/modules/master-data/employee/services/employee.service';
 import { BranchService } from '@/modules/master-data/company/services/branch.service';
@@ -73,10 +73,16 @@ const mapPOAResponseToListItem = (
             '-'
         ),
         created_by_name: String(
+            (item.approval_emp_name && !['-','undefined'].includes(item.approval_emp_name)) ? item.approval_emp_name :
             (employeeMap && item.created_by && employeeMap[String(item.created_by).toLowerCase()]) ? employeeMap[String(item.created_by).toLowerCase()] :
             (employeeMap && poHeader.created_by && employeeMap[String(poHeader.created_by).toLowerCase()]) ? employeeMap[String(poHeader.created_by).toLowerCase()] :
+            (employeeMap && item.create_by && employeeMap[String(item.create_by).toLowerCase()]) ? employeeMap[String(item.create_by).toLowerCase()] :
+            (employeeMap && poHeader.create_by && employeeMap[String(poHeader.create_by).toLowerCase()]) ? employeeMap[String(poHeader.create_by).toLowerCase()] :
+            (employeeMap && item.created_by_id && employeeMap[String(item.created_by_id).toLowerCase()]) ? employeeMap[String(item.created_by_id).toLowerCase()] :
             (item.created_by_name && !['-','undefined'].includes(item.created_by_name)) ? item.created_by_name : 
             (poHeader.created_by_name && !['-','undefined'].includes(poHeader.created_by_name)) ? poHeader.created_by_name : 
+            (item.preparer_name && !['-','undefined'].includes(item.preparer_name)) ? item.preparer_name :
+            (poHeader.preparer_name && !['-','undefined'].includes(poHeader.preparer_name)) ? poHeader.preparer_name :
             '-'
         ),
         branch_name: String(
@@ -144,15 +150,25 @@ const mapPOAResponseToListItem = (
     return {
         ...item,
         // Identify PO ID securely
-        po_id: Number(item.approval_id || item.po_header_id || item.po_id || poHeader.po_header_id || poHeader.po_id || 0),
+        // Identify PO ID securely - support string keys for deduplication
+        po_id: item.approval_id || item.po_header_id || item.po_id || poHeader.po_header_id || poHeader.po_id || 0,
         po_header_id: Number(item.po_header_id || item.po_id || poHeader.po_header_id || poHeader.po_id || 0),
         po_no: String(poHeader.po_no || item.po_no || '-'),
         poa_no: String(item.approval_no || item.poa_no || '-'),
         po_date: String(item.approval_date || poHeader.po_date || item.po_date || item.created_at || ''),
         status: (() => {
+            const currentStatus = String(item.status || status || 'PENDING_APPROVAL').toUpperCase();
             const poaNo = String(item.approval_no || item.poa_no || '-');
-            if (status === 'PENDING_APPROVAL' && poaNo && poaNo !== '-') return 'APPROVED';
-            return status;
+            
+            // 🎯 Normalization: If backend says PENDING, map to our canonical PENDING_APPROVAL
+            let normalized = currentStatus === 'PENDING' ? 'PENDING_APPROVAL' : currentStatus;
+            
+            // 🎯 Logic: If it has a POA number, it is definitely APPROVED (even if original record says PENDING)
+            if (normalized === 'PENDING_APPROVAL' && poaNo && poaNo !== '-') {
+                normalized = 'APPROVED';
+            }
+            
+            return normalized as any;
         })(),
         
         ...recovered,
@@ -239,12 +255,10 @@ export const POAService = {
     getList: async (params?: POListParams): Promise<POListResponse> => {
         logger.info('[POAService] getList:', params);
 
-        const selectedStatus = (params?.status as string) || 'PENDING_APPROVAL';
-
-        // 1. Parallel Fetching — fetch ALL statuses from PO to include REJECTED
+        // 1. Parallel Fetching — fetch ALL statuses to ensure mapping works correctly
         const [approvalRes, poRes, poRejectedRes, empRes, branchRes, taxRes, uomRes] = await Promise.allSettled([
             api.get<Record<string, unknown>>(ENDPOINTS.list, { params: { limit: 1000, page: 1 } }),
-            POService.getList({ status: 'PENDING_APPROVAL', limit: 1000, page: 1 }),
+            POService.getList({ limit: 1000, page: 1 }), // Fetch all raw POs to avoid status mismatch; normalization happens below
             POService.getList({ status: 'REJECTED', limit: 1000, page: 1 }),
             EmployeeService.getAll(),
             BranchService.getList({ limit: 1000 }),
@@ -252,9 +266,9 @@ export const POAService = {
             UnitService.getAll({ limit: 1000 })
         ]);
 
-        const rawApprovalItems = approvalRes.status === 'fulfilled' ? extractArrayFromResponse<Record<string, unknown>>(approvalRes.value) : [];
-        const rawPendingPOs    = poRes.status === 'fulfilled'         ? poRes.value.data         : [];
-        const rawRejectedPOs   = poRejectedRes.status === 'fulfilled' ? poRejectedRes.value.data : [];
+        const rawApprovalItems = (approvalRes.status === 'fulfilled') ? extractArrayFromResponse<Record<string, unknown>>(approvalRes.value) : [];
+        const rawPendingPOs    = (poRes.status === 'fulfilled') ? extractArrayFromResponse<POListItem>(poRes.value) : [];
+        const rawRejectedPOs   = (poRejectedRes.status === 'fulfilled') ? extractArrayFromResponse<POListItem>(poRejectedRes.value) : [];
 
         // DIAGNOSTIC LOG (Temporary)
         if (rawApprovalItems && rawApprovalItems.length > 0) {
@@ -301,101 +315,134 @@ export const POAService = {
             }
         }
 
-        // 3. Normalize and Combine
-        const approvalItems: POListItem[]    = rawApprovalItems.map(item => mapPOAResponseToListItem(item, employeeMap, branchMap, taxCodeMap, uomMap));
-        const pendingPOItems: POListItem[]   = rawPendingPOs.map(item   => mapPOAResponseToListItem(item as any, employeeMap, branchMap, taxCodeMap, uomMap));
-        const rejectedPOItems: POListItem[]  = rawRejectedPOs.map(item  => mapPOAResponseToListItem(item as any, employeeMap, branchMap, taxCodeMap, uomMap));
-
-        // ---------------------------------------------------------------------------
-        // 4. Deduplicate & Combine
-        // ---------------------------------------------------------------------------
-        const listMap = new Map<string, POListItem>();
+         // 3. Normalize and Combine
+        // Approval items come from the raw /po-approval endpoint, so they need full mapping.
+        const approvalItems: POListItem[] = rawApprovalItems.map(item => mapPOAResponseToListItem(item, employeeMap, branchMap, taxCodeMap, uomMap));
         
-        // Official approval records take priority. 
-        // Use 'poa_no' as unique key for history records, falling back to 'po_no' for pending placeholders.
-        approvalItems.forEach(item => {
-            const uniqueKey = (item.poa_no && item.poa_no !== '-') ? item.poa_no : (item.po_no || '');
-            if (uniqueKey) listMap.set(uniqueKey, item);
+        // Pending/Rejected POs come from POService.getList() which ALREADY hydrates and maps them.
+        // We only need to ensure their status is canonical.
+        const pendingPOItems: POListItem[] = rawPendingPOs
+            .filter(item => {
+                const s = String(item.status || '').toUpperCase();
+                // 🎯 Filter Rule: From the raw source, only include items that actually NEED approval action.
+                // Documents that are already APPROVED or COMPLETED should only appear via the POA history.
+                return s === 'PENDING' || s === 'WAITING' || s === 'PENDING_APPROVAL' || s.startsWith('WAITING') || s === 'PARTIAL';
+            })
+            .map(item => {
+                const mapped = mapPOAResponseToListItem(item, employeeMap, branchMap, taxCodeMap, uomMap);
+                const s = String(item.status || mapped.status || '').toUpperCase();
+                // 🎯 Status normalization for actionable rows
+                const isActionable = s === 'PENDING' || s === 'WAITING' || s === 'PENDING_APPROVAL' || s.startsWith('WAITING') || s === 'PARTIAL';
+                
+                return {
+                    ...mapped,
+                    poa_no: '-', // Raw POs from /po don't have a POA number yet
+                    status: (isActionable ? 'PENDING_APPROVAL' : mapped.status) as any
+                };
+            });
+        
+        const rejectedPOItems: POListItem[] = rawRejectedPOs.map(item => {
+            const mapped = mapPOAResponseToListItem(item, employeeMap, branchMap, taxCodeMap, uomMap);
+            return {
+                ...mapped,
+                status: 'REJECTED',
+                total_amount: 0 // Business rule: Rejected shows 0 in list to avoid confusion
+            };
         });
 
-        // Add pending POs only if they are not already represented by an approval record.
-        pendingPOItems.forEach(item => {
-            const poNo = item.po_no || '';
-            // For pending POs, we check if ANY approval record already covers this PO No
-            const alreadyInList = Array.from(listMap.values()).some(existing => existing.po_no === poNo);
-            if (poNo && !alreadyInList) {
-                listMap.set(poNo, item);
+        // ---------------------------------------------------------------------------
+        // 4. Deduplicate & Combine (Strict Logic — NO DUPLICATES ALLOWED)
+        // ---------------------------------------------------------------------------
+        const listMap = new Map<string, POListItem>();
+        const seenPoIds = new Set<number>();
+
+        // 4.1 Process Official Approval Records first (Primary Source of truth for status)
+        approvalItems.forEach((item: POListItem) => {
+            const poaNo = String(item.poa_no || '').trim();
+            const poNo = String(item.po_no || '').trim();
+            const poId = item.po_id ? Number(item.po_id) : undefined;
+
+            // Use Trimmed POA Number as primary map key, or fallback to trimmed PO Number
+            const uniqueKey = (poaNo && poaNo !== '-') ? poaNo : poNo;
+            if (uniqueKey) {
+                listMap.set(uniqueKey, item);
+                if (poId) seenPoIds.add(poId);
             }
         });
 
-        // 🛡️ Add REJECTED POs — these come from the PO endpoint and may not appear in /po-approval
-        // The approval record (with status REJECTED) takes priority if it already exists.
-        rejectedPOItems.forEach(item => {
-            const poNo = item.po_no || '';
-            const alreadyInList = Array.from(listMap.values()).some(existing => existing.po_no === poNo);
-            if (poNo && !alreadyInList) {
-                // Force status to REJECTED + zero amount
-                listMap.set(poNo, { ...item, status: 'REJECTED', total_amount: 0 });
+        // 4.2 Merge Pending/Rejected POs (Deduplicate only against identical sources)
+        [...pendingPOItems, ...rejectedPOItems].forEach((item: POListItem) => {
+            const poNo = String(item.po_no || '').trim();
+            const poaNo = String(item.poa_no || '').trim();
+            const status = String(item.status || '').toUpperCase();
+
+            // 🎯 NEW: Skip DRAFT items
+            if (status === 'DRAFT') return;
+
+            // 🎯 AV-Style Key: If it's a "Waiting" round, key by PO. If it's history, key by POA.
+            // This allows PO-001 (Waiting) and POA-001 (Partial History) to coexist.
+            const isActionRow = !poaNo || poaNo === '-';
+            const uniqueKey = isActionRow ? `ACTION-${poNo}` : poaNo;
+            
+            // 🎯 Filtering Rule: If it's an Action row, check if it should be hidden due to "Full Rejection".
+            // Rule: Hide if has REJECTED history but NO PARTIAL/APPROVED history.
+            if (isActionRow) {
+                const history = approvalItems.filter(h => String(h.po_no || '').trim() === poNo);
+                const hasRejected = history.some(h => h.status === 'REJECTED');
+                const hasPositive  = history.some(h => h.status === 'PARTIAL' || h.status === 'APPROVED');
+                
+                if (hasRejected && !hasPositive) {
+                    console.log(`[POAService] Hiding Action row for fully rejected PO: ${poNo}`);
+                    return;
+                }
+            }
+            
+            if (!listMap.has(uniqueKey)) {
+                // Ensure unique po_id for React rendering
+                const realId = item.po_header_id || item.po_id || 0;
+                item.po_id = (poaNo && poaNo !== '-') ? `HIST-${poaNo}-${realId}` : `ACTION-${poNo}-${realId}`;
+                
+                listMap.set(uniqueKey, item);
+            } else {
+                console.log(`[POAService] Skipping already-added row for key: ${uniqueKey}`);
             }
         });
 
         const combinedItems = Array.from(listMap.values());
-
-        // 3. Status Filtering (Strict)
-        let filtered: POListItem[];
-        if (selectedStatus === 'ALL') {
-            filtered = combinedItems;
-        } else {
-            // Strict match for other statuses (APPROVED, PARTIAL, REJECTED, etc.)
-            // We ensure both sides are normalized for safety, although they should be already.
-            filtered = combinedItems.filter(item => {
-                const itemStatus = String(item.status || '').toUpperCase().trim();
-                const targetStatus = String(selectedStatus).toUpperCase().trim();
-                return itemStatus === targetStatus;
-            });
-        }
-
-        // DIAGNOSTIC LOG (Temporary - identifies filtering leaks)
-        logger.info(`[POAService] Status Filter applied: ${selectedStatus}. Before: ${combinedItems.length}, After: ${filtered.length}`);
-
-        // Manual Filter by ALL params
-        filtered = filtered.filter(item => {
-            const r = item as unknown as Record<string, unknown>;
-            
-            // Text Search (po_no, poa_no, vendor_name, pr_no)
-            if (params?.po_no && !String(r.po_no || '').toLowerCase().includes(params.po_no.toLowerCase())) return false;
-            if (params?.poa_no && !String(r.poa_no || '').toLowerCase().includes(params.poa_no.toLowerCase())) return false;
-            if (params?.vendor_name && !String(r.vendor_name || '').toLowerCase().includes(params.vendor_name.toLowerCase())) return false;
-            if (params?.pr_no && !String(r.pr_no || '').toLowerCase().includes(params.pr_no.toLowerCase())) return false;
-            
-            // Unified Search (q)
-            if (params?.q) {
-                const q = params.q.toLowerCase();
-                const fields = ['po_no', 'poa_no', 'vendor_name', 'pr_no', 'qc_no'];
-                if (!fields.some(f => String(r[f] || '').toLowerCase().includes(q))) return false;
+        
+        // 🔍 MEGA DIAGNOSTIC LOG (Finding the 0-item bug)
+        console.log(`[POAService] FINAL COMBINED PRE-FILTER: ${combinedItems.length} items`);
+        combinedItems.forEach((item, idx) => {
+            if (idx < 10) {
+                console.log(`[POAService] Item[${idx}] PO: ${item.po_no}, Status: "${item.status}", Type: ${typeof item.status}`);
             }
-
-            // Date Range
-            if (params?.date_from) {
-                const poDate = new Date(String(r.po_date || '0')).getTime();
-                const fromDate = new Date(params.date_from).getTime();
-                if (poDate < fromDate) return false;
-            }
-            if (params?.date_to) {
-                const poDate = new Date(String(r.po_date || '0')).getTime();
-                const toDate = new Date(params.date_to).getTime();
-                if (poDate > toDate) return false;
-            }
-
-            return true;
         });
 
-        // Paginate
-        const page  = params?.page  || 1;
-        const limit = params?.limit || 20;
-        const paginatedData = filtered.slice((page - 1) * limit, page * limit);
+        // ---------------------------------------------------------------------------
+        // 5. Client-Side Filtering & Pagination (Hybrid Fallback)
+        // ---------------------------------------------------------------------------
+        const filterParams = { ...params };
+        if (filterParams.status === 'ALL') delete filterParams.status;
 
-        return { data: paginatedData, total: filtered.length, page, limit, totalPages: Math.ceil(filtered.length / limit) };
+        // Ensure status is compared correctly (trimmed and uppercase)
+        if (filterParams.status) {
+            filterParams.status = String(filterParams.status).trim().toUpperCase() as any;
+        }
+
+        console.log(`[POAService] Applying filter with params:`, JSON.stringify(filterParams));
+
+        const result = applyClientFilters<POListItem>(combinedItems, filterParams as any, {
+            searchableFields: ['po_no', 'poa_no', 'vendor_name', 'pr_no', 'qc_no'],
+            dateField: 'po_date',
+            exactMatchFields: ['status']
+        });
+
+        console.log(`[POAService] CLIENT FILTER RESULT: total=${result.total}, data.length=${result.data.length}`);
+        if (result.data.length > 0) {
+            console.log(`[POAService] Result[0] Status: "${result.data[0].status}"`);
+        }
+
+        return result;
     },
 
 
@@ -450,38 +497,82 @@ export const POAService = {
         }
 
         const approvalRes = res.status === 'fulfilled' ? res.value : {};
-        const poHeaderId = Number(approvalRes.po_header_id || approvalRes.po_id || (approvalRes.poHeader as any)?.po_header_id || id);
-
-        let poRes: any = {};
-        try {
-            poRes = await POService.getById(poHeaderId);
-        } catch (error) {
-            logger.error(`[POAService] Could not fetch base PO ${poHeaderId}`, error);
+        
+        // 🎯 Support parsing numeric ID from composite strings (ID-xxxxx-REALID)
+        let poHeaderId = Number(approvalRes.po_header_id || approvalRes.po_id || (approvalRes.poHeader as any)?.po_header_id || id);
+        if (isNaN(poHeaderId)) {
+            const idStr = String(id || '');
+            if (idStr.includes('-')) {
+                const parts = idStr.split('-');
+                const lastPart = parts[parts.length - 1];
+                if (lastPart && !isNaN(Number(lastPart))) {
+                    poHeaderId = Number(lastPart);
+                }
+            }
         }
 
-        // Merge logic: If we have an existing POA record, its lines should take precedence.
-        // Backend POA detail might use 'lines' instead of 'po_lines'.
+        // 1. Fetch Base PO and ALL Approval History for this PO
+        let poRes: any = {};
+        let allApprovalHistory: any[] = [];
+        
+        try {
+            poRes = await POService.getById(poHeaderId);
+            
+            // 🎯 Fetch all past approvals for this PO to calculate remaining balances
+            const poNo = poRes.po_no || (approvalRes.poHeader as any)?.po_no || approvalRes.po_no;
+            if (poNo) {
+                const historyRes = await api.get<Record<string, unknown>>(ENDPOINTS.list, { params: { po_no: poNo, limit: 1000 } });
+                allApprovalHistory = extractArrayFromResponse(historyRes);
+            }
+        } catch (error) {
+            logger.error(`[POAService] Could not fetch base PO or History for ${poHeaderId}`, error);
+        }
+
+        // 2. Calculate Cumulative Approved Quantities per Line
+        // Key is po_line_id, value is sum of approved_qty from ALL rounds
+        const approvedSumMap: Record<number, number> = {};
+        allApprovalHistory.forEach((h: any) => {
+            const poaNo = String(h.approval_no || h.poa_no || '');
+            // 🎯 CRITICAL: Only count rounds that have a valid POA Number (Officially Approved rounds)
+            // If poaNo is '-' or empty, it's either the current pending session or a rejected record from POService mismatch
+            if (!poaNo || poaNo === '-') return;
+
+            const hLines = h.po_lines || h.lines || [];
+            hLines.forEach((l: any) => {
+                const lid = l.po_line_id || l.id;
+                if (lid) {
+                    approvedSumMap[lid] = (approvedSumMap[lid] || 0) + Number(l.approved_qty || 0);
+                }
+            });
+        });
+
+        // 3. Merge and Enrich Lines
         const parentLines = poRes.po_lines || poRes.poLines || [];
         const poaLinesRaw = approvalRes.po_lines || approvalRes.lines || [];
         const poaLines = (Array.isArray(poaLinesRaw) && poaLinesRaw.length > 0) ? poaLinesRaw : [];
         
-        let finalLines = poaLines;
-        if (poaLines.length > 0) {
-            // Enrich POA lines with parent PO data (qty, item_name, unit_price, po_line_id)
-            finalLines = poaLines.map((l: any, idx: number) => {
-                // Try to find matching line by po_line_id first, then fallback to index
-                const parentLine = (l.po_line_id) 
-                    ? parentLines.find((pl: any) => pl.id === l.po_line_id || pl.po_line_id === l.po_line_id) 
-                    : parentLines[idx];
-                
-                return { 
-                    ...(parentLine || {}), 
-                    ...l 
-                };
-            });
-        } else {
-            finalLines = parentLines;
-        }
+        // Use parent lines as base if creating new POV, otherwise use existing POA lines
+        const sourceLines = (poaLines.length > 0) ? poaLines : parentLines;
+
+        const finalLines = sourceLines.map((l: any, idx: number) => {
+            // Find parent PO line for the official "Ordered Qty"
+            const parentLine = (l.po_line_id) 
+                ? parentLines.find((pl: any) => pl.id === l.po_line_id || pl.po_line_id === l.po_line_id) 
+                : parentLines[idx];
+            
+            const lid = l.po_line_id || l.id || (parentLine?.id);
+            const originalQty = Number(parentLine?.qty ?? parentLine?.qty_ordered ?? l.qty ?? l.qty_ordered ?? 0);
+            const prevApproved = Number(approvedSumMap[lid] || 0);
+            const remaining = Math.max(0, originalQty - prevApproved);
+
+            return { 
+                ...(parentLine || {}), 
+                ...l,
+                previously_approved_qty: prevApproved,
+                remaining_qty: remaining,
+                qty: originalQty // Ensure full original qty is available for reference
+            };
+        });
 
         const merged: Record<string, any> = {
             ...poRes,
@@ -494,10 +585,7 @@ export const POAService = {
         
         logger.info(`[POAService] Final Hydrated Result for ${id}:`, {
             po_no: result.po_no,
-            branch: result.branch_name,
-            preparer: result.created_by_name,
-            tax: result.tax_name,
-            term: result.payment_term_days
+            remaining_check: result.po_lines?.[0], // Debug first line
         });
 
         return result;

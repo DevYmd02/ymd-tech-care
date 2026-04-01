@@ -129,6 +129,13 @@ export const RFQService = {
     // 🎯 HYBRID FALLBACK: Strip filters from API call if client filtering is active
     // Backend may not support these yet or may have inconsistent internal status (e.g. 'DRAFT' vs UI 'SENT')
     if (needsClientFilter && !USE_MOCK) {
+        logger.debug('🚀 [RFQService] Hybrid Fallback Triggered: Increasing search window to 500 items.');
+        
+        // 🎯 SEARCH WINDOW OPTIMIZATION:
+        // Fetch a larger chunk from the beginning to apply client-side filters meaningfully.
+        apiParams.limit = 500;
+        apiParams.page = 1;
+
         delete apiParams.rfq_no;
         delete apiParams.pr_no;
         delete apiParams.ref_pr_no;
@@ -190,6 +197,7 @@ export const RFQService = {
             searchableFields: ['rfq_no', 'pr_no', 'creator_name'],
             dateField: 'rfq_date',
             backendTotal: res.total,
+            exactMatchFields: ['status']
         }) as unknown as RFQListResponse;
     }
 

@@ -27,6 +27,8 @@ interface ClientFilterOptions<T> {
   dateField?: keyof T;
   /** Preserved total count from backend response to avoid capping total on paginated chunks */
   backendTotal?: number;
+  /** List of fields that MUST match exactly (e.g. status) rather than partial string matching */
+  exactMatchFields?: (keyof T)[];
 }
 
 /** Standard paginated list response shape used across all procurement modules */
@@ -86,11 +88,20 @@ export const applyClientFilters = <T extends object>(
 
       // String → Partial Match (Case Insensitive)
       if (typeof itemValue === 'string' && typeof filterValue === 'string') {
-        return itemValue.toLowerCase().includes(filterValue.toLowerCase());
+        const isExactMatchField = options.exactMatchFields?.includes(key as keyof T);
+        if (isExactMatchField) {
+            const match = String(itemValue || '').trim().toLowerCase() === String(filterValue || '').trim().toLowerCase();
+            if (!match) {
+                return false;
+            }
+            return true;
+        }
+        return String(itemValue || '').toLowerCase().includes(String(filterValue || '').toLowerCase());
       }
 
       // Strict Equality with String Casting for Robustness
-      return String(itemValue) === String(filterValue);
+      const match = String(itemValue ?? '').trim() === String(filterValue ?? '').trim();
+      return match;
     });
   });
 

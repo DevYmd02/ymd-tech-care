@@ -132,9 +132,14 @@ const POLineRow: React.FC<POLineRowProps> = ({ field, idx, control, isReadOnly, 
                 {field.item_name || field.description || '-'}
             </td>
 
-            {/* 5. Qty Ordered (Static Reference from Parent PO) */}
-            <td data-col="5" data-label="Qty" className="px-2 py-2 text-center border-r border-gray-200 dark:border-gray-700 text-slate-700 dark:text-slate-300 font-medium w-20 min-w-[80px]">
+            {/* 5. Original Ordered Qty */}
+            <td data-col="5" data-label="OrigQty" className="px-2 py-2 text-center border-r border-gray-200 dark:border-gray-700 text-slate-500 dark:text-slate-500 text-xs w-20 min-w-[80px]">
                 {detailData?.po_lines?.[idx]?.qty ?? field.qty ?? '0'}
+            </td>
+
+            {/* 5.1 Remaining Qty (Calculated Balance) */}
+            <td data-col="5.1" data-label="RemQty" className="px-2 py-2 text-center border-r border-gray-200 dark:border-gray-700 text-blue-600 dark:text-blue-400 font-bold w-20 min-w-[80px] bg-blue-50/10">
+                {field.remaining_qty?.toLocaleString() ?? detailData?.po_lines?.[idx]?.remaining_qty?.toLocaleString() ?? '-'}
             </td>
 
             {/* 6. Unit */}
@@ -147,20 +152,33 @@ const POLineRow: React.FC<POLineRowProps> = ({ field, idx, control, isReadOnly, 
                 <Controller
                     name={`po_lines.${idx}.qty_ordered`}
                     control={control}
+                    rules={{ 
+                        max: { 
+                            value: field.remaining_qty || 999999, 
+                            message: `เกินยอดคงเหลือ (${field.remaining_qty})` 
+                        } 
+                    }}
                     render={({ field: { value, onChange } }) => (
-                        <input
-                            type="number" step="any"
-                            value={value ?? ''}
-                            onChange={e => onChange(e.target.valueAsNumber)}
-                            disabled={isReadOnly}
-                            className={cn(
-                                ui.input,
-                                '!h-9 text-center text-[14px] font-semibold',
-                                !isReadOnly && 'text-emerald-700 dark:text-emerald-400 border-emerald-500 bg-emerald-50/30 dark:bg-emerald-950/20 focus:border-emerald-500 focus:ring-emerald-500/20 shadow-sm',
-                                isReadOnly && ui.inputRO,
-                                errors.po_lines?.[idx]?.qty_ordered && 'border-red-500 focus:ring-red-500/20 focus:border-red-500'
+                        <div className="relative">
+                            <input
+                                type="number" step="any"
+                                value={value ?? ''}
+                                onChange={e => onChange(e.target.valueAsNumber)}
+                                disabled={isReadOnly}
+                                className={cn(
+                                    ui.input,
+                                    '!h-9 text-center text-[14px] font-semibold',
+                                    !isReadOnly && 'text-emerald-700 dark:text-emerald-400 border-emerald-500 bg-emerald-50/30 dark:bg-emerald-950/20 focus:border-emerald-500 focus:ring-emerald-500/20 shadow-sm',
+                                    isReadOnly && ui.inputRO,
+                                    errors.po_lines?.[idx]?.qty_ordered && 'border-red-500 focus:ring-red-500/20 focus:border-red-500 bg-red-50/50'
+                                )}
+                            />
+                            {errors.po_lines?.[idx]?.qty_ordered && (
+                                <div className="absolute -bottom-5 left-0 right-0 text-[9px] text-red-500 font-bold text-center leading-tight">
+                                    {errors.po_lines?.[idx]?.qty_ordered?.message}
+                                </div>
                             )}
-                        />
+                        </div>
                     )}
                 />
             </td>
@@ -525,12 +543,11 @@ export default function POAFormModal({
                                             <th className="px-2 py-2 text-center w-12 border-r border-blue-500/40 font-semibold">ลำดับ</th>
                                             <th className="px-3 py-2 text-left w-28 border-r border-blue-500/40 font-semibold">รหัสสินค้า</th>
                                             <th className="px-3 py-2 text-left border-r border-blue-500/40 font-semibold">ชื่อสินค้า/บริการ</th>
-                                            <th className="px-2 py-2 text-center w-20 border-r border-blue-500/40 font-semibold">
-                                                {isPartialApproval ? "จำนวนคงเหลือ" : "จำนวนสั่ง"}
-                                            </th>
-                                            <th className="px-2 py-2 text-center w-20 border-r border-blue-500/40 font-semibold">หน่วย</th>
-                                            <th className="px-2 py-2 text-center w-24 border-r border-blue-500/40 bg-emerald-500 text-white font-semibold">ยอดอนุมัติ</th>
-                                            <th className="px-2 py-2 text-center w-24 border-r border-blue-500/40 font-semibold">ราคา/หน่วย</th>
+                                            <th className="px-2 py-2 text-center w-20 border-r border-blue-500/40 font-semibold text-[11px]">จำนวนเดิม</th>
+                                            <th className="px-2 py-2 text-center w-20 border-r border-blue-500/40 font-bold text-[11px] bg-blue-700">คงเหลือ</th>
+                                            <th className="px-2 py-2 text-center w-20 border-r border-blue-500/40 font-semibold text-[11px]">หน่วย</th>
+                                            <th className="px-2 py-2 text-center w-24 border-r border-blue-500/40 bg-emerald-500 text-white font-bold text-[11px]">ยอดอนุมัติ</th>
+                                            <th className="px-2 py-2 text-center w-24 border-r border-blue-500/40 font-semibold text-[11px]">ราคา/หน่วย</th>
                                             <th className="px-2 py-2 text-center w-20 border-r border-blue-500/40 font-semibold">ส่วนลด</th>
                                             <th className="px-2 py-2 text-center w-28 border-r border-blue-500/40 font-semibold">ยอดสุทธิ</th>
                                             <th className="px-2 py-2 text-center w-20 border-r border-blue-500/40 font-semibold">ประเภท</th>

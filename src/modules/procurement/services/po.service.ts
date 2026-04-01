@@ -1,4 +1,4 @@
-import api from '@/core/api/api';
+import api, { USE_MOCK } from '@/core/api/api';
 import type { POListParams, POListResponse, POListItem } from '@/modules/procurement/types';
 import { CreatePOSchema, type POStatus } from '@/modules/procurement/schemas/po-schemas';
 import type { CreatePOPayload } from '@/modules/procurement/types';
@@ -61,9 +61,34 @@ export const POService = {
      */
     getList: async (params?: POListParams): Promise<POListResponse> => {
         logger.info('[POService] Fetching PO List', params);
-        const response = await api.get<POListResponse>(ENDPOINTS.list, { params });
 
+        // 🎯 SEARCH WINDOW OPTIMIZATION (Hybrid Fallback)
+        // If we are filtering by fields the backend might not consistently support,
+        // we fetch a larger dataset (500 items) to ensure client-side filtering is effective.
+        const apiParams = { ...(params || {}) };
+        const needsHybridFallback = !!(params?.po_no || params?.vendor_name || params?.status || params?.date_from || params?.date_to || params?.poa_no || params?.pr_no);
+
+        if (needsHybridFallback && !USE_MOCK) {
+            logger.debug('🚀 [POService] Hybrid Fallback Triggered: Increasing search window to 500 items.');
+            apiParams.limit = 500;
+            apiParams.page = 1;
+            
+            // Map our canonical frontend status to what the backend expects for the API call
+            if (apiParams.status === 'PENDING_APPROVAL') {
+                (apiParams as any).status = 'PENDING';
+            }
+            
+            // Strip other client-only filters
+            delete apiParams.po_no;
+            delete apiParams.vendor_name;
+            delete apiParams.date_from;
+            delete apiParams.date_to;
+        }
+
+        const response = await api.get<POListResponse>(ENDPOINTS.list, { params: apiParams });
         const rawItems = extractArrayFromResponse<POListItem>(response);
+        
+        console.log(`[POService] RAW BACKEND RESULT: total=${response.total}, items_returned=${rawItems.length}, api_status_used="${(apiParams as any).status || 'NONE'}"`);
 
         // 1. Hydrate Vendors
         const vendorMap: Record<number, string> = {};
@@ -150,12 +175,13 @@ export const POService = {
         const result = applyClientFilters<POListItem>(allItems, params as any, {
             searchableFields: ['po_no', 'vendor_name', 'qc_no', 'pr_no', 'poa_no'],
             dateField: 'po_date',
-            backendTotal: response.total ?? allItems.length
+            backendTotal: response.total ?? allItems.length,
+            exactMatchFields: ['status']
         });
 
         // If not in Mock mode, we still trust the backend's total count if it's much larger than our items
         // but if we have filtering active, we use the client-side filtered count.
-        const isFiltering = params?.po_no || params?.vendor_name || params?.status || params?.date_from || params?.date_to;
+        const isFiltering = !!(params?.po_no || params?.vendor_name || params?.status || params?.date_from || params?.date_to);
         const total = isFiltering ? result.total : (response.total ?? allItems.length);
         
         return {

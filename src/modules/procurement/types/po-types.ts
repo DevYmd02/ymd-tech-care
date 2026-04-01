@@ -21,7 +21,7 @@ import type { POStatus } from '@/modules/procurement/schemas/po-schemas';
  * Table: po_header
  */
 export interface POHeader {
-    po_id: number;                  // INTEGER @id
+    po_id: any;                  // Support string unique keys (UPG-...) to prevent React duplicate key errors
     po_header_id: number;           // Aligned with API PK
     po_no: string;                  // varchar(30)
     po_date: string;                // date

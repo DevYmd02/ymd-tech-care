@@ -56,7 +56,15 @@ export const usePOAForm = ({
         enabled: isOpen && !!currentPoId,
     });
 
-    const isReadOnly = readOnly || ['APPROVED', 'PARTIAL', 'REJECTED', 'COMPLETED', 'CANCELLED', 'ISSUED'].includes(detailData?.status || initialValues?.status || '');
+    const currentStatus = detailData?.status || initialValues?.status || '';
+    const currentPoaNo  = detailData?.poa_no || initialValues?.poa_no || '-';
+    
+    // 🎯 Logic: Is Read Only if (Status is Terminal) AND (It is a historical record with a POA No)
+    // If it is a PARTIAL record but poa_no is '-', it's a "Waiting" round for the balance -> NOT Read Only.
+    const isReadOnly = readOnly || (
+        ['APPROVED', 'PARTIAL', 'REJECTED', 'COMPLETED', 'CANCELLED', 'ISSUED'].includes(currentStatus) && 
+        (currentPoaNo !== '-')
+    );
 
     const { data: currencies = [], isLoading: isLoadingCurrencies } = useQuery({
         queryKey: ['master-currencies'],
@@ -111,18 +119,18 @@ export const usePOAForm = ({
             const initialLines = (sourceObj.po_lines || sourceObj.lines || []).map((l: any) => {
                 // For history records, if it was approved/partial, it should stay checked
                 const wasApproved = (l.status === 'APPROVED' || l.status === 'PARTIAL');
-                const hasRemaining = l.remaining_qty !== undefined ? Number(l.remaining_qty) > 0 : true;
 
-                // 🎯 DEFAULT FULL QTY: For PENDING_APPROVAL, pre-fill approved qty = full ordered qty
-                // This lets the approver see the full amount and reduce only if doing partial approval.
+                // 🎯 DEFAULT BAL QTY: For PENDING_APPROVAL, pre-fill approved qty = remaining qty
+                // This lets the approver see the actual balance left to approve.
                 // For already-approved records we respect the recorded qty_ordered from the POA.
-                const fullQty = Number(l.qty || l.qty_ordered || 0);
-                const defaultQty = isPending ? fullQty : Number(l.qty_ordered || l.qty || 0);
+                const originalQty = Number(l.qty || l.qty_ordered || 0);
+                const remainingQty = l.remaining_qty !== undefined ? Number(l.remaining_qty) : originalQty;
+                const defaultQty = isPending ? remainingQty : Number(l.qty_ordered || l.qty || 0);
                 
                 return {
                     ...l,
                     qty_ordered: defaultQty,
-                    is_approved: l.is_approved !== undefined ? !!l.is_approved : (wasApproved || fullQty > 0 || hasRemaining)
+                    is_approved: l.is_approved !== undefined ? !!l.is_approved : (wasApproved || remainingQty > 0)
                 };
             });
 
