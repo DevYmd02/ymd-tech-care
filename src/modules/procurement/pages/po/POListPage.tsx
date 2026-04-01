@@ -123,21 +123,21 @@ export default function POListPage() {
         columnHelper.accessor('po_no', {
             header: () => <div className="text-left whitespace-nowrap">เลขที่ PO</div>,
             cell: (info) => (
-                <span className="font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline cursor-pointer whitespace-nowrap" title={info.getValue()}>
+                <span className="font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline cursor-pointer whitespace-nowrap text-sm" title={info.getValue()}>
                     {info.getValue()}
                 </span>
             ),
-            size: 120,
+            size: 140,
             enableSorting: false,
         }),
         columnHelper.accessor('po_date', {
             header: 'วันที่',
             cell: (info) => (
-                <span className="text-gray-600 dark:text-gray-300 whitespace-nowrap text-xs">
+                <span className="text-gray-600 dark:text-gray-300 whitespace-nowrap text-sm">
                     {formatThaiDate(info.getValue())}
                 </span>
             ),
-            size: 90,
+            size: 110,
             enableSorting: false,
         }),
         columnHelper.accessor('qc_no', {
@@ -149,14 +149,14 @@ export default function POListPage() {
                 const qcDisplay = item.qc_no || (item.qc_id ? `ID: ${item.qc_id}` : null);
                 
                 return (
-                    <div className="flex flex-col whitespace-nowrap">
+                    <div className="flex flex-col whitespace-nowrap text-sm">
                         {prDisplay ? (
                             <>
                                 <span className="font-medium text-indigo-500/90 dark:text-indigo-400/80 leading-tight">
                                     {prDisplay}
                                 </span>
                                 {qcDisplay && (
-                                    <span className="text-[10px] text-slate-500/80 dark:text-slate-400/80 mt-0.5 hover:text-slate-700 hover:underline cursor-pointer leading-tight">
+                                    <span className="text-[11px] text-slate-500/80 dark:text-slate-400/80 mt-0.5 hover:text-slate-700 hover:underline cursor-pointer leading-tight font-medium">
                                         {qcDisplay}
                                     </span>
                                 )}
@@ -166,12 +166,16 @@ export default function POListPage() {
                                 {qcDisplay}
                             </span>
                         ) : (
-                            <span className="text-gray-400">-</span>
+                            <div className="flex items-center">
+                                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 bg-slate-100/50 dark:bg-slate-800/30 px-1.5 py-0.5 rounded border border-slate-200/50 dark:border-slate-700/30 whitespace-nowrap uppercase tracking-wider">
+                                    สร้างโดยตรง (PO)
+                                </span>
+                            </div>
                         )}
                     </div>
                 );
             },
-            size: 130,
+            size: 140,
             enableSorting: false,
         }),
         columnHelper.accessor('vendor_name', {
@@ -183,43 +187,14 @@ export default function POListPage() {
                 const vendorDisplayName = item.vendor?.vendor_name || item.vendor_name || (item.vendor_id ? `Vendor ID: ${item.vendor_id}` : '-');
                 
                 return (
-                    <div className="truncate font-medium text-slate-700 dark:text-gray-200 text-left max-w-[120px] lg:max-w-[180px]" title={vendorDisplayName}>
+                    <div className="truncate font-semibold text-slate-700 dark:text-gray-200 text-left max-w-[150px] lg:max-w-[220px] text-sm" title={vendorDisplayName}>
                         {vendorDisplayName}
                     </div>
                 );
             },
-            size: 180,
+            size: 220,
             enableSorting: false,
         }),
-        columnHelper.accessor(row => row.status, {
-            id: 'status',
-            header: () => <div className="text-center w-full">สถานะ</div>,
-            cell: (info) => (
-                <div className="flex justify-center" title={info.row.original.reject_reason || undefined}>
-                    <POStatusBadge status={info.getValue()} className="whitespace-nowrap scale-[0.9]" />
-                </div>
-            ),
-            size: 80,
-            enableSorting: false,
-        }),
-        /* 
-        columnHelper.accessor('item_count', {
-            header: () => <div className="text-right w-full whitespace-nowrap">รายการ</div>,
-            cell: (info) => {
-                const item = info.row.original;
-                // Safe Array Access
-                // @ts-expect-error - handle dynamic mapping
-                const count = item.item_count || item.po_lines?.length;
-                return (
-                    <div className="text-right text-gray-600 dark:text-gray-300 w-full text-xs font-medium">
-                        {count !== undefined ? `${count} รายการ` : '-'}
-                    </div>
-                );
-            },
-            size: 60,
-            enableSorting: false,
-        }), 
-        */
         columnHelper.accessor('total_amount', {
             header: () => <div className="text-right w-full whitespace-nowrap">ยอดรวม (บาท)</div>,
             cell: (info) => {
@@ -228,12 +203,23 @@ export default function POListPage() {
                 // @ts-expect-error - handle string to number conversion from API
                 const val = Number(item.base_total_amount || item.total_amount || 0);
                 return (
-                    <div className="text-right font-bold text-gray-800 dark:text-white whitespace-nowrap w-full text-xs">
+                    <div className="text-right font-bold text-gray-800 dark:text-white whitespace-nowrap w-full text-sm">
                         {new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val)}
                     </div>
                 );
             },
-            size: 80,
+            size: 120,
+            enableSorting: false,
+        }),
+        columnHelper.accessor(row => row.status, {
+            id: 'status',
+            header: () => <div className="text-center w-full">สถานะ</div>,
+            cell: (info) => (
+                <div className="flex justify-center" title={info.row.original.reject_reason || undefined}>
+                    <POStatusBadge status={info.getValue()} className="whitespace-nowrap scale-[0.95]" />
+                </div>
+            ),
+            size: 100,
             enableSorting: false,
         }),
         columnHelper.display({
@@ -478,7 +464,9 @@ export default function POListPage() {
                                                         {item.qc_no}
                                                     </span>
                                                 ) : (
-                                                    <span className="text-gray-400">-</span>
+                                                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 bg-slate-100/50 dark:bg-slate-800/30 px-1.5 py-0.5 rounded border border-slate-200/50 dark:border-slate-700/30 whitespace-nowrap uppercase tracking-wider">
+                                                        สร้างโดยตรง
+                                                    </span>
                                                 )}
                                             </div>
                                         ),

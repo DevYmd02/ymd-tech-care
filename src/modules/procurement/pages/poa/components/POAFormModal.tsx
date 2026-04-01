@@ -31,7 +31,7 @@ const ui = {
     error: 'text-red-500 text-[10px] mt-0.5 font-medium',
 };
 
-const POSummaryPanel = ({ control, detailData }: { control: Control<POAFormData>; detailData?: any }) => {
+const POSummaryPanel = ({ control, detailData }: { control: Control<POAFormData>; detailData?: Record<string, any> }) => {
     const poLines = useWatch({ control, name: 'po_lines' });
 
     const { grossTotal, totalDiscount, taxAmount, totalAmount, taxRate } = useMemo(() => {
@@ -42,19 +42,20 @@ const POSummaryPanel = ({ control, detailData }: { control: Control<POAFormData>
             return sum + parseDiscountAmount(l.discount_expression || '0', lineGross);
         }, 0);
         const subtotal = grossTotal - totalDiscount;
-        const rawRate = Number((detailData as any)?.tax_code?.tax_rate ?? (detailData as any)?.tax_rate ?? 7);
+        const rawRate = Number((detailData as Record<string, any>)?.tax_code?.tax_rate ?? (detailData as Record<string, any>)?.tax_rate ?? 7);
         // Normalize: if rate is 0.07, treat as 7%
         const normalizedRate = (rawRate > 0 && rawRate < 1) ? (rawRate * 100) : rawRate;
         const taxRate = parseFloat(normalizedRate.toFixed(4));
         // 🛡️ Round to 2dp (ERP Currency Precision Standard)
         const taxAmount   = Math.round(subtotal * (taxRate / 100) * 100) / 100;
         const totalAmount = Math.round((subtotal + taxAmount) * 100) / 100;
+
         return {
             grossTotal:    Math.round(grossTotal    * 100) / 100,
             totalDiscount: Math.round(totalDiscount * 100) / 100,
             taxAmount,
             totalAmount,
-            taxRate,
+            taxRate
         };
     }, [poLines, detailData]);
 
@@ -72,9 +73,9 @@ const POSummaryPanel = ({ control, detailData }: { control: Control<POAFormData>
                 <span className="text-gray-600 dark:text-slate-400">ภาษีมูลค่าเพิ่ม ({taxRate}%)</span>
                 <span className="font-medium text-gray-900 dark:text-white">{taxAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
             </div>
-            <div className="border-t border-gray-200 dark:border-slate-700 pt-3 flex justify-between items-baseline">
-                <span className="text-base font-bold text-gray-800 dark:text-slate-200">รวมสุทธิ</span>
-                <span className="text-xl font-bold text-blue-600 dark:text-blue-400">{totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+            <div className="border-t border-gray-100 dark:border-slate-700 pt-2 flex justify-between items-baseline">
+                <span className="text-sm font-bold text-gray-700 dark:text-slate-300">รวมสุทธิ</span>
+                <span className="text-lg font-bold text-blue-600 dark:text-blue-400">{totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
             </div>
         </div>
     );
@@ -258,7 +259,6 @@ export default function POAFormModal({
         currencies,
         isLoadingCurrencies,
         isReadOnly,
-        isFetchingRate,
         isPartialApproval,
     } = usePOAForm({ isOpen, onClose, onSuccess, poId, initialValues, readOnly });
 
@@ -479,13 +479,8 @@ export default function POAFormModal({
                                                     {...register('exchange_rate', { valueAsNumber: true })}
                                                     className={cn(ui.input, "text-right pr-8", errors.exchange_rate && "border-red-500 focus:ring-red-500/20 focus:border-red-500")} 
                                                     placeholder="1" 
-                                                    disabled={isReadOnly || isFetchingRate}
+                                                    disabled={isReadOnly}
                                                 />
-                                                {isFetchingRate && (
-                                                    <div className="absolute right-2 top-1.5">
-                                                        <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
-                                                    </div>
-                                                )}
                                             </div>
                                             {errors.exchange_rate && <p className={ui.error}>{errors.exchange_rate.message}</p>}
                                         </div>

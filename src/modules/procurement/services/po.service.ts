@@ -175,7 +175,10 @@ export const POService = {
         const mappedItem = {
             ...res,
             po_id: res.po_id ?? (res as unknown as { po_header_id?: number }).po_header_id as number,
-            status: normalizePOStatus(res.status)
+            status: normalizePOStatus(res.status),
+            exchange_rate: Number((res as Record<string, any>).exchange_rate || (res as Record<string, any>).exchangeRate || (res as Record<string, any>).quote_currency_rate || 1),
+            quote_currency_code: String((res as Record<string, any>).quote_currency_code || res.currency_code || (res as Record<string, any>).quoteCurrencyCode || (res as Record<string, any>).currencyCode || 'THB'),
+            base_currency_code: String((res as Record<string, any>).base_currency_code || (res as Record<string, any>).target_currency || (res as Record<string, any>).baseCurrencyCode || (res as Record<string, any>).targetCurrency || 'THB'),
         };
 
         if (mappedItem.vendor_id && !mappedItem.vendor_name) {

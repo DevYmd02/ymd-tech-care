@@ -188,7 +188,7 @@ export const usePOForm = ({
                 const detail = existingPO as unknown as Record<string, unknown>;
                 const lines = (detail.poLines || detail.po_lines || detail.lines || []) as Record<string, unknown>[];
                 if (lines.length > 0) {
-                    initialPOLines = lines.map((l: any, idx: number) => ({
+                    initialPOLines = lines.map((l: Record<string, any>, idx: number) => ({
                         line_no:         idx + 1,
                         item_id:         Number(l.item_id || 0),
                         po_line_id:      l.po_line_id ? Number(l.po_line_id) : undefined,
@@ -213,13 +213,13 @@ export const usePOForm = ({
             }
             // Phase 1: Direct PO Lines from internal or partial initialValues
             else if (initialValues?.po_lines && initialValues.po_lines.length > 0) {
-                initialPOLines = initialValues.po_lines.map((l: any, idx: number) => ({
+                initialPOLines = initialValues.po_lines.map((l: Record<string, any>, idx: number) => ({
                     ...l,
                     po_line_id: Number(l.po_line_id || (l.id && l.id !== l.item_id ? l.id : undefined) || 0) || undefined,
                     id: Number(l.po_line_id || l.id || l.item_id || 0),
                     item_id: Number(l.item_id || l.id || 0),
                     line_no: l.line_no || idx + 1,
-                }));
+                })) as any[]; // Cast to any[] temporarily to satisfy the complex PO line interface assignment
             } 
             // Phase 2: Derive from RFQ/VQ inheritance
             else if (inheritedQC && (inheritedQC.vq_lines || inheritedQC.lines)) {
@@ -274,6 +274,11 @@ export const usePOForm = ({
             const detail = (existingPO as any) || {};
             const cleanD = (d: any) => (typeof d === 'string' && d.includes('T')) ? d.split('T')[0] : d;
 
+            // 🎯 Robust Multicurrency Detection
+            const backendCurrency = detail?.currency_code || detail?.quote_currency_code || initialValues?.currency_code || 'THB';
+            const backendRate = Number(detail?.exchange_rate || inheritedQC?.exchange_rate || initialValues?.exchange_rate || 1);
+            const isActuallyMulti = !!(backendCurrency && backendCurrency !== 'THB') || backendRate !== 1;
+
             reset({
                 po_no:                detail?.po_no                       ?? initialValues?.po_no                ?? undefined,
                 po_date:              cleanD(detail?.po_date)              ?? cleanD(initialValues?.po_date)      ?? new Date().toISOString().split('T')[0],
@@ -287,13 +292,13 @@ export const usePOForm = ({
                 vendor_name:          detail?.vendor_name                 ?? initialValues?.vendor_name          ?? undefined,
                 branch_id:            detail?.branch_id                   ?? initialValues?.branch_id            ?? undefined,
                 ship_to_warehouse_id: detail?.ship_to_warehouse_id       ?? detail?.warehouse_id ?? initialValues?.ship_to_warehouse_id ?? undefined,
-                is_multicurrency:     false,
-                currency_code:        detail?.currency_code               ?? (inheritedQC?.base_currency_code || inheritedQC?.currency || initialValues?.currency_code) ?? 'THB',
-                base_currency_code:   inheritedQC?.base_currency_code     || 'THB',
-                quote_currency_code:  inheritedQC?.quote_currency_code    || inheritedQC?.currency || 'THB',
+                is_multicurrency:     isActuallyMulti,
+                currency_code:        backendCurrency,
+                base_currency_code:   detail?.base_currency_code          || inheritedQC?.base_currency_code     || 'THB',
+                quote_currency_code:  backendCurrency,
                 target_currency:      'THB',
                 exchange_rate_date:   cleanD(detail?.exchange_rate_date)  ?? cleanD(initialValues?.exchange_rate_date) ?? new Date().toISOString().split('T')[0],
-                exchange_rate:        Number(detail?.exchange_rate        || inheritedQC?.exchange_rate || initialValues?.exchange_rate || 1),
+                exchange_rate:        backendRate,
                 payment_term_days:    Number(detail?.payment_term_days    || inheritedQC?.payment_term_days || initialValues?.payment_term_days || 30),
                 delivery_date:        cleanD(detail?.delivery_date)       || cleanD(initialValues?.delivery_date) || '',
                 remarks:              detail?.remarks                     ?? initialValues?.remarks ?? '',
@@ -920,7 +925,7 @@ export const usePOForm = ({
                 branch_id:          Number(pendingPayload.branch_id),
                 warehouse_id:       Number(pendingPayload.ship_to_warehouse_id),
                 base_currency_code: pendingPayload.base_currency_code || "THB",
-                quote_currency_code: pendingPayload.quote_currency_code || pendingPayload.currency_code || "THB",
+                quote_currency_code: pendingPayload.currency_code || pendingPayload.quote_currency_code || "THB",
                 exchange_rate:      Number(pendingPayload.exchange_rate || 1),
                 exchange_rate_date: pendingPayload.exchange_rate_date ? new Date(pendingPayload.exchange_rate_date).toISOString() : new Date().toISOString(),
                 tax_code_id:        Number(pendingPayload.tax_code_id),
@@ -930,10 +935,8 @@ export const usePOForm = ({
                 created_by:         (poId ? (getValues('created_by') ? Number(getValues('created_by')) : undefined) : (user?.id ? Number(user.id) : undefined)) as unknown as number,
                 
                 // 🚫 FORBIDDEN PROPERTIES: Backend DTO strictly rejects these in the header for PO creation.
-                // Traceability is handled via pr_id and line-level rfq_line_id.
-                // rfq_id:          safeId(pendingPayload.rfq_id),
-                // winning_vq_id:   safeId(pendingPayload.winning_vq_id),
-                // qc_no:           pendingPayload.qc_no || undefined,
+                // Re-removing to fix 400 Bad Request: "property ... should not exist"
+                // payment_term_days, delivery_date, remark
                 
                 // 🚫 SUMMARY FIELDS REMOVED: Backend calculates subtotal, tax_amount, total_amount automatically.
                 // Property subtotal should not exist. property tax_amount should not exist. property total_amount should not exist.
@@ -944,7 +947,7 @@ export const usePOForm = ({
                     pr_line_id:     safeId(item.pr_line_id),
                     rfq_line_id:    safeId(item.rfq_line_id), // 🎯 PR/QC Traceability
                     status:         "OPEN",
-                    qty:            Number(item.qty || item.qty_ordered || 0),
+                    qty:            Number(item.qty_ordered ?? item.qty ?? 0),
                     uom_id:         Number(item.uom_id),
                     unit_price:     Number(item.unit_price),
                     tax_code_id:    pendingPayload.tax_code_id !== undefined ? Number(pendingPayload.tax_code_id) : Number(item.tax_code_id),
