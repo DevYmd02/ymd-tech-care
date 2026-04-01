@@ -138,15 +138,16 @@ function overlayAVStatus(items: PRHeader[], avStatusMap: Map<number, { status: s
       const newItem = { ...item };
       if (avNo) newItem.av_no = avNo;
 
+      // 🛡️ Only override status if the current Header status is 'PENDING'
+      // This ensures we trust the Header (GET /pr) once a document is no longer waiting for approval,
+      // while still allowing the AV Module to sync status for active 'PENDING' items.
       if (avStatus && avStatus !== item.status) {
-        const isStaleRejection = item.status === 'PENDING' && avStatus === 'REJECTED';
-        if (isStaleRejection) {
-          logger.debug(`[PRService] ⏭️ Skipping stale AV rejection for PR ${item.pr_no} (Header is already PENDING)`);
-          return newItem;
+        if (item.status === 'PENDING') {
+          logger.info(`[PRService] 🔄 Syncing PENDING PR ${item.pr_no} status → ${avStatus} (from AV record)`);
+          newItem.status = avStatus as PRHeader['status'];
+        } else {
+          logger.debug(`[PRService] ⏭️ Skipping AV status override for PR ${item.pr_no} (Header is already ${item.status}, skipping AV ${avStatus})`);
         }
-
-        logger.info(`[PRService] 🔄 Overriding PR ${item.pr_no} status: ${item.status} → ${avStatus} (from AV record)`);
-        newItem.status = avStatus as PRHeader['status'];
       }
       return newItem;
     }

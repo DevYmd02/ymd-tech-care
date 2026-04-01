@@ -23,22 +23,24 @@ const normalizePOStatus = (status?: string): POStatus => {
     if (!status) return 'DRAFT';
     const s = status.toUpperCase().trim();
 
-    // Direct mapping — trust what the backend sends
-    if (s === 'APPROVED')              return 'APPROVED';
-    if (s === 'PARTIAL')               return 'PARTIAL';
+    // 1. Terminal/Explicit Statuses
+    if (s === 'APPROVED' || s === 'SUCCESS') return 'APPROVED';
     if (s === 'REJECTED' || s === 'CANCEL' || s === 'CANCELLED') return 'REJECTED';
-    if (s === 'ISSUED')                return 'ISSUED';
-    if (s === 'COMPLETED')             return 'COMPLETED';
-    if (s === 'DRAFT')                 return 'DRAFT';
+    if (s === 'ISSUED')   return 'ISSUED';
+    if (s === 'COMPLETED') return 'COMPLETED';
+    if (s === 'PARTIAL' || s === 'PARTIALLY_APPROVED') return 'PARTIAL';
+    if (s === 'DRAFT')     return 'DRAFT';
 
-    // Map all PENDING/WAITING variants → PENDING_APPROVAL
-    if (s === 'PENDING' || s === 'PENDING_APPROVAL' ||
-        s === 'WAITING' || s === 'WAITING_APPROVAL' ||
-        s === 'WAITING_FOR_APPROVE' || s === 'WAITING_FOR_APPROVAL') {
+    // 2. Pending/Waiting variants → PENDING_APPROVAL
+    const pendingVariants = [
+        'PENDING', 'PENDING_APPROVAL', 'WAITING', 
+        'WAITING_APPROVAL', 'WAITING_FOR_APPROVE', 'WAITING_FOR_APPROVAL'
+    ];
+    if (pendingVariants.includes(s)) {
         return 'PENDING_APPROVAL';
     }
 
-    // Fallback: return as-is (let UI handle unknown values)
+    // 3. Fallback
     return (status as POStatus) || 'DRAFT';
 };
 
@@ -339,26 +341,52 @@ export const POAService = {
 
         const combinedItems = Array.from(listMap.values());
 
-        // Status filter
+        // 3. Status Filtering (Strict)
         let filtered: POListItem[];
         if (selectedStatus === 'ALL') {
             filtered = combinedItems;
         } else {
-            filtered = combinedItems.filter(item => item.status === selectedStatus);
+            // Strict match for other statuses (APPROVED, PARTIAL, REJECTED, etc.)
+            // We ensure both sides are normalized for safety, although they should be already.
+            filtered = combinedItems.filter(item => {
+                const itemStatus = String(item.status || '').toUpperCase().trim();
+                const targetStatus = String(selectedStatus).toUpperCase().trim();
+                return itemStatus === targetStatus;
+            });
         }
 
-        // Text search
+        // DIAGNOSTIC LOG (Temporary - identifies filtering leaks)
+        logger.info(`[POAService] Status Filter applied: ${selectedStatus}. Before: ${combinedItems.length}, After: ${filtered.length}`);
+
+        // Manual Filter by ALL params
         filtered = filtered.filter(item => {
             const r = item as unknown as Record<string, unknown>;
-            if (params?.po_no      && !String(r.po_no      || '').toLowerCase().includes(params.po_no.toLowerCase()))      return false;
-            if (params?.poa_no     && !String(r.poa_no     || '').toLowerCase().includes(params.poa_no.toLowerCase()))     return false;
+            
+            // Text Search (po_no, poa_no, vendor_name, pr_no)
+            if (params?.po_no && !String(r.po_no || '').toLowerCase().includes(params.po_no.toLowerCase())) return false;
+            if (params?.poa_no && !String(r.poa_no || '').toLowerCase().includes(params.poa_no.toLowerCase())) return false;
             if (params?.vendor_name && !String(r.vendor_name || '').toLowerCase().includes(params.vendor_name.toLowerCase())) return false;
-            if (params?.pr_no      && !String(r.pr_no      || '').toLowerCase().includes(params.pr_no.toLowerCase()))      return false;
+            if (params?.pr_no && !String(r.pr_no || '').toLowerCase().includes(params.pr_no.toLowerCase())) return false;
+            
+            // Unified Search (q)
             if (params?.q) {
                 const q = params.q.toLowerCase();
                 const fields = ['po_no', 'poa_no', 'vendor_name', 'pr_no', 'qc_no'];
                 if (!fields.some(f => String(r[f] || '').toLowerCase().includes(q))) return false;
             }
+
+            // Date Range
+            if (params?.date_from) {
+                const poDate = new Date(String(r.po_date || '0')).getTime();
+                const fromDate = new Date(params.date_from).getTime();
+                if (poDate < fromDate) return false;
+            }
+            if (params?.date_to) {
+                const poDate = new Date(String(r.po_date || '0')).getTime();
+                const toDate = new Date(params.date_to).getTime();
+                if (poDate > toDate) return false;
+            }
+
             return true;
         });
 

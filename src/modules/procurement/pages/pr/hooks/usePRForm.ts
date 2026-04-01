@@ -320,8 +320,8 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
                 remark: pr.remark || '',
                 shipping_method: pr.shipping_method || '',
                 vendor_quote_no: pr.vendor_quote_no || '',
-                credit_days: pr.credit_days != null ? Number(pr.credit_days) : 0,
-                payment_term_days: pr.payment_term_days != null ? Number(pr.payment_term_days) : 0,
+                credit_days: pr.credit_days != null ? Number(pr.credit_days) : undefined,
+                payment_term_days: pr.payment_term_days != null ? Number(pr.payment_term_days) : undefined,
                 pr_sub_total: 0,
                 pr_discount_amount: 0,
                 pr_tax_amount: 0,
@@ -338,11 +338,21 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
         } else {
           try {
             const nextPRNo = await PRService.generateNextDocumentNo();
-            reset({ ...getPRDefaultFormValues(user), pr_no: nextPRNo.document_no });
+            reset({ 
+              ...getPRDefaultFormValues(user), 
+              pr_no: nextPRNo.document_no,
+              credit_days: '',
+              payment_term_days: ''
+            });
           } catch (err) {
             logger.error('[usePRForm] Failed to generate PR No:', err);
             // Fallback securely so the form doesn't crash
-            reset({ ...getPRDefaultFormValues(user), pr_no: 'DRAFT-TEMP' });
+            reset({ 
+              ...getPRDefaultFormValues(user), 
+              pr_no: 'DRAFT-TEMP',
+              credit_days: '',
+              payment_term_days: ''
+            });
           }
         }
       }, 0);
@@ -629,10 +639,12 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
        setValue("preferred_vendor_id", vendor.vendor_id);
        setValue("vendor_name", vendor.vendor_name);
        setValue("credit_days", vendor.payment_term_days);
+       setValue("payment_term_days", vendor.payment_term_days);
      } else {
        setValue("preferred_vendor_id", undefined);
        setValue("vendor_name", '');
-       setValue("credit_days", undefined);
+       setValue("credit_days", '');
+       setValue("payment_term_days", '');
      }
    };
 
@@ -729,8 +741,8 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
 
           pr_exchange_rate_date: data.pr_exchange_rate_date || data.pr_date,
           pr_discount_raw: String(data.pr_discount_raw || '0'),
-          payment_term_days: Number(data.payment_term_days || 30),
-          credit_days: Number(data.credit_days || 30),
+          payment_term_days: data.payment_term_days != null ? Number(data.payment_term_days) : undefined,
+          credit_days: data.credit_days != null ? Number(data.credit_days) : undefined,
           vendor_quote_no: data.vendor_quote_no || '',
           shipping_method: data.shipping_method || '',
           // 🎯 FIX 1: Save purpose/remark directly without infinite accumulator concatenation bug

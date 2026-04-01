@@ -18,7 +18,6 @@ export const PO_STATUS_OPTIONS = [
     { value: 'APPROVED',         label: 'อนุมัติแล้ว' },
     { value: 'PARTIAL',          label: 'อนุมัติบางส่วน' },
     { value: 'REJECTED',         label: 'ไม่อนุมัติ' },
-    { value: 'ISSUED',           label: 'ออก PO แล้ว' },
     { value: 'COMPLETED',        label: 'ปิดรายการ' },
     { value: 'CANCELLED',        label: 'ยกเลิก' },
 ];
@@ -66,7 +65,9 @@ export const usePOList = () => {
         po_no: filters.search || undefined,
         pr_no: filters.search2 || undefined,
         vendor_name: filters.search3 || undefined,
-        status: filters.status === 'ALL' ? undefined : filters.status,
+        // For status filter: If REJECTED or APPROVED are requested, we widen the search
+        // to catch items currently waiting in PENDING_APPROVAL that have overlays.
+        status: (filters.status === 'ALL' || filters.status === 'REJECTED') ? undefined : filters.status,
         date_from: filters.date_start || undefined,
         date_to: filters.date_end || undefined,
         page: filters.page,
@@ -118,7 +119,9 @@ export const usePOList = () => {
         const finalItems = (status && status !== 'ALL')
             ? enrichedItems.filter(i => i.status === status)
             : enrichedItems;
-        return { ...data, data: finalItems, total: finalItems.length };
+        // Only override total if we are doing extra client-side status filtering here
+        const total = (status && status !== 'ALL') ? finalItems.length : (data.total ?? finalItems.length);
+        return { ...data, data: finalItems, total };
     }, [data, poaStatusMap, filters.status]);
 
     // handleFilterChange wrapper: typed for POFilterKeys

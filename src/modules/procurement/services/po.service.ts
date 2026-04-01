@@ -1,11 +1,10 @@
 import api from '@/core/api/api';
-import { USE_MOCK } from '@/core/api/api';
 import type { POListParams, POListResponse, POListItem } from '@/modules/procurement/types';
 import { CreatePOSchema, type POStatus } from '@/modules/procurement/schemas/po-schemas';
 import type { CreatePOPayload } from '@/modules/procurement/types';
 import { logger } from '@/shared/utils/logger';
 import type { SuccessResponse } from '@/shared/types/api-response.types';
-import { applyClientFilters, applyClientPagination, extractArrayFromResponse } from '@/shared/utils/clientFilterUtils';
+import { applyClientFilters, extractArrayFromResponse } from '@/shared/utils/clientFilterUtils';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
 import { PRService } from './pr.service';
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
@@ -145,28 +144,25 @@ export const POService = {
             return mappedItem;
         }));
 
-        if (!USE_MOCK) {
-            const responseObj = response as unknown as Record<string, unknown>;
-            const total = typeof responseObj?.total === 'number' ? responseObj.total : allItems.length;
-            return {
-                ...response,
-                total: total,
-                page: typeof responseObj?.page === 'number' ? responseObj.page : (params?.page ?? 1),
-                limit: typeof responseObj?.limit === 'number' ? responseObj.limit : (params?.limit ?? 20),
-                totalPages: typeof responseObj?.totalPages === 'number' ? responseObj.totalPages : Math.ceil(total / (params?.limit ?? 20)),
-                data: allItems
-            };
-        }
+        // Client-side Filtering & Pagination Layer
+        // We apply this for both Mock and Live data to ensure UI consistency 
+        // especially when the backend may have different search/pagination behaviors.
+        const result = applyClientFilters<POListItem>(allItems, params as any, {
+            searchableFields: ['po_no', 'vendor_name', 'qc_no', 'pr_no', 'poa_no'],
+            dateField: 'po_date',
+            backendTotal: response.total ?? allItems.length
+        });
 
-        if (params) {
-            return applyClientFilters<POListItem>(allItems, params as any, {
-                searchableFields: ['po_no', 'vendor_name', 'qc_no', 'pr_no', 'poa_no'],
-                dateField: 'po_date',
-                backendTotal: response.total
-            });
-        }
-
-        return applyClientPagination<POListItem>(allItems, 1, 20, response.total);
+        // If not in Mock mode, we still trust the backend's total count if it's much larger than our items
+        // but if we have filtering active, we use the client-side filtered count.
+        const isFiltering = params?.po_no || params?.vendor_name || params?.status || params?.date_from || params?.date_to;
+        const total = isFiltering ? result.total : (response.total ?? allItems.length);
+        
+        return {
+            ...result,
+            total,
+            totalPages: Math.ceil(total / (params?.limit ?? 20))
+        };
     },
 
     getById: async (id: number): Promise<POListItem> => {
