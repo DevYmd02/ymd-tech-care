@@ -293,6 +293,7 @@ export interface RFQFilterCriteria {
     pr_no?: string;
     pr_id?: number;
     creator_name?: string;
+    approved_pr_no?: string;
     search?: string;
     keyword?: string;
     status?: RFQStatus | 'ALL';

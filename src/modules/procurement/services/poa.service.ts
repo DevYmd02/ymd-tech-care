@@ -126,7 +126,8 @@ const mapPOAResponseToListItem = (
     uomMap?: Record<string, string>
 ): POListItem => {
     const poHeader = (item.poHeader as POHeaderResponse) || (item.po_header as POHeaderResponse) || item || {};
-    const lines = item.poLines || item.po_lines || poHeader.po_lines || poHeader.poLines || item.lines || [];
+    // 🎯 PRIORITY: Prefer snake_case (our enriched version) over camelCase (raw backend version)
+    const lines = item.po_lines || item.poLines || poHeader.po_lines || poHeader.poLines || item.lines || [];
 
     const status = normalizePOStatus(item.status || poHeader.status);
     const poaNoValue = String(item.approval_no || item.poa_no || poHeader.poa_no || poHeader.approval_no || '-');
@@ -214,7 +215,10 @@ const mapPOAResponseToListItem = (
                 (l.unit_name && !['-','undefined'].includes(l.unit_name)) ? l.unit_name :
                 (poHeader.po_lines?.[idx] as any)?.uom_name || '-'
             ),
-            is_approved: l.is_approved !== undefined ? !!l.is_approved : true,
+            // 🎯 AV PATTERN: Do NOT force is_approved to true if not explicitly set.
+            // This allows the form hook to properly filter out non-actionable rows.
+            is_approved: l.is_approved !== undefined ? !!l.is_approved : undefined,
+            remaining_qty: Number(l.remaining_qty ?? 0)
         };
     });
 
@@ -291,7 +295,7 @@ const mapPOAResponseToListItem = (
 const ENDPOINTS = {
     list: '/po-approval',
     detail: (id: number) => `/po-approval/${id}`, // ✅ Dedicated: specific history record
-    poDetail: (id: number) => `/po-approval/po/${id}`, // ✅ Dedicated: approval context for PO
+    poDetail: (id: number) => `/po/${id}`, // ✅ FIXED: Standard PO endpoint
     update: (id: number) => `/po/${id}`,
     approve: (id: number) => `/po/${id}/approve`,
     reject: (id: number) => `/po/${id}/reject`,
@@ -601,15 +605,17 @@ export const POAService = {
         let allApprovalHistory: any[] = [];
         
         try {
+            // 🎯 CRITICAL FIX: ALWAYS fetch via POService.getById to trigger ItemMaster hydration
+            // Raw API responses from /po-approval or /po/id (initial fetch) often lack item_code/item_name.
             poRes = await POService.getById(poHeaderId);
             
             // 🎯 Fetch all past approvals for this PO to calculate remaining balances
             const poNo = poRes.po_no || (approvalRes.poHeader as any)?.po_no || approvalRes.po_no;
-            if (poNo) {
+            if (poNo && poNo !== '-') {
                 const historyRes = await api.get<Record<string, unknown>>(ENDPOINTS.list, { params: { po_no: poNo, limit: 1000 } });
                 const rawHistory = extractArrayFromResponse(historyRes);
-                // 🎯 CRITICAL: Exact match filtering for the PO Number
-                // The API might return PO-001 for a search of PO-0010. We must be strict.
+                
+                // 🎯 Exact match filtering for the PO Number
                 allApprovalHistory = rawHistory.filter((h: any) => 
                     String(h.poHeader?.po_no || h.po_no || '').trim() === poNo.trim()
                 );
@@ -625,78 +631,95 @@ export const POAService = {
         const approvedSumMap: Record<number, number> = {};
         const seenHistoryIds = new Set<number>();
 
+        // 2. Extract Base Lines FIRST to avoid ReferenceErrors during history summation
+        const poHeaderDetail = (approvalRes.poHeader as any) || (approvalRes.po_header as any) || approvalRes || {};
+        const parentLines = poRes.po_lines || poRes.poLines || [];
+        const poaLinesRaw = approvalRes.poLines || approvalRes.po_lines || poHeaderDetail.po_lines || poHeaderDetail.poLines || approvalRes.lines || [];
+        const poaLines = Array.isArray(poaLinesRaw) ? poaLinesRaw : [];
+
+        // 🎯 MAPS for Robust Matching & Metadata Recovery
+        const parentIdMap = new Map<number, any>();
+        const parentCodeMap = new Map<string, any>();
+        parentLines.forEach((p: any) => {
+            const pid = p.id || p.po_line_id;
+            if (pid) parentIdMap.set(pid, p);
+            if (p.item_code) parentCodeMap.set(p.item_code, p);
+        });
+
+        // 🎯 SUMMATION: Identify which PO line each historical record belongs to
         allApprovalHistory.forEach((h: any) => {
             const hId   = Number(h.id || 0);
             const poaNo = String(h.approval_no || h.poa_no || '').trim();
 
-            // 🎯 CRITICAL Skipping Logic:
-            // 1. Skip if it's the exact same internal record ID
             if (hId > 0 && hId === currentRoundId) return;
-            
-            // 2. Skip if it's the same POA number (prevents double-counting during mapping)
             if (poaNo && poaNo !== '-' && poaNo === currentPoaNo) return;
-            
-            // 3. Skip if we've already counted this history record ID (Set guard)
             if (hId > 0 && seenHistoryIds.has(hId)) return;
             if (hId > 0) seenHistoryIds.add(hId);
 
-            // 🎯 Summation Logic: Only count rounds that have a valid decision (POA Number)
             if (!poaNo || poaNo === '-') return;
 
             const hLines = h.po_lines || h.lines || [];
             hLines.forEach((l: any) => {
-                // 🎯 CRITICAL: We must sum based on the ID of the line in the ORIGINAL PO (po_line_id)
-                // History entries usually have po_line_id pointing back to the parent.
-                const lid = l.po_line_id || l.id;
-                if (lid) {
+                let lid = l.po_line_id || l.id;
+                
+                // 🎯 Match by Code if ID is missing/mismatched (Common in history)
+                if (!parentIdMap.has(lid) && l.item_code) {
+                    const matchByCode = parentCodeMap.get(l.item_code);
+                    if (matchByCode) lid = matchByCode.id || matchByCode.po_line_id;
+                }
+
+                if (lid && parentIdMap.has(lid)) {
                     approvedSumMap[lid] = (approvedSumMap[lid] || 0) + Number(l.approved_qty || l.qty_approved || 0);
                 }
             });
         });
 
-        // 3. Merge and Enrich Lines
-        const parentLines = poRes.po_lines || poRes.poLines || [];
-        // 🎯 Robust Line Extraction (Mirroring mapPOAResponseToListItem)
-        const poHeaderDetail = (approvalRes.poHeader as any) || (approvalRes.po_header as any) || approvalRes || {};
-        const poaLinesRaw = approvalRes.poLines || approvalRes.po_lines || poHeaderDetail.po_lines || poHeaderDetail.poLines || approvalRes.lines || [];
-        const poaLines = Array.isArray(poaLinesRaw) ? poaLinesRaw : [];
+        logger.debug(`[POAService] Approved Summation Map for PO ${poHeaderId}:`, approvedSumMap);
         
-        // Use parent lines as base if creating new POV, otherwise use existing POA lines
         const sourceLines = (poaLines.length > 0) ? poaLines : parentLines;
 
         const finalLines = sourceLines.map((l: any, idx: number) => {
-            // Find parent PO line for the official "Ordered Qty"
-            const parentLine = (l.po_line_id) 
-                ? parentLines.find((pl: any) => pl.id === l.po_line_id || pl.po_line_id === l.po_line_id) 
-                : parentLines[idx];
+            const lid = l.po_line_id || l.id;
             
-            const lid = l.po_line_id || (parentLine ? (parentLine.id || parentLine.po_line_id) : l.id);
+            // 🎯 Metadata Recovery: History often loses names/codes, pull from Parent PO
+            let parentLine = parentIdMap.get(lid);
+            if (!parentLine && l.item_code) parentLine = parentCodeMap.get(l.item_code);
+            if (!parentLine) parentLine = parentLines[idx];
+            
             const originalQty = Number(parentLine?.qty ?? parentLine?.qty_ordered ?? l.qty ?? l.qty_ordered ?? 0);
             
-            // 🎯 History Mode: If viewing an existing POA record, strictly use its recorded values
+            // 🎯 ENHANCE line with metadata from Parent PO
+            const enriched = {
+                ...l,
+                item_code: l.item_code || parentLine?.item_code || '-',
+                product_code: l.item_code || parentLine?.item_code || '-',
+                item_name: l.item_name || parentLine?.item_name || l.description || parentLine?.description || '-',
+                uom_name: l.uom_name || parentLine?.uom_name || '-',
+                qty: originalQty,
+            };
+
+            // 🎯 History Mode
             if (isHistory) {
-                // 🎯 CRITICAL: Only use approved_qty or qty_approved. 
-                // Do NOT fallback to qty_ordered here as it often contains the original PO qty (10)
                 const poaQty = Number(l.approved_qty ?? l.qty_approved ?? 0);
                 return {
-                    ...l,
-                    qty: originalQty,
+                    ...enriched,
                     qty_ordered: poaQty,
                     is_processed: true,
-                    remaining_qty: 0
+                    remaining_qty: 0,
+                    is_approved: true
                 };
             }
 
-            // 🎯 Approval Mode: Calculate remaining and defaults for new rounds
-            const approvedSoFar = lid ? (approvedSumMap[lid] || 0) : 0;
+            // 🎯 Approval Mode (Actionable)
+            const actualLid = lid || (parentLine ? (parentLine.id || parentLine.po_line_id) : undefined);
+            const approvedSoFar = actualLid ? (approvedSumMap[actualLid] || 0) : 0;
             const remQty = Math.max(0, originalQty - approvedSoFar);
             
             const existingQty = Number(l.approved_qty || l.qty_approved || l.qty_ordered || 0);
             const defaultQty  = (existingQty > 0) ? existingQty : Math.max(0, remQty);
 
             return {
-                ...l,
-                qty: originalQty,
+                ...enriched,
                 remaining_qty: remQty,
                 qty_ordered: defaultQty,
                 is_processed: remQty <= 0
@@ -716,10 +739,20 @@ export const POAService = {
             total: undefined,
         } : poRes;
 
+        const finalApprovalRes = { ...approvalRes };
+        const finalPoRes       = { ...sanitizedPoRes };
+        
+        // 🎯 SANITIZE: Remove any "stray" line arrays to ensure mapPOAResponseToListItem 
+        // uses our enriched finalLines (po_lines).
+        delete (finalApprovalRes as any).poLines;
+        delete (finalApprovalRes as any).lines;
+        delete (finalPoRes as any).poLines;
+        delete (finalPoRes as any).lines;
+
         const merged: Record<string, any> = {
-            ...sanitizedPoRes,
-            ...approvalRes,
-            // 🎯 Ensure approvalRes values always win
+            ...finalPoRes,
+            ...finalApprovalRes,
+            // 🎯 Our enriched and filtered lines become the ONLY source of truth
             po_lines: finalLines,
             poHeader: sanitizedPoRes.poHeader || sanitizedPoRes.po_header || sanitizedPoRes || {},
         };

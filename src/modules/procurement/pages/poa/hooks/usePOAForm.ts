@@ -128,7 +128,8 @@ export const usePOAForm = ({
                 const originalQty = Number(l.qty || l.qty_ordered || (l as any).qty_total || (l as any).quantity || 0);
                 let remQty = l.remaining_qty !== undefined ? Number(l.remaining_qty) : originalQty;
 
-                // Safety: If it's a new POA and remQty is 0 but originalQty exists, use originalQty
+                // 🎯 SAFETY RESTORE: If it's a new POA and remQty is 0 but originalQty exists, use originalQty
+                // This prevents items from being hidden if the service calculation still has gaps.
                 const isNewRound = !sourceObj.poa_no || sourceObj.poa_no === '-';
                 if (isNewRound && remQty === 0 && originalQty > 0) {
                     remQty = originalQty;

@@ -5,17 +5,19 @@
  */
 import { FormProvider, useWatch, Controller } from 'react-hook-form';
 import { 
-    CheckCircle, XCircle, FileText, Loader2, Search, Package
+    CheckCircle, XCircle, FileText, Loader2, Search, Package, Clock
 } from 'lucide-react';
+import React from 'react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { parseDiscountAmount } from '@/modules/procurement/utils/pricing.utils';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 import { WindowFormLayout } from '@/shared/components/ui/layout/WindowFormLayout';
 import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal';
 import { usePOAForm } from '../hooks/usePOAForm';
 import { POSearchModal } from './POSearchModal';
 import { CustomDateInput } from '@/shared/components/forms/CustomDateInput';
+import { POAHistoryModal } from './POAHistoryModal';
 import type { Control, FieldErrors, UseFormSetValue } from 'react-hook-form';
 import type { Currency } from '@/modules/master-data/types/master-data-types';
 import type { POAFormData } from '@/modules/procurement/schemas/poa-schemas';
@@ -322,6 +324,8 @@ export default function POAFormModal({
         isPartialApproval,
     } = usePOAForm({ isOpen, onClose, onSuccess, poId, initialValues, readOnly });
 
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
     const formValues = useWatch({ control });
 
     if (!isOpen) return null;
@@ -339,7 +343,19 @@ export default function POAFormModal({
                 }
                 headerColor="bg-blue-600"
                 footer={
-                    <div className="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-end items-center bg-slate-100 dark:bg-gray-900 sticky bottom-0 z-10">
+                    <div className="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-between items-center bg-slate-100 dark:bg-gray-900 sticky bottom-0 z-10">
+                        <div className="flex items-center gap-2">
+                             {/* 🎯 AV PATTERN: Approval History Button on bottom-left */}
+                             {(poId || detailData?.po_id || initialValues?.po_id) && (
+                                <button 
+                                    type="button" 
+                                    onClick={() => setIsHistoryOpen(true)}
+                                    className="px-3 py-2 bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded-md text-sm font-medium flex items-center gap-1.5 border border-emerald-200 dark:border-emerald-800"
+                                >
+                                    <Clock size={16} /> ประวัติการอนุมัติ
+                                </button>
+                             )}
+                        </div>
                         <div className="flex gap-3">
                             <button
                                 type="button"
@@ -603,7 +619,7 @@ export default function POAFormModal({
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {fields.length === 0 && (
+                                        {fields.length === 0 ? (
                                             <tr>
                                                 <td colSpan={12} className="px-4 py-12 text-center text-gray-400">
                                                     <div className="flex flex-col items-center gap-2">
@@ -611,25 +627,50 @@ export default function POAFormModal({
                                                         <span className="font-medium">
                                                             {isLoadingDetail ? "กำลังโหลดรายการสินค้า..." : "ไม่พบรายการสินค้า"}
                                                         </span>
-                                                        <span className="text-xs opacity-60">
-                                                            {isLoadingDetail ? "กรุณารอสักครู่ขณะเราดึงข้อมูลจากระบบ" : "ไม่พบข้อมูลรายการในภูมิภาคเอกสารนี้"}
-                                                        </span>
                                                     </div>
                                                 </td>
                                             </tr>
-                                        )}
-                                        {fields.map((field, idx: number) => (
-                                            <POLineRow
-                                                key={field.id}
-                                                field={field as any}
-                                                idx={idx}
-                                                control={control}
-                                                isReadOnly={isReadOnly}
-                                                detailData={detailData}
-                                                errors={errors}
-                                                setValue={setValue}
-                                            />
-                                        ))}
+                                        ) : (() => {
+                                            const renderedLines = fields.map((field, idx: number) => {
+                                                const isProcessed = !!(field as any).is_processed;
+                                                const isHidden = !isReadOnly && isProcessed;
+                                                if (isHidden) return null;
+
+                                                return (
+                                                    <POLineRow
+                                                        key={field.id}
+                                                        field={field as any}
+                                                        idx={idx}
+                                                        control={control}
+                                                        isReadOnly={isReadOnly}
+                                                        detailData={detailData}
+                                                        errors={errors}
+                                                        setValue={setValue}
+                                                    />
+                                                );
+                                            }).filter(Boolean);
+
+                                            if (renderedLines.length === 0 && !isReadOnly && fields.length > 0) {
+                                                return (
+                                                    <tr>
+                                                        <td colSpan={12} className="px-10 py-16 text-center text-gray-500 bg-slate-50/10 dark:bg-slate-900/10 italic font-medium">
+                                                            <div className="flex flex-col items-center gap-3">
+                                                                <CheckCircle className="w-10 h-10 text-emerald-500/50" />
+                                                                <span>ไม่มีรายการรออนุมัติ (ดำเนินการอนุมัติครบถ้วนแล้ว)</span>
+                                                                <button 
+                                                                    type="button" 
+                                                                    onClick={() => setIsHistoryOpen(true)}
+                                                                    className="mt-2 text-blue-500 hover:text-blue-600 underline text-sm"
+                                                                >
+                                                                    ดูประวัติการอนุมัติที่นี่
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            }
+                                            return renderedLines;
+                                        })()}
                                     </tbody>
                                 </table>
                             </div>
@@ -671,6 +712,13 @@ export default function POAFormModal({
                     isOpen={isPOSearchModalOpen}
                     onClose={() => setIsPOSearchModalOpen(false)}
                     onSelect={handlePOSelect}
+                />
+
+                <POAHistoryModal
+                    isOpen={isHistoryOpen}
+                    onClose={() => setIsHistoryOpen(false)}
+                    poId={poId || detailData?.po_id || initialValues?.po_id}
+                    poNo={detailData?.po_no || initialValues?.po_no}
                 />
             </WindowFormLayout>
         </FormProvider>

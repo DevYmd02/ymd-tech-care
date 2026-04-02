@@ -1,45 +1,97 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Check, FileText, Loader2, Info } from 'lucide-react';
-import { RFQService } from '@/modules/procurement/services/rfq.service';
+import type { ApprovalHeader } from '@/modules/procurement/types/av-types';
 import { ModalLayout } from '@/shared/components/ui/layout/ModalLayout';
 import { logger } from '@/shared/utils/logger';
+import { RFQService } from '@/modules/procurement/services/rfq.service';
+
+/** 🎯 Extended type to handle API aliases for AV record */
+interface ExtendedApprovalHeader extends ApprovalHeader {
+    approved_pr_no?: string;
+    approval_id: number;
+}
 
 interface ApprovedPRSelectionModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSelect: (record: any) => void;
+    onSelect: (record: ExtendedApprovalHeader) => void;
     prNo: string | null;
     prId: number | null;
 }
 
 export const ApprovedPRSelectionModal: React.FC<ApprovedPRSelectionModalProps> = ({ isOpen, onClose, onSelect, prNo, prId }) => {
     const [searchTerm, setSearchTerm] = useState('');
-    const [approvedRecords, setApprovedRecords] = useState<any[]>([]);
+    const [approvedRecords, setApprovedRecords] = useState<ExtendedApprovalHeader[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [fetchError, setFetchError] = useState<string | null>(null);
+    const [usedAVNumbers, setUsedAVNumbers] = useState<Set<string>>(new Set());
+    const [usedApprovalIds, setUsedApprovalIds] = useState<Set<number>>(new Set());
 
     useEffect(() => {
         if (!isOpen || !prId) return;
 
-        const fetchApprovedNumbers = async () => {
+        const fetchData = async () => {
             setIsLoading(true);
             setFetchError(null);
             try {
-                logger.info(`[ApprovedPRSelectionModal] Fetching AV numbers for ${prNo} (ID: ${prId})`);
-                const records = await RFQService.getPRApprovalDetail(prId);
-                setApprovedRecords(records);
-                logger.info(`[ApprovedPRSelectionModal] Found ${records.length} AV records for PR ${prNo}`);
+                logger.info(`[ApprovedPRSelectionModal] Launching PRECISION REGISTRY CHECK for PR ${prNo} (ID: ${prId})`);
+                
+                // 🎯 PHASE 1: Fetch candidate AV records
+                const avRecords = await RFQService.getPRApprovalDetail(prId);
+                
+                // 🎯 PHASE 2: Parallel Precision Query against the RFQ Registry
+                // We ask the RFQ System directly: "Has AV-XXXX been used yet?"
+                const registryResults = await Promise.all(avRecords.map(async (av) => {
+                    const avNo = av.approval_no || av.approved_pr_no;
+                    if (!avNo) return { av, isUsed: false, rfqNo: null };
+
+                    try {
+                        // Query the RFQ List using the exact AV number filter
+                        const rfqRes = await RFQService.getList({ 
+                            approved_pr_no: avNo, 
+                            limit: 1 
+                        });
+                        
+                        const isUsed = rfqRes.total > 0;
+                        const rfqNo = isUsed ? (rfqRes.data[0]?.rfq_no || 'Unknown') : null;
+                        
+                        if (isUsed) {
+                            logger.info(`🔍 [Precision Check] AV ${avNo} is SPENT! Linked to RFQ: ${rfqNo}`);
+                        }
+                        return { av, isUsed, rfqNo };
+                    } catch (e) {
+                         logger.warn(`[Precision Check] Failed to query RFQ registry for ${avNo}:`, e);
+                         return { av, isUsed: false, rfqNo: null };
+                    }
+                }));
+
+                // Collect results for filtering
+                const usedNos = new Set<string>();
+                const usedIds = new Set<number>();
+
+                registryResults.forEach(res => {
+                    if (res.isUsed) {
+                        const avNo = res.av.approval_no || res.av.approved_pr_no || '';
+                        if (avNo) usedNos.add(avNo);
+                        if (res.av.approval_id) usedIds.add(res.av.approval_id);
+                    }
+                });
+
+                setUsedAVNumbers(usedNos);
+                setUsedApprovalIds(usedIds);
+                setApprovedRecords(avRecords);
+                
+                logger.info(`[ApprovedPRSelectionModal] Final Scan Result: Found ${usedNos.size} used records. Available to select: ${avRecords.length - usedNos.size}`);
             } catch (error) {
-                logger.error(`[ApprovedPRSelectionModal] Failed to fetch for PR ${prId}:`, error);
+                logger.error(`[ApprovedPRSelectionModal] Critical Scan Failure:`, error);
                 setFetchError('ไม่สามารถดึงข้อมูลเลขที่ Approve ได้');
-                setApprovedRecords([]);
             } finally {
                 setIsLoading(false);
             }
         };
 
-        fetchApprovedNumbers();
-    }, [isOpen, prId, prNo]); // Added prNo to dependencies
+        fetchData();
+    }, [isOpen, prId, prNo]);
 
     // Reset search on close
     useEffect(() => {
@@ -49,7 +101,21 @@ export const ApprovedPRSelectionModal: React.FC<ApprovedPRSelectionModalProps> =
     }, [isOpen]);
 
     const filteredRecords = approvedRecords.filter(record => {
-        const num = record.approval_no || record.approved_pr_no || '';
+        // 🎯 BULLETPROOF FILTER:
+        // Try to match by BOTH Number and ID to ensure nothing slips through.
+        const avNo = record.approval_no || record.approved_pr_no;
+        const avId = record.approval_id;
+
+        const isUsedByNo = avNo && usedAVNumbers.has(avNo);
+        const isUsedById = avId && usedApprovalIds.has(Number(avId));
+
+        if (isUsedByNo || isUsedById) {
+            logger.debug(`[ApprovedPRSelectionModal] FILTERED OUT: ${avNo} (ID: ${avId})`);
+            return false;
+        }
+
+        // 🔍 Search term filter
+        const num = avNo || '';
         return num.toLowerCase().includes(searchTerm.toLowerCase());
     });
 
