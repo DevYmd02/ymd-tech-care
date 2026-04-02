@@ -6,18 +6,18 @@
 import type { BaseMasterData } from '@/shared/types/common-master.types';
 
 export interface EmployeeGroupMaster extends BaseMasterData {
-    id: number;
-    group_id: number;
-    group_code: string;
-    group_name: string;
-    group_name_en?: string;
+    employee_group_id: string; // uuid
+    employee_group_code: string;
+    employee_group_name: string;
+    employee_group_nameeng: string;
 }
 
 export interface EmployeeGroupFormData {
-    groupCode: string;
-    groupName: string;
-    groupNameEn: string;
+    employeeGroupCode: string;
+    employeeGroupName: string;
+    employeeGroupNameEn: string;
     isActive: boolean;
 }
 
 export type EmployeeGroupListItem = EmployeeGroupMaster;
+

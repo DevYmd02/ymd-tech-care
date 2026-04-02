@@ -3,15 +3,95 @@
  * @description Service for Employee Group (กลุ่มพนักงาน) master data
  */
 
-import api from '@/core/api/api';
+import api, { extractErrorMessage } from '@/core/api/api';
 import type { EmployeeGroupMaster, EmployeeGroupFormData } from '@/modules/master-data/company/types/employee-group.types';
 import { type PaginatedListResponse } from '@/shared/types/api-response.types';
 import { type TableFilters } from '@/shared/hooks/useTableFilters';
 
+interface EmployeeGroupPayload {
+  employee_group_code?: string;
+  employee_group_name?: string;
+  employee_group_nameeng?: string;
+  is_active?: boolean;
+}
+
 export const EmployeeGroupService = {
-  getList: (params?: Partial<TableFilters>) => api.get<PaginatedListResponse<EmployeeGroupMaster>>('/org-employee-groups', { params }),
-  get: (id: number) => api.get<EmployeeGroupMaster>(`/org-employee-groups/${id}`),
-  create: (data: EmployeeGroupFormData) => api.post<{ success: boolean; data?: EmployeeGroupMaster; message?: string }>('/org-employee-groups', data),
-  update: (id: number, data: Partial<EmployeeGroupFormData>) => api.put<{ success: boolean; data?: EmployeeGroupMaster; message?: string }>(`/org-employee-groups/${id}`, data),
-  delete: (id: number) => api.delete<boolean>(`/org-employee-groups/${id}`),
+  getList: async (filters?: Partial<TableFilters>): Promise<PaginatedListResponse<EmployeeGroupMaster>> => {
+    // Transform 'status' filter to 'is_active' if needed by backend
+    const params: Record<string, string | number | boolean | undefined> = { ...filters };
+    
+    if (params.status === 'ACTIVE') {
+      params.is_active = true;
+    } else if (params.status === 'INACTIVE') {
+      params.is_active = false;
+    }
+    
+    // Remove status if we already mapped it to is_active, or if it's 'ALL'
+    delete params.status;
+
+    const response = await api.get<PaginatedListResponse<EmployeeGroupMaster> | EmployeeGroupMaster[]>('/employee-group', { params });
+    
+    if (Array.isArray(response)) {
+      const page = Number(params?.page) || 1;
+      const limit = Number(params?.limit) || 10;
+      return {
+        items: response,
+        total: response.length,
+        page,
+        limit
+      };
+    }
+    
+    return response;
+  },
+
+
+  get: (id: string) => 
+    api.get<EmployeeGroupMaster>(`/employee-group/${id}`),
+
+  create: async (data: EmployeeGroupFormData): Promise<{ success: boolean; data?: EmployeeGroupMaster; message?: string }> => {
+    try {
+      const payload: EmployeeGroupPayload = {
+        employee_group_code: data.employeeGroupCode,
+        employee_group_name: data.employeeGroupName,
+        employee_group_nameeng: data.employeeGroupNameEn || undefined,
+        is_active: data.isActive,
+      };
+      const response = await api.post<EmployeeGroupMaster>('/employee-group', payload);
+      return { success: true, data: response };
+    } catch (error) {
+      console.error('[EmployeeGroupService] create failed:', error);
+      return { success: false, message: extractErrorMessage(error) };
+    }
+  },
+
+  update: async (id: string, data: Partial<EmployeeGroupFormData>): Promise<{ success: boolean; data?: EmployeeGroupMaster; message?: string }> => {
+    try {
+      const payload: EmployeeGroupPayload = {};
+      if (data.employeeGroupCode !== undefined) payload.employee_group_code = data.employeeGroupCode;
+      if (data.employeeGroupName !== undefined) payload.employee_group_name = data.employeeGroupName;
+      if (data.employeeGroupNameEn !== undefined) payload.employee_group_nameeng = data.employeeGroupNameEn || undefined;
+      if (data.isActive !== undefined) payload.is_active = data.isActive;
+      
+      const response = await api.patch<EmployeeGroupMaster>(`/employee-group/${id}`, payload);
+      return { success: true, data: response };
+    } catch (error) {
+      console.error('[EmployeeGroupService] update failed:', error);
+      return { success: false, message: extractErrorMessage(error) };
+    }
+  },
+
+
+  delete: async (id: string): Promise<boolean> => {
+    try {
+      await api.delete(`/employee-group/${id}`);
+      return true;
+    } catch (error) {
+      console.error('[EmployeeGroupService] delete failed:', error);
+      return false;
+    }
+  },
 };
+
+
+

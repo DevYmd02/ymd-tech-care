@@ -42,12 +42,68 @@ export const setupMasterDataHandlers = (mock: MockAdapter) => {
   mock.onGet('/org-positions').reply((config) => [200, applyMockFilters(mockPositions, (config.params || {}) as Record<string, FilterValue>)]);
 
   // --- EMPLOYEE GROUPS ---
-  mock.onGet('/org-employee-groups').reply((config) => [200, applyMockFilters(mockEmployeeGroups, (config.params || {}) as Record<string, FilterValue>)]);
-  mock.onGet(/\/org-employee-groups\/.+/).reply((config) => {
-    const id = Number(config.url?.split('/').pop());
-    const found = mockEmployeeGroups.find((g: EmployeeGroupListItem) => g.id === id);
+  mock.onGet('/employee-group').reply((config) => [200, applyMockFilters(mockEmployeeGroups, (config.params || {}) as Record<string, FilterValue>)]);
+  mock.onGet(/\/employee-group\/.+/).reply((config) => {
+    const id = config.url?.split('/').pop();
+    const found = mockEmployeeGroups.find((g: EmployeeGroupListItem) => g.employee_group_id === id);
     return found ? [200, found] : [404, { message: 'Group Not Found' }];
   });
+
+  mock.onPost('/employee-group').reply((config) => {
+    const data = JSON.parse(config.data);
+    
+    // Duplicate Check
+    const isDuplicate = mockEmployeeGroups.some(
+      (g) => g.employee_group_code.toLowerCase() === data.employee_group_code?.toLowerCase()
+    );
+
+    if (isDuplicate) {
+      return [400, { success: false, message: `รหัสกลุ่มพนักงาน "${data.employee_group_code}" มีอยู่ในระบบแล้ว` }];
+    }
+
+    const newGroup = {
+      ...data,
+      employee_group_id: Math.random().toString(36).substring(7),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    mockEmployeeGroups.push(newGroup);
+    return [201, { success: true, data: newGroup }];
+  });
+
+  mock.onPatch(/\/employee-group\/.+/).reply((config) => {
+    const id = config.url?.split('/').pop();
+    const data = JSON.parse(config.data);
+    const index = mockEmployeeGroups.findIndex(g => g.employee_group_id === id);
+    
+    if (index !== -1) {
+      // Duplicate Check (excluding current record)
+      if (data.employee_group_code) {
+        const isDuplicate = mockEmployeeGroups.some(
+          (g) => g.employee_group_id !== id && g.employee_group_code.toLowerCase() === data.employee_group_code.toLowerCase()
+        );
+
+        if (isDuplicate) {
+          return [400, { success: false, message: `รหัสกลุ่มพนักงาน "${data.employee_group_code}" มีอยู่ในระบบแล้ว` }];
+        }
+      }
+
+      Object.assign(mockEmployeeGroups[index], { ...data, updated_at: new Date().toISOString() });
+      return [200, { success: true, data: mockEmployeeGroups[index] }];
+    }
+    return [404, { message: 'Not Found' }];
+  });
+
+  mock.onDelete(/\/employee-group\/.+/).reply((config) => {
+    const id = config.url?.split('/').pop();
+    const index = mockEmployeeGroups.findIndex(g => g.employee_group_id === id);
+    if (index !== -1) {
+      mockEmployeeGroups.splice(index, 1);
+      return [200, { success: true }];
+    }
+    return [404, { message: 'Not Found' }];
+  });
+
 
   // --- EMPLOYEES ---
   mock.onGet('/org-employees').reply((config) => [200, applyMockFilters(mockEmployees, (config.params || {}) as Record<string, FilterValue>)]);

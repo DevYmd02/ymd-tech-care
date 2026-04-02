@@ -14,7 +14,7 @@ interface EmployeeGroupFormModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
-    editId?: number | null;
+    editId?: string | null;
 }
 
 export const EmployeeGroupFormModal = ({ isOpen, onClose, onSuccess, editId }: EmployeeGroupFormModalProps) => {
@@ -25,7 +25,6 @@ export const EmployeeGroupFormModal = ({ isOpen, onClose, onSuccess, editId }: E
         errors,
         isSubmitting,
         handleSave,
-        setValue,
         control
     } = useEmployeeGroupForm(editId ?? null, isOpen, onSuccess);
 
@@ -76,14 +75,14 @@ export const EmployeeGroupFormModal = ({ isOpen, onClose, onSuccess, editId }: E
                         รหัสกลุ่มพนักงาน <span className="text-red-500">*</span>
                     </label>
                     <input
-                        {...register('groupCode')}
+                        {...register('employeeGroupCode')}
                         type="text"
                         placeholder="กรอกรหัสกลุ่มพนักงาน"
-                        className={`${styles.input} ${errors.groupCode ? 'border-red-500 focus:ring-red-200' : ''}`}
-                        disabled={isEdit}
+                        className={`${styles.input} ${errors.employeeGroupCode ? 'border-red-500 focus:ring-red-200' : ''}`}
                     />
-                    {errors.groupCode ? (
-                        <p className="text-red-500 text-xs mt-1">{errors.groupCode.message}</p>
+
+                    {errors.employeeGroupCode ? (
+                        <p className="text-red-500 text-xs mt-1">{errors.employeeGroupCode.message}</p>
                     ) : (
                         <p className="text-gray-400 text-xs mt-1">varchar(20) - รหัสกลุ่มพนักงาน</p>
                     )}
@@ -95,13 +94,13 @@ export const EmployeeGroupFormModal = ({ isOpen, onClose, onSuccess, editId }: E
                         ชื่อกลุ่มพนักงาน (ภาษาไทย) <span className="text-red-500">*</span>
                     </label>
                     <input
-                        {...register('groupName')}
+                        {...register('employeeGroupName')}
                         type="text"
                         placeholder="กรอกชื่อกลุ่มพนักงาน"
-                        className={`${styles.input} ${errors.groupName ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        className={`${styles.input} ${errors.employeeGroupName ? 'border-red-500 focus:ring-red-200' : ''}`}
                     />
-                    {errors.groupName ? (
-                        <p className="text-red-500 text-xs mt-1">{errors.groupName.message}</p>
+                    {errors.employeeGroupName ? (
+                        <p className="text-red-500 text-xs mt-1">{errors.employeeGroupName.message}</p>
                     ) : (
                         <p className="text-gray-400 text-xs mt-1">varchar(100) - ชื่อกลุ่มพนักงาน</p>
                     )}
@@ -113,28 +112,29 @@ export const EmployeeGroupFormModal = ({ isOpen, onClose, onSuccess, editId }: E
                         ชื่อกลุ่มพนักงาน (ภาษาอังกฤษ)
                     </label>
                     <input
-                        {...register('groupNameEn')}
+                        {...register('employeeGroupNameEn')}
                         type="text"
                         placeholder="Enter employee group name in English"
-                        className={`${styles.input} ${errors.groupNameEn ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        className={`${styles.input} ${errors.employeeGroupNameEn ? 'border-red-500 focus:ring-red-200' : ''}`}
                     />
                     <p className="text-gray-400 text-xs mt-1">varchar(100) - ชื่อกลุ่มพนักงาน (Eng)</p>
                 </div>
 
-                {/* Status - Dropdown Select */}
-                <div>
-                    <label className={styles.label}>
-                        สถานะ <span className="text-red-500">*</span>
+                {/* Status - Checkbox */}
+                <div className="flex flex-col gap-2">
+                    <label className={styles.label}>สถานะ</label>
+                    <label className="flex items-center gap-3 cursor-pointer group bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 transition-all shadow-sm">
+                        <input
+                            {...register('isActive')}
+                            type="checkbox"
+                            className="checkbox checkbox-primary checkbox-sm rounded-md border-gray-400"
+                        />
+                        <span className={`text-sm font-semibold transition-colors ${isActive ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                            {isActive ? 'ใช้งาน (Active)' : 'ไม่ใช้งาน (Inactive)'}
+                        </span>
                     </label>
-                    <select
-                        className={`${styles.input} cursor-pointer`}
-                        value={isActive ? 'true' : 'false'}
-                        onChange={(e) => setValue('isActive', e.target.value === 'true')}
-                    >
-                        <option value="true">ใช้งาน (Active)</option>
-                        <option value="false">ไม่ใช้งาน (Inactive)</option>
-                    </select>
                 </div>
+
             </div>
         </DialogFormLayout>
     );

@@ -103,8 +103,33 @@ export const mockJobs: JobListItem[] = [
 ];
 
 export const mockEmployeeGroups: EmployeeGroupListItem[] = [
-    { id: 1, group_id: 1, group_code: 'FULL', group_name: 'Full-Time', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
-    { id: 2, group_id: 2, group_code: 'CONT', group_name: 'Contractor', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { 
+        employee_group_id: '1', 
+        employee_group_code: 'FULL', 
+        employee_group_name: 'Full-Time', 
+        employee_group_nameeng: 'Full-Time', 
+        is_active: true, 
+        created_at: '2023-01-01T00:00:00Z', 
+        updated_at: '2023-01-01T00:00:00Z' 
+    },
+    { 
+        employee_group_id: '2', 
+        employee_group_code: 'CONT', 
+        employee_group_name: 'Contractor', 
+        employee_group_nameeng: 'Contractor', 
+        is_active: true, 
+        created_at: '2023-01-01T00:00:00Z', 
+        updated_at: '2023-01-01T00:00:00Z' 
+    },
+    { 
+        employee_group_id: '3', 
+        employee_group_code: 'PART', 
+        employee_group_name: 'Part-Time', 
+        employee_group_nameeng: 'Part-Time', 
+        is_active: false, 
+        created_at: '2023-01-01T00:00:00Z', 
+        updated_at: '2023-01-01T00:00:00Z' 
+    },
 ];
 
 export const mockPositions: PositionListItem[] = [
