@@ -16,7 +16,7 @@ interface Props {
 export const ExistingAVSearchModal: React.FC<Props> = ({ isOpen, onClose, prId, onSelect }) => {
   const { data, isLoading } = useQuery({
     queryKey: ['existing-avs', prId],
-    queryFn: () => AVService.getApprovalList({ pr_id: prId }),
+    queryFn: () => AVService.getApprovalList({ prId: prId }),
     enabled: isOpen && !!prId,
   });
 

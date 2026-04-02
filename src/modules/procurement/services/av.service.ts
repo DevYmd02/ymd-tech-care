@@ -25,5 +25,9 @@ export const AVService = {
 
   getApprovalList: async (params?: any): Promise<ApprovalListResponse> => {
     return await api.get<ApprovalListResponse>('/pr-approval', { params });
+  },
+
+  getApprovalById: async (id: number): Promise<any> => {
+    return await api.get<any>(`/pr-approval/${id}`);
   }
 };
