@@ -68,12 +68,22 @@ export const AVFormLines: React.FC<AVFormLinesProps> = React.memo(({
                             return lines.map((_, index) => {
                                 const line = watchedLines[index] || {};
                                 const isApproved = !!line.is_approved;
+                                const status = watchForm('status');
 
                                 const approvedQty = Number(line.approved_qty) || 0;
                                 const requestedQty = Number(showRequestedQty ? (line.requested_qty ?? line.qty) : (line.remaining_qty ?? line.requested_qty ?? line.qty)) || 0;
 
+                                // 🎯 Updated Hiding Logic:
+                                // If it's a NEW AV, hide lines with 0 requested (already fully approved elsewhere)
                                 if (!isExistingAV && requestedQty === 0) return null;
-                                if (isExistingAV && !isApproved) return null;
+                                
+                                // If it's an EXISTING AV:
+                                // - If it's REJECTED, show everything that was part of the PR or AV
+                                // - If it's NOT REJECTED, only show items that were actually approved/included in this AV
+                                if (isExistingAV) {
+                                  if (status !== 'REJECTED' && !isApproved) return null;
+                                }
+
                                 visibleNo++;
                             
                             // Recalculate discount based on approved qty

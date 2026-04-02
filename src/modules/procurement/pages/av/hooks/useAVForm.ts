@@ -101,6 +101,20 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess, approvalItem }: UseA
         logger.info('[useAVForm] Fetched PR Data Stringified:', JSON.stringify(pr));
 
         const source = (pr as any).header || pr;
+        setActiveId(prId); // 🌟 Update activeId on load
+        logger.info('[useAVForm] Fetched PR Data source:', JSON.stringify(source));
+
+        // 🎯 NEW: Fetch specific AV detail if we have an ID
+        let avDetails: any = null;
+        const targetApprovalId = itemArg?.approval_id || itemArg?.id;
+        if (targetApprovalId) {
+            try {
+                avDetails = await AVService.getApprovalById(targetApprovalId);
+                logger.info('[useAVForm] Fetched specific AV detail:', JSON.stringify(avDetails));
+            } catch (err) {
+                logger.warn('[useAVForm] Failed to fetch specific AV detail, falling back:', err);
+            }
+        }
 
         const uniqueWhIds = Array.from(new Set((pr.lines || []).map((l: any) => l.warehouse_id).filter(Boolean)));
         
@@ -138,22 +152,43 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess, approvalItem }: UseA
           const matchedWh = (warehouses || []).find((w: any) => String(w.value) === String(lineWhId));
           const locName = locationLookup[Number(line.location)] || line.location_name || line.location || '';
 
-          const isLineApproved = String(line.status || '').trim().toUpperCase() === 'APPROVED';
-          const rem = isLineApproved ? 0 : (Number(line.remaining_qty) > 0 ? Number(line.remaining_qty) : Number(line.qty));
+          const isLineApprovedStatus = String(line.status || '').trim().toUpperCase() === 'APPROVED';
+          const rem = isLineApprovedStatus ? 0 : (Number(line.remaining_qty) > 0 ? Number(line.remaining_qty) : Number(line.qty));
+
+          // 🎯 Match PR line with specific AV approval line
+          const approvalLines = avDetails?.pr_approval_lines || avDetails?.prApprovalLines || [];
+          const approvalLine = (approvalLines as any[]).find((al: any) => 
+              String(al.pr_line_id || al.prLineId) === String(line.id || line.pr_line_id)
+          );
+
+          // 🎯 Metadata flattening for snapshot data
+          const enrichedLine = {
+            ...line,
+            ...(line.pr_line || {}), // Flatten nested pr_line if exists (common in some PR APIs)
+            item_code: line.item?.item_code || line.item_code || matchedItem?.item_code || '',
+            item_name: line.item?.item_name || line.item_name || line.description || matchedItem?.item_name || '',
+          };
 
           return {
-            ...line,
-            item_code: matchedItem?.item_code || line.item_code || '',
-            item_name: matchedItem?.item_name || line.item_name || line.description || '',
-            description: line.description || line.item_name || matchedItem?.item_name || '',
-            uom: matchedUnit?.uom_name || matchedUnit?.unit_name || line.uom || '',
+            ...enrichedLine,
+            item_code: enrichedLine.item_code,
+            item_name: enrichedLine.item_name,
+            description: enrichedLine.description || enrichedLine.item_name || '',
+            uom: matchedUnit?.uom_name || matchedUnit?.unit_name || enrichedLine.uom_code || enrichedLine.uom || '',
             remaining_qty: rem,
             is_approved: (() => {
+                if (approvalLine) return Number(approvalLine.approved_qty || approvalLine.approvedQty) > 0;
+                if (targetApprovalId) {
+                  // If it's an existing AV but this specific line wasn't in the snapshot
+                  return avDetails?.status === 'APPROVED' || avDetails?.status === 'PARTIAL' ? false : false;
+                }
                 const isNew = !itemArg || !itemArg.approval_id || itemArg.status === 'PENDING';
                 if (isNew) return rem > 0;
                 return (line.approved_qty !== null && line.approved_qty !== undefined) ? Number(line.approved_qty) > 0 : true;
             })(),
             approved_qty: (() => {
+                if (approvalLine) return Number(approvalLine.approved_qty || approvalLine.approvedQty);
+                if (targetApprovalId) return 0; // Existing record but line not included -> 0
                 const isNew = !itemArg || !itemArg.approval_id || itemArg.status === 'PENDING';
                 if (isNew) return Number(rem) || 0;
                 return (line.approved_qty !== null && line.approved_qty !== undefined) ? Number(line.approved_qty) : (Number(rem) || 0);
@@ -205,8 +240,8 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess, approvalItem }: UseA
 
         reset({
           ...source,
-          approval_id: itemArg?.approval_id || itemArg?.id || undefined,
-          av_no: itemArg?.av_no || itemArg?.approval_no || '',
+          approval_id: avDetails?.approval_id || itemArg?.approval_id || itemArg?.id || undefined,
+          av_no: avDetails?.approval_no || itemArg?.av_no || itemArg?.approval_no || '',
           hasOtherAVs: !!itemArg?.hasOtherAVs,
           lines: mappedLines,
           pr_no: source.pr_no || '',
@@ -220,10 +255,11 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess, approvalItem }: UseA
           purpose: (source.purpose || source.remark || '').trim(),
           preferred_vendor_id: vendorId ? Number(vendorId) : undefined,
           vendor_name: vendorName,
-          preparer_name: source.preparer_name || source.requester_name || source.employee_name || '',
+          preparer_name: avDetails?.approval_emp_name || source.preparer_name || source.requester_name || source.employee_name || '',
           requester_name: source.requester_name || source.employee_name || '',
           is_on_hold: source.status === 'DRAFT' ? 'Y' : 'N',
-          status: itemArg?.status || source.status || 'PENDING',
+          status: avDetails?.status || itemArg?.status || source.status || 'PENDING',
+          reject_reason: avDetails?.status === 'REJECTED' ? (avDetails.remarks || avDetails.reject_reason || '') : '',
           shipping_method: source.shipping_method || '',
           pr_tax_code_id: source.pr_tax_code_id ? Number(source.pr_tax_code_id) : undefined,
           pr_tax_rate: (() => {
@@ -231,7 +267,7 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess, approvalItem }: UseA
             const matchedTax = purchaseTaxOptions.find(t => String(t.value) === String(source.pr_tax_code_id));
             return Number(matchedTax?.original?.tax_rate || 0);
           })(),
-        });
+        }, { keepDefaultValues: false }); // Ensure UI updates
       }
     } catch (error) {
       console.error('Failed to fetch AV details:', error);
