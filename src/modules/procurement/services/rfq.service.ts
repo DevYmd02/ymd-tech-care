@@ -11,7 +11,7 @@ const ENDPOINTS = {
   create: '/rfq',
   addVendors: (id: number) => `/rfq/${id}/vendors`,
   sendToVendor: (rfqVendorId: number) => `/rfq/${rfqVendorId}/send-to-vendor`,
-  approvedPRsWithoutRFQ: '/rfq/pr/without-rfq',
+  approvedPRsWithoutRFQ: '/rfq/pr-approved/without-rfq',
   prApprovalDetail: (prId: number) => `/rfq/pr-approved/${prId}/without-rfq`,
 };
 
@@ -177,6 +177,10 @@ export const RFQService = {
             status: currentStatus, // Overwrite with dynamic status
             ref_pr_no: item.ref_pr_no || item.pr_no || item.pr?.pr_no || null,
             pr_no: item.ref_pr_no || item.pr_no || item.pr?.pr_no || null,
+            
+            // 🕵️‍♂️ Robust AV Mapping Recovery (Snake_Case + CamelCase + Nested discovery)
+            pr_approval_id: item.pr_approval_id || (item as any).pr_approval?.approval_id || (item as any).prApprovalId || (item as any).av_id || (item as any).approval_id,
+            approved_pr_no: item.approved_pr_no || (item as any).pr_approval?.approval_no || (item as any).ref_approved_pr_no || (item as any).refApprovedPrNo || (item as any).pr_approval_no || (item as any).av_no || (item as any).approval_no,
         };
     });
 

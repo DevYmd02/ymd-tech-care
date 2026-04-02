@@ -27,7 +27,8 @@ export const PRSourceSelectionModal: React.FC<PRSourceSelectionModalProps> = ({ 
             setIsLoading(true);
             setFetchError(null);
             try {
-                logger.info('[PRSourceSelectionModal] Fetching PRs without RFQ from backend');
+                logger.info('[PRSourceSelectionModal] Fetching all APPROVED PRs from backend (Smarter WITHOUT-RFQ Endpoint)');
+                // 🎯 FIX: Use RFQService.getApprovedPRsWithoutRFQ() which handles the "disappear when used" logic
                 const res = await RFQService.getApprovedPRsWithoutRFQ();
                 const list = res.data || [];
                 
@@ -41,7 +42,7 @@ export const PRSourceSelectionModal: React.FC<PRSourceSelectionModalProps> = ({ 
                 setPrList(sortedList);
                 setLinkedPrNos(new Set()); 
                 
-                logger.info(`[PRSourceSelectionModal] Loaded ${sortedList.length} PRs from backend`);
+                logger.info(`[PRSourceSelectionModal] Loaded ${sortedList.length} Approved PRs from PRService`);
             } catch (error) {
                 logger.error('[PRSourceSelectionModal] Failed to fetch data:', error);
                 setFetchError('ไม่สามารถดึงข้อมูลได้ กรุณาลองใหม่อีกครั้ง');

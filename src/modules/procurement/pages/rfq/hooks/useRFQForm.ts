@@ -214,24 +214,24 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         setValue('approved_pr_no', approvedNo, { shouldValidate: true, shouldDirty: true });
         setValue('pr_approval_id', record.approval_id ? Number(record.approval_id) : undefined, { shouldDirty: true });
         
-        // 🆕 Extract AV approved delivery date with deep scanning — prioritizing AV header dates over PR fallbacks
-        // 🆕 Extract AV approved delivery date with deep scanning — prioritizing Delivery Date
-        // If the AV record only has need_by_date (Required Date), we fallback to PR's delivery_date if available
-        const rawDate = record.delivery_date || 
-                        record.deliveryDate || 
-                        activePR?.delivery_date || 
+        // 🆕 Extract AV approved delivery date with deep scanning — prioritizing PR's requested date
+        // We favor the original PR date or need_by_date, as AV's 'delivery_date' often defaults to system dates in the backend
+        const rawDate = activePR?.delivery_date || 
                         initialPR?.delivery_date || 
                         record.need_by_date || 
                         record.needByDate || 
+                        record.delivery_date || 
+                        record.deliveryDate || 
                         record.due_date || 
                         record.pr?.delivery_date || 
                         record.pr?.need_by_date || '';
         const finalAVDate = rawDate ? rawDate.toString().split('T')[0] : '';
         
-        logger.info("💎 [DIAGNOSTIC] AV Selection Date Extraction:", {
+        logger.info("💎 [DIAGNOSTIC] AV Selection Date Extraction (Adjusted Precedence):", {
             record_id: record.approval_id,
             rawDate,
             finalAVDate,
+            activePR_date: activePR?.delivery_date,
             all_keys: Object.keys(record)
         });
 
@@ -271,10 +271,10 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                     uom: originalLine?.uom || avLine.uom || masterItem?.unit_name || '',
                     uom_id: originalLine?.uom_id || avLine.uom_id || 0,
                     required_receipt_type: originalLine?.required_receipt_type || 'FULL',
-                    // 🎯 IMPROVED: Look for date in AV Line first, then AV Header, then PR Line
+                    // 🎯 IMPROVED: Prefer Original Line (PR) date if AV line date is ambiguous
                     target_delivery_date: (
+                        originalLine?.target_delivery_date || 
                         avLine.delivery_date || 
-                        originalLine?.target_delivery_date || // PR Line's date is often the correct one
                         avLine.line_needed_date || 
                         avLine.need_by_date || 
                         finalAVDate || 
@@ -755,6 +755,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
 
             // 🛡️ SAFE RESET: Don't lose Purpose/Remarks if user typed them
             const currentValues = getValues();
+            setActivePR(fullPR); // 🎯 CRITICAL: Sync activePR state for date inheritance
             reset({
                 ...currentValues,
                 ...mappedData,

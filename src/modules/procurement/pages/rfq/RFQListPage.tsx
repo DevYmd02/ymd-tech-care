@@ -142,12 +142,25 @@ const AVNumberCell = ({ prNo, fallbackNo, approvalId }: { prNo?: string | null, 
         
         // 🎯 Precision Match: If we have an ID, find the exact matching approval
         if (approvalId) {
-            const match = approvalList.find((a: any) => Number(a.approval_id) === Number(approvalId));
-            if (match) return match.approval_no;
+            const match = (approvalList as any[]).find((a: any) => Number(a.approval_id) === Number(approvalId) || a.id === approvalId);
+            if (match) return match.approval_no || match.approved_pr_no;
         }
 
-        // Fallback: Take the first one (historical compatibility)
-        return approvalList[0].approval_no;
+        // 🎯 String Match Fallback: If we have a fallback number but no ID (Common in List API)
+        if (fallbackNo && !approvalId) {
+             const match = (approvalList as any[]).find((a: any) => 
+                (a.approval_no || a.approved_pr_no) === fallbackNo
+             );
+             if (match) return match.approval_no || match.approved_pr_no;
+        }
+
+        // 🛡️ Robust Fallback: If there's ONLY ONE AV record for this PR, it's safe to assume it's the one.
+        if (approvalList.length === 1 && !approvalId) {
+            return approvalList[0].approval_no || (approvalList[0] as any).approved_pr_no;
+        }
+
+        // ❌ Strict: If there are MULTIPLE AVs (e.g. 0008, 0009) and no ID/Number match, return null.
+        return null;
     }, [hasFallback, fallbackNo, approvalList, approvalId]);
 
     if (isLoading && !hasFallback) {
@@ -416,8 +429,8 @@ export default function RFQListPage() {
                             <PRNumberCell prId={item.pr_id} fallbackNo={prNumber} />
                             <AVNumberCell 
                                 prNo={prNumber} 
-                                fallbackNo={item.approved_pr_no} 
-                                approvalId={item.pr_approval_id}
+                                fallbackNo={item.approved_pr_no || (item as any).ref_approved_pr_no || (item as any).refApprovedPrNo || (item as any).pr_approval_no || (item as any).approval_no || (item as any).pr_approval?.approval_no} 
+                                approvalId={item.pr_approval_id || (item as any).pr_approval?.approval_id}
                             />
                         </div>
                     </div>
