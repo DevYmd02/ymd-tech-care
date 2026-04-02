@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { POAService } from '@/modules/procurement/services/poa.service';
 import { POAFormSchema, type POAFormData } from '@/modules/procurement/schemas/poa-schemas';
-import type { POListItem } from '@/modules/procurement/types';
+import type { POListItem, POLine } from '@/modules/procurement/types';
 import { logger } from '@/shared/utils/logger';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { extractErrorMessage } from '@/core/api/api';
@@ -37,7 +37,7 @@ export const usePOAForm = ({
     const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
     const [isPOSearchModalOpen, setIsPOSearchModalOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [currentPoId, setCurrentPoId] = useState<number | undefined>(poId);
+    const [currentPoId, setCurrentPoId] = useState<number | string | undefined>(poId);
     const [isPartialApproval, setIsPartialApproval] = useState(false);
     const isInitialLoad = useRef(true);
     
@@ -51,20 +51,25 @@ export const usePOAForm = ({
     }, [poId]);
 
     const { data: detailData, isLoading: isLoadingDetail } = useQuery({
-        queryKey: ['poa-detail', currentPoId],
-        queryFn: () => POAService.getById(currentPoId!),
+        queryKey: ['poa-detail', currentPoId, !!(initialValues?.poa_no && initialValues.poa_no !== '-')],
+        queryFn: () => POAService.getById(
+            currentPoId!, 
+            (initialValues?.poa_no && initialValues.poa_no !== '-') ? 'POA' : 'PO'
+        ),
         enabled: isOpen && !!currentPoId,
     });
 
     const currentStatus = detailData?.status || initialValues?.status || '';
     const currentPoaNo  = detailData?.poa_no || initialValues?.poa_no || '-';
     
-    // 🎯 Logic: Is Read Only if (Status is Terminal) AND (It is a historical record with a POA No)
-    // If it is a PARTIAL record but poa_no is '-', it's a "Waiting" round for the balance -> NOT Read Only.
-    const isReadOnly = readOnly || (
-        ['APPROVED', 'PARTIAL', 'REJECTED', 'COMPLETED', 'CANCELLED', 'ISSUED'].includes(currentStatus) && 
-        (currentPoaNo !== '-')
-    );
+    // 🎯 Logic: Is Read Only ONLY if it's a historical record with a POA Number
+    // PENDING_APPROVAL status should ALWAYS be editable (it's waiting for approval action)
+    // PARTIAL without POA number means it's a new round waiting for approval -> editable
+    // 🛡️ CRITICAL: PENDING_APPROVAL must NEVER be read-only (it's the approval action state)
+    const isReadOnly = currentStatus === 'PENDING_APPROVAL' ? false : !!(readOnly || (
+        ['APPROVED', 'PARTIAL', 'REJECTED', 'COMPLETED', 'CANCELLED', 'ISSUED'].includes(currentStatus) &&
+        (currentPoaNo && currentPoaNo !== '-')
+    ));
 
     const { data: currencies = [], isLoading: isLoadingCurrencies } = useQuery({
         queryKey: ['master-currencies'],
@@ -73,6 +78,7 @@ export const usePOAForm = ({
     });
 
     const formMethods = useForm<POAFormData>({
+        mode: 'all',
         resolver: zodResolver(POAFormSchema) as Resolver<POAFormData>,
         defaultValues: {
             po_no: '',
@@ -114,33 +120,41 @@ export const usePOAForm = ({
 
     useEffect(() => {
         if (isOpen && (initialValues || detailData)) {
-            const sourceObj = (detailData || initialValues || {}) as any;
-            const isPending = (sourceObj.status === 'PENDING_APPROVAL' || !sourceObj.status);
-            const initialLines = (sourceObj.po_lines || sourceObj.lines || []).map((l: any) => {
-                const originalQty = Number(l.qty || l.qty_ordered || 0);
-                const remQty      = l.remaining_qty !== undefined ? Number(l.remaining_qty) : originalQty;
-                
-                // 🎯 Logic: Is Processed?
-                // If it's a follow-up round (isPending but some already approved), 
-                // remQty == 0 means it's completely finished in a previous round.
-                const isProcessed = remQty === 0 && originalQty > 0;
+            const sourceObj = (detailData || initialValues || {}) as POListItem;
+            
+            // 🎯 Logic: Map PO lines to form state with robust quantity fallbacks
+            const initialLines = (sourceObj.po_lines || []).map((l: POLine) => {
+                // Try multiple field names to find the absolute original PO quantity
+                const originalQty = Number(l.qty || l.qty_ordered || (l as any).qty_total || (l as any).quantity || 0);
+                let remQty = l.remaining_qty !== undefined ? Number(l.remaining_qty) : originalQty;
 
-                // For a "New" approval (no processed items yet), default to originalQty.
-                // For a "Follow-up" (processed exists), default to remaining balance.
-                const currentQty  = Number(l.qty_ordered || l.qty || 0);
-                const defaultQty  = isPending ? (isProcessed ? 0 : remQty) : currentQty;
+                // Safety: If it's a new POA and remQty is 0 but originalQty exists, use originalQty
+                const isNewRound = !sourceObj.poa_no || sourceObj.poa_no === '-';
+                if (isNewRound && remQty === 0 && originalQty > 0) {
+                    remQty = originalQty;
+                }
+
+                const isProcessed = remQty <= 0 && originalQty > 0;
+                const existingQty = Number(l.approved_qty ?? l.qty_approved ?? l.qty_ordered ?? 0);
                 
+                // 🎯 AV PATTERN: Force full remaining quantity for new rounds or items with zero existing approved qty
+                const defaultQty = (isNewRound || existingQty === 0) 
+                    ? (isProcessed ? 0 : remQty) 
+                    : existingQty;
+
                 return {
                     ...l,
                     qty: originalQty,
                     qty_ordered: defaultQty,
                     remaining_qty: remQty,
                     is_processed: isProcessed,
-                    is_approved: l.is_approved !== undefined ? !!l.is_approved : (isProcessed || defaultQty > 0)
+                    // 🎯 AV PATTERN: Processed items are UNCHECKED by default in new rounds
+                    is_approved: l.is_approved !== undefined ? !!l.is_approved : (!isProcessed && defaultQty > 0)
                 };
             });
 
             reset({
+                ...sourceObj,
                 po_no: sourceObj.po_no || '',
                 po_date: sourceObj.po_date || '',
                 vendor_id: sourceObj.vendor_id,
@@ -157,9 +171,7 @@ export const usePOAForm = ({
                 tax_code_id: sourceObj.tax_code_id,
                 tax_name: (sourceObj.tax_name && sourceObj.tax_name !== '-' && sourceObj.tax_name !== 'undefined') ? sourceObj.tax_name : 
                           (sourceObj.tax_code as any)?.tax_name || 
-                          (sourceObj.tax_code as any)?.name ||
-                          (sourceObj.poHeader as any)?.tax_name || 
-                          (sourceObj.poHeader as any)?.tax_code?.tax_name || '-',
+                          (sourceObj.tax_code as any)?.name || '-',
                 created_by_name: (sourceObj.created_by_name && sourceObj.created_by_name !== '-' && sourceObj.created_by_name !== 'undefined') ? sourceObj.created_by_name : 
                                  (sourceObj.approval_emp_name && sourceObj.approval_emp_name !== '-' && sourceObj.approval_emp_name !== 'undefined') ? sourceObj.approval_emp_name : '-',
                 exchange_rate_date: sourceObj.exchange_rate_date ? new Date(sourceObj.exchange_rate_date).toISOString().split('T')[0] : (new Date().toISOString().split('T')[0]),
@@ -167,11 +179,11 @@ export const usePOAForm = ({
                 target_currency: sourceObj.base_currency_code || sourceObj.target_currency || 'THB',
                 exchange_rate: Number(sourceObj.exchange_rate || 1),
             });
-            // 🎯 Latch: Sync refs immediately to prevent useEffect from firing
+
+            // Sync refs to prevent loop
             prevCurrencyId.current = sourceObj.quote_currency_code || sourceObj.currency_code || 'THB';
             prevTargetCurrency.current = sourceObj.base_currency_code || sourceObj.target_currency || 'THB';
             prevRateDate.current = sourceObj.exchange_rate_date ? new Date(sourceObj.exchange_rate_date).toISOString().split('T')[0] : (new Date().toISOString().split('T')[0]);
-            
             isInitialLoad.current = false;
         } else if (!isOpen) {
             reset();
@@ -182,19 +194,23 @@ export const usePOAForm = ({
         }
     }, [isOpen, initialValues, detailData, reset]);
 
-    const watchLines           = useWatch({ control, name: 'po_lines' });
+    const watchLines = useWatch({ control, name: 'po_lines' });
 
     // ── Partial Approval Detection (Pattern matched with AV/PR) ────────────────
     useEffect(() => {
         if (!watchLines || !detailData) return;
         
-        const isAllSelectedFull = watchLines.every((l: any, idx: number) => {
-            const originalQty = Number(detailData?.po_lines?.[idx]?.qty_ordered || detailData?.po_lines?.[idx]?.qty || 0);
-            const approvedQty = Number(l.qty_ordered || l.qty || 0);
-            return !!l.is_approved && approvedQty === originalQty && originalQty > 0;
+        const isAllFinalized = watchLines.every((l: any) => {
+            // 1. If item is already processed (approved in full in previous round), it's "Done".
+            if (l.is_processed) return true;
+            
+            // 2. If item is newly approved in THIS round for the full remaining amount, it's "Done".
+            const approvedQty = Number(l.qty_ordered || 0);
+            const remQty      = Number(l.remaining_qty || 0);
+            return !!l.is_approved && approvedQty === remQty && remQty > 0;
         });
         
-        setIsPartialApproval(!isAllSelectedFull);
+        setIsPartialApproval(!isAllFinalized);
     }, [watchLines, detailData]);
 
     // ── Currency Exchange Rate Auto-Calculation triggers (DISABLED FOR POA) ──────
@@ -210,6 +226,22 @@ export const usePOAForm = ({
 
     const handleConfirmApprove = async () => {
         if (!currentPoId) return;
+        
+        // 🎯 Extract numeric ID from composite strings for submission
+        let numericPoId = Number(currentPoId);
+        
+        // 🎯 Decode Numeric Offsets back to real database IDs
+        if (numericPoId >= 2000000000) {
+            numericPoId -= 2000000000;
+        } else if (numericPoId >= 1000000000) {
+            numericPoId -= 1000000000;
+        }
+        
+        if (!numericPoId || isNaN(numericPoId)) {
+            toast('ไม่สามารถระบุเลขที่ PO ได้', 'error');
+            return;
+        }
+        
         try {
             setIsSubmitting(true);
             
@@ -228,21 +260,22 @@ export const usePOAForm = ({
             // Calculation Logic:
             // APPROVED = All items are checked AND all approved quantities equal ordered quantities.
             // PARTIAL  = At least one item checked AND (some items unchecked OR some quantities reduced).
-            const isAllApproved = formData.po_lines.every((l: any, idx: number) => {
-                const originalQty = Number(detailData?.po_lines?.[idx]?.qty_ordered || detailData?.po_lines?.[idx]?.qty || 0);
-                const approvedQty = Number(l.qty_ordered || l.qty || 0);
-                return !!l.is_approved && approvedQty === originalQty && originalQty > 0;
+            const isAllFinalized = formData.po_lines.every((l: any) => {
+                if (l.is_processed) return true;
+                const approvedQty = Number(l.qty_ordered || 0);
+                const remQty      = Number(l.remaining_qty || 0);
+                return !!l.is_approved && approvedQty === remQty && remQty > 0;
             });
             
-            const submissionStatus = isAllApproved ? 'APPROVED' : 'PARTIAL';
+            const submissionStatus = isAllFinalized ? 'APPROVED' : 'PARTIAL';
 
             // Prepare enriched unified approval payload
             const payload: any = {
-                po_header_id: currentPoId,
+                po_header_id: numericPoId,
                 status: submissionStatus,
                 remarks: formData.remarks || (submissionStatus === 'PARTIAL' ? 'Partially Approved via POA' : 'Approved via POA'),
                 approval_date: now,
-                need_by_date: (formData as any).delivery_date || (formData as any).po_date || now,
+                need_by_date: formData.delivery_date || formData.po_date || now,
                 approval_emp_id: user?.employee_id || user?.id || 0,
                 approval_emp_name: user?.employee?.employee_fullname || user?.username || 'System',
                 // After the currency swap fix: form field currency_code = PO/quote currency (e.g. USD)
@@ -254,7 +287,8 @@ export const usePOAForm = ({
                 tax_code_id: (formData as any).tax_code_id || 0,
                 discount_expression: (formData as any).discount_expression || '0',
                 lines: formData.po_lines.map((l: any) => ({
-                    po_line_id: l.id || l.po_line_id,
+                    // 🛡️ Always use the business integer po_line_id, NOT the RHF string field.id
+                    po_line_id: Number(l.po_line_id || l.id || 0),
                     // If unchecked, approved_qty MUST be 0 (Backend requirement for PARTIAL)
                     approved_qty: l.is_approved ? Number(l.qty_ordered || l.qty || 0) : 0,
                     remarks: l.line_remark || (l.is_approved ? 'Approved' : 'Rejected/Skipped'),
@@ -281,6 +315,22 @@ export const usePOAForm = ({
 
     const handleConfirmReject = async () => {
         if (!currentPoId) return;
+        
+        // 🎯 Extract numeric ID from composite strings for submission
+        let numericPoId = Number(currentPoId);
+        
+        // 🎯 Decode Numeric Offsets back to real database IDs
+        if (numericPoId >= 2000000000) {
+            numericPoId -= 2000000000;
+        } else if (numericPoId >= 1000000000) {
+            numericPoId -= 1000000000;
+        }
+        
+        if (!numericPoId || isNaN(numericPoId)) {
+            toast('ไม่สามารถระบุเลขที่ PO ได้', 'error');
+            return;
+        }
+        
         const formData = getValues();
         const reason = formData.reject_reason;
         const now = new Date().toISOString();
@@ -295,7 +345,7 @@ export const usePOAForm = ({
             
             // Prepare enriched unified rejection payload
             const payload: any = {
-                po_header_id: currentPoId,
+                po_header_id: numericPoId,
                 status: 'REJECTED',
                 remarks: reason,
                 approval_date: now,
@@ -312,7 +362,7 @@ export const usePOAForm = ({
                 discount_expression: (formData as any).discount_expression || '0',
                 lines: formData.po_lines.map((l: any) => ({
                     // 🛡️ Always use the business integer po_line_id, NOT the RHF string field.id
-                    po_line_id: l.po_line_id || l.id,
+                    po_line_id: Number(l.po_line_id || l.id || 0),
                     approved_qty: 0, // Reject sets approved qty to 0
                     remarks: reason,
                     approval_date: now

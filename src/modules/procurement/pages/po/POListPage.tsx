@@ -10,7 +10,7 @@ import type { POFormData } from '@/modules/procurement/schemas/po-schemas';
 import { createColumnHelper } from '@tanstack/react-table';
 import type { ColumnDef } from '@tanstack/react-table';
 import { POFormModal, DocumentSourceSelectorModal } from './components';
-import { POAHistoryModal } from '@/modules/procurement/shared/components/POAHistoryModal';
+import { POAHistoryModal } from '@/modules/procurement/pages/poa/components/POAHistoryModal';
 import GRNFormModal from '@/modules/procurement/pages/grn/components/GRNFormModal';
 
 export default function POListPage() {

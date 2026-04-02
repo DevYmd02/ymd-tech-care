@@ -1,7 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
-import { X, FileText, Loader2 } from 'lucide-react';
+import { X, FileText, Loader2, Search } from 'lucide-react';
 import { POAService } from '@/modules/procurement/services/poa.service';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import type { POListItem } from '@/modules/procurement/types';
@@ -17,6 +17,8 @@ export const POSearchModal: React.FC<POSearchModalProps> = ({
     onClose, 
     onSelect 
 }) => {
+    const [searchTerm, setSearchTerm] = React.useState('');
+
     const { data, isLoading, error } = useQuery({
         queryKey: ['pending-approval-pos'],
         queryFn: () => POAService.getList({ status: 'PENDING_APPROVAL' }),
@@ -27,7 +29,17 @@ export const POSearchModal: React.FC<POSearchModalProps> = ({
     if (!isOpen) return null;
 
     // Handles raw data structure (might be wrapped in { success: true, data: [...] } or straight array)
-    const poList = (data as any)?.items || (data as any)?.data || data || [];
+    const rawPoList = (data as any)?.items || (data as any)?.data || data || [];
+    
+    // 🎯 Client-Side Filtering
+    const filteredPoList = (rawPoList as any[]).filter(item => {
+        if (!searchTerm) return true;
+        const s = searchTerm.toLowerCase();
+        return (
+            String(item.po_no || '').toLowerCase().includes(s) ||
+            String(item.vendor_name || '').toLowerCase().includes(s)
+        );
+    });
 
     return createPortal(
         <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
@@ -48,7 +60,25 @@ export const POSearchModal: React.FC<POSearchModalProps> = ({
                 </div>
 
                 {/* Body / Table Area */}
-                <div className="p-4 flex-1 overflow-auto">
+                <div className="p-4 flex-1 overflow-auto flex flex-col gap-4">
+                    
+                    {/* 🎯 NEW: Search Box */}
+                    {!isLoading && !error && (rawPoList as any[]).length > 0 && (
+                        <div className="relative group">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <Search className="h-4 w-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                            </div>
+                            <input
+                                type="text"
+                                className="block w-full pl-10 pr-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                                placeholder="ค้นหาตามเลขที่ PO หรือชื่อผู้ขาย..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                autoFocus
+                            />
+                        </div>
+                    )}
+
                     {isLoading ? (
                         <div className="flex flex-col items-center justify-center py-10 text-gray-500 dark:text-gray-400">
                             <Loader2 className="w-8 h-8 animate-spin mb-2" />
@@ -58,9 +88,13 @@ export const POSearchModal: React.FC<POSearchModalProps> = ({
                         <div className="text-center py-10 text-red-500">
                             เกิดข้อผิดพลาดในการดึงข้อมูล
                         </div>
-                    ) : (poList as any[]).length === 0 ? (
+                    ) : (rawPoList as any[]).length === 0 ? (
                         <div className="text-center py-10 text-gray-500 dark:text-gray-400">
                             ไม่มีใบสั่งซื้อที่รออนุมัติในระบบ
+                        </div>
+                    ) : filteredPoList.length === 0 ? (
+                        <div className="text-center py-10 text-gray-500 dark:text-gray-400">
+                            ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา
                         </div>
                     ) : (
                         <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
@@ -76,8 +110,20 @@ export const POSearchModal: React.FC<POSearchModalProps> = ({
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                                    {(poList as any[]).map((item: any, index: number) => {
-                                        const total = item.total_amount || 0;
+                                    {filteredPoList.map((item: any, index: number) => {
+                                        const total = (() => {
+                                            const rawTotal = Number(
+                                                item.total_amount ?? 
+                                                item.base_total_amount ?? 
+                                                item.grand_total ?? 
+                                                item.net_amount ?? 
+                                                item.net_amt ?? 
+                                                item.amount ?? 
+                                                item.total ?? 
+                                                0
+                                            );
+                                            return rawTotal;
+                                        })();
                                         return (
                                             <tr key={item.po_id} className="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
                                                 <td className="px-4 py-3 text-center text-gray-500">{index + 1}</td>

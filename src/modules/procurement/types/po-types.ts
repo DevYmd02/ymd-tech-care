@@ -21,7 +21,8 @@ import type { POStatus } from '@/modules/procurement/schemas/po-schemas';
  * Table: po_header
  */
 export interface POHeader {
-    po_id: any;                  // Support string unique keys (UPG-...) to prevent React duplicate key errors
+    po_id: number;                  // Support string unique keys (UPG-...) to prevent React duplicate key errors
+    row_key?: string;               // UI Unique Key (AV Pattern)
     po_header_id: number;           // Aligned with API PK
     po_no: string;                  // varchar(30)
     po_date: string;                // date
@@ -69,6 +70,12 @@ export interface POHeader {
     };
     po_lines?: POLine[];
 
+    // Multi-currency and POA specific fields
+    exchange_rate_date?: string;
+    quote_currency_code?: string;
+    base_currency_code?: string;
+    target_currency?: string;
+
     // Aggregates for List View
     item_count?: number;
 }
@@ -106,6 +113,14 @@ export interface POLine {
     
     required_receipt_type: 'FULL' | 'PARTIAL'; // varchar(20)
     rfq_line_id?: number | null;    // FK -> rfq_line (Required for QC Traceability)
+
+    // POA specific fields
+    remaining_qty?: number;
+    qty_approved?: number;
+    approved_qty?: number;
+    is_approved?: boolean;
+    is_processed?: boolean;
+    line_remark?: string;
 }
 
 // ====================================================================================
