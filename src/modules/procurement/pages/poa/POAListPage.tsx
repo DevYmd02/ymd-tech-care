@@ -8,7 +8,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { usePOAList, POA_STATUS_OPTIONS } from './hooks/usePOAList';
 import type { POListItem } from '@/modules/procurement/types';
 import { POAFormModal } from './components';
-import { POAHistoryModal } from '@/modules/procurement/shared/components/POAHistoryModal';
+import { POAHistoryModal } from '@/modules/procurement/pages/poa/components/POAHistoryModal';
 
 const columnHelper = createColumnHelper<POListItem>();
 
@@ -119,9 +119,8 @@ export default function POAListPage() {
             header: () => <div className="text-right w-full whitespace-nowrap">ยอดรวม (บาท)</div>,
             cell: (info) => {
                 const item = info.row.original;
-                // 🛡️ REJECTED always = 0.00 (approved_qty=0 would create negative discount math)
-                // @ts-expect-error - handle dynamic field from joined results
-                const val = item.status === 'REJECTED' ? 0 : Number(item.base_total_amount || info.getValue() || 0);
+                // 🛡️ REJECTED always = 0.00
+                const val = item.status === 'REJECTED' ? 0 : Number(info.getValue() || 0);
                 return (
                     <div className="text-right font-bold text-gray-800 dark:text-white whitespace-nowrap w-full text-sm">
                         {new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val)}
@@ -284,7 +283,7 @@ export default function POAListPage() {
                                 onPageChange: handlePageChange,
                                 onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 })
                             }}
-                            rowIdField="po_id"
+                            rowIdField="row_key"
                         />
                     </div>
 
@@ -295,7 +294,7 @@ export default function POAListPage() {
                     >
                         {filteredData.map((item) => (
                             <MobileListCard
-                                key={item.po_id}
+                                key={item.row_key}
                                 title={item.po_no}
                                 subtitle={formatThaiDate(item.po_date)}
                                 statusBadge={<POStatusBadge status={item.status} />}
@@ -306,8 +305,7 @@ export default function POAListPage() {
                                         label: 'ยอดรวมสุทธิ', 
                                         value: (
                                             <span className="font-bold text-emerald-600">
-                                                {/* @ts-expect-error - dynamic base_total_amount mapping */}
-                                                {Number(item.base_total_amount || item.total_amount || 0).toLocaleString()}
+                                                {Number(item.total_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </span>
                                         ) 
                                     }

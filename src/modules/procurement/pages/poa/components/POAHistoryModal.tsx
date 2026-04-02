@@ -148,9 +148,10 @@ const POAHistoryRow: React.FC<{ item: POListItem; index: number }> = ({ item, in
   const isOfficialPOA = !!item.poa_no && item.poa_no !== '-';
 
   // Fetch full detail for this specific record to get the real total_amount
+  // 🎯 AV PATTERN: Explicitly specify 'POA' context to fetch from /po-approval/${id}
   const { data: detail, isLoading } = useQuery({
     queryKey: ['poa', 'detail', poaId],
-    queryFn: () => POAService.getById(poaId),
+    queryFn: () => POAService.getById(poaId, 'POA'),
     enabled: !!poaId && isOfficialPOA,
     staleTime: 60 * 1000,
   });

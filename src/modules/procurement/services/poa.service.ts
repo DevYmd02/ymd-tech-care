@@ -14,6 +14,7 @@ import { EmployeeService } from '@/modules/master-data/employee/services/employe
 import { BranchService } from '@/modules/master-data/company/services/branch.service';
 import { TaxCodeService } from '@/modules/master-data/tax/services/tax-code.service';
 import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
+import { parseDiscountAmount } from '@/modules/procurement/utils/pricing.utils';
 
 
 // ---------------------------------------------------------------------------
@@ -45,6 +46,74 @@ const normalizePOStatus = (status?: string): POStatus => {
 };
 
 
+interface POALineResponse {
+    id?: number;
+    po_line_id?: number;
+    item_id?: number;
+    item_code?: string;
+    item_name?: string;
+    description?: string;
+    qty?: number | string;
+    qty_ordered?: number | string;
+    qty_approved?: number | string;
+    approved_qty?: number | string;
+    remaining_qty?: number | string;
+    quantity?: number | string;
+    item_qty?: number | string;
+    unit_price?: number | string;
+    discount_amount?: number | string;
+    discount_amt?: number | string;
+    discount_expression?: string;
+    uom_id?: number | string;
+    uom_name?: string;
+    unit_name?: string;
+    receipt_type?: string;
+    is_approved?: boolean;
+    remarks?: string;
+    line_remark?: string;
+}
+
+interface POHeaderResponse {
+    id?: number;
+    po_header_id?: number;
+    po_id?: number;
+    po_no?: string;
+    approval_no?: string;
+    approval_id?: number;
+    poa_no?: string;
+    status?: string;
+    po_date?: string;
+    approval_date?: string;
+    vendor_id?: number;
+    vendor_name?: string;
+    currency_code?: string;
+    currencyCode?: string;
+    quote_currency_code?: string;
+    quoteCurrencyCode?: string;
+    quote_currency_rate?: number;
+    tax_code_id?: number;
+    tax_name?: string;
+    tax_rate?: number;
+    payment_term_days?: number;
+    delivery_date?: string;
+    exchange_rate?: number;
+    exchangeRate?: number;
+    rate?: number;
+    created_by?: number | string;
+    create_by?: number | string;
+    created_by_name?: string;
+    preparer_name?: string;
+    branch_id?: number | string;
+    branch_name?: string;
+    po_lines?: POALineResponse[];
+    lines?: POALineResponse[];
+    poLines?: POALineResponse[];
+    base_currency_code?: string;
+    target_currency?: string;
+    baseCurrencyCode?: string;
+    targetCurrency?: string;
+}
+
 /**
  * Standardizes the response from both List and Detail endpoints.
  * Backend often returns nested poHeader or inconsistent field names.
@@ -56,14 +125,13 @@ const mapPOAResponseToListItem = (
     taxCodeMap?: Record<string, any>,
     uomMap?: Record<string, string>
 ): POListItem => {
-    // 🚩 In case the API returns the object nested under poHeader or quotation
-    const poHeader = (item.poHeader as any) || (item.po_header as any) || item || {};
+    const poHeader = (item.poHeader as POHeaderResponse) || (item.po_header as POHeaderResponse) || item || {};
     const lines = item.poLines || item.po_lines || poHeader.po_lines || poHeader.poLines || item.lines || [];
 
-    // Status Normalization
     const status = normalizePOStatus(item.status || poHeader.status);
+    const poaNoValue = String(item.approval_no || item.poa_no || poHeader.poa_no || poHeader.approval_no || '-');
+    const isHistorical = poaNoValue && poaNoValue !== '-';
 
-    // Metadata Recovery with Multi-Source Fallbacks
     const recovered = {
         tax_name: String(
             (item.tax_name && !['-','undefined'].includes(item.tax_name)) ? item.tax_name : 
@@ -100,7 +168,6 @@ const mapPOAResponseToListItem = (
                 (poHeader.tax_rate !== undefined && poHeader.tax_rate !== null) ? poHeader.tax_rate :
                 7
             );
-            // Normalization Layer: If rate is like 0.07, treat it as 7%
             return (rawRate > 0 && rawRate < 1) ? rawRate * 100 : rawRate;
         })(),
         exchange_rate: Number(
@@ -117,26 +184,30 @@ const mapPOAResponseToListItem = (
         ),
     };
 
-    const mappedLines = lines.map((l: any, idx: number) => {
-        // Priority: Recorded Approval (History) > Balance (New) > Action Qty > Original Full Qty
-        // Add robust aliases: approved_qty, qty_approved, quantity, item_qty
-        const qty_ordered = Number(l.approved_qty ?? l.qty_approved ?? l.remaining_qty ?? l.qty_ordered ?? l.quantity ?? l.item_qty ?? l.qty ?? 0);
+    const mappedLines = lines.map((l: POALineResponse, idx: number) => {
+        const hasApprovalQty = l.approved_qty !== undefined || l.qty_approved !== undefined;
+        
+        const qty_ordered = isHistorical
+            ? Number(l.approved_qty ?? l.qty_approved ?? (hasApprovalQty ? 0 : (l.qty ?? l.qty_ordered ?? 0)))
+            : Number(l.approved_qty ?? l.qty_approved ?? l.remaining_qty ?? l.qty_ordered ?? l.qty ?? 0);
+        
         const unit_price = Number(l.unit_price ?? (poHeader.po_lines?.[idx] as any)?.unit_price ?? 0);
-        const disc_amt = Number(l.discount_amount ?? l.discount_amt ?? 0);
-
-        // DIAGNOSTIC LOG (Temporary)
-        if (qty_ordered === 0 && (l.approved_qty !== undefined || l.remaining_qty !== undefined)) {
-            console.log(`[POA Mapper] Line ${idx} has 0 qty. Keys:`, Object.keys(l), 'Values:', JSON.stringify(l));
-        }
+        
+        // 🎯 DEEP SCAN FIX: Use parseDiscountAmount to handle percentage strings (e.g. "2%")
+        const lineGross = qty_ordered * unit_price;
+        const discount_expr = String(l.discount_expression || l.discount_amount || l.discount_amt || '0');
+        const disc_amt = parseDiscountAmount(discount_expr, lineGross);
 
         return {
             ...l,
             id: l.id || l.po_line_id || idx + 1,
             po_line_id: l.po_line_id || l.id,
+            qty: Number(l.qty ?? l.qty_ordered ?? 0), 
             qty_ordered,
             unit_price,
             discount_amount: disc_amt,
-            net_amount: Number((qty_ordered * unit_price) - disc_amt),
+            discount_expression: discount_expr,
+            net_amount: Number(lineGross - disc_amt),
             uom_name: String(
                 (l.uom_name && !['-','undefined'].includes(l.uom_name)) ? l.uom_name :
                 (uomMap && l.uom_id && uomMap[String(l.uom_id).toLowerCase()]) ? uomMap[String(l.uom_id).toLowerCase()] :
@@ -147,81 +218,85 @@ const mapPOAResponseToListItem = (
         };
     });
 
-    return {
+    const mappedResult = {
         ...item,
-        // Identify PO ID securely
-        // Identify PO ID securely - support string keys for deduplication
         po_id: item.approval_id || item.po_header_id || item.po_id || poHeader.po_header_id || poHeader.po_id || 0,
         po_header_id: Number(item.po_header_id || item.po_id || poHeader.po_header_id || poHeader.po_id || 0),
         po_no: String(poHeader.po_no || item.po_no || '-'),
-        poa_no: String(item.approval_no || item.poa_no || '-'),
+        poa_no: poaNoValue,
         po_date: String(item.approval_date || poHeader.po_date || item.po_date || item.created_at || ''),
         status: (() => {
             const currentStatus = String(item.status || status || 'PENDING_APPROVAL').toUpperCase();
-            const poaNo = String(item.approval_no || item.poa_no || '-');
-            
-            // 🎯 Normalization: If backend says PENDING, map to our canonical PENDING_APPROVAL
             let normalized = currentStatus === 'PENDING' ? 'PENDING_APPROVAL' : currentStatus;
-            
-            // 🎯 Logic: If it has a POA number, it is definitely APPROVED (even if original record says PENDING)
-            if (normalized === 'PENDING_APPROVAL' && poaNo && poaNo !== '-') {
+            if (normalized === 'PENDING_APPROVAL' && poaNoValue && poaNoValue !== '-') {
                 normalized = 'APPROVED';
             }
-            
             return normalized as any;
         })(),
-        
         ...recovered,
-        
         po_lines: mappedLines,
-        // Header-level financial totals with fallback calculation from lines
         total_amount: (() => {
-            // 🛡️ REJECTED status = 0 ALWAYS (approved_qty=0 causes negative math from discounts)
             if (status === 'REJECTED') return 0;
 
-            // Broad aliases for header-level total (History/List records often use 'net_amt' or 'amount')
-            const rawTotal = Number(
+            const rate = Number(recovered.exchange_rate || 1);
+            
+            // 🎯 Line-level calculation (Original Currency)
+            const subTotalOriginal = (mappedLines || []).reduce((sum: number, l: any) => {
+                return sum + Number(l.net_amount || 0);
+            }, 0);
+            const taxRate = Number(recovered.tax_rate ?? 7);
+            const totalWithTaxOriginal = subTotalOriginal + (subTotalOriginal * taxRate / 100);
+            
+            // 🎯 Convert to Base Currency (Baht)
+            const calculatedTotalBase = Number((totalWithTaxOriginal * rate).toFixed(2));
+
+            const rawTotalBase = Number(
                 item.total_amount ?? 
+                item.base_total_amount ?? 
                 item.grand_total ?? 
                 item.net_amount ?? 
                 item.net_amt ?? 
                 item.amount ?? 
                 item.total ?? 
-                item.total_price ?? 
-                item.sum_total ??
-                item.price ??
-                item.approval_amount ?? 
                 0
             );
-            if (rawTotal > 0) return rawTotal;
-            
-            // Fallback: Sum up mapped lines (Only works if lines are included in list)
-            if (mappedLines.length > 0) {
-                // IMPORTANT: Only sum lines that were actually approved (qty > 0) in this specific round
-                const subTotal = mappedLines.reduce((sum: number, l: any) => {
-                    if (Number(l.qty_ordered || 0) <= 0) return sum;
-                    return sum + Number(l.net_amount || 0);
-                }, 0);
-                
-                if (subTotal === 0) return 0;
 
-                const taxRate = Number(recovered.tax_rate ?? 7);
-                return subTotal + (subTotal * taxRate / 100);
+            // 🎯 FOR HISTORY: Always trust the calculation from lines IF lines exist, 
+            // because historical lines in the database are the source of truth for partial rounds.
+            // But we MUST use the converted Baht value for the "Baht" column.
+            if (isHistorical) {
+                 if (calculatedTotalBase > 0) return calculatedTotalBase;
+                 
+                 // Fallback if lines are missing (list API)
+                 const likelyRoundNetOriginal = Number(item.amount || item.net_amount || item.net_amt || 0);
+                 if (likelyRoundNetOriginal > 0 && likelyRoundNetOriginal < (rawTotalBase / rate)) {
+                     const withTaxBase = (likelyRoundNetOriginal * rate) + (likelyRoundNetOriginal * rate * taxRate / 100);
+                     return Number(withTaxBase.toFixed(2));
+                 }
             }
 
-            return 0;
+            return (rawTotalBase > 0) ? rawTotalBase : (calculatedTotalBase > 0 ? calculatedTotalBase : 0);
         })(),
+        base_total_amount: 0, 
     } as unknown as POListItem;
+    
+    // 🎯 Final Fixup: Sync base_total_amount for UI compatibility
+    if (!(mappedResult as any).base_total_amount || (mappedResult as any).base_total_amount === 0) {
+        (mappedResult as any).base_total_amount = mappedResult.total_amount;
+    }
+    
+    return mappedResult;
 };
 
 const ENDPOINTS = {
-    list: '/po-approval', // Updated to approval list endpoint
-    detail: (id: number) => `/po-approval/${id}`, // Update if needed, but for now focusing on list
+    list: '/po-approval',
+    detail: (id: number) => `/po-approval/${id}`, // ✅ Dedicated: specific history record
+    poDetail: (id: number) => `/po-approval/po/${id}`, // ✅ Dedicated: approval context for PO
     update: (id: number) => `/po/${id}`,
     approve: (id: number) => `/po/${id}/approve`,
     reject: (id: number) => `/po/${id}/reject`,
-    submit: '/po-approval', // Unified approval endpoint
-    bulkApprove: '/po/bulk-approve', // If exists, otherwise we'll map over array
+    submit: '/po-approval',
+    bulkApprove: '/po/bulk-approve',
 };
  
 export interface POAApprovalPayload {
@@ -317,27 +392,48 @@ export const POAService = {
 
          // 3. Normalize and Combine
         // Approval items come from the raw /po-approval endpoint, so they need full mapping.
-        const approvalItems: POListItem[] = rawApprovalItems.map(item => mapPOAResponseToListItem(item, employeeMap, branchMap, taxCodeMap, uomMap));
+        const approvalItems: POListItem[] = rawApprovalItems.map(item => {
+            const mapped = mapPOAResponseToListItem(item, employeeMap, branchMap, taxCodeMap, uomMap);
+            // 🎯 AV PATTERN: Raw ID + String row_key
+            const rawId = Number(item.approval_id || item.id || 0);
+            return {
+                ...mapped,
+                row_key: `approved-${rawId}`,
+                po_id: Number(item.po_id || mapped.po_id || 0),
+                approval_id: rawId,
+            };
+        });
         
-        // Pending/Rejected POs come from POService.getList() which ALREADY hydrates and maps them.
-        // We only need to ensure their status is canonical.
+        // 🎯 AV PATTERN: Calculate remaining totals for pending items by matching history
+        const approvedHistoryTotalMap = new Map<string, number>();
+        approvalItems.forEach(h => {
+            const sum = Number(approvedHistoryTotalMap.get(h.po_no) || 0);
+            approvedHistoryTotalMap.set(h.po_no, sum + Number(h.total_amount || 0));
+        });
+
         const pendingPOItems: POListItem[] = rawPendingPOs
             .filter(item => {
                 const s = String(item.status || '').toUpperCase();
-                // 🎯 Filter Rule: From the raw source, only include items that actually NEED approval action.
-                // Documents that are already APPROVED or COMPLETED should only appear via the POA history.
                 return s === 'PENDING' || s === 'WAITING' || s === 'PENDING_APPROVAL' || s.startsWith('WAITING') || s === 'PARTIAL';
             })
             .map(item => {
                 const mapped = mapPOAResponseToListItem(item, employeeMap, branchMap, taxCodeMap, uomMap);
-                const s = String(item.status || mapped.status || '').toUpperCase();
-                // 🎯 Status normalization for actionable rows
-                const isActionable = s === 'PENDING' || s === 'WAITING' || s === 'PENDING_APPROVAL' || s.startsWith('WAITING') || s === 'PARTIAL';
+                const rawId = Number(item.po_id || mapped.po_id || 0);
+                const poNo = String(mapped.po_no || '');
                 
+                // 🎯 AV PATTERN: Subtract historical totals from the pending PO row
+                const historicalSum = approvedHistoryTotalMap.get(poNo) || 0;
+                const originalTotal = Number(mapped.total_amount || 0);
+                const remTotal      = Math.max(0, originalTotal - historicalSum);
+
                 return {
                     ...mapped,
-                    poa_no: '-', // Raw POs from /po don't have a POA number yet
-                    status: (isActionable ? 'PENDING_APPROVAL' : mapped.status) as any
+                    row_key: `pending-${rawId}`,
+                    po_id: rawId,
+                    poa_no: '-', 
+                    status: 'PENDING_APPROVAL' as any,
+                    total_amount: remTotal,
+                    base_total_amount: remTotal
                 };
             });
         
@@ -370,41 +466,29 @@ export const POAService = {
             }
         });
 
-        // 4.2 Merge Pending/Rejected POs (Deduplicate only against identical sources)
+        // 4.2 Merge Pending/Rejected POs
         [...pendingPOItems, ...rejectedPOItems].forEach((item: POListItem) => {
             const poNo = String(item.po_no || '').trim();
             const poaNo = String(item.poa_no || '').trim();
             const status = String(item.status || '').toUpperCase();
 
-            // 🎯 NEW: Skip DRAFT items
             if (status === 'DRAFT') return;
 
-            // 🎯 AV-Style Key: If it's a "Waiting" round, key by PO. If it's history, key by POA.
-            // This allows PO-001 (Waiting) and POA-001 (Partial History) to coexist.
             const isActionRow = !poaNo || poaNo === '-';
             const uniqueKey = isActionRow ? `ACTION-${poNo}` : poaNo;
             
-            // 🎯 Filtering Rule: If it's an Action row, check if it should be hidden due to "Full Rejection".
-            // Rule: Hide if has REJECTED history but NO PARTIAL/APPROVED history.
             if (isActionRow) {
                 const history = approvalItems.filter(h => String(h.po_no || '').trim() === poNo);
                 const hasRejected = history.some(h => h.status === 'REJECTED');
                 const hasPositive  = history.some(h => h.status === 'PARTIAL' || h.status === 'APPROVED');
                 
                 if (hasRejected && !hasPositive) {
-                    console.log(`[POAService] Hiding Action row for fully rejected PO: ${poNo}`);
                     return;
                 }
             }
             
             if (!listMap.has(uniqueKey)) {
-                // Ensure unique po_id for React rendering
-                const realId = item.po_header_id || item.po_id || 0;
-                item.po_id = (poaNo && poaNo !== '-') ? `HIST-${poaNo}-${realId}` : `ACTION-${poNo}-${realId}`;
-                
                 listMap.set(uniqueKey, item);
-            } else {
-                console.log(`[POAService] Skipping already-added row for key: ${uniqueKey}`);
             }
         });
 
@@ -446,12 +530,20 @@ export const POAService = {
     },
 
 
-    getById: async (id: number): Promise<POListItem> => {
-        logger.info(`[POAService] Fetching POA Detail: ${id}`);
+    getById: async (id: number | string, context?: 'PO' | 'POA'): Promise<POListItem> => {
+        logger.info(`[POAService] Fetching POA Detail: ${id}, Context: ${context}`);
+
+        const numericId = Number(id);
+        
+        // 🎯 AV PATTERN: Distinguish context explicitly
+        // If context is POA, we fetch the historical record.
+        // If context is PO (default), we fetch the actionable approval screen.
+        const isHistory = context === 'POA' || (typeof id === 'string' && id.startsWith('approved'));
+        const actualId = typeof id === 'string' ? Number(id.replace(/^(approved|pending)-/, '')) : numericId;
 
         // 1. Parallel fetch for registries and detail
         const [res, emps, branches, taxes, uoms] = await Promise.allSettled([
-            api.get<Record<string, unknown>>(ENDPOINTS.detail(id)),
+            api.get<Record<string, unknown>>(isHistory ? ENDPOINTS.detail(actualId) : ENDPOINTS.poDetail(actualId)),
             EmployeeService.getAll(),
             BranchService.getList({ limit: 1000 }),
             TaxCodeService.getTaxCodes(),
@@ -498,18 +590,11 @@ export const POAService = {
 
         const approvalRes = res.status === 'fulfilled' ? res.value : {};
         
-        // 🎯 Support parsing numeric ID from composite strings (ID-xxxxx-REALID)
-        let poHeaderId = Number(approvalRes.po_header_id || approvalRes.po_id || (approvalRes.poHeader as any)?.po_header_id || id);
-        if (isNaN(poHeaderId)) {
-            const idStr = String(id || '');
-            if (idStr.includes('-')) {
-                const parts = idStr.split('-');
-                const lastPart = parts[parts.length - 1];
-                if (lastPart && !isNaN(Number(lastPart))) {
-                    poHeaderId = Number(lastPart);
-                }
-            }
-        }
+        // 🎯 AV PATTERN: Raw ID Mapping (Legacy 1B/2B offsets removed)
+        let poHeaderId = Number(approvalRes.po_header_id || approvalRes.po_id || (approvalRes.poHeader as any)?.po_header_id || actualId);
+        
+        // Ensure po_header_id is correctly prioritized
+        if (!isHistory && poHeaderId === 0) poHeaderId = actualId;
 
         // 1. Fetch Base PO and ALL Approval History for this PO
         let poRes: any = {};
@@ -522,34 +607,59 @@ export const POAService = {
             const poNo = poRes.po_no || (approvalRes.poHeader as any)?.po_no || approvalRes.po_no;
             if (poNo) {
                 const historyRes = await api.get<Record<string, unknown>>(ENDPOINTS.list, { params: { po_no: poNo, limit: 1000 } });
-                allApprovalHistory = extractArrayFromResponse(historyRes);
+                const rawHistory = extractArrayFromResponse(historyRes);
+                // 🎯 CRITICAL: Exact match filtering for the PO Number
+                // The API might return PO-001 for a search of PO-0010. We must be strict.
+                allApprovalHistory = rawHistory.filter((h: any) => 
+                    String(h.poHeader?.po_no || h.po_no || '').trim() === poNo.trim()
+                );
             }
         } catch (error) {
             logger.error(`[POAService] Could not fetch base PO or History for ${poHeaderId}`, error);
         }
 
-        // 2. Calculate Cumulative Approved Quantities per Line
-        // Key is po_line_id, value is sum of approved_qty from ALL rounds
+        // 2. Calculate Cumulative Approved Quantities per Line from PREVIOUS rounds
+        const currentRoundId = Number(id || approvalRes.id || 0);
+        const currentPoaNo   = String(approvalRes.approval_no || approvalRes.poa_no || '').trim();
+        
         const approvedSumMap: Record<number, number> = {};
+        const seenHistoryIds = new Set<number>();
+
         allApprovalHistory.forEach((h: any) => {
-            const poaNo = String(h.approval_no || h.poa_no || '');
-            // 🎯 CRITICAL: Only count rounds that have a valid POA Number (Officially Approved rounds)
-            // If poaNo is '-' or empty, it's either the current pending session or a rejected record from POService mismatch
+            const hId   = Number(h.id || 0);
+            const poaNo = String(h.approval_no || h.poa_no || '').trim();
+
+            // 🎯 CRITICAL Skipping Logic:
+            // 1. Skip if it's the exact same internal record ID
+            if (hId > 0 && hId === currentRoundId) return;
+            
+            // 2. Skip if it's the same POA number (prevents double-counting during mapping)
+            if (poaNo && poaNo !== '-' && poaNo === currentPoaNo) return;
+            
+            // 3. Skip if we've already counted this history record ID (Set guard)
+            if (hId > 0 && seenHistoryIds.has(hId)) return;
+            if (hId > 0) seenHistoryIds.add(hId);
+
+            // 🎯 Summation Logic: Only count rounds that have a valid decision (POA Number)
             if (!poaNo || poaNo === '-') return;
 
             const hLines = h.po_lines || h.lines || [];
             hLines.forEach((l: any) => {
+                // 🎯 CRITICAL: We must sum based on the ID of the line in the ORIGINAL PO (po_line_id)
+                // History entries usually have po_line_id pointing back to the parent.
                 const lid = l.po_line_id || l.id;
                 if (lid) {
-                    approvedSumMap[lid] = (approvedSumMap[lid] || 0) + Number(l.approved_qty || 0);
+                    approvedSumMap[lid] = (approvedSumMap[lid] || 0) + Number(l.approved_qty || l.qty_approved || 0);
                 }
             });
         });
 
         // 3. Merge and Enrich Lines
         const parentLines = poRes.po_lines || poRes.poLines || [];
-        const poaLinesRaw = approvalRes.po_lines || approvalRes.lines || [];
-        const poaLines = (Array.isArray(poaLinesRaw) && poaLinesRaw.length > 0) ? poaLinesRaw : [];
+        // 🎯 Robust Line Extraction (Mirroring mapPOAResponseToListItem)
+        const poHeaderDetail = (approvalRes.poHeader as any) || (approvalRes.po_header as any) || approvalRes || {};
+        const poaLinesRaw = approvalRes.poLines || approvalRes.po_lines || poHeaderDetail.po_lines || poHeaderDetail.poLines || approvalRes.lines || [];
+        const poaLines = Array.isArray(poaLinesRaw) ? poaLinesRaw : [];
         
         // Use parent lines as base if creating new POV, otherwise use existing POA lines
         const sourceLines = (poaLines.length > 0) ? poaLines : parentLines;
@@ -560,25 +670,58 @@ export const POAService = {
                 ? parentLines.find((pl: any) => pl.id === l.po_line_id || pl.po_line_id === l.po_line_id) 
                 : parentLines[idx];
             
-            const lid = l.po_line_id || l.id || (parentLine?.id);
+            const lid = l.po_line_id || (parentLine ? (parentLine.id || parentLine.po_line_id) : l.id);
             const originalQty = Number(parentLine?.qty ?? parentLine?.qty_ordered ?? l.qty ?? l.qty_ordered ?? 0);
-            const prevApproved = Number(approvedSumMap[lid] || 0);
-            const remaining = Math.max(0, originalQty - prevApproved);
+            
+            // 🎯 History Mode: If viewing an existing POA record, strictly use its recorded values
+            if (isHistory) {
+                // 🎯 CRITICAL: Only use approved_qty or qty_approved. 
+                // Do NOT fallback to qty_ordered here as it often contains the original PO qty (10)
+                const poaQty = Number(l.approved_qty ?? l.qty_approved ?? 0);
+                return {
+                    ...l,
+                    qty: originalQty,
+                    qty_ordered: poaQty,
+                    is_processed: true,
+                    remaining_qty: 0
+                };
+            }
 
-            return { 
-                ...(parentLine || {}), 
+            // 🎯 Approval Mode: Calculate remaining and defaults for new rounds
+            const approvedSoFar = lid ? (approvedSumMap[lid] || 0) : 0;
+            const remQty = Math.max(0, originalQty - approvedSoFar);
+            
+            const existingQty = Number(l.approved_qty || l.qty_approved || l.qty_ordered || 0);
+            const defaultQty  = (existingQty > 0) ? existingQty : Math.max(0, remQty);
+
+            return {
                 ...l,
-                previously_approved_qty: prevApproved,
-                remaining_qty: remaining,
-                qty: originalQty // Ensure full original qty is available for reference
+                qty: originalQty,
+                remaining_qty: remQty,
+                qty_ordered: defaultQty,
+                is_processed: remQty <= 0
             };
         });
 
-        const merged: Record<string, any> = {
+        // 🎯 AV PATTERN: Sanitize Parent PO data before merging
+        // For history records, we MUST NOT inherit financial totals from the parent PO
+        const sanitizedPoRes = isHistory ? {
             ...poRes,
+            total_amount: undefined,
+            base_total_amount: undefined,
+            grand_total: undefined,
+            net_amount: undefined,
+            net_amt: undefined,
+            amount: undefined,
+            total: undefined,
+        } : poRes;
+
+        const merged: Record<string, any> = {
+            ...sanitizedPoRes,
             ...approvalRes,
+            // 🎯 Ensure approvalRes values always win
             po_lines: finalLines,
-            poHeader: poRes.poHeader || poRes.po_header || poRes || {},
+            poHeader: sanitizedPoRes.poHeader || sanitizedPoRes.po_header || sanitizedPoRes || {},
         };
 
         const result = mapPOAResponseToListItem(merged, employeeMap, branchMap, taxCodeMap, uomMap);

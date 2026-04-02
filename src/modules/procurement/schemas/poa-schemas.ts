@@ -12,6 +12,17 @@ export const POALineSchema = POLineSchema.extend({
     remaining_qty: z.coerce.number().optional(),
     previously_approved_qty: z.coerce.number().optional(),
     is_processed: z.boolean().optional(),
+}).refine((data) => {
+    // 🎯 Logic: If item is selected for approval, amount cannot exceed remaining.
+    if (data.is_approved) {
+        const qty = Number(data.qty_ordered || 0);
+        const rem = Number(data.remaining_qty || 0);
+        return qty <= rem;
+    }
+    return true;
+}, {
+    message: "ห้ามเกินจำนวนที่เหลือ",
+    path: ["qty_ordered"]
 });
 
 export const POAFormSchema = z.object({

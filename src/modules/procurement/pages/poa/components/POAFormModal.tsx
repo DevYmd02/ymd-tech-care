@@ -16,7 +16,7 @@ import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal'
 import { usePOAForm } from '../hooks/usePOAForm';
 import { POSearchModal } from './POSearchModal';
 import { CustomDateInput } from '@/shared/components/forms/CustomDateInput';
-import type { Control, FieldErrors } from 'react-hook-form';
+import type { Control, FieldErrors, UseFormSetValue } from 'react-hook-form';
 import type { Currency } from '@/modules/master-data/types/master-data-types';
 import type { POAFormData } from '@/modules/procurement/schemas/poa-schemas';
 import { cn } from '@/shared/utils/cn';
@@ -41,14 +41,14 @@ const POSummaryPanel = ({ control, detailData }: { control: Control<POAFormData>
             const lineGross = Number(l.qty_ordered ?? 0) * Number(l.unit_price ?? 0);
             return sum + parseDiscountAmount(l.discount_expression || '0', lineGross);
         }, 0);
-        const subtotal = grossTotal - totalDiscount;
+        
+        const subtotal = Math.max(0, grossTotal - totalDiscount);
         const rawRate = Number((detailData as Record<string, any>)?.tax_code?.tax_rate ?? (detailData as Record<string, any>)?.tax_rate ?? 7);
-        // Normalize: if rate is 0.07, treat as 7%
         const normalizedRate = (rawRate > 0 && rawRate < 1) ? (rawRate * 100) : rawRate;
         const taxRate = parseFloat(normalizedRate.toFixed(4));
-        // 🛡️ Round to 2dp (ERP Currency Precision Standard)
+        
         const taxAmount   = Math.round(subtotal * (taxRate / 100) * 100) / 100;
-        const totalAmount = Math.round((subtotal + taxAmount) * 100) / 100;
+        const totalAmount = Math.max(0, Math.round((subtotal + taxAmount) * 100) / 100);
 
         return {
             grossTotal:    Math.round(grossTotal    * 100) / 100,
@@ -88,9 +88,10 @@ interface POLineRowProps {
     isReadOnly: boolean;
     detailData?: any;
     errors: FieldErrors<POAFormData>;
+    setValue: UseFormSetValue<POAFormData>;
 }
 
-const POLineRow: React.FC<POLineRowProps> = ({ field, idx, control, isReadOnly, detailData, errors }) => {
+const POLineRow: React.FC<POLineRowProps> = ({ field, idx, control, isReadOnly, detailData, errors, setValue }) => {
     const lineVal = useWatch({ control, name: `po_lines.${idx}` as any });
     const isProcessed = !!(lineVal?.is_processed ?? field.is_processed);
     
@@ -101,16 +102,23 @@ const POLineRow: React.FC<POLineRowProps> = ({ field, idx, control, isReadOnly, 
     const isApproved = !!(lineVal?.is_approved ?? field.is_approved);
 
     // Row-level disable logic
+    // 🎯 Logic: Lock if it's a historical record (isReadOnly) 
+    // OR if it's already fully approved in a PREVIOUS round (isProcessed).
     const isDisabled = isReadOnly || isProcessed;
 
     return (
-        <tr 
+        <tr
             className={cn(
                 "border-b border-gray-100 dark:border-gray-800 transition-colors",
-                isProcessed && "bg-slate-100/40 dark:bg-slate-800/30 opacity-60 grayscale-[0.5] select-none",
-                !isProcessed && !isApproved && "bg-gray-100/50 dark:bg-gray-800/50 opacity-70"
+                // 1. Processed = Already approved/rejected in previous round OR Document is ReadOnly.
+                // 🎯 UI: Processed rows are dimmed and non-interactive to prevent double-processing.
+                (isReadOnly || isProcessed) && "bg-slate-200/50 dark:bg-slate-900/40 opacity-50 grayscale-[0.4] pointer-events-none select-none border-l-[3px] border-l-slate-400/50",
+                // ✅ USER REQUEST: Unchecked items that are active should look clearly inactive/pending
+                !isProcessed && !isApproved && !isReadOnly && "opacity-75 bg-slate-50/10 dark:bg-slate-900/5",
+                // ✅ Highlight active row
+                !isProcessed && isApproved && !isReadOnly && "bg-emerald-50/5 dark:bg-emerald-900/5"
             )}
-            data-line-idx={idx} 
+            data-line-idx={idx}
             data-testid={`po-line-${idx}`}
         >
             {/* 1. Selection */}
@@ -119,12 +127,25 @@ const POLineRow: React.FC<POLineRowProps> = ({ field, idx, control, isReadOnly, 
                     name={`po_lines.${idx}.is_approved`}
                     control={control}
                     render={({ field: { value, onChange } }) => (
-                        <input
+                        <input 
                             type="checkbox"
+                            className="w-4 h-4 text-blue-600 rounded cursor-pointer disabled:cursor-not-allowed disabled:opacity-30 transition-all border-slate-300 dark:border-slate-700"
                             checked={!!value}
-                            onChange={e => onChange(e.target.checked)}
+                            onChange={(e) => {
+                                const isChecked = e.target.checked;
+                                onChange(isChecked);
+                                
+                                // 🎯 UX Sync: If checked and qty is 0, default to full remaining
+                                const currentQty = Number(control._formValues.po_lines[idx].qty_ordered || 0);
+                                const remQty     = Number(field.remaining_qty || 0);
+                                
+                                if (isChecked && currentQty === 0) {
+                                    setValue(`po_lines.${idx}.qty_ordered`, remQty, { shouldValidate: true });
+                                } else if (!isChecked) {
+                                    setValue(`po_lines.${idx}.qty_ordered`, 0, { shouldValidate: true });
+                                }
+                            }}
                             disabled={isDisabled}
-                            className={cn('w-4 h-4 text-emerald-600 rounded', isDisabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer')}
                         />
                     )}
                 />
@@ -156,33 +177,50 @@ const POLineRow: React.FC<POLineRowProps> = ({ field, idx, control, isReadOnly, 
                 {field.uom_name || '-'}
             </td>
 
-            {/* 7. Approved Qty (Editable) */}
             <td data-col="7" data-label="ApproveQty" className="px-2 py-2 border-r border-gray-200 dark:border-gray-700 bg-emerald-50/10 w-24 min-w-[96px]">
                 <Controller
                     name={`po_lines.${idx}.qty_ordered`}
                     control={control}
-                    render={({ field: { value, onChange } }) => (
-                        <div className="relative">
-                            <input
-                                type="number" step="any"
-                                value={value ?? ''}
-                                onChange={e => onChange(e.target.valueAsNumber)}
-                                disabled={isDisabled}
-                                className={cn(
-                                    ui.input,
-                                    '!h-9 text-center text-[14px] font-semibold',
-                                    !isDisabled && 'text-emerald-700 dark:text-emerald-400 border-emerald-500 bg-emerald-50/30 dark:bg-emerald-950/20 focus:border-emerald-500 focus:ring-emerald-500/20 shadow-sm',
-                                    isDisabled && ui.inputRO,
-                                    errors.po_lines?.[idx]?.qty_ordered && 'border-red-500 focus:ring-red-500/20 focus:border-red-500 bg-red-50/50'
+                    render={({ field: { value, onChange } }) => {
+                        // 🎯 Robust Detection: Find the limit from any available source
+                        const val = Number(value || 0);
+                        const qtyFromData = Number(detailData?.po_lines?.[idx]?.qty || 0);
+                        const remFromField = Number(lineVal?.remaining_qty ?? field?.remaining_qty ?? 0);
+                        
+                        // Use remaining_qty if available (>0), otherwise fallback to original qty
+                        const limit = remFromField > 0 ? remFromField : (qtyFromData > 0 ? qtyFromData : 999999);
+                        
+                        const isOver = val > limit;
+                        const hasError = !!errors.po_lines?.[idx]?.qty_ordered || isOver;
+
+                        return (
+                            <div className="relative">
+                                {hasError && (
+                                    <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-3 h-5 bg-red-600 rounded-full z-20 shadow-[0_0_8px_rgba(220,38,38,0.5)] animate-pulse" />
                                 )}
-                            />
-                            {errors.po_lines?.[idx]?.qty_ordered && (
-                                <div className="absolute -bottom-5 left-0 right-0 text-[10px] text-red-500 font-bold text-center leading-tight">
-                                    {errors.po_lines?.[idx]?.qty_ordered?.message}
-                                </div>
-                            )}
-                        </div>
-                    )}
+                                <input
+                                    type="number" step="any"
+                                    value={value ?? ''}
+                                    onChange={e => {
+                                        const newVal = e.target.valueAsNumber || 0;
+                                        onChange(newVal);
+                                        // 🎯 UX Sync: If input > 0, auto-check the approve checkbox
+                                        if (newVal > 0) {
+                                            setValue(`po_lines.${idx}.is_approved`, true, { shouldValidate: true });
+                                        } else if (newVal === 0) {
+                                            setValue(`po_lines.${idx}.is_approved`, false, { shouldValidate: true });
+                                        }
+                                    }}
+                                    disabled={isDisabled}
+                                    className={cn(
+                                        (isApproved && !isDisabled) ? ui.input : ui.inputRO,
+                                        '!h-8 text-center text-sm font-bold transition-all duration-200',
+                                        hasError && '!border-red-600 !ring-2 !ring-red-500/30 !text-red-600 dark:!text-red-400 !bg-red-50/10 dark:!bg-red-900/20'
+                                    )}
+                                />
+                            </div>
+                        );
+                    }}
                 />
             </td>
 
@@ -220,7 +258,7 @@ const POLineRow: React.FC<POLineRowProps> = ({ field, idx, control, isReadOnly, 
                             placeholder={isDisabled ? '' : 'หมายเหตุ...'}
                             className={cn(
                                 ui.input,
-                                '!h-9 text-sm',
+                                '!h-8 text-xs',
                                 isDisabled && ui.inputRO,
                                 errors.po_lines?.[idx]?.line_remark && 'border-red-500 focus:ring-red-500/20 focus:border-red-500'
                             )}
@@ -259,6 +297,7 @@ export default function POAFormModal({
         fields,
         onSubmit,
         onInvalidSubmit,
+        setValue,
 
         isConfirmModalOpen,
         setIsConfirmModalOpen,
@@ -546,7 +585,14 @@ export default function POAFormModal({
                                             <th className="px-2 py-2 text-center w-12 border-r border-blue-500/40 font-semibold">ลำดับ</th>
                                             <th className="px-3 py-2 text-left w-28 border-r border-blue-500/40 font-semibold">รหัสสินค้า</th>
                                             <th className="px-3 py-2 text-left border-r border-blue-500/40 font-semibold">ชื่อสินค้า/บริการ</th>
-                                            <th className="px-2 py-2 text-center w-20 border-r border-blue-500/40 font-semibold text-[11px]">จำนวนที่สั่ง</th>
+                                            <th className="px-2 py-2 text-center w-20 border-r border-blue-500/40 font-semibold text-[11px]">
+                                                {isReadOnly ? 'ยอดอนุมัติเดิม' : (
+                                                    // 🎯 AV PATTERN: If any line has been partially approved (rem < total), show "ยอดคงเหลือ"
+                                                    fields.some(f => Number((f as any).remaining_qty || 0) < Number((f as any).qty || 0))
+                                                    ? 'ยอดคงเหลือ' 
+                                                    : 'จำนวนสั่งซื้อ'
+                                                )}
+                                            </th>
                                             <th className="px-2 py-2 text-center w-20 border-r border-blue-500/40 font-semibold text-[11px]">หน่วย</th>
                                             <th className="px-2 py-2 text-center w-24 border-r border-blue-500/40 bg-emerald-500 text-white font-bold text-[11px]">ยอดอนุมัติ</th>
                                             <th className="px-2 py-2 text-center w-24 border-r border-blue-500/40 font-semibold text-[11px]">ราคา/หน่วย</th>
@@ -581,6 +627,7 @@ export default function POAFormModal({
                                                 isReadOnly={isReadOnly}
                                                 detailData={detailData}
                                                 errors={errors}
+                                                setValue={setValue}
                                             />
                                         ))}
                                     </tbody>
