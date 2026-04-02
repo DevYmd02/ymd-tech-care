@@ -113,7 +113,23 @@ function mapItemDetailFields(raw: Record<string, unknown>): ItemMaster {
     item_category_code: raw.item_category_code ? String(raw.item_category_code) : undefined,
 
     created_at: String(raw.created_at || new Date().toISOString()),
-    updated_at: String(raw.updated_at || new Date().toISOString())
+    updated_at: String(raw.updated_at || new Date().toISOString()),
+    barcodes: (Array.isArray(raw.barcodes) ? raw.barcodes : (Array.isArray(raw.itemBarcodes) ? raw.itemBarcodes : [])).map((itm: unknown) => {
+          const b = itm as Record<string, unknown>;
+          return {
+            item_barcode_id: Number(b.item_barcode_id || b.barcode_id || b.id || 0),
+            barcode: String(b.barcode || b.item_barcode_code || ''),
+            uom_id: b.uom_id ? Number(b.uom_id) : (b.unit_id ? Number(b.unit_id) : undefined),
+            unit_name: b.unit_name ? String(b.unit_name) : '',
+            is_primary: Boolean(b.is_primary || b.is_default || false),
+            is_active: Boolean(b.is_active ?? true),
+            item_id: Number(raw.item_id || 0),
+            item_code: String(raw.item_code || ''),
+            item_name: String(raw.item_name || ''),
+            created_at: String(b.created_at || new Date().toISOString()),
+            updated_at: String(b.updated_at || new Date().toISOString())
+          };
+    })
   };
 }
 
@@ -221,7 +237,8 @@ export const ItemMasterService = {
         item_class_id: data.item_class_id ? Number(data.item_class_id) : null,
         item_size_id: data.item_size_id ? Number(data.item_size_id) : null,
         item_color_id: data.item_color_id ? Number(data.item_color_id) : null,
-        item_grade_id: data.item_grade_id ? Number(data.item_grade_id) : null
+        item_grade_id: data.item_grade_id ? Number(data.item_grade_id) : null,
+        barcodes: data.barcodes || []
       };
       const response = await api.post<SuccessResponse & { item_id?: number }>('/item-master', payload);
       // Backend returns item_id, but SuccessResponse expects id. Support both.
@@ -271,6 +288,7 @@ export const ItemMasterService = {
         item_color_id: data.item_color_id ? Number(data.item_color_id) : undefined,
         item_grade_id: data.item_grade_id ? Number(data.item_grade_id) : undefined,
         is_active: data.is_active !== undefined ? Boolean(data.is_active) : undefined,
+        barcodes: data.barcodes || undefined
       };
 
       await api.patch<SuccessResponse>(`/item-master/${id}`, payload);

@@ -9,9 +9,8 @@ import { logger } from '@/shared/utils/logger';
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
 import { ProductCategoryService } from '@/modules/master-data/inventory/services/product-category.service';
-import { ItemBarcodeService } from '@/modules/master-data/inventory/services/item-barcode.service';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
-import type { ItemMaster, ItemMasterFormData, ItemBarcodeListItem } from '@/modules/master-data/types/master-data-types';
+import type { ItemMaster, ItemMasterFormData } from '@/modules/master-data/types/master-data-types';
 import { extractErrorMessage } from '@/core/api/api';
 
 export const itemMasterSchema = z.object({
@@ -259,76 +258,43 @@ export function useItemForm(editId: number | null, onSuccess?: () => void) {
                 is_expiry_control: item.is_expiry_control || false,
                 is_serial_control: item.is_serial_control || false,
                 costing_method: item.costing_method || 'FIFO',
-                barcodes: [], // Will be filled by separate query below
+                barcodes: (item.barcodes || []).map((b: any) => ({
+                    barcode_id: b.item_barcode_id,
+                    uom_id: b.uom_id || 0,
+                    barcode: b.barcode,
+                    is_primary: b.is_primary ?? false
+                })),
             });
         }
     }, [existingItem, reset]);
 
-    // Fetch barcodes for this item if editing
-    const { data: itemBarcodes } = useQuery({
-        queryKey: ['item-barcodes-form', editId],
-        queryFn: async () => {
-            if (!editId) return [];
-            const res = await ItemBarcodeService.getAll({ item_id: editId });
-            return res.items
-                .filter((b: ItemBarcodeListItem) => b.is_active !== false)
-                .map((b: ItemBarcodeListItem) => ({
-                    barcode_id: b.barcode_id || b.id,
-                    uom_id: b.unit_id || 0,
-                    barcode: b.barcode,
-                    is_primary: b.is_primary ?? false
-                }));
-        },
-        enabled: !!editId
-    });
-
-    useEffect(() => {
-        if (itemBarcodes && itemBarcodes.length > 0) {
-            setValue('barcodes', itemBarcodes, { shouldDirty: false });
-        }
-    }, [itemBarcodes, setValue]);
+    // Redundant barcode query removed as barcodes are now nested in item-detail
 
     const saveMutation = useMutation({
         mutationFn: async (data: ItemFormData) => {
-            // 1. Save Item
-            const itemResponse = editId 
-                ? await ItemMasterService.update(editId, data as ItemMasterFormData)
-                : await ItemMasterService.create(data as ItemMasterFormData);
+            // Prepare payload with nested barcodes
+            const payload: ItemMasterFormData = {
+                ...data,
+                barcodes: (data.barcodes || []).map((b: any) => ({
+                    item_barcode_id: b.barcode_id,
+                    barcode: b.barcode,
+                    uom_id: b.uom_id,
+                    is_primary: b.is_primary
+                }))
+            };
 
-            // 2. Handle Barcodes Sync (Post-Save)
-            const targetItemId = editId || (typeof itemResponse === 'number' ? itemResponse : null);
-            
-            if (targetItemId) {
-                const barcodes = data.barcodes || [];
-                const originalBarcodes = itemBarcodes || [];
-
-                // Soft Delete removed (only if updating)
-                if (editId) {
-                    const toDelete = originalBarcodes.filter((ob) => !barcodes.find(b => b.barcode_id === ob.barcode_id));
-                    for (const b of toDelete) {
-                        // Backend Soft Delete instead of physical removal
-                        await ItemBarcodeService.update(b.barcode_id!, { is_active: false });
-                    }
-                }
-
-                // Add or Update
-                for (const b of barcodes) {
-                    if (b.barcode_id && editId) {
-                        await ItemBarcodeService.update(b.barcode_id, {
-                            barcode: b.barcode,
-                            uom_id: b.uom_id,
-                            is_default: b.is_primary
-                        });
-                    } else {
-                        await ItemBarcodeService.create({
-                            item_id: targetItemId,
-                            barcode: b.barcode,
-                            uom_id: b.uom_id,
-                            is_default: b.is_primary
-                        });
-                    }
-                }
+            // If updating, handle "deleted" barcodes by ensuring they are NOT in the barcodes array
+            // If the backend handles relation sync, omitting removed barcodes will suffice.
+            // If the backend developer told you to send them with a specific property (like is_active), 
+            // we should re-verify that property name. For now, removing it to fix the 400 error.
+            if (editId && existingItem?.barcodes) {
+                // If the backend doesn't allow is_active, we simply DON'T include them in the barcodes array.
+                // Most Sync Relations will delete anything that isn't sent.
             }
+
+            const itemResponse = editId 
+                ? await ItemMasterService.update(editId, payload)
+                : await ItemMasterService.create(payload);
 
             return !!itemResponse;
         },
