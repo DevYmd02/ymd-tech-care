@@ -61,6 +61,9 @@ export const usePOForm = ({
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isHydrating, setIsHydrating] = useState(false);
     const hasHydratedInitial = useRef(false);
+
+    // ── Helper ──────────────────────────────────────────────────────────────
+    const cleanD = (d: any) => (typeof d === 'string' && d.includes('T')) ? d.split('T')[0] : d;
     
     // ── Master Data Queries ──────────────────────────────────────────────────
     const { data: branches = [],   isLoading: isLoadingBranches }   = useQuery({ queryKey: ['master-branches'],   queryFn: MasterDataService.getBranches,   enabled: isOpen });
@@ -272,7 +275,6 @@ export const usePOForm = ({
             }
 
             const detail = (existingPO as any) || {};
-            const cleanD = (d: any) => (typeof d === 'string' && d.includes('T')) ? d.split('T')[0] : d;
 
             // 🎯 Robust Multicurrency Detection
             const backendCurrency = detail?.currency_code || detail?.quote_currency_code || initialValues?.currency_code || 'THB';
@@ -482,7 +484,17 @@ export const usePOForm = ({
             setValue('rfq_id', (Number(qcId || (fullPR as any).rfq_id) || undefined) as any);
             setValue('qc_id', (Number(qcId || (fullPR as any).qc_id) || undefined) as any);
             setValue('winning_vq_id', (Number(resolvedWinningVqId || (fullPR as any).winning_vq_id) || undefined) as any);
-
+            
+            // 🏢 Branch & Project mapping
+            if (fullPR.branch_id) {
+                setValue('branch_id', Number(fullPR.branch_id));
+            }
+            
+            // 📝 Remarks mapping (from PR purpose or remark)
+            const prRemarks = fullPR.purpose || fullPR.remark;
+            if (prRemarks) {
+                setValue('remarks', prRemarks);
+            }
 
             // 3. Map Vendor & Terms (Strict Hydration + Forced UI Refresh)
             const finalVendorId = Number(vendorId || winningVQ?.vendor_id || fullPR.preferred_vendor_id);
@@ -516,6 +528,13 @@ export const usePOForm = ({
 
             setValue('payment_term_days', creditTerm);
             setValue('credit_days', finalCreditDays);
+            
+            // 📅 DELIVERY DATE MAPPING: Priority VQ -> PR Delivery -> PR Need By
+            const deliveryDate = (winningVQ as any)?.delivery_date || fullPR.delivery_date || fullPR.need_by_date;
+            if (deliveryDate) {
+                setValue('delivery_date', cleanD(deliveryDate));
+            }
+
             if (taxCodeId) {
                 setValue('tax_code_id', taxCodeId, { shouldValidate: true });
             }
