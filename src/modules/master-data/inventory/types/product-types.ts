@@ -587,6 +587,7 @@ export interface ItemMaster extends BaseMasterData {
     item_grade_code?: string;
     item_category_id?: number;
     item_category_code?: string;
+    barcodes?: ItemBarcode[];
 }
 
 export interface ItemMasterFormData {
@@ -641,6 +642,7 @@ export interface ItemMasterFormData {
     item_grade_id?: number;
     is_buddy?: boolean;
     is_on_hold?: boolean;
+    barcodes?: Partial<ItemBarcode>[];
 }
 
 export interface ItemListItem {
@@ -774,12 +776,12 @@ export const initialUOMConversionFormData: UOMConversionFormData = {
 // ====================================================================================
 
 export interface ItemBarcode {
-    barcode_id: number;
+    item_barcode_id: number;
     item_id: number;
     item_code: string;
     item_name: string;
     barcode: string;
-    unit_id?: number;
+    uom_id?: number;
     unit_name?: string;
     is_primary: boolean;
     is_active: boolean;

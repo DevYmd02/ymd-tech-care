@@ -37,8 +37,8 @@ export const ItemBarcodeService = {
 
       // Map DB fields to our frontend format (ItemBarcodeListItem)
       const items: ItemBarcodeListItem[] = rawItems.map((b: any) => ({
-          id: b.id || b.barcode_id || b.item_barcode_id, // Primary ID for table rows
-          barcode_id: b.barcode_id || b.item_barcode_id || b.id,
+          id: b.id || b.item_barcode_id || b.barcode_id, // Primary ID for table rows
+          barcode_id: b.item_barcode_id || b.barcode_id || b.id,
           item_id: b.item_id,
           item_code: b.item_code || '',
           item_name: b.item_name || '',
@@ -61,9 +61,10 @@ export const ItemBarcodeService = {
       try {
           const response = await api.get<any>(`/item-barcode/${id}`);
           return {
-              barcode_id: response.barcode_id || response.item_barcode_id || response.id,
+              item_barcode_id: response.item_barcode_id || response.barcode_id || response.id,
               item_id: response.item_id,
               barcode: response.barcode || response.item_barcode_code,
+              uom_id: response.uom_id || response.unit_id,
               is_primary: response.is_primary || response.is_default || false,
               is_active: response.is_active ?? true,
               item_code: response.item_code || '',
