@@ -122,7 +122,7 @@ const PRNumberCell = ({ prId, fallbackNo }: { prId: number | null | undefined, f
 // AV NUMBER HYDRATOR
 // ====================================================================================
 
-const AVNumberCell = ({ prNo, fallbackNo }: { prNo?: string | null, fallbackNo?: string | null }) => {
+const AVNumberCell = ({ prNo, fallbackNo, approvalId }: { prNo?: string | null, fallbackNo?: string | null, approvalId?: number | null }) => {
     const hasFallback = !!(fallbackNo && fallbackNo.trim() !== '');
     
     const { data: approvalList, isLoading } = useQuery({
@@ -140,9 +140,15 @@ const AVNumberCell = ({ prNo, fallbackNo }: { prNo?: string | null, fallbackNo?:
         if (hasFallback) return fallbackNo;
         if (!approvalList || approvalList.length === 0) return null;
         
-        // Take the first one (usually there's only one active approval per PR in this view)
+        // 🎯 Precision Match: If we have an ID, find the exact matching approval
+        if (approvalId) {
+            const match = approvalList.find((a: any) => Number(a.approval_id) === Number(approvalId));
+            if (match) return match.approval_no;
+        }
+
+        // Fallback: Take the first one (historical compatibility)
         return approvalList[0].approval_no;
-    }, [hasFallback, fallbackNo, approvalList]);
+    }, [hasFallback, fallbackNo, approvalList, approvalId]);
 
     if (isLoading && !hasFallback) {
         return (
@@ -411,6 +417,7 @@ export default function RFQListPage() {
                             <AVNumberCell 
                                 prNo={prNumber} 
                                 fallbackNo={item.approved_pr_no} 
+                                approvalId={item.pr_approval_id}
                             />
                         </div>
                     </div>

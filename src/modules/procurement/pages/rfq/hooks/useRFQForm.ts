@@ -42,7 +42,7 @@ export const mapPRToRFQFormData = (
     return {
         pr_id: pr.pr_id,
         pr_no: pr.pr_no,
-        approved_pr_no: (pr as unknown as Record<string, unknown>).approved_pr_no as string || null,
+        approved_pr_no: (pr as any).approved_pr_no || pr.av_no || (pr as any).approval_no || null,
         branch_id: pr.branch_id,
         project_id: pr.project_id || null,
         purpose: pr.purpose || '',
@@ -320,10 +320,14 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
     const lastSyncedAVNo = React.useRef<string | null>(null);
 
     useEffect(() => {
+        // 🛡️ STOP: Manual Select Only for New RFQs if there's no Edit Mode ID
+        // This gives the user control to select which AV they want (if multiple exist)
+        if (!editId) return;
+
         // 🛡️ STOP: Don't auto-sync if we're in Edit Mode and already hydrated 
-        // OR if there's no data to sync
-        if (!isOpen || !currentPrNo || !approvalHydrationData || approvalHydrationData.length === 0) return;
         if (editId && hasInitialHydrated.current) return;
+
+        if (!isOpen || !currentPrNo || !approvalHydrationData || approvalHydrationData.length === 0) return;
 
         // Find the AV we want to sync (either the specific one chosen in PR, or the first one)
         const targetAV = currentApprovedPrNo 
@@ -341,6 +345,39 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
             }
         }
     }, [isOpen, currentPrNo, currentApprovedPrNo, approvalHydrationData, handleApprovedPRSelect, editId]);
+
+    // --- 🔗 [FORCE] Auto-Fetch AV Number for Existing RFQs (Consistency with RFQListPage) ---
+    useEffect(() => {
+        const fetchMissingAVNo = async () => {
+            const prApprovalId = methods.getValues('pr_approval_id');
+            const currentPrId = methods.getValues('pr_id');
+
+            // Trigger: Only if open, in Edit Mode, has PR ID but no AV No displayed
+            if (!isOpen || !editId || !currentPrId || currentApprovedPrNo) return;
+
+            try {
+                logger.info(`🔍 [useRFQForm] Restoring missing AV number for RFQ ${editId} (PR ID: ${currentPrId})`);
+                const records = await RFQService.getPRApprovalDetail(Number(currentPrId));
+                
+                if (records && records.length > 0) {
+                    // Match by pr_approval_id if available, otherwise fallback to first (historical)
+                    const match = prApprovalId 
+                        ? records.find((r: any) => Number(r.approval_id) === Number(prApprovalId))
+                        : records[0];
+
+                    if (match) {
+                        const foundNo = match.approval_no || match.approved_pr_no;
+                        logger.info(`✅ [useRFQForm] Restored AV No: ${foundNo}`);
+                        setValue('approved_pr_no', foundNo, { shouldValidate: true });
+                    }
+                }
+            } catch (err) {
+                logger.warn(`⚠️ [useRFQForm] Could not restore AV number:`, err);
+            }
+        };
+
+        fetchMissingAVNo();
+    }, [isOpen, editId, currentPrNo, currentApprovedPrNo, setValue, methods]);
 
     // 🔄 AUTO-SYNC: Header Delivery Date -> All Lines
     const headerDeliveryDate = methods.watch('target_delivery_date');
@@ -570,6 +607,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                     pr_id: rfq.pr_id || null,
                     pr_no: fetchedPrNo,
                     pr_approval_id: rfq.pr_approval_id || (rfq as any).approval_id || null,
+                    approved_pr_no: rfq.approved_pr_no || (rfq as any).approval_no || (rfq as any).av_no || null,
                     branch_id: rfq.branch_id ? Number(rfq.branch_id) : 0,
                     status: (rfq.status as RFQStatus) || 'DRAFT',
                     quotation_due_date: rfq.quotation_due_date?.split('T')[0] || '',
@@ -877,6 +915,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                 receive_location: stagedPayload.receive_location,
                 payment_term_hint: stagedPayload.payment_term_hint,
                 incoterm: stagedPayload.incoterm,
+                approved_pr_no: stagedPayload.approved_pr_no || undefined,
                 // 🔗 Send AV Header ID (Linkage persistence)
                 pr_approval_id: stagedPayload.pr_approval_id 
                     ? Number(stagedPayload.pr_approval_id) 
