@@ -1,7 +1,7 @@
 import React from 'react';
 import { Controller, useFormContext, useWatch } from 'react-hook-form';
 import { Search, X as XIcon, FileText } from 'lucide-react';
-import { CustomDateInput } from '@/shared/components/forms/CustomDateInput';
+import { CustomDateInput } from '@ui';
 import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWrapper';
 import type { QuotationFormData } from '@/modules/procurement/schemas/vq-schemas';
 

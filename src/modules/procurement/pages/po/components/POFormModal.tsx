@@ -15,7 +15,7 @@ import {
 import { POStatusBadge } from '@ui';
 
 import { WindowFormLayout } from '@/shared/components/ui/layout/WindowFormLayout';
-import { CustomDateInput } from '@/shared/components/forms/CustomDateInput';
+import { CustomDateInput } from '@ui';
 import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal';
 import { VendorSearchModal } from '@/modules/master-data/vendor/components/selector/VendorSearchModal';
 import { ProductSearchModal } from './ProductSearchModal';

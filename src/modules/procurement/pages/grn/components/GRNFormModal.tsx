@@ -6,7 +6,7 @@ import { GRNService } from '@/modules/procurement/services/grn.service';
 import type { POListItem } from '@/modules/procurement/types';
 import type { CreateGRNPayload, GRNLineItemInput } from '@/modules/procurement/types/grn-types';
 import { logger } from '@/shared/utils/logger';
-import { CustomDateInput } from '@/shared/components/forms/CustomDateInput';
+import { CustomDateInput } from '@ui';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 

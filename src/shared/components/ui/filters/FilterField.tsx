@@ -7,7 +7,7 @@
 import React from 'react';
 import { ChevronDown } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
-import { CustomDateInput } from '@/shared/components/forms/CustomDateInput';
+import { CustomDateInput } from '../inputs/CustomDateInput';
 
 // ====================================================================================
 // TYPES

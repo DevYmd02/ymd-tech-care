@@ -151,7 +151,11 @@ export const ModalLayout: React.FC<ModalLayoutProps> = ({
                     </div>
                 ) : (
                     /* Elegant Dialog Header */
-                    <div className={`flex items-center justify-between px-6 py-5 border-b ${styles.border.subtle} ${styles.bg.surface}`}>
+                    <div className={cn(
+                        "flex items-center justify-between px-6 py-5 border-b",
+                        styles.border.subtle,
+                        headerColor ? headerColor : styles.bg.surface
+                    )}>
                         <div className="flex items-center gap-4">
                             {titleIcon && (
                                 <div className="p-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl">
@@ -159,11 +163,11 @@ export const ModalLayout: React.FC<ModalLayoutProps> = ({
                                 </div>
                             )}
                             <div>
-                                <h2 className={`text-xl font-extrabold ${styles.text.primary} leading-tight`}>
+                                <h2 className={cn("text-xl font-extrabold leading-tight", headerColor ? "text-white" : styles.text.primary)}>
                                     {title}
                                 </h2>
                                 {subtitle && (
-                                    <p className="text-sm text-gray-500 dark:text-gray-400 font-medium mt-1">
+                                    <p className={cn("text-sm font-medium mt-1", headerColor ? "text-white/80" : "text-gray-500 dark:text-gray-400")}>
                                         {subtitle}
                                     </p>
                                 )}
@@ -171,7 +175,10 @@ export const ModalLayout: React.FC<ModalLayoutProps> = ({
                         </div>
                         <button 
                             onClick={onClose}
-                            className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-all duration-200"
+                            className={cn(
+                                "p-2 rounded-full transition-all duration-200",
+                                headerColor ? "text-white hover:bg-white/20" : "text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800"
+                            )}
                         >
                             <X size={24} />
                         </button>

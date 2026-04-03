@@ -4,7 +4,7 @@ import { useFormContext, Controller } from 'react-hook-form';
 import type { RFQFormValues } from '@/modules/procurement/schemas/rfq-schemas';
 import type { BranchListItem, Currency } from '@/modules/master-data/types/master-data-types';
 import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWrapper';
-import { CustomDateInput } from '@/shared/components/forms/CustomDateInput';
+import { CustomDateInput } from '@ui';
 
 interface RFQFormHeaderProps {
     branches: BranchListItem[];
