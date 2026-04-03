@@ -11,14 +11,14 @@ import {
     Building
 } from 'lucide-react';
 import { EmployeeSideFormModal } from './EmployeeSideFormModal';
-import { useEmployeeSideList } from '../../hooks/useEmployeeSideList';
-import type { EmployeeSideListItem } from '@/modules/master-data/types/master-data-types';
+import { useEmployeeSideList } from './hooks/useEmployeeSideList';
+import type { EmployeeSideListItem } from '@master-data/types/master-data-types';
 import { ActiveStatusBadge } from '@ui';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
-import { EmployeeSideService } from '../../services/employee-side.service';
+import { EmployeeSideService } from '@company/services/employee-side.service';
 
 // ====================================================================================
 // CONFIG

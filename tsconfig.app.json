@@ -51,7 +51,9 @@
       "@customer": ["./src/modules/master-data/customer"],
       "@customer/*": ["./src/modules/master-data/customer/*"],
       "@currency": ["./src/modules/master-data/currency"],
-      "@currency/*": ["./src/modules/master-data/currency/*"]
+      "@currency/*": ["./src/modules/master-data/currency/*"],
+      "@company/*": ["./src/modules/master-data/company/*"],
+      "@master-data/*": ["./src/modules/master-data/*"]
     }
   },
   "include": ["src"]

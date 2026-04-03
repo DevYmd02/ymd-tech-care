@@ -13,7 +13,7 @@
 import { Building2, Save, X, RotateCcw } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
-import { useBranchForm } from '../../hooks/useBranchForm';
+import { useBranchForm } from './hooks/useBranchForm';
 import type { BranchListItem } from '@/modules/master-data/types/master-data-types';
 
 interface Props {

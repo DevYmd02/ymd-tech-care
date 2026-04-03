@@ -11,14 +11,14 @@ import {
     Briefcase
 } from 'lucide-react';
 import { PositionFormModal } from './PositionFormModal';
-import { usePositionList } from '../../hooks/usePositionList';
-import type { PositionListItem } from '@/modules/master-data/types/master-data-types';
+import { usePositionList } from './hooks/usePositionList';
+import type { PositionListItem } from '@master-data/types/master-data-types';
 import { ActiveStatusBadge } from '@ui';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
-import { PositionService } from '../../services/position.service';
+import { PositionService } from '@company/services/position.service';
 
 // ====================================================================================
 // CONFIG

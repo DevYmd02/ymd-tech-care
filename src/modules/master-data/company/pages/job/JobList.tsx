@@ -11,14 +11,14 @@ import {
     Briefcase
 } from 'lucide-react';
 import { JobFormModal } from './JobFormModal';
-import { useJobList } from '../../hooks/useJobList';
-import type { JobListItem } from '@/modules/master-data/types/master-data-types';
+import { useJobList } from './hooks/useJobList';
+import type { JobListItem } from '@master-data/types/master-data-types';
 import { ActiveStatusBadge } from '@ui';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
-import { JobService } from '../../services/job.service';
+import { JobService } from '@company/services/job.service';
 
 // ====================================================================================
 // CONFIG

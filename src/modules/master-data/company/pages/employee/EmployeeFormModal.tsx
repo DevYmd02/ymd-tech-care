@@ -7,7 +7,7 @@ import { useWatch } from 'react-hook-form';
 import { Save, X, User } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
-import { useEmployeeForm } from '../../hooks/useEmployeeForm';
+import { useEmployeeForm } from './hooks/useEmployeeForm';
 
 interface EmployeeFormModalProps {
     isOpen: boolean;

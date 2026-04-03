@@ -8,7 +8,7 @@ import { useWatch } from 'react-hook-form';
 import { Save, X, Briefcase } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
-import { usePositionForm } from '../../hooks/usePositionForm';
+import { usePositionForm } from './hooks/usePositionForm';
 
 interface PositionFormModalProps {
     isOpen: boolean;

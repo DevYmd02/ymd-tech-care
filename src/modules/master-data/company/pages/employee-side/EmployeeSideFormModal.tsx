@@ -8,7 +8,7 @@ import { useWatch } from 'react-hook-form';
 import { Save, X, Building } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
-import { useEmployeeSideForm } from '../../hooks/useEmployeeSideForm';
+import { useEmployeeSideForm } from './hooks/useEmployeeSideForm';
 
 interface EmployeeSideFormModalProps {
     isOpen: boolean;

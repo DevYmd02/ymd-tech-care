@@ -138,8 +138,24 @@ export const mockPositions: PositionListItem[] = [
 ];
 
 export const mockSalesZones: SalesZoneListItem[] = [
-    { id: 1, zone_id: 1, zone_code: 'BKK', zone_name: 'Bangkok', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
-    { id: 2, zone_id: 2, zone_code: 'NORTH', zone_name: 'Northern Region', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { 
+        sale_area_id: '1', 
+        sale_area_code: 'BKK', 
+        sale_area_name: 'Bangkok', 
+        sale_area_nameeng: 'Bangkok',
+        is_active: true, 
+        created_at: '2023-01-01T00:00:00Z', 
+        updated_at: '2023-01-01T00:00:00Z' 
+    },
+    { 
+        sale_area_id: '2', 
+        sale_area_code: 'NORTH', 
+        sale_area_name: 'Northern Region', 
+        sale_area_nameeng: 'Northern Region',
+        is_active: true, 
+        created_at: '2023-01-01T00:00:00Z', 
+        updated_at: '2023-01-01T00:00:00Z' 
+    },
 ];
 
 export const mockSalesChannels: SalesChannelListItem[] = [
