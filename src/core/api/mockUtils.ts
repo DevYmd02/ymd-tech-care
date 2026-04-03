@@ -55,6 +55,10 @@ export const applyMockFilters = <T>(
       
       // String -> Partial Match (Case Insensitive)
       if (typeof itemValue === 'string' && typeof filterValue === 'string') {
+        // 💡 SPECIAL CASE: Fields containing 'code' should match exactly to avoid confusing duplicate checks
+        if (key.toLowerCase().includes('code')) {
+          return itemValue.toLowerCase() === filterValue.toLowerCase();
+        }
         return itemValue.toLowerCase().includes(filterValue.toLowerCase());
       }
       

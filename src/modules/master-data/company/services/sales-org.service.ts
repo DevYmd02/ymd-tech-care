@@ -16,9 +16,30 @@ import { type SalesTargetMaster, type SalesTargetFormData } from '@/modules/mast
 export const SalesZoneService = {
   getList: (params?: Record<string, string | number | boolean>) => api.get<SalesZoneMaster[]>('/master/sales-zones', { params }),
   get: (id: string | number) => api.get<SalesZoneMaster>(`/master/sales-zones/${id}`),
-  create: (data: SalesZoneFormData) => api.post<{ success: boolean; data?: SalesZoneMaster; message?: string }>('/master/sales-zones', data),
-  update: (id: string | number, data: Partial<SalesZoneFormData>) => api.put<{ success: boolean; data?: SalesZoneMaster; message?: string }>(`/master/sales-zones/${id}`, data),
-  delete: (id: string | number) => api.delete<boolean>(`/master/sales-zones/${id}`),
+  create: async (data: SalesZoneFormData): Promise<{ success: boolean; data?: SalesZoneMaster; message?: string }> => {
+    try {
+      const response = await api.post<SalesZoneMaster>('/master/sales-zones', data);
+      return { success: true, data: response };
+    } catch (error) {
+      return { success: false, message: (error as Error).message || 'สร้างไม่สำเร็จ' };
+    }
+  },
+  update: async (id: string | number, data: Partial<SalesZoneFormData>): Promise<{ success: boolean; data?: SalesZoneMaster; message?: string }> => {
+    try {
+      const response = await api.put<SalesZoneMaster>(`/master/sales-zones/${id}`, data);
+      return { success: true, data: response };
+    } catch (error) {
+      return { success: false, message: (error as Error).message || 'บันทึกไม่สำเร็จ' };
+    }
+  },
+  delete: async (id: string | number): Promise<boolean> => {
+    try {
+      await api.delete(`/master/sales-zones/${id}`);
+      return true;
+    } catch {
+      return false;
+    }
+  },
 };
 
 // ====================================================================================
@@ -28,9 +49,30 @@ export const SalesZoneService = {
 export const SalesChannelService = {
   getList: (params?: Record<string, string | number | boolean>) => api.get<SalesChannelMaster[]>('/master/sales-channels', { params }),
   get: (id: string | number) => api.get<SalesChannelMaster>(`/master/sales-channels/${id}`),
-  create: (data: SalesChannelFormData) => api.post<{ success: boolean; data?: SalesChannelMaster; message?: string }>('/master/sales-channels', data),
-  update: (id: string | number, data: Partial<SalesChannelFormData>) => api.put<{ success: boolean; data?: SalesChannelMaster; message?: string }>(`/master/sales-channels/${id}`, data),
-  delete: (id: string | number) => api.delete<boolean>(`/master/sales-channels/${id}`),
+  create: async (data: SalesChannelFormData): Promise<{ success: boolean; data?: SalesChannelMaster; message?: string }> => {
+    try {
+      const response = await api.post<SalesChannelMaster>('/master/sales-channels', data);
+      return { success: true, data: response };
+    } catch (error) {
+      return { success: false, message: (error as Error).message || 'สร้างไม่สำเร็จ' };
+    }
+  },
+  update: async (id: string | number, data: Partial<SalesChannelFormData>): Promise<{ success: boolean; data?: SalesChannelMaster; message?: string }> => {
+    try {
+      const response = await api.put<SalesChannelMaster>(`/master/sales-channels/${id}`, data);
+      return { success: true, data: response };
+    } catch (error) {
+      return { success: false, message: (error as Error).message || 'บันทึกไม่สำเร็จ' };
+    }
+  },
+  delete: async (id: string | number): Promise<boolean> => {
+    try {
+      await api.delete(`/master/sales-channels/${id}`);
+      return true;
+    } catch {
+      return false;
+    }
+  },
 };
 
 // ====================================================================================
@@ -40,7 +82,28 @@ export const SalesChannelService = {
 export const SalesTargetService = {
   getList: (params?: Record<string, string | number | boolean>) => api.get<PaginatedListResponse<SalesTargetMaster>>('/master/sales-targets', { params }),
   get: (id: string | number) => api.get<SalesTargetMaster>(`/master/sales-targets/${id}`),
-  create: (data: SalesTargetFormData) => api.post<{ success: boolean; data?: SalesTargetMaster; message?: string }>('/master/sales-targets', data),
-  update: (id: string | number, data: Partial<SalesTargetFormData>) => api.put<{ success: boolean; data?: SalesTargetMaster; message?: string }>(`/master/sales-targets/${id}`, data),
-  delete: (id: string | number) => api.delete<boolean>(`/master/sales-targets/${id}`),
+  create: async (data: SalesTargetFormData): Promise<{ success: boolean; data?: SalesTargetMaster; message?: string }> => {
+    try {
+      const response = await api.post<SalesTargetMaster>('/master/sales-targets', data);
+      return { success: true, data: response };
+    } catch (error) {
+      return { success: false, message: (error as Error).message || 'สร้างไม่สำเร็จ' };
+    }
+  },
+  update: async (id: string | number, data: Partial<SalesTargetFormData>): Promise<{ success: boolean; data?: SalesTargetMaster; message?: string }> => {
+    try {
+      const response = await api.put<SalesTargetMaster>(`/master/sales-targets/${id}`, data);
+      return { success: true, data: response };
+    } catch (error) {
+      return { success: false, message: (error as Error).message || 'บันทึกไม่สำเร็จ' };
+    }
+  },
+  delete: async (id: string | number): Promise<boolean> => {
+    try {
+      await api.delete(`/master/sales-targets/${id}`);
+      return true;
+    } catch {
+      return false;
+    }
+  },
 };
