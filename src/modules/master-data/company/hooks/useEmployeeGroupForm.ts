@@ -11,22 +11,23 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { EmployeeGroupService } from '../services/employee-group.service';
 import type { EmployeeGroupFormData } from '../types/employee-group.types';
 import { logger } from '@/shared/utils/logger';
+import { extractErrorMessage } from '@/core/api/api';
 
 export const employeeGroupSchema = z.object({
-    groupCode: z.string().min(1, 'กรุณากรอกรหัสกลุ่มพนักงาน').max(20, 'รหัสกลุ่มพนักงานต้องไม่เกิน 20 ตัวอักษร'),
-    groupName: z.string().min(1, 'กรุณากรอกชื่อกลุ่มพนักงาน').max(100, 'ชื่อกลุ่มพนักงานต้องไม่เกิน 100 ตัวอักษร'),
-    groupNameEn: z.string().max(100, 'ชื่อกลุ่มพนักงาน (English) ต้องไม่เกิน 100 ตัวอักษร'),
+    employeeGroupCode: z.string().min(1, 'กรุณากรอกรหัสกลุ่มพนักงาน').max(20, 'รหัสกลุ่มพนักงานต้องไม่เกิน 20 ตัวอักษร'),
+    employeeGroupName: z.string().min(1, 'กรุณากรอกชื่อกลุ่มพนักงาน').max(100, 'ชื่อกลุ่มพนักงานต้องไม่เกิน 100 ตัวอักษร'),
+    employeeGroupNameEn: z.string().max(100, 'ชื่อกลุ่มพนักงาน (English) ต้องไม่เกิน 100 ตัวอักษร'),
     isActive: z.boolean(),
 });
 
 export const initialEmployeeGroupData: EmployeeGroupFormData = {
-    groupCode: '',
-    groupName: '',
-    groupNameEn: '',
+    employeeGroupCode: '',
+    employeeGroupName: '',
+    employeeGroupNameEn: '',
     isActive: true,
 };
 
-export function useEmployeeGroupForm(editId: number | null, isOpen: boolean, onSuccess?: () => void) {
+export function useEmployeeGroupForm(editId: string | null, isOpen: boolean, onSuccess?: () => void) {
     const queryClient = useQueryClient();
     const isEdit = !!editId;
 
@@ -35,6 +36,7 @@ export function useEmployeeGroupForm(editId: number | null, isOpen: boolean, onS
         handleSubmit: rhfHandleSubmit,
         reset,
         setValue,
+        setError,
         control,
         formState: { errors }
     } = useForm<EmployeeGroupFormData>({
@@ -53,9 +55,9 @@ export function useEmployeeGroupForm(editId: number | null, isOpen: boolean, onS
     useEffect(() => {
         if (isOpen && isEdit && initialData) {
             reset({
-                groupCode: initialData.group_code,
-                groupName: initialData.group_name,
-                groupNameEn: initialData.group_name_en || '',
+                employeeGroupCode: initialData.employee_group_code,
+                employeeGroupName: initialData.employee_group_name,
+                employeeGroupNameEn: initialData.employee_group_nameeng || '',
                 isActive: initialData.is_active ?? true,
             });
         } else if (isOpen && !isEdit) {
@@ -75,11 +77,25 @@ export function useEmployeeGroupForm(editId: number | null, isOpen: boolean, onS
                 queryClient.invalidateQueries({ queryKey: ['employee-groups'] });
                 if (onSuccess) onSuccess();
             } else {
+                // This branch might not be hit if API returns 400, but kept for safety
                 throw new Error(res.message || 'บันทึกไม่สำเร็จ');
             }
         },
+
         onError: (error: Error) => {
             logger.error('Error saving employee-group:', error);
+            const msg = extractErrorMessage(error);
+            
+            // 1. Set field-level error for duplicate codes
+            if (msg.includes('รหัส') || msg.toLowerCase().includes('duplicate') || msg.includes('ซ้ำ')) {
+                setError('employeeGroupCode', { 
+                    type: 'manual', 
+                    message: msg 
+                });
+            }
+
+            // 2. Alert the user immediately so they know what happened
+            alert(`ไม่สามารถบันทึกได้: ${msg}`);
         }
     });
 
@@ -98,3 +114,4 @@ export function useEmployeeGroupForm(editId: number | null, isOpen: boolean, onS
         control
     };
 }
+

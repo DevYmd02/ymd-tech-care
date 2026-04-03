@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { EmployeeGroupFormModal } from './EmployeeGroupFormModal';
 import { useEmployeeGroupList } from '../../hooks/useEmployeeGroupList';
-import type { EmployeeGroupListItem } from '@/modules/master-data/types/master-data-types';
+import type { EmployeeGroupListItem } from '../../types/employee-group.types';
 import { ActiveStatusBadge } from '@ui';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
@@ -43,14 +43,15 @@ export default function EmployeeGroupList() {
         resetFilters
     } = useTableFilters({
         customParamKeys: {
-          search: 'group_code',
-          search2: 'group_name'
+          search: 'employee_group_code',
+          search2: 'employee_group_name'
         }
     });
 
+
     const { groups, totalCount, isLoading, refetch } = useEmployeeGroupList(filters);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingId, setEditingId] = useState<number | null>(null);
+    const [editingId, setEditingId] = useState<string | null>(null);
 
     // ==================== FILTER CONFIG ====================
     const filterConfig: FilterFieldConfig<keyof typeof filters>[] = useMemo(() => [
@@ -83,12 +84,22 @@ export default function EmployeeGroupList() {
         setIsModalOpen(true);
     };
 
-    const handleEdit = (id: number) => {
+    const handleEdit = (id: string) => {
         setEditingId(id);
         setIsModalOpen(true);
     };
 
-    const handleDelete = useCallback(async (id: number) => {
+    const handleModalSuccess = () => {
+        refetch();
+        handleModalClose();
+    };
+
+    const handleModalClose = () => {
+        setEditingId(null);
+        setIsModalOpen(false);
+    };
+
+    const handleDelete = useCallback(async (id: string) => {
         if (confirm('คุณต้องการลบกลุ่มพนักงานนี้หรือไม่?')) {
             try {
                 await EmployeeGroupService.delete(id);
@@ -100,11 +111,6 @@ export default function EmployeeGroupList() {
         }
     }, [refetch]);
 
-    const handleModalClose = () => {
-        setIsModalOpen(false);
-        setEditingId(null);
-    };
-
     // ==================== TABLE COLUMNS ====================
     const columns = useMemo<ColumnDef<EmployeeGroupListItem>[]>(() => [
         {
@@ -114,7 +120,7 @@ export default function EmployeeGroupList() {
             size: 60,
         },
         {
-            accessorKey: 'group_code',
+            accessorKey: 'employee_group_code',
             header: 'รหัสกลุ่ม',
             cell: ({ getValue }) => (
                 <span className="font-medium text-blue-600 dark:text-blue-400">
@@ -123,11 +129,11 @@ export default function EmployeeGroupList() {
             ),
         },
         {
-            accessorKey: 'group_name',
+            accessorKey: 'employee_group_name',
             header: 'ชื่อกลุ่ม (ไทย)',
         },
         {
-            accessorKey: 'group_name_en',
+            accessorKey: 'employee_group_nameeng',
             header: 'ชื่อกลุ่ม (Eng)',
             cell: ({ getValue }) => getValue() || '-',
         },
@@ -137,11 +143,7 @@ export default function EmployeeGroupList() {
             cell: ({ getValue }) => <ActiveStatusBadge isActive={getValue() as boolean} />,
             size: 100,
         },
-        {
-            accessorKey: 'created_at',
-            header: 'วันที่สร้าง',
-            cell: ({ getValue }) => getValue() ? new Date(getValue() as string).toLocaleDateString('th-TH') : '-',
-        },
+
         {
             id: 'actions',
             header: 'จัดการ',
@@ -149,14 +151,14 @@ export default function EmployeeGroupList() {
             cell: ({ row }) => (
                 <div className="flex items-center gap-2">
                     <button 
-                        onClick={() => handleEdit(row.original.id)}
+                        onClick={() => handleEdit(row.original.employee_group_id)}
                         className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                         title="แก้ไข"
                     >
                         <Edit2 size={18} />
                     </button>
                     <button 
-                        onClick={() => handleDelete(row.original.id)}
+                        onClick={() => handleDelete(row.original.employee_group_id)}
                         className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                         title="ลบ"
                     >
@@ -217,7 +219,7 @@ export default function EmployeeGroupList() {
                         onPageChange: handlePageChange,
                         onPageSizeChange: (size) => setFilters({ limit: size, page: 1 }),
                     }}
-                    rowIdField="id"
+                    rowIdField="employee_group_id"
                     className="shadow-sm"
                 />
             </div>
@@ -227,8 +229,9 @@ export default function EmployeeGroupList() {
                 isOpen={isModalOpen} 
                 onClose={handleModalClose}
                 editId={editingId}
-                onSuccess={refetch}
+                onSuccess={handleModalSuccess}
             />
+
         </div>
     );
 }
