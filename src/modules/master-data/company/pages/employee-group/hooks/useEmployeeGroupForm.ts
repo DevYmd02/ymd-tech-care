@@ -71,11 +71,14 @@ export function useEmployeeGroupForm(editId: string | null, isOpen: boolean, onS
     useEffect(() => {
         if (codeValue !== debouncedCode) return;
 
-        if (duplicateCheckData?.items && debouncedCode) {
-            const matches = duplicateCheckData.items;
-            const isDuplicate = matches.some(item => 
-                item.employee_group_code?.toLowerCase() === debouncedCode.trim().toLowerCase() && 
-                item.employee_group_id?.toString() !== editId
+        if (duplicateCheckData && debouncedCode) {
+            const matches = Array.isArray(duplicateCheckData) 
+                ? duplicateCheckData 
+                : (duplicateCheckData as { items?: unknown[] }).items || [];
+
+            const isDuplicate = matches.some((item: unknown) => 
+                (item as { employee_group_code?: string }).employee_group_code?.toLowerCase() === debouncedCode.trim().toLowerCase() && 
+                (item as { employee_group_id?: string | number }).employee_group_id?.toString() !== editId
             );
 
             if (isDuplicate && dirtyFields.employeeGroupCode) {

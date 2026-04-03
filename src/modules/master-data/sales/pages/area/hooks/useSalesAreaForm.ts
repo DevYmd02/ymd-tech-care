@@ -69,10 +69,14 @@ export function useSalesAreaForm({ isOpen, onClose, editId, onSuccess }: UseSale
     useEffect(() => {
         if (codeValue !== debouncedCode) return;
 
-        if (Array.isArray(duplicateCheckData) && debouncedCode) {
-            const isDuplicate = duplicateCheckData.some(item => 
-                item.sale_area_code?.toLowerCase() === debouncedCode.trim().toLowerCase() && 
-                item.sale_area_id?.toString() !== editId
+        if (duplicateCheckData && debouncedCode) {
+            const matches = Array.isArray(duplicateCheckData) 
+                ? duplicateCheckData 
+                : (duplicateCheckData as { items?: unknown[] }).items || [];
+
+            const isDuplicate = matches.some((item: unknown) => 
+                (item as { sale_area_code?: string }).sale_area_code?.toLowerCase() === debouncedCode.trim().toLowerCase() && 
+                (item as { sale_area_id?: string | number }).sale_area_id?.toString() !== editId
             );
 
             if (isDuplicate && dirtyFields.saleAreaCode) {

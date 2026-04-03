@@ -113,10 +113,60 @@ export const setupMasterDataHandlers = (mock: MockAdapter) => {
     return found ? [200, found] : [404, { message: 'Employee Not Found' }];
   });
 
-  // --- SALES ---
-  mock.onGet('/org-sales-zones').reply(200, mockSalesZones);
-  mock.onGet('/org-sales-channels').reply(200, mockSalesChannels);
-  mock.onGet('/org-sales-targets').reply(200, mockSalesTargets);
+  // --- SALES AREA (/employee-sale-area) ---
+  mock.onGet('/employee-sale-area').reply((config) => [200, applyMockFilters(mockSalesZones, (config.params || {}) as Record<string, FilterValue>)]);
+  mock.onGet(/\/employee-sale-area\/.+/).reply((config) => {
+    const id = config.url?.split('/').pop();
+    const found = mockSalesZones.find(z => z.sale_area_id === id);
+    return found ? [200, found] : [404, { message: 'Sale Area Not Found' }];
+  });
+
+  mock.onPost('/employee-sale-area').reply((config) => {
+    const data = JSON.parse(config.data);
+    const newItem = {
+      ...data,
+      sale_area_id: Math.random().toString(36).substring(7),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    mockSalesZones.push(newItem);
+    return [201, { success: true, data: newItem }];
+  });
+
+  mock.onPut(/\/employee-sale-area\/.+/).reply((config) => {
+    const id = config.url?.split('/').pop();
+    const data = JSON.parse(config.data);
+    const index = mockSalesZones.findIndex(z => z.sale_area_id === id);
+    if (index !== -1) {
+      Object.assign(mockSalesZones[index], { ...data, updated_at: new Date().toISOString() });
+      return [200, { success: true, data: mockSalesZones[index] }];
+    }
+    return [404, { message: 'Not Found' }];
+  });
+
+  mock.onDelete(/\/employee-sale-area\/.+/).reply((config) => {
+    const id = config.url?.split('/').pop();
+    const index = mockSalesZones.findIndex(z => z.sale_area_id === id);
+    if (index !== -1) {
+      mockSalesZones.splice(index, 1);
+      return [200, { success: true }];
+    }
+    return [404, { message: 'Not Found' }];
+  });
+
+  // --- SALES LEGACY (/master/sales-*) ---
+  mock.onGet('/master/sales-zones').reply((config) => [200, applyMockFilters(mockSalesZones, (config.params || {}) as Record<string, FilterValue>)]);
+  mock.onGet('/master/sales-channels').reply((config) => [200, applyMockFilters(mockSalesChannels, (config.params || {}) as Record<string, FilterValue>)]);
+  mock.onGet('/master/sales-targets').reply((config) => {
+      const result = applyMockFilters(mockSalesTargets, (config.params || {}) as Record<string, FilterValue>);
+      const items = Array.isArray(result) ? result : (result as { items: unknown[] }).items || [];
+      return [200, {
+          items,
+          total: items.length,
+          page: 1,
+          limit: 10
+      }];
+  });
 
   // --- CURRENCY ---
   const mockCurrencies = [
