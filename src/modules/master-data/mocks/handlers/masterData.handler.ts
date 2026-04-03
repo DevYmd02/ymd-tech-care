@@ -154,6 +154,47 @@ export const setupMasterDataHandlers = (mock: MockAdapter) => {
     return [404, { message: 'Not Found' }];
   });
 
+  // --- SALES CHANNEL (/employee-sale-channel) ---
+  mock.onGet('/employee-sale-channel').reply((config) => [200, applyMockFilters(mockSalesChannels, (config.params || {}) as Record<string, FilterValue>)]);
+  mock.onGet(/\/employee-sale-channel\/.+/).reply((config) => {
+    const id = config.url?.split('/').pop();
+    const found = mockSalesChannels.find(c => c.channel_id === id);
+    return found ? [200, found] : [404, { message: 'Sale Channel Not Found' }];
+  });
+
+  mock.onPost('/employee-sale-channel').reply((config) => {
+    const data = JSON.parse(config.data);
+    const newItem = {
+      ...data,
+      channel_id: Math.random().toString(36).substring(7),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    mockSalesChannels.push(newItem);
+    return [201, { success: true, data: newItem }];
+  });
+
+  mock.onPut(/\/employee-sale-channel\/.+/).reply((config) => {
+    const id = config.url?.split('/').pop();
+    const data = JSON.parse(config.data);
+    const index = mockSalesChannels.findIndex(c => c.channel_id === id);
+    if (index !== -1) {
+      Object.assign(mockSalesChannels[index], { ...data, updated_at: new Date().toISOString() });
+      return [200, { success: true, data: mockSalesChannels[index] }];
+    }
+    return [404, { message: 'Not Found' }];
+  });
+
+  mock.onDelete(/\/employee-sale-channel\/.+/).reply((config) => {
+    const id = config.url?.split('/').pop();
+    const index = mockSalesChannels.findIndex(c => c.channel_id === id);
+    if (index !== -1) {
+      mockSalesChannels.splice(index, 1);
+      return [200, { success: true }];
+    }
+    return [404, { message: 'Not Found' }];
+  });
+
   // --- SALES LEGACY (/master/sales-*) ---
   mock.onGet('/master/sales-zones').reply((config) => [200, applyMockFilters(mockSalesZones, (config.params || {}) as Record<string, FilterValue>)]);
   mock.onGet('/master/sales-channels').reply((config) => [200, applyMockFilters(mockSalesChannels, (config.params || {}) as Record<string, FilterValue>)]);

@@ -1,20 +1,13 @@
-/**
- * @file SalesChannelList.tsx
- * @description หน้ารายการข้อมูลช่องทางการขาย (Sales Channel List)
- * @module sales
- */
-
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 import { 
     Edit2, 
     Trash2, 
-    Store
+    ShoppingBag
 } from 'lucide-react';
 import { SalesChannelFormModal } from './SalesChannelFormModal';
-import { SalesChannelService } from '@/modules/master-data/company/services/sales-org.service';
-import type { SalesChannelListItem } from '@/modules/master-data/types/master-data-types';
+import { useSalesChannelList } from './hooks/useSalesChannelList';
+import type { SalesChannelListItem } from '@/modules/master-data/sales/types/channel/channel.types';
 import { ActiveStatusBadge } from '@ui';
-import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
@@ -34,37 +27,36 @@ const STATUS_OPTIONS = [
 // ====================================================================================
 
 export default function SalesChannelList() {
-    // ==================== STATE ====================
-    const { 
-        filters, 
-        setFilters, 
+    const {
+        filters,
+        setFilters,
         handlePageChange,
-        resetFilters
-    } = useTableFilters({
-        customParamKeys: {
-          search: 'channel_code',
-          search2: 'channel_name'
-        }
-    });
-
-    const [allChannels, setAllChannels] = useState<SalesChannelListItem[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingId, setEditingId] = useState<number | null>(null);
+        resetFilters,
+        isLoading,
+        isModalOpen,
+        editingId,
+        filteredData,
+        paginatedData,
+        fetchData,
+        handleCreateNew,
+        handleEdit,
+        handleDelete,
+        handleModalClose
+    } = useSalesChannelList();
 
     // ==================== FILTER CONFIG ====================
     const filterConfig: FilterFieldConfig<keyof typeof filters>[] = useMemo(() => [
         { 
             name: 'search', 
-            label: 'รหัสช่องทาง', 
+            label: 'รหัสช่องทางการขาย', 
             type: 'text', 
-            placeholder: 'กรอกรหัสช่องทาง' 
+            placeholder: 'กรอกรหัสช่องทางการขาย' 
         },
         { 
             name: 'search2', 
-            label: 'ชื่อช่องทาง', 
+            label: 'ชื่อช่องทางการขาย', 
             type: 'text', 
-            placeholder: 'กรอกชื่อช่องทาง' 
+            placeholder: 'กรอกชื่อช่องทางการขาย' 
         },
         { 
             name: 'status', 
@@ -73,80 +65,6 @@ export default function SalesChannelList() {
             options: STATUS_OPTIONS 
         },
     ], []);
-
-    // ==================== DATA FETCHING ====================
-    const fetchData = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const data = await SalesChannelService.getList();
-            setAllChannels(data);
-        } catch (error) {
-            console.error('Failed to fetch sales channels:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
-
-    // ==================== CLIENT-SIDE FILTERING & PAGINATION ====================
-    const filteredData = useMemo(() => {
-        let result = [...allChannels];
-
-        // Filter by Status
-        if (filters.status !== 'ALL') {
-            result = result.filter(item => 
-                filters.status === 'ACTIVE' ? item.is_active : !item.is_active
-            );
-        }
-
-        // Filter by Code
-        if (filters.search) {
-            const term = filters.search.toLowerCase();
-            result = result.filter(item => item.channel_code.toLowerCase().includes(term));
-        }
-
-        // Filter by Name
-        if (filters.search2) {
-            const term = filters.search2.toLowerCase();
-            result = result.filter(item => item.channel_name.toLowerCase().includes(term));
-        }
-
-        // Sort by Created Date Desc
-        result.sort((a, b) => new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime());
-
-        return result;
-    }, [allChannels, filters]);
-
-    // Pagination Slicing
-    const paginatedData = useMemo(() => {
-        const startIndex = (filters.page - 1) * filters.limit;
-        return filteredData.slice(startIndex, startIndex + filters.limit);
-    }, [filteredData, filters.page, filters.limit]);
-
-    // ==================== HANDLERS ====================
-    const handleCreateNew = () => {
-        setEditingId(null);
-        setIsModalOpen(true);
-    };
-
-    const handleEdit = (id: number) => {
-        setEditingId(id);
-        setIsModalOpen(true);
-    };
-
-    const handleDelete = useCallback((id: number) => {
-        if (confirm('คุณต้องการลบช่องทางการขายนี้หรือไม่?')) {
-            SalesChannelService.delete(id).then(() => fetchData());
-        }
-    }, [fetchData]);
-
-    const handleModalClose = () => {
-        setIsModalOpen(false);
-        setEditingId(null);
-    };
 
     // ==================== TABLE COLUMNS ====================
     const columns = useMemo<ColumnDef<SalesChannelListItem>[]>(() => [
@@ -158,7 +76,7 @@ export default function SalesChannelList() {
         },
         {
             accessorKey: 'channel_code',
-            header: 'รหัสช่องทาง',
+            header: 'รหัสช่องทางการขาย',
             cell: ({ getValue }) => (
                 <span className="font-medium text-blue-600 dark:text-blue-400">
                     {getValue() as string}
@@ -167,11 +85,11 @@ export default function SalesChannelList() {
         },
         {
             accessorKey: 'channel_name',
-            header: 'ชื่อช่องทาง (ไทย)',
+            header: 'ชื่อช่องทางการขาย (ไทย)',
         },
         {
-            accessorKey: 'channel_name_en',
-            header: 'ชื่อช่องทาง (Eng)',
+            accessorKey: 'channel_nameeng',
+            header: 'ชื่อช่องทางการขาย (Eng)',
             cell: ({ getValue }) => getValue() || '-',
         },
         {
@@ -187,14 +105,14 @@ export default function SalesChannelList() {
             cell: ({ row }) => (
                 <div className="flex items-center gap-2">
                     <button 
-                        onClick={() => handleEdit(row.original.id)}
+                        onClick={() => handleEdit(row.original.channel_id)}
                         className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                         title="แก้ไข"
                     >
                         <Edit2 size={18} />
                     </button>
                     <button 
-                        onClick={() => handleDelete(row.original.id)}
+                        onClick={() => handleDelete(row.original.channel_id)}
                         className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                         title="ลบ"
                     >
@@ -203,7 +121,7 @@ export default function SalesChannelList() {
                 </div>
             ),
         },
-    ], [filters.page, filters.limit, handleDelete]);
+    ], [filters.page, filters.limit, handleEdit, handleDelete]);
 
     // ==================== RENDER ====================
     return (
@@ -213,11 +131,11 @@ export default function SalesChannelList() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                        <Store className="text-blue-600" />
+                        <ShoppingBag className="text-blue-600" />
                         กำหนดช่องทางการขาย (Sales Channel Master)
                     </h1>
                     <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">
-                        จัดการข้อมูลช่องทางการขายทั้งหมดในระบบ
+                        จัดการข้อมูลช่องทางการขายสินค้า
                     </p>
                 </div>
             </div>
@@ -231,7 +149,7 @@ export default function SalesChannelList() {
                     onSearch={() => handlePageChange(1)}
                     onReset={resetFilters}
                     onCreate={handleCreateNew}
-                    createLabel="เพิ่มช่องทางการขาย"
+                    createLabel="เพิ่มช่องทางการขายใหม่"
                     accentColor="indigo"
                 />
             </div>
@@ -255,7 +173,7 @@ export default function SalesChannelList() {
                         onPageChange: handlePageChange,
                         onPageSizeChange: (size) => setFilters({ limit: size, page: 1 }),
                     }}
-                    rowIdField="id"
+                    rowIdField="channel_id"
                     className="shadow-sm"
                 />
             </div>
@@ -270,6 +188,3 @@ export default function SalesChannelList() {
         </div>
     );
 }
-
-
-

@@ -75,10 +75,8 @@ export function SalesAreaFormModal({ isOpen, onClose, editId, onSuccess }: Props
                         placeholder="กรอกรหัสเขตการขาย (เช่น AREA-BKK)"
                         className={`${styles.input} ${errors.saleAreaCode ? 'border-red-500 focus:ring-red-200' : ''}`}
                     />
-                    {errors.saleAreaCode ? (
+                    {errors.saleAreaCode && (
                         <p className="text-red-500 text-xs mt-1">{errors.saleAreaCode.message}</p>
-                    ) : (
-                        <p className="text-gray-400 text-xs mt-1">varchar(20), UNIQUE</p>
                     )}
                 </div>
 
