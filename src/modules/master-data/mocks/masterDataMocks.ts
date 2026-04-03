@@ -159,8 +159,24 @@ export const mockSalesZones: SalesZoneListItem[] = [
 ];
 
 export const mockSalesChannels: SalesChannelListItem[] = [
-    { id: 1, channel_id: 1, channel_code: 'ONLINE', channel_name: 'Online Store', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
-    { id: 2, channel_id: 2, channel_code: 'RETAIL', channel_name: 'Retail Shop', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { 
+        channel_id: '1', 
+        channel_code: 'ONLINE', 
+        channel_name: 'Online Store', 
+        channel_nameeng: 'Online Store',
+        is_active: true, 
+        created_at: '2023-01-01T00:00:00Z', 
+        updated_at: '2023-01-01T00:00:00Z' 
+    },
+    { 
+        channel_id: '2', 
+        channel_code: 'RETAIL', 
+        channel_name: 'Retail Shop', 
+        channel_nameeng: 'Retail Shop',
+        is_active: true, 
+        created_at: '2023-01-01T00:00:00Z', 
+        updated_at: '2023-01-01T00:00:00Z' 
+    },
 ];
 
 export const mockSalesTargets: SalesTargetListItem[] = [

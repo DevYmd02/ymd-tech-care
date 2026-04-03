@@ -1,36 +1,7 @@
-/**
- * @file SalesChannelFormModal.tsx
- * @description Modal สำหรับสร้าง/แก้ไขข้อมูลช่องทางการขาย (Sales Channel)
- * @module sales
- */
-
-import { useEffect } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Store, Save, X } from 'lucide-react';
+import { ShoppingBag, Save, X } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
-import { SalesChannelService } from '@/modules/master-data/company/services/sales-org.service';
-import type { SalesChannelFormData } from '@/modules/master-data/types/master-data-types';
-
-// ====================================================================================
-// SCHEMA
-// ====================================================================================
-
-const channelSchema = z.object({
-    channelCode: z.string()
-        .min(1, 'กรุณากรอกรหัสช่องทางการขาย')
-        .max(20, 'รหัสช่องทางการขายต้องไม่เกิน 20 ตัวอักษร'),
-    channelName: z.string()
-        .min(1, 'กรุณากรอกชื่อช่องทางการขาย (ไทย)')
-        .max(200, 'ชื่อช่องทางการขายต้องไม่เกิน 200 ตัวอักษร'),
-    channelNameEn: z.string()
-        .max(200, 'ชื่อช่องทางการขาย (Eng) ต้องไม่เกิน 200 ตัวอักษร'),
-    isActive: z.boolean(),
-});
-
-type ChannelFormValues = z.infer<typeof channelSchema>;
+import { useSalesChannelForm } from './hooks/useSalesChannelForm';
 
 // ====================================================================================
 // PROPS
@@ -39,7 +10,7 @@ type ChannelFormValues = z.infer<typeof channelSchema>;
 interface Props {
     isOpen: boolean;
     onClose: () => void;
-    editId?: number | null;
+    editId?: string | null;
     onSuccess?: () => void;
 }
 
@@ -51,67 +22,14 @@ export function SalesChannelFormModal({ isOpen, onClose, editId, onSuccess }: Pr
     const {
         register,
         handleSubmit,
-        reset,
-        formState: { errors, isSubmitting },
-        control,
-        setValue
-    } = useForm<ChannelFormValues>({
-        resolver: zodResolver(channelSchema),
-        defaultValues: {
-            channelCode: '',
-            channelName: '',
-            channelNameEn: '',
-            isActive: true
-        }
-    });
-
-    const isActive = useWatch({ control, name: 'isActive' });
-
-    // Reset/Load Data
-    useEffect(() => {
-        if (isOpen) {
-            if (editId) {
-                const fetchData = async () => {
-                    const data = await SalesChannelService.get(editId);
-                    if (data) {
-                        reset({
-                            channelCode: data.channel_code,
-                            channelName: data.channel_name,
-                            channelNameEn: data.channel_name_en || '',
-                            isActive: data.is_active
-                        });
-                    }
-                };
-                fetchData();
-            } else {
-                reset({
-                    channelCode: '',
-                    channelName: '',
-                    channelNameEn: '',
-                    isActive: true
-                });
-            }
-        }
-    }, [isOpen, editId, reset]);
-
-    const onSubmit = async (data: ChannelFormValues) => {
-        try {
-            if (editId) {
-                await SalesChannelService.update(editId, data);
-            } else {
-                await SalesChannelService.create(data as SalesChannelFormData);
-            }
-            if (onSuccess) onSuccess();
-            onClose();
-        } catch (error) {
-            console.error('Failed to save sales channel:', error);
-        }
-    };
+        errors,
+        isSubmitting
+    } = useSalesChannelForm({ isOpen, onClose, editId, onSuccess });
 
     // ==================== RENDERING ====================
     
     // Header Icon
-    const TitleIcon = <Store size={24} className="text-white" />;
+    const TitleIcon = <ShoppingBag size={24} className="text-white" />;
 
     // Footer Actions
     const FormFooter = (
@@ -126,7 +44,7 @@ export function SalesChannelFormModal({ isOpen, onClose, editId, onSuccess }: Pr
             </button>
             <button
                 type="button"
-                onClick={handleSubmit(onSubmit)}
+                onClick={handleSubmit}
                 disabled={isSubmitting}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50"
             >
@@ -154,13 +72,11 @@ export function SalesChannelFormModal({ isOpen, onClose, editId, onSuccess }: Pr
                     <input
                         {...register('channelCode')}
                         type="text"
-                        placeholder="กรอกรหัสช่องทางการขาย (เช่น ONLINE)"
+                        placeholder="กรอกรหัสช่องทางการขาย (เช่น CH-001)"
                         className={`${styles.input} ${errors.channelCode ? 'border-red-500 focus:ring-red-200' : ''}`}
                     />
-                    {errors.channelCode ? (
+                    {errors.channelCode && (
                         <p className="text-red-500 text-xs mt-1">{errors.channelCode.message}</p>
-                    ) : (
-                        <p className="text-gray-400 text-xs mt-1">varchar(20), UNIQUE</p>
                     )}
                 </div>
 
@@ -172,7 +88,7 @@ export function SalesChannelFormModal({ isOpen, onClose, editId, onSuccess }: Pr
                     <input
                         {...register('channelName')}
                         type="text"
-                        placeholder="กรอกชื่อช่องทางการขาย (เช่น ขายออนไลน์)"
+                        placeholder="กรอกชื่อช่องทางการขาย (เช่น ขายปลีก)"
                         className={`${styles.input} ${errors.channelName ? 'border-red-500 focus:ring-red-200' : ''}`}
                     />
                     {errors.channelName && (
@@ -188,27 +104,27 @@ export function SalesChannelFormModal({ isOpen, onClose, editId, onSuccess }: Pr
                     <input
                         {...register('channelNameEn')}
                         type="text"
-                        placeholder="e.g. Online Channel"
+                        placeholder="e.g. Retail"
                         className={styles.input}
                     />
                 </div>
 
                 {/* Status */}
-                <div>
-                    <label className={styles.label}>
-                        สถานะ <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                        className={`${styles.input} cursor-pointer`}
-                        value={isActive ? 'true' : 'false'}
-                        onChange={(e) => setValue('isActive', e.target.value === 'true')}
+                <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-blue-200 dark:hover:border-blue-900/50 transition-colors group cursor-pointer">
+                    <input
+                        {...register('isActive')}
+                        type="checkbox"
+                        id="sales_channel_is_active"
+                        className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer accent-blue-600"
+                    />
+                    <label 
+                        htmlFor="sales_channel_is_active" 
+                        className="text-sm font-semibold text-gray-700 dark:text-gray-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors cursor-pointer"
                     >
-                        <option value="true">ใช้งาน (Active)</option>
-                        <option value="false">ไม่ใช้งาน (Inactive)</option>
-                    </select>
+                        สถานะใช้งาน (Active)
+                    </label>
                 </div>
             </div>
         </DialogFormLayout>
     );
 }
-

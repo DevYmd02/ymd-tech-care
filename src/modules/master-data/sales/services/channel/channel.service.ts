@@ -11,17 +11,41 @@ import type {
 
 export const SalesChannelService = {
   getList: (params?: Record<string, string | number | boolean>) => 
-    api.get<SalesChannelMaster[]>('/master/sales-channels', { params }),
+    api.get<SalesChannelMaster[]>('/employee-sale-channel', { params }),
 
   get: (id: string | number) => 
-    api.get<SalesChannelMaster>(`/master/sales-channels/${id}`),
+    api.get<SalesChannelMaster>(`/employee-sale-channel/${id}`),
 
-  create: (data: SalesChannelFormData) => 
-    api.post<{ success: boolean; data?: SalesChannelMaster; message?: string }>('/master/sales-channels', data),
+  create: async (data: SalesChannelFormData): Promise<{ success: boolean; data?: SalesChannelMaster; message?: string }> => {
+    try {
+      const payload = {
+        channel_code: data.channelCode,
+        channel_name: data.channelName,
+        channel_nameeng: data.channelNameEn,
+        is_active: data.isActive
+      };
+      const response = await api.post<SalesChannelMaster>('/employee-sale-channel', payload);
+      return { success: true, data: response };
+    } catch (error) {
+      return { success: false, message: (error as Error).message || 'บันทึกไม่สำเร็จ' };
+    }
+  },
 
-  update: (id: string | number, data: Partial<SalesChannelFormData>) => 
-    api.put<{ success: boolean; data?: SalesChannelMaster; message?: string }>(`/master/sales-channels/${id}`, data),
+  update: async (id: string | number, data: Partial<SalesChannelFormData>): Promise<{ success: boolean; data?: SalesChannelMaster; message?: string }> => {
+    try {
+      const payload: Record<string, string | number | boolean | undefined> = {};
+      if (data.channelCode !== undefined) payload.channel_code = data.channelCode;
+      if (data.channelName !== undefined) payload.channel_name = data.channelName;
+      if (data.channelNameEn !== undefined) payload.channel_nameeng = data.channelNameEn;
+      if (data.isActive !== undefined) payload.is_active = data.isActive;
+
+      const response = await api.put<SalesChannelMaster>(`/employee-sale-channel/${id}`, payload);
+      return { success: true, data: response };
+    } catch (error) {
+      return { success: false, message: (error as Error).message || 'บันทึกไม่สำเร็จ' };
+    }
+  },
 
   delete: (id: string | number) => 
-    api.delete<boolean>(`/master/sales-channels/${id}`),
+    api.delete<boolean>(`/employee-sale-channel/${id}`),
 };
