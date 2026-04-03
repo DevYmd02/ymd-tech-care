@@ -16,7 +16,7 @@ import { WindowFormLayout } from '@/shared/components/ui/layout/WindowFormLayout
 import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal';
 import { usePOAForm } from '../hooks/usePOAForm';
 import { POSearchModal } from './POSearchModal';
-import { CustomDateInput } from '@/shared/components/forms/CustomDateInput';
+import { CustomDateInput } from '@ui';
 import { POAHistoryModal } from './POAHistoryModal';
 import type { Control, FieldErrors, UseFormSetValue } from 'react-hook-form';
 import type { Currency } from '@/modules/master-data/types/master-data-types';

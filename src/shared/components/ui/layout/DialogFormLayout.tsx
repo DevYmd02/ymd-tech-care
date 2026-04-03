@@ -8,9 +8,10 @@ interface DialogFormLayoutProps {
     titleIcon?: React.ReactNode;
     children: React.ReactNode;
     footer?: React.ReactNode;
-    width?: string; // Optional custom width (default to lg/max-w-4xl)
+    width?: string;
     isLoading?: boolean;
     subtitle?: string;
+    headerColor?: string;
 }
 
 export const DialogFormLayout: React.FC<DialogFormLayoutProps> = (props) => {
@@ -24,7 +25,14 @@ export const DialogFormLayout: React.FC<DialogFormLayoutProps> = (props) => {
         <ModalLayout 
             variant="dialog" 
             size={size} 
-            {...props}
+            headerColor={props.headerColor}
+            isOpen={props.isOpen}
+            onClose={props.onClose}
+            title={props.title}
+            titleIcon={props.titleIcon}
+            footer={props.footer}
+            isLoading={props.isLoading}
+            subtitle={props.subtitle}
         >
             {props.children}
         </ModalLayout>

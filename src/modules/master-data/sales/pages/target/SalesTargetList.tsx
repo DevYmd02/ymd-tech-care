@@ -1,40 +1,58 @@
 /**
  * @file SalesTargetList.tsx
- * @description หน้ารายการข้อมูลเป้าการขาย (Sales Target List)
- * @module sales
+ * @description Main page for Managing Sale Period and Sale Target
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { 
-    Edit2, 
-    Trash2, 
-    Target
-} from 'lucide-react';
-import { SalesTargetFormModal } from './SalesTargetFormModal';
-import { SalesTargetService } from '@/modules/master-data/company/services/sales-org.service';
-import type { SalesTargetListItem } from '@/modules/master-data/types/master-data-types';
-import { ActiveStatusBadge } from '@ui';
-import { useTableFilters } from '@/shared/hooks/useTableFilters';
-import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
-import { SmartTable } from '@ui';
-import type { ColumnDef } from '@tanstack/react-table';
+import { useState, useCallback, useEffect } from 'react';
+import { Target, Users, Package } from 'lucide-react';
 
-// ====================================================================================
-// CONFIG
-// ====================================================================================
+// Components
+import { 
+    PageListLayout, 
+    TabPanel, 
+    FilterFormBuilder, 
+} from '@ui';
+import type { TabItem } from '@/shared/components/ui/layout/TabPanel';
+import type { FilterFieldConfig } from '@/shared/components/ui/filters/FilterFormBuilder';
+
+// Sub-tabs & Modals
+import { SalePeriodTab } from './components/SalePeriodTab';
+import { SaleTargetTab } from './components/SaleTargetTab';
+import { SalePeriodFormModal } from './components/SalePeriodFormModal';
+import { SaleTargetFormModal } from './components/SaleTargetFormModal';
+
+// Services
+import { SalePeriodService } from '@/modules/master-data/sales/services/target/sale-period.service';
+import { SaleTargetService } from '@/modules/master-data/sales/services/target/sale-target.service';
+
+// Hooks & Types
+import { useTableFilters, type TableFilters } from '@/shared/hooks/useTableFilters';
+import type { 
+    SalePeriodMaster, 
+    SalePeriodFilters 
+} from '@/modules/master-data/sales/types/target/sale-period.types';
+import type { 
+    SaleTargetMaster, 
+    SaleTargetFilters 
+} from '@/modules/master-data/sales/types/target/sale-target.types';
 
 const STATUS_OPTIONS = [
-    { value: 'ALL', label: 'ทั้งหมด' },
-    { value: 'ACTIVE', label: 'ใช้งาน' },
-    { value: 'INACTIVE', label: 'ไม่ใช้งาน' },
+    { label: 'ทั้งหมด', value: 'ALL' },
+    { label: 'เปิดงวด (Open)', value: 'ACTIVE' },
+    { label: 'ปิดงวด (Closed)', value: 'INACTIVE' },
 ];
 
-// ====================================================================================
-// COMPONENT
-// ====================================================================================
-
 export default function SalesTargetList() {
-    // ==================== STATE ====================
+    const [activeTab, setActiveTab] = useState('monthly');
+    const [monthlyTargets, setMonthlyTargets] = useState<SalePeriodMaster[]>([]);
+    const [employeeTargets, setSaleTargets] = useState<SaleTargetMaster[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    
+    // Modal states
+    const [isSalePeriodModalOpen, setIsSalePeriodModalOpen] = useState(false);
+    const [isSaleTargetModalOpen, setIsSaleTargetModalOpen] = useState(false);
+    const [editId, setEditId] = useState<string | number | null>(null);
+
     const { 
         filters, 
         setFilters, 
@@ -42,239 +60,168 @@ export default function SalesTargetList() {
         resetFilters
     } = useTableFilters({
         customParamKeys: {
-          search: 'target_code',
-          search2: 'target_name'
+          search: 'period_id'
         }
     });
 
-    const [allTargets, setAllTargets] = useState<SalesTargetListItem[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingId, setEditingId] = useState<number | null>(null);
+    const tabItems: TabItem[] = [
+        { id: 'monthly', label: 'เป้าขายรายเดือน', icon: <Target size={18} /> },
+        { id: 'employee', label: 'เป้าการขายพนักงาน', icon: <Users size={18} /> },
+        { id: 'category', label: 'เป้าการขายหมวดหมู่', icon: <Package size={18} /> },
+    ];
 
-    // ==================== FILTER CONFIG ====================
-    const filterConfig: FilterFieldConfig<keyof typeof filters>[] = useMemo(() => [
-        { 
-            name: 'search', 
-            label: 'รหัสเป้าการขาย', 
-            type: 'text', 
-            placeholder: 'กรอกรหัสเป้าการขาย' 
-        },
-        { 
-            name: 'search2', 
-            label: 'ชื่อเป้าการขาย', 
-            type: 'text', 
-            placeholder: 'กรอกชื่อเป้าการขาย' 
-        },
-        { 
-            name: 'status', 
-            label: 'สถานะ', 
-            type: 'select', 
-            options: STATUS_OPTIONS 
-        },
-    ], []);
+    const monthlyFilterConfig: FilterFieldConfig<string>[] = [
+        { name: 'search', label: 'รหัสเป้าการขาย', type: 'text', placeholder: 'กรอกรหัสเป้าการขาย' },
+        { name: 'status', label: 'สถานะ', type: 'select', options: STATUS_OPTIONS },
+    ];
 
-    // ==================== DATA FETCHING ====================
-    const fetchData = useCallback(async () => {
+    const employeeFilterConfig: FilterFieldConfig<keyof TableFilters<string>>[] = [
+        { name: 'search', label: 'พนักงาน/รหัสเป้าหมาย', type: 'text', placeholder: 'ค้นหาพนักงาน...' },
+    ];
+
+    const fetchMonthlyData = useCallback(async () => {
         setIsLoading(true);
         try {
-            const response = await SalesTargetService.getList(filters as unknown as Record<string, string | number | boolean>);
-            setAllTargets(response.items || []);
+            const response = await SalePeriodService.getList(filters as unknown as Partial<SalePeriodFilters>);
+            // Handle both PageResponse format and direct array format safely without 'any'
+            let items: SalePeriodMaster[] = [];
+            if (Array.isArray(response)) {
+                items = response;
+            } else if (response && 'items' in response) {
+                items = (response as { items: SalePeriodMaster[] }).items;
+            }
+            setMonthlyTargets(items);
         } catch (error) {
-            console.error('Failed to fetch sales targets:', error);
+            console.error('Failed to fetch sale periods:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [filters]);
+
+    const fetchEmployeeData = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const response = await SaleTargetService.getList(filters as unknown as Partial<SaleTargetFilters>);
+            setSaleTargets(response.items || []);
+        } catch (error) {
+            console.error('Failed to fetch sale targets:', error);
         } finally {
             setIsLoading(false);
         }
     }, [filters]);
 
     useEffect(() => {
-        fetchData();
-    }, [fetchData]);
-
-    // ==================== CLIENT-SIDE FILTERING & PAGINATION ====================
-    const filteredData = useMemo(() => {
-        let result = [...allTargets];
-
-        // Filter by Status
-        if (filters.status !== 'ALL') {
-            result = result.filter(item => 
-                filters.status === 'ACTIVE' ? item.is_active : !item.is_active
-            );
+        if (activeTab === 'monthly') {
+            fetchMonthlyData();
+        } else if (activeTab === 'employee') {
+            fetchEmployeeData();
         }
+    }, [activeTab, fetchMonthlyData, fetchEmployeeData]);
 
-        // Filter by Code
-        if (filters.search) {
-            const term = filters.search.toLowerCase();
-            result = result.filter(item => item.target_code.toLowerCase().includes(term));
+    const handleAdd = () => {
+        setEditId(null);
+        if (activeTab === 'monthly') {
+            setIsSalePeriodModalOpen(true);
+        } else if (activeTab === 'employee') {
+            setIsSaleTargetModalOpen(true);
         }
-
-        // Filter by Name
-        if (filters.search2) {
-            const term = filters.search2.toLowerCase();
-            result = result.filter(item => item.target_name.toLowerCase().includes(term));
-        }
-
-        // Sort by Created Date Desc
-        result.sort((a, b) => new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime());
-
-        return result;
-    }, [allTargets, filters]);
-
-    // Pagination Slicing
-    const paginatedData = useMemo(() => {
-        const startIndex = (filters.page - 1) * filters.limit;
-        return filteredData.slice(startIndex, startIndex + filters.limit);
-    }, [filteredData, filters.page, filters.limit]);
-
-    // ==================== HANDLERS ====================
-    const handleCreateNew = () => {
-        setEditingId(null);
-        setIsModalOpen(true);
     };
 
-    const handleEdit = (id: number) => {
-        setEditingId(id);
-        setIsModalOpen(true);
-    };
-
-    const handleDelete = useCallback((id: number) => {
-        if (confirm('คุณต้องการลบเป้าการขายนี้หรือไม่?')) {
-            SalesTargetService.delete(id).then(() => fetchData());
+    const handleEdit = (id: string | number) => {
+        setEditId(id);
+        if (activeTab === 'monthly') {
+            setIsSalePeriodModalOpen(true);
+        } else if (activeTab === 'employee') {
+            setIsSaleTargetModalOpen(true);
         }
-    }, [fetchData]);
-
-    const handleModalClose = () => {
-        setIsModalOpen(false);
-        setEditingId(null);
     };
 
-    // ==================== TABLE COLUMNS ====================
-    const columns = useMemo<ColumnDef<SalesTargetListItem>[]>(() => [
-        {
-            id: 'sequence',
-            header: 'ลำดับ',
-            accessorFn: (_, index) => (filters.page - 1) * filters.limit + index + 1,
-            size: 60,
-        },
-        {
-            accessorKey: 'target_code',
-            header: 'รหัสเป้าการขาย',
-            cell: ({ getValue }) => (
-                <span className="font-medium text-blue-600 dark:text-blue-400">
-                    {getValue() as string}
-                </span>
-            ),
-        },
-        {
-            accessorKey: 'target_name',
-            header: 'ชื่อเป้าการขาย',
-        },
-        {
-            accessorKey: 'amount',
-            header: 'ยอดเป้าหมาย (บาท)',
-            cell: ({ getValue }) => (getValue() as number).toLocaleString('th-TH', { minimumFractionDigits: 2 }),
-        },
-        {
-            accessorKey: 'year',
-            header: 'ปี/งวด',
-            cell: ({ row }) => `${row.original.year} / ${row.original.period}`,
-        },
-        {
-            accessorKey: 'is_active',
-            header: 'สถานะ',
-            cell: ({ getValue }) => <ActiveStatusBadge isActive={getValue() as boolean} />,
-            size: 100,
-        },
-        {
-            id: 'actions',
-            header: 'จัดการ',
-            size: 100,
-            cell: ({ row }) => (
-                <div className="flex items-center gap-2">
-                    <button 
-                        onClick={() => handleEdit(row.original.id)}
-                        className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-                        title="แก้ไข"
-                    >
-                        <Edit2 size={18} />
-                    </button>
-                    <button 
-                        onClick={() => handleDelete(row.original.id)}
-                        className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-                        title="ลบ"
-                    >
-                        <Trash2 size={18} />
-                    </button>
-                </div>
-            ),
-        },
-    ], [filters.page, filters.limit, handleDelete]);
+    const handleDelete = useCallback((id: string | number) => {
+        const msg = activeTab === 'monthly' ? 'คุณต้องการลบเป้าการขายนี้หรือไม่?' : 'คุณต้องการลบเป้าการขายพนักงานนี้หรือไม่?';
+        if (window.confirm(msg)) {
+            if (activeTab === 'monthly') {
+                SalePeriodService.delete(id).then(() => fetchMonthlyData());
+            } else {
+                SaleTargetService.delete(id).then(() => fetchEmployeeData());
+            }
+        }
+    }, [activeTab, fetchMonthlyData, fetchEmployeeData]);
 
-    // ==================== RENDER ====================
+    const SearchForm = (
+        <FilterFormBuilder
+            config={activeTab === 'monthly' ? monthlyFilterConfig : employeeFilterConfig}
+            filters={filters}
+            onFilterChange={(name, value) => setFilters({ [name]: value })}
+            onSearch={activeTab === 'monthly' ? fetchMonthlyData : fetchEmployeeData}
+            onReset={resetFilters}
+            onCreate={activeTab !== 'category' ? handleAdd : undefined}
+            createLabel={activeTab === 'monthly' ? 'สร้างเป้าการขายใหม่' : 'เพิ่มเป้าพนักงาน'}
+            accentColor="indigo"
+        />
+    );
+
     return (
-        <div className="p-6 space-y-6">
-            
-            {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                        <Target className="text-blue-600" />
-                        กำหนดเป้าการขาย (Sales Target Master)
-                    </h1>
-                    <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">
-                        จัดการข้อมูลเป้าการขาย
-                    </p>
-                </div>
-            </div>
+        <PageListLayout
+            title="กำหนดเป้าการขาย"
+            subtitle="จัดการช่วงเวลาและเป้าหมายการขาย (Master Data)"
+            icon={Target}
+            accentColor="indigo"
+            searchForm={SearchForm}
+            totalCount={activeTab === 'monthly' ? monthlyTargets.length : employeeTargets.length}
+            isLoading={isLoading}
+        >
+            <TabPanel
+                tabs={tabItems}
+                activeTab={activeTab}
+                onTabChange={(id) => {
+                    setActiveTab(id);
+                    resetFilters();
+                }}
+            >
+                {activeTab === 'monthly' && (
+                    <SalePeriodTab
+                        data={monthlyTargets}
+                        isLoading={isLoading}
+                        filters={filters}
+                        handlePageChange={handlePageChange}
+                        handleEdit={handleEdit}
+                        handleDelete={handleDelete}
+                    />
+                )}
 
-            {/* Filter Section */}
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-                <FilterFormBuilder
-                    config={filterConfig}
-                    filters={filters}
-                    onFilterChange={(name: string, value: string) => setFilters({ [name]: value })}
-                    onSearch={() => handlePageChange(1)}
-                    onReset={resetFilters}
-                    onCreate={handleCreateNew}
-                    createLabel="เพิ่มเป้าการขาย"
-                    accentColor="indigo"
-                />
-            </div>
+                {activeTab === 'employee' && (
+                    <SaleTargetTab
+                        data={employeeTargets}
+                        isLoading={isLoading}
+                        filters={filters}
+                        handlePageChange={handlePageChange}
+                        handleEdit={handleEdit}
+                        handleDelete={handleDelete}
+                    />
+                )}
 
-            {/* Data Table */}
-            <div className="flex flex-col gap-4">
-                <div className="flex justify-between items-center">
-                    <h2 className="text-gray-700 dark:text-gray-300 font-medium">
-                        พบข้อมูล {filteredData.length} รายการ
-                    </h2>
-                </div>
+                {activeTab === 'category' && (
+                    <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+                        <Target size={64} className="mb-4 opacity-20" />
+                        <p className="text-lg font-medium">ฟีเจอร์นี้กำลังอยู่ระหว่างการพัฒนา</p>
+                        <p className="text-sm">การกำหนดเป้าการขายรายหมวดหมู่สินค้า</p>
+                    </div>
+                )}
+            </TabPanel>
 
-                <SmartTable
-                    data={paginatedData}
-                    columns={columns}
-                    isLoading={isLoading}
-                    pagination={{
-                        pageIndex: filters.page,
-                        pageSize: filters.limit,
-                        totalCount: filteredData.length,
-                        onPageChange: handlePageChange,
-                        onPageSizeChange: (size) => setFilters({ limit: size, page: 1 }),
-                    }}
-                    rowIdField="id"
-                    className="shadow-sm"
-                />
-            </div>
-
-            {/* Modal */}
-            <SalesTargetFormModal 
-                isOpen={isModalOpen} 
-                onClose={handleModalClose}
-                editId={editingId}
-                onSuccess={fetchData}
+            <SalePeriodFormModal 
+                isOpen={isSalePeriodModalOpen}
+                onClose={() => setIsSalePeriodModalOpen(false)}
+                editId={editId}
+                onSuccess={fetchMonthlyData}
             />
-        </div>
+
+            <SaleTargetFormModal
+                isOpen={isSaleTargetModalOpen}
+                onClose={() => setIsSaleTargetModalOpen(false)}
+                editId={editId}
+                onSuccess={fetchEmployeeData}
+            />
+        </PageListLayout>
     );
 }
-
-
-

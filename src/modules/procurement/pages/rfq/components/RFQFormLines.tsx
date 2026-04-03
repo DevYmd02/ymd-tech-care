@@ -1,7 +1,7 @@
 import React from 'react';
 import { FileText } from 'lucide-react';
 import { useFormContext, useFieldArray, Controller } from 'react-hook-form';
-import { CustomDateInput } from '@/shared/components/forms/CustomDateInput';
+import { CustomDateInput } from '@ui';
 import type { RFQFormValues } from '@/modules/procurement/schemas/rfq-schemas';
 
 interface RFQFormLinesProps {

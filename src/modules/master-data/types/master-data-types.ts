@@ -34,11 +34,14 @@ export * from '@/modules/master-data/company/types/employee.types';
 // ====================================================================================
 export * from '@/modules/master-data/sales/types/area/area.types';
 export * from '@/modules/master-data/sales/types/channel/channel.types';
-export * from '@/modules/master-data/sales/types/target/target.types';
+export * from '@/modules/master-data/sales/types/target/sale-period.types';
+export * from '@/modules/master-data/sales/types/target/sale-target.types';
 
 // Backward compatibility aliases
 import { type SaleAreaListItem } from '@/modules/master-data/sales/types/area/area.types';
+import { type SalePeriodListItem } from '@/modules/master-data/sales/types/target/sale-period.types';
 export type SalesZoneListItem = SaleAreaListItem;
+export type SalesTargetListItem = SalePeriodListItem;
 
 // ====================================================================================
 // RE-EXPORTS FROM INVENTORY MODULE

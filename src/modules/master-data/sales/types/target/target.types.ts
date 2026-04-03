@@ -1,27 +1,8 @@
 /**
  * @file target.types.ts
- * @description Sales Target types
+ * @description Barrel file for Sale Period and Sale Target types (Backward compatibility)
+ * @deprecated Import directly from './sale-period.types' or './sale-target.types' instead.
  */
 
-import type { BaseMasterData } from '@/shared/types/common-master.types';
-
-export interface SalesTargetMaster extends BaseMasterData {
-    id: number;
-    target_id: number;
-    target_code: string;
-    target_name: string;
-    amount: number;
-    year: number;
-    period: number;
-}
-
-export interface SalesTargetFormData {
-    targetCode: string;
-    targetName: string;
-    amount: number;
-    year: number;
-    period: number;
-    isActive: boolean;
-}
-
-export type SalesTargetListItem = SalesTargetMaster;
+export * from './sale-period.types';
+export * from './sale-target.types';

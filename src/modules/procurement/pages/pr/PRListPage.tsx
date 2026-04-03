@@ -8,7 +8,8 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/react-query';
 import { FileText, Plus, Search, Send, AlertTriangle, Eye, Edit } from 'lucide-react';
-import { PageListLayout, SmartTable, PRStatusBadge, FilterField, MobileListCard, MobileListContainer } from '@ui';
+import { PageListLayout, SmartTable, PRStatusBadge, MobileListCard, MobileListContainer } from '@ui';
+import { FilterField } from '@/shared/components/ui/filters/FilterField';
 import { useTableFilters } from '@/shared/hooks';
 import { PRFormModal } from './components/PRFormModal';
 import { PRActionsCell } from './components/PRActionsCell';

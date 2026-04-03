@@ -29,7 +29,7 @@ import type {
     PositionListItem,
     SalesZoneListItem,
     SalesChannelListItem,
-    SalesTargetListItem,
+    SalePeriodListItem,
     EmployeeListItem,
 } from '@/modules/master-data/types/master-data-types';
 
@@ -179,8 +179,17 @@ export const mockSalesChannels: SalesChannelListItem[] = [
     },
 ];
 
-export const mockSalesTargets: SalesTargetListItem[] = [
-    { id: 1, target_id: 1, target_code: 'FY2026-Q1', target_name: 'Q1 2026 Sales Target', amount: 1000000, year: 2026, period: 1, is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+export const mockSalesTargets: SalePeriodListItem[] = [
+    { 
+        period_id: '1', 
+        period_target: '1000000', 
+        begin_date: '2026-01-01', 
+        end_date: '2026-03-31', 
+        close_status: false, 
+        is_active: true, 
+        created_at: '2023-01-01T00:00:00Z', 
+        updated_at: '2023-01-01T00:00:00Z' 
+    },
 ];
 
 export const mockEmployees: EmployeeListItem[] = [

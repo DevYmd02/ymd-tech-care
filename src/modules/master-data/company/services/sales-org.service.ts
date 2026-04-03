@@ -7,7 +7,7 @@ import api from '@/core/api/api';
 import { type PaginatedListResponse } from '@/shared/types/api-response.types';
 import { type SaleAreaMaster as SalesZoneMaster, type SaleAreaFormData as SalesZoneFormData } from '@/modules/master-data/sales/types/area/area.types';
 import { type SalesChannelMaster, type SalesChannelFormData } from '@/modules/master-data/sales/types/channel/channel.types';
-import { type SalesTargetMaster, type SalesTargetFormData } from '@/modules/master-data/sales/types/target/target.types';
+import { type SalePeriodMaster, type SalePeriodFormData } from '@/modules/master-data/sales/types/target/sale-period.types';
 
 // ====================================================================================
 // SALES ZONE SERVICE
@@ -76,23 +76,23 @@ export const SalesChannelService = {
 };
 
 // ====================================================================================
-// SALES TARGET SERVICE
+// SALES TARGET SERVICE (Sale Period)
 // ====================================================================================
 
 export const SalesTargetService = {
-  getList: (params?: Record<string, string | number | boolean>) => api.get<PaginatedListResponse<SalesTargetMaster>>('/master/sales-targets', { params }),
-  get: (id: string | number) => api.get<SalesTargetMaster>(`/master/sales-targets/${id}`),
-  create: async (data: SalesTargetFormData): Promise<{ success: boolean; data?: SalesTargetMaster; message?: string }> => {
+  getList: (params?: Record<string, string | number | boolean>) => api.get<PaginatedListResponse<SalePeriodMaster>>('/employees-sale-period', { params }),
+  get: (id: string | number) => api.get<SalePeriodMaster>(`/employees-sale-period/${id}`),
+  create: async (data: SalePeriodFormData): Promise<{ success: boolean; data?: SalePeriodMaster; message?: string }> => {
     try {
-      const response = await api.post<SalesTargetMaster>('/master/sales-targets', data);
+      const response = await api.post<SalePeriodMaster>('/employees-sale-period', data);
       return { success: true, data: response };
     } catch (error) {
       return { success: false, message: (error as Error).message || 'สร้างไม่สำเร็จ' };
     }
   },
-  update: async (id: string | number, data: Partial<SalesTargetFormData>): Promise<{ success: boolean; data?: SalesTargetMaster; message?: string }> => {
+  update: async (id: string | number, data: Partial<SalePeriodFormData>): Promise<{ success: boolean; data?: SalePeriodMaster; message?: string }> => {
     try {
-      const response = await api.put<SalesTargetMaster>(`/master/sales-targets/${id}`, data);
+      const response = await api.patch<SalePeriodMaster>(`/employees-sale-period/${id}`, data);
       return { success: true, data: response };
     } catch (error) {
       return { success: false, message: (error as Error).message || 'บันทึกไม่สำเร็จ' };
@@ -100,7 +100,7 @@ export const SalesTargetService = {
   },
   delete: async (id: string | number): Promise<boolean> => {
     try {
-      await api.delete(`/master/sales-targets/${id}`);
+      await api.delete(`/employees-sale-period/${id}`);
       return true;
     } catch {
       return false;
