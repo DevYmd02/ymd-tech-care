@@ -11,13 +11,13 @@ import {
     Layers
 } from 'lucide-react';
 import { EmployeeDeptFormModal } from './EmployeeDeptFormModal';
-import { useEmployeeDeptList } from '../../hooks/useEmployeeDeptList';
-import type { EmployeeDeptListItem } from '@/modules/master-data/types/master-data-types';
+import { useEmployeeDeptList } from './hooks/useEmployeeDeptList';
+import type { EmployeeDeptListItem } from '@master-data/types/master-data-types';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
-import { EmployeeDeptService } from '../../services/employee-dept.service';
+import { EmployeeDeptService } from '@company/services/employee-dept.service';
 
 // ====================================================================================
 // CONFIG

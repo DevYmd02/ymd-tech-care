@@ -8,10 +8,10 @@ import { useForm, type SubmitHandler, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { OrgEmployeeService } from '../services/employee.service';
-import { EmployeeSideService } from '../services/employee-side.service';
-import { PositionService } from '../services/position.service';
-import type { EmployeeFormData } from '../types/employee.types';
+import { OrgEmployeeService } from '@company/services/employee.service';
+import { EmployeeSideService } from '@company/services/employee-side.service';
+import { PositionService } from '@company/services/position.service';
+import type { EmployeeFormData } from '@company/types/employee.types';
 import { logger } from '@/shared/utils/logger';
 
 export const employeeSchema = z.object({

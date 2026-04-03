@@ -8,8 +8,8 @@ import { useForm, type SubmitHandler, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { JobService } from '../services/job.service';
-import type { JobFormData } from '../types/job.types';
+import { JobService } from '@company/services/job.service';
+import type { JobFormData } from '@company/types/job.types';
 import { logger } from '@/shared/utils/logger';
 
 export const jobSchema = z.object({

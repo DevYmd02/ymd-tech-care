@@ -10,14 +10,14 @@ import {
     User
 } from 'lucide-react';
 import { EmployeeFormModal } from './EmployeeFormModal';
-import { useEmployeeList } from '../../hooks/useEmployeeList';
-import type { EmployeeListItem } from '@/modules/master-data/types/master-data-types';
+import { useEmployeeList } from './hooks/useEmployeeList';
+import type { EmployeeListItem } from '@master-data/types/master-data-types';
 import { ActiveStatusBadge } from '@ui';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
-import { OrgEmployeeService } from '../../services/employee.service';
+import { OrgEmployeeService } from '@company/services/employee.service';
 
 // ====================================================================================
 // CONFIG

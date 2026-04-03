@@ -1,36 +1,7 @@
-/**
- * @file SalesAreaFormModal.tsx
- * @description Modal สำหรับสร้าง/แก้ไขข้อมูลเขตการขาย (Sales Area/Zone)
- * @module sales
- */
-
-import { useEffect } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { MapPin, Save, X } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
-import { SalesZoneService } from '@/modules/master-data/company/services/sales-org.service';
-import type { SalesZoneFormData } from '@/modules/master-data/types/master-data-types';
-
-// ====================================================================================
-// SCHEMA
-// ====================================================================================
-
-const areaSchema = z.object({
-    zoneCode: z.string()
-        .min(1, 'กรุณากรอกรหัสเขตการขาย')
-        .max(20, 'รหัสเขตการขายต้องไม่เกิน 20 ตัวอักษร'),
-    zoneName: z.string()
-        .min(1, 'กรุณากรอกชื่อเขตการขาย (ไทย)')
-        .max(200, 'ชื่อเขตการขายต้องไม่เกิน 200 ตัวอักษร'),
-    zoneNameEn: z.string()
-        .max(200, 'ชื่อเขตการขาย (Eng) ต้องไม่เกิน 200 ตัวอักษร'),
-    isActive: z.boolean(),
-});
-
-type AreaFormValues = z.infer<typeof areaSchema>;
+import { useSalesAreaForm } from './hooks/useSalesAreaForm';
 
 // ====================================================================================
 // PROPS
@@ -39,7 +10,7 @@ type AreaFormValues = z.infer<typeof areaSchema>;
 interface Props {
     isOpen: boolean;
     onClose: () => void;
-    editId?: number | null;
+    editId?: string | null;
     onSuccess?: () => void;
 }
 
@@ -51,62 +22,9 @@ export function SalesAreaFormModal({ isOpen, onClose, editId, onSuccess }: Props
     const {
         register,
         handleSubmit,
-        reset,
-        formState: { errors, isSubmitting },
-        control,
-        setValue
-    } = useForm<AreaFormValues>({
-        resolver: zodResolver(areaSchema),
-        defaultValues: {
-            zoneCode: '',
-            zoneName: '',
-            zoneNameEn: '',
-            isActive: true
-        }
-    });
-
-    const isActive = useWatch({ control, name: 'isActive' });
-
-    // Reset/Load Data
-    useEffect(() => {
-        if (isOpen) {
-            if (editId) {
-                const fetchData = async () => {
-                    const data = await SalesZoneService.get(editId);
-                    if (data) {
-                        reset({
-                            zoneCode: data.zone_code,
-                            zoneName: data.zone_name,
-                            zoneNameEn: data.zone_name_en || '',
-                            isActive: data.is_active
-                        });
-                    }
-                };
-                fetchData();
-            } else {
-                reset({
-                    zoneCode: '',
-                    zoneName: '',
-                    zoneNameEn: '',
-                    isActive: true
-                });
-            }
-        }
-    }, [isOpen, editId, reset]);
-
-    const onSubmit = async (data: AreaFormValues) => {
-        try {
-            if (editId) {
-                await SalesZoneService.update(editId, data);
-            } else {
-                await SalesZoneService.create(data as SalesZoneFormData);
-            }
-            if (onSuccess) onSuccess();
-            onClose();
-        } catch (error) {
-            console.error('Failed to save sales area:', error);
-        }
-    };
+        errors,
+        isSubmitting
+    } = useSalesAreaForm({ isOpen, onClose, editId, onSuccess });
 
     // ==================== RENDERING ====================
     
@@ -126,7 +44,7 @@ export function SalesAreaFormModal({ isOpen, onClose, editId, onSuccess }: Props
             </button>
             <button
                 type="button"
-                onClick={handleSubmit(onSubmit)}
+                onClick={handleSubmit}
                 disabled={isSubmitting}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50"
             >
@@ -152,13 +70,13 @@ export function SalesAreaFormModal({ isOpen, onClose, editId, onSuccess }: Props
                         รหัสเขตการขาย <span className="text-red-500">*</span>
                     </label>
                     <input
-                        {...register('zoneCode')}
+                        {...register('saleAreaCode')}
                         type="text"
                         placeholder="กรอกรหัสเขตการขาย (เช่น AREA-BKK)"
-                        className={`${styles.input} ${errors.zoneCode ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        className={`${styles.input} ${errors.saleAreaCode ? 'border-red-500 focus:ring-red-200' : ''}`}
                     />
-                    {errors.zoneCode ? (
-                        <p className="text-red-500 text-xs mt-1">{errors.zoneCode.message}</p>
+                    {errors.saleAreaCode ? (
+                        <p className="text-red-500 text-xs mt-1">{errors.saleAreaCode.message}</p>
                     ) : (
                         <p className="text-gray-400 text-xs mt-1">varchar(20), UNIQUE</p>
                     )}
@@ -170,13 +88,13 @@ export function SalesAreaFormModal({ isOpen, onClose, editId, onSuccess }: Props
                         ชื่อเขตการขาย (ไทย) <span className="text-red-500">*</span>
                     </label>
                     <input
-                        {...register('zoneName')}
+                        {...register('saleAreaName')}
                         type="text"
                         placeholder="กรอกชื่อเขตการขาย (เช่น กรุงเทพและปริมณฑล)"
-                        className={`${styles.input} ${errors.zoneName ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        className={`${styles.input} ${errors.saleAreaName ? 'border-red-500 focus:ring-red-200' : ''}`}
                     />
-                    {errors.zoneName && (
-                        <p className="text-red-500 text-xs mt-1">{errors.zoneName.message}</p>
+                    {errors.saleAreaName && (
+                        <p className="text-red-500 text-xs mt-1">{errors.saleAreaName.message}</p>
                     )}
                 </div>
 
@@ -186,26 +104,27 @@ export function SalesAreaFormModal({ isOpen, onClose, editId, onSuccess }: Props
                         ชื่อเขตการขาย (Eng)
                     </label>
                     <input
-                        {...register('zoneNameEn')}
+                        {...register('saleAreaNameEng')}
                         type="text"
                         placeholder="e.g. Bangkok and Metropolitan"
                         className={styles.input}
                     />
                 </div>
 
-                {/* Status */}
-                <div>
-                    <label className={styles.label}>
-                        สถานะ <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                        className={`${styles.input} cursor-pointer`}
-                        value={isActive ? 'true' : 'false'}
-                        onChange={(e) => setValue('isActive', e.target.value === 'true')}
+                {/* Status - Pattern: Styled Checkbox */}
+                <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-blue-200 dark:hover:border-blue-900/50 transition-colors group cursor-pointer">
+                    <input
+                        {...register('isActive')}
+                        type="checkbox"
+                        id="sale_area_is_active"
+                        className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer accent-blue-600"
+                    />
+                    <label 
+                        htmlFor="sale_area_is_active" 
+                        className="text-sm font-semibold text-gray-700 dark:text-gray-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors cursor-pointer"
                     >
-                        <option value="true">ใช้งาน (Active)</option>
-                        <option value="false">ไม่ใช้งาน (Inactive)</option>
-                    </select>
+                        สถานะใช้งาน (Active)
+                    </label>
                 </div>
             </div>
         </DialogFormLayout>

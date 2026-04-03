@@ -4,14 +4,17 @@
  */
 
 import { useEffect } from 'react';
-import { useForm, type SubmitHandler, type Resolver } from 'react-hook-form';
+import { useForm, useWatch, type SubmitHandler, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { EmployeeGroupService } from '../services/employee-group.service';
-import type { EmployeeGroupFormData } from '../types/employee-group.types';
+import { EmployeeGroupService } from '@company/services/employee-group.service';
+import type { EmployeeGroupFormData } from '@company/types/employee-group.types';
 import { logger } from '@/shared/utils/logger';
 import { extractErrorMessage } from '@/core/api/api';
+import { useDebounce } from '@/shared/hooks/useDebounce';
+import { useConfirmation } from '@/shared/hooks/useConfirmation';
+import { type TableFilters } from '@/shared/hooks/useTableFilters';
 
 export const employeeGroupSchema = z.object({
     employeeGroupCode: z.string().min(1, 'กรุณากรอกรหัสกลุ่มพนักงาน').max(20, 'รหัสกลุ่มพนักงานต้องไม่เกิน 20 ตัวอักษร'),
@@ -37,12 +40,53 @@ export function useEmployeeGroupForm(editId: string | null, isOpen: boolean, onS
         reset,
         setValue,
         setError,
+        clearErrors,
         control,
-        formState: { errors }
+        formState: { errors, dirtyFields }
     } = useForm<EmployeeGroupFormData>({
         resolver: zodResolver(employeeGroupSchema) as Resolver<EmployeeGroupFormData>,
         defaultValues: initialEmployeeGroupData,
     });
+
+    const { confirm } = useConfirmation();
+
+    // Real-time Duplicate Check
+    const codeValue = useWatch({ control, name: 'employeeGroupCode' });
+    const debouncedCode = useDebounce(codeValue, 500);
+
+    const { data: duplicateCheckData } = useQuery({
+        queryKey: ['employee-group-check-duplicate', debouncedCode, editId],
+        queryFn: async () => {
+            if (!debouncedCode) return { items: [] };
+            const params = { 
+                page: 1, 
+                limit: 10, 
+                employee_group_code: debouncedCode 
+            };
+            return EmployeeGroupService.getList(params as unknown as Partial<TableFilters>);
+        },
+        enabled: isOpen && !!debouncedCode && debouncedCode.trim().length >= 1,
+    });
+
+    useEffect(() => {
+        if (codeValue !== debouncedCode) return;
+
+        if (duplicateCheckData?.items && debouncedCode) {
+            const matches = duplicateCheckData.items;
+            const isDuplicate = matches.some(item => 
+                item.employee_group_code?.toLowerCase() === debouncedCode.trim().toLowerCase() && 
+                item.employee_group_id?.toString() !== editId
+            );
+
+            if (isDuplicate && dirtyFields.employeeGroupCode) {
+                setError('employeeGroupCode', { type: 'manual', message: 'รหัสกลุ่มพนักงานซ้ำในระบบ' });
+            } else if (errors.employeeGroupCode?.message === 'รหัสกลุ่มพนักงานซ้ำในระบบ') {
+                clearErrors('employeeGroupCode');
+            }
+        } else if (!debouncedCode && errors.employeeGroupCode?.message === 'รหัสกลุ่มพนักงานซ้ำในระบบ') {
+            clearErrors('employeeGroupCode');
+        }
+    }, [duplicateCheckData, debouncedCode, codeValue, editId, setError, clearErrors, errors.employeeGroupCode?.message, dirtyFields.employeeGroupCode]);
 
     // Fetch data for edit
     const { data: initialData, isLoading: isLoadingInitial } = useQuery({
@@ -77,12 +121,11 @@ export function useEmployeeGroupForm(editId: string | null, isOpen: boolean, onS
                 queryClient.invalidateQueries({ queryKey: ['employee-groups'] });
                 if (onSuccess) onSuccess();
             } else {
-                // This branch might not be hit if API returns 400, but kept for safety
                 throw new Error(res.message || 'บันทึกไม่สำเร็จ');
             }
         },
 
-        onError: (error: Error) => {
+        onError: async (error: Error) => {
             logger.error('Error saving employee-group:', error);
             const msg = extractErrorMessage(error);
             
@@ -94,8 +137,14 @@ export function useEmployeeGroupForm(editId: string | null, isOpen: boolean, onS
                 });
             }
 
-            // 2. Alert the user immediately so they know what happened
-            alert(`ไม่สามารถบันทึกได้: ${msg}`);
+            // 2. Alert the user with themed confirmation
+            await confirm({
+                title: 'ไม่สามารถบันทึกได้',
+                description: msg,
+                confirmText: 'ตกลง',
+                variant: 'danger',
+                hideCancel: true
+            });
         }
     });
 
@@ -114,4 +163,3 @@ export function useEmployeeGroupForm(editId: string | null, isOpen: boolean, onS
         control
     };
 }
-

@@ -4,11 +4,10 @@
  * @module company
  */
 
-import { useWatch } from 'react-hook-form';
 import { Save, X, UsersRound } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
-import { useEmployeeGroupForm } from '../../hooks/useEmployeeGroupForm';
+import { useEmployeeGroupForm } from './hooks/useEmployeeGroupForm';
 
 interface EmployeeGroupFormModalProps {
     isOpen: boolean;
@@ -24,11 +23,9 @@ export const EmployeeGroupFormModal = ({ isOpen, onClose, onSuccess, editId }: E
         register,
         errors,
         isSubmitting,
-        handleSave,
-        control
+        handleSave
     } = useEmployeeGroupForm(editId ?? null, isOpen, onSuccess);
 
-    const isActive = useWatch({ control, name: 'isActive' });
 
     // Header Icon
     const TitleIcon = <UsersRound className="w-5 h-5 text-white" />;
@@ -120,18 +117,19 @@ export const EmployeeGroupFormModal = ({ isOpen, onClose, onSuccess, editId }: E
                     <p className="text-gray-400 text-xs mt-1">varchar(100) - ชื่อกลุ่มพนักงาน (Eng)</p>
                 </div>
 
-                {/* Status - Checkbox */}
-                <div className="flex flex-col gap-2">
-                    <label className={styles.label}>สถานะ</label>
-                    <label className="flex items-center gap-3 cursor-pointer group bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 transition-all shadow-sm">
-                        <input
-                            {...register('isActive')}
-                            type="checkbox"
-                            className="checkbox checkbox-primary checkbox-sm rounded-md border-gray-400"
-                        />
-                        <span className={`text-sm font-semibold transition-colors ${isActive ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
-                            {isActive ? 'ใช้งาน (Active)' : 'ไม่ใช้งาน (Inactive)'}
-                        </span>
+                {/* Status - Pattern: Styled Checkbox */}
+                <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-blue-200 dark:hover:border-blue-900/50 transition-colors group cursor-pointer mt-2">
+                    <input
+                        {...register('isActive')}
+                        type="checkbox"
+                        id="employee_group_is_active"
+                        className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer accent-blue-600"
+                    />
+                    <label 
+                        htmlFor="employee_group_is_active" 
+                        className="text-sm font-semibold text-gray-700 dark:text-gray-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors cursor-pointer"
+                    >
+                        สถานะใช้งาน (Active)
                     </label>
                 </div>
 

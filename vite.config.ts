@@ -37,6 +37,7 @@ export default defineConfig(({ mode }) => {
         "@master-data": path.resolve(__dirname, './src/modules/master-data'),
         "@customer": path.resolve(__dirname, './src/modules/master-data/customer'),
         "@currency": path.resolve(__dirname, './src/modules/master-data/currency'),
+        "@company": path.resolve(__dirname, './src/modules/master-data/company'),
       },
     },
     server: {

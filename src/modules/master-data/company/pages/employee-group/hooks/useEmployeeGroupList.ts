@@ -4,7 +4,7 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { EmployeeGroupService } from '../services/employee-group.service';
+import { EmployeeGroupService } from '@company/services/employee-group.service';
 import type { TableFilters } from '@/shared/hooks/useTableFilters';
 
 export function useEmployeeGroupList(filters: Partial<TableFilters>) {

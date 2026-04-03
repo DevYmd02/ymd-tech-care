@@ -1,20 +1,13 @@
-/**
- * @file SalesAreaList.tsx
- * @description หน้ารายการข้อมูลเขตการขาย (Sales Area List)
- * @module sales
- */
-
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 import { 
     Edit2, 
     Trash2, 
     MapPin
 } from 'lucide-react';
 import { SalesAreaFormModal } from './SalesAreaFormModal';
-import { SalesZoneService } from '@/modules/master-data/company/services/sales-org.service';
-import type { SalesZoneListItem } from '@/modules/master-data/types/master-data-types';
+import { useSalesAreaList } from './hooks/useSalesAreaList';
+import type { SaleAreaListItem } from '@/modules/master-data/sales/types/area/area.types';
 import { ActiveStatusBadge } from '@ui';
-import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
@@ -34,23 +27,22 @@ const STATUS_OPTIONS = [
 // ====================================================================================
 
 export default function SalesAreaList() {
-    // ==================== STATE ====================
-    const { 
-        filters, 
-        setFilters, 
+    const {
+        filters,
+        setFilters,
         handlePageChange,
-        resetFilters
-    } = useTableFilters({
-        customParamKeys: {
-          search: 'zone_code',
-          search2: 'zone_name'
-        }
-    });
-
-    const [allAreas, setAllAreas] = useState<SalesZoneListItem[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingId, setEditingId] = useState<number | null>(null);
+        resetFilters,
+        isLoading,
+        isModalOpen,
+        editingId,
+        filteredData,
+        paginatedData,
+        fetchData,
+        handleCreateNew,
+        handleEdit,
+        handleDelete,
+        handleModalClose
+    } = useSalesAreaList();
 
     // ==================== FILTER CONFIG ====================
     const filterConfig: FilterFieldConfig<keyof typeof filters>[] = useMemo(() => [
@@ -74,82 +66,8 @@ export default function SalesAreaList() {
         },
     ], []);
 
-    // ==================== DATA FETCHING ====================
-    const fetchData = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const data = await SalesZoneService.getList();
-            setAllAreas(data);
-        } catch (error) {
-            console.error('Failed to fetch sales areas:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
-
-    // ==================== CLIENT-SIDE FILTERING & PAGINATION ====================
-    const filteredData = useMemo(() => {
-        let result = [...allAreas];
-
-        // Filter by Status
-        if (filters.status !== 'ALL') {
-            result = result.filter(item => 
-                filters.status === 'ACTIVE' ? item.is_active : !item.is_active
-            );
-        }
-
-        // Filter by Code
-        if (filters.search) {
-            const term = filters.search.toLowerCase();
-            result = result.filter(item => item.zone_code.toLowerCase().includes(term));
-        }
-
-        // Filter by Name
-        if (filters.search2) {
-            const term = filters.search2.toLowerCase();
-            result = result.filter(item => item.zone_name.toLowerCase().includes(term));
-        }
-
-        // Sort by Created Date Desc
-        result.sort((a, b) => new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime());
-
-        return result;
-    }, [allAreas, filters]);
-
-    // Pagination Slicing
-    const paginatedData = useMemo(() => {
-        const startIndex = (filters.page - 1) * filters.limit;
-        return filteredData.slice(startIndex, startIndex + filters.limit);
-    }, [filteredData, filters.page, filters.limit]);
-
-    // ==================== HANDLERS ====================
-    const handleCreateNew = () => {
-        setEditingId(null);
-        setIsModalOpen(true);
-    };
-
-    const handleEdit = (id: number) => {
-        setEditingId(id);
-        setIsModalOpen(true);
-    };
-
-    const handleDelete = useCallback((id: number) => {
-        if (confirm('คุณต้องการลบเขตการขายนี้หรือไม่?')) {
-            SalesZoneService.delete(id).then(() => fetchData());
-        }
-    }, [fetchData]);
-
-    const handleModalClose = () => {
-        setIsModalOpen(false);
-        setEditingId(null);
-    };
-
     // ==================== TABLE COLUMNS ====================
-    const columns = useMemo<ColumnDef<SalesZoneListItem>[]>(() => [
+    const columns = useMemo<ColumnDef<SaleAreaListItem>[]>(() => [
         {
             id: 'sequence',
             header: 'ลำดับ',
@@ -157,7 +75,7 @@ export default function SalesAreaList() {
             size: 60,
         },
         {
-            accessorKey: 'zone_code',
+            accessorKey: 'sale_area_code',
             header: 'รหัสเขตการขาย',
             cell: ({ getValue }) => (
                 <span className="font-medium text-blue-600 dark:text-blue-400">
@@ -166,11 +84,11 @@ export default function SalesAreaList() {
             ),
         },
         {
-            accessorKey: 'zone_name',
+            accessorKey: 'sale_area_name',
             header: 'ชื่อเขตการขาย (ไทย)',
         },
         {
-            accessorKey: 'zone_name_en',
+            accessorKey: 'sale_area_nameeng',
             header: 'ชื่อเขตการขาย (Eng)',
             cell: ({ getValue }) => getValue() || '-',
         },
@@ -187,14 +105,14 @@ export default function SalesAreaList() {
             cell: ({ row }) => (
                 <div className="flex items-center gap-2">
                     <button 
-                        onClick={() => handleEdit(row.original.id)}
+                        onClick={() => handleEdit(row.original.sale_area_id)}
                         className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                         title="แก้ไข"
                     >
                         <Edit2 size={18} />
                     </button>
                     <button 
-                        onClick={() => handleDelete(row.original.id)}
+                        onClick={() => handleDelete(row.original.sale_area_id)}
                         className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                         title="ลบ"
                     >
@@ -203,7 +121,7 @@ export default function SalesAreaList() {
                 </div>
             ),
         },
-    ], [filters.page, filters.limit, handleDelete]);
+    ], [filters.page, filters.limit, handleEdit, handleDelete]);
 
     // ==================== RENDER ====================
     return (
@@ -255,7 +173,7 @@ export default function SalesAreaList() {
                         onPageChange: handlePageChange,
                         onPageSizeChange: (size) => setFilters({ limit: size, page: 1 }),
                     }}
-                    rowIdField="id"
+                    rowIdField="sale_area_id"
                     className="shadow-sm"
                 />
             </div>

@@ -78,7 +78,7 @@ export default function SalesTargetList() {
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
-            const response = await SalesTargetService.getList(filters);
+            const response = await SalesTargetService.getList(filters as unknown as Record<string, string | number | boolean>);
             setAllTargets(response.items || []);
         } catch (error) {
             console.error('Failed to fetch sales targets:', error);

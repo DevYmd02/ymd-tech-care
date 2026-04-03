@@ -3,10 +3,10 @@ import { z } from 'zod';
 import { useForm, useWatch, type SubmitHandler, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { BranchService } from '../services/branch.service';
+import { BranchService } from '@company/services/branch.service';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import { logger } from '@/shared/utils/logger';
-import type { BranchListItem } from '@/modules/master-data/types/master-data-types';
+import type { BranchListItem } from '@master-data/types/master-data-types';
 
 export const branchSchema = z.object({
     branch_code: z.string().min(1, 'กรุณากรอกรหัสสาขา').max(20, 'รหัสสาขาต้องไม่เกิน 20 ตัวอักษร'),

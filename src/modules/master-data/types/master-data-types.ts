@@ -32,7 +32,13 @@ export * from '@/modules/master-data/company/types/employee.types';
 // ====================================================================================
 // RE-EXPORTS FROM SALES MODULE
 // ====================================================================================
-export * from '@/modules/master-data/sales/types/sales-structure.types';
+export * from '@/modules/master-data/sales/types/area/area.types';
+export * from '@/modules/master-data/sales/types/channel/channel.types';
+export * from '@/modules/master-data/sales/types/target/target.types';
+
+// Backward compatibility aliases
+import { type SaleAreaListItem } from '@/modules/master-data/sales/types/area/area.types';
+export type SalesZoneListItem = SaleAreaListItem;
 
 // ====================================================================================
 // RE-EXPORTS FROM INVENTORY MODULE

@@ -11,14 +11,14 @@ import {
     UsersRound
 } from 'lucide-react';
 import { EmployeeGroupFormModal } from './EmployeeGroupFormModal';
-import { useEmployeeGroupList } from '../../hooks/useEmployeeGroupList';
-import type { EmployeeGroupListItem } from '../../types/employee-group.types';
+import { useEmployeeGroupList } from './hooks/useEmployeeGroupList';
+import type { EmployeeGroupListItem } from '@company/types/employee-group.types';
 import { ActiveStatusBadge } from '@ui';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
-import { EmployeeGroupService } from '../../services/employee-group.service';
+import { EmployeeGroupService } from '@company/services/employee-group.service';
 
 // ====================================================================================
 // CONFIG
