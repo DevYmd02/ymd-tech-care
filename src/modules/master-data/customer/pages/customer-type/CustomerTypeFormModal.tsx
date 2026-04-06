@@ -22,6 +22,7 @@ export function CustomerTypeFormModal({
     isSubmitting,
     isLoading,
     isEdit,
+    error,
     handleChange,
     handleSubmit,
     setStatus,
@@ -68,10 +69,11 @@ export function CustomerTypeFormModal({
                 name="customer_type_code"
                 value={formData.customer_type_code}
                 onChange={handleChange}
-                className={styles.input}
+                className={`${styles.input} ${error ? 'border-red-500 focus:ring-red-200' : ''}`}
                 placeholder="กรอกรหัสประเภทลูกค้า"
                 required
               />
+              {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
             </div>
 
             <div className="flex items-center pb-2">

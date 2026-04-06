@@ -4,21 +4,22 @@
 
 import { useMemo, useCallback, useState } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { toast } from 'react-hot-toast';
 import { Users, Plus, Search, Edit2, Trash2, X } from 'lucide-react';
 import { PageListLayout, SmartTable, FilterField, ActiveStatusBadge } from '@ui';
 import { useTableFilters, useDebounce, useConfirmation } from '@/shared/hooks';
 import { createColumnHelper } from '@tanstack/react-table';
-import { CustomerService } from '@customer/services/customer.service';
-import type { CustomerGroup } from '@customer/types/customer-types';
+import { CustomerGroupService } from '@customer/services/customer-group.service';
+import type { CustomerGroup } from '@customer/types/customer-group.types';
 
 import { CustomerGroupFormModal } from './CustomerGroupFormModal';
 
 export default function CustomerGroupList() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<string | number | null>(null);
 
   const { filters, setFilters, resetFilters, handlePageChange } = useTableFilters({
-    customParamKeys: { search: 'customer_group_code', search2: 'customer_group_name_th' }
+    customParamKeys: { search: 'customer_group_code', search2: 'customer_group_name' }
   });
 
   const { confirm } = useConfirmation();
@@ -26,7 +27,7 @@ export default function CustomerGroupList() {
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['customer-groups', debouncedFilters],
-    queryFn: () => CustomerService.getCustomerGroups(debouncedFilters),
+    queryFn: () => CustomerGroupService.getList(debouncedFilters),
     placeholderData: keepPreviousData,
   });
 
@@ -35,23 +36,32 @@ export default function CustomerGroupList() {
     setIsModalOpen(true);
   };
 
-  const handleEdit = (id: number) => {
+  const handleEdit = (id: string | number) => {
     setSelectedId(id);
     setIsModalOpen(true);
   };
 
-  const handleDelete = useCallback(async (_: number, code: string) => {
+  const handleDelete = useCallback(async (id: string | number, code: string) => {
     const isConfirmed = await confirm({
       title: 'ยืนยันการลบข้อมูล',
-      description: `คุณต้องการลบกลุ่มลูกค้า ${code} ใช่หรือไม่?`,
+      description: `คุณต้องการลบกลุ่มลูกค้า "${code}" ใช่หรือไม่?`,
       confirmText: 'ลบข้อมูล',
       variant: 'danger',
     });
 
     if (isConfirmed) {
-      console.log('Delete', code);
+      try {
+        const response = await CustomerGroupService.delete(id);
+        if (response.success) {
+          toast.success('ลบข้อมูลสำเร็จ');
+          refetch();
+        }
+      } catch (error) {
+        console.error('Delete error:', error);
+        toast.error('ไม่สามารถลบข้อมูลได้');
+      }
     }
-  }, [confirm]);
+  }, [confirm, refetch]);
 
   const columnHelper = createColumnHelper<CustomerGroup>();
   const columns = useMemo(() => [
@@ -66,8 +76,8 @@ export default function CustomerGroupList() {
       cell: (info) => <span className="font-bold text-blue-600 dark:text-blue-400">{info.getValue()}</span>,
       size: 150,
     }),
-    columnHelper.accessor('customer_group_name_th', { header: 'ชื่อกลุ่มลูกค้า (TH)', size: 250 }),
-    columnHelper.accessor('customer_group_name_en', {
+    columnHelper.accessor('customer_group_name', { header: 'ชื่อกลุ่มลูกค้า (TH)', size: 250 }),
+    columnHelper.accessor('customer_group_nameeng', {
       header: 'ชื่อกลุ่มลูกค้า (EN)',
       cell: (info) => <span className="text-gray-500">{info.getValue() || '-'}</span>,
       size: 250,

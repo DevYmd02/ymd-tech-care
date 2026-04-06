@@ -22,9 +22,9 @@ export const setupCustomerHandlers = (mock: MockAdapter) => {
       customer_type_id: sanitizeId(cust.customer_type_id),
       customer_group_id: sanitizeId(cust.customer_group_id),
       billing_group_id: sanitizeId(cust.billing_group_id),
-      business_type_name: MOCK_BUSINESS_TYPES.find(b => b.business_type_id === cust.business_type_id)?.business_type_name_th || '',
+      business_type_name: MOCK_BUSINESS_TYPES.find(b => b.business_type_id === cust.business_type_id)?.business_type_name || '',
       customer_type_name: MOCK_CUSTOMER_TYPES.find(t => t.customer_type_id === String(cust.customer_type_id))?.customer_type_name || '',
-      customer_group_name: MOCK_CUSTOMER_GROUPS.find(g => g.customer_group_id === cust.customer_group_id)?.customer_group_name_th || '',
+      customer_group_name: MOCK_CUSTOMER_GROUPS.find(g => g.customer_group_id === cust.customer_group_id)?.customer_group_name || '',
       billing_group_name: MOCK_BILLING_GROUPS.find(bg => bg.billing_group_id === cust.billing_group_id)?.billing_group_name_th || ''
     }));
 
@@ -39,7 +39,7 @@ export const setupCustomerHandlers = (mock: MockAdapter) => {
   mock.onGet('/customer/business-type').reply((config: AxiosRequestConfig) => {
     const params = config.params || {};
     const result = applyMockFilters(MOCK_BUSINESS_TYPES, params, {
-      searchableFields: ['business_type_code', 'business_type_name_th', 'business_type_name_en'],
+      searchableFields: ['business_type_code', 'business_type_name', 'business_type_nameeng'],
     });
     return [200, result];
   });
@@ -57,7 +57,7 @@ export const setupCustomerHandlers = (mock: MockAdapter) => {
   mock.onGet('/customer/group').reply((config: AxiosRequestConfig) => {
     const params = config.params || {};
     const result = applyMockFilters(MOCK_CUSTOMER_GROUPS, params, {
-      searchableFields: ['customer_group_code', 'customer_group_name_th', 'customer_group_name_en'],
+      searchableFields: ['customer_group_code', 'customer_group_name', 'customer_group_nameeng'],
     });
     return [200, result];
   });
