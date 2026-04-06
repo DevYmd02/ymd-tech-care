@@ -37,6 +37,14 @@ export const implementedRoutes = {
         register: '/auth/register',
         forgotPassword: '/auth/forgot-password',
     },
+    sales: {
+        dashboard: '/sales/dashboard',
+        inquiry: '/sales/inquiry',
+        estimate: '/sales/estimate',
+        quotation: '/sales/quotation',
+        reservation: '/sales/reservation',
+        order: '/sales/order',
+    },
 };
 
 /**
@@ -79,6 +87,14 @@ export const ROUTES = {
     STANDARD_COST: '/master-data/standard-cost',
     PRICE_LEVEL: '/master-data/price-level',
     PRICE_LIST: '/master-data/price-list',
+  },
+  SALES: {
+    DASHBOARD: '/sales/dashboard',
+    INQUIRY: '/sales/inquiry',
+    ESTIMATE: '/sales/estimate',
+    QUOTATION: '/sales/quotation',
+    RESERVATION: '/sales/reservation',
+    ORDER: '/sales/order',
   }
 } as const;
 
@@ -132,10 +148,6 @@ export const placeholderRoutes: Record<string, PlaceholderRoute[]> = {
         { path: 'audit/reports', title: 'Audit Reports' },
     ],
     sales: [
-        { path: 'sales/dashboard', title: 'Sales Dashboard' },
-        { path: 'sales/inquiry', title: 'Inquiry' },
-        { path: 'sales/estimate', title: 'Estimate' },
-        { path: 'sales/quotation', title: 'Quotation' },
         { path: 'sales/quotation-approval', title: 'Quotation Approval' },
         { path: 'sales/reservation', title: 'Reservation' },
         { path: 'sales/order', title: 'Sales Order' },

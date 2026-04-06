@@ -3,7 +3,6 @@ import type { TableFilters } from '@/shared/hooks/useTableFilters';
 import type { 
   CustomerMaster, 
   CustomerBusinessType, 
-  CustomerType, 
   CustomerGroup, 
   CustomerBillingGroup,
   CustomerStatus
@@ -11,7 +10,6 @@ import type {
 import { 
   MOCK_CUSTOMERS, 
   MOCK_BUSINESS_TYPES, 
-  MOCK_CUSTOMER_TYPES, 
   MOCK_CUSTOMER_GROUPS, 
   MOCK_BILLING_GROUPS 
 } from '@customer/mocks/data/customerData';
@@ -53,13 +51,6 @@ export const CustomerService = {
     return await api.get<MasterDataListResponse<CustomerBusinessType>>('/customer/business-type', { params });
   },
 
-  /** Get Customer Types (Setup) */
-  getCustomerTypes: async (params?: Partial<TableFilters<string>>): Promise<MasterDataListResponse<CustomerType>> => {
-    if (USE_MOCK) {
-       return { data: MOCK_CUSTOMER_TYPES, total: MOCK_CUSTOMER_TYPES.length, page: 1, limit: 100 };
-    }
-    return await api.get<MasterDataListResponse<CustomerType>>('/customer/type', { params });
-  },
 
   /** Get Customer Groups (Setup) */
   getCustomerGroups: async (params?: Partial<TableFilters<string>>): Promise<MasterDataListResponse<CustomerGroup>> => {

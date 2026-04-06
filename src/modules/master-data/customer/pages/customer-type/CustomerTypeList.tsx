@@ -8,17 +8,18 @@ import { Tags, Plus, Search, Edit2, Trash2, X } from 'lucide-react';
 import { PageListLayout, SmartTable, FilterField, ActiveStatusBadge } from '@ui';
 import { useTableFilters, useDebounce, useConfirmation } from '@/shared/hooks';
 import { createColumnHelper } from '@tanstack/react-table';
-import { CustomerService } from '@customer/services/customer.service';
-import type { CustomerType } from '@customer/types/customer-types';
+import { CustomerTypeService } from '@customer/services/customer-type.service';
+import type { CustomerType } from '@customer/types/customer-type.types';
+import { toast } from 'react-hot-toast';
 
 import { CustomerTypeFormModal } from './CustomerTypeFormModal';
 
 export default function CustomerTypeList() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const { filters, setFilters, resetFilters, handlePageChange } = useTableFilters({
-    customParamKeys: { search: 'customer_type_code', search2: 'customer_type_name_th' }
+    customParamKeys: { search: 'customer_type_code', search2: 'customer_type_name' }
   });
 
   const { confirm } = useConfirmation();
@@ -26,7 +27,7 @@ export default function CustomerTypeList() {
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['customer-types', debouncedFilters],
-    queryFn: () => CustomerService.getCustomerTypes(debouncedFilters),
+    queryFn: () => CustomerTypeService.getList(debouncedFilters),
     placeholderData: keepPreviousData,
   });
 
@@ -35,12 +36,12 @@ export default function CustomerTypeList() {
     setIsModalOpen(true);
   };
 
-  const handleEdit = (id: number) => {
+  const handleEdit = (id: string) => {
     setSelectedId(id);
     setIsModalOpen(true);
   };
 
-  const handleDelete = useCallback(async (_: number, code: string) => {
+  const handleDelete = useCallback(async (id: string, code: string) => {
     const isConfirmed = await confirm({
       title: 'ยืนยันการลบข้อมูล',
       description: `คุณต้องการลบประเภทลูกค้า ${code} ใช่หรือไม่?`,
@@ -49,9 +50,20 @@ export default function CustomerTypeList() {
     });
 
     if (isConfirmed) {
-      console.log('Delete', code);
+      try {
+        const response = await CustomerTypeService.delete(id);
+        if (response.success) {
+          toast.success('ลบข้อมูลสำเร็จ');
+          refetch();
+        } else {
+          toast.error(response.message || 'ลบข้อมูลไม่สำเร็จ');
+        }
+      } catch (error) {
+        console.error('[CustomerTypeList] handleDelete error:', error);
+        toast.error('เกิดข้อผิดพลาดในการลบข้อมูล');
+      }
     }
-  }, [confirm]);
+  }, [confirm, refetch]);
 
   const columnHelper = createColumnHelper<CustomerType>();
   const columns = useMemo(() => [
@@ -66,8 +78,8 @@ export default function CustomerTypeList() {
       cell: (info) => <span className="font-bold text-blue-600 dark:text-blue-400">{info.getValue()}</span>,
       size: 150,
     }),
-    columnHelper.accessor('customer_type_name_th', { header: 'ชื่อประเภทลูกค้า (TH)', size: 250 }),
-    columnHelper.accessor('customer_type_name_en', {
+    columnHelper.accessor('customer_type_name', { header: 'ชื่อประเภทลูกค้า (TH)', size: 250 }),
+    columnHelper.accessor('customer_type_nameeng', {
       header: 'ชื่อประเภทลูกค้า (EN)',
       cell: (info) => <span className="text-gray-500">{info.getValue() || '-'}</span>,
       size: 250,
@@ -83,8 +95,8 @@ export default function CustomerTypeList() {
       size: 100,
       cell: ({ row }) => (
         <div className="flex justify-center gap-2">
-          <button onClick={() => handleEdit(row.original.customer_type_id)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit2 size={18} /></button>
-          <button onClick={() => handleDelete(row.original.customer_type_id, row.original.customer_type_code)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={18} /></button>
+          <button onClick={() => handleEdit(row.original.customer_type_id)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit2 size={18} /></button>
+          <button onClick={() => handleDelete(row.original.customer_type_id, row.original.customer_type_code)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={18} /></button>
         </div>
       ),
     }),
@@ -110,10 +122,10 @@ export default function CustomerTypeList() {
               <X size={16} />
               ล้างค่า
             </button>
-            <button onClick={() => refetch()} className="h-10 px-6 bg-blue-600 text-white rounded-lg font-bold flex items-center gap-2 hover:bg-blue-700">
+            <button onClick={() => refetch()} className="h-10 px-6 bg-blue-600 text-white rounded-lg font-bold flex items-center gap-2 hover:bg-blue-700 transition-colors">
               <Search size={18} /> ค้นหา
             </button>
-            <button onClick={handleCreate} className="h-10 px-6 bg-emerald-600 text-white rounded-lg font-bold flex items-center gap-2 hover:bg-emerald-700">
+            <button onClick={handleCreate} className="h-10 px-6 bg-emerald-600 text-white rounded-lg font-bold flex items-center gap-2 hover:bg-emerald-700 transition-colors">
               <Plus size={18} /> เพิ่มใหม่
             </button>
           </div>

@@ -1,6 +1,7 @@
 /**
  * @file SaleTargetFormModal.tsx
- * @description Modal สำหรับสร้าง/แก้ไขข้อมูลเป้าการขายพนักงาน (Sale Target)
+ * @description Modal สำหรับจัดการข้อมูลเป้าการขายพนักงาน (Sale Target) 
+ * ปรับปรุง: ใช้ตัวเลือกพนักงานเพื่อส่ง UUID และส่งยอดเงินเป็น String
  */
 
 import { useEffect, useCallback, useState } from 'react';
@@ -10,19 +11,26 @@ import { z } from 'zod';
 import { User, Save } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
+
+// Services
 import { SaleTargetService } from '@/modules/master-data/sales/services/target/sale-target.service';
 import { SalePeriodService } from '@/modules/master-data/sales/services/target/sale-period.service';
+import { OrgEmployeeService } from '@/modules/master-data/company/services/employee.service';
+
+// Types
 import type { 
   SalePeriodMaster
 } from '@/modules/master-data/sales/types/target/sale-period.types';
 import type {
   SaleTargetFormData
 } from '@/modules/master-data/sales/types/target/sale-target.types';
+import type { EmployeeMaster } from '@/modules/master-data/company/types/employee.types';
 
 const employeeTargetSchema = z.object({
-    employeeId: z.string().min(1, 'กรุณาเลือกพนักงาน'),
-    targetId: z.string().min(1, 'กรุณาเลือกงวดเป้าหมาย'),
-    amount: z.number().min(0, 'กรุณากรอกยอดเป้าหมาย'),
+    emp_id: z.string().min(1, 'กรุณาเลือกพนักงาน'),
+    period_id: z.string().min(1, 'กรุณาเลือกงวดเป้าหมาย'),
+    period_target: z.number().min(0, 'กรุณากรอกยอดเป้าหมาย'),
+    list_no: z.number(),
 });
 
 type EmployeeTargetValues = z.infer<typeof employeeTargetSchema>;
@@ -36,6 +44,7 @@ interface Props {
 
 export function SaleTargetFormModal({ isOpen, onClose, editId, onSuccess }: Props) {
     const [periods, setPeriods] = useState<SalePeriodMaster[]>([]);
+    const [employees, setEmployees] = useState<EmployeeMaster[]>([]);
     
     const {
         register,
@@ -46,33 +55,48 @@ export function SaleTargetFormModal({ isOpen, onClose, editId, onSuccess }: Prop
     } = useForm<EmployeeTargetValues>({
         resolver: zodResolver(employeeTargetSchema),
         defaultValues: {
-            employeeId: '',
-            targetId: '',
-            amount: 0,
+            emp_id: '',
+            period_id: '',
+            period_target: 0,
+            list_no: 1,
         }
     });
 
     useEffect(() => {
-        const fetchPeriods = async () => {
+        const fetchDropdownData = async () => {
             try {
-                const res = await SalePeriodService.getList();
-                setPeriods(res.items || []);
+                // Fetch Periods
+                const periodRes = await SalePeriodService.getList();
+                let periodItems: SalePeriodMaster[] = [];
+                if (Array.isArray(periodRes)) {
+                    periodItems = periodRes;
+                } else if (periodRes && 'items' in periodRes) {
+                    periodItems = (periodRes as { items: SalePeriodMaster[] }).items;
+                }
+                setPeriods(periodItems);
+
+                // Fetch Employees
+                const empRes = await OrgEmployeeService.getList({ limit: 100 });
+                setEmployees(empRes.items || []);
+
             } catch (err) {
-                console.error('Failed to fetch periods:', err);
+                console.error('Failed to fetch dropdown data:', err);
             }
         };
 
         if (isOpen) {
-            fetchPeriods();
+            fetchDropdownData();
             if (editId) {
                 const fetchDetail = async () => {
                     try {
                         const data = await SaleTargetService.get(editId);
                         if (data) {
                             reset({
-                                employeeId: data.employee_id,
-                                targetId: data.target_id,
-                                amount: data.amount,
+                                emp_id: data.emp_id,
+                                period_id: data.period_id,
+                                // Handle both string from API or number from internal mapping
+                                period_target: Number(data.period_target || data.amount || 0),
+                                list_no: data.list_no || 1,
                             });
                         }
                     } catch (error) {
@@ -82,9 +106,10 @@ export function SaleTargetFormModal({ isOpen, onClose, editId, onSuccess }: Prop
                 fetchDetail();
             } else {
                 reset({
-                    employeeId: '',
-                    targetId: '',
-                    amount: 0,
+                    emp_id: '',
+                    period_id: '',
+                    period_target: 0,
+                    list_no: 1,
                 });
             }
         }
@@ -93,9 +118,10 @@ export function SaleTargetFormModal({ isOpen, onClose, editId, onSuccess }: Prop
     const onSubmit = useCallback(async (values: EmployeeTargetValues) => {
         try {
             const payload: SaleTargetFormData = {
-                employeeId: values.employeeId,
-                targetId: values.targetId,
-                amount: values.amount
+                emp_id: values.emp_id,
+                period_id: values.period_id,
+                period_target: values.period_target.toString(), // Convert to String for API
+                list_no: values.list_no
             };
 
             if (editId) {
@@ -142,34 +168,48 @@ export function SaleTargetFormModal({ isOpen, onClose, editId, onSuccess }: Prop
             <div className="p-6 space-y-5">
                 {/* Employee Selection */}
                 <div>
-                    <label className={styles.label}>รหัสพนักงาน <span className="text-red-500">*</span></label>
-                    <input
-                        {...register('employeeId')}
-                        className={`${styles.input} ${errors.employeeId ? 'border-red-500' : ''}`}
-                        placeholder="กรอกรหัสพนักงาน (UUID)"
+                    <label className={styles.label}>พนักงาน <span className="text-red-500">*</span></label>
+                    <Controller
+                        name="emp_id"
+                        control={control}
+                        render={({ field }) => (
+                            <select
+                                {...field}
+                                className={`${styles.input} ${errors.emp_id ? 'border-red-500' : ''}`}
+                            >
+                                <option value="">เลือกพนักงาน</option>
+                                {employees.map(emp => (
+                                    <option key={emp.id} value={emp.id}>
+                                        {`[${emp.employee_code}] ${emp.employee_name}`}
+                                    </option>
+                                ))}
+                            </select>
+                        )}
                     />
-                    {errors.employeeId && <p className="text-red-500 text-xs mt-1">{errors.employeeId.message}</p>}
+                    {errors.emp_id && <p className="text-red-500 text-xs mt-1">{errors.emp_id.message}</p>}
                 </div>
 
                 {/* Target Period */}
                 <div>
                     <label className={styles.label}>งวดเป้าหมาย <span className="text-red-500">*</span></label>
                     <Controller
-                        name="targetId"
+                        name="period_id"
                         control={control}
                         render={({ field }) => (
                             <select
                                 {...field}
-                                className={`${styles.input} ${errors.targetId ? 'border-red-500' : ''}`}
+                                className={`${styles.input} ${errors.period_id ? 'border-red-500' : ''}`}
                             >
                                 <option value="">เลือกงวดเป้าหมาย</option>
                                 {periods.map(p => (
-                                    <option key={p.period_id} value={p.period_id}>({p.begin_date} - {p.end_date})</option>
+                                    <option key={p.period_id} value={p.period_id}>
+                                        {`งวดวันที่ ${new Date(p.begin_date).toLocaleDateString('th-TH')} - ${new Date(p.end_date).toLocaleDateString('th-TH')}`}
+                                    </option>
                                 ))}
                             </select>
                         )}
                     />
-                    {errors.targetId && <p className="text-red-500 text-xs mt-1">{errors.targetId.message}</p>}
+                    {errors.period_id && <p className="text-red-500 text-xs mt-1">{errors.period_id.message}</p>}
                 </div>
 
                 {/* Amount */}
@@ -178,12 +218,14 @@ export function SaleTargetFormModal({ isOpen, onClose, editId, onSuccess }: Prop
                     <input
                         type="number"
                         step="0.01"
-                        {...register('amount', { valueAsNumber: true })}
-                        className={`${styles.input} ${errors.amount ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        {...register('period_target', { valueAsNumber: true })}
+                        className={`${styles.input} ${errors.period_target ? 'border-red-500 focus:ring-red-200' : ''}`}
                         placeholder="0.00"
                     />
-                    {errors.amount && <p className="text-red-500 text-xs mt-1">{errors.amount.message}</p>}
+                    {errors.period_target && <p className="text-red-500 text-xs mt-1">{errors.period_target.message}</p>}
                 </div>
+                
+                <input type="hidden" {...register('list_no')} />
             </div>
         </DialogFormLayout>
     );

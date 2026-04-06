@@ -1,70 +1,31 @@
-import { useState, useEffect, type ChangeEvent, type FormEvent } from 'react';
-import type { CustomerType } from '@customer/types/customer-types';
 import { Save } from 'lucide-react';
 import { DialogFormLayout } from '@ui';
 import { styles } from '@/shared/constants/styles';
+import { useCustomerTypeForm } from './hooks/useCustomerTypeForm';
+// Removed unused CustomerType import
 
 interface CustomerTypeFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  id?: number;
-  initialData?: CustomerType | null;
+  id?: string;
   onSuccess?: () => void;
-}
-
-interface CustomerTypeFormData {
-  customer_type_code: string;
-  customer_type_name_th: string;
-  customer_type_name_en: string;
-  note: string;
 }
 
 export function CustomerTypeFormModal({
   isOpen,
   onClose,
   id,
-  initialData,
   onSuccess,
 }: CustomerTypeFormModalProps) {
-  const isEdit = !!id || !!initialData;
-  const [formData, setFormData] = useState<CustomerTypeFormData>({
-    customer_type_code: '',
-    customer_type_name_th: '',
-    customer_type_name_en: '',
-    note: '',
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (isOpen) {
-      setFormData({
-        customer_type_code: initialData?.customer_type_code || '',
-        customer_type_name_th: initialData?.customer_type_name_th || '',
-        customer_type_name_en: initialData?.customer_type_name_en || '',
-        note: initialData?.note || '',
-      });
-    }
-  }, [isOpen, initialData, id]);
-
-  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    try {
-      console.log('Submit Customer Type:', formData);
-      await new Promise(resolve => setTimeout(resolve, 500));
-      onSuccess?.();
-      onClose();
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  const {
+    formData,
+    isSubmitting,
+    isLoading,
+    isEdit,
+    handleChange,
+    handleSubmit,
+    setStatus,
+  } = useCustomerTypeForm({ id, onSuccess, onClose, isOpen });
 
   const footer = (
     <div className="flex justify-end gap-3 w-full">
@@ -72,13 +33,14 @@ export function CustomerTypeFormModal({
         type="button" 
         onClick={onClose} 
         className={styles.btnSecondary}
+        disabled={isSubmitting}
       >
         ยกเลิก
       </button>
       <button 
         type="submit" 
         form="customer-type-form" 
-        disabled={isSubmitting}
+        disabled={isSubmitting || isLoading}
         className={`${styles.btnPrimary} flex items-center gap-2`}
       >
         <Save size={18} /> {isSubmitting ? 'กำลังบันทึก...' : (isEdit ? 'บันทึกการแก้ไข' : 'บันทึก')}
@@ -94,58 +56,68 @@ export function CustomerTypeFormModal({
       subtitle="กำหนดประเภทของลูกค้าเพื่อการจัดการข้อมูล"
       footer={footer}
     >
-      <form id="customer-type-form" onSubmit={handleSubmit} className="p-6 space-y-6">
-        {/* Customer Type Code */}
-        <div className="space-y-1">
-          <label className={styles.label}>รหัสประเภทลูกค้า <span className="text-red-500">*</span></label>
-          <input
-            name="customer_type_code"
-            value={formData.customer_type_code}
-            onChange={handleChange}
-            className={styles.input}
-            placeholder="กรอกรหัสประเภทลูกค้า"
-            required
-          />
-        </div>
-        
-        {/* Name TH */}
-        <div className="space-y-1">
-          <label className={styles.label}>ชื่อประเภทลูกค้า (ภาษาไทย) <span className="text-red-500">*</span></label>
-          <input
-            name="customer_type_name_th"
-            value={formData.customer_type_name_th}
-            onChange={handleChange}
-            className={styles.input}
-            placeholder="กรอกชื่อภาษาไทย"
-            required
-          />
-        </div>
+      {isLoading ? (
+        <div className="p-10 text-center text-gray-500">กำลังโหลดข้อมูล...</div>
+      ) : (
+        <form id="customer-type-form" onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* Code & Status Row */}
+          <div className="flex flex-col md:flex-row md:items-end gap-4">
+            <div className="flex-1 space-y-1">
+              <label className={styles.label}>รหัสประเภทลูกค้า <span className="text-red-500">*</span></label>
+              <input
+                name="customer_type_code"
+                value={formData.customer_type_code}
+                onChange={handleChange}
+                className={styles.input}
+                placeholder="กรอกรหัสประเภทลูกค้า"
+                required
+              />
+            </div>
 
-        {/* Name EN */}
-        <div className="space-y-1">
-          <label className={styles.label}>ชื่อประเภทลูกค้า (ภาษาอังกฤษ)</label>
-          <input
-            name="customer_type_name_en"
-            value={formData.customer_type_name_en}
-            onChange={handleChange}
-            className={styles.input}
-            placeholder="Customer type in English"
-          />
-        </div>
+            <div className="flex items-center pb-2">
+              <label className="flex items-center gap-2 cursor-pointer group hover:text-purple-600 transition-colors">
+                <input
+                  type="checkbox"
+                  id="is_active"
+                  name="is_active"
+                  checked={formData.is_active}
+                  onChange={(e) => setStatus(e.target.checked)}
+                  className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500 cursor-pointer accent-purple-600"
+                />
+                <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 group-hover:text-purple-600 dark:group-hover:text-purple-400">
+                  สถานะใช้งาน (Active)
+                </span>
+              </label>
+            </div>
+          </div>
+          
+          {/* Name TH */}
+          <div className="space-y-1">
+            <label className={styles.label}>ชื่อประเภทลูกค้า (ภาษาไทย) <span className="text-red-500">*</span></label>
+            <input
+              name="customer_type_name"
+              value={formData.customer_type_name}
+              onChange={handleChange}
+              className={styles.input}
+              placeholder="กรอกชื่อภาษาไทย"
+              required
+            />
+          </div>
 
-        {/* Note */}
-        <div className="space-y-1">
-          <label className={styles.label}>หมายเหตุ</label>
-          <textarea
-            name="note"
-            value={formData.note}
-            onChange={handleChange}
-            className={styles.textarea}
-            placeholder="กรอกหมายเหตุ (ถ้ามี)"
-            rows={3}
-          />
-        </div>
-      </form>
+          {/* Name EN */}
+          <div className="space-y-1">
+            <label className={styles.label}>ชื่อประเภทลูกค้า (ภาษาอังกฤษ)</label>
+            <input
+              name="customer_type_nameeng"
+              value={formData.customer_type_nameeng}
+              onChange={handleChange}
+              className={styles.input}
+              placeholder="Customer type in English"
+            />
+          </div>
+
+        </form>
+      )}
     </DialogFormLayout>
   );
 }
