@@ -5,23 +5,24 @@
 
 import { useMemo, useCallback, useState } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { toast } from 'react-hot-toast';
 import { Briefcase, Plus, Search, Edit2, Trash2, X } from 'lucide-react';
 import { PageListLayout, SmartTable, FilterField, ActiveStatusBadge } from '@ui';
 import { useTableFilters, useDebounce, useConfirmation } from '@/shared/hooks';
 import { createColumnHelper } from '@tanstack/react-table';
-import { CustomerService } from '@customer/services/customer.service';
-import type { CustomerBusinessType } from '@customer/types/customer-types';
+import { BusinessTypeService } from '@customer/services/business-type.service';
+import type { CustomerBusinessType } from '@customer/types/business-type.types';
 
 import { BusinessTypeFormModal } from './BusinessTypeFormModal';
 
 export default function BusinessTypeList() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<string | number | null>(null);
 
   const { filters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters({
     customParamKeys: {
       search: 'business_type_code',
-      search2: 'business_type_name_th',
+      search2: 'business_type_name',
     }
   });
 
@@ -31,7 +32,7 @@ export default function BusinessTypeList() {
   // Data Fetching - Properly typed
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['customer-business-types', debouncedFilters],
-    queryFn: () => CustomerService.getBusinessTypes(debouncedFilters),
+    queryFn: () => BusinessTypeService.getList(debouncedFilters),
     placeholderData: keepPreviousData,
   });
 
@@ -40,23 +41,32 @@ export default function BusinessTypeList() {
     setIsModalOpen(true);
   };
 
-  const handleEdit = (id: number) => {
+  const handleEdit = (id: string | number) => {
     setSelectedId(id);
     setIsModalOpen(true);
   };
 
-  const handleDelete = useCallback(async (_: number, code: string) => {
+  const handleDelete = useCallback(async (id: string | number, code: string) => {
     const isConfirmed = await confirm({
       title: 'ยืนยันการลบข้อมูล',
-      description: `คุณต้องการลบประเภทธุรกิจ ${code} ใช่หรือไม่?`,
+      description: `คุณต้องการลบประเภทธุรกิจ "${code}" ใช่หรือไม่?`,
       confirmText: 'ลบข้อมูล',
       variant: 'danger',
     });
 
     if (isConfirmed) {
-      console.log('Delete', code);
+      try {
+        const response = await BusinessTypeService.delete(id);
+        if (response.success) {
+          toast.success('ลบข้อมูลสำเร็จ');
+          refetch();
+        }
+      } catch (error) {
+        console.error('Delete error:', error);
+        toast.error('ไม่สามารถลบข้อมูลได้');
+      }
     }
-  }, [confirm]);
+  }, [confirm, refetch]);
 
   // Columns
   const columnHelper = createColumnHelper<CustomerBusinessType>();
@@ -72,11 +82,11 @@ export default function BusinessTypeList() {
       cell: (info) => <span className="font-bold text-blue-600 dark:text-blue-400">{info.getValue()}</span>,
       size: 150,
     }),
-    columnHelper.accessor('business_type_name_th', {
+    columnHelper.accessor('business_type_name', {
       header: 'ชื่อประเภทธุรกิจ (TH)',
       size: 250,
     }),
-    columnHelper.accessor('business_type_name_en', {
+    columnHelper.accessor('business_type_nameeng', {
       header: 'ชื่อประเภทธุรกิจ (EN)',
       cell: (info) => <span className="text-gray-500">{info.getValue() || '-'}</span>,
       size: 250,

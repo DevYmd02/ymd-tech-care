@@ -1,41 +1,41 @@
 import { useState, useEffect, useCallback, type ChangeEvent, type FormEvent } from 'react';
-import { CustomerTypeService } from '@customer/services/customer-type.service';
-import { initialCustomerTypeFormData, type CustomerTypeFormData } from '@customer/types/customer-type.types';
+import { CustomerGroupService } from '@customer/services/customer-group.service';
+import { initialCustomerGroupFormData, type CustomerGroupFormData } from '@customer/types/customer-group.types';
 import { toast } from 'react-hot-toast';
 import { extractErrorMessage } from '@/core/api/api';
 import { useDebounce } from '@/shared/hooks';
 
-interface UseCustomerTypeFormProps {
-  id?: string;
+interface UseCustomerGroupFormProps {
+  id?: string | number;
   onSuccess?: () => void;
   onClose: () => void;
   isOpen: boolean;
 }
 
-export function useCustomerTypeForm({ id, onSuccess, onClose, isOpen }: UseCustomerTypeFormProps) {
-  const [formData, setFormData] = useState<CustomerTypeFormData>(initialCustomerTypeFormData);
+export function useCustomerGroupForm({ id, onSuccess, onClose, isOpen }: UseCustomerGroupFormProps) {
+  const [formData, setFormData] = useState<CustomerGroupFormData>(initialCustomerGroupFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  const debouncedCode = useDebounce(formData.customer_type_code, 500);
+  const debouncedCode = useDebounce(formData.customer_group_code, 500);
 
   const isEdit = !!id;
 
-  const fetchDetail = useCallback(async (targetId: string) => {
+  const fetchDetail = useCallback(async (targetId: string | number) => {
     setIsLoading(true);
     try {
-      const data = await CustomerTypeService.getById(targetId);
+      const data = await CustomerGroupService.getById(targetId);
       if (data) {
         setFormData({
-          customer_type_code: data.customer_type_code || '',
-          customer_type_name: data.customer_type_name || '',
-          customer_type_nameeng: data.customer_type_nameeng || '',
+          customer_group_code: data.customer_group_code || '',
+          customer_group_name: data.customer_group_name || '',
+          customer_group_nameeng: data.customer_group_nameeng || '',
           is_active: data.is_active ?? true,
         });
       }
     } catch (error) {
-      console.error('[useCustomerTypeForm] fetchDetail error:', error);
+      console.error('[useCustomerGroupForm] fetchDetail error:', error);
       toast.error('ไม่สามารถดึงข้อมูลได้');
     } finally {
       setIsLoading(false);
@@ -47,7 +47,7 @@ export function useCustomerTypeForm({ id, onSuccess, onClose, isOpen }: UseCusto
       if (id) {
         fetchDetail(id);
       } else {
-        setFormData(initialCustomerTypeFormData);
+        setFormData(initialCustomerGroupFormData);
         setError(null);
       }
     }
@@ -56,12 +56,12 @@ export function useCustomerTypeForm({ id, onSuccess, onClose, isOpen }: UseCusto
   // [VALIDATION] Real-time duplicate check
   useEffect(() => {
     const checkDuplicateRealTime = async () => {
-      if (!debouncedCode || isEdit) return; // Skip for edit mode to avoid self-collision (or add logic to check against original)
+      if (!debouncedCode || isEdit) return;
       
       try {
-        const existing = await CustomerTypeService.getList({ search: debouncedCode });
+        const existing = await CustomerGroupService.getList({ search: debouncedCode });
         const isDuplicate = existing.data.some(
-          item => item.customer_type_code.toLowerCase() === debouncedCode.toLowerCase()
+          item => item.customer_group_code.toLowerCase() === debouncedCode.toLowerCase()
         );
         
         if (isDuplicate) {
@@ -81,7 +81,7 @@ export function useCustomerTypeForm({ id, onSuccess, onClose, isOpen }: UseCusto
     const { name, value, type } = e.target as HTMLInputElement;
     const val = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
     setFormData(prev => ({ ...prev, [name]: val }));
-    if (name === 'customer_type_code') setError(null); // Clear error when typing
+    if (name === 'customer_group_code') setError(null);
   };
 
   const setStatus = (isActive: boolean) => {
@@ -90,17 +90,18 @@ export function useCustomerTypeForm({ id, onSuccess, onClose, isOpen }: UseCusto
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (error) {
+        toast.error('กรุณาแก้ไขข้อผิดพลาดก่อนบันทึก');
+        return;
+    }
+
     setIsSubmitting(true);
     try {
+      // Re-verify duplicate on submit for reliability
       if (!isEdit) {
-        // [VALIDATION] Check for duplicate code before creating
-        const existing = await CustomerTypeService.getList({ search: formData.customer_type_code });
-        const isDuplicate = existing.data.some(
-          item => item.customer_type_code.toLowerCase() === formData.customer_type_code.toLowerCase()
-        );
-        
-        if (isDuplicate) {
-          const errMsg = `รหัสประเภทลูกค้า "${formData.customer_type_code}" มีอยู่ในระบบแล้ว`;
+        const existing = await CustomerGroupService.getList({ search: formData.customer_group_code });
+        if (existing.data.some(item => item.customer_group_code.toLowerCase() === formData.customer_group_code.toLowerCase())) {
+          const errMsg = `รหัสกลุ่มลูกค้า "${formData.customer_group_code}" มีอยู่ในระบบแล้ว`;
           setError(errMsg);
           toast.error(errMsg);
           setIsSubmitting(false);
@@ -109,7 +110,7 @@ export function useCustomerTypeForm({ id, onSuccess, onClose, isOpen }: UseCusto
       }
 
       if (isEdit && id) {
-        const response = await CustomerTypeService.update(id, formData);
+        const response = await CustomerGroupService.update(id, formData);
         if (response.success) {
           toast.success('บันทึกการแก้ไขสำเร็จ');
           onSuccess?.();
@@ -118,7 +119,7 @@ export function useCustomerTypeForm({ id, onSuccess, onClose, isOpen }: UseCusto
           toast.error(response.message || 'บันทึกการแก้ไขไม่สำเร็จ');
         }
       } else {
-        const response = await CustomerTypeService.create(formData);
+        const response = await CustomerGroupService.create(formData);
         if (response.success) {
           toast.success('เพิ่มข้อมูลสำเร็จ');
           onSuccess?.();
@@ -128,12 +129,10 @@ export function useCustomerTypeForm({ id, onSuccess, onClose, isOpen }: UseCusto
         }
       }
     } catch (error) {
-      console.error('[useCustomerTypeForm] handleSubmit error:', error);
+      console.error('[useCustomerGroupForm] handleSubmit error:', error);
       const msg = extractErrorMessage(error);
-      
-      // Specifically handle database unique constraint errors if the backend returns them
       if (msg.includes('รหัส') || msg.toLowerCase().includes('duplicate') || msg.includes('ซ้ำ')) {
-        const errMsg = `รหัส "${formData.customer_type_code}" มีอยู่ในระบบแล้ว`;
+        const errMsg = `รหัส "${formData.customer_group_code}" มีอยู่ในระบบแล้ว`;
         setError(errMsg);
         toast.error(errMsg);
       } else {

@@ -149,40 +149,16 @@ export interface CustomerFormData {
 // SETUPS / CONFIGURATIONS (Moved from configurations/ submodule)
 // ====================================================================================
 
-/** Customer Business Type */
-export interface CustomerBusinessType {
-    id: number;
-    code: string;
-    name_th: string;
-    name_en: string;
-    business_type_id: number;
-    business_type_code: string;
-    business_type_name_th: string;
-    business_type_name_en: string;
-    note?: string;
-    is_active: boolean;
-    created_at: string;
-    updated_at: string;
-}
+/** Customer Business Type (Re-exported from modular types) */
+import type { CustomerBusinessType } from './business-type.types';
+export type { CustomerBusinessType };
 
 /** Customer Type (Re-exported from modular types) */
 export type { CustomerType };
 
-/** Customer Group */
-export interface CustomerGroup {
-    id: number;
-    code: string;
-    name_th: string;
-    name_en: string;
-    customer_group_id: number;
-    customer_group_code: string;
-    customer_group_name_th: string;
-    customer_group_name_en: string;
-    note?: string;
-    is_active: boolean;
-    created_at: string;
-    updated_at: string;
-}
+/** Customer Group (Re-exported from modular types) */
+import type { CustomerGroup } from './customer-group.types';
+export type { CustomerGroup };
 
 /** Customer Billing Group */
 export interface CustomerBillingGroup {

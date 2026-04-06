@@ -36,7 +36,16 @@ export const CustomerService = {
        };
     }
     try {
-      return await api.get<MasterDataListResponse<CustomerMaster>>('/customer', { params });
+      const response = await api.get<unknown>('/customer', { params });
+      if (Array.isArray(response)) {
+        return {
+          data: response,
+          total: response.length,
+          page: 1,
+          limit: response.length
+        };
+      }
+      return response as MasterDataListResponse<CustomerMaster>;
     } catch (error) {
       logger.error('[CustomerService] getList error:', error);
       return { data: [], total: 0, page: 1, limit: 10 };
@@ -48,7 +57,11 @@ export const CustomerService = {
     if (USE_MOCK) {
        return { data: MOCK_BUSINESS_TYPES, total: MOCK_BUSINESS_TYPES.length, page: 1, limit: 100 };
     }
-    return await api.get<MasterDataListResponse<CustomerBusinessType>>('/customer/business-type', { params });
+    const response = await api.get<unknown>('/customer/business-type', { params });
+    if (Array.isArray(response)) {
+      return { data: response, total: response.length, page: 1, limit: response.length };
+    }
+    return response as MasterDataListResponse<CustomerBusinessType>;
   },
 
 
@@ -57,7 +70,11 @@ export const CustomerService = {
     if (USE_MOCK) {
        return { data: MOCK_CUSTOMER_GROUPS, total: MOCK_CUSTOMER_GROUPS.length, page: 1, limit: 100 };
     }
-    return await api.get<MasterDataListResponse<CustomerGroup>>('/customer/group', { params });
+    const response = await api.get<unknown>('/customer/group', { params });
+    if (Array.isArray(response)) {
+      return { data: response, total: response.length, page: 1, limit: response.length };
+    }
+    return response as MasterDataListResponse<CustomerGroup>;
   },
 
   /** Get Billing Groups (Setup) */
@@ -65,7 +82,11 @@ export const CustomerService = {
     if (USE_MOCK) {
        return { data: MOCK_BILLING_GROUPS, total: MOCK_BILLING_GROUPS.length, page: 1, limit: 100 };
     }
-    return await api.get<MasterDataListResponse<CustomerBillingGroup>>('/customer/billing-group', { params });
+    const response = await api.get<unknown>('/customer/billing-group', { params });
+    if (Array.isArray(response)) {
+      return { data: response, total: response.length, page: 1, limit: response.length };
+    }
+    return response as MasterDataListResponse<CustomerBillingGroup>;
   },
 
   /** Get Customer Detail */
@@ -96,7 +117,8 @@ export const CustomerService = {
       localCustomers.unshift(newCustomer);
       return { success: true, data: newCustomer };
     }
-    return await api.post<MasterDataResponse<CustomerMaster>>('/customer', payload);
+    const data = await api.post<CustomerMaster>('/customer', payload);
+    return { success: true, data };
   },
 
   /** Update Customer */
@@ -109,7 +131,8 @@ export const CustomerService = {
       }
       return { success: false, message: 'Not found' };
     }
-    return await api.put<MasterDataResponse<CustomerMaster>>(`/customer/${id}`, payload);
+    const data = await api.patch<CustomerMaster>(`/customer/${id}`, payload);
+    return { success: true, data };
   },
 
   /** Delete Customer */
@@ -118,6 +141,7 @@ export const CustomerService = {
       localCustomers = localCustomers.filter(c => c.customer_id !== id);
       return { success: true };
     }
-    return await api.delete<MasterDataResponse<null>>(`/customer/${id}`);
+    await api.delete(`/customer/${id}`);
+    return { success: true };
   }
 };

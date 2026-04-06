@@ -17,7 +17,17 @@ export const CustomerTypeService = {
       };
     }
     try {
-      return await api.get<MasterDataListResponse<CustomerType>>('/customer-type', { params });
+      const response = await api.get<unknown>('/customer-type', { params });
+      // Normalize response from REAL API (Raw Array) to MasterDataListResponse
+      if (Array.isArray(response)) {
+        return {
+          data: response,
+          total: response.length,
+          page: 1,
+          limit: response.length
+        };
+      }
+      return response as MasterDataListResponse<CustomerType>;
     } catch (error) {
       logger.error('[CustomerTypeService] getList error:', error);
       return { data: [], total: 0, page: 1, limit: 10 };
@@ -51,7 +61,8 @@ export const CustomerTypeService = {
       };
       return { success: true, data: newItem };
     }
-    return await api.post<MasterDataResponse<CustomerType>>('/customer-type', payload);
+    const data = await api.post<CustomerType>('/customer-type', payload);
+    return { success: true, data };
   },
 
   /** Update Customer Type */
@@ -59,7 +70,8 @@ export const CustomerTypeService = {
     if (USE_MOCK) {
       return { success: true, data: { ...payload, customer_type_id: id } as CustomerType };
     }
-    return await api.put<MasterDataResponse<CustomerType>>(`/customer-type/${id}`, payload);
+    const data = await api.patch<CustomerType>(`/customer-type/${id}`, payload);
+    return { success: true, data };
   },
 
   /** Delete Customer Type */
@@ -67,6 +79,7 @@ export const CustomerTypeService = {
     if (USE_MOCK) {
       return { success: true };
     }
-    return await api.delete<MasterDataResponse<null>>(`/customer-type/${id}`);
+    await api.delete(`/customer-type/${id}`);
+    return { success: true };
   }
 };
