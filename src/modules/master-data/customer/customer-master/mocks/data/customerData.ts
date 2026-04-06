@@ -96,27 +96,19 @@ export const MOCK_CUSTOMER_GROUPS: CustomerGroup[] = [
 /** Billing Groups Data */
 export const MOCK_BILLING_GROUPS: CustomerBillingGroup[] = [
   {
-    id: 1,
-    code: 'MON',
-    name_th: 'กลุ่มวางบิลรายเดือน',
-    name_en: 'Monthly',
-    billing_group_id: 1,
-    billing_group_code: 'MON',
-    billing_group_name_th: 'กลุ่มวางบิลรายเดือน',
-    billing_group_name_en: 'Monthly',
+    bill_group_id: 1,
+    bill_group_code: 'MON',
+    bill_group_name: 'กลุ่มวางบิลรายเดือน',
+    bill_group_nameeng: 'Monthly',
     is_active: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   },
   {
-    id: 2,
-    code: 'WEK',
-    name_th: 'กลุ่มวางบิลรายสัปดาห์',
-    name_en: 'Weekly',
-    billing_group_id: 2,
-    billing_group_code: 'WEK',
-    billing_group_name_th: 'กลุ่มวางบิลรายสัปดาห์',
-    billing_group_name_en: 'Weekly',
+    bill_group_id: 2,
+    bill_group_code: 'WEK',
+    bill_group_name: 'กลุ่มวางบิลรายสัปดาห์',
+    bill_group_nameeng: 'Weekly',
     is_active: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()

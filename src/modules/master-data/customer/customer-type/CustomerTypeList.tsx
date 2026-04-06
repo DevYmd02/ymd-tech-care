@@ -114,18 +114,18 @@ export default function CustomerTypeList() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 items-end">
           <FilterField label="รหัส" value={filters.search} onChange={(val: string) => setFilters({ search: val })} placeholder="รหัส..." />
           <FilterField label="ชื่อประเภทลูกค้า" value={filters.search2} onChange={(val: string) => setFilters({ search2: val })} placeholder="ชื่อ..." />
-          <div className="lg:col-span-2 xl:col-span-3 flex justify-end gap-2">
+          <div className="md:col-span-full lg:col-span-2 xl:col-span-3 flex flex-wrap justify-end gap-2">
             <button 
               onClick={resetFilters} 
-              className="h-10 px-4 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-lg border border-gray-300 flex items-center justify-center gap-2 transition-colors shadow-sm"
+              className="h-10 px-4 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-lg border border-gray-300 flex items-center justify-center gap-2 transition-colors shadow-sm whitespace-nowrap"
             >
               <X size={16} />
               ล้างค่า
             </button>
-            <button onClick={() => refetch()} className="h-10 px-6 bg-blue-600 text-white rounded-lg font-bold flex items-center gap-2 hover:bg-blue-700 transition-colors">
+            <button onClick={() => refetch()} className="h-10 px-6 bg-blue-600 text-white rounded-lg font-bold flex items-center gap-2 hover:bg-blue-700 transition-colors whitespace-nowrap">
               <Search size={18} /> ค้นหา
             </button>
-            <button onClick={handleCreate} className="h-10 px-6 bg-emerald-600 text-white rounded-lg font-bold flex items-center gap-2 hover:bg-emerald-700 transition-colors">
+            <button onClick={handleCreate} className="h-10 px-6 bg-emerald-600 text-white rounded-lg font-bold flex items-center gap-2 hover:bg-emerald-700 transition-colors whitespace-nowrap">
               <Plus size={18} /> เพิ่มประเภทลูกค้าใหม่
             </button>
           </div>
