@@ -48,6 +48,8 @@
       "@utils/*": ["./src/utils/*"],
       "@pr": ["./src/pages/procurement/pr"],
       "@pr/*": ["./src/pages/procurement/pr/*"],
+      "@sales": ["./src/modules/sales"],
+      "@sales/*": ["./src/modules/sales/*"],
       "@customer": ["./src/modules/master-data/customer"],
       "@customer/*": ["./src/modules/master-data/customer/*"],
       "@currency": ["./src/modules/master-data/currency"],

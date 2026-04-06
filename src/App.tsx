@@ -96,19 +96,19 @@ const TaxCodeList = React.lazy(() => import('@/modules/master-data/tax/pages/cod
 const TaxGroupList = React.lazy(() => import('@/modules/master-data/tax/pages/group/TaxGroupList'));
 
 // Customer Pages
-const CustomerList = React.lazy(() => import('@customer/pages/customer-master/CustomerListPage'));
-const BusinessTypeList = React.lazy(() => import('@customer/pages/business-type/BusinessTypeList'));
-const CustomerTypeList = React.lazy(() => import('@customer/pages/customer-type/CustomerTypeList'));
-const CustomerGroupList = React.lazy(() => import('@customer/pages/customer-group/CustomerGroupList'));
-const BillingGroupList = React.lazy(() => import('@customer/pages/billing-group/BillingGroupList'));
+const CustomerList = React.lazy(() => import('@customer/customer-master/CustomerListPage'));
+const BusinessTypeList = React.lazy(() => import('@customer/business-type/BusinessTypeList'));
+const CustomerTypeList = React.lazy(() => import('@customer/customer-type/CustomerTypeList'));
+const CustomerGroupList = React.lazy(() => import('@customer/customer-group/CustomerGroupList'));
+const BillingGroupList = React.lazy(() => import('@customer/billing-group/BillingGroupList'));
 
 // Sales Module Pages
-const InquiryListPage = React.lazy(() => import('@/modules/sales/pages/inquiry/InquiryListPage'));
-const EstimateListPage = React.lazy(() => import('@/modules/sales/pages/estimate/EstimateListPage'));
-const QuotationListPage = React.lazy(() => import('@/modules/sales/pages/quotation/QuotationListPage'));
-const ReservationListPage = React.lazy(() => import('@/modules/sales/pages/reservation/ReservationListPage'));
-const SalesOrderListPage = React.lazy(() => import('@/modules/sales/pages/sales-order/SalesOrderListPage'));
-const SalesDashboard = React.lazy(() => import('@/modules/sales/pages/dashboard/SalesDashboard'));
+const InquiryListPage = React.lazy(() => import('@sales/inquiry/InquiryListPage'));
+const EstimateListPage = React.lazy(() => import('@sales/estimate/EstimateListPage'));
+const QuotationListPage = React.lazy(() => import('@sales/quotation/QuotationListPage'));
+const ReservationListPage = React.lazy(() => import('@sales/reservation/ReservationListPage'));
+const SalesOrderListPage = React.lazy(() => import('@sales/sales-order/SalesOrderListPage'));
+const SalesDashboard = React.lazy(() => import('@sales/dashboard/SalesDashboard'));
 
 // Auth Pages (from modules)
 const LoginPage = React.lazy(() => import('@/modules/auth/pages/LoginPage'));

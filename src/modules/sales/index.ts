@@ -3,8 +3,8 @@
  * @description Entry point for Sales Module
  */
 
-export * from './pages/inquiry/InquiryListPage';
-export * from './pages/estimate/EstimateListPage';
-export * from './pages/quotation/QuotationListPage';
-export * from './pages/reservation/ReservationListPage';
-export * from './pages/sales-order/SalesOrderListPage';
+export * from './inquiry/InquiryListPage';
+export * from './estimate/EstimateListPage';
+export * from './quotation/QuotationListPage';
+export * from './reservation/ReservationListPage';
+export * from './sales-order/SalesOrderListPage';

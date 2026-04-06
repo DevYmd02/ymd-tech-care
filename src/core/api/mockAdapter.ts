@@ -12,7 +12,7 @@ import { setupPRTHandlers } from '@/modules/procurement/mocks/handlers/prt.handl
 import { setupVQHandlers } from '@/modules/procurement/mocks/handlers/vq.handler';
 import { setupQCHandlers } from '@/modules/procurement/mocks/handlers/qc.handler';
 import { setupGRNHandlers } from '@/modules/procurement/mocks/handlers/grn.handler';
-import { setupCustomerHandlers } from '@/modules/master-data/customer/mocks/handlers/customer.handler';
+import { setupCustomerHandlers } from '@/modules/master-data/customer/customer-master/mocks/handlers/customer.handler';
 
 /**
  * Setup Centralized Mocks Registry
