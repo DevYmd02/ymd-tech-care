@@ -5,7 +5,7 @@
  */
 import { FormProvider, useWatch, Controller } from 'react-hook-form';
 import { 
-    CheckCircle, XCircle, FileText, Loader2, Search, Package, Clock
+    CheckCircle, XCircle, FileText, Loader2, Search, Package, Clock, Printer
 } from 'lucide-react';
 import React from 'react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
@@ -347,13 +347,30 @@ export default function POAFormModal({
                         <div className="flex items-center gap-2">
                              {/* 🎯 AV PATTERN: Approval History Button on bottom-left */}
                              {(poId || detailData?.po_id || initialValues?.po_id) && (
-                                <button 
-                                    type="button" 
-                                    onClick={() => setIsHistoryOpen(true)}
-                                    className="px-3 py-2 bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded-md text-sm font-medium flex items-center gap-1.5 border border-emerald-200 dark:border-emerald-800"
-                                >
-                                    <Clock size={16} /> ประวัติการอนุมัติ
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    <button 
+                                        type="button" 
+                                        onClick={() => setIsHistoryOpen(true)}
+                                        className="px-3 py-2 bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded-md text-sm font-medium flex items-center gap-1.5 border border-emerald-200 dark:border-emerald-800"
+                                    >
+                                        <Clock size={16} /> ประวัติการอนุมัติ
+                                    </button>
+
+                                    {/* Print POA Button */}
+                                    {(detailData?.status === 'APPROVED' || detailData?.status === 'PARTIAL') && (detailData as any)?.approval_id && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+                                                const approvalId = (detailData as any).approval_id;
+                                                window.open(`${apiUrl}/po-approval/${approvalId}/pdf`, '_blank');
+                                            }}
+                                            className="px-3 py-2 bg-blue-50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-md text-sm font-medium flex items-center gap-1.5 border border-blue-200 dark:border-blue-800 transition-all"
+                                        >
+                                            <Printer size={16} /> พิมพ์ใบอนุมัติ
+                                        </button>
+                                    )}
+                                </div>
                              )}
                         </div>
                         <div className="flex gap-3">

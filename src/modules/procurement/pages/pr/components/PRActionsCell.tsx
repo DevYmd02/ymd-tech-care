@@ -1,4 +1,4 @@
-import { Eye, Edit, Send, Clock } from 'lucide-react';
+import { Eye, Edit, Send, Clock, Printer } from 'lucide-react';
 import type { PRHeader } from '@/modules/procurement/types';
 
 interface PRActionsCellProps {
@@ -67,6 +67,20 @@ export const PRActionsCell = ({
             {/* 3. PENDING: Handled by AV Module */}
             {/* The previous Approve/Reject actions have been removed to enforce usage of the dedicated Approval (AV) Module */}
             
+
+            {/* Print Trigger for finalized states */}
+            {['APPROVED', 'PARTIAL', 'COMPLETED'].includes(item.status as string) && (
+                <button 
+                onClick={() => {
+                    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+                    window.open(`${apiUrl}/pr/${item.pr_id}/pdf`, '_blank');
+                }}
+                className="p-1.5 text-blue-600 dark:text-blue-400 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-all" 
+                title="พิมพ์ใบขอซื้อ"
+                >
+                    <Printer size={16} />
+                </button>
+            )}
 
              {/* 5. CANCELLED: View Only */}
              {item.status === 'CANCELLED' && (

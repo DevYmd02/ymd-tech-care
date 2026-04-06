@@ -7,7 +7,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/react-query';
-import { FileText, Plus, Search, Send, AlertTriangle, Eye, Edit } from 'lucide-react';
+import { FileText, Plus, Search, Send, AlertTriangle, Eye, Edit, Printer } from 'lucide-react';
 import { PageListLayout, SmartTable, PRStatusBadge, MobileListCard, MobileListContainer } from '@ui';
 import { FilterField } from '@/shared/components/ui/filters/FilterField';
 import { useTableFilters } from '@/shared/hooks';
@@ -25,6 +25,7 @@ import { PRService, type PRListParams } from '@/modules/procurement/services/pr.
 import type { PRHeader, PRStatus } from '@/modules/procurement/types';
 
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
+import type { VendorListItem } from '@/modules/master-data/vendor/types/vendor-types';
 
 // ====================================================================================
 // STATUS OPTIONS
@@ -64,7 +65,7 @@ export default function PRListPage() {
 
     const vendorMap = useMemo(() => {
         const map: Record<string, { vendor_code: string; vendor_name: string }> = {};
-        (vendorData?.items || []).forEach((v: any) => {
+        (vendorData?.items || []).forEach((v: VendorListItem) => {
             const id = v.vendor_id || v.id;
             if (id) {
                 map[String(id)] = {
@@ -265,7 +266,7 @@ export default function PRListPage() {
 
                 // ── Aggressive Requester Name Hydration ──
                 const reqName = row.requester_name || row.created_by_name || row.employee_name;
-                const reqId = row.requester_user_id || row.user_id || (row as any).created_by;
+                const reqId = row.requester_user_id || row.user_id || row.created_by_user_id;
                 const displayReq = reqName
                     ? String(reqName)
                     : (reqId ? `ID: ${reqId}` : 'ไม่ระบุผู้ขอ');
@@ -300,7 +301,7 @@ export default function PRListPage() {
 
                 // If Code exists but Name is missing, do lookup in fetched vendorData
                 if (!vendorName && vendorCode) {
-                    const foundVendor = (vendorData?.items || []).find((v: any) => v.vendor_code === vendorCode);
+                    const foundVendor = (vendorData?.items || []).find((v: VendorListItem) => v.vendor_code === vendorCode);
                     if (foundVendor) {
                         vendorName = foundVendor.vendor_name;
                     }
@@ -550,6 +551,17 @@ export default function PRListPage() {
                                                     className="flex-[2] bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
                                                 >
                                                     <Send size={14} /> ส่งอนุมัติ
+                                                </button>
+                                            )}
+                                            {['APPROVED', 'PARTIAL', 'COMPLETED'].includes(item.status as string) && (
+                                                <button
+                                                    onClick={() => {
+                                                        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+                                                        window.open(`${apiUrl}/pr/${item.pr_id}/pdf`, '_blank');
+                                                    }}
+                                                    className="flex-1 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1"
+                                                >
+                                                    <Printer size={14} /> พิมพ์
                                                 </button>
                                             )}
                                             {/* PENDING approval actions removed for Mobile View to enforce AV Module usage */}

@@ -16,6 +16,7 @@ export type AVLineFormData = z.infer<typeof AVLineSchema>;
 export const AVFormSchema = PRBaseFormSchema.extend({
     lines: z.array(AVLineSchema),
     av_no: z.string().optional().nullable(),
+    approval_id: z.coerce.number().optional().nullable(),
     hasOtherAVs: z.boolean().optional(),
     reject_reason: z.string().optional().nullable(),
 });

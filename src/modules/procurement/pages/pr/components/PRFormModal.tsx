@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FormProvider, Controller } from 'react-hook-form';
 
-import { FileText, Printer, Copy, Loader2, Calendar } from 'lucide-react';
+import { FileText, Printer, Loader2, Calendar } from 'lucide-react';
 import { PRHeader } from './PRHeader';
 import { PRFormLines } from './PRFormLines';
 import { PRFormSummary } from './PRFormSummary';
@@ -78,12 +78,20 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
       footer={
           <div className="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-between items-center bg-white dark:bg-gray-900 sticky bottom-0 z-10 gap-x-2">
              <div className="flex items-center gap-2">
-                 {isEditMode && (
-                    <>
-                        <button type="button" disabled className="flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md text-sm font-medium"><Printer size={16} className="mr-2" /> พิมพ์</button>
-                        <button type="button" disabled className="flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md text-sm font-medium"><Copy size={16} className="mr-2" /> คัดลอก</button>
-                    </>
-                 )}
+                  {id && (watch('status') === 'APPROVED' || watch('status') === 'PARTIAL') && (
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+                        if (id) {
+                          window.open(`${apiUrl}/pr/${id}/pdf`, '_blank');
+                        }
+                      }}
+                      className="px-3 py-2 bg-blue-50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-md text-sm font-medium flex items-center gap-1.5 border border-blue-200 dark:border-blue-800"
+                    >
+                      <Printer size={16} /> พิมพ์ใบขอซื้อ
+                    </button>
+                  )}
             </div>
             <div className="flex items-center gap-2">
                 <button type="button" onClick={onClose} disabled={isSubmitting || isActionLoading} className="px-4 py-2 border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-md text-sm font-medium">{'ปิด'}</button>
