@@ -1,10 +1,10 @@
 import type { 
   CustomerMaster, 
   CustomerBusinessType, 
-  CustomerType, 
   CustomerGroup, 
   CustomerBillingGroup 
 } from "@/modules/master-data/customer/types/customer-types";
+import type { CustomerType } from "@/modules/master-data/customer/types/customer-type.types";
 
 /** Business Types Data */
 export const MOCK_BUSINESS_TYPES: CustomerBusinessType[] = [
@@ -55,40 +55,28 @@ export const MOCK_BUSINESS_TYPES: CustomerBusinessType[] = [
 /** Customer Types Data */
 export const MOCK_CUSTOMER_TYPES: CustomerType[] = [
   {
-    id: 1,
-    code: 'IND',
-    name_th: 'ลูกค้าบุคคลธรรมดา',
-    name_en: 'Individual',
-    customer_type_id: 1,
+    customer_type_id: '861a7a2a-7e1a-4b9b-9c1a-7e1a4b9b9c1a',
     customer_type_code: 'IND',
-    customer_type_name_th: 'ลูกค้าบุคคลธรรมดา',
-    customer_type_name_en: 'Individual',
+    customer_type_name: 'ลูกค้าบุคคลธรรมดา',
+    customer_type_nameeng: 'Individual',
     is_active: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   },
   {
-    id: 2,
-    code: 'COR',
-    name_th: 'ลูกค้านิติบุคคล',
-    name_en: 'Corporate',
-    customer_type_id: 2,
+    customer_type_id: 'e2a1a7a2-a7e1-4b9b-9c1a-7e1a4b9b9c1b',
     customer_type_code: 'COR',
-    customer_type_name_th: 'ลูกค้านิติบุคคล',
-    customer_type_name_en: 'Corporate',
+    customer_type_name: 'ลูกค้านิติบุคคล',
+    customer_type_nameeng: 'Corporate',
     is_active: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   },
   {
-    id: 3,
-    code: 'GOV',
-    name_th: 'ลูกค้าหน่วยงานราชการ',
-    name_en: 'Government',
-    customer_type_id: 3,
+    customer_type_id: 'f3a1a7a2-f7e1-4b9b-9c1a-7e1a4b9b9c1c',
     customer_type_code: 'GOV',
-    customer_type_name_th: 'ลูกค้าหน่วยงานราชการ',
-    customer_type_name_en: 'Government',
+    customer_type_name: 'ลูกค้าหน่วยงานราชการ',
+    customer_type_nameeng: 'Government',
     is_active: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()

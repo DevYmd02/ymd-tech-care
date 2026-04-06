@@ -387,12 +387,29 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
     }, []);
 
     const handleSelectAllVendors = () => {
-        const interactive = vendors.filter(v => ['DRAFT', 'PENDING', 'WAITING', 'SENT', 'ACTIVE', 'NEW'].includes(String(v.status || '').toUpperCase()));
-        const allSelected = interactive.every(v => selectedVendorIds.includes(v.vendor_id));
-        if (allSelected) {
-            setSelectedVendorIds(vendors.filter(v => v.status !== 'PENDING' && v.status !== 'WAITING' && v.status !== 'DRAFT').map(v => v.vendor_id));
+        // Define non-locked (interactive) vendors: those that can be toggled manually
+        const interactiveVendorsList = vendors.filter(v => 
+            ['DRAFT', 'PENDING', 'WAITING', 'ACTIVE', 'NEW'].includes(String(v.status || '').toUpperCase())
+        );
+        
+        const allInteractiveSelected = interactiveVendorsList.length > 0 && 
+            interactiveVendorsList.every(v => selectedVendorIds.includes(v.vendor_id));
+
+        if (allInteractiveSelected) {
+            // Uncheck: Remove all interactive vendor IDs from selection
+            const interactiveIds = interactiveVendorsList.map(v => v.vendor_id);
+            setSelectedVendorIds(prev => prev.filter(id => !interactiveIds.includes(id)));
         } else {
-            setSelectedVendorIds(vendors.map(v => v.vendor_id));
+            // Check: Add all interactive vendor IDs to selection
+            setSelectedVendorIds(prev => {
+                const combined = [...prev];
+                interactiveVendorsList.forEach(v => {
+                    if (!combined.includes(v.vendor_id)) {
+                        combined.push(v.vendor_id);
+                    }
+                });
+                return combined;
+            });
         }
     };
 
@@ -460,6 +477,13 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
         const cfg = emailConfig[v.vendor_id];
         return cfg?.sendEmail === true && (!cfg.to || cfg.to.length === 0);
     });
+
+    // Select All state: check if all non-locked vendors are selected
+    const interactiveVendors = vendors.filter(v => 
+        ['DRAFT', 'PENDING', 'WAITING', 'ACTIVE', 'NEW'].includes(String(v.status || '').toUpperCase())
+    );
+    const isAllInteractiveSelected = interactiveVendors.length > 0 && 
+        interactiveVendors.every(v => selectedVendorIds.includes(v.vendor_id));
 
     // Email OFF = valid (print-only flow); no method-count gate
     const canConfirm = newSelectedVendors.length > 0 && !hasEmptyToConfig && !isLoading && !isFetching;
@@ -538,7 +562,7 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
                                         <input
                                             type="checkbox"
                                             className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer w-4 h-4"
-                                            checked={selectedVendorIds.length === vendors.length && vendors.length > 0}
+                                            checked={isAllInteractiveSelected}
                                             onChange={handleSelectAllVendors}
                                         />
                                         เลือกทั้งหมด

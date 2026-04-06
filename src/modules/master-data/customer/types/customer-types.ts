@@ -4,6 +4,7 @@
  * @usage import type { CustomerMaster, CustomerFormData } from '@/modules/master-data/customer/types/customer-types';
  */
 
+import type { CustomerType } from './customer-type.types';
 
 // ====================================================================================
 // ENUMS / TYPES
@@ -164,21 +165,8 @@ export interface CustomerBusinessType {
     updated_at: string;
 }
 
-/** Customer Type */
-export interface CustomerType {
-    id: number;
-    code: string;
-    name_th: string;
-    name_en: string;
-    customer_type_id: number;
-    customer_type_code: string;
-    customer_type_name_th: string;
-    customer_type_name_en: string;
-    note?: string;
-    is_active: boolean;
-    created_at: string;
-    updated_at: string;
-}
+/** Customer Type (Re-exported from modular types) */
+export type { CustomerType };
 
 /** Customer Group */
 export interface CustomerGroup {

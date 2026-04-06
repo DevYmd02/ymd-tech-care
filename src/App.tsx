@@ -108,6 +108,7 @@ const EstimateListPage = React.lazy(() => import('@/modules/sales/pages/estimate
 const QuotationListPage = React.lazy(() => import('@/modules/sales/pages/quotation/QuotationListPage'));
 const ReservationListPage = React.lazy(() => import('@/modules/sales/pages/reservation/ReservationListPage'));
 const SalesOrderListPage = React.lazy(() => import('@/modules/sales/pages/sales-order/SalesOrderListPage'));
+const SalesDashboard = React.lazy(() => import('@/modules/sales/pages/dashboard/SalesDashboard'));
 
 // Auth Pages (from modules)
 const LoginPage = React.lazy(() => import('@/modules/auth/pages/LoginPage'));
@@ -322,6 +323,7 @@ function AppContent() {
             ))}
 
             {/* Sales Module */}
+            <Route path="sales/dashboard" element={<SalesDashboard />} />
             <Route path="sales/inquiry" element={<InquiryListPage />} />
             <Route path="sales/estimate" element={<EstimateListPage />} />
             <Route path="sales/quotation" element={<QuotationListPage />} />

@@ -14,9 +14,13 @@ export function useEmployeeList(filters: Partial<TableFilters>) {
         placeholderData: (previousData) => previousData,
     });
 
+    const data = query.data;
+    const employees = Array.isArray(data) ? data : (data?.items || []);
+    const totalCount = Array.isArray(data) ? data.length : (data?.total || 0);
+
     return {
         ...query,
-        employees: query.data?.items || [],
-        totalCount: query.data?.total || 0,
+        employees,
+        totalCount,
     };
 }

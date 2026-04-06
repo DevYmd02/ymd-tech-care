@@ -1,6 +1,6 @@
 /**
  * @file sale-target.service.ts
- * @description Service for managing Sale Targets
+ * @description Service for managing Sale Targets (Employee Targets) aligned with backend schema.
  */
 
 import api from '@/core/api/api';
@@ -12,18 +12,19 @@ import type {
 } from '../../types/target/sale-target.types';
 
 export const SaleTargetService = {
+  // Aligned Endpoint: /empployees-sale-target (Removes /master/ to match Postman)
   getList: (params?: Partial<SaleTargetFilters>) => 
-    api.get<PaginatedListResponse<SaleTargetMaster>>('/master/employee-sales-targets', { params }),
+    api.get<PaginatedListResponse<SaleTargetMaster>>('/empployees-sale-target', { params }),
 
   get: (id: string | number) => 
-    api.get<SaleTargetMaster>(`/master/employee-sales-targets/${id}`),
+    api.get<SaleTargetMaster>(`/empployees-sale-target/${id}`),
 
   create: (data: SaleTargetFormData) => 
-    api.post<{ success: boolean; data?: SaleTargetMaster; message?: string }>('/master/employee-sales-targets', data),
+    api.post<{ success: boolean; data?: SaleTargetMaster; message?: string }>('/empployees-sale-target', data),
 
   update: (id: string | number, data: Partial<SaleTargetFormData>) => 
-    api.put<{ success: boolean; data?: SaleTargetMaster; message?: string }>(`/master/employee-sales-targets/${id}`, data),
+    api.patch<{ success: boolean; data?: SaleTargetMaster; message?: string }>(`/empployees-sale-target/${id}`, data),
 
   delete: (id: string | number) => 
-    api.delete<boolean>(`/master/employee-sales-targets/${id}`),
+    api.delete<boolean>(`/empployees-sale-target/${id}`),
 };
