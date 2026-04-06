@@ -25,7 +25,7 @@ export const setupCustomerHandlers = (mock: MockAdapter) => {
       business_type_name: MOCK_BUSINESS_TYPES.find(b => b.business_type_id === cust.business_type_id)?.business_type_name || '',
       customer_type_name: MOCK_CUSTOMER_TYPES.find(t => t.customer_type_id === String(cust.customer_type_id))?.customer_type_name || '',
       customer_group_name: MOCK_CUSTOMER_GROUPS.find(g => g.customer_group_id === cust.customer_group_id)?.customer_group_name || '',
-      billing_group_name: MOCK_BILLING_GROUPS.find(bg => bg.billing_group_id === cust.billing_group_id)?.billing_group_name_th || ''
+      billing_group_name: MOCK_BILLING_GROUPS.find(bg => bg.bill_group_id === cust.billing_group_id)?.bill_group_name || ''
     }));
 
     const result = applyMockFilters(enhancedData, params, {
@@ -66,7 +66,7 @@ export const setupCustomerHandlers = (mock: MockAdapter) => {
   mock.onGet('/customer/billing-group').reply((config: AxiosRequestConfig) => {
     const params = config.params || {};
     const result = applyMockFilters(MOCK_BILLING_GROUPS, params, {
-      searchableFields: ['billing_group_code', 'billing_group_name_th', 'billing_group_name_en'],
+      searchableFields: ['bill_group_code', 'bill_group_name', 'bill_group_nameeng'],
     });
     return [200, result];
   });

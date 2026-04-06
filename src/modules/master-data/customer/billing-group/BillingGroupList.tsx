@@ -4,21 +4,22 @@
 
 import { useMemo, useCallback, useState } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { toast } from 'react-hot-toast';
 import { CreditCard, Plus, Search, Edit2, Trash2, X } from 'lucide-react';
 import { PageListLayout, SmartTable, FilterField, ActiveStatusBadge } from '@ui';
 import { useTableFilters, useDebounce, useConfirmation } from '@/shared/hooks';
 import { createColumnHelper } from '@tanstack/react-table';
-import { CustomerService } from '@customer/customer-master/services/customer.service';
-import type { CustomerBillingGroup } from '@customer/customer-master/types/customer-types';
+import { BillingGroupService } from './services/billing-group.service';
+import type { CustomerBillingGroup } from './types/billing-group.types';
 
 import { BillingGroupFormModal } from './BillingGroupFormModal';
 
 export default function BillingGroupList() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<string | number | null>(null);
 
   const { filters, setFilters, resetFilters, handlePageChange } = useTableFilters({
-    customParamKeys: { search: 'billing_group_code', search2: 'billing_group_name_th' }
+    customParamKeys: { search: 'bill_group_code', search2: 'bill_group_name' }
   });
 
   const { confirm } = useConfirmation();
@@ -26,7 +27,7 @@ export default function BillingGroupList() {
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['customer-billing-groups', debouncedFilters],
-    queryFn: () => CustomerService.getBillingGroups(debouncedFilters),
+    queryFn: () => BillingGroupService.getList(debouncedFilters),
     placeholderData: keepPreviousData,
   });
 
@@ -35,23 +36,32 @@ export default function BillingGroupList() {
     setIsModalOpen(true);
   };
 
-  const handleEdit = (id: number) => {
+  const handleEdit = (id: string | number) => {
     setSelectedId(id);
     setIsModalOpen(true);
   };
 
-  const handleDelete = useCallback(async (_: number, code: string) => {
+  const handleDelete = useCallback(async (id: string | number, code: string) => {
     const isConfirmed = await confirm({
       title: 'ยืนยันการลบข้อมูล',
-      description: `คุณต้องการลบกลุ่มวางบิล ${code} ใช่หรือไม่?`,
+      description: `คุณต้องการลบกลุ่มวางบิล "${code}" ใช่หรือไม่?`,
       confirmText: 'ลบข้อมูล',
       variant: 'danger',
     });
 
     if (isConfirmed) {
-      console.log('Delete', code);
+      try {
+        const response = await BillingGroupService.delete(id);
+        if (response.success) {
+          toast.success('ลบข้อมูลสำเร็จ');
+          refetch();
+        }
+      } catch (error) {
+        console.error('Delete error:', error);
+        toast.error('ไม่สามารถลบข้อมูลได้');
+      }
     }
-  }, [confirm]);
+  }, [confirm, refetch]);
 
   const columnHelper = createColumnHelper<CustomerBillingGroup>();
   const columns = useMemo(() => [
@@ -61,13 +71,13 @@ export default function BillingGroupList() {
       cell: (info) => <div className="text-center">{info.row.index + 1 + (filters.page - 1) * filters.limit}</div>,
       size: 60,
     }),
-    columnHelper.accessor('billing_group_code', {
+    columnHelper.accessor('bill_group_code', {
       header: 'รหัส',
       cell: (info) => <span className="font-bold text-blue-600 dark:text-blue-400">{info.getValue()}</span>,
       size: 150,
     }),
-    columnHelper.accessor('billing_group_name_th', { header: 'ชื่อกลุ่มวางบิล (TH)', size: 250 }),
-    columnHelper.accessor('billing_group_name_en', {
+    columnHelper.accessor('bill_group_name', { header: 'ชื่อกลุ่มวางบิล (TH)', size: 250 }),
+    columnHelper.accessor('bill_group_nameeng', {
       header: 'ชื่อกลุ่มวางบิล (EN)',
       cell: (info) => <span className="text-gray-500">{info.getValue() || '-'}</span>,
       size: 250,
@@ -83,8 +93,8 @@ export default function BillingGroupList() {
       size: 100,
       cell: ({ row }) => (
         <div className="flex justify-center gap-2">
-          <button onClick={() => handleEdit(row.original.billing_group_id)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit2 size={18} /></button>
-          <button onClick={() => handleDelete(row.original.billing_group_id, row.original.billing_group_code)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={18} /></button>
+          <button onClick={() => handleEdit(row.original.bill_group_id)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit2 size={18} /></button>
+          <button onClick={() => handleDelete(row.original.bill_group_id, row.original.bill_group_code)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={18} /></button>
         </div>
       ),
     }),
@@ -102,18 +112,18 @@ export default function BillingGroupList() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 items-end">
           <FilterField label="รหัส" value={filters.search} onChange={(val: string) => setFilters({ search: val })} placeholder="รหัส..." />
           <FilterField label="ชื่อกลุ่มวางบิล" value={filters.search2} onChange={(val: string) => setFilters({ search2: val })} placeholder="ชื่อ..." />
-          <div className="lg:col-span-2 xl:col-span-3 flex justify-end gap-2">
+          <div className="md:col-span-full lg:col-span-2 xl:col-span-3 flex flex-wrap justify-end gap-2">
             <button 
               onClick={resetFilters} 
-              className="h-10 px-4 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-lg border border-gray-300 flex items-center justify-center gap-2 transition-colors shadow-sm"
+              className="h-10 px-4 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-lg border border-gray-300 flex items-center justify-center gap-2 transition-colors shadow-sm whitespace-nowrap"
             >
               <X size={16} />
               ล้างค่า
             </button>
-            <button onClick={() => refetch()} className="h-10 px-6 bg-blue-600 text-white rounded-lg font-bold flex items-center gap-2 hover:bg-blue-700">
+            <button onClick={() => refetch()} className="h-10 px-6 bg-blue-600 text-white rounded-lg font-bold flex items-center gap-2 hover:bg-blue-700 whitespace-nowrap">
               <Search size={18} /> ค้นหา
             </button>
-            <button onClick={handleCreate} className="h-10 px-6 bg-emerald-600 text-white rounded-lg font-bold flex items-center gap-2 hover:bg-emerald-700">
+            <button onClick={handleCreate} className="h-10 px-6 bg-emerald-600 text-white rounded-lg font-bold flex items-center gap-2 hover:bg-emerald-700 whitespace-nowrap">
               <Plus size={18} /> เพิ่มกลุ่มวางบิลใหม่
             </button>
           </div>
@@ -131,7 +141,7 @@ export default function BillingGroupList() {
           onPageChange: handlePageChange, 
           onPageSizeChange: (size: number) => setFilters({ limit: size, page: 1 }) 
         }}
-        rowIdField="billing_group_id"
+        rowIdField="bill_group_id"
         className="flex-1"
       />
       <BillingGroupFormModal

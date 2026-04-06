@@ -160,20 +160,9 @@ export type { CustomerType };
 import type { CustomerGroup } from '@customer/customer-group/types/customer-group.types';
 export type { CustomerGroup };
 
-/** Customer Billing Group */
-export interface CustomerBillingGroup {
-    id: number;
-    code: string;
-    name_th: string;
-    name_en: string;
-    billing_group_id: number;
-    billing_group_code: string;
-    billing_group_name_th: string;
-    billing_group_name_en: string;
-    is_active: boolean;
-    created_at: string;
-    updated_at: string;
-}
+/** Customer Billing Group (Re-exported from modular types) */
+import type { CustomerBillingGroup } from '@customer/billing-group/types/billing-group.types';
+export type { CustomerBillingGroup };
 
 // ====================================================================================
 // INITIAL DATA & MAPPING
