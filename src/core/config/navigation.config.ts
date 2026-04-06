@@ -127,6 +127,7 @@ export const sidebarMenuItems: MenuItem[] = [
             { id: 'poa', label: 'รายการอนุมัติใบสั่งซื้อ (POA)', path: '/procurement/poa' },
             { id: 'grn', label: 'รายการใบรับสินค้า (GRN)', path: '/procurement/grn' },
             { id: 'prt', label: 'รายการใบคืนสินค้า (PRT)', path: '/procurement/prt' },
+            { id: 've', label: 'แบบประเมินผู้ขาย (Vendor Evaluation)', path: '/procurement/ve' },
         ]
     },
     {

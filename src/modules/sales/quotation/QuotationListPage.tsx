@@ -10,6 +10,7 @@ import { FileText, Search, Plus, Edit, Eye, Send } from 'lucide-react';
 import { PageListLayout, SmartTable, FilterField } from '@ui';
 import { createColumnHelper } from '@tanstack/react-table';
 import { QuotationService, type QuotationHeader } from '@sales/quotation/services/quotation.service';
+import { QuotationFormModal } from './components/QuotationFormModal';
 
 // ====================================================================================
 // CONSTANTS
@@ -52,8 +53,11 @@ export default function QuotationListPage() {
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
 
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
+
     // API Integration
-    const { data: apiData, isLoading } = useQuery({
+    const { data: apiData, isLoading, refetch } = useQuery({
         queryKey: ['sales-quotations', sqNo, customer, statusFilter, startDate, endDate],
         queryFn: () => QuotationService.getList({
             sq_no: sqNo,
@@ -66,6 +70,16 @@ export default function QuotationListPage() {
 
     const displayData = useMemo(() => apiData?.data || [], [apiData]);
 
+    const handleCreate = () => {
+        setSelectedId(undefined);
+        setIsModalOpen(true);
+    };
+
+    const handleEdit = (id: string) => {
+        setSelectedId(id);
+        setIsModalOpen(true);
+    };
+
     // Columns Definition
     const columnHelper = createColumnHelper<QuotationHeader>();
     
@@ -73,7 +87,10 @@ export default function QuotationListPage() {
         columnHelper.accessor('sq_no', {
             header: 'เลขที่ใบเสนอราคา',
             cell: (info) => (
-                <span className="text-blue-600 font-semibold cursor-pointer hover:underline">
+                <span 
+                    onClick={() => handleEdit(info.row.original.sq_no)}
+                    className="text-blue-600 font-semibold cursor-pointer hover:underline"
+                >
                     {info.getValue()}
                 </span>
             ),
@@ -88,7 +105,7 @@ export default function QuotationListPage() {
             header: 'ลูกค้า',
             cell: (info) => (
                 <div className="flex flex-col">
-                    <span className="font-medium text-gray-900">{info.getValue()}</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">{info.getValue()}</span>
                     <span className="text-xs text-gray-500">{info.row.original.customer_code}</span>
                 </div>
             ),
@@ -117,7 +134,7 @@ export default function QuotationListPage() {
         columnHelper.accessor('workflow_status', {
             header: 'สถานะงาน',
             cell: (info) => (
-                <span className="text-sm font-medium text-gray-700">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     {info.getValue()}
                 </span>
             ),
@@ -126,12 +143,15 @@ export default function QuotationListPage() {
         columnHelper.display({
             id: 'actions',
             header: 'การจัดการ',
-            cell: () => (
+            cell: (info) => (
                 <div className="flex items-center gap-3">
                     <button className="text-blue-500 hover:text-blue-700 transition-colors">
                         <Eye size={18} />
                     </button>
-                    <button className="text-orange-500 hover:text-orange-700 transition-colors">
+                    <button 
+                        onClick={() => handleEdit(info.row.original.sq_no)}
+                        className="text-orange-500 hover:text-orange-700 transition-colors"
+                    >
                         <Edit size={18} />
                     </button>
                     <button className="text-emerald-500 hover:text-emerald-700 transition-colors">
@@ -212,7 +232,10 @@ export default function QuotationListPage() {
                             </button>
                         </div>
                         
-                        <button className="h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2">
+                        <button 
+                            onClick={handleCreate}
+                            className="h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2"
+                        >
                             <Plus size={18} />
                             สร้างใบเสนอราคาใหม่
                         </button>
@@ -234,6 +257,14 @@ export default function QuotationListPage() {
                     }}
                 />
             </div>
+
+            {/* Form Modal */}
+            <QuotationFormModal 
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                id={selectedId}
+                onSuccess={() => refetch()}
+            />
         </PageListLayout>
     );
 }

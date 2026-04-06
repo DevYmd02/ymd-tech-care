@@ -39,6 +39,7 @@ const POListPage = React.lazy(() => import('@/modules/procurement/pages/po/POLis
 const POAListPage = React.lazy(() => import('@/modules/procurement/pages/poa/POAListPage'));
 const GRNListPage = React.lazy(() => import('@/modules/procurement/pages/grn/GRNListPage'));
 const PRTListPage = React.lazy(() => import('@/modules/procurement/pages/prt/PRTListPage'));
+const VEListPage = React.lazy(() => import('@/modules/procurement/pages/ve/VendorEvaluationListPage'));
 
 // Roles Pages
 const RolesDashboard = React.lazy(() => import('@/modules/admin/pages/roles/RolesDashboard'));
@@ -221,6 +222,7 @@ function AppContent() {
               <Route path="poa" element={<POAListPage />} />
               <Route path="grn" element={<GRNListPage />} />
               <Route path="prt" element={<PRTListPage />} />
+              <Route path="ve" element={<VEListPage />} />
             </Route>
 
             {/* Other Inner Routes ... */}
