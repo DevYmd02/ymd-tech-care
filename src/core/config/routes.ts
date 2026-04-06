@@ -74,6 +74,7 @@ export const ROUTES = {
     POA: '/procurement/poa',
     GRN: '/procurement/grn',
     PRT: '/procurement/prt',
+    VE: '/procurement/ve',
   },
   MASTER_DATA: {
     DASHBOARD: '/master-data',
