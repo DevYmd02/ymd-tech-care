@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FormProvider, Controller } from 'react-hook-form';
 
-import { FileText, CheckCircle, XCircle, Loader2, Calendar, Search, Clock } from 'lucide-react';
+import { FileText, CheckCircle, XCircle, Loader2, Calendar, Search, Clock, Printer } from 'lucide-react';
 import { AVHeader } from './AVHeader';
 import { AVFormLines } from './AVFormLines';
 import { AVFormSummary } from './AVFormSummary';
@@ -78,15 +78,30 @@ export const AVFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, a
           <div className="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-between items-center bg-white dark:bg-gray-900 sticky bottom-0 z-10 gap-x-2">
              <div className="flex items-center gap-2">
                  {/* Left actions placeholder */}
-                 {id && (
-                   <button 
-                     type="button" 
-                     onClick={() => setIsHistoryOpen(true)}
-                     className="px-3 py-2 bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded-md text-sm font-medium flex items-center gap-1.5 border border-emerald-200 dark:border-emerald-800"
-                   >
-                     <Clock size={16} /> ประวัติการอนุมัติ
-                   </button>
-                 )}
+                  {id && (
+                    <button 
+                      type="button" 
+                      onClick={() => setIsHistoryOpen(true)}
+                      className="px-3 py-2 bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded-md text-sm font-medium flex items-center gap-1.5 border border-emerald-200 dark:border-emerald-800"
+                    >
+                      <Clock size={16} /> ประวัติการอนุมัติ
+                    </button>
+                  )}
+                  {id && (watch('status') === 'APPROVED' || watch('status') === 'PARTIAL') && (
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+                        const approvalId = watch('approval_id');
+                        if (approvalId) {
+                          window.open(`${apiUrl}/pr-approval/${approvalId}/pdf`, '_blank');
+                        }
+                      }}
+                      className="px-3 py-2 bg-blue-50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-md text-sm font-medium flex items-center gap-1.5 border border-blue-200 dark:border-blue-800"
+                    >
+                      <Printer size={16} /> พิมพ์ใบอนุมัติ
+                    </button>
+                  )}
             </div>
             <div className="flex items-center gap-2">
                 <button type="button" onClick={onClose} disabled={isSubmitting || isRejecting} className="px-4 py-2 border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-md text-sm font-medium">ปิด</button>

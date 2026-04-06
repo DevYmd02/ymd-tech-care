@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { ShieldCheck, Search, Eye } from 'lucide-react';
+import { ShieldCheck, Search, Eye, Printer } from 'lucide-react';
 import { PageListLayout, SmartTable, PRStatusBadge, FilterField, MobileListCard, MobileListContainer } from '@ui';
 import { useTableFilters } from '@/shared/hooks';
 import { AVFormModal } from './components/AVFormModal';
@@ -346,12 +346,27 @@ export default function AVListPage() {
                         className={`p-1.5 rounded-md transition-colors flex items-center justify-center ${
                             row.original.row_key?.startsWith('pending-')
                             ? "text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-300"
-                            : "text-blue-600 hover:bg-blue-50 hover:text-blue-700 dark:text-blue-400 dark:hover:bg-blue-900/30 dark:hover:text-blue-300"
+                            : "text-gray-500 hover:bg-blue-50 hover:text-blue-600 dark:text-gray-400 dark:hover:bg-blue-900/20 dark:hover:text-blue-400"
                         }`}
                         title={row.original.row_key?.startsWith('pending-') ? "พิจารณาอนุมัติ" : "ดูรายละเอียด"}
                     >
                         {row.original.row_key?.startsWith('pending-') ? <ShieldCheck size={18} /> : <Eye size={18} />}
                     </button>
+                    {['APPROVED', 'PARTIAL'].includes(row.original.status?.toUpperCase()) && (
+                        <button 
+                            onClick={() => {
+                                const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+                                const approvalId = row.original.approval_id;
+                                if (approvalId) {
+                                    window.open(`${apiUrl}/pr-approval/${approvalId}/pdf`, '_blank');
+                                }
+                            }}
+                            className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-md transition-all" 
+                            title="พิมพ์ใบอนุมัติ"
+                        >
+                            <Printer size={18} />
+                        </button>
+                    )}
                 </div>
             ),
             size: 180, 
@@ -493,16 +508,36 @@ export default function AVListPage() {
                                     </span>
                                 }
                                 actions={
-                                    <button
-                                        onClick={() => handleApprove(item.pr_id, item)}
-                                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
-                                    >
-                                        {item.status === 'PENDING' ? (
-                                            <><ShieldCheck size={14} /> พิจารณาอนุมัติ</>
-                                        ) : (
-                                            <><Eye size={14} /> ดูรายละเอียด</>
+                                    <div className="flex gap-2 w-full">
+                                        <button
+                                            onClick={() => handleApprove(item.pr_id, item)}
+                                            className={`flex-1 text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm ${
+                                                item.status === 'PENDING'
+                                                ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                                                : "bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 font-medium"
+                                            }`}
+                                        >
+                                            {item.status === 'PENDING' ? (
+                                                <><ShieldCheck size={14} /> พิจารณาอนุมัติ</>
+                                            ) : (
+                                                <><Eye size={14} /> ดูรายละเอียด</>
+                                            )}
+                                        </button>
+                                        {['APPROVED', 'PARTIAL'].includes(item.status?.toUpperCase()) && (
+                                            <button
+                                                onClick={() => {
+                                                    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+                                                    const approvalId = (item as any).approval_id;
+                                                    if (approvalId) {
+                                                        window.open(`${apiUrl}/pr-approval/${approvalId}/pdf`, '_blank');
+                                                    }
+                                                }}
+                                                className="flex-1 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1"
+                                            >
+                                                <Printer size={14} /> พิมพ์
+                                            </button>
                                         )}
-                                    </button>
+                                    </div>
                                 }
                             />
                         ))}

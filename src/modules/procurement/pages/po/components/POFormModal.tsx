@@ -10,7 +10,7 @@ import { useMemo, useState } from 'react';
 import { FormProvider, useWatch, Controller, type Control } from 'react-hook-form';
 import { 
     Save, Search, Trash2, FileText,
-    Loader2, Plus, X as XIcon
+    Loader2, Plus, X as XIcon, Printer
 } from 'lucide-react';
 import { POStatusBadge } from '@ui';
 
@@ -247,25 +247,41 @@ export default function POFormModal({
                 }
                 headerColor="bg-blue-600"
                 footer={
-                    <div className="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-end items-center bg-slate-100 dark:bg-gray-900 sticky bottom-0 z-10 gap-x-2">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md text-sm font-medium transition-colors"
-                        >
-                            {isView ? 'ปิด' : 'ยกเลิก'}
-                        </button>
-                        {!isView && (
+                    <div className="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-between items-center bg-slate-100 dark:bg-gray-900 sticky bottom-0 z-10">
+                        <div className="flex items-center gap-2">
+                            {isView && existingPO?.status && ['APPROVED', 'PARTIAL', 'ISSUED', 'COMPLETED'].includes(existingPO.status.toUpperCase()) && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+                                        window.open(`${apiUrl}/po/${poId}/pdf`, '_blank');
+                                    }}
+                                    className="px-4 py-2 bg-blue-50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-md text-sm font-medium flex items-center gap-1.5 border border-blue-200 dark:border-blue-800 transition-all"
+                                >
+                                    <Printer size={16} /> พิมพ์ใบสั่งซื้อ
+                                </button>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-2">
                             <button
                                 type="button"
-                                onClick={handleSubmit(onSubmit, onInvalidSubmit)}
-                                disabled={isHydrating || isSubmitting}
-                                className="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md text-sm font-medium shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                onClick={onClose}
+                                className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md text-sm font-medium transition-colors"
                             >
-                                {(isHydrating || isSubmitting) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save size={14} />} 
-                                {(isHydrating || isSubmitting) ? 'กำลังประมวลผล...' : (isRejected ? 'บันทึกและส่งอนุมัติใหม่' : 'บันทึก')}
+                                {isView ? 'ปิด' : 'ยกเลิก'}
                             </button>
-                        )}
+                            {!isView && (
+                                <button
+                                    type="button"
+                                    onClick={handleSubmit(onSubmit, onInvalidSubmit)}
+                                    disabled={isHydrating || isSubmitting}
+                                    className="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md text-sm font-medium shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {(isHydrating || isSubmitting) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save size={14} />} 
+                                    {(isHydrating || isSubmitting) ? 'กำลังประมวลผล...' : (isRejected ? 'บันทึกและส่งอนุมัติใหม่' : 'บันทึก')}
+                                </button>
+                            )}
+                        </div>
                     </div>
                 }
             >

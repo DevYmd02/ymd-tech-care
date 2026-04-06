@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Search, CheckCircle, Eye, Clock } from 'lucide-react';
+import { Search, CheckCircle, Eye, Clock, Printer } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { PageListLayout, SmartTable, FilterField, MobileListCard, MobileListContainer } from '@ui';
 import { POStatusBadge } from '@ui';
@@ -163,6 +163,19 @@ export default function POAListPage() {
                             >
                                 <Clock size={18} />
                             </button>
+                            {(item.status === 'APPROVED' || item.status === 'PARTIAL') && (item as any).approval_id && (
+                                <button
+                                    onClick={() => {
+                                        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+                                        const approvalId = (item as any).approval_id;
+                                        window.open(`${apiUrl}/po-approval/${approvalId}/pdf`, '_blank');
+                                    }}
+                                    className="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-all"
+                                    title="พิมพ์ใบอนุมัติ"
+                                >
+                                    <Printer size={18} />
+                                </button>
+                            )}
                         </div>
                     );
                 }
@@ -325,6 +338,18 @@ export default function POAListPage() {
                                             >
                                                 <Clock size={16} /> ประวัติ
                                             </button>
+                                            {(item.status === 'APPROVED' || item.status === 'PARTIAL') && (item as any).approval_id && (
+                                                <button
+                                                    onClick={() => {
+                                                        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+                                                        const approvalId = (item as any).approval_id;
+                                                        window.open(`${apiUrl}/po-approval/${approvalId}/pdf`, '_blank');
+                                                    }}
+                                                    className="flex-1 bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 text-xs py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 font-bold"
+                                                >
+                                                    <Printer size={16} /> พิมพ์
+                                                </button>
+                                            )}
                                         </div>
                                     ) : (
                                         <div className="flex flex-col gap-2 w-full font-bold tracking-wide">

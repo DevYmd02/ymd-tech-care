@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { FileText, Eye, Send, Package, Edit, Search, Plus, Clock } from 'lucide-react';
+import { FileText, Eye, Send, Package, Edit, Search, Plus, Clock, Printer } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { PageListLayout, SmartTable, FilterField, MobileListCard, MobileListContainer } from '@ui';
 import { POStatusBadge } from '@ui';
@@ -246,6 +246,20 @@ export default function POListPage() {
                                 title="ดูประวัติการอนุมัติ"
                             >
                                 <Clock size={16} />
+                            </button>
+                        )}
+                        
+                        {/* Print Button — PR/AV pattern */}
+                        {['APPROVED', 'PARTIAL', 'ISSUED', 'COMPLETED'].includes(item.status?.toUpperCase()) && (
+                            <button
+                                onClick={() => {
+                                    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+                                    window.open(`${apiUrl}/po/${item.po_id}/pdf`, '_blank');
+                                }}
+                                className="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-all"
+                                title="พิมพ์ใบสั่งซื้อ"
+                            >
+                                <Printer size={16} />
                             </button>
                         )}
 
@@ -494,6 +508,18 @@ export default function POListPage() {
                                                 className="flex-1 min-w-[70px] bg-emerald-50 dark:bg-emerald-900/30 hover:bg-emerald-100 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm"
                                             >
                                                 <Clock size={16} /> ประวัติ
+                                            </button>
+                                        )}
+
+                                        {['APPROVED', 'PARTIAL', 'ISSUED', 'COMPLETED'].includes(item.status?.toUpperCase()) && (
+                                            <button
+                                                onClick={() => {
+                                                    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+                                                    window.open(`${apiUrl}/po/${item.po_id}/pdf`, '_blank');
+                                                }}
+                                                className="flex-1 min-w-[70px] bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                                            >
+                                                <Printer size={16} /> พิมพ์
                                             </button>
                                         )}
 
