@@ -65,7 +65,7 @@ export interface PriceListItemFormData {
     itemId: string;
     uomId: string | null;
     unitPrice: number;
-    lineDiscount: number;
+    lineDiscount: string | number;
     lineDiscountAmnt: number;
     unitPriceNet: number;
     remark: string;
@@ -92,6 +92,7 @@ export interface PriceListFormData {
     permitEmpId: string;
     remark: string;
     priceListFlag: string | null;
+    customerName?: string; // Helper for UI display
     
     items: PriceListItemFormData[];
 }

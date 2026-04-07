@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useCallback } from 'react';
-import { useForm, useFieldArray, type SubmitHandler } from 'react-hook-form';
+import { useForm, useFieldArray, type SubmitHandler, type Path, type PathValue } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PriceListService } from '@master-data/sales/pages/price-list/services/price-list.service';
@@ -16,7 +16,7 @@ const priceListItemSchema = z.object({
     itemId: z.string().min(1, 'กรุณาเลือกสินค้า'),
     uomId: z.string().nullable(),
     unitPrice: z.number().min(0, 'ราคาต้องไม่ติดลบ'),
-    lineDiscount: z.number().min(0, 'ส่วนลดต้องไม่ติดลบ'),
+    lineDiscount: z.union([z.number(), z.string()]),
     lineDiscountAmnt: z.number(),
     unitPriceNet: z.number(),
     remark: z.string(),
@@ -41,6 +41,7 @@ const priceListSchema = z.object({
     permitEmpId: z.string(),
     remark: z.string(),
     priceListFlag: z.string().nullable(),
+    customerName: z.string().optional(),
     items: z.array(priceListItemSchema),
 });
 
@@ -60,6 +61,7 @@ const initialValues: PriceListFormData = {
     permitEmpId: '',
     remark: '',
     priceListFlag: null,
+    customerName: '',
     items: [],
 };
 
@@ -78,7 +80,7 @@ export function usePriceListForm(editId: string | null, onSuccess?: () => void) 
         defaultValues: initialValues,
     });
 
-    const { fields, append, remove, update } = useFieldArray({
+    const { fields, append, remove } = useFieldArray({
         control,
         name: 'items',
     });
@@ -105,6 +107,7 @@ export function usePriceListForm(editId: string | null, onSuccess?: () => void) 
                         permitEmpId: data.permit_emp_id || '',
                         remark: data.remark || '',
                         priceListFlag: data.price_list_flag,
+                        customerName: data.customer_name || '',
                         items: (data.items || []).map(item => ({
                             priceListItemId: item.price_list_item_id,
                             itemId: item.item_id,
@@ -132,9 +135,29 @@ export function usePriceListForm(editId: string | null, onSuccess?: () => void) 
 
     const onSubmit: SubmitHandler<PriceListFormData> = async (formData) => {
         try {
+            // Convert any percentage/string discounts to absolute amounts for the API
+            const submissionData = {
+                ...formData,
+                items: formData.items.map(item => {
+                    let finalDiscount = 0;
+                    if (typeof item.lineDiscount === 'string' && item.lineDiscount.endsWith('%')) {
+                        const percent = parseFloat(item.lineDiscount.replace('%', '')) || 0;
+                        finalDiscount = (item.unitPrice * percent) / 100;
+                    } else {
+                        finalDiscount = Number(item.lineDiscount) || 0;
+                    }
+
+                    return {
+                        ...item,
+                        lineDiscount: finalDiscount, // API expects number
+                        lineDiscountAmnt: finalDiscount
+                    };
+                })
+            };
+
             const result = editId 
-                ? await PriceListService.update(editId, formData)
-                : await PriceListService.create(formData);
+                ? await PriceListService.update(editId, submissionData as PriceListFormData)
+                : await PriceListService.create(submissionData as PriceListFormData);
             
             if (result.success) {
                 toast.success(editId ? 'แก้ไขข้อมูลสำเร็จ' : 'เพิ่มข้อมูลสำเร็จ');
@@ -148,21 +171,43 @@ export function usePriceListForm(editId: string | null, onSuccess?: () => void) 
         }
     };
 
-    const calculateNetPrice = useCallback((unitPrice: number, lineDiscount: number) => {
-        return unitPrice - lineDiscount;
+    const calculateNetPrice = useCallback((unitPrice: number, lineDiscount: string | number) => {
+        let discountAmnt = 0;
+        if (typeof lineDiscount === 'string' && lineDiscount.endsWith('%')) {
+            const percent = parseFloat(lineDiscount.replace('%', '')) || 0;
+            discountAmnt = (unitPrice * percent) / 100;
+        } else {
+            discountAmnt = Number(lineDiscount) || 0;
+        }
+        return {
+            discountAmnt,
+            unitPriceNet: unitPrice - discountAmnt
+        };
     }, []);
 
-    const handleItemChange = (index: number, field: keyof PriceListItemFormData, value: string | number | boolean | null) => {
-        const item = (getValues('items'))[index];
-        const updatedItem = { ...item, [field]: value };
+    const handleItemChange = <K extends keyof PriceListItemFormData>(
+        index: number, 
+        field: K, 
+        value: PriceListItemFormData[K]
+    ) => {
+        // Use Path casting instead of any to satisfy TS and RHF requirements
+        const path = `items.${index}.${field}` as Path<PriceListFormData>;
+        setValue(path, value as PathValue<PriceListFormData, Path<PriceListFormData>>, { shouldDirty: true });
         
         if (field === 'unitPrice' || field === 'lineDiscount') {
-            const unitPrice = field === 'unitPrice' ? Number(value) : Number(item.unitPrice);
-            const lineDiscount = field === 'lineDiscount' ? Number(value) : Number(item.lineDiscount);
-            updatedItem.unitPriceNet = calculateNetPrice(unitPrice, lineDiscount);
+            const items = getValues('items');
+            const item = items[index];
+            const unitPrice = field === 'unitPrice' ? (parseFloat(String(value)) || 0) : (Number(item.unitPrice) || 0);
+            const lineDiscount = field === 'lineDiscount' ? String(value) : String(item.lineDiscount);
+            const { discountAmnt, unitPriceNet } = calculateNetPrice(unitPrice, lineDiscount);
+            
+            // Limit to reasonable ERP values to prevent UI overflow bugs
+            const safeNet = Math.max(0, Math.min(unitPriceNet, 999999999999.99));
+            const safeDisc = Math.max(0, Math.min(discountAmnt, unitPrice));
+            
+            setValue(`items.${index}.lineDiscountAmnt` as Path<PriceListFormData>, safeDisc as PathValue<PriceListFormData, Path<PriceListFormData>>, { shouldDirty: true });
+            setValue(`items.${index}.unitPriceNet` as Path<PriceListFormData>, safeNet as PathValue<PriceListFormData, Path<PriceListFormData>>, { shouldDirty: true });
         }
-        
-        update(index, updatedItem);
     };
 
     return {

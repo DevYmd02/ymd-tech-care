@@ -22,27 +22,22 @@ export type Product = ItemListItem;
 // ====================================================================================
 
 const productColumns: ColumnDef<ItemListItem>[] = [
-    { key: 'action', header: 'เลือก', width: '100px', align: 'center' },
+    { key: 'action', header: 'เลือก', width: '80px', align: 'center' },
     {
-        key: 'item_code', header: 'รหัสสินค้า', width: '120px', render: (p: ItemListItem) => (
+        key: 'item_code', header: 'รหัสสินค้า', width: '180px', render: (p: ItemListItem) => (
             <span className="text-sm font-bold text-gray-800 dark:text-gray-200">{p.item_code}</span>
         )
     },
     {
         key: 'item_name', header: 'ชื่อสินค้า', width: '1fr', render: (p: ItemListItem) => (
-            <span className="text-sm text-gray-700 dark:text-gray-300">{p.item_name}</span>
+            <div className="text-sm text-gray-700 dark:text-gray-300 font-medium break-words leading-relaxed">
+                {p.item_name}
+            </div>
         )
     },
     {
-        key: 'unit_name', header: 'หน่วย', width: '120px', render: (p: ItemListItem) => (
-            <span className="text-xs text-gray-600 dark:text-gray-400">{p.uom_name || p.unit_name || p.base_uom_name || '-'}</span>
-        )
-    },
-    {
-        key: 'standard_cost', header: 'ราคามาตรฐาน', width: '140px', align: 'right', render: (p: ItemListItem) => (
-            <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">
-                {(Number(p.standard_cost) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-            </span>
+        key: 'unit_name', header: 'หน่วย', width: '100px', align: 'center', render: (p: ItemListItem) => (
+            <span className="text-xs text-gray-600 dark:text-gray-400 font-semibold">{p.uom_name || p.unit_name || p.base_uom_name || '-'}</span>
         )
     },
 ];

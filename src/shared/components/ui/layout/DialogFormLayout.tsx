@@ -16,11 +16,12 @@ interface DialogFormLayoutProps {
 }
 
 export const DialogFormLayout: React.FC<DialogFormLayoutProps> = (props) => {
-    // Map existing width strings to variant sizes if they match common patterns
-    let size: 'sm' | 'md' | 'lg' | 'xl' | 'full' = 'lg';
+    let size: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full' = 'lg';
     if (props.width === 'max-w-md') size = 'sm';
     if (props.width === 'max-w-lg') size = 'md';
-    if (props.width === 'max-w-6xl') size = 'xl';
+    if (props.width === 'max-w-6xl' || props.width === 'max-w-6xl') size = 'xl';
+    if (props.width === 'max-w-[1600px]') size = '2xl';
+    if (props.width === 'max-w-[1800px]') size = '3xl';
 
     return (
         <ModalLayout 
