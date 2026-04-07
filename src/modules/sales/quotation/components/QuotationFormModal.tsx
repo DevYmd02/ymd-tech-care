@@ -1,10 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Save, FileText, Printer, Loader2 } from 'lucide-react';
+import { useForm, FormProvider, useWatch } from 'react-hook-form';
+import { useQuery } from '@tanstack/react-query';
 import { WindowFormLayout } from '@ui';
+import { MasterDataService } from '@/modules/master-data';
+import { CustomerService } from '@/modules/master-data/customer/customer-master/services/customer.service';
+import { TaxGroupService } from '@/modules/master-data/tax/services/tax-group.service';
+import type { Currency } from '@/modules/master-data/types/master-data-types';
+import type { QuotationFormData, QuotationLineData } from '../types/quotation.types';
 import { QuotationHeaderForm } from './QuotationHeaderForm';
 import { QuotationLineTable } from './QuotationLineTable';
 import { QuotationSummary } from './QuotationSummary';
-import type { QuotationFormData, QuotationLineData } from '../types/quotation.types';
 
 interface QuotationFormModalProps {
     isOpen: boolean;
@@ -21,6 +27,11 @@ const DEFAULT_FORM_DATA: QuotationFormData = {
     lead_id: '',
     branch_id: '',
     currency_code: 'THB',
+    isMulticurrency: false,
+    base_currency_code: 'THB',
+    quote_currency_code: 'THB',
+    exchange_rate: 1,
+    exchange_rate_date: new Date().toISOString().split('T')[0],
     status: 'DRAFT',
     valid_until: '',
     payment_term_days: 0,
@@ -50,18 +61,90 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
     const isEdit = !!id;
     const [isSubmitting, setIsSubmitting] = useState(false);
     
-    // Header State
-    const [formData, setFormData] = useState<QuotationFormData>(
-        initialData ? { ...DEFAULT_FORM_DATA, ...initialData } : DEFAULT_FORM_DATA
-    );
+    // React Hook Form Setup
+    const methods = useForm<QuotationFormData>({
+        defaultValues: initialData ? { ...DEFAULT_FORM_DATA, ...initialData } : DEFAULT_FORM_DATA,
+        mode: 'onBlur',
+    });
 
-    const handleHeaderChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-        const { name, value } = e.target;
-        setFormData((prev) => ({ 
-            ...prev, 
-            [name]: name === 'payment_term_days' || name === 'discount_amount' ? (parseFloat(value) || 0) : value 
-        }));
-    };
+    const { setValue, handleSubmit, reset, control } = methods;
+    const formData = (useWatch({ control }) || {}) as QuotationFormData;
+
+    // Reset form when modal opens with new data
+    useEffect(() => {
+        if (isOpen) {
+            reset(initialData ? { ...DEFAULT_FORM_DATA, ...initialData } : DEFAULT_FORM_DATA);
+        }
+    }, [isOpen, initialData, reset]);
+
+    // Data Fetching
+    const { data: branches = [] } = useQuery({
+        queryKey: ['master-branches'],
+        queryFn: MasterDataService.getBranches,
+        enabled: isOpen
+    });
+
+    const { data: currencies = [] } = useQuery({
+        queryKey: ['master-currencies'],
+        queryFn: MasterDataService.getCurrencies,
+        enabled: isOpen
+    });
+
+    const { data: customerResponse } = useQuery({
+        queryKey: ['master-customers'],
+        queryFn: () => CustomerService.getList({ limit: 100 }),
+        enabled: isOpen
+    });
+    const customers = customerResponse?.data || [];
+
+    const { data: taxGroups = [] } = useQuery({
+        queryKey: ['master-tax-groups'],
+        queryFn: TaxGroupService.getTaxGroups,
+        enabled: isOpen
+    });
+
+    const { data: departments = [] } = useQuery({
+        queryKey: ['master-departments'],
+        queryFn: MasterDataService.getDepartments,
+        enabled: isOpen
+    });
+
+    const { data: projects = [] } = useQuery({
+        queryKey: ['master-projects'],
+        queryFn: MasterDataService.getProjects,
+        enabled: isOpen
+    });
+
+    const { data: itemTypes = [] } = useQuery({
+        queryKey: ['master-item-types'],
+        queryFn: MasterDataService.getItemTypes,
+        enabled: isOpen
+    });
+
+    // Exchange Rate Sync Logic
+    const sourceCurrency = useWatch({ control, name: 'base_currency_code' }) as string;
+    const targetCurrency = useWatch({ control, name: 'quote_currency_code' }) as string;
+
+    useEffect(() => {
+        if (!sourceCurrency || !formData?.isMulticurrency) return;
+        
+        if (sourceCurrency === 'THB' || sourceCurrency === targetCurrency) {
+            setValue('exchange_rate', 1, { shouldDirty: false });
+            return;
+        }
+
+        const sourceObj = currencies?.find((c: Currency) => c.currency_code === sourceCurrency);
+        const targetObj = currencies?.find((c: Currency) => c.currency_code === targetCurrency);
+
+        const fromRate = sourceObj?.exchange_rate || 1;
+        const toRate = targetObj?.exchange_rate || (targetCurrency === 'THB' ? 1 : 1);
+
+        const calculatedRate = fromRate / toRate;
+        
+        if (calculatedRate !== undefined && !isNaN(calculatedRate)) {
+            setValue('exchange_rate', Number(calculatedRate.toFixed(6)), { shouldValidate: true });
+        }
+    }, [currencies, sourceCurrency, targetCurrency, setValue, formData?.isMulticurrency]);
 
     const handleAddLine = () => {
         const newLine: QuotationLineData = { 
@@ -75,24 +158,17 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
             tax_code_id: '',
             note: '' 
         };
-        setFormData(prev => ({
-            ...prev,
-            lines: [...prev.lines, newLine]
-        }));
+        setValue('lines', [...(formData.lines || []), newLine]);
     };
 
     const handleRemoveLine = (index: number) => {
-        setFormData(prev => ({
-            ...prev,
-            lines: prev.lines.filter((_, i) => i !== index)
-        }));
+        setValue('lines', (formData.lines || []).filter((_, i) => i !== index));
     };
 
     const handleLineChange = (index: number, field: keyof QuotationLineData, value: string | number) => {
-        const newLines = [...formData.lines];
+        const newLines = [...(formData.lines || [])];
         const updatedLine = { ...newLines[index], [field]: value };
         
-        // Basic calculation for line_total
         if (field === 'qty' || field === 'unit_price' || field === 'line_discount') {
             const qty = Number(field === 'qty' ? value : updatedLine.qty) || 0;
             const price = Number(field === 'unit_price' ? value : updatedLine.unit_price) || 0;
@@ -101,20 +177,18 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
         }
         
         newLines[index] = updatedLine;
-        setFormData(prev => ({ ...prev, lines: newLines }));
+        setValue('lines', newLines);
     };
 
     // Calculate Totals
-    const subTotal = formData.lines.reduce((sum, line) => sum + (line.line_total || 0), 0);
+    const subTotal = (formData.lines || []).reduce((sum, line) => sum + (line.line_total || 0), 0);
     const vatAmount = subTotal * 0.07;
     const totalAmount = (subTotal + vatAmount) - (formData.discount_amount || 0);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const onFormSubmit = async (data: QuotationFormData) => {
         setIsSubmitting(true);
-        console.log('Submitting Quotation:', { ...formData, sub_total: subTotal, vat_amount: vatAmount, total_amount: totalAmount });
+        console.log('Submitting Quotation:', { ...data, sub_total: subTotal, vat_amount: vatAmount, total_amount: totalAmount });
         
-        // Simulate API delay
         await new Promise(r => setTimeout(r, 1000));
         
         setIsSubmitting(false);
@@ -171,46 +245,53 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
                 </div>
             }
         >
-            <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6">
-                <form id="quotation-form" onSubmit={handleSubmit} className="max-w-[1400px] mx-auto space-y-6">
-                    
-                    {/* 1. Header Section */}
-                    <div className={cardClass}>
-                        <div className="p-6">
-                            <QuotationHeaderForm 
-                                formData={formData} 
-                                onChange={handleHeaderChange} 
-                            />
+            <FormProvider {...methods}>
+                <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6">
+                    <form id="quotation-form" onSubmit={handleSubmit(onFormSubmit)} className="max-w-[1400px] mx-auto space-y-6">
+                        
+                        {/* 1. Header Section */}
+                        <div className={cardClass}>
+                            <div className="p-6">
+                                <QuotationHeaderForm 
+                                    branches={branches}
+                                    currencies={currencies}
+                                    customers={customers}
+                                    taxGroups={taxGroups}
+                                    departments={departments}
+                                    projects={projects}
+                                    itemTypes={itemTypes}
+                                />
+                            </div>
                         </div>
-                    </div>
 
-                    {/* 2. Line Items Section */}
-                    <div className={cardClass}>
-                        <div className="p-6">
-                            <QuotationLineTable 
-                                lines={formData.lines} 
-                                onAddLine={handleAddLine} 
-                                onRemoveLine={handleRemoveLine}
-                                onLineChange={handleLineChange}
-                            />
+                        {/* 2. Line Items Section */}
+                        <div className={cardClass}>
+                            <div className="p-6">
+                                <QuotationLineTable 
+                                    lines={formData.lines} 
+                                    onAddLine={handleAddLine} 
+                                    onRemoveLine={handleRemoveLine}
+                                    onLineChange={handleLineChange}
+                                />
+                            </div>
                         </div>
-                    </div>
 
-                    {/* 3. Summary Section */}
-                    <div className={cardClass}>
-                        <div className="p-6">
-                            <QuotationSummary 
-                                subTotal={subTotal}
-                                discountAmount={formData.discount_amount}
-                                vatAmount={vatAmount}
-                                totalAmount={totalAmount}
-                                lineCount={formData.lines.length}
-                                onDiscountChange={(val) => setFormData((prev) => ({ ...prev, discount_amount: val }))}
-                            />
+                        {/* 3. Summary Section */}
+                        <div className={cardClass}>
+                            <div className="p-6">
+                                <QuotationSummary 
+                                    subTotal={subTotal}
+                                    discountAmount={formData.discount_amount}
+                                    vatAmount={vatAmount}
+                                    totalAmount={totalAmount}
+                                    lineCount={formData.lines.length}
+                                    onDiscountChange={(val) => setValue('discount_amount', val)}
+                                />
+                            </div>
                         </div>
-                    </div>
-                </form>
-            </div>
+                    </form>
+                </div>
+            </FormProvider>
         </WindowFormLayout>
     );
 }

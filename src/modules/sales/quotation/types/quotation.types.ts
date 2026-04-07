@@ -25,6 +25,11 @@ export interface QuotationFormData {
     customer_id: string;  // UUID (FK)
     branch_id?: string;   // UUID (FK)
     currency_code: string; // Varchar(3)
+    isMulticurrency?: boolean;
+    base_currency_code?: string;
+    quote_currency_code?: string;
+    exchange_rate?: number;
+    exchange_rate_date?: string;
     status: 'DRAFT' | 'SENT' | 'ACCEPTED' | 'EXPIRED' | 'CANCELLED'; // Varchar(20)
     valid_until?: string; // Date
     sub_total: number;    // Numeric(18,2)

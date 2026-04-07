@@ -1,5 +1,4 @@
 import { Plus, Trash2, Package } from 'lucide-react';
-import { styles } from '@/shared/constants/styles';
 import type { QuotationLineData } from '../types/quotation.types';
 
 interface QuotationLineTableProps {
@@ -10,6 +9,8 @@ interface QuotationLineTableProps {
 }
 
 export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChange }: QuotationLineTableProps) {
+    const compactInputClass = "h-8 w-full px-2 text-xs bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-900 dark:text-white transition-colors disabled:bg-gray-50 dark:disabled:bg-gray-800/50";
+    
     return (
         <section className="space-y-6">
             <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
@@ -31,83 +32,83 @@ export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChang
                 <table className="w-full text-sm text-left">
                     <thead className="text-xs uppercase bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
                         <tr>
-                            <th className="px-3 py-3 w-12 text-center">#</th>
-                            <th className="px-4 py-3 min-w-[200px]">รหัสสินค้า (item_id)</th>
-                            <th className="px-4 py-3 min-w-[250px]">ชื่อสินค้า (Item Name)</th>
-                            <th className="px-4 py-3 w-32 text-right">จำนวน (qty)</th>
-                            <th className="px-4 py-3 w-32">หน่วย (uom_id)</th>
-                            <th className="px-4 py-3 w-40 text-right">ราคา/หน่วย (unit_price)</th>
-                            <th className="px-4 py-3 w-32 text-right">ส่วนลด (line_discount)</th>
-                            <th className="px-4 py-3 w-40 text-right">ยอดสุทธิ (line_total)</th>
-                            <th className="px-4 py-3 w-16 text-center">จัดการ</th>
+                            <th className="px-2 py-2 w-10 text-center">#</th>
+                            <th className="px-2 py-2 min-w-[180px]">รหัสสินค้า (ITEM_ID)</th>
+                            <th className="px-2 py-2 min-w-[220px]">ชื่อสินค้า (ITEM NAME)</th>
+                            <th className="px-2 py-2 w-24 text-right">จำนวน (QTY)</th>
+                            <th className="px-2 py-2 w-28">หน่วย (UOM_ID)</th>
+                            <th className="px-2 py-2 w-36 text-right">ราคา/หน่วย (UNIT_PRICE)</th>
+                            <th className="px-2 py-2 w-32 text-right">ส่วนลด (LINE_DISCOUNT)</th>
+                            <th className="px-2 py-2 w-36 text-right">ยอดสุทธิ (LINE_TOTAL)</th>
+                            <th className="px-2 py-2 w-14 text-center">จัดการ</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-gray-900">
                         {lines.map((line, index) => (
                             <tr key={index} className="hover:bg-blue-50/30 dark:hover:bg-blue-900/5 transition-colors group">
-                                <td className="px-3 py-3 text-center text-gray-500 font-medium">
+                                <td className="px-2 py-1.5 text-center text-gray-500 font-medium">
                                     {index + 1}
                                 </td>
-                                <td className="px-4 py-3">
+                                <td className="px-2 py-1.5">
                                     <select 
                                         value={line.item_id || ''} 
                                         onChange={(e) => onLineChange(index, 'item_id', e.target.value)}
-                                        className={`${styles.input} h-9 py-0 text-sm`}
+                                        className={compactInputClass}
                                     >
                                         <option value="">-- เลือกสินค้า --</option>
                                     </select>
                                 </td>
-                                <td className="px-4 py-3">
+                                <td className="px-2 py-1.5">
                                     <input 
                                         type="text" 
                                         value={line.item_name || ''} 
-                                        className={`${styles.input} h-9 py-0 text-sm bg-gray-50 cursor-not-allowed`}
+                                        className={`${compactInputClass} bg-gray-50 italic cursor-not-allowed`}
                                         placeholder="ชื่อสินค้าอัตโนมัติ"
                                         readOnly
                                     />
                                 </td>
-                                <td className="px-4 py-3">
+                                <td className="px-2 py-1.5">
                                     <input 
                                         type="number" 
                                         value={line.qty || 0} 
                                         onChange={(e) => onLineChange(index, 'qty', parseFloat(e.target.value))}
-                                        className={`${styles.input} h-9 py-0 text-sm text-right`}
+                                        className={`${compactInputClass} text-right`}
                                     />
                                 </td>
-                                <td className="px-4 py-3">
+                                <td className="px-2 py-1.5">
                                     <select 
                                         value={line.uom_id || ''} 
                                         onChange={(e) => onLineChange(index, 'uom_id', e.target.value)}
-                                        className={`${styles.input} h-9 py-0 text-sm`}
+                                        className={compactInputClass}
                                     >
                                         <option value="PCS">PCS</option>
                                         <option value="SET">SET</option>
                                     </select>
                                 </td>
-                                <td className="px-4 py-3">
+                                <td className="px-2 py-1.5">
                                     <input 
                                         type="number" 
                                         value={line.unit_price || 0} 
                                         onChange={(e) => onLineChange(index, 'unit_price', parseFloat(e.target.value))}
-                                        className={`${styles.input} h-9 py-0 text-sm text-right font-medium text-blue-600`}
+                                        className={`${compactInputClass} text-right font-medium text-blue-600`}
                                     />
                                 </td>
-                                <td className="px-4 py-3">
+                                <td className="px-2 py-1.5">
                                     <input 
                                         type="number" 
                                         value={line.line_discount || 0} 
                                         onChange={(e) => onLineChange(index, 'line_discount', parseFloat(e.target.value))}
-                                        className={`${styles.input} h-9 py-0 text-sm text-right`}
+                                        className={`${compactInputClass} text-right`}
                                     />
                                 </td>
-                                <td className="px-4 py-3 text-right font-bold text-gray-900 dark:text-white">
+                                <td className="px-2 py-1.5 text-right font-bold text-gray-900 dark:text-white text-xs">
                                     {(line.line_total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </td>
-                                <td className="px-4 py-3 text-center">
+                                <td className="px-2 py-1.5 text-center">
                                     <button 
                                         type="button" 
                                         onClick={() => onRemoveLine(index)}
-                                        className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                                        className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
                                     >
                                         <Trash2 size={16} />
                                     </button>
