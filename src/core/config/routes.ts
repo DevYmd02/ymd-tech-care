@@ -89,13 +89,14 @@ export const ROUTES = {
     PRICE_LEVEL: '/master-data/price-level',
     PRICE_LIST: '/master-data/price-list',
   },
-  SALES: {
+    SALES: {
     DASHBOARD: '/sales/dashboard',
     INQUIRY: '/sales/inquiry',
     ESTIMATE: '/sales/estimate',
     QUOTATION: '/sales/quotation',
     RESERVATION: '/sales/reservation',
     ORDER: '/sales/order',
+    ORDER_APPROVAL: '/sales/order-approval',
   }
 } as const;
 
@@ -150,6 +151,7 @@ export const placeholderRoutes: Record<string, PlaceholderRoute[]> = {
     ],
     sales: [
         { path: 'sales/quotation-approval', title: 'Quotation Approval' },
+        { path: 'sales/order-approval', title: 'Sales Order Approval' },
         { path: 'sales/reservation', title: 'Reservation' },
         { path: 'sales/order', title: 'Sales Order' },
         { path: 'sales/delivery', title: 'Delivery / DO' },
