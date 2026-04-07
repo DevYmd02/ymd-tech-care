@@ -4,7 +4,7 @@
  */
 
 import { useMemo } from 'react';
-import { Edit2, Trash2, Layers,Plus } from 'lucide-react';
+import { Edit2, Trash2, Layers } from 'lucide-react';
 import PriceListFormModal from '@/modules/master-data/sales/pages/price-list/PriceListFormModal';
 import { usePriceList } from '@master-data/sales/pages/price-list/hooks/usePriceList';
 import type { PriceListHeader } from '@master-data/sales/pages/price-list/types/price-list.types';
@@ -152,14 +152,6 @@ export default function PriceListList() {
                         จัดการรายการราคาสินค้าและเงื่อนไขพิเศษ
                     </p>
                 </div>
-
-                <button
-                    onClick={handleCreateNew}
-                    className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl font-medium shadow-sm transition-all active:scale-95"
-                >
-                    <Plus size={20} />
-                    สร้างราคาสินค้า
-                </button>
             </div>
 
             {/* Filter Section */}
@@ -170,6 +162,8 @@ export default function PriceListList() {
                     onFilterChange={(name: string, value: string) => setFilters({ [name]: value })}
                     onSearch={() => handlePageChange(1)}
                     onReset={resetFilters}
+                    onCreate={handleCreateNew}
+                    createLabel="สร้างราคาสินค้า"
                     accentColor="blue"
                 />
             </div>

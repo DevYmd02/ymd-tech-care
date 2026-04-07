@@ -185,6 +185,7 @@ export function useCustomerForm({
             if (id) {
                 // ===== UPDATE Payload =====
                 const updatePayload = {
+                    customer_code:          formData.customer_code, // Added this
                     customer_name:          formData.customer_name_th,
                     customer_nameeng:       formData.customer_name_en,
                     tax_id:                 formData.tax_id,
@@ -201,7 +202,7 @@ export function useCustomerForm({
                     email:                  formData.email,
                     website:                formData.website,
                     is_active:              formData.is_active,
-                    customerAddresses:      mappedAddresses,
+                    addresses:              mappedAddresses, // Changed from customerAddresses
                 };
                 response = await CustomerService.update(id, updatePayload as unknown as Partial<CustomerMaster>);
             } else {
