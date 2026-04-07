@@ -66,8 +66,8 @@ export function CustomerAddressList({
                             )}
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="md:col-span-2 space-y-1">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div className="md:col-span-2 lg:col-span-3 space-y-1">
                                 <label className={styles.label}>ที่อยู่ (เลขที่, อาคาร, ถนน) <span className="text-red-500">*</span></label>
                                 <textarea 
                                     value={addr.address}
@@ -113,6 +113,26 @@ export function CustomerAddressList({
                                     onChange={(e) => updateAddress(index, 'postalCode', e.target.value)}
                                     className={styles.input}
                                     placeholder="XXXXX"
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className={styles.label}>ผู้ติดต่อ (เฉพาะที่อยู่นี้)</label>
+                                <input 
+                                    value={addr.contactPerson}
+                                    onChange={(e) => updateAddress(index, 'contactPerson', e.target.value)}
+                                    className={styles.input}
+                                    placeholder="ชื่อผู้ติดต่อ..."
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className={styles.label}>อีเมล (เฉพาะที่อยู่นี้) <span className="text-red-500">*</span></label>
+                                <input 
+                                    type="email"
+                                    value={addr.email}
+                                    onChange={(e) => updateAddress(index, 'email', e.target.value)}
+                                    className={styles.input}
+                                    placeholder="email@example.com"
                                     required
                                 />
                             </div>

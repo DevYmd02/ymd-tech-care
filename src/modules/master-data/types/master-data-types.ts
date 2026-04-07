@@ -32,14 +32,14 @@ export * from '@/modules/master-data/company/types/employee.types';
 // ====================================================================================
 // RE-EXPORTS FROM SALES MODULE
 // ====================================================================================
-export * from '@/modules/master-data/sales/types/area/area.types';
-export * from '@/modules/master-data/sales/types/channel/channel.types';
-export * from '@/modules/master-data/sales/types/target/sale-period.types';
-export * from '@/modules/master-data/sales/types/target/sale-target.types';
+export * from '@master-data/sales/pages/area/types/area.types';
+export * from '@master-data/sales/pages/channel/types/channel.types';
+export * from '@master-data/sales/pages/target/types/sale-period.types';
+export * from '@master-data/sales/pages/target/types/sale-target.types';
 
 // Backward compatibility aliases
-import { type SaleAreaListItem } from '@/modules/master-data/sales/types/area/area.types';
-import { type SalePeriodListItem } from '@/modules/master-data/sales/types/target/sale-period.types';
+import { type SaleAreaListItem } from '@master-data/sales/pages/area/types/area.types';
+import { type SalePeriodListItem } from '@master-data/sales/pages/target/types/sale-period.types';
 export type SalesZoneListItem = SaleAreaListItem;
 export type SalesTargetListItem = SalePeriodListItem;
 

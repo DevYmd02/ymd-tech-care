@@ -36,7 +36,7 @@ export const CustomerService = {
        };
     }
     try {
-      const response = await api.get<unknown>('/customer', { params });
+      const response = await api.get<unknown>('/customer-master', { params });
       if (Array.isArray(response)) {
         return {
           data: response,
@@ -57,7 +57,7 @@ export const CustomerService = {
     if (USE_MOCK) {
        return { data: MOCK_BUSINESS_TYPES, total: MOCK_BUSINESS_TYPES.length, page: 1, limit: 100 };
     }
-    const response = await api.get<unknown>('/customer/business-type', { params });
+    const response = await api.get<unknown>('/customer-master/business-type', { params });
     if (Array.isArray(response)) {
       return { data: response, total: response.length, page: 1, limit: response.length };
     }
@@ -70,7 +70,7 @@ export const CustomerService = {
     if (USE_MOCK) {
        return { data: MOCK_CUSTOMER_GROUPS, total: MOCK_CUSTOMER_GROUPS.length, page: 1, limit: 100 };
     }
-    const response = await api.get<unknown>('/customer/group', { params });
+    const response = await api.get<unknown>('/customer-master/group', { params });
     if (Array.isArray(response)) {
       return { data: response, total: response.length, page: 1, limit: response.length };
     }
@@ -82,7 +82,7 @@ export const CustomerService = {
     if (USE_MOCK) {
        return { data: MOCK_BILLING_GROUPS, total: MOCK_BILLING_GROUPS.length, page: 1, limit: 100 };
     }
-    const response = await api.get<unknown>('/customer/billing-group', { params });
+    const response = await api.get<unknown>('/customer-master/billing-group', { params });
     if (Array.isArray(response)) {
       return { data: response, total: response.length, page: 1, limit: response.length };
     }
@@ -95,7 +95,7 @@ export const CustomerService = {
       return localCustomers.find(c => c.customer_id === id) || null;
     }
     try {
-      return await api.get<CustomerMaster>(`/customer/${id}`);
+      return await api.get<CustomerMaster>(`/customer-master/${id}`);
     } catch (error) {
       logger.error('[CustomerService] getById error:', error);
       return null;
@@ -117,7 +117,7 @@ export const CustomerService = {
       localCustomers.unshift(newCustomer);
       return { success: true, data: newCustomer };
     }
-    const data = await api.post<CustomerMaster>('/customer', payload);
+    const data = await api.post<CustomerMaster>('/customer-master', payload);
     return { success: true, data };
   },
 
@@ -131,7 +131,7 @@ export const CustomerService = {
       }
       return { success: false, message: 'Not found' };
     }
-    const data = await api.patch<CustomerMaster>(`/customer/${id}`, payload);
+    const data = await api.patch<CustomerMaster>(`/customer-master/${id}`, payload);
     return { success: true, data };
   },
 
@@ -141,7 +141,7 @@ export const CustomerService = {
       localCustomers = localCustomers.filter(c => c.customer_id !== id);
       return { success: true };
     }
-    await api.delete(`/customer/${id}`);
+    await api.delete(`/customer-master/${id}`);
     return { success: true };
   }
 };

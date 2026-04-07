@@ -7,7 +7,7 @@ import { useMemo } from 'react';
 import { Edit2, Trash2 } from 'lucide-react';
 import { SmartTable } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
-import type { SalePeriodListItem } from '@/modules/master-data/sales/types/target/sale-period.types';
+import type { SalePeriodListItem } from '../types/sale-period.types';
 import type { TableFilters } from '@/shared/hooks/useTableFilters';
 
 interface Props {

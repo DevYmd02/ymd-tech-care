@@ -1,7 +1,17 @@
-import { type ChangeEvent } from 'react';
+import { useState, useEffect, type ChangeEvent } from 'react';
 import { Users } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import type { CustomerFormData } from '@customer/customer-master/types/customer-types';
+
+import { BusinessTypeService } from '@customer/business-type/services/business-type.service';
+import { CustomerTypeService } from '@customer/customer-type/services/customer-type.service';
+import { CustomerGroupService } from '@customer/customer-group/services/customer-group.service';
+import { BillingGroupService } from '@customer/billing-group/services/billing-group.service';
+
+import type { CustomerBusinessType } from '@customer/business-type/types/business-type.types';
+import type { CustomerType } from '@customer/customer-type/types/customer-type.types';
+import type { CustomerGroup } from '@customer/customer-group/types/customer-group.types';
+import type { CustomerBillingGroup } from '@customer/billing-group/types/billing-group.types';
 
 interface CustomerGeneralInfoProps {
     formData: CustomerFormData;
@@ -10,6 +20,31 @@ interface CustomerGeneralInfoProps {
 }
 
 export function CustomerGeneralInfo({ formData, onChange, errors }: CustomerGeneralInfoProps) {
+    const [businessTypes, setBusinessTypes] = useState<CustomerBusinessType[]>([]);
+    const [customerTypes, setCustomerTypes] = useState<CustomerType[]>([]);
+    const [customerGroups, setCustomerGroups] = useState<CustomerGroup[]>([]);
+    const [billingGroups, setBillingGroups] = useState<CustomerBillingGroup[]>([]);
+
+    useEffect(() => {
+        const fetchDropdownData = async () => {
+            try {
+                const [bTypes, cTypes, cGroups, bGroups] = await Promise.all([
+                    BusinessTypeService.getList(),
+                    CustomerTypeService.getList(),
+                    CustomerGroupService.getList(),
+                    BillingGroupService.getList()
+                ]);
+                setBusinessTypes(bTypes.data || []);
+                setCustomerTypes(cTypes.data || []);
+                setCustomerGroups(cGroups.data || []);
+                setBillingGroups(bGroups.data || []);
+            } catch (error) {
+                console.error("Failed to fetch customer dropdown data", error);
+            }
+        };
+        fetchDropdownData();
+    }, []);
+
     return (
         <section>
             <div className="flex items-center gap-2 mb-4 text-blue-600 dark:text-blue-400">
@@ -25,10 +60,11 @@ export function CustomerGeneralInfo({ formData, onChange, errors }: CustomerGene
                         name="customer_code" 
                         value={formData.customer_code} 
                         onChange={onChange} 
-                        className={styles.input} 
-                        placeholder="Auto Generated" 
-                        disabled={true}
+                        className={`${styles.input} ${errors.customer_code ? 'border-red-500' : ''}`}
+                        placeholder="เช่น CUST-0001" 
+                        required
                     />
+                    {errors.customer_code && <p className="text-xs text-red-500">{errors.customer_code}</p>}
                 </div>
                 <div className="space-y-1">
                     <label className={styles.label}>เลขประจำตัวผู้เสียภาษี</label>
@@ -42,7 +78,7 @@ export function CustomerGeneralInfo({ formData, onChange, errors }: CustomerGene
                 </div>
 
                 {/* Name TH & EN */}
-                <div className="space-y-1">
+                <div className="space-y-1 md:col-span-2">
                     <label className={styles.label}>ชื่อลูกค้า (ไทย) <span className="text-red-500">*</span></label>
                     <input 
                         name="customer_name_th" 
@@ -53,7 +89,7 @@ export function CustomerGeneralInfo({ formData, onChange, errors }: CustomerGene
                         required
                     />
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1 md:col-span-2">
                     <label className={styles.label}>ชื่อลูกค้า (อังกฤษ)</label>
                     <input 
                         name="customer_name_en" 
@@ -64,7 +100,74 @@ export function CustomerGeneralInfo({ formData, onChange, errors }: CustomerGene
                     />
                 </div>
 
-                {/* Registration Checkbox */}
+                {/* Dropdowns for Groups & Types */}
+                <div className="space-y-1">
+                    <label className={styles.label}>ประเภทธุรกิจลูกหนี้</label>
+                    <select 
+                        name="business_type_id" 
+                        value={formData.business_type_id || ''} 
+                        onChange={onChange} 
+                        className={styles.input}
+                    >
+                        <option value="">-- เลือก --</option>
+                        {businessTypes.map(item => (
+                            <option key={item.business_type_id} value={item.business_type_id}>
+                                {item.business_type_name}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+                <div className="space-y-1">
+                    <label className={styles.label}>ประเภทลูกหนี้</label>
+                    <select 
+                        name="customer_type_id" 
+                        value={formData.customer_type_id || ''} 
+                        onChange={onChange} 
+                        className={styles.input}
+                    >
+                        <option value="">-- เลือก --</option>
+                        {customerTypes.map(item => (
+                            <option key={item.customer_type_id} value={item.customer_type_id}>
+                                {item.customer_type_name}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
+                <div className="space-y-1">
+                    <label className={styles.label}>กลุ่มลูกหนี้</label>
+                    <select 
+                        name="customer_group_id" 
+                        value={formData.customer_group_id || ''} 
+                        onChange={onChange} 
+                        className={styles.input}
+                    >
+                        <option value="">-- เลือก --</option>
+                        {customerGroups.map(item => (
+                            <option key={item.customer_group_id} value={item.customer_group_id}>
+                                {item.customer_group_name}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+                <div className="space-y-1">
+                    <label className={styles.label}>กลุ่มวางบิล</label>
+                    <select 
+                        name="billing_group_id" 
+                        value={formData.billing_group_id || ''} 
+                        onChange={onChange} 
+                        className={styles.input}
+                    >
+                        <option value="">-- เลือก --</option>
+                        {billingGroups.map(item => (
+                            <option key={item.bill_group_id} value={item.bill_group_id}>
+                                {item.bill_group_name}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
+                {/* Toggles */}
                 <div className="md:col-span-2 pt-2">
                     <label className="flex items-center gap-3 cursor-pointer group">
                         <div className="relative">
@@ -86,3 +189,4 @@ export function CustomerGeneralInfo({ formData, onChange, errors }: CustomerGene
         </section>
     );
 }
+

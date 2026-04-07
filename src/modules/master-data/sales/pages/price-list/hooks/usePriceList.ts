@@ -1,14 +1,14 @@
 /**
- * @file useSalesAreaList.ts
- * @description Hook สำหรับจัดการ logic ของหน้ารายการเขตการขาย
+ * @file usePriceList.ts
+ * @description Hook for managing Price List logic
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { SaleAreaService } from '../services/area.service';
-import type { SaleAreaListItem } from '../types/area.types';
+import { PriceListService } from '@master-data/sales/pages/price-list/services/price-list.service';
+import type { PriceListHeader } from '@master-data/sales/pages/price-list/types/price-list.types';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 
-export function useSalesAreaList() {
+export function usePriceList() {
     const { 
         filters, 
         setFilters, 
@@ -16,12 +16,12 @@ export function useSalesAreaList() {
         resetFilters
     } = useTableFilters({
         customParamKeys: {
-          search: 'sale_area_code',
-          search2: 'sale_area_name'
+          search: 'price_list_no',
+          search2: 'price_list_name'
         }
     });
 
-    const [allAreas, setAllAreas] = useState<SaleAreaListItem[]>([]);
+    const [allPriceLists, setAllPriceLists] = useState<PriceListHeader[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -29,10 +29,10 @@ export function useSalesAreaList() {
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
-            const data = await SaleAreaService.getList();
-            setAllAreas(data);
+            const data = await PriceListService.getList();
+            setAllPriceLists(data);
         } catch (error) {
-            console.error('Failed to fetch sales areas:', error);
+            console.error('Failed to fetch price lists:', error);
         } finally {
             setIsLoading(false);
         }
@@ -43,7 +43,7 @@ export function useSalesAreaList() {
     }, [fetchData]);
 
     const filteredData = useMemo(() => {
-        let result = [...allAreas];
+        let result = [...allPriceLists];
 
         // Filter by Status
         if (filters.status !== 'ALL') {
@@ -52,23 +52,23 @@ export function useSalesAreaList() {
             );
         }
 
-        // Filter by Code
+        // Filter by No
         if (filters.search) {
             const term = filters.search.toLowerCase();
-            result = result.filter(item => item.sale_area_code.toLowerCase().includes(term));
+            result = result.filter(item => item.price_list_no.toLowerCase().includes(term));
         }
 
         // Filter by Name
         if (filters.search2) {
             const term = filters.search2.toLowerCase();
-            result = result.filter(item => item.sale_area_name.toLowerCase().includes(term));
+            result = result.filter(item => item.price_list_name.toLowerCase().includes(term));
         }
 
         // Sort by Created Date Desc
         result.sort((a, b) => new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime());
 
         return result;
-    }, [allAreas, filters]);
+    }, [allPriceLists, filters]);
 
     const paginatedData = useMemo(() => {
         const startIndex = (filters.page - 1) * filters.limit;
@@ -86,12 +86,12 @@ export function useSalesAreaList() {
     };
 
     const handleDelete = useCallback(async (id: string) => {
-        if (confirm('คุณต้องการลบเขตการขายนี้หรือไม่?')) {
+        if (confirm('คุณต้องการลบรายการราคานี้หรือไม่?')) {
             try {
-                await SaleAreaService.delete(id);
+                await PriceListService.delete(id);
                 fetchData();
             } catch (error) {
-                console.error('Failed to delete sales area:', error);
+                console.error('Failed to delete price list:', error);
             }
         }
     }, [fetchData]);
@@ -106,7 +106,6 @@ export function useSalesAreaList() {
         setFilters,
         handlePageChange,
         resetFilters,
-        allAreas,
         isLoading,
         isModalOpen,
         editingId,

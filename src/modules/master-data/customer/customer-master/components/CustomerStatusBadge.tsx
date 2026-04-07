@@ -19,8 +19,18 @@ const customerStatusConfig: Record<CustomerStatus, { label: string; colorClass: 
   },
 };
 
-export const CustomerStatusBadge: FC<{ status: CustomerStatus; className?: string }> = ({ status, className = '' }) => {
-  const config = customerStatusConfig[status] || customerStatusConfig.INACTIVE;
+export const CustomerStatusBadge: FC<{ 
+  status: string | undefined | null; 
+  isActive?: boolean;
+  className?: string;
+}> = ({ status, isActive, className = '' }) => {
+  // If isActive is explicitly provided, prioritize it for ACTIVE/INACTIVE
+  let normalizedStatus = (status || '').toUpperCase() as CustomerStatus;
+  
+  if (isActive === true) normalizedStatus = 'ACTIVE';
+  if (isActive === false && normalizedStatus === 'ACTIVE') normalizedStatus = 'INACTIVE';
+
+  const config = customerStatusConfig[normalizedStatus] || customerStatusConfig.INACTIVE;
   
   return (
     <span className={`inline-flex items-center gap-1.5 px-3 py-1 text-[11px] font-semibold rounded-full border shadow-sm transition-all duration-200 whitespace-nowrap ${config.colorClass} ${className}`}>

@@ -64,6 +64,8 @@ export const itemMasterSchema = z.object({
         uom_id: z.coerce.number().min(1, 'กรุณาเลือกหน่วยนับ'),
         barcode: z.string().min(1, 'กรุณากรอกบาร์โค้ด'),
         is_primary: z.boolean().default(false),
+        is_purchase: z.boolean().default(true),
+        is_sales: z.boolean().default(true),
     })).default([]),
     is_active: z.boolean().default(true),
     
@@ -262,7 +264,9 @@ export function useItemForm(editId: number | null, onSuccess?: () => void) {
                     barcode_id: b.item_barcode_id,
                     uom_id: b.uom_id || 0,
                     barcode: b.barcode,
-                    is_primary: b.is_primary ?? false
+                    is_primary: b.is_primary ?? false,
+                    is_purchase: b.is_purchase ?? true,
+                    is_sales: b.is_sales ?? true
                 })),
             });
         }
@@ -279,7 +283,9 @@ export function useItemForm(editId: number | null, onSuccess?: () => void) {
                     item_barcode_id: b.barcode_id,
                     barcode: b.barcode,
                     uom_id: b.uom_id,
-                    is_primary: b.is_primary
+                    is_primary: b.is_primary,
+                    is_purchase: b.is_purchase,
+                    is_sales: b.is_sales
                 }))
             };
 

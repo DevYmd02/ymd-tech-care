@@ -13,17 +13,17 @@ import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
 
 // Services
-import { SaleTargetService } from '@/modules/master-data/sales/services/target/sale-target.service';
-import { SalePeriodService } from '@/modules/master-data/sales/services/target/sale-period.service';
+import { SaleTargetService } from '../services/sale-target.service';
+import { SalePeriodService } from '../services/sale-period.service';
 import { OrgEmployeeService } from '@/modules/master-data/company/services/employee.service';
 
 // Types
 import type { 
   SalePeriodMaster
-} from '@/modules/master-data/sales/types/target/sale-period.types';
+} from '../types/sale-period.types';
 import type {
   SaleTargetFormData
-} from '@/modules/master-data/sales/types/target/sale-target.types';
+} from '../types/sale-target.types';
 import type { EmployeeMaster } from '@/modules/master-data/company/types/employee.types';
 
 const employeeTargetSchema = z.object({

@@ -7,7 +7,7 @@ import api from '@/core/api/api';
 import type { 
   SaleAreaMaster, 
   SaleAreaFormData 
-} from '@/modules/master-data/sales/types/area/area.types';
+} from '../types/area.types';
 
 export const SaleAreaService = {
   /**

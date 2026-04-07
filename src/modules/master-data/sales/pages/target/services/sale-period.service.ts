@@ -9,7 +9,7 @@ import type {
   SalePeriodMaster, 
   SalePeriodFormData,
   SalePeriodFilters
-} from '../../types/target/sale-period.types';
+} from '../types/sale-period.types';
 
 export const SalePeriodService = {
   getList: (params?: Partial<SalePeriodFilters>) => 

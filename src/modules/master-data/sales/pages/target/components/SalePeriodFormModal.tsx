@@ -10,11 +10,11 @@ import { z } from 'zod';
 import { Target, Save, X } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout, CustomDateInput } from '@ui';
-import { SalePeriodService } from '@/modules/master-data/sales/services/target/sale-period.service';
+import { SalePeriodService } from '../services/sale-period.service';
 import { handleError } from '@/shared/utils/errorHandler';
 import type { 
   SalePeriodFormData 
-} from '@/modules/master-data/sales/types/target/sale-period.types';
+} from '../types/sale-period.types';
 
 const targetSchema = z.object({
     begin_date: z.string().min(1, 'กรุณาเลือกวันที่เริ่มต้น'),

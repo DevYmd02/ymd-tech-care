@@ -12,6 +12,7 @@ interface DialogFormLayoutProps {
     isLoading?: boolean;
     subtitle?: string;
     headerColor?: string;
+    headerRight?: React.ReactNode;
 }
 
 export const DialogFormLayout: React.FC<DialogFormLayoutProps> = (props) => {
@@ -33,6 +34,7 @@ export const DialogFormLayout: React.FC<DialogFormLayoutProps> = (props) => {
             footer={props.footer}
             isLoading={props.isLoading}
             subtitle={props.subtitle}
+            headerRight={props.headerRight}
         >
             {props.children}
         </ModalLayout>

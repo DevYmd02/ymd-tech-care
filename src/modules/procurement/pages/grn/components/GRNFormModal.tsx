@@ -1,14 +1,12 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Save, Package, Plus, Trash2, Search } from 'lucide-react';
-import { WindowFormLayout, DialogFormLayout } from '@ui';
+import { WindowFormLayout, DialogFormLayout, CustomDateInput } from '@ui';
 import { POService } from '@/modules/procurement/services';
 import { GRNService } from '@/modules/procurement/services/grn.service';
 import type { POListItem } from '@/modules/procurement/types';
 import type { CreateGRNPayload, GRNLineItemInput } from '@/modules/procurement/types/grn-types';
 import { logger } from '@/shared/utils/logger';
-import { CustomDateInput } from '@ui';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
-import { useConfirmation } from '@/shared/hooks/useConfirmation';
 
 // ====================================================================================
 // PROPS
@@ -27,7 +25,6 @@ interface Props {
 
 export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }: Props) {
     const { toast } = useToast();
-    const { confirm } = useConfirmation();
     const prevIsOpenRef = useRef(false);
     
     // -- State --
@@ -39,7 +36,10 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
     const [remark, setRemark] = useState<string>('');
     const [warehouseId, setWarehouseId] = useState<number | undefined>(undefined);
     const [receivedBy, setReceivedBy] = useState<number | undefined>(undefined);
+    const [empDeptId, setEmpDeptId] = useState<string | undefined>(undefined);
+    const [jobId, setJobId] = useState<string | undefined>(undefined);
     const [status, setStatus] = useState<string>('Draft');
+    const [isMulticurrency, setIsMulticurrency] = useState(false);
     const [isPOSearchOpen, setIsPOSearchOpen] = useState(false);
 
     // -- Fetch Issued POs --
@@ -55,7 +55,10 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
             setRemark('');
             setWarehouseId(undefined);
             setReceivedBy(undefined);
+            setEmpDeptId(undefined);
+            setJobId(undefined);
             setStatus('Draft');
+            setIsMulticurrency(false);
             
             // Load POs
             POService.getList({ status: 'ISSUED', limit: 100 }).then(res => {
@@ -63,7 +66,7 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
             });
         }
         prevIsOpenRef.current = isOpen;
-    }, [isOpen, initialPOId, poList]);
+    }, [isOpen, initialPOId]);
 
     // -- Handle PO Selection --
     useEffect(() => {
@@ -71,20 +74,22 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
             POService.getById(selectedPOId).then(po => {
                 if (po) {
                     setSelectedPO(po);
-                    const mockItems: GRNLineItemInput[] = Array.from({ length: po.item_count || 2 }).map((_, i) => ({
+                    const mockItems: GRNLineItemInput[] = Array.from({ length: 1 }).map((_, i) => ({
                         po_line_id: 1000 + i,
                         item_id: 5000 + i,
-                        item_code: `ITM00${i+1}`,
-                        item_name: `คอมพิวเตอร์ Notebook Dell Ins`,
-                        qty_ordered: 5 * (i + 1),
-                        receiving_qty: 5 * (i + 1),
-                        accepted_qty: 5 * (i + 1),
+                        item_code: `ITM001`,
+                        item_name: `คอมพิวเตอร์ Notebook Dell Inspiro`,
+                        qty_ordered: 5,
+                        qty_received: 5,
+                        accepted_qty: 5,
                         rejected_qty: 0,
+                        uom_id: 'PCS_UUID',
                         uom_name: 'PCS',
                         unit_price: 100,
-                        line_total: 500 * (i + 1),
+                        line_total: 500,
                         qc_status: 'PASS',
-                        remark: ''
+                        lot_id: 'LOT001',
+                        remark: 'หมายเหตุ'
                     }));
                     setItems(mockItems);
                 }
@@ -100,7 +105,7 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
         setItems(prev => {
             const newItems = [...prev];
             const item = { ...newItems[index] };
-            item.receiving_qty = value;
+            item.qty_received = value;
             item.accepted_qty = value;
             item.rejected_qty = 0;
             newItems[index] = item;
@@ -108,10 +113,10 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
         });
     };
 
-    const handleQCStatusChange = (index: number, value: string) => {
+    const handleLotChange = (index: number, value: string) => {
         setItems(prev => {
             const newItems = [...prev];
-            newItems[index] = { ...newItems[index], qc_status: value };
+            newItems[index] = { ...newItems[index], lot_id: value };
             return newItems;
         });
     };
@@ -131,13 +136,14 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
             item_code: '',
             item_name: '',
             qty_ordered: 0,
-            receiving_qty: 0,
+            qty_received: 0,
             accepted_qty: 0,
             rejected_qty: 0,
             uom_name: 'PCS',
             unit_price: 0,
             line_total: 0,
             qc_status: 'PASS',
+            lot_id: '',
             remark: ''
         }]);
     };
@@ -149,46 +155,34 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
     const handleSubmit = async () => {
         if (!selectedPOId) return;
 
-        // Custom Confirmation for PENDING QC
-        const hasPending = items.some(item => item.qc_status === 'PENDING');
-        if (hasPending) {
-            const isConfirmed = await confirm({
-                title: 'ยืนยันการบันทึก',
-                description: 'มีบางรายการยังไม่ได้ตรวจสอบ (PENDING) ยืนยันที่จะบันทึกหรือไม่?',
-                confirmText: 'บันทึก',
-                cancelText: 'ยกเลิก',
-                variant: 'warning'
-            });
-            if (!isConfirmed) return;
-        }
-        
         const payload: CreateGRNPayload = {
              po_id: selectedPOId,
              received_date: formDate,
              warehouse_id: warehouseId || selectedPO?.ship_to_warehouse_id || 0,
+             received_by: receivedBy || 0,
+             status: status,
+             emp_dept_id: empDeptId,
+             job_id: jobId,
              remark: remark,
              items: items.map(i => ({
                  po_line_id: Number(i.po_line_id) || 0,
                  item_id: Number(i.item_id) || 0,
-                 receiving_qty: i.receiving_qty,
+                 qty_received: i.qty_received,
                  accepted_qty: i.accepted_qty,
                  rejected_qty: i.rejected_qty,
+                 uom_id: i.uom_id || '',
+                 lot_id: i.lot_id,
                  remark: i.remark
              }))
         };
 
         try {
             await GRNService.create(payload);
-            
-            // 🎯 Close-First Interaction Flow
             onClose(); 
             toast('บันทึกใบรับสินค้าเรียบร้อยแล้ว', 'success');
-            
-            // Delayed invalidation
             setTimeout(() => {
                 if (onSuccess) onSuccess();
             }, 100);
-            
         } catch (error) {
             logger.error('[GRNFormModal] handleSubmit error:', error);
             toast('เกิดข้อผิดพลาดในการบันทึก', 'error');
@@ -197,13 +191,13 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
 
     // -- Calculated Values --
     const totalItems = items.length;
-    const totalReceived = useMemo(() => items.reduce((sum, item) => sum + (item.receiving_qty || 0), 0), [items]);
+    const totalReceived = useMemo(() => items.reduce((sum, item) => sum + (item.qty_received || 0), 0), [items]);
 
     // -- Styles --
     const inputClass = 'w-full h-10 px-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
     const selectClass = 'w-full h-10 px-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 appearance-none';
-    const labelClass = 'block text-sm font-medium text-blue-600 dark:text-blue-400 mb-1';
-    const sectionHeaderClass = 'text-base font-bold text-blue-600 dark:text-blue-400 flex items-center gap-2';
+    const labelClass = 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1';
+    const sectionHeaderClass = 'text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2';
 
     return (
         <WindowFormLayout
@@ -219,7 +213,7 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-5 py-2.5 border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors"
+                            className="px-8 py-2 border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors"
                         >
                             ยกเลิก
                         </button>
@@ -227,7 +221,7 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
                             type="button"
                             onClick={handleSubmit}
                             disabled={!selectedPOId}
-                            className="px-6 py-2.5 bg-blue-600 text-white hover:bg-blue-700 rounded-lg text-sm font-medium shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            className="px-8 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg text-sm font-bold shadow-md transition-all flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
                         >
                             <Save size={18} />
                             บันทึก
@@ -236,28 +230,29 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
                 </div>
             }
         >
-            <div className="flex flex-col h-full bg-gray-100 dark:bg-gray-900 p-4 gap-4 overflow-auto">
+            <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-950 p-6 gap-6 overflow-auto">
                 
                 {/* ========== GRN Header Section ========== */}
-                <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-                    <h3 className={sectionHeaderClass}>
-                        <Package size={18} />
-                        ใบรับสินค้า (GRN Header)
-                    </h3>
+                <div className="bg-white dark:bg-gray-900 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
+                    <div className="border-l-4 border-blue-500 pl-3 mb-6">
+                        <h3 className={sectionHeaderClass}>
+                            ใบรับสินค้า (GRN Header)
+                        </h3>
+                    </div>
                     
                     {/* Row 1 */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div>
                             <label className={labelClass}>
-                                เลขที่ GRN <span className="text-gray-400">(grn_no)</span> <span className="text-red-500">*</span>
+                                เลขที่ GRN <span className="text-gray-400 font-normal">(grn_no)</span> <span className="text-red-500">*</span>
                             </label>
-                            <input type="text" value={grnNo} readOnly className={`${inputClass} bg-gray-50 dark:bg-gray-900`} />
+                            <input type="text" value={grnNo} readOnly className={`${inputClass} bg-gray-50 dark:bg-gray-800/50 text-gray-500 font-medium`} />
                         </div>
                         <div>
                             <label className={labelClass}>
-                                วันที่รับ <span className="text-gray-400">(grn_date)</span> <span className="text-red-500">*</span>
+                                วันที่รับ <span className="text-gray-400 font-normal">(grn_date)</span> <span className="text-red-500">*</span>
                             </label>
-                            <div className="h-10">
+                            <div className="relative h-10">
                                 <CustomDateInput 
                                     value={formDate} 
                                     onChange={(val) => setFormDate(val)} 
@@ -267,22 +262,20 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
                         </div>
                         <div>
                             <label className={labelClass}>
-                                เลขที่ PO อ้างอิง <span className="text-gray-400">(po_id FK)</span> <span className="text-red-500">*</span>
+                                เลขที่ PO อ้างอิง <span className="text-gray-400 font-normal">(po_id FK)</span> <span className="text-red-500">*</span>
                             </label>
                             <div className="flex gap-2">
                                 <input 
                                     type="text" 
                                     value={selectedPO?.po_no || 'PO2024-xxx'} 
                                     readOnly 
-                                    className={`${inputClass} flex-1 bg-gray-50 dark:bg-gray-900`}
+                                    className={`${inputClass} flex-1 bg-gray-50 dark:bg-gray-800/50 text-gray-500`}
                                     placeholder="PO2024-xxx"
                                 />
                                 <button 
                                     type="button"
-                                    onClick={() => {
-                                        setIsPOSearchOpen(true);
-                                    }}
-                                    className="px-4 h-10 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center"
+                                    onClick={() => setIsPOSearchOpen(true)}
+                                    className="px-4 h-10 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm transition-all focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center justify-center"
                                 >
                                     <Search size={18} />
                                 </button>
@@ -291,10 +284,10 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
                     </div>
 
                     {/* Row 2 */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
                         <div>
                             <label className={labelClass}>
-                                รับเข้าคลัง <span className="text-gray-400">(warehouse_id FK)</span> <span className="text-red-500">*</span>
+                                รับเข้าคลัง <span className="text-gray-400 font-normal">(warehouse_id FK)</span> <span className="text-red-500">*</span>
                             </label>
                             <select value={warehouseId || ''} onChange={(e) => setWarehouseId(e.target.value ? Number(e.target.value) : undefined)} className={selectClass}>
                                 <option value="">-- เลือกคลังสินค้า --</option>
@@ -304,7 +297,7 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
                         </div>
                         <div>
                             <label className={labelClass}>
-                                ผู้รับสินค้า <span className="text-gray-400">(received_by)</span> <span className="text-red-500">*</span>
+                                ผู้รับสินค้า <span className="text-gray-400 font-normal">(received_by)</span> <span className="text-red-500">*</span>
                             </label>
                             <select value={receivedBy || ''} onChange={(e) => setReceivedBy(e.target.value ? Number(e.target.value) : undefined)} className={selectClass}>
                                 <option value="">-- เลือกผู้รับสินค้า --</option>
@@ -314,138 +307,198 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
                         </div>
                         <div>
                             <label className={labelClass}>
-                                สถานะ <span className="text-gray-400">(status)</span>
+                                แผนก <span className="text-gray-400 font-normal">(department_code)</span>
                             </label>
-                            <select value={status} onChange={(e) => setStatus(e.target.value)} className={selectClass}>
+                            <select value={empDeptId || ''} onChange={(e) => setEmpDeptId(e.target.value)} className={selectClass}>
+                                <option value="">-- เลือกแผนก --</option>
+                                <option value="DEPT01">ฝ่ายผลิต</option>
+                                <option value="DEPT02">ฝ่ายขาย</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Row 3 */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+                        <div>
+                            <label className={labelClass}>
+                                งาน <span className="text-gray-400 font-normal">(job_code)</span>
+                            </label>
+                            <select value={jobId || ''} onChange={(e) => setJobId(e.target.value)} className={selectClass}>
+                                <option value="">-- เลือกงาน --</option>
+                                <option value="JOB01">งานติดตั้งเครื่องจักร</option>
+                                <option value="JOB02">งานซ่อมบำรุงประจำปี</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className={labelClass}>
+                                สถานะ <span className="text-gray-400 font-normal">(status)</span>
+                            </label>
+                            <select value={status} onChange={(e) => setStatus(e.target.value)} className={`${selectClass} font-medium text-blue-600`}>
                                 <option value="Draft">Draft</option>
-                                <option value="Completed">Completed</option>
+                                <option value="Posted">Posted</option>
+                                <option value="Cancelled">Cancelled</option>
                             </select>
                         </div>
                     </div>
 
                     {/* Remarks */}
-                    <div className="mt-4">
+                    <div className="mt-6">
                         <label className={labelClass}>
-                            หมายเหตุ <span className="text-gray-400">(remarks - optional)</span>
+                            หมายเหตุ <span className="text-gray-400 font-normal">(remarks - optional)</span>
                         </label>
                         <textarea 
                             value={remark}
                             onChange={(e) => setRemark(e.target.value)}
                             placeholder="ระบุหมายเหตุเพิ่มเติม (ถ้ามี)"
                             rows={2}
-                            className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 resize-none"
+                            className="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 resize-none shadow-sm transition-all"
                         />
+                    </div>
+
+                    {/* Multicurrency */}
+                    <div className="mt-6 p-4 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30">
+                        <label className="flex items-center gap-3 cursor-pointer group">
+                            <input 
+                                type="checkbox" 
+                                checked={isMulticurrency} 
+                                onChange={(e) => setIsMulticurrency(e.target.checked)}
+                                className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                            />
+                            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-blue-600 transition-colors">Multicurrency</span>
+                        </label>
                     </div>
                 </div>
 
                 {/* ========== Line Items Section ========== */}
-                <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex-1 flex flex-col">
-                    <div className="flex justify-between items-center mb-4">
-                        <h3 className={sectionHeaderClass}>
-                            รายการสินค้าที่รับ (GRN Line Items)
-                        </h3>
+                <div className="bg-white dark:bg-gray-900 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 flex flex-col">
+                    <div className="flex justify-between items-center mb-6">
+                        <div className="border-l-4 border-blue-500 pl-3">
+                            <h3 className={sectionHeaderClass}>
+                                รายการสินค้าที่รับ (GRN Line Items)
+                            </h3>
+                        </div>
                         <button 
                             type="button"
                             onClick={handleAddLine}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm font-medium"
+                            className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm transition-all flex items-center gap-2 text-sm font-bold active:scale-95"
                         >
-                            <Plus size={16} />
+                            <Plus size={18} strokeWidth={2.5} />
                             เพิ่มรายการ
                         </button>
                     </div>
 
                     {/* Table */}
-                    <div className="flex-1 overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
-                        <table className="w-full min-w-[900px] text-sm">
-                            <thead className="bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400">
-                                <tr>
-                                    <th className="px-3 py-3 text-center w-12 border-b border-r border-gray-200 dark:border-gray-700">#</th>
-                                    <th className="px-3 py-3 text-left w-28 border-b border-r border-gray-200 dark:border-gray-700">
-                                        รหัสสินค้า<br/><span className="text-xs text-gray-400">(item_id FK)</span>
+                    <div className="border border-gray-200 dark:border-gray-800 rounded-xl shadow-inner scrollbar-hide">
+                        <table className="w-full min-w-[1000px] text-sm table-fixed border-collapse">
+                            <thead>
+                                <tr className="bg-gray-50 dark:bg-gray-800/80 text-gray-600 dark:text-gray-400">
+                                    <th className="px-4 py-4 text-center w-[50px] font-bold border-b border-gray-100 dark:border-gray-700">#</th>
+                                    <th className="px-4 py-4 text-left w-[140px] font-bold border-b border-gray-100 dark:border-gray-700 leading-tight">
+                                        รหัสสินค้า<br/><span className="text-[10px] font-normal text-gray-400">(item_id FK)</span>
                                     </th>
-                                    <th className="px-3 py-3 text-left border-b border-r border-gray-200 dark:border-gray-700">ชื่อสินค้า</th>
-                                    <th className="px-3 py-3 text-center w-24 border-b border-r border-gray-200 dark:border-gray-700">
-                                        จำนวนสั่ง<br/><span className="text-xs text-gray-400">(PO Qty)</span>
+                                    <th className="px-4 py-4 text-left font-bold border-b border-gray-100 dark:border-gray-700">ชื่อสินค้า</th>
+                                    <th className="px-4 py-4 text-center w-[110px] font-bold border-b border-gray-100 dark:border-gray-700 leading-tight">
+                                        จำนวนสั่ง<br/><span className="text-[10px] font-normal text-gray-400">(PO Qty)</span>
                                     </th>
-                                    <th className="px-3 py-3 text-center w-24 border-b border-r border-gray-200 dark:border-gray-700">
-                                        จำนวนรับ<br/><span className="text-xs text-gray-400">(qty_received)*</span>
+                                    <th className="px-4 py-4 text-center w-[110px] font-bold border-b border-gray-100 dark:border-gray-700 leading-tight">
+                                        จำนวนรับ<br/><span className="text-[10px] font-normal text-red-500">(qty_received)*</span>
                                     </th>
-                                    <th className="px-3 py-3 text-center w-20 border-b border-r border-gray-200 dark:border-gray-700">
-                                        หน่วย<br/><span className="text-xs text-gray-400">(uom_id FK)</span>
+                                    <th className="px-4 py-4 text-left w-[110px] font-bold border-b border-gray-100 dark:border-gray-700 leading-tight">
+                                        หน่วย<br/><span className="text-[10px] font-normal text-gray-400">(uom_id FK)</span>
                                     </th>
-                                    <th className="px-3 py-3 text-center w-24 border-b border-r border-gray-200 dark:border-gray-700">
-                                        สถานะ QC<br/><span className="text-xs text-gray-400">(qc_status)</span>
+                                    <th className="px-4 py-4 text-left w-[120px] font-bold border-b border-gray-100 dark:border-gray-700 leading-tight">
+                                        Lot No<br/><span className="text-[10px] font-normal text-gray-400">(lot_no)</span>
                                     </th>
-                                    <th className="px-3 py-3 text-left w-32 border-b border-r border-gray-200 dark:border-gray-700">
-                                        หมายเหตุ<br/><span className="text-xs text-gray-400">(remarks)</span>
+                                    <th className="px-4 py-4 text-left w-[180px] font-bold border-b border-gray-100 dark:border-gray-700 leading-tight">
+                                        หมายเหตุ<br/><span className="text-[10px] font-normal text-gray-400">(remarks)</span>
                                     </th>
-                                    <th className="px-3 py-3 text-center w-12 border-b border-gray-200 dark:border-gray-700">ลบ</th>
+                                    <th className="px-4 py-4 text-center w-[60px] font-bold border-b border-gray-100 dark:border-gray-700">ลบ</th>
                                 </tr>
                             </thead>
-                            <tbody className="bg-white dark:bg-gray-800">
+                            <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
                                 {items.map((item, index) => (
-                                    <tr key={item.po_line_id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750">
-                                        <td className="px-3 py-2 text-center text-gray-500 border-r border-gray-100 dark:border-gray-700">{index + 1}</td>
-                                        <td className="px-3 py-2 border-r border-gray-100 dark:border-gray-700">
-                                            <input type="text" value={item.item_code} readOnly className="w-full h-8 px-2 text-sm border border-gray-200 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white" />
+                                    <tr key={item.po_line_id} className="group hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors">
+                                        <td className="px-4 py-3 text-center text-gray-400 font-medium">{index + 1}</td>
+                                        <td className="px-2 py-3">
+                                            <input 
+                                                type="text" 
+                                                value={item.item_code} 
+                                                readOnly 
+                                                className="w-full h-9 px-2 text-sm border border-transparent group-hover:border-gray-200 dark:group-hover:border-gray-700 rounded bg-transparent focus:bg-white dark:focus:bg-gray-800 transition-all outline-none" 
+                                            />
                                         </td>
-                                        <td className="px-3 py-2 border-r border-gray-100 dark:border-gray-700">
-                                            <input type="text" value={item.item_name} readOnly className="w-full h-8 px-2 text-sm border border-gray-200 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white" />
+                                        <td className="px-2 py-3">
+                                            <input 
+                                                type="text" 
+                                                value={item.item_name} 
+                                                readOnly 
+                                                className="w-full h-9 px-2 text-sm border border-transparent group-hover:border-gray-200 dark:group-hover:border-gray-700 rounded bg-transparent focus:bg-white dark:focus:bg-gray-800 transition-all outline-none" 
+                                            />
                                         </td>
-                                        <td className="px-3 py-2 text-center border-r border-gray-100 dark:border-gray-700">
-                                            <input type="number" value={item.qty_ordered} readOnly className="w-full h-8 px-2 text-sm text-center border border-gray-200 dark:border-gray-600 rounded bg-gray-100 dark:bg-gray-900 text-gray-500 dark:text-gray-400" />
+                                        <td className="px-2 py-3">
+                                            <input 
+                                                type="number" 
+                                                value={item.qty_ordered} 
+                                                readOnly 
+                                                className="w-full h-9 px-2 text-sm text-center border border-gray-100 dark:border-gray-800 rounded bg-gray-50/50 dark:bg-gray-800/50 text-gray-500 font-medium" 
+                                            />
                                         </td>
-                                        <td className="px-3 py-2 border-r border-gray-100 dark:border-gray-700">
+                                        <td className="px-2 py-3">
                                             <input 
                                                 type="number" 
                                                 min={0}
-                                                value={item.receiving_qty} 
+                                                value={item.qty_received} 
                                                 onChange={(e) => handleQuantityChange(index, Number(e.target.value))}
-                                                className="w-full h-8 px-2 text-sm text-center border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                                                className="w-full h-9 px-2 text-sm text-center border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-blue-600 font-bold focus:ring-2 focus:ring-blue-500 shadow-sm"
                                             />
                                         </td>
-                                        <td className="px-3 py-2 border-r border-gray-100 dark:border-gray-700">
-                                            <select value={item.uom_name} className="w-full h-8 px-2 text-sm border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
-                                                <option value="PCS">PCS</option>
-                                                <option value="BOX">BOX</option>
-                                                <option value="SET">SET</option>
-                                            </select>
-                                        </td>
-                                        <td className="px-3 py-2 border-r border-gray-100 dark:border-gray-700">
+                                        <td className="px-2 py-3">
                                             <select 
-                                                value={item.qc_status || 'PASS'} 
-                                                onChange={(e) => handleQCStatusChange(index, e.target.value)}
-                                                className="w-full h-8 px-2 text-sm border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                                value={item.uom_name} 
+                                                onChange={() => {}} // Read-only for now
+                                                className="w-full h-9 px-2 text-sm border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
                                             >
-                                                <option value="PASS">PASS</option>
-                                                <option value="FAIL">FAIL</option>
-                                                <option value="PENDING">PENDING</option>
+                                                <option value="PCS">PCS</option>
+                                                <option value="SET">SET</option>
+                                                <option value="BOX">BOX</option>
                                             </select>
                                         </td>
-                                        <td className="px-3 py-2 border-r border-gray-100 dark:border-gray-700">
+                                        <td className="px-2 py-3">
+                                            <input 
+                                                type="text" 
+                                                value={item.lot_id || ''} 
+                                                onChange={(e) => handleLotChange(index, e.target.value)}
+                                                placeholder="ระบุล๊อต"
+                                                className="w-full h-9 px-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        </td>
+                                        <td className="px-2 py-3">
                                             <input 
                                                 type="text" 
                                                 value={item.remark || ''} 
                                                 onChange={(e) => handleRemarkChange(index, e.target.value)}
                                                 placeholder="หมายเหตุ"
-                                                className="w-full h-8 px-2 text-sm border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                                className="w-full h-9 px-2 text-sm border border-transparent group-hover:border-gray-200 dark:group-hover:border-gray-700 rounded bg-transparent focus:bg-white dark:focus:bg-gray-800 transition-all outline-none"
                                             />
                                         </td>
-                                        <td className="px-3 py-2 text-center">
+                                        <td className="px-4 py-3 text-center">
                                             <button 
                                                 type="button"
                                                 onClick={() => handleRemoveLine(index)}
-                                                className="text-red-500 hover:text-red-700 p-1"
+                                                className="w-8 h-8 flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-all"
                                             >
-                                                <Trash2 size={16} />
+                                                <Trash2 size={18} />
                                             </button>
                                         </td>
                                     </tr>
                                 ))}
                                 {items.length === 0 && (
                                     <tr>
-                                        <td colSpan={9} className="px-3 py-8 text-center text-gray-400">
-                                            กรุณาเลือก PO เพื่อแสดงรายการสินค้า หรือกดปุ่ม "เพิ่มรายการ"
+                                        <td colSpan={9} className="px-4 py-16 text-center">
+                                            <div className="flex flex-col items-center gap-3 text-gray-400 dark:text-gray-600">
+                                                <Package size={48} strokeWidth={1} />
+                                                <p className="text-sm">กรุณาเลือก PO เพื่อดึงรายการสินค้า หรือกดปุ่ม "เพิ่มรายการ"</p>
+                                            </div>
                                         </td>
                                     </tr>
                                 )}
@@ -454,15 +507,19 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
                     </div>
 
                     {/* Summary Section */}
-                    <div className="mt-4 flex justify-end">
-                        <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 w-72">
-                            <div className="flex justify-between items-center mb-2 text-sm">
-                                <span className="text-gray-600 dark:text-gray-400">จำนวนรายการทั้งหมด:</span>
-                                <span className="font-bold text-gray-900 dark:text-white">{totalItems} รายการ</span>
+                    <div className="mt-8 flex justify-end">
+                        <div className="bg-blue-50/50 dark:bg-blue-900/10 border-2 border-blue-100 dark:border-blue-900/30 rounded-2xl p-6 min-w-[320px] shadow-sm">
+                            <div className="flex justify-between items-center mb-4 pb-4 border-b border-blue-100/50 dark:border-blue-900/20">
+                                <span className="text-gray-600 dark:text-gray-400 font-medium">จำนวนรายการทั้งหมด:</span>
+                                <span className="font-bold text-gray-900 dark:text-white px-3 py-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-blue-100 dark:border-blue-900/30">{totalItems} <span className="text-[10px] font-normal text-gray-400 uppercase ml-1">Items</span></span>
                             </div>
-                            <div className="flex justify-between items-center text-sm">
-                                <span className="text-gray-600 dark:text-gray-400 font-medium">จำนวนรับรวม:</span>
-                                <span className="font-bold text-blue-600 dark:text-blue-400 text-lg">{totalReceived.toLocaleString(undefined, { minimumFractionDigits: 3 })}</span>
+                            <div className="flex justify-between items-end">
+                                <span className="text-gray-700 dark:text-gray-300 font-bold mb-1">จำนวนรับรวม:</span>
+                                <div className="text-right">
+                                    <span className="font-black text-blue-600 dark:text-blue-400 text-3xl leading-none">
+                                        {totalReceived.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 })}
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     </div>

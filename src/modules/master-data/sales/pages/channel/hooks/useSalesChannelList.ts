@@ -4,8 +4,8 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { SalesChannelService } from '@/modules/master-data/sales/services/channel/channel.service';
-import type { SalesChannelListItem } from '@/modules/master-data/sales/types/channel/channel.types';
+import { SalesChannelService } from '../services/channel.service';
+import type { SalesChannelListItem } from '../types/channel.types';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 

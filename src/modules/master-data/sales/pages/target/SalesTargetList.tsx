@@ -22,19 +22,19 @@ import { SalePeriodFormModal } from './components/SalePeriodFormModal';
 import { SaleTargetFormModal } from './components/SaleTargetFormModal';
 
 // Services
-import { SalePeriodService } from '@/modules/master-data/sales/services/target/sale-period.service';
-import { SaleTargetService } from '@/modules/master-data/sales/services/target/sale-target.service';
+import { SalePeriodService } from './services/sale-period.service';
+import { SaleTargetService } from './services/sale-target.service';
 
 // Hooks & Types
 import { useTableFilters, type TableFilters } from '@/shared/hooks/useTableFilters';
 import type { 
     SalePeriodMaster, 
     SalePeriodFilters 
-} from '@/modules/master-data/sales/types/target/sale-period.types';
+} from './types/sale-period.types';
 import type { 
     SaleTargetMaster, 
     SaleTargetFilters 
-} from '@/modules/master-data/sales/types/target/sale-target.types';
+} from './types/sale-target.types';
 
 const STATUS_OPTIONS = [
     { label: 'ทั้งหมด', value: 'ALL' },
