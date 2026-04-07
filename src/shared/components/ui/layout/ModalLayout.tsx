@@ -22,7 +22,7 @@ interface ModalLayoutProps {
     /** Modal style variant */
     variant?: 'window' | 'dialog';
     /** Modal width/size */
-    size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
+    size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full';
     /** Loading state */
     isLoading?: boolean;
     /** Accent color for window header (e.g., bg-blue-600) */
@@ -38,6 +38,8 @@ const sizeClasses = {
     md: 'max-w-lg',
     lg: 'max-w-4xl',
     xl: 'max-w-6xl',
+    '2xl': 'max-w-[1600px]',
+    '3xl': 'max-w-[1800px]',
     full: 'w-full h-full rounded-none',
 };
 
@@ -164,7 +166,12 @@ export const ModalLayout: React.FC<ModalLayoutProps> = ({
                     )}>
                         <div className="flex items-center gap-4">
                             {titleIcon && (
-                                <div className="p-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl">
+                                <div className={cn(
+                                    "p-2 rounded-xl",
+                                    headerColor 
+                                        ? "bg-white/20 text-white" 
+                                        : "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+                                )}>
                                     {titleIcon}
                                 </div>
                             )}
