@@ -18,7 +18,7 @@ export type CustomerAddressType = 'REGISTERED' | 'CONTACT' | 'BILLING' | 'SHIPPI
 
 /** Address Item for Form Data */
 export interface CustomerAddressFormItem {
-    id: string; // Temp ID for UI key
+    id: string | number; // Temp ID for UI key
     address: string;
     subDistrict?: string;
     district: string;
@@ -35,7 +35,7 @@ export interface CustomerAddressFormItem {
 
 /** Additional Contact Interface */
 export interface CustomerContactPerson {
-    id: string;
+    id: string | number;
     name: string;
     position: string;
     phone: string;
@@ -50,8 +50,8 @@ export interface CustomerContactPerson {
 
 /** Customer Address (Backend Schema) */
 export interface CustomerAddress {
-    customer_address_id: string;
-    customer_id: string;
+    customer_address_id: number | string;
+    customer_id: number | string;
     address_type: CustomerAddressType;
     address: string;
     sub_district?: string | null;
@@ -69,8 +69,8 @@ export interface CustomerAddress {
 
 /** Customer Contact (Backend Schema) */
 export interface CustomerContact {
-    contact_id: string;
-    customer_id: string;
+    contact_id: number | string;
+    customer_id: number | string;
     contact_name: string;
     position?: string;
     phone?: string;
@@ -87,22 +87,33 @@ export interface CustomerMaster {
     name_en: string;
     customer_id: number;
     customer_code: string;
-    customer_name_th: string;
-    customer_name_en: string;
+    customer_name_th?: string;
+    customer_name_en?: string;
+    customer_name?: string;
+    customer_nameeng?: string;
     tax_id: string;
-    business_type_id: number;
-    customer_type_id: number;
-    customer_group_id: number;
-    billing_group_id: number;
-    credit_limit?: number;
+    is_vat_registered?: boolean;
+    business_type_id: number | string;
+    customer_type_id: number | string;
+    customer_group_id: number | string;
+    billing_group_id?: number | string;
+    bill_group_id?: number | string;
+    credit_limit?: number | string;
     credit_days?: number;
+    credit_term_days?: number;
     payment_method?: string;
+    payment_method_default?: string;
+    phone?: string | null;
+    email?: string | null;
+    website?: string | null;
+    contact_name?: string | null;
     status: CustomerStatus;
     is_active: boolean;
     created_at: string;
     updated_at: string;
     // Relational Data
     addresses?: CustomerAddress[];
+    customerAddresses?: CustomerAddress[];
     contacts?: CustomerContact[];
     
     // Relations (optional objects)
@@ -119,10 +130,10 @@ export interface CustomerFormData {
     customer_name_en: string;
     tax_id: string;
     
-    business_type_id: number;
-    customer_type_id: number;
-    customer_group_id: number;
-    billing_group_id: number;
+    business_type_id: number | string;
+    customer_type_id: number | string;
+    customer_group_id: number | string;
+    billing_group_id: number | string;
     
     vat_registered: boolean;
     
@@ -138,11 +149,11 @@ export interface CustomerFormData {
     credit_limit: number;
     credit_term: number;
     payment_method_id: string;
-    currency_id: string;
     
     additional_contacts: CustomerContactPerson[];
     note: string;
     status: CustomerStatus;
+    is_active: boolean;
 }
 
 // ====================================================================================
@@ -191,7 +202,7 @@ export const initialCustomerFormData: CustomerFormData = {
         contactPerson: '',
         phone: '',
         phoneExtension: '',
-        email: ''
+        email: '' 
     }, {
         id: '2',
         address: '',
@@ -215,29 +226,32 @@ export const initialCustomerFormData: CustomerFormData = {
     website: '',
     credit_limit: 0,
     credit_term: 30,
-    payment_method_id: 'TRANSFER',
-    currency_id: 'THB',
+    payment_method_id: '',
     additional_contacts: [],
     note: '',
-    status: 'ACTIVE'
+    status: 'ACTIVE',
+    is_active: true
 };
 
 /**
  * แปลง CustomerMaster (API) → CustomerFormData (frontend)
  */
 export const toCustomerFormData = (c: CustomerMaster): CustomerFormData => {
+    // Resolve relational arrays
+    const targetAddresses = c.customerAddresses || c.addresses;
+    
     return {
         customer_code: c.customer_code || '',
-        customer_name_th: c.customer_name_th || '',
-        customer_name_en: c.customer_name_en || '',
+        customer_name_th: c.customer_name || c.customer_name_th || '',
+        customer_name_en: c.customer_nameeng || c.customer_name_en || '',
         tax_id: c.tax_id || '',
-        business_type_id: c.business_type_id || 0,
-        customer_type_id: c.customer_type_id || 0,
-        customer_group_id: c.customer_group_id || 0,
-        billing_group_id: c.billing_group_id || 0,
-        vat_registered: true,
-        addresses: (c.addresses || []).map((addr) => ({
-            id: addr.customer_address_id ? String(addr.customer_address_id) : '1',
+        business_type_id: c.business_type_id || '',
+        customer_type_id: c.customer_type_id || '',
+        customer_group_id: c.customer_group_id || '',
+        billing_group_id: c.bill_group_id || c.billing_group_id || '',
+        vat_registered: c.is_vat_registered ?? true,
+        addresses: targetAddresses && targetAddresses.length > 0 ? targetAddresses.map((addr) => ({
+            id: addr.customer_address_id ? String(addr.customer_address_id) : String(Math.random()),
             address: addr.address || '',
             subDistrict: addr.sub_district || '',
             district: addr.district || '',
@@ -250,17 +264,16 @@ export const toCustomerFormData = (c: CustomerMaster): CustomerFormData => {
             phone: addr.phone || '',
             phoneExtension: addr.phone_extension || '',
             email: addr.email || ''
-        })),
+        })) : initialCustomerFormData.addresses,
         same_as_registered: true,
-        contact_name: c.contacts?.[0]?.contact_name || '',
-        phone: c.contacts?.[0]?.phone || '',
+        contact_name: c.contact_name || c.contacts?.[0]?.contact_name || '',
+        phone: c.phone || c.contacts?.[0]?.phone || '',
         mobile: c.contacts?.[0]?.mobile || '',
-        email: c.contacts?.[0]?.email || '',
-        website: '',
-        credit_limit: c.credit_limit || 0,
-        credit_term: c.credit_days || 0,
-        payment_method_id: c.payment_method || '',
-        currency_id: 'THB',
+        email: c.email || c.contacts?.[0]?.email || '',
+        website: c.website || '',
+        credit_limit: Number(c.credit_limit || 0),
+        credit_term: c.credit_term_days || c.credit_days || 0,
+        payment_method_id: c.payment_method_default || c.payment_method || '',
         additional_contacts: (c.contacts || []).slice(1).map((contact) => ({
             id: contact.contact_id || String(Math.random()),
             name: contact.contact_name || '',
@@ -271,6 +284,7 @@ export const toCustomerFormData = (c: CustomerMaster): CustomerFormData => {
             isMain: contact.is_primary ?? false
         })),
         note: '',
-        status: c.status || 'ACTIVE'
+        status: c.status || 'ACTIVE',
+        is_active: c.is_active ?? true
     };
 };

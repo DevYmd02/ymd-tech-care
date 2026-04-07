@@ -106,7 +106,7 @@ export function useCustomerForm({
             district: '',
             province: '',
             postalCode: '',
-            country: 'Thailand',
+            country: '',
             isMain: false,
             addressType: 'SHIPPING'
         };
@@ -148,14 +148,117 @@ export function useCustomerForm({
         e.preventDefault();
         setIsSubmitting(true);
         try {
-            console.log('Submit Customer:', formData);
-            // API Call logic
-            toast('บันทึกข้อมูลลูกค้าเรียบร้อยแล้ว', 'success');
-            onSuccess?.();
-            onClose();
-        } catch (error) {
+            // Pre-submit validation for addresses (backend DTO has email as @IsNotEmpty @IsString)
+            for (let i = 0; i < formData.addresses.length; i++) {
+                const addr = formData.addresses[i];
+                const typeLabel = addr.addressType === 'REGISTERED' ? 'ที่อยู่ตามทะเบียน' : addr.addressType === 'CONTACT' ? 'ที่อยู่ติดต่อ' : `ที่อยู่อื่นๆ (${i + 1})`;
+                
+                // If specific address email is empty, we will fallback to formData.email or placeholder in mapping
+                // But let's check if the OVERALL email source is available if we want to be strict
+                const finalEmail = addr.email || formData.email || 'no-email@ymd.com';
+                if (!finalEmail || finalEmail.trim() === '') {
+                    toast(`กรุณากรอก "อีเมล" ในส่วน ${typeLabel}`, 'error');
+                    setIsSubmitting(false);
+                    return;
+                }
+            }
+
+            // Map addresses - aligned with CreateCustomerAddressDto
+            const mappedAddresses = formData.addresses.map(a => ({
+                address_type:    a.addressType || 'REGISTERED' as const,
+                address:         a.address || '',
+                sub_district:    a.subDistrict || undefined,
+                district:        a.district || '',
+                province:        a.province || '',
+                postal_code:     a.postalCode || '',
+                country:         a.country || 'Thailand',
+                contact_person:  a.contactPerson || '',
+                phone:           a.phone || undefined,
+                phone_extension: a.phoneExtension || undefined,
+                email:           a.email || formData.email || 'no-email@ymd.com', // Fallback cascade
+                is_default:      a.isMain ?? false,
+                is_active:       true
+            }));
+
+            let response;
+
+            if (id) {
+                // ===== UPDATE Payload =====
+                const updatePayload = {
+                    customer_name:          formData.customer_name_th,
+                    customer_nameeng:       formData.customer_name_en,
+                    tax_id:                 formData.tax_id,
+                    is_vat_registered:      formData.vat_registered,
+                    business_type_id:       formData.business_type_id ? Number(formData.business_type_id) : undefined,
+                    customer_type_id:       formData.customer_type_id ? Number(formData.customer_type_id) : undefined,
+                    customer_group_id:      formData.customer_group_id ? Number(formData.customer_group_id) : undefined,
+                    bill_group_id:          formData.billing_group_id ? Number(formData.billing_group_id) : undefined,
+                    credit_limit:           Number(formData.credit_limit || 0),
+                    payment_term_days:      Number(formData.credit_term || 0),
+                    payment_method_default: formData.payment_method_id,
+                    contact_name:           formData.contact_name,
+                    phone:                  formData.phone,
+                    email:                  formData.email,
+                    website:                formData.website,
+                    is_active:              formData.is_active,
+                    customerAddresses:      mappedAddresses,
+                };
+                response = await CustomerService.update(id, updatePayload as unknown as Partial<CustomerMaster>);
+            } else {
+                // ===== CREATE Payload - aligned with CreateCustomerMasterDto =====
+                const createPayload = {
+                    customer_code:          formData.customer_code,
+                    customer_name:          formData.customer_name_th,
+                    customer_nameeng:       formData.customer_name_en || undefined,
+                    tax_id:                 formData.tax_id || undefined,
+                    is_vat_registered:      formData.vat_registered,
+                    // Required fields - must be numbers
+                    customer_type_id:       Number(formData.customer_type_id) || 0,
+                    customer_group_id:      Number(formData.customer_group_id) || 0,
+                    // Optional number fields
+                    bill_group_id:          formData.billing_group_id ? Number(formData.billing_group_id) : undefined,
+                    business_type_id:       formData.business_type_id ? Number(formData.business_type_id) : undefined,
+                    credit_limit:           formData.credit_limit ? Number(formData.credit_limit) : undefined,
+                    payment_term_days:      formData.credit_term ? Number(formData.credit_term) : undefined,
+                    payment_method_default: formData.payment_method_id || undefined,
+                    contact_name:           formData.contact_name || undefined,
+                    phone:                  formData.phone || undefined,
+                    email:                  formData.email || undefined,
+                    website:                formData.website || undefined,
+                    is_active:              formData.is_active,
+                    addresses:              mappedAddresses,
+                };
+                response = await CustomerService.create(createPayload as unknown as Partial<CustomerMaster>);
+            }
+
+            if (response.success) {
+                toast('บันทึกข้อมูลลูกค้าเรียบร้อยแล้ว', 'success');
+                onSuccess?.();
+                onClose();
+            } else {
+                toast(response.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'error');
+            }
+        } catch (error: unknown) {
+            // ---- Detailed Error Extraction ----
+            let errorMessage = 'เกิดข้อผิดพลาดในการบันทึกข้อมูล';
+
+            if (error && typeof error === 'object' && 'response' in error) {
+                const axiosError = error as { response?: { data?: { message?: string | string[]; statusCode?: number } } };
+                const data = axiosError.response?.data;
+                
+                if (data) {
+                    if (Array.isArray(data.message)) {
+                        // NestJS class-validator returns array of errors
+                        errorMessage = data.message.join('\n');
+                        logger.error('Validation Errors:', data.message);
+                    } else if (typeof data.message === 'string') {
+                        errorMessage = data.message;
+                    }
+                }
+            }
+
             logger.error('Error saving customer:', error);
-            toast('เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'error');
+            toast(errorMessage, 'error');
         } finally {
             setIsSubmitting(false);
         }

@@ -5,17 +5,11 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { Users, Plus, Search, Edit2, Trash2, MoreHorizontal, X } from 'lucide-react';
+import { Users, Plus, Search, Edit2, Trash2, X } from 'lucide-react';
 import { 
     PageListLayout, 
     SmartTable, 
     FilterField,
-    DropdownMenu, 
-    DropdownMenuContent, 
-    DropdownMenuItem, 
-    DropdownMenuLabel, 
-    DropdownMenuSeparator, 
-    DropdownMenuTrigger 
 } from '@ui';
 import { useTableFilters, useDebounce, useConfirmation } from '@/shared/hooks';
 import { createColumnHelper } from '@tanstack/react-table';
@@ -90,70 +84,86 @@ export default function CustomerListPage() {
     columnHelper.accessor('customer_code', {
       header: 'รหัสลูกค้า',
       cell: (info) => <span className="font-bold text-blue-600 dark:text-blue-400">{info.getValue()}</span>,
-      size: 150,
+      size: 120,
     }),
     columnHelper.accessor('customer_name_th', {
       header: 'ชื่อลูกค้า',
       cell: (info) => {
         const row = info.row.original;
+        const nameTh = row.customer_name || row.customer_name_th;
+        const nameEn = row.customer_nameeng || row.customer_name_en;
         return (
-          <div className="flex flex-col">
-            <span className="font-medium text-gray-900 dark:text-gray-100">{info.getValue()}</span>
-            <span className="text-xs text-gray-500">{row.customer_name_en}</span>
+          <div className="flex flex-col min-w-0">
+            <span className="font-medium text-gray-900 dark:text-gray-100 truncate" title={nameTh}>
+              {nameTh}
+            </span>
+            <span className="text-[10px] text-gray-500 truncate" title={nameEn}>
+              {nameEn}
+            </span>
           </div>
         );
       },
-      size: 300,
+      size: 250,
     }),
     columnHelper.accessor('tax_id', {
-      header: 'เลขที่ผู้เสียภาษี',
+      header: 'เลขผู้เสียภาษี',
       cell: (info) => <span className="text-gray-600 dark:text-gray-400">{info.getValue() || '-'}</span>,
-      size: 150,
+      size: 130,
     }),
     columnHelper.accessor('credit_limit', {
       header: () => <div className="text-right w-full">วงเงิน (บาท)</div>,
-      cell: (info) => <div className="text-right font-medium">{(info.getValue() || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>,
+      cell: (info) => <div className="text-right font-medium text-emerald-600 dark:text-emerald-400">{(info.getValue() || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>,
       size: 120,
     }),
     columnHelper.accessor('credit_days', {
       header: () => <div className="text-right w-full">เครดิต (วัน)</div>,
-      cell: (info) => <div className="text-right">{info.getValue()} วัน</div>,
+      cell: (info) => {
+        const row = info.row.original;
+        const val = row.credit_term_days ?? row.credit_days;
+        return <div className="text-right font-medium">{val !== undefined && val !== null ? `${val} วัน` : '-'}</div>;
+      },
       size: 100,
     }),
     columnHelper.accessor('payment_method', {
       header: 'วิธีชำระ',
-      size: 120,
+      cell: (info) => {
+        const row = info.row.original;
+        return <span>{row.payment_method_default || row.payment_method || '-'}</span>;
+      },
+      size: 110,
     }),
     columnHelper.accessor('status', {
       header: () => <div className="text-center w-full">สถานะ</div>,
       cell: (info) => (
         <div className="flex justify-center">
-          <CustomerStatusBadge status={info.getValue()} />
+          <CustomerStatusBadge 
+            status={info.getValue()} 
+            isActive={info.row.original.is_active} 
+          />
         </div>
       ),
-      size: 120,
+      size: 100,
     }),
     columnHelper.display({
       id: 'actions',
       header: () => <div className="text-center w-full">จัดการ</div>,
-      size: 80,
+      size: 100,
       cell: ({ row }) => (
-        <div className="flex justify-center">
-          <DropdownMenu>
-            <DropdownMenuTrigger className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full outline-none">
-              <MoreHorizontal size={18} className="text-gray-500" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
-              <DropdownMenuLabel>พิกัดจัดการ</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => handleEdit(row.original.customer_id)}>
-                <Edit2 className="mr-2 h-4 w-4" /> แก้ไขข้อมูล
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleDelete(row.original.customer_id, row.original.customer_code)} className="text-red-600">
-                <Trash2 className="mr-2 h-4 w-4" /> ลบข้อมูล
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+        <div className="flex justify-center items-center gap-1">
+          <button 
+            onClick={() => handleEdit(row.original.customer_id)}
+            className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-colors"
+            title="แก้ไข"
+          >
+            <Edit2 size={16} />
+          </button>
+          <button 
+            onClick={() => handleDelete(row.original.customer_id, row.original.customer_code)}
+            className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
+            title="ลบ"
+          >
+            <Trash2 size={16} />
+          </button>
         </div>
       ),
     }),
@@ -233,6 +243,7 @@ export default function CustomerListPage() {
         onSuccess={() => {
           setIsModalOpen(false);
           setSelectedId(null);
+          refetch(); // รีเฟรชข้อมูลในตาราง
         }}
       />
     </PageListLayout>

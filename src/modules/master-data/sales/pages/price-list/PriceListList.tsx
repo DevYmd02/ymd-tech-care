@@ -1,20 +1,19 @@
+/**
+ * @file PriceListList.tsx
+ * @description List page for Price List Master Data
+ */
+
 import { useMemo } from 'react';
-import { 
-    Edit2, 
-    Trash2, 
-    ShoppingBag
-} from 'lucide-react';
-import { SalesChannelFormModal } from './SalesChannelFormModal';
-import { useSalesChannelList } from './hooks/useSalesChannelList';
-import type { SalesChannelListItem } from './types/channel.types';
+import { Edit2, Trash2, Layers,Plus } from 'lucide-react';
+import PriceListFormModal from '@/modules/master-data/sales/pages/price-list/PriceListFormModal';
+import { usePriceList } from '@master-data/sales/pages/price-list/hooks/usePriceList';
+import type { PriceListHeader } from '@master-data/sales/pages/price-list/types/price-list.types';
 import { ActiveStatusBadge } from '@ui';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
 
-// ====================================================================================
-// CONFIG
-// ====================================================================================
+// ==================== CONFIG ====================
 
 const STATUS_OPTIONS = [
     { value: 'ALL', label: 'ทั้งหมด' },
@@ -22,11 +21,7 @@ const STATUS_OPTIONS = [
     { value: 'INACTIVE', label: 'ไม่ใช้งาน' },
 ];
 
-// ====================================================================================
-// COMPONENT
-// ====================================================================================
-
-export default function SalesChannelList() {
+export default function PriceListList() {
     const {
         filters,
         setFilters,
@@ -42,21 +37,21 @@ export default function SalesChannelList() {
         handleEdit,
         handleDelete,
         handleModalClose
-    } = useSalesChannelList();
+    } = usePriceList();
 
     // ==================== FILTER CONFIG ====================
     const filterConfig: FilterFieldConfig<keyof typeof filters>[] = useMemo(() => [
         { 
             name: 'search', 
-            label: 'รหัสช่องทางการขาย', 
+            label: 'เลขที่ PRICE LIST', 
             type: 'text', 
-            placeholder: 'กรอกรหัสช่องทางการขาย' 
+            placeholder: 'ค้นหาด้วย เลขที่...' 
         },
         { 
             name: 'search2', 
-            label: 'ชื่อช่องทางการขาย', 
+            label: 'ชื่อ PRICE LIST', 
             type: 'text', 
-            placeholder: 'กรอกชื่อช่องทางการขาย' 
+            placeholder: 'ชื่อ Price List...' 
         },
         { 
             name: 'status', 
@@ -67,7 +62,7 @@ export default function SalesChannelList() {
     ], []);
 
     // ==================== TABLE COLUMNS ====================
-    const columns = useMemo<ColumnDef<SalesChannelListItem>[]>(() => [
+    const columns = useMemo<ColumnDef<PriceListHeader>[]>(() => [
         {
             id: 'sequence',
             header: 'ลำดับ',
@@ -75,26 +70,45 @@ export default function SalesChannelList() {
             size: 60,
         },
         {
-            accessorKey: 'channel_code',
-            header: 'รหัสช่องทางการขาย',
+            accessorKey: 'price_list_no',
+            header: 'เลขที่ PRICELIST',
             cell: ({ getValue }) => (
-                <span className="font-medium text-blue-600 dark:text-blue-400">
+                <span className="font-semibold text-blue-600 dark:text-blue-400">
                     {getValue() as string}
                 </span>
             ),
         },
         {
-            accessorKey: 'channel_name',
-            header: 'ชื่อช่องทางการขาย (ไทย)',
+            accessorKey: 'price_list_name',
+            header: 'ชื่อ PRICELIST',
         },
         {
-            accessorKey: 'channel_nameeng',
-            header: 'ชื่อช่องทางการขาย (Eng)',
-            cell: ({ getValue }) => getValue() || '-',
+            id: 'customer',
+            header: 'ลูกค้า',
+            cell: ({ row }) => {
+                const { customer_code, customer_name } = row.original;
+                if (!customer_code && !customer_name) return '-';
+                return (
+                    <div className="flex flex-col">
+                        <span className="text-sm font-medium">{customer_code || '-'}</span>
+                        <span className="text-xs text-gray-500">{customer_name || ''}</span>
+                    </div>
+                );
+            }
+        },
+        {
+            accessorKey: 'begin_date',
+            header: 'วันที่เริ่มต้น',
+            cell: ({ getValue }) => getValue() ? new Date(getValue() as string).toLocaleDateString('th-TH') : '-',
+        },
+        {
+            accessorKey: 'end_date',
+            header: 'วันที่สิ้นสุด',
+            cell: ({ getValue }) => getValue() ? new Date(getValue() as string).toLocaleDateString('th-TH') : '-',
         },
         {
             accessorKey: 'is_active',
-            header: 'สถานะ',
+            header: 'ใช้งาน',
             cell: ({ getValue }) => <ActiveStatusBadge isActive={getValue() as boolean} />,
             size: 100,
         },
@@ -105,14 +119,14 @@ export default function SalesChannelList() {
             cell: ({ row }) => (
                 <div className="flex items-center gap-2">
                     <button 
-                        onClick={() => handleEdit(row.original.channel_id)}
+                        onClick={() => handleEdit(row.original.price_list_id)}
                         className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                         title="แก้ไข"
                     >
                         <Edit2 size={18} />
                     </button>
                     <button 
-                        onClick={() => handleDelete(row.original.channel_id)}
+                        onClick={() => handleDelete(row.original.price_list_id)}
                         className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                         title="ลบ"
                     >
@@ -131,13 +145,21 @@ export default function SalesChannelList() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                        <ShoppingBag className="text-blue-600" />
-                        กำหนดช่องทางการขาย (Sales Channel Master)
+                        <Layers className="text-blue-600" />
+                        กำหนดราคาสินค้า (Pricelist)
                     </h1>
                     <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">
-                        จัดการข้อมูลช่องทางการขายสินค้า
+                        จัดการรายการราคาสินค้าและเงื่อนไขพิเศษ
                     </p>
                 </div>
+
+                <button
+                    onClick={handleCreateNew}
+                    className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl font-medium shadow-sm transition-all active:scale-95"
+                >
+                    <Plus size={20} />
+                    สร้างราคาสินค้า
+                </button>
             </div>
 
             {/* Filter Section */}
@@ -148,17 +170,15 @@ export default function SalesChannelList() {
                     onFilterChange={(name: string, value: string) => setFilters({ [name]: value })}
                     onSearch={() => handlePageChange(1)}
                     onReset={resetFilters}
-                    onCreate={handleCreateNew}
-                    createLabel="เพิ่มช่องทางการขายใหม่"
-                    accentColor="indigo"
+                    accentColor="blue"
                 />
             </div>
 
             {/* Data Table */}
             <div className="flex flex-col gap-4">
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center px-1">
                     <h2 className="text-gray-700 dark:text-gray-300 font-medium">
-                        พบข้อมูล {filteredData.length} รายการ
+                        รายการทั้งหมด ({filteredData.length})
                     </h2>
                 </div>
 
@@ -173,17 +193,20 @@ export default function SalesChannelList() {
                         onPageChange: handlePageChange,
                         onPageSizeChange: (size) => setFilters({ limit: size, page: 1 }),
                     }}
-                    rowIdField="channel_id"
-                    className="shadow-sm"
+                    rowIdField="price_list_id"
+                    className="shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700 rounded-xl"
                 />
             </div>
 
             {/* Modal */}
-            <SalesChannelFormModal 
+            <PriceListFormModal 
                 isOpen={isModalOpen} 
                 onClose={handleModalClose}
                 editId={editingId}
-                onSuccess={fetchData}
+                onSuccess={() => {
+                    handleModalClose();
+                    fetchData();
+                }}
             />
         </div>
     );

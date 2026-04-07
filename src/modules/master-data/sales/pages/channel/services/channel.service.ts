@@ -7,7 +7,7 @@ import api from '@/core/api/api';
 import type { 
   SalesChannelMaster, 
   SalesChannelFormData 
-} from '@/modules/master-data/sales/types/channel/channel.types';
+} from '../types/channel.types';
 
 export const SalesChannelService = {
   getList: (params?: Record<string, string | number | boolean>) => 

@@ -3,8 +3,8 @@ import { useForm, useWatch, type SubmitHandler, type Resolver } from 'react-hook
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { SaleAreaService } from '@/modules/master-data/sales/services/area/area.service';
-import type { SaleAreaFormData } from '@/modules/master-data/sales/types/area/area.types';
+import { SaleAreaService } from '../services/area.service';
+import type { SaleAreaFormData } from '../types/area.types';
 import { extractErrorMessage } from '@/core/api/api';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';

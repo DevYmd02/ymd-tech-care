@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { SalesAreaFormModal } from './SalesAreaFormModal';
 import { useSalesAreaList } from './hooks/useSalesAreaList';
-import type { SaleAreaListItem } from '@/modules/master-data/sales/types/area/area.types';
+import type { SaleAreaListItem } from './types/area.types';
 import { ActiveStatusBadge } from '@ui';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';

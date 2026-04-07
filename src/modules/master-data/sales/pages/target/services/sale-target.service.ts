@@ -9,7 +9,7 @@ import type {
   SaleTargetMaster,
   SaleTargetFormData,
   SaleTargetFilters
-} from '../../types/target/sale-target.types';
+} from '../types/sale-target.types';
 
 export const SaleTargetService = {
   // Aligned Endpoint: /empployees-sale-target (Removes /master/ to match Postman)

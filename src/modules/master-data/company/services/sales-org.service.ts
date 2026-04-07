@@ -5,9 +5,9 @@
 
 import api from '@/core/api/api';
 import { type PaginatedListResponse } from '@/shared/types/api-response.types';
-import { type SaleAreaMaster as SalesZoneMaster, type SaleAreaFormData as SalesZoneFormData } from '@/modules/master-data/sales/types/area/area.types';
-import { type SalesChannelMaster, type SalesChannelFormData } from '@/modules/master-data/sales/types/channel/channel.types';
-import { type SalePeriodMaster, type SalePeriodFormData } from '@/modules/master-data/sales/types/target/sale-period.types';
+import { type SaleAreaMaster as SalesZoneMaster, type SaleAreaFormData as SalesZoneFormData } from '@master-data/sales/pages/area/types/area.types';
+import { type SalesChannelMaster, type SalesChannelFormData } from '@master-data/sales/pages/channel/types/channel.types';
+import { type SalePeriodMaster, type SalePeriodFormData } from '@master-data/sales/pages/target/types/sale-period.types';
 
 // ====================================================================================
 // SALES ZONE SERVICE

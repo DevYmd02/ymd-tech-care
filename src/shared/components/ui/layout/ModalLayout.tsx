@@ -29,6 +29,8 @@ interface ModalLayoutProps {
     headerColor?: string;
     /** Custom z-index (default 50) */
     zIndex?: number;
+    /** Optional content for the right side of the header */
+    headerRight?: React.ReactNode;
 }
 
 const sizeClasses = {
@@ -52,6 +54,7 @@ export const ModalLayout: React.FC<ModalLayoutProps> = ({
     isLoading = false,
     headerColor = styles.bg.accent,
     zIndex = 50,
+    headerRight,
 }) => {
     const [isAnimating, setIsAnimating] = useState(false);
     const [shouldRender, setShouldRender] = useState(false);
@@ -140,14 +143,17 @@ export const ModalLayout: React.FC<ModalLayoutProps> = ({
                             {titleIcon}
                             <span className="uppercase font-black tracking-tighter">{title}</span>
                         </div>
-                        <button 
-                            type="button" 
-                            onClick={onClose} 
-                            className="bg-red-600 hover:bg-red-500 text-white rounded-md p-1 px-2 transition-all hover:scale-105 active:scale-95 shadow-sm flex items-center gap-1 group"
-                        >
-                            <X size={16} className="group-hover:rotate-90 transition-transform" />
-                            <span className="text-[10px] hidden sm:inline font-bold">CLOSE</span>
-                        </button>
+                        <div className="flex items-center space-x-3">
+                            {headerRight}
+                            <button 
+                                type="button" 
+                                onClick={onClose} 
+                                className="bg-red-600 hover:bg-red-500 text-white rounded-md p-1 px-2 transition-all hover:scale-105 active:scale-95 shadow-sm flex items-center gap-1 group"
+                            >
+                                <X size={16} className="group-hover:rotate-90 transition-transform" />
+                                <span className="text-[10px] hidden sm:inline font-bold">CLOSE</span>
+                            </button>
+                        </div>
                     </div>
                 ) : (
                     /* Elegant Dialog Header */
@@ -173,15 +179,18 @@ export const ModalLayout: React.FC<ModalLayoutProps> = ({
                                 )}
                             </div>
                         </div>
-                        <button 
-                            onClick={onClose}
-                            className={cn(
-                                "p-2 rounded-full transition-all duration-200",
-                                headerColor ? "text-white hover:bg-white/20" : "text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800"
-                            )}
-                        >
-                            <X size={24} />
-                        </button>
+                        <div className="flex items-center gap-4">
+                            {headerRight}
+                            <button 
+                                onClick={onClose}
+                                className={cn(
+                                    "p-2 rounded-full transition-all duration-200",
+                                    headerColor ? "text-white hover:bg-white/20" : "text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800"
+                                )}
+                            >
+                                <X size={24} />
+                            </button>
+                        </div>
                     </div>
                 )}
 

@@ -7,7 +7,6 @@ import { CustomerGeneralInfo } from '@customer/customer-master/components/Custom
 import { CustomerAddressList } from '@customer/customer-master/components/CustomerAddressList';
 import { CustomerPaymentConditions } from '@customer/customer-master/components/CustomerPaymentConditions';
 import { CustomerContactInfo } from '@customer/customer-master/components/CustomerContactInfo';
-import { CustomerRemarks } from '@customer/customer-master/components/CustomerRemarks';
 import { useCustomerForm } from '@customer/customer-master/hooks/useCustomerForm';
 
 interface CustomerFormModalProps {
@@ -90,11 +89,6 @@ export function CustomerFormModal(props: CustomerFormModalProps) {
                     removeAddress={removeAddress}
                     updateAddress={updateAddress}
                     handleSameAsRegisteredChange={handleSameAsRegisteredChange}
-                />
-
-                <CustomerRemarks 
-                    formData={formData}
-                    onChange={handleChange}
                 />
             </form>
         </DialogFormLayout>
