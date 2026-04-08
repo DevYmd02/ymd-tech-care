@@ -68,7 +68,10 @@ export interface SearchModalProps<T> {
 // COMPONENT - SearchModal
 // ====================================================================================
 
-export function SearchModal<T>({
+// Inner generic function — React.memo erases generic type params, so we
+// export it separately and then re-export the memo version cast to the
+// correct generic signature. This way <SearchModal<T> /> works in JSX.
+function SearchModalInner<T>({
     isOpen,
     onClose,
     onSelect,
@@ -88,16 +91,18 @@ export function SearchModal<T>({
     // State สำหรับเก็บคำค้นหา
     const [searchTerm, setSearchTerm] = useState('');
 
-    // ถ้า Modal ปิดอยู่ ไม่ต้อง render
-    if (!isOpen) return null;
-
     // กรองข้อมูลตามคำค้นหา
-    const filteredData = data.filter(item =>
-        filterFn(item, searchTerm.toLowerCase())
-    );
+    // BUG FIX: ถ้ามี onSearchChange (Server-side) เราจะไม่ทำการกรองซ้ำที่ Client เพราะข้อมูลที่ได้รับมาคือผลลัพธ์จากการกรองที่ Server แล้ว
+    // หากกรองซ้ำที่นี่ จะทำให้ข้อมูล "หายไป" ชั่วขณะขณะที่กำลังรอ API (เพราะ searchTerm เปลี่ยนแต่ data ยังเป็นชุดเก่า)
+    const filteredData = React.useMemo(() => {
+        if (onSearchChange) return data;
+        return data.filter(item =>
+            filterFn(item, searchTerm.toLowerCase())
+        );
+    }, [data, filterFn, searchTerm, onSearchChange]);
 
     // Generate color classes based on accent color
-    const colorClasses = {
+    const colorClasses = React.useMemo(() => ({
         emerald: {
             title: 'text-emerald-600',
             label: 'text-emerald-600',
@@ -122,10 +127,13 @@ export function SearchModal<T>({
             hover: 'hover:bg-purple-50',
             loader: 'border-purple-500',
         },
-    }[accentColor];
+    }[accentColor]), [accentColor]);
 
     // Generate grid template columns from column definitions
-    const gridCols = columns.map(col => col.width || '1fr').join(' ');
+    const gridCols = React.useMemo(() => columns.map(col => col.width || '1fr').join(' '), [columns]);
+
+    // ถ้า Modal ปิดอยู่ ไม่ต้อง render (ย้ายมาไว้หลัง Hooks ตามกฎ React)
+    if (!isOpen) return null;
 
     return createPortal(
         // Overlay
@@ -263,3 +271,7 @@ export function SearchModal<T>({
     );
 
 }
+
+// Cast preserves the <T> generic so `<SearchModal<MyType> />` works in JSX
+// without TypeScript raising ts(2558) "Expected 0 type arguments".
+export const SearchModal = React.memo(SearchModalInner) as typeof SearchModalInner;

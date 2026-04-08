@@ -7,12 +7,12 @@
  * - ProductSearchModal: Smart wrapper ที่ใช้ MOCK_PRODUCTS (ไม่รั่วใน production)
  */
 
-import React from 'react';
+import React, { memo } from 'react';
 import { SearchModal, type ColumnDef } from '@ui';
-import type { ItemListItem } from '@/modules/master-data/inventory/types/product-types';
-import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
+import type { ItemListItem } from '@inventory/types/product-types';
+import { ItemMasterService } from '@inventory/services/item-master.service';
 import { useQuery } from '@tanstack/react-query';
-import { useDebounce } from '@/shared/hooks/useDebounce';
+import { useDebounce } from '@hooks/useDebounce';
 
 // Re-export type for consumers
 export type Product = ItemListItem;
@@ -66,23 +66,11 @@ export interface ProductSearchModalBaseProps {
 }
 
 /**
- * ProductSearchModalBase - Pure/Dumb Component
+ * ProductSearchModalBase - Pure/Dumb Component (Memoized)
  * 
  * @description รับ data ผ่าน props ไม่ fetch เอง - สามารถ reuse ได้ง่าย
- * @usage ใช้เมื่อต้องการควบคุม data source เอง
- * 
- * @example
- * ```tsx
- * const myProducts = [...];
- * <ProductSearchModalBase 
- *   isOpen={open} 
- *   onClose={close} 
- *   onSelect={handleSelect}
- *   data={myProducts}
- * />
- * ```
  */
-export const ProductSearchModalBase: React.FC<ProductSearchModalBaseProps> = ({
+export const ProductSearchModalBase = memo(({
     isOpen,
     onClose,
     onSelect,
@@ -92,7 +80,12 @@ export const ProductSearchModalBase: React.FC<ProductSearchModalBaseProps> = ({
     emptyText = 'ไม่พบสินค้าในระบบ',
     isLoading = false,
     onSearchChange
-}) => {
+}: ProductSearchModalBaseProps) => {
+    // กรองสินค้า (แบบ Stable)
+    const handleFilter = React.useCallback((p: ItemListItem, term: string) => 
+        p.item_code.toLowerCase().includes(term) ||
+        p.item_name.toLowerCase().includes(term), []);
+
     return (
         <SearchModal<ItemListItem>
             isOpen={isOpen}
@@ -105,17 +98,14 @@ export const ProductSearchModalBase: React.FC<ProductSearchModalBaseProps> = ({
             accentColor="blue"
             data={data}
             columns={productColumns}
-            filterFn={(p: ItemListItem, term: string) =>
-                p.item_code.toLowerCase().includes(term) ||
-                p.item_name.toLowerCase().includes(term)
-            }
-            getKey={(p: ItemListItem) => p.item_id || p.item_code}
+            filterFn={handleFilter}
+            getKey={(p: ItemListItem) => p.item_id || p.id || p.item_code}
             emptyText={emptyText}
             isLoading={isLoading}
             onSearchChange={onSearchChange}
         />
     );
-};
+});
 
 // ====================================================================================
 // SMART WRAPPER - Uses MOCK_PRODUCTS (Backward Compatible)
