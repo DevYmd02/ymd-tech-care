@@ -36,7 +36,7 @@ export interface GRNHeader {
     
     // Financial/Tax
     curr_id?: string;             // uuid
-    curr_type_cpde?: string;      // varchar(30)
+    curr_type_code?: string;      // varchar(30)
     curr_type_id?: string;        // uuid
     
     // Project/Department
@@ -114,6 +114,9 @@ export interface GRNLineItemInput {
     uom_name: string; // Captured
     qc_status?: string; // QC status: PASS, HOLD, FAIL
     lot_id?: string; // Match DB name (uuid)
+    lot_code?: string; // display name for UI
+
+
     // We might need unit_price/total for value tracking if GRN tracks value
     unit_price?: number; 
     line_total?: number;
@@ -147,7 +150,7 @@ export interface CreateGRNPayload {
     // Financial/Tax
     curr_id?: string;
     curr_type_id?: string;
-    curr_type_cpde?: string;
+    curr_type_code?: string;
     
     // Project/Department
     job_id?: string;

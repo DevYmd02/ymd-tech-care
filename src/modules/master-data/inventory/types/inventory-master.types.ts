@@ -130,10 +130,18 @@ export interface ShelfFormData extends IBaseFormData {
 export interface LotNo extends IBaseMaster {
     lot_no_id: number;
     expiry_date?: string;
+    mfg_date?: string;
+    supplier_vendor_id?: number | string;
+    item_id?: number | string;
+    note?: string;
 }
 
 export interface LotNoFormData extends IBaseFormData {
     expiryDate?: string;
+    mfgDate?: string;
+    supplierVendorId?: number | string;
+    itemId?: number | string;
+    note?: string;
 }
 
 // ====================================================================================

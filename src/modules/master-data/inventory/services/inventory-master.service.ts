@@ -56,7 +56,7 @@ function createInventoryService<T extends IBaseMaster, F, A, O = Partial<A>>(
     let localData: T[] = [...config.mockData];
 
     return {
-        getAll: async (params?: Record<string, any>): Promise<ListResponse<T>> => {
+        getAll: async (params?: Record<string, string | number | boolean | undefined>): Promise<ListResponse<T>> => {
             if (USE_MOCK) {
                 logger.info(`🎭 [Mock Mode] Serving ${config.entityName} list`);
                 return {
@@ -328,6 +328,10 @@ interface LotNoApiResponse {
     lot_no_code: string;
     lot_no_name: string;
     expiry_date?: string;
+    mfg_date?: string;
+    supplier_vendor_id?: number | string;
+    item_id?: number | string;
+    note?: string;
     is_active: boolean;
     created_at: string;
     updated_at?: string;
@@ -716,8 +720,38 @@ export const LotNoService = createInventoryService<LotNo, LotNoFormData, LotNoAp
         code: data.code.toUpperCase(),
         name_th: data.nameTh,
         name_en: data.nameEn ?? '',
+        expiry_date: data.expiryDate,
+        mfg_date: data.mfgDate,
+        supplier_vendor_id: data.supplierVendorId,
+        item_id: data.itemId,
+        note: data.note,
         is_active: data.isActive,
         created_at: now,
         updated_at: now,
+    }),
+    mapFromApi: (item: LotNoApiResponse): LotNo => ({
+        id: item.lot_no_id,
+        lot_no_id: item.lot_no_id,
+        code: item.lot_no_code,
+        name_th: item.lot_no_name,
+        name_en: '',
+        expiry_date: item.expiry_date,
+        mfg_date: item.mfg_date,
+        supplier_vendor_id: item.supplier_vendor_id,
+        item_id: item.item_id,
+        note: item.note,
+        is_active: item.is_active,
+        created_at: item.created_at,
+        updated_at: item.updated_at || '',
+    }),
+    mapToApi: (data: LotNoFormData) => ({
+        lot_no_code: data.code?.trim().toUpperCase(),
+        lot_no_name: data.nameTh?.trim(),
+        expiry_date: data.expiryDate,
+        mfg_date: data.mfgDate,
+        supplier_vendor_id: data.supplierVendorId,
+        item_id: data.itemId,
+        note: data.note,
+        is_active: data.isActive,
     }),
 });
