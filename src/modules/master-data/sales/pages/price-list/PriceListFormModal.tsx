@@ -4,15 +4,17 @@
  */
 
 import { useState } from 'react';
-import { Layers, Save, X, Plus, Trash2, Search } from 'lucide-react';
+import { Layers, Save, X, Plus, Trash2, Search, Minus } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout, CustomDateInput } from '@ui';
 import { Controller } from 'react-hook-form';
 import { usePriceListForm } from '@master-data/sales/pages/price-list/hooks/usePriceListForm';
 import { ProductSearchModal } from '@/modules/master-data/inventory/components/ProductSearchModal';
 import { CustomerSearchModal } from '@/modules/master-data/customer/customer-master/components/CustomerSearchModal';
+import { EmployeeSearchModal } from '@/modules/master-data/employee/components/EmployeeSearchModal';
 import type { CustomerMaster } from '@customer/customer-master/types/customer-types';
 import type { ItemListItem } from '@/modules/master-data/inventory/types/product-types';
+import type { IEmployee } from '@/modules/master-data/company/types/employee-types';
 
 interface Props {
     isOpen: boolean;
@@ -38,6 +40,7 @@ export default function PriceListFormModal({ isOpen, onClose, editId, onSuccess 
 
     const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
     const [isCustomerSearchOpen, setIsCustomerSearchOpen] = useState(false);
+    const [isPermitEmpSearchOpen, setIsPermitEmpSearchOpen] = useState(false);
     const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
 
     const handleAddProduct = () => {
@@ -75,6 +78,12 @@ export default function PriceListFormModal({ isOpen, onClose, editId, onSuccess 
         setValue('customerId', customer.customer_code || customer.code);
         setValue('customerName', customer.customer_name_th || customer.name_th || customer.customer_name || '');
         setIsCustomerSearchOpen(false);
+    };
+    
+    const handleSelectPermitEmp = (employee: IEmployee) => {
+        setValue('permitEmpId', String(employee.id));
+        setValue('permitEmpName', `${employee.employee_firstname_th} ${employee.employee_lastname_th}`);
+        setIsPermitEmpSearchOpen(false);
     };
 
     // ==================== RENDERING ====================
@@ -241,8 +250,75 @@ export default function PriceListFormModal({ isOpen, onClose, editId, onSuccess 
                                 </div>
                             </div>
 
-                            <div className="md:col-span-1">
-                                <label className={styles.label}>หมายเหตุ</label>
+                            <div>
+                                <label className={styles.label}>ผู้บันทึก (Recorder)</label>
+                                <input 
+                                    {...register('saveEmpName')} 
+                                    type="text" 
+                                    className={`${styles.input} font-medium bg-gray-50/50 dark:bg-gray-800/50`} 
+                                    placeholder="ผู้บันทึก..." 
+                                    readOnly
+                                />
+                            </div>
+
+                            {/* Row 4 */}
+                            <div>
+                                <label className={styles.label}>ผู้อนุมัติ (Approver)</label>
+                                <div className="grid grid-cols-[1fr_45px] gap-2">
+                                    <input 
+                                        {...register('permitEmpName')} 
+                                        type="text" 
+                                        className={`${styles.input} font-medium`} 
+                                        placeholder="เลือกผู้อนุมัติ..." 
+                                        readOnly
+                                    />
+                                    <button 
+                                        type="button" 
+                                        onClick={() => setIsPermitEmpSearchOpen(true)}
+                                        className="h-[42px] flex items-center justify-center border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg shadow-sm transition-all"
+                                        title="ค้นหาพนักงาน"
+                                    >
+                                        <Search size={18} />
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className={styles.label}>เงื่อนไขการปรับราคา</label>
+                                <Controller
+                                    name="priceListFlag"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <div className="flex h-[42px] p-1 bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                                            <button
+                                                type="button"
+                                                onClick={() => field.onChange(field.value === '+' ? null : '+')}
+                                                className={`flex-1 flex items-center justify-center gap-2 rounded-md transition-all text-sm font-bold ${
+                                                    field.value === '+' 
+                                                    ? 'bg-emerald-500 text-white shadow-sm' 
+                                                    : 'text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                                }`}
+                                            >
+                                                <Plus size={16} /> ปรับเพิ่ม
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => field.onChange(field.value === '-' ? null : '-')}
+                                                className={`flex-1 flex items-center justify-center gap-2 rounded-md transition-all text-sm font-bold ${
+                                                    field.value === '-' 
+                                                    ? 'bg-rose-500 text-white shadow-sm' 
+                                                    : 'text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                                }`}
+                                            >
+                                                <Minus size={16} /> ปรับลด
+                                            </button>
+                                        </div>
+                                    )}
+                                />
+                            </div>
+
+                            <div>
+                                <label className={styles.label}>หมายเหตุ (Remark)</label>
                                 <input
                                     {...register('remark')}
                                     type="text"
@@ -387,6 +463,14 @@ export default function PriceListFormModal({ isOpen, onClose, editId, onSuccess 
                 isOpen={isCustomerSearchOpen}
                 onClose={() => setIsCustomerSearchOpen(false)}
                 onSelect={handleSelectCustomer}
+            />
+
+            {/* Employee Search Sub-Modal (Permit) */}
+            <EmployeeSearchModal
+                isOpen={isPermitEmpSearchOpen}
+                onClose={() => setIsPermitEmpSearchOpen(false)}
+                onSelect={handleSelectPermitEmp}
+                title="ค้นหาผู้อนุมัติ - Find Approver"
             />
         </>
     );

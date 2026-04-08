@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { PriceListService } from '@master-data/sales/pages/price-list/services/price-list.service';
 import type { PriceListFormData, PriceListItemFormData } from '@master-data/sales/pages/price-list/types/price-list.types';
 import toast from 'react-hot-toast';
+import { useAuth } from '@/core/auth/contexts/AuthContext';
 
 const priceListItemSchema = z.object({
     priceListItemId: z.string().optional(),
@@ -39,9 +40,12 @@ const priceListSchema = z.object({
     itemBrandId: z.string(),
     itemId: z.string(),
     permitEmpId: z.string(),
+    saveEmpId: z.string(),
     remark: z.string(),
-    priceListFlag: z.string().nullable(),
+    priceListFlag: z.enum(['+', '-']).nullable(),
     customerName: z.string().optional(),
+    permitEmpName: z.string().optional(),
+    saveEmpName: z.string().optional(),
     items: z.array(priceListItemSchema),
 });
 
@@ -59,13 +63,17 @@ const initialValues: PriceListFormData = {
     itemBrandId: '',
     itemId: '',
     permitEmpId: '',
+    saveEmpId: '',
     remark: '',
     priceListFlag: null,
     customerName: '',
+    permitEmpName: '',
+    saveEmpName: '',
     items: [],
 };
 
 export function usePriceListForm(editId: string | null, onSuccess?: () => void) {
+    const { user } = useAuth();
     const {
         register,
         handleSubmit,
@@ -105,9 +113,12 @@ export function usePriceListForm(editId: string | null, onSuccess?: () => void) 
                         itemBrandId: data.item_brand_id || '',
                         itemId: data.item_id || '',
                         permitEmpId: data.permit_emp_id || '',
+                        saveEmpId: data.save_emp_id || '',
                         remark: data.remark || '',
                         priceListFlag: data.price_list_flag,
                         customerName: data.customer_name || '',
+                        permitEmpName: data.permit_emp_name || '',
+                        saveEmpName: data.save_emp_name || '',
                         items: (data.items || []).map(item => ({
                             priceListItemId: item.price_list_item_id,
                             itemId: item.item_id,
@@ -129,9 +140,14 @@ export function usePriceListForm(editId: string | null, onSuccess?: () => void) 
             };
             fetchDetail();
         } else {
-            reset(initialValues);
+            // Default 'Recorder' to current user in create mode
+            reset({
+                ...initialValues,
+                saveEmpId: user?.employee?.employee_id ? String(user.employee.employee_id) : '',
+                saveEmpName: user?.employee?.employee_fullname || ''
+            });
         }
-    }, [editId, reset]);
+    }, [editId, reset, user]);
 
     const onSubmit: SubmitHandler<PriceListFormData> = async (formData) => {
         try {
