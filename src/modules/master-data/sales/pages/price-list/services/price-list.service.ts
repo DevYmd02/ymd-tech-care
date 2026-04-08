@@ -102,6 +102,18 @@ export const PriceListService = {
   },
 
   /**
+   * Approve a price list
+   */
+  approve: async (id: string): Promise<{ success: boolean; message?: string }> => {
+    try {
+      await api.put(`/price-list/${id}/approve`);
+      return { success: true };
+    } catch (error) {
+      return { success: false, message: (error as Error).message || 'อนุมัติไม่สำเร็จ' };
+    }
+  },
+
+  /**
    * Delete a price list
    */
   delete: async (id: string): Promise<boolean> => {

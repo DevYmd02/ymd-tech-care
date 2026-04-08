@@ -217,7 +217,7 @@ export const setupMasterDataHandlers = (mock: MockAdapter) => {
     { currency_id: '4', currency_code: 'JPY', currency_name: 'เยนญี่ปุ่น', currency_nameeng: 'Japanese Yen', symbol: '¥', exchange_rate: 0.24, is_active: true, created_at: '2026-01-01', updated_at: '2026-01-01' },
   ];
 
-  mock.onGet('/master-data/currency').reply((config) => {
+  mock.onGet('/currency').reply((config) => {
     const result = applyMockFilters(mockCurrencies, (config.params || {}) as Record<string, FilterValue>);
     if (result && typeof result === 'object' && 'items' in result) {
       return [200, result];
@@ -225,13 +225,13 @@ export const setupMasterDataHandlers = (mock: MockAdapter) => {
     return [200, { items: result, total: (result as unknown[]).length, page: 1, limit: 100 }];
   });
 
-  mock.onGet(/\/master-data\/currency\/.+/).reply((config) => {
+  mock.onGet(/\/currency\/.+/).reply((config) => {
     const id = config.url?.split('/').pop();
     const found = mockCurrencies.find(c => c.currency_id === id);
     return found ? [200, found] : [404, { message: 'Currency Not Found' }];
   });
 
-  mock.onPost('/master-data/currency').reply((config) => {
+  mock.onPost('/currency').reply((config) => {
     const data = JSON.parse(config.data);
     const newCurrency = {
       ...data,
@@ -243,7 +243,7 @@ export const setupMasterDataHandlers = (mock: MockAdapter) => {
     return [201, { success: true, item: newCurrency }];
   });
 
-  mock.onPut(/\/master-data\/currency\/.+/).reply((config) => {
+  mock.onPut(/\/currency\/.+/).reply((config) => {
     const id = config.url?.split('/').pop();
     const data = JSON.parse(config.data);
     const index = mockCurrencies.findIndex(c => c.currency_id === id);
@@ -254,7 +254,7 @@ export const setupMasterDataHandlers = (mock: MockAdapter) => {
     return [404, { message: 'Not Found' }];
   });
 
-  mock.onDelete(/\/master-data\/currency\/.+/).reply((config) => {
+  mock.onDelete(/\/currency\/.+/).reply((config) => {
     const id = config.url?.split('/').pop();
     const index = mockCurrencies.findIndex(c => c.currency_id === id);
     if (index !== -1) {
@@ -268,7 +268,7 @@ export const setupMasterDataHandlers = (mock: MockAdapter) => {
     { currency_type_id: '1', code: 'SPOT', name_th: 'อัตราแลกเปลี่ยนทันที', name_en: 'Spot Exchange Rate', is_active: true, created_at: '2026-01-01', updated_at: '2026-01-01' },
   ];
 
-  mock.onGet('/master-data/exchange-rate-type').reply((config) => 
+  mock.onGet('/exchange-rate-type').reply((config) => 
     [200, applyMockFilters(mockExchangeRateTypes, (config.params || {}) as Record<string, FilterValue>)]
   );
 
@@ -278,7 +278,7 @@ export const setupMasterDataHandlers = (mock: MockAdapter) => {
     { exchange_id: '2', currency_id: '2', currency_type_id: '1', buy_rate: 35.5, sale_rate: 35.8, rate_date: '2026-02-17', exchange_round: 2, allow_adjust: 1, is_active: true },
   ];
 
-  mock.onGet('/master-data/exchange-rate').reply((config) => {
+  mock.onGet('/exchange-rate').reply((config) => {
     try {
       const joinedRates = mockExchangeRates.map(rate => {
         const currency = mockCurrencies.find(c => c.currency_id === rate.currency_id);
@@ -296,20 +296,29 @@ export const setupMasterDataHandlers = (mock: MockAdapter) => {
     }
   });
 
-  mock.onGet(/\/master-data\/exchange-rate\/latest/).reply((config) => {
+  mock.onGet(/\/exchange-rate\/latest/).reply((config) => {
       const params = config.params || {};
-      const currencyId = params.currency_id;
+      const currencyIdParam = params.currency_id;
+      
+      // Resolve code from ID if numeric ID is passed
+      let code = currencyIdParam;
+      if (currencyIdParam === '1') code = 'THB';
+      else if (currencyIdParam === '2') code = 'USD';
+      else if (currencyIdParam === '3') code = 'EUR';
+      else if (currencyIdParam === '4') code = 'JPY';
       
       let rate = 1;
-      if (currencyId === 'USD') rate = 35.5;
-      else if (currencyId === 'EUR') rate = 38.2;
-      else if (currencyId === 'JPY') rate = 0.24;
-      else if (currencyId === 'CNY') rate = 4.9;
-      else if (currencyId === 'THB') rate = 1;
+      if (code === 'USD') rate = 35.5;
+      else if (code === 'EUR') rate = 38.2;
+      else if (code === 'JPY') rate = 0.24;
+      else if (code === 'CNY') rate = 4.9;
+      else if (code === 'THB') rate = 1;
       
+      console.log(`💎 [Mock] Exchange Rate for ${currencyIdParam}(${code}): ${rate}`);
+
       return [200, {
           rate,
-          currency_id: currencyId,
+          currency_id: currencyIdParam,
           date: params.rate_date || new Date().toISOString().split('T')[0],
           source: 'System Rate'
       }];

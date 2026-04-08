@@ -8,9 +8,10 @@ import { Edit2, Trash2, Layers } from 'lucide-react';
 import PriceListFormModal from '@/modules/master-data/sales/pages/price-list/PriceListFormModal';
 import { usePriceList } from '@master-data/sales/pages/price-list/hooks/usePriceList';
 import type { PriceListHeader } from '@master-data/sales/pages/price-list/types/price-list.types';
-import { ActiveStatusBadge } from '@ui';
+import { ActiveStatusBadge, StatusBadge } from '@ui';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';
+import { CheckCircle } from 'lucide-react';
 import type { ColumnDef } from '@tanstack/react-table';
 
 // ==================== CONFIG ====================
@@ -36,6 +37,7 @@ export default function PriceListList() {
         handleCreateNew,
         handleEdit,
         handleDelete,
+        handleApprove,
         handleModalClose
     } = usePriceList();
 
@@ -107,6 +109,20 @@ export default function PriceListList() {
             cell: ({ getValue }) => getValue() ? new Date(getValue() as string).toLocaleDateString('th-TH') : '-',
         },
         {
+            accessorKey: 'approve_status',
+            header: 'สถานะอนุมัติ',
+            cell: ({ getValue }) => {
+                const status = getValue() as string || 'WAITING';
+                return (
+                    <StatusBadge 
+                        status={status === 'APPROVED' ? 'อนุมัติแล้ว' : 'รออนุมัติ'} 
+                        variant={status === 'APPROVED' ? 'success' : 'warning'}
+                    />
+                );
+            },
+            size: 120,
+        },
+        {
             accessorKey: 'is_active',
             header: 'ใช้งาน',
             cell: ({ getValue }) => <ActiveStatusBadge isActive={getValue() as boolean} />,
@@ -115,9 +131,20 @@ export default function PriceListList() {
         {
             id: 'actions',
             header: 'จัดการ',
-            size: 100,
+            size: 150,
             cell: ({ row }) => (
                 <div className="flex items-center gap-2">
+                    {/* ปุ่มอนุมัติ - โชว์เฉพาะตอนรออนุมัติ */}
+                    {row.original.approve_status !== 'APPROVED' && (
+                        <button 
+                            onClick={() => handleApprove(row.original.price_list_id)}
+                            className="p-1.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors"
+                            title="อนุมัติรายการ"
+                        >
+                            <CheckCircle size={18} />
+                        </button>
+                    )}
+                    
                     <button 
                         onClick={() => handleEdit(row.original.price_list_id)}
                         className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
@@ -135,7 +162,7 @@ export default function PriceListList() {
                 </div>
             ),
         },
-    ], [filters.page, filters.limit, handleEdit, handleDelete]);
+    ], [filters.page, filters.limit, handleEdit, handleDelete, handleApprove]);
 
     // ==================== RENDER ====================
     return (

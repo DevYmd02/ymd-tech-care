@@ -236,12 +236,12 @@ export const CurrencyService = {
 
     getLatestExchangeRate: async (currencyId: string, rateDate?: string): Promise<{ rate: number; source?: string } | null> => {
         try {
-            const res = await api.get<any>('/master-data/exchange-rate/latest', {
+            const res = await api.get<{ rate: number; source?: string } | { data: { rate: number; source?: string } }>('/exchange-rate/latest', {
                 params: { currency_id: currencyId, rate_date: rateDate }
             });
             // Handle if response is wrapped in { data: ... }
-            const result = res?.data || res;
-            return result;
+            const result = (res && 'data' in res) ? res.data : res;
+            return result as { rate: number; source?: string } | null;
         } catch (error) {
             logger.error('[CurrencyService] getLatestExchangeRate error:', error);
             return null;

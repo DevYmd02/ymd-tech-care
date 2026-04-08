@@ -27,11 +27,14 @@ export interface PriceListHeader extends BaseMasterData {
     permit_emp_id: string; // uuid
     remark: string; // varchar(255)
     save_emp_id: string; // uuid
-    price_list_flag: string | null; // char(1)
+    price_list_flag: '+' | '-' | null; // char(1)
+    approve_status: 'WAITING' | 'APPROVED' | null; // varchar(20)
     
     // Virtual fields / Joined data (Inferred for UI)
     customer_code?: string;
     customer_name?: string;
+    permit_emp_name?: string; // [NEW] Joined from Employee
+    save_emp_name?: string;   // [NEW] Joined from Employee
 }
 
 export interface PriceListItemLine {
@@ -90,9 +93,12 @@ export interface PriceListFormData {
     itemBrandId: string;
     itemId: string;
     permitEmpId: string;
+    saveEmpId: string; // [NEW] Added for Recorder
     remark: string;
-    priceListFlag: string | null;
+    priceListFlag: '+' | '-' | null;
     customerName?: string; // Helper for UI display
+    permitEmpName?: string; // [NEW] Helper for UI display
+    saveEmpName?: string; // [NEW] Helper for UI display
     
     items: PriceListItemFormData[];
 }

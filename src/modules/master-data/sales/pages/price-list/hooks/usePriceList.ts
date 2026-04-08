@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { PriceListService } from '@master-data/sales/pages/price-list/services/price-list.service';
 import type { PriceListHeader } from '@master-data/sales/pages/price-list/types/price-list.types';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
+import toast from 'react-hot-toast';
 
 export function usePriceList() {
     const { 
@@ -96,6 +97,23 @@ export function usePriceList() {
         }
     }, [fetchData]);
 
+    const handleApprove = useCallback(async (id: string) => {
+        if (confirm('คุณต้องการอนุมัติรายการราคานี้หรือไม่?')) {
+            try {
+                const result = await PriceListService.approve(id);
+                if (result.success) {
+                    toast.success('อนุมัติสำเร็จ');
+                    fetchData();
+                } else {
+                    toast.error(result.message || 'อนุมัติไม่สำเร็จ');
+                }
+            } catch (error) {
+                console.error('Failed to approve price list:', error);
+                toast.error('เกิดข้อผิดพลาดในการอนุมัติ');
+            }
+        }
+    }, [fetchData]);
+
     const handleModalClose = () => {
         setIsModalOpen(false);
         setEditingId(null);
@@ -115,6 +133,7 @@ export function usePriceList() {
         handleCreateNew,
         handleEdit,
         handleDelete,
+        handleApprove,
         handleModalClose
     };
 }
