@@ -3,6 +3,9 @@ import { Save, Package, Plus, Trash2, Search } from 'lucide-react';
 import { WindowFormLayout, DialogFormLayout, CustomDateInput } from '@ui';
 import { POService } from '@/modules/procurement/services';
 import { GRNService } from '@/modules/procurement/services/grn.service';
+import { CurrencyService } from '@/modules/master-data/currency/services/currency.service';
+import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWrapper';
+import type { CurrencyMappedItem } from '@/modules/master-data/currency/types/currency-types';
 import type { POListItem } from '@/modules/procurement/types';
 import type { CreateGRNPayload, GRNLineItemInput } from '@/modules/procurement/types/grn-types';
 import { logger } from '@/shared/utils/logger';
@@ -40,6 +43,14 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
     const [jobId, setJobId] = useState<string | undefined>(undefined);
     const [status, setStatus] = useState<string>('Draft');
     const [isMulticurrency, setIsMulticurrency] = useState(false);
+    const [currencyId, setCurrencyId] = useState<string | undefined>(undefined);
+    const [currencyCode, setCurrencyCode] = useState<string>('THB');
+    const [targetCurrencyId, setTargetCurrencyId] = useState<string | undefined>(undefined);
+    const [exchangeRate, setExchangeRate] = useState<number>(1);
+    const [rateDate, setRateDate] = useState<string>(new Date().toISOString().split('T')[0]);
+    
+    const [currencyOptions, setCurrencyOptions] = useState<CurrencyMappedItem[]>([]);
+    const [isRateLoading, setIsRateLoading] = useState(false);
     const [isPOSearchOpen, setIsPOSearchOpen] = useState(false);
 
     // -- Fetch Issued POs --
@@ -64,41 +75,119 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
             POService.getList({ status: 'ISSUED', limit: 100 }).then(res => {
                 setPoList(res.data);
             });
+
+            // Load Currencies and Rate Types
+            CurrencyService.getCurrencies().then(res => {
+                console.log('💎 [GRN] Currencies Loaded:', res);
+                setCurrencyOptions(res.items);
+                // System Default to THB
+                const thb = res.items.find(c => c.code === 'THB');
+                if (thb) {
+                    setCurrencyId(thb.id);
+                    setCurrencyCode('THB');
+                    setTargetCurrencyId(thb.id);
+                }
+            });
         }
         prevIsOpenRef.current = isOpen;
     }, [isOpen, initialPOId]);
 
-    // -- Handle PO Selection --
+    // -- Handle PO Selection & Exchange Rate --
     useEffect(() => {
         if (selectedPOId) {
             POService.getById(selectedPOId).then(po => {
                 if (po) {
                     setSelectedPO(po);
-                    const mockItems: GRNLineItemInput[] = Array.from({ length: 1 }).map((_, i) => ({
-                        po_line_id: 1000 + i,
-                        item_id: 5000 + i,
-                        item_code: `ITM001`,
-                        item_name: `คอมพิวเตอร์ Notebook Dell Inspiro`,
-                        qty_ordered: 5,
-                        qty_received: 5,
-                        accepted_qty: 5,
-                        rejected_qty: 0,
-                        uom_id: 'PCS_UUID',
-                        uom_name: 'PCS',
-                        unit_price: 100,
-                        line_total: 500,
-                        qc_status: 'PASS',
-                        lot_id: 'LOT001',
-                        remark: 'หมายเหตุ'
-                    }));
-                    setItems(mockItems);
+                    
+                    // Populate items from PO
+                    if (po.po_lines) {
+                        const poItems: GRNLineItemInput[] = po.po_lines.map(line => ({
+                            po_line_id: line.po_line_id,
+                            item_id: line.item_id,
+                            item_code: line.item_code || '',
+                            item_name: line.item_name || '',
+                            qty_ordered: line.qty || 0,
+                            qty_received: (line.qty || 0) - (line.qty_received || 0),
+                            accepted_qty: (line.qty || 0) - (line.qty_received || 0),
+                            rejected_qty: 0,
+                            uom_id: line.uom_id ? String(line.uom_id) : undefined,
+                            uom_name: line.uom_name || 'PCS',
+                            unit_price: line.unit_price || 0,
+                            line_total: ((line.qty || 0) - (line.qty_received || 0)) * (line.unit_price || 0),
+                            qc_status: 'PASS',
+                            lot_id: '',
+                            remark: ''
+                        }));
+                        setItems(poItems);
+                    }
+
+                    // Populate Multicurrency from PO
+                    if (po.currency_code && po.currency_code !== 'THB') {
+                        setIsMulticurrency(true);
+                        setCurrencyCode(po.currency_code);
+                        setExchangeRate(po.exchange_rate || 1);
+                        setRateDate(po.exchange_rate_date || new Date().toISOString().split('T')[0]);
+                        // Try to find matching currency ID
+                        const matchedCurr = currencyOptions.find(c => c.code === po.currency_code);
+                        if (matchedCurr) setCurrencyId(matchedCurr.id);
+                    } else {
+                        setIsMulticurrency(false);
+                        setCurrencyCode('THB');
+                        setExchangeRate(1);
+                        setCurrencyId(undefined);
+                    }
                 }
             });
         } else {
             setSelectedPO(null);
             setItems([]);
         }
-    }, [selectedPOId]);
+    }, [selectedPOId, currencyOptions]);
+
+    // Handle Exchange Rate Calculation from Master Data & API
+    useEffect(() => {
+        const fetchRate = async () => {
+            if (!isMulticurrency || !currencyId || !targetCurrencyId || !rateDate) {
+                console.log('💎 [GRN] fetchRate skipped:', { isMulticurrency, currencyId, targetCurrencyId, rateDate });
+                return;
+            }
+            
+            // 1. Immediate Calculation from Master Data
+            const baseCurr = currencyOptions.find(c => String(c.id) === String(currencyId));
+            const targetCurr = currencyOptions.find(c => String(c.id) === String(targetCurrencyId));
+
+            if (baseCurr && targetCurr) {
+                if (String(currencyId) === String(targetCurrencyId)) {
+                    setExchangeRate(1);
+                } else {
+                    // Calculate Cross-Rate: Base_Rate / Target_Rate
+                    const bRate = Number(baseCurr.exchange_rate) || 1;
+                    const tRate = Number(targetCurr.exchange_rate) || 1;
+                    const masterRate = bRate / tRate;
+                    setExchangeRate(Number(masterRate.toFixed(6)));
+                    console.log(`💎 [GRN] Calculated Master Rate: ${baseCurr.code}(${bRate}) / ${targetCurr.code}(${tRate}) = ${masterRate}`);
+                }
+            }
+
+            // 2. Fetch specific date rate if backend supports it
+            if (currencyCode !== 'THB' && targetCurrencyId) {
+                setIsRateLoading(true);
+                try {
+                    const res = await CurrencyService.getLatestExchangeRate(currencyId, rateDate);
+                    console.log('💎 [GRN] API Rate Response:', res);
+                    if (res && res.rate && Number(res.rate) !== 0) { 
+                        setExchangeRate(Number(res.rate));
+                    }
+                } catch (error) {
+                    logger.error('[GRNFormModal] Failed to fetch exchange rate:', error);
+                } finally {
+                    setIsRateLoading(false);
+                }
+            }
+        };
+
+        fetchRate();
+    }, [isMulticurrency, currencyId, targetCurrencyId, rateDate, currencyCode, currencyOptions]);
 
     // -- Handlers --
     const handleQuantityChange = (index: number, value: number) => {
@@ -139,7 +228,7 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
             qty_received: 0,
             accepted_qty: 0,
             rejected_qty: 0,
-            uom_name: 'PCS',
+            uom_name: '',
             unit_price: 0,
             line_total: 0,
             qc_status: 'PASS',
@@ -164,6 +253,13 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
              emp_dept_id: empDeptId,
              job_id: jobId,
              remark: remark,
+             // Financial/Tax
+             curr_id: isMulticurrency ? currencyId : undefined,
+             curr_type_id: isMulticurrency ? targetCurrencyId : undefined,
+             curr_type_cpde: isMulticurrency ? currencyCode : 'THB',
+             // Note: CreateGRNPayload doesn't have exchange_rate yet in schema, 
+             // but we'll include it in case the backend supports it dynamically
+             ...(isMulticurrency ? { exchange_rate: exchangeRate } : {}), 
              items: items.map(i => ({
                  po_line_id: Number(i.po_line_id) || 0,
                  item_id: Number(i.item_id) || 0,
@@ -194,9 +290,9 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
     const totalReceived = useMemo(() => items.reduce((sum, item) => sum + (item.qty_received || 0), 0), [items]);
 
     // -- Styles --
-    const inputClass = 'w-full h-10 px-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
-    const selectClass = 'w-full h-10 px-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 appearance-none';
-    const labelClass = 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1';
+    const inputClass = 'w-full h-8 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none disabled:opacity-70';
+    const selectClass = 'w-full h-8 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 appearance-none outline-none disabled:opacity-70';
+    const labelClass = 'block text-sm font-semibold text-blue-700 dark:text-blue-300 mb-1';
     const sectionHeaderClass = 'text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2';
 
     return (
@@ -252,7 +348,7 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
                             <label className={labelClass}>
                                 วันที่รับ <span className="text-gray-400 font-normal">(grn_date)</span> <span className="text-red-500">*</span>
                             </label>
-                            <div className="relative h-10">
+                            <div className="relative h-8">
                                 <CustomDateInput 
                                     value={formDate} 
                                     onChange={(val) => setFormDate(val)} 
@@ -275,7 +371,7 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
                                 <button 
                                     type="button"
                                     onClick={() => setIsPOSearchOpen(true)}
-                                    className="px-4 h-10 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm transition-all focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center justify-center"
+                                    className="px-4 h-8 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm transition-all focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center justify-center"
                                 >
                                     <Search size={18} />
                                 </button>
@@ -355,17 +451,88 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
                         />
                     </div>
 
-                    {/* Multicurrency */}
-                    <div className="mt-6 p-4 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30">
-                        <label className="flex items-center gap-3 cursor-pointer group">
-                            <input 
-                                type="checkbox" 
-                                checked={isMulticurrency} 
-                                onChange={(e) => setIsMulticurrency(e.target.checked)}
-                                className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                            />
-                            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-blue-600 transition-colors">Multicurrency</span>
-                        </label>
+                    {/* Multicurrency Section */}
+                    <div className="mt-4">
+                        <MulticurrencyWrapper
+                            name="isMulticurrency"
+                            checked={isMulticurrency}
+                            onCheckedChange={(checked) => setIsMulticurrency(checked)}
+                            label="Multicurrency (เปิดใช้งานหลายสกุลเงิน)"
+                        >
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">วันที่อัตราแลกเปลี่ยน</label>
+                                    <CustomDateInput 
+                                        value={rateDate}
+                                        onChange={(val) => setRateDate(val)}
+                                        className={inputClass}
+                                        disabled={!isMulticurrency}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">รหัสสกุลเงิน <span className="text-red-500">*</span></label>
+                                    <select 
+                                        value={currencyId || ''} 
+                                        onChange={(e) => {
+                                            const id = e.target.value;
+                                            setCurrencyId(id);
+                                            const code = currencyOptions.find(c => c.id === id)?.code || 'THB';
+                                            setCurrencyCode(code);
+                                        }} 
+                                        className={selectClass}
+                                        disabled={!isMulticurrency}
+                                    >
+                                        <option value="">-- เลือกสกุลเงิน --</option>
+                                        {currencyOptions.map(c => (
+                                            <option key={c.id} value={c.id}>{c.code} - {c.name_th}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">ไปยังสกุลเงิน (Target)</label>
+                                    <select 
+                                        value={targetCurrencyId || ''} 
+                                        onChange={(e) => {
+                                            const id = e.target.value;
+                                            setTargetCurrencyId(id);
+                                        }} 
+                                        className={selectClass}
+                                        disabled={!isMulticurrency}
+                                    >
+                                        <option value="">-- เลือกสกุลเงิน --</option>
+                                        {currencyOptions.map(c => (
+                                            <option key={c.id} value={c.id}>{c.code} - {c.name_th}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                                        อัตราแลกเปลี่ยน {isRateLoading && <span className="text-blue-500 text-[10px] animate-pulse">(Updating...)</span>}
+                                    </label>
+                                    <div className="relative">
+                                        <input 
+                                            type="number" 
+                                            value={exchangeRate} 
+                                            onChange={(e) => setExchangeRate(Number(e.target.value))}
+                                            readOnly={currencyCode === 'THB'}
+                                            disabled={!isMulticurrency}
+                                            className={`${inputClass} text-right font-medium ${currencyCode === 'THB' ? 'bg-gray-100 dark:bg-gray-800/50 italic' : ''}`}
+                                            step="0.0001"
+                                        />
+                                        {currencyCode && currencyCode !== 'THB' && (
+                                            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">
+                                                1 {currencyCode} =
+                                            </div>
+                                        )}
+                                    </div>
+                                    {currencyCode && currencyCode !== 'THB' && (
+                                        <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 text-right font-medium">
+                                            1 {currencyCode} ≈ {Number(exchangeRate || 0).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })} THB
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </MulticurrencyWrapper>
                     </div>
                 </div>
 
@@ -519,6 +686,7 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
                                     <span className="font-black text-blue-600 dark:text-blue-400 text-3xl leading-none">
                                         {totalReceived.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 })}
                                     </span>
+                                    <span className="ml-2 text-sm font-bold text-gray-500 uppercase">{isMulticurrency ? currencyCode : 'THB'}</span>
                                 </div>
                             </div>
                         </div>
