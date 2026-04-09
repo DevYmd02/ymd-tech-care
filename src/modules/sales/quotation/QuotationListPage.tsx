@@ -188,14 +188,6 @@ export default function QuotationListPage() {
                         accentColor="blue"
                     />
                     <FilterField
-                        label="สถานะ"
-                        type="select"
-                        value={statusFilter}
-                        onChange={setStatusFilter}
-                        options={STATUS_OPTIONS}
-                        accentColor="blue"
-                    />
-                    <FilterField
                         label="วันที่ตั้งแต่"
                         type="date"
                         value={startDate}
@@ -209,14 +201,18 @@ export default function QuotationListPage() {
                         onChange={setEndDate}
                         accentColor="blue"
                     />
+                    <FilterField
+                        label="สถานะ"
+                        type="select"
+                        value={statusFilter}
+                        onChange={setStatusFilter}
+                        options={STATUS_OPTIONS}
+                        accentColor="blue"
+                    />
                     
                     {/* Action Buttons Group */}
-                    <div className="md:col-span-5 flex flex-col sm:flex-row justify-between gap-4 mt-2">
+                    <div className="md:col-span-5 flex flex-col sm:flex-row justify-end gap-4 mt-2">
                         <div className="flex gap-2">
-                            <button className="h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2">
-                                <Search size={18} />
-                                ค้นหา
-                            </button>
                             <button 
                                 onClick={() => {
                                     setSqNo('');
@@ -229,6 +225,10 @@ export default function QuotationListPage() {
                             >
                                 <Plus size={18} className="rotate-45" />
                                 ล้างค่า
+                            </button>
+                            <button className="h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2">
+                                <Search size={18} />
+                                ค้นหา
                             </button>
                         </div>
                         

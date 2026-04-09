@@ -31,8 +31,5 @@ export interface EmployeeSideFormData {
 }
 
 // Backward compatibility aliases
-export type DepartmentMaster = EmployeeSideMaster;
-export type DepartmentFormData = EmployeeSideFormData;
-export type DepartmentListItem = EmployeeSideMaster;
 export type EmployeeSideListItem = EmployeeSideMaster;
 

@@ -14,6 +14,8 @@ import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWra
 import type { CurrencyMappedItem } from '@/modules/master-data/currency/types/currency-types';
 import type { POListItem } from '@/modules/procurement/types';
 import type { CreateGRNPayload, GRNLineItemInput } from '@/modules/procurement/types/grn-types';
+import { MasterDataService } from '@/modules/master-data';
+import type { DepartmentListItem } from '@/modules/master-data/types/master-data-types';
 import { logger } from '@/shared/utils/logger';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 
@@ -61,6 +63,7 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
     const [isLotSearchOpen, setIsLotSearchOpen] = useState(false);
     const [currentLotLineIndex, setCurrentLotLineIndex] = useState<number | null>(null);
     const [uomOptions, setUomOptions] = useState<UnitListItem[]>([]);
+    const [deptOptions, setDeptOptions] = useState<DepartmentListItem[]>([]);
 
 
     
@@ -95,6 +98,11 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
             // Load UOMs
             UnitService.getAll().then((res: PaginatedListResponse<UnitListItem>) => {
                 setUomOptions(res.items);
+            });
+
+            // Load Departments
+            MasterDataService.getDepartments().then((res) => {
+                setDeptOptions(res);
             });
         }
         prevIsOpenRef.current = isOpen;
@@ -462,8 +470,11 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
                             <div className="relative">
                                 <select value={empDeptId || ''} onChange={(e) => setEmpDeptId(e.target.value)} className={selectClass}>
                                     <option value="">-- เลือกแผนก --</option>
-                                    <option value="DEPT01">ฝ่ายผลิต</option>
-                                    <option value="DEPT02">ฝ่ายขาย</option>
+                                    {deptOptions.map((dept) => (
+                                        <option key={dept.emp_dept_id || dept.dept_id || dept.id} value={String(dept.emp_dept_id || dept.dept_id || dept.id)}>
+                                            {dept.emp_dept_code || dept.dept_code} - {dept.emp_dept_name || dept.dept_name || dept.department_name}
+                                        </option>
+                                    ))}
                                 </select>
                                 <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={14} />
                             </div>

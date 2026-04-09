@@ -33,6 +33,7 @@ export interface EmployeeDeptMaster extends BaseMasterData {
     department_id?: number;
     department_code?: string;
     department_name?: string;
+    department_name_en?: string;
 }
 
 export interface EmployeeDeptFormData {
@@ -44,6 +45,9 @@ export interface EmployeeDeptFormData {
 }
 
 // Backward compatibility aliases
+export type DepartmentMaster = EmployeeDeptMaster;
+export type DepartmentFormData = EmployeeDeptFormData;
+export type DepartmentListItem = EmployeeDeptMaster;
 export type SectionMaster = EmployeeDeptMaster;
 export type SectionFormData = EmployeeDeptFormData;
 export type SectionListItem = EmployeeDeptMaster;
