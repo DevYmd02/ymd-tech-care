@@ -247,8 +247,10 @@ export function QuotationHeaderForm({
                     >
                         <option value="">-- เลือกแผนก --</option>
                         {departments.map(dept => (
-                            <option key={dept.id || dept.emp_side_id || dept.side_id} value={String(dept.id || dept.emp_side_id || dept.side_id || '')}>
-                                {dept.side_name}
+                            <option key={dept.emp_dept_id || dept.dept_id || dept.id} value={String(dept.emp_dept_id || dept.dept_id || dept.id || '')}>
+                                {(dept.emp_dept_code || dept.dept_code) ? `${dept.emp_dept_code || dept.dept_code} - ` : ''}
+                                {dept.emp_dept_name || dept.dept_name || dept.department_name}
+                                {dept.emp_side_name ? ` (${dept.emp_side_name})` : ''}
                             </option>
                         ))}
                     </select>
