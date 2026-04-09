@@ -4,23 +4,30 @@
  */
 
 import { useEffect, useCallback } from 'react';
-import { useForm, useFieldArray, type SubmitHandler, type Path, type PathValue } from 'react-hook-form';
+import { useForm, useFieldArray, type SubmitHandler, type Path, type PathValue, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PriceListService } from '@master-data/sales/pages/price-list/services/price-list.service';
-import type { PriceListFormData, PriceListItemFormData } from '@master-data/sales/pages/price-list/types/price-list.types';
+import type { PriceListFormData } from '../types/price-list.types';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
+import { CustomerService } from '@customer/customer-master/services/customer.service';
+import { EmployeeService } from '@master-data/employee/services/employee.service';
+import { ItemMasterService } from '@inventory/services/item-master.service';
+import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
+import type { IEmployee } from '@/modules/master-data/company/types/employee-types';
+import type { FieldErrors } from 'react-hook-form';
 
 const priceListItemSchema = z.object({
     priceListItemId: z.string().optional(),
     itemId: z.string().min(1, 'กรุณาเลือกสินค้า'),
-    uomId: z.string().nullable(),
-    unitPrice: z.number().min(0, 'ราคาต้องไม่ติดลบ'),
-    lineDiscount: z.union([z.number(), z.string()]),
-    lineDiscountAmnt: z.number(),
-    unitPriceNet: z.number(),
+    uomId: z.string().nullable().refine(val => val !== null && val !== '', 'กรุณาเลือกหน่วยนับ'),
+    unitPrice: z.coerce.number().min(0, 'ราคาต้องไม่ติดลบ'),
+    lineDiscount: z.union([z.coerce.number(), z.string()]),
+    lineDiscountAmnt: z.coerce.number(),
+    unitPriceNet: z.coerce.number(),
     remark: z.string(),
+    itemBrandId: z.union([z.string(), z.number()]).optional(),
     itemCode: z.string().optional(),
     itemName: z.string().optional(),
     uomName: z.string().optional(),
@@ -36,20 +43,41 @@ const priceListSchema = z.object({
     branchId: z.string().min(1, 'กรุณาเลือกสาขา'),
     customerGroupId: z.string(),
     customerId: z.string(),
-    empDeptId: z.string(),
-    itemBrandId: z.string(),
+    itemBrandId: z.string().optional(),
+    empDeptId: z.string().min(1, 'กรุณาเลือกแผนก'),
     itemId: z.string(),
-    permitEmpId: z.string(),
+    permitEmpId: z.string().min(1, 'กรุณาเลือกผู้อนุมัติ'),
     saveEmpId: z.string(),
     remark: z.string(),
     priceListFlag: z.enum(['+', '-']).nullable(),
+    customerCode: z.string().optional(),
     customerName: z.string().optional(),
     permitEmpName: z.string().optional(),
     saveEmpName: z.string().optional(),
     items: z.array(priceListItemSchema),
+}).superRefine((data, ctx) => {
+    // Check for duplicate Item + UOM pairs
+    const seen = new Set<string>();
+    data.items.forEach((item, index) => {
+        if (!item.itemId || !item.uomId) return;
+        
+        const pairKey = `${item.itemId}-${item.uomId}`;
+        if (seen.has(pairKey)) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: 'หน่วยนับซ้ำกันกับสินค้า',
+                path: ['items', index, 'uomId'],
+            });
+        }
+        seen.add(pairKey);
+    });
 });
 
-const initialValues: PriceListFormData = {
+// Standardize on Zod-inferred types for 100% type safety with zodResolver
+type FormValues = z.infer<typeof priceListSchema>;
+type ItemValues = z.infer<typeof priceListItemSchema>;
+
+const initialValues: FormValues = {
     priceListNo: '',
     priceListName: '',
     priceListDate: new Date().toISOString().split('T')[0],
@@ -59,13 +87,14 @@ const initialValues: PriceListFormData = {
     branchId: '',
     customerGroupId: '',
     customerId: '',
-    empDeptId: '',
     itemBrandId: '',
+    empDeptId: '',
     itemId: '',
     permitEmpId: '',
     saveEmpId: '',
     remark: '',
     priceListFlag: null,
+    customerCode: '',
     customerName: '',
     permitEmpName: '',
     saveEmpName: '',
@@ -83,9 +112,10 @@ export function usePriceListForm(editId: string | null, onSuccess?: () => void, 
         watch,
         getValues,
         formState: { errors, isSubmitting }
-    } = useForm<PriceListFormData>({
-        resolver: zodResolver(priceListSchema),
+    } = useForm<FormValues>({
+        resolver: zodResolver(priceListSchema) as Resolver<FormValues>,
         defaultValues: initialValues,
+        mode: 'onChange'
     });
 
     const { fields, append, remove } = useFieldArray({
@@ -98,9 +128,70 @@ export function usePriceListForm(editId: string | null, onSuccess?: () => void, 
         if (!isOpen) return;
 
         if (editId) {
+            console.log('🔄 Fetching Price List for Edit:', editId);
             const fetchDetail = async () => {
                 try {
-                    const data = await PriceListService.get(editId);
+                    // Step 1: Fetch basic Price List detail and all employees for lookups
+                    const [data, employees] = await Promise.all([
+                        PriceListService.get(editId),
+                        EmployeeService.getAll()
+                    ]);
+                    
+                    console.log('✅ Base Price List fetched:', data);
+
+                    // Step 2: Hydrate Customer information
+                    const customerIdNum = Number(data.customer_id || data.customer_code || 0);
+                    const customer = customerIdNum ? await CustomerService.getById(customerIdNum) : null;
+                    
+                    // Step 3: Resolve Recorder and Approver names from employee list with fallback matching
+                    const recorder = (employees as (IEmployee & { employee_id?: number | string })[]).find(
+                        e => Number(e.id) === Number(data.save_emp_id) || Number(e.employee_id) === Number(data.save_emp_id)
+                    );
+                    const approver = (employees as (IEmployee & { employee_id?: number | string })[]).find(
+                        e => Number(e.id) === Number(data.permit_emp_id) || Number(e.employee_id) === Number(data.permit_emp_id)
+                    );
+
+                    const resolveEmpName = (emp: (Partial<IEmployee> & { employee_id?: number | string; employee_name?: string; employee_fullname?: string; employee_firstname_th?: string; employee_lastname_th?: string; employee_code?: string; first_name?: string; last_name?: string }) | undefined) => {
+                        if (!emp) return '';
+                        if (typeof emp.employee_name === 'string') return emp.employee_name;
+                        if (typeof emp.employee_fullname === 'string') return emp.employee_fullname;
+                        if (typeof emp.employee_firstname_th === 'string') {
+                            return `${emp.employee_firstname_th} ${typeof emp.employee_lastname_th === 'string' ? emp.employee_lastname_th : ''}`.trim();
+                        }
+                        if (typeof emp.first_name === 'string') {
+                            return `${emp.first_name} ${typeof emp.last_name === 'string' ? emp.last_name : ''}`.trim();
+                        }
+                        return String(emp.employee_code || '');
+                    };
+
+                    // Step 4: Hydrate Item Details for the table (Codes and Names)
+                    const rawLines = data.priceListItemLines || data.price_list_lines || data.items || [];
+                    const hydratedItems = await Promise.all(rawLines.map(async (line) => {
+                        const itmId = Number(line.item_id || 0);
+                        const uomId = Number(line.uom_id || 0);
+                        
+                        // Fetch item and unit details in parallel for each row
+                        const [itemDetail, unitDetail] = await Promise.all([
+                            itmId ? ItemMasterService.getById(itmId) : Promise.resolve(null),
+                            uomId ? UnitService.get(uomId) : Promise.resolve(null)
+                        ]);
+
+                        return {
+                            priceListItemId: String(line.price_list_item_id || ''),
+                            itemId: String(itmId),
+                            uomId: String(uomId),
+                            unitPrice: Number(line.unit_price || 0),
+                            lineDiscount: line.line_discount_rate || Number(line.line_discount || 0),
+                            lineDiscountAmnt: Number(line.line_discount_amount || line.line_discount_amnt || 0),
+                            unitPriceNet: Number(line.unit_price_net || 0),
+                            remark: line.remarks || line.remark || '',
+                            itemCode: itemDetail?.item_code || line.item_code || '',
+                            itemName: itemDetail?.item_name || line.item_name || '',
+                            uomName: unitDetail?.unit_name || unitDetail?.uom_name || line.uom_name || '-'
+                        };
+                    }));
+
+                    // Step 5: Reset form with fully hydrated information
                     reset({
                         priceListNo: data.price_list_no,
                         priceListName: data.price_list_name,
@@ -108,32 +199,21 @@ export function usePriceListForm(editId: string | null, onSuccess?: () => void, 
                         isActive: data.is_active,
                         beginDate: data.begin_date ? data.begin_date.split('T')[0] : null,
                         endDate: data.end_date ? data.end_date.split('T')[0] : null,
-                        branchId: data.branch_id,
-                        customerGroupId: data.customer_group_id || '',
-                        customerId: data.customer_id || '',
-                        empDeptId: data.emp_dept_id || '',
-                        itemBrandId: data.item_brand_id || '',
-                        itemId: data.item_id || '',
-                        permitEmpId: data.permit_emp_id || '',
-                        saveEmpId: data.save_emp_id || '',
+                        branchId: String(data.branch_id || ''),
+                        customerId: String(customerIdNum || ''),
+                        customerCode: customer?.customer_code || String(customerIdNum || ''),
+                        customerName: customer?.customer_name_th || customer?.customer_name || data.customer_name || '',
+                        empDeptId: String(data.emp_dept_id || ''),
+                        itemBrandId: String(data.item_brand_id || ''),
+                        itemId: String(data.item_id || ''),
+                        permitEmpId: String(data.permit_emp_id || ''),
+                        permitEmpName: resolveEmpName(approver),
+                        saveEmpId: String(data.save_emp_id || ''),
+                        saveEmpName: resolveEmpName(recorder),
+                        customerGroupId: String(data.customer_group_id || ''),
                         remark: data.remark || '',
-                        priceListFlag: data.price_list_flag,
-                        customerName: data.customer_name || '',
-                        permitEmpName: data.permit_emp_name || '',
-                        saveEmpName: data.save_emp_name || '',
-                        items: (data.items || []).map(item => ({
-                            priceListItemId: item.price_list_item_id,
-                            itemId: item.item_id,
-                            uomId: item.uom_id,
-                            unitPrice: Number(item.unit_price),
-                            lineDiscount: Number(item.line_discount),
-                            lineDiscountAmnt: Number(item.line_discount_amnt),
-                            unitPriceNet: Number(item.unit_price_net),
-                            remark: item.remark || '',
-                            itemCode: item.item_code,
-                            itemName: item.item_name,
-                            uomName: item.uom_name,
-                        })),
+                        priceListFlag: data.price_list_flag === 'A' ? '+' : data.price_list_flag === 'S' ? '-' : null,
+                        items: hydratedItems,
                     });
                 } catch (error) {
                     console.error('Failed to fetch price list detail:', error);
@@ -151,7 +231,7 @@ export function usePriceListForm(editId: string | null, onSuccess?: () => void, 
         }
     }, [editId, reset, user, isOpen]);
 
-    const onSubmit: SubmitHandler<PriceListFormData> = async (formData) => {
+    const onSubmit: SubmitHandler<FormValues> = async (formData) => {
         try {
             // Convert any percentage/string discounts to absolute amounts for the API
             const submissionData = {
@@ -171,11 +251,13 @@ export function usePriceListForm(editId: string | null, onSuccess?: () => void, 
                         lineDiscountAmnt: finalDiscount
                     };
                 })
-            };
+            } satisfies PriceListFormData;
+
+            console.log('📝 Form Submission Data:', submissionData);
 
             const result = editId 
-                ? await PriceListService.update(editId, submissionData as PriceListFormData)
-                : await PriceListService.create(submissionData as PriceListFormData);
+                ? await PriceListService.update(editId, submissionData)
+                : await PriceListService.create(submissionData);
             
             if (result.success) {
                 toast.success(editId ? 'แก้ไขข้อมูลสำเร็จ' : 'เพิ่มข้อมูลสำเร็จ');
@@ -188,6 +270,18 @@ export function usePriceListForm(editId: string | null, onSuccess?: () => void, 
             toast.error('เกิดข้อผิดพลาดในการบันทึก');
         }
     };
+
+    const onInvalid = (errors: FieldErrors<FormValues>) => {
+        console.warn('Form Validation Errors:', errors);
+        const firstErrorField = Object.keys(errors)[0] as keyof FormValues;
+        if (firstErrorField) {
+            const error = errors[firstErrorField] as { message?: string };
+            const message = error?.message || `กรุณตรวจสอบฟิลด์ ${String(firstErrorField)}`;
+            toast.error(message);
+        }
+    };
+
+    const onSubmitWithValidation = handleSubmit(onSubmit, onInvalid);
 
     const calculateNetPrice = useCallback((unitPrice: number, lineDiscount: string | number) => {
         let discountAmnt = 0;
@@ -203,14 +297,17 @@ export function usePriceListForm(editId: string | null, onSuccess?: () => void, 
         };
     }, []);
 
-    const handleItemChange = <K extends keyof PriceListItemFormData>(
+    const handleItemChange = <K extends keyof ItemValues>(
         index: number, 
         field: K, 
-        value: PriceListItemFormData[K]
+        value: ItemValues[K]
     ) => {
         // Use Path casting instead of any to satisfy TS and RHF requirements
-        const path = `items.${index}.${field}` as Path<PriceListFormData>;
-        setValue(path, value as PathValue<PriceListFormData, Path<PriceListFormData>>, { shouldDirty: true });
+        const path = `items.${index}.${field}` as Path<FormValues>;
+        setValue(path, value as PathValue<FormValues, Path<FormValues>>, { 
+            shouldDirty: true,
+            shouldValidate: true // 🚀 Force validation to trigger duplicate check immediately
+        });
         
         if (field === 'unitPrice' || field === 'lineDiscount') {
             const items = getValues('items');
@@ -223,14 +320,14 @@ export function usePriceListForm(editId: string | null, onSuccess?: () => void, 
             const safeNet = Math.max(0, Math.min(unitPriceNet, 999999999999.99));
             const safeDisc = Math.max(0, Math.min(discountAmnt, unitPrice));
             
-            setValue(`items.${index}.lineDiscountAmnt` as Path<PriceListFormData>, safeDisc as PathValue<PriceListFormData, Path<PriceListFormData>>, { shouldDirty: true });
-            setValue(`items.${index}.unitPriceNet` as Path<PriceListFormData>, safeNet as PathValue<PriceListFormData, Path<PriceListFormData>>, { shouldDirty: true });
+            setValue(`items.${index}.lineDiscountAmnt` as Path<FormValues>, safeDisc as PathValue<FormValues, Path<FormValues>>, { shouldDirty: true, shouldValidate: true });
+            setValue(`items.${index}.unitPriceNet` as Path<FormValues>, safeNet as PathValue<FormValues, Path<FormValues>>, { shouldDirty: true, shouldValidate: true });
         }
     };
 
     return {
         register,
-        handleSubmit: handleSubmit(onSubmit),
+        handleSubmit: onSubmitWithValidation,
         control,
         errors,
         isSubmitting,

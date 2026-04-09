@@ -195,7 +195,7 @@ export const CustomerSearchModal: React.FC<CustomerSearchModalProps> = React.mem
 
                                         return (
                                             <tr
-                                                key={customer.customer_id || customer.id || index}
+                                                key={customer.customer_id || customer.id || `customer-${index}`}
                                                 className={`transition-colors text-sm ${
                                                     !isSelectable
                                                         ? 'bg-gray-50/50 dark:bg-gray-900/30 opacity-60'
@@ -273,7 +273,7 @@ export const CustomerSearchModal: React.FC<CustomerSearchModalProps> = React.mem
                                         );
                                     })
                                 ) : (
-                                    <tr>
+                                    <tr key="empty-row">
                                         <td colSpan={9} className="px-4 py-20 text-center text-gray-400 dark:text-gray-500">
                                             <Search size={48} className="mx-auto mb-4 opacity-20" />
                                             <p className="text-base font-medium">ไม่พบข้อมูลลูกค้า</p>
