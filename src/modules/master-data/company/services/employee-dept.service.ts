@@ -9,11 +9,41 @@ import { type PaginatedListResponse } from '@/shared/types/api-response.types';
 import { type TableFilters } from '@/shared/hooks/useTableFilters';
 
 export const EmployeeDeptService = {
-  getList: (params?: Partial<TableFilters>) => api.get<PaginatedListResponse<EmployeeDeptMaster>>('/org-sections', { params }),
-  get: (id: string | number) => api.get<EmployeeDeptMaster>(`/org-sections/${id}`),
-  create: (data: EmployeeDeptFormData) => api.post<{ success: boolean; data?: EmployeeDeptMaster; message?: string }>('/org-sections', data),
-  update: (id: string | number, data: Partial<EmployeeDeptFormData>) => api.put<{ success: boolean; data?: EmployeeDeptMaster; message?: string }>(`/org-sections/${id}`, data),
-  delete: (id: string | number) => api.delete<boolean>(`/org-sections/${id}`),
+  getList: async (params?: Partial<TableFilters>): Promise<PaginatedListResponse<EmployeeDeptMaster>> => {
+    const response = await api.get<PaginatedListResponse<EmployeeDeptMaster> | EmployeeDeptMaster[]>('/department', { params });
+    
+    // Normalize: Handle raw array response from backend
+    if (Array.isArray(response)) {
+      return {
+        items: response,
+        total: response.length,
+        page: params?.page || 1,
+        limit: params?.limit || 10,
+      };
+    }
+    
+    return response;
+  },
+  get: (id: string | number) => api.get<EmployeeDeptMaster>(`/department/${id}`),
+  create: async (data: EmployeeDeptFormData): Promise<{ success: boolean; data?: EmployeeDeptMaster; message?: string }> => {
+    try {
+      const response = await api.post<EmployeeDeptMaster>('/department', data);
+      return { success: true, data: response };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return { success: false, message: err.response?.data?.message || 'บันทึกไม่สำเร็จ' };
+    }
+  },
+  update: async (id: string | number, data: Partial<EmployeeDeptFormData>): Promise<{ success: boolean; data?: EmployeeDeptMaster; message?: string }> => {
+    try {
+      const response = await api.put<EmployeeDeptMaster>(`/department/${id}`, data);
+      return { success: true, data: response };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return { success: false, message: err.response?.data?.message || 'แก้ไขไม่สำเร็จ' };
+    }
+  },
+  delete: (id: string | number) => api.delete<boolean>(`/department/${id}`),
 };
 
 // Backward compatibility alias

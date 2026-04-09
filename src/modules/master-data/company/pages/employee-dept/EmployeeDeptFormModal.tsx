@@ -26,11 +26,10 @@ export const EmployeeDeptFormModal = ({ isOpen, onClose, onSuccess, editId }: Em
         sides,
         isSubmitting,
         handleSave,
-        setValue,
         control
     } = useEmployeeDeptForm(editId ?? null, isOpen, onSuccess);
 
-    const isActive = useWatch({ control, name: 'isActive' });
+    const isActive = useWatch({ control, name: 'is_active' });
 
     // Header Icon
     const TitleIcon = <Layers className="w-5 h-5 text-white" />;
@@ -48,7 +47,7 @@ export const EmployeeDeptFormModal = ({ isOpen, onClose, onSuccess, editId }: Em
             </button>
             <button
                 type="button"
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50"
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50"
                 onClick={handleSave}
                 disabled={isSubmitting}
             >
@@ -71,89 +70,86 @@ export const EmployeeDeptFormModal = ({ isOpen, onClose, onSuccess, editId }: Em
             footer={FormFooter}
         >
             <div className="p-6 space-y-6">
-                {/* 1. Dept Code (รหัสแผนก) */}
+                {/* 1. Select Side & Status Row */}
+                <div className="space-y-1">
+                    <div className="flex justify-between items-center mb-1">
+                        <label className={styles.label}>
+                            เลือกฝ่าย <span className="text-red-500">*</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                            <input
+                                {...register('is_active')}
+                                type="checkbox"
+                                checked={isActive}
+                                className="checkbox checkbox-sm checkbox-primary border-indigo-400 checked:bg-indigo-600"
+                            />
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                ใช้งาน (Active)
+                            </span>
+                        </label>
+                    </div>
+                    <select 
+                        className={`${styles.input} cursor-pointer ${errors.emp_side_id ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        {...register('emp_side_id')}
+                    >
+                        <option value="">-- เลือกฝ่าย --</option>
+                        {sides.map(side => (
+                            <option key={side.emp_side_id || side.side_id} value={side.emp_side_id || side.side_id}>
+                                {side.emp_side_code || side.side_code} - {side.emp_side_name || side.side_name}
+                            </option>
+                        ))}
+                    </select>
+                    {errors.emp_side_id && (
+                        <p className="text-red-500 text-xs mt-1">{errors.emp_side_id.message}</p>
+                    )}
+                </div>
+
+                {/* 2. Dept Code */}
                 <div className="space-y-1">
                     <label className={styles.label}>
                         รหัสแผนก <span className="text-red-500">*</span>
                     </label>
                     <input
-                        {...register('deptCode')}
+                        {...register('emp_dept_code')}
                         type="text"
                         placeholder="กรอกรหัสแผนก (เช่น FIN-TRS, ACC-GL)"
-                        className={`${styles.input} ${errors.deptCode ? 'border-red-500 focus:ring-red-200' : ''}`}
-                        disabled={isEdit}
+                        className={`${styles.input} ${errors.emp_dept_code ? 'border-red-500 focus:ring-red-200' : ''}`}
                     />
-                    {errors.deptCode && (
-                        <p className="text-red-500 text-xs mt-1">{errors.deptCode.message}</p>
+                    {errors.emp_dept_code && (
+                        <p className="text-red-500 text-xs mt-1">{errors.emp_dept_code.message}</p>
                     )}
                 </div>
 
-                {/* 2. Dept Name Thai (ชื่อแผนก ภาษาไทย) */}
+                {/* 3. Dept Name Thai (ชื่อแผนก ภาษาไทย) */}
                 <div className="space-y-1">
                     <label className={styles.label}>
                         ชื่อแผนก (ภาษาไทย) <span className="text-red-500">*</span>
                     </label>
                     <input
-                        {...register('deptName')}
+                        {...register('emp_dept_name')}
                         type="text"
                         placeholder="กรอกชื่อแผนก"
-                        className={`${styles.input} ${errors.deptName ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        className={`${styles.input} ${errors.emp_dept_name ? 'border-red-500 focus:ring-red-200' : ''}`}
                     />
-                    {errors.deptName && (
-                        <p className="text-red-500 text-xs mt-1">{errors.deptName.message}</p>
+                    {errors.emp_dept_name && (
+                        <p className="text-red-500 text-xs mt-1">{errors.emp_dept_name.message}</p>
                     )}
                 </div>
 
-                {/* 3. Dept Name English (ชื่อแผนก ภาษาอังกฤษ) */}
+                {/* 4. Dept Name English (ชื่อแผนก ภาษาอังกฤษ) */}
                 <div className="space-y-1">
                     <label className={styles.label}>
                         ชื่อแผนก (ภาษาอังกฤษ)
                     </label>
                     <input
-                        {...register('deptNameEn')}
+                        {...register('emp_dept_nameeng')}
                         type="text"
                         placeholder="Enter department name in English"
-                        className={`${styles.input} ${errors.deptNameEn ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        className={`${styles.input} ${errors.emp_dept_nameeng ? 'border-red-500 focus:ring-red-200' : ''}`}
                     />
-                    {errors.deptNameEn && (
-                        <p className="text-red-500 text-xs mt-1">{errors.deptNameEn.message}</p>
+                    {errors.emp_dept_nameeng && (
+                        <p className="text-red-500 text-xs mt-1">{errors.emp_dept_nameeng.message}</p>
                     )}
-                </div>
-
-                {/* 4. Select Side (เลือกฝ่าย) */}
-                <div className="space-y-1">
-                    <label className={styles.label}>
-                        เลือกฝ่าย <span className="text-red-500">*</span>
-                    </label>
-                    <select 
-                        className={`${styles.input} cursor-pointer ${errors.sideId ? 'border-red-500 focus:ring-red-200' : ''}`}
-                        {...register('sideId')}
-                    >
-                        <option value="">-- เลือกฝ่าย --</option>
-                        {sides.map(side => (
-                            <option key={side.side_id || side.department_id} value={side.side_id || side.department_id}>
-                                {side.side_code || side.department_code} - {side.side_name || side.department_name}
-                            </option>
-                        ))}
-                    </select>
-                    {errors.sideId && (
-                        <p className="text-red-500 text-xs mt-1">{errors.sideId.message}</p>
-                    )}
-                </div>
-
-                {/* 5. Status */}
-                <div className="space-y-1">
-                    <label className={styles.label}>
-                        สถานะ <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                        className={`${styles.input} cursor-pointer`}
-                        value={isActive ? 'true' : 'false'}
-                        onChange={(e) => setValue('isActive', e.target.value === 'true')}
-                    >
-                        <option value="true">ใช้งาน (Active)</option>
-                        <option value="false">ไม่ใช้งาน (Inactive)</option>
-                    </select>
                 </div>
             </div>
         </DialogFormLayout>
