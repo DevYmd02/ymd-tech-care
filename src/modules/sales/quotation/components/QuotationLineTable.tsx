@@ -1,15 +1,19 @@
-import { Plus, Trash2, Package } from 'lucide-react';
+import { Plus, Trash2, Package, Search } from 'lucide-react';
 import type { QuotationLineData } from '../types/quotation.types';
+import type { UnitListItem } from '@/modules/master-data/inventory/types/product-types';
 
 interface QuotationLineTableProps {
     lines: QuotationLineData[];
     onAddLine: () => void;
     onRemoveLine: (index: number) => void;
     onLineChange: (index: number, field: keyof QuotationLineData, value: string | number) => void;
+    onSearchProduct?: (index: number) => void;
+    uoms?: UnitListItem[];
 }
 
-export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChange }: QuotationLineTableProps) {
-    const compactInputClass = "h-8 w-full px-2 text-xs bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-900 dark:text-white transition-colors disabled:bg-gray-50 dark:disabled:bg-gray-800/50";
+export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChange, onSearchProduct, uoms = [] }: QuotationLineTableProps) {
+    const compactInputClass = "h-8 w-full px-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-900 dark:text-white transition-all disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm";
+    const headerThClass = "px-3 py-3 text-[10px] font-bold uppercase tracking-wider bg-gray-50 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700";
     
     return (
         <section className="space-y-6">
@@ -30,17 +34,17 @@ export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChang
 
             <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
                 <table className="w-full text-sm text-left">
-                    <thead className="text-xs uppercase bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-800/50">
                         <tr>
-                            <th className="px-2 py-2 w-10 text-center">#</th>
-                            <th className="px-2 py-2 min-w-[180px]">รหัสสินค้า (ITEM_ID)</th>
-                            <th className="px-2 py-2 min-w-[220px]">ชื่อสินค้า (ITEM NAME)</th>
-                            <th className="px-2 py-2 w-24 text-right">จำนวน (QTY)</th>
-                            <th className="px-2 py-2 w-28">หน่วย (UOM_ID)</th>
-                            <th className="px-2 py-2 w-36 text-right">ราคา/หน่วย (UNIT_PRICE)</th>
-                            <th className="px-2 py-2 w-32 text-right">ส่วนลด (LINE_DISCOUNT)</th>
-                            <th className="px-2 py-2 w-36 text-right">ยอดสุทธิ (LINE_TOTAL)</th>
-                            <th className="px-2 py-2 w-14 text-center">จัดการ</th>
+                            <th className={`${headerThClass} w-10 text-center`}>#</th>
+                            <th className={`${headerThClass} min-w-[180px]`}>รหัสสินค้า (ITEM CODE)</th>
+                            <th className={`${headerThClass} min-w-[220px]`}>ชื่อสินค้า (ITEM NAME)</th>
+                            <th className={`${headerThClass} w-24 text-right`}>จำนวน (QTY)</th>
+                            <th className={`${headerThClass} w-28`}>หน่วย (UOM)</th>
+                            <th className={`${headerThClass} w-28 text-right`}>ราคา/หน่วย</th>
+                            <th className={`${headerThClass} w-28 text-right`}>ส่วนลด</th>
+                            <th className={`${headerThClass} w-28 text-right`}>ยอดสุทธิ</th>
+                            <th className={`${headerThClass} w-14 text-center`}>จัดการ</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-gray-900">
@@ -50,13 +54,21 @@ export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChang
                                     {index + 1}
                                 </td>
                                 <td className="px-2 py-1.5">
-                                    <select 
-                                        value={line.item_id || ''} 
-                                        onChange={(e) => onLineChange(index, 'item_id', e.target.value)}
-                                        className={compactInputClass}
-                                    >
-                                        <option value="">-- เลือกสินค้า --</option>
-                                    </select>
+                                    <div className="flex gap-1">
+                                        <input 
+                                            value={line.item_code || ''}
+                                            readOnly
+                                            className={`${compactInputClass} bg-gray-50/50 italic cursor-not-allowed`}
+                                            placeholder="รหัสสินค้า"
+                                        />
+                                        <button 
+                                            type="button" 
+                                            onClick={() => onSearchProduct?.(index)}
+                                            className="p-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-all shadow-sm active:scale-95 shrink-0 h-8 w-8 flex items-center justify-center"
+                                        >
+                                            <Search size={14} />
+                                        </button>
+                                    </div>
                                 </td>
                                 <td className="px-2 py-1.5">
                                     <input 
@@ -69,9 +81,16 @@ export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChang
                                 </td>
                                 <td className="px-2 py-1.5">
                                     <input 
-                                        type="number" 
-                                        value={line.qty || 0} 
-                                        onChange={(e) => onLineChange(index, 'qty', parseFloat(e.target.value))}
+                                        type="text" 
+                                        value={line.qty || ''} 
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                                onLineChange(index, 'qty', val === '' ? 0 : parseFloat(val));
+                                            }
+                                        }}
+                                        onFocus={(e) => e.target.select()}
+                                        placeholder="0"
                                         className={`${compactInputClass} text-right`}
                                     />
                                 </td>
@@ -81,27 +100,40 @@ export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChang
                                         onChange={(e) => onLineChange(index, 'uom_id', e.target.value)}
                                         className={compactInputClass}
                                     >
-                                        <option value="PCS">PCS</option>
-                                        <option value="SET">SET</option>
+                                        <option value="">-- หน่วย --</option>
+                                        {uoms.map((u) => (
+                                            <option key={String(u.id || u.unit_id)} value={String(u.id || u.unit_id)}>
+                                                {u.unit_name || u.uom_name}
+                                            </option>
+                                        ))}
                                     </select>
                                 </td>
                                 <td className="px-2 py-1.5">
                                     <input 
-                                        type="number" 
-                                        value={line.unit_price || 0} 
-                                        onChange={(e) => onLineChange(index, 'unit_price', parseFloat(e.target.value))}
+                                        type="text" 
+                                        value={line.unit_price || ''} 
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                                onLineChange(index, 'unit_price', val === '' ? 0 : parseFloat(val));
+                                            }
+                                        }}
+                                        onFocus={(e) => e.target.select()}
+                                        placeholder="0.00"
                                         className={`${compactInputClass} text-right font-medium text-blue-600`}
                                     />
                                 </td>
                                 <td className="px-2 py-1.5">
                                     <input 
-                                        type="number" 
-                                        value={line.line_discount || 0} 
-                                        onChange={(e) => onLineChange(index, 'line_discount', parseFloat(e.target.value))}
+                                        type="text" 
+                                        value={line.line_discount_input ?? ''} 
+                                        onChange={(e) => onLineChange(index, 'line_discount_input', e.target.value)}
+                                        onFocus={(e) => e.target.select()}
+                                        placeholder="0%"
                                         className={`${compactInputClass} text-right`}
                                     />
                                 </td>
-                                <td className="px-2 py-1.5 text-right font-bold text-gray-900 dark:text-white text-xs">
+                                <td className="px-2 py-1.5 text-right font-bold text-gray-900 dark:text-white text-sm">
                                     {(line.line_total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </td>
                                 <td className="px-2 py-1.5 text-center">

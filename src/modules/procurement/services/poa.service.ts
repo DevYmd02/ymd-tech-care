@@ -11,7 +11,7 @@ import type { SuccessResponse } from '@/shared/types/api-response.types';
 import { extractArrayFromResponse, applyClientFilters } from '@/shared/utils/clientFilterUtils';
 import type { POStatus } from '@/modules/procurement/schemas/po-schemas';
 import { EmployeeService } from '@/modules/master-data/employee/services/employee.service';
-import { BranchService } from '@/modules/master-data/company/services/branch.service';
+import { BranchService } from '@/modules/master-data/company/services/org-branch.service';
 import { TaxCodeService } from '@/modules/master-data/tax/services/tax-code.service';
 import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
 import { parseDiscountAmount } from '@/modules/procurement/utils/pricing.utils';

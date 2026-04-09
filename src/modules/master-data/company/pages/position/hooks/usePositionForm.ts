@@ -8,7 +8,7 @@ import { useForm, type SubmitHandler, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { PositionService } from '@company/services/position.service';
+import { PositionService } from '@company/services/org-position.service';
 import type { PositionFormData } from '@company/types/position.types';
 import { logger } from '@/shared/utils/logger';
 

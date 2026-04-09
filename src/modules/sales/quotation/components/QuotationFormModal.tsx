@@ -5,12 +5,17 @@ import { useQuery } from '@tanstack/react-query';
 import { WindowFormLayout } from '@ui';
 import { MasterDataService } from '@/modules/master-data';
 import { CustomerService } from '@/modules/master-data/customer/customer-master/services/customer.service';
+import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
 import { TaxGroupService } from '@/modules/master-data/tax/services/tax-group.service';
 import type { Currency } from '@/modules/master-data/types/master-data-types';
 import type { QuotationFormData, QuotationLineData } from '../types/quotation.types';
 import { QuotationHeaderForm } from './QuotationHeaderForm';
 import { QuotationLineTable } from './QuotationLineTable';
 import { QuotationSummary } from './QuotationSummary';
+import { CustomerSearchModal } from './CustomerSearchModal';
+import { ProductSearchModal } from './ProductSearchModal';
+import type { CustomerMaster } from '@/modules/master-data/customer/customer-master/types/customer-types';
+import type { ItemListItem } from '@/modules/master-data/inventory/types/product-types';
 
 interface QuotationFormModalProps {
     isOpen: boolean;
@@ -45,6 +50,7 @@ const DEFAULT_FORM_DATA: QuotationFormData = {
     remarks: '',
     sq_status: '',
     status_remark: '',
+    discount_input: '',
     discount_amount: 0,
     sub_total: 0,
     vat_amount: 0,
@@ -60,6 +66,11 @@ const cardClass = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-
 export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess }: QuotationFormModalProps) {
     const isEdit = !!id;
     const [isSubmitting, setIsSubmitting] = useState(false);
+    
+    // Search Modals State
+    const [isCustomerSearchOpen, setIsCustomerSearchOpen] = useState(false);
+    const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
+    const [activeLineIndex, setActiveLineIndex] = useState<number | null>(null);
     
     // React Hook Form Setup
     const methods = useForm<QuotationFormData>({
@@ -120,6 +131,13 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
         queryFn: MasterDataService.getItemTypes,
         enabled: isOpen
     });
+    
+    const { data: uomResponse } = useQuery({
+        queryKey: ['master-units'],
+        queryFn: () => UnitService.getAll({ limit: 1000 }),
+        enabled: isOpen
+    });
+    const uoms = uomResponse?.items || [];
 
     // Exchange Rate Sync Logic
     const sourceCurrency = useWatch({ control, name: 'base_currency_code' }) as string;
@@ -149,10 +167,12 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
     const handleAddLine = () => {
         const newLine: QuotationLineData = { 
             item_id: '', 
+            item_code: '', 
             item_name: '', 
             qty: 0, 
             uom_id: 'PCS', 
             unit_price: 0, 
+            line_discount_input: '',
             line_discount: 0, 
             line_total: 0, 
             tax_code_id: '',
@@ -169,25 +189,101 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
         const newLines = [...(formData.lines || [])];
         const updatedLine = { ...newLines[index], [field]: value };
         
-        if (field === 'qty' || field === 'unit_price' || field === 'line_discount') {
+        if (field === 'qty' || field === 'unit_price' || field === 'line_discount' || field === 'line_discount_input') {
             const qty = Number(field === 'qty' ? value : updatedLine.qty) || 0;
             const price = Number(field === 'unit_price' ? value : updatedLine.unit_price) || 0;
-            const disc = Number(field === 'line_discount' ? value : updatedLine.line_discount) || 0;
-            updatedLine.line_total = (qty * price) - disc;
+            
+            // Parse line discount
+            const ldInput = (field === 'line_discount_input' ? (value as string) : updatedLine.line_discount_input) || '';
+            let calculatedLD = 0;
+            if (ldInput.endsWith('%')) {
+                const percent = parseFloat(ldInput.replace('%', '')) || 0;
+                calculatedLD = (qty * price) * (percent / 100);
+            } else {
+                calculatedLD = parseFloat(ldInput) || Number(field === 'line_discount' ? value : updatedLine.line_discount) || 0;
+            }
+            
+            updatedLine.line_discount = calculatedLD;
+            updatedLine.line_total = (qty * price) - calculatedLD;
         }
         
         newLines[index] = updatedLine;
         setValue('lines', newLines);
     };
 
+    const handleSelectCustomer = (customer: CustomerMaster) => {
+        setValue('customer_id', String(customer.customer_id || customer.id || ''));
+        setIsCustomerSearchOpen(false);
+    };
+
+    const handleSelectProduct = (product: ItemListItem) => {
+        if (activeLineIndex !== null) {
+            const newLines = [...(formData.lines || [])];
+            const line = newLines[activeLineIndex];
+            
+            if (line) {
+                line.item_id = String(product.item_id || product.id || '');
+                line.item_code = product.item_code || '';
+                line.item_name = product.item_name || '';
+                
+                // Map UOM: Find the correct ID from the uoms list
+                const productUomId = product.uom_id || product.unit_id;
+                const productUomName = product.uom_name || product.base_uom_name || product.unit_name;
+                
+                const foundUom = uoms.find(u => 
+                    (productUomId && (u.id === productUomId || u.unit_id === productUomId)) ||
+                    (productUomName && (u.unit_name === productUomName || u.uom_name === productUomName))
+                );
+
+                if (foundUom) {
+                    line.uom_id = String(foundUom.id || foundUom.unit_id);
+                } else {
+                    line.uom_id = String(productUomId || productUomName || 'PCS');
+                }
+                
+                line.unit_price = Number(product.standard_cost || 0);
+                line.qty = 1; // Default to 1 on select
+                line.line_discount_input = '';
+                line.line_discount = 0;
+                line.line_total = line.unit_price; // Initial total
+                
+                setValue('lines', newLines, { shouldValidate: true, shouldDirty: true });
+            }
+        }
+        setIsProductSearchOpen(false);
+    };
+
     // Calculate Totals
     const subTotal = (formData.lines || []).reduce((sum, line) => sum + (line.line_total || 0), 0);
-    const vatAmount = subTotal * 0.07;
-    const totalAmount = (subTotal + vatAmount) - (formData.discount_amount || 0);
+    
+    // Parse Discount
+    const dInput = formData.discount_input || '';
+    let calculatedDiscount = 0;
+    if (dInput.endsWith('%')) {
+        const percent = parseFloat(dInput.replace('%', '')) || 0;
+        calculatedDiscount = subTotal * (percent / 100);
+    } else {
+        calculatedDiscount = dInput === '' ? 0 : (parseFloat(dInput) || Number(formData.discount_amount) || 0);
+    }
+
+    const selectedTaxGroup = taxGroups.find(t => String(t.tax_group_id) === String(formData.tax_group_id));
+    const taxRate = selectedTaxGroup ? (Number(selectedTaxGroup.tax_rate) || 0) : 0;
+    
+    // Calculate VAT only if a tax group is selected
+    const vatAmount = formData.tax_group_id ? (subTotal * (taxRate / 100)) : 0;
+    const totalAmount = (subTotal + vatAmount) - calculatedDiscount;
 
     const onFormSubmit = async (data: QuotationFormData) => {
         setIsSubmitting(true);
-        console.log('Submitting Quotation:', { ...data, sub_total: subTotal, vat_amount: vatAmount, total_amount: totalAmount });
+        // Ensure numeric discount_amount is synced before submit
+        const finalData = { 
+            ...data, 
+            discount_amount: calculatedDiscount,
+            sub_total: subTotal, 
+            vat_amount: vatAmount, 
+            total_amount: totalAmount 
+        };
+        console.log('Submitting Quotation:', finalData);
         
         await new Promise(r => setTimeout(r, 1000));
         
@@ -260,6 +356,7 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
                                     departments={departments}
                                     projects={projects}
                                     itemTypes={itemTypes}
+                                    onSearchCustomer={() => setIsCustomerSearchOpen(true)}
                                 />
                             </div>
                         </div>
@@ -269,9 +366,14 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
                             <div className="p-6">
                                 <QuotationLineTable 
                                     lines={formData.lines} 
+                                    uoms={uoms}
                                     onAddLine={handleAddLine} 
                                     onRemoveLine={handleRemoveLine}
                                     onLineChange={handleLineChange}
+                                    onSearchProduct={(index) => {
+                                        setActiveLineIndex(index);
+                                        setIsProductSearchOpen(true);
+                                    }}
                                 />
                             </div>
                         </div>
@@ -281,17 +383,33 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
                             <div className="p-6">
                                 <QuotationSummary 
                                     subTotal={subTotal}
+                                    discountInput={formData.discount_input}
                                     discountAmount={formData.discount_amount}
+                                    taxRate={taxRate}
                                     vatAmount={vatAmount}
                                     totalAmount={totalAmount}
+                                    currencySymbol={formData.isMulticurrency ? (formData.base_currency_code || 'บาท') : 'บาท'}
                                     lineCount={formData.lines.length}
-                                    onDiscountChange={(val) => setValue('discount_amount', val)}
+                                    onDiscountChange={(val) => setValue('discount_input', val, { shouldDirty: true })}
                                 />
                             </div>
                         </div>
                     </form>
                 </div>
             </FormProvider>
+
+            {/* Local Search Modals */}
+            <CustomerSearchModal 
+                isOpen={isCustomerSearchOpen}
+                onClose={() => setIsCustomerSearchOpen(false)}
+                onSelect={handleSelectCustomer}
+            />
+
+            <ProductSearchModal 
+                isOpen={isProductSearchOpen}
+                onClose={() => setIsProductSearchOpen(false)}
+                onSelect={handleSelectProduct}
+            />
         </WindowFormLayout>
     );
 }

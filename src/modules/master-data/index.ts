@@ -1,13 +1,14 @@
 
 // -- Company & Org Structure --
 export * from './company/services/employee-side.service';
-export * from './company/services/employee-dept.service';
-export * from './company/services/job.service';
-export * from './company/services/position.service';
+// Note: org-department.service is imported directly (not re-exported to avoid DepartmentService name conflict)
+export * from './company/services/org-section.service';
+export * from './company/services/org-job.service';
+export * from './company/services/org-position.service';
 export * from './company/services/employee-group.service';
 export * from './company/services/employee.service';
 export * from './company/services/sales-org.service';
-export * from './company/services/branch.service';
+export * from './company/services/org-branch.service';
 export * from './accounting/services/cost-center.service'; // Moved here for logical grouping
 
 // -- HR --

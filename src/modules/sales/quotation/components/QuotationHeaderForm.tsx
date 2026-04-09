@@ -22,6 +22,7 @@ interface QuotationHeaderFormProps {
     projects: Project[];
     itemTypes: ItemTypeListItem[];
     readOnly?: boolean;
+    onSearchCustomer?: () => void;
 }
 
 export function QuotationHeaderForm({ 
@@ -32,17 +33,25 @@ export function QuotationHeaderForm({
     departments,
     projects,
     itemTypes,
-    readOnly = false 
+    readOnly = false,
+    onSearchCustomer
 }: QuotationHeaderFormProps) {
     const { register, watch, setValue, control } = useFormContext<QuotationFormData>();
     
     const formData = watch();
     const isLocked = readOnly;
 
-    // Compact styles for balancing
-    const inputClass = "h-9 w-full px-3 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white placeholder-gray-400 transition-colors disabled:bg-gray-50 dark:disabled:bg-gray-800/50";
-    const selectClass = "h-9 w-full px-3 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white cursor-pointer disabled:bg-gray-50 dark:disabled:bg-gray-800/50";
-    const labelClass = "block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1";
+    // Premium localized styles
+    const inputClass = "h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white placeholder-gray-400 transition-all disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm";
+    const selectClass = "h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white cursor-pointer disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm";
+    const labelClass = "block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider";
+    const cardSection = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-4 bg-blue-50/10 dark:bg-blue-900/5 p-6 rounded-2xl border border-blue-100 dark:border-blue-900/20";
+
+    // Find selected customer name for display
+    const selectedCustomer = customers.find(c => String(c.customer_id || c.id) === String(formData.customer_id));
+    const customerDisplay = selectedCustomer 
+        ? `${selectedCustomer.customer_code || selectedCustomer.code || ''} - ${selectedCustomer.customer_name_th || selectedCustomer.customer_name || selectedCustomer.name_th || ''}` 
+        : '';
 
     return (
         <section className="space-y-6">
@@ -51,7 +60,7 @@ export function QuotationHeaderForm({
                 <h3 className="text-lg font-bold">ข้อมูลใบเสนอราคา — Header Quotation</h3>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-3 bg-blue-50/30 dark:bg-blue-900/10 p-5 rounded-2xl border border-blue-100 dark:border-blue-900/20">
+            <div className={cardSection}>
                 
                 {/* Row 1 */}
                 <div className="space-y-1">
@@ -84,20 +93,25 @@ export function QuotationHeaderForm({
 
                 <div className="space-y-1">
                     <label className={labelClass}>ลูกค้า (customer_id) <span className="text-red-500">*</span></label>
-                    <div className="relative">
-                        <select 
-                            {...register('customer_id')}
-                            disabled={isLocked}
-                            className={`${selectClass} pl-10`}
+                    <div className="flex gap-2">
+                        <div className="relative flex-1 group">
+                            <input 
+                                value={customerDisplay}
+                                readOnly
+                                disabled={isLocked}
+                                className={`${inputClass} pl-9 bg-gray-50/50 italic cursor-not-allowed group-hover:border-blue-400 transition-colors`}
+                                placeholder="-- คลิกเพื่อค้นหาลูกค้า --"
+                            />
+                            <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        </div>
+                        <button 
+                            type="button" 
+                            disabled={isLocked} 
+                            onClick={() => onSearchCustomer?.()}
+                            className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center shrink-0 w-9 h-9"
                         >
-                            <option value="">-- เลือกลูกค้า --</option>
-                            {customers.map(customer => (
-                                <option key={customer.customer_id} value={customer.customer_id.toString()}>
-                                    {customer.customer_code} - {customer.customer_name_th}
-                                </option>
-                            ))}
-                        </select>
-                        <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                            <Search size={18} />
+                        </button>
                     </div>
                 </div>
 
@@ -288,6 +302,16 @@ export function QuotationHeaderForm({
                             if (!formData.exchange_rate_date) {
                                 const today = new Date().toISOString().split('T')[0];
                                 setValue('exchange_rate_date', today, { shouldValidate: true, shouldDirty: true });
+                            }
+                            // Default to THB when enabled if no currency is selected
+                            if (!formData.base_currency_code) {
+                                setValue('base_currency_code', 'THB', { shouldValidate: true, shouldDirty: true });
+                            }
+                            if (!formData.quote_currency_code) {
+                                setValue('quote_currency_code', 'THB', { shouldValidate: true, shouldDirty: true });
+                            }
+                            if (!formData.exchange_rate) {
+                                setValue('exchange_rate', 1, { shouldValidate: true, shouldDirty: true });
                             }
                         }
                     }}
