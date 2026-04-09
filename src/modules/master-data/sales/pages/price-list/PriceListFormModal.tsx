@@ -36,7 +36,7 @@ export default function PriceListFormModal({ isOpen, onClose, editId, onSuccess 
         watch,
         control,
         setValue
-    } = usePriceListForm(editId ?? null, onSuccess);
+    } = usePriceListForm(editId ?? null, onSuccess, isOpen);
 
     const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
     const [isCustomerSearchOpen, setIsCustomerSearchOpen] = useState(false);
@@ -117,7 +117,7 @@ export default function PriceListFormModal({ isOpen, onClose, editId, onSuccess 
             <DialogFormLayout
                 isOpen={isOpen}
                 onClose={onClose}
-                title={editId ? 'แก้ไขรายการราคา (Price List)' : 'เพิ่มรายการราคาใหม่'}
+                title={editId ? 'แก้ไขรายการราคา (Price List)' : 'เพิ่มรายการราคาใหม่ (Price List)'}
                 titleIcon={TitleIcon}
                 footer={FormFooter}
                 width="max-w-[1800px]"
@@ -405,6 +405,7 @@ export default function PriceListFormModal({ isOpen, onClose, editId, onSuccess 
                                                         {...register(`items.${index}.unitPrice`, {
                                                             onChange: (e) => handleItemChange(index, 'unitPrice', e.target.value)
                                                         })}
+                                                        onFocus={(e) => e.target.select()}
                                                         className="w-full text-right bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none text-sm font-bold px-3 py-1.5 rounded-lg text-gray-700 dark:text-gray-100 shadow-sm transition-all"
                                                     />
                                                 </td>
@@ -414,6 +415,7 @@ export default function PriceListFormModal({ isOpen, onClose, editId, onSuccess 
                                                         {...register(`items.${index}.lineDiscount`, {
                                                             onChange: (e) => handleItemChange(index, 'lineDiscount', e.target.value)
                                                         })}
+                                                        onFocus={(e) => e.target.select()}
                                                         className="w-full text-right bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none text-sm font-bold px-3 py-1.5 rounded-lg text-red-600 dark:text-red-400 shadow-sm transition-all"
                                                         placeholder="0"
                                                     />

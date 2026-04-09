@@ -72,7 +72,7 @@ const initialValues: PriceListFormData = {
     items: [],
 };
 
-export function usePriceListForm(editId: string | null, onSuccess?: () => void) {
+export function usePriceListForm(editId: string | null, onSuccess?: () => void, isOpen?: boolean) {
     const { user } = useAuth();
     const {
         register,
@@ -95,6 +95,8 @@ export function usePriceListForm(editId: string | null, onSuccess?: () => void) 
 
     // Fetch data for editing
     useEffect(() => {
+        if (!isOpen) return;
+
         if (editId) {
             const fetchDetail = async () => {
                 try {
@@ -147,7 +149,7 @@ export function usePriceListForm(editId: string | null, onSuccess?: () => void) 
                 saveEmpName: user?.employee?.employee_fullname || ''
             });
         }
-    }, [editId, reset, user]);
+    }, [editId, reset, user, isOpen]);
 
     const onSubmit: SubmitHandler<PriceListFormData> = async (formData) => {
         try {
