@@ -7,28 +7,40 @@ import type { BaseMasterData } from '@/shared/types/common-master.types';
 
 export interface EmployeeDeptMaster extends BaseMasterData {
     id: string | number;
-    dept_id?: string | number; // DB Field
-    dept_code?: string;       // DB Field
-    dept_name?: string;       // DB Field
-    dept_nameeng?: string;    // DB Field
-    side_id?: string | number; // DB Field (FK)
-    side_code?: string;       // DB Field (FK)
-    side_name?: string;       // DB Field (FK/Join)
-    section_id: number;       // Legacy Field
-    section_code: string;     // Legacy Field
-    section_name: string;     // Legacy Field
-    section_name_en?: string; // Legacy Field
-    department_id?: number;   // Legacy Field (FK)
-    department_code?: string; // Legacy Field (FK)
-    department_name?: string; // Legacy Field (FK)
+    emp_dept_id?: string | number;
+    emp_dept_code?: string;
+    emp_dept_name?: string;
+    emp_dept_nameeng?: string;
+    emp_side_id?: string | number;
+    is_active: boolean;
+    
+    // Joint data support
+    emp_side_name?: string;
+    emp_side_code?: string;
+
+    // Legacy mapping support (Backward compatibility)
+    dept_id?: string | number;
+    dept_code?: string;
+    dept_name?: string;
+    dept_nameeng?: string;
+    side_id?: string | number;
+    side_code?: string;
+    side_name?: string;
+    section_id?: number;
+    section_code?: string;
+    section_name?: string;
+    section_name_en?: string;
+    department_id?: number;
+    department_code?: string;
+    department_name?: string;
 }
 
 export interface EmployeeDeptFormData {
-    deptCode: string;
-    deptName: string;
-    deptNameEn: string;
-    sideId: string | number;
-    isActive: boolean;
+    emp_dept_code: string;
+    emp_dept_name: string;
+    emp_dept_nameeng: string;
+    emp_side_id: string | number;
+    is_active: boolean;
 }
 
 // Backward compatibility aliases
