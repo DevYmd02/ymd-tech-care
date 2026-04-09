@@ -4,7 +4,7 @@
  */
 
 import { useEffect } from 'react';
-import { useForm, type SubmitHandler, type Resolver } from 'react-hook-form';
+import { useForm, useWatch, type SubmitHandler, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -13,17 +13,17 @@ import type { EmployeeSideFormData } from '@company/types/employee-side.types';
 import { logger } from '@/shared/utils/logger';
 
 export const employeeSideSchema = z.object({
-    sideCode: z.string().min(1, 'กรุณากรอกรหัสฝ่าย').max(20, 'รหัสฝ่ายต้องไม่เกิน 20 ตัวอักษร'),
-    sideName: z.string().min(1, 'กรุณากรอกชื่อฝ่าย (ภาษาไทย)').max(100, 'ชื่อฝ่ายต้องไม่เกิน 100 ตัวอักษร'),
-    sideNameEn: z.string().max(100, 'ชื่อฝ่าย (English) ต้องไม่เกิน 100 ตัวอักษร'),
-    isActive: z.boolean(),
+    emp_side_code: z.string().min(1, 'กรุณากรอกรหัสฝ่าย').max(20, 'รหัสฝ่ายต้องไม่เกิน 20 ตัวอักษร'),
+    emp_side_name: z.string().min(1, 'กรุณากรอกชื่อฝ่าย (ภาษาไทย)').max(100, 'ชื่อฝ่ายต้องไม่เกิน 100 ตัวอักษร'),
+    emp_side_nameeng: z.string().max(100, 'ชื่อฝ่าย (English) ต้องไม่เกิน 100 ตัวอักษร'),
+    is_active: z.boolean(),
 });
 
 export const initialEmployeeSideData: EmployeeSideFormData = {
-    sideCode: '',
-    sideName: '',
-    sideNameEn: '',
-    isActive: true,
+    emp_side_code: '',
+    emp_side_name: '',
+    emp_side_nameeng: '',
+    is_active: true,
 };
 
 export function useEmployeeSideForm(editId: string | number | null, isOpen: boolean, onSuccess?: () => void) {
@@ -35,12 +35,56 @@ export function useEmployeeSideForm(editId: string | number | null, isOpen: bool
         handleSubmit: rhfHandleSubmit,
         reset,
         setValue,
+        setError,
+        clearErrors,
         control,
         formState: { errors }
     } = useForm<EmployeeSideFormData>({
         resolver: zodResolver(employeeSideSchema) as Resolver<EmployeeSideFormData>,
         defaultValues: initialEmployeeSideData,
     });
+
+    const watchedCode = useWatch({ control, name: 'emp_side_code' });
+
+    // Real-time duplicate check
+    useEffect(() => {
+        if (!watchedCode || watchedCode.length < 2) {
+            clearErrors('emp_side_code');
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+            try {
+                // Search for the code
+                const result = await EmployeeSideService.getList({ 
+                    search: watchedCode,
+                    limit: 1 
+                });
+
+                // Find if there's an exact match that isn't the current record
+                const isDuplicate = result.items.some(item => 
+                    item.emp_side_code === watchedCode && 
+                    String(item.emp_side_id) !== String(editId)
+                );
+
+                if (isDuplicate) {
+                    setError('emp_side_code', {
+                        type: 'manual',
+                        message: 'รหัสฝ่ายนี้มีอยู่ในระบบแล้ว'
+                    });
+                } else {
+                    // Only clear if the error was a duplicate error
+                    if (errors.emp_side_code?.type === 'manual') {
+                        clearErrors('emp_side_code');
+                    }
+                }
+            } catch (err) {
+                logger.error('Error checking duplicate code:', err);
+            }
+        }, 500); // 500ms debounce
+
+        return () => clearTimeout(timer);
+    }, [watchedCode, editId, setError, clearErrors, errors.emp_side_code?.type]);
 
     // Fetch data for edit
     const { data: initialData, isLoading: isLoadingInitial } = useQuery({
@@ -53,10 +97,10 @@ export function useEmployeeSideForm(editId: string | number | null, isOpen: bool
     useEffect(() => {
         if (isOpen && isEdit && initialData) {
             reset({
-                sideCode: initialData.side_code || initialData.department_code || '',
-                sideName: initialData.side_name || initialData.department_name || '',
-                sideNameEn: initialData.side_nameeng || initialData.department_name_en || '',
-                isActive: initialData.is_active ?? true,
+                emp_side_code: initialData.emp_side_code || initialData.side_code || initialData.department_code || '',
+                emp_side_name: initialData.emp_side_name || initialData.side_name || initialData.department_name || '',
+                emp_side_nameeng: initialData.emp_side_nameeng || initialData.side_nameeng || initialData.department_name_en || '',
+                is_active: initialData.is_active ?? true,
             });
         } else if (isOpen && !isEdit) {
             reset(initialEmployeeSideData);

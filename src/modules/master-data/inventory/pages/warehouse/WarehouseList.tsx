@@ -8,7 +8,7 @@ import { Warehouse, Edit2, Trash2 } from 'lucide-react';
 import { WarehouseFormModal } from './WarehouseFormModal';
 import { WarehouseService } from '@/modules/master-data/inventory/services/warehouse.service';
 import type { WarehouseListItem, WarehouseMaster, BranchListItem } from '@/modules/master-data/types/master-data-types';
-import { BranchService } from '@/modules/master-data/company/services/branch.service';
+import { BranchService } from '@/modules/master-data/company/services/org-branch.service';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import { ActiveStatusBadge } from '@ui';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';

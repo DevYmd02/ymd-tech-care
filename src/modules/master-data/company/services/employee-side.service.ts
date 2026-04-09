@@ -9,11 +9,41 @@ import { type PaginatedListResponse } from '@/shared/types/api-response.types';
 import { type TableFilters } from '@/shared/hooks/useTableFilters';
 
 export const EmployeeSideService = {
-  getList: (params?: Partial<TableFilters>) => api.get<PaginatedListResponse<EmployeeSideMaster>>('/org-departments', { params }),
-  get: (id: string | number) => api.get<EmployeeSideMaster>(`/org-departments/${id}`),
-  create: (data: EmployeeSideFormData) => api.post<{ success: boolean; data?: EmployeeSideMaster; message?: string }>('/org-departments', data),
-  update: (id: string | number, data: Partial<EmployeeSideFormData>) => api.put<{ success: boolean; data?: EmployeeSideMaster; message?: string }>(`/org-departments/${id}`, data),
-  delete: (id: string | number) => api.delete<boolean>(`/org-departments/${id}`),
+  getList: async (params?: Partial<TableFilters>): Promise<PaginatedListResponse<EmployeeSideMaster>> => {
+    const response = await api.get<PaginatedListResponse<EmployeeSideMaster> | EmployeeSideMaster[]>('/employee-side', { params });
+    
+    // Normalize: Handle raw array response from backend
+    if (Array.isArray(response)) {
+      return {
+        items: response,
+        total: response.length,
+        page: params?.page || 1,
+        limit: params?.limit || 10,
+      };
+    }
+    
+    return response;
+  },
+  get: (id: string | number) => api.get<EmployeeSideMaster>(`/employee-side/${id}`),
+  create: async (data: EmployeeSideFormData): Promise<{ success: boolean; data?: EmployeeSideMaster; message?: string }> => {
+    try {
+      const response = await api.post<EmployeeSideMaster>('/employee-side', data);
+      return { success: true, data: response };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return { success: false, message: err.response?.data?.message || 'บันทึกไม่สำเร็จ' };
+    }
+  },
+  update: async (id: string | number, data: Partial<EmployeeSideFormData>): Promise<{ success: boolean; data?: EmployeeSideMaster; message?: string }> => {
+    try {
+      const response = await api.patch<EmployeeSideMaster>(`/employee-side/${id}`, data);
+      return { success: true, data: response };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return { success: false, message: err.response?.data?.message || 'แก้ไขไม่สำเร็จ' };
+    }
+  },
+  delete: (id: string | number) => api.delete<boolean>(`/employee-side/${id}`),
 };
 
 // Backward compatibility alias

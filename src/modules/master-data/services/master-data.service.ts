@@ -13,7 +13,7 @@ import type {
 import { logger } from '@/shared/utils/logger';
 
 // Import services
-import { BranchService } from '@/modules/master-data/company/services/branch.service';
+import { BranchService } from '@/modules/master-data/company/services/org-branch.service';
 import { WarehouseService } from '@/modules/master-data/inventory/services/warehouse.service';
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import { UnitService } from '@/modules/master-data/inventory/services/unit.service';

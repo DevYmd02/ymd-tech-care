@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { useForm, useWatch, type SubmitHandler, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { BranchService } from '@company/services/branch.service';
+import { BranchService } from '@company/services/org-branch.service';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import { logger } from '@/shared/utils/logger';
 import type { BranchListItem } from '@master-data/types/master-data-types';

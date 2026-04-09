@@ -100,10 +100,15 @@ export default function EmployeeSideList() {
         }
     }, [refetch]);
 
-    const handleModalClose = () => {
+    const handleModalClose = useCallback(() => {
         setIsModalOpen(false);
         setEditingId(null);
-    };
+    }, []);
+
+    const handleSaveSuccess = useCallback(() => {
+        refetch();
+        handleModalClose();
+    }, [refetch, handleModalClose]);
 
     // ==================== TABLE COLUMNS ====================
     const columns = useMemo<ColumnDef<EmployeeSideListItem>[]>(() => [
@@ -114,23 +119,23 @@ export default function EmployeeSideList() {
             size: 60,
         },
         {
-            accessorKey: 'side_code', // DB Primary Field
+            accessorKey: 'emp_side_code', // Priority Field
             header: 'รหัสฝ่าย',
             cell: ({ row }) => (
                 <span className="font-medium text-blue-600 dark:text-blue-400">
-                    {row.original.side_code || row.original.department_code}
+                    {row.original.emp_side_code || row.original.side_code || row.original.department_code}
                 </span>
             ),
         },
         {
-            accessorKey: 'side_name', // DB Primary Field
+            accessorKey: 'emp_side_name', // Priority Field
             header: 'ชื่อฝ่าย (ไทย)',
-            cell: ({ row }) => row.original.side_name || row.original.department_name,
+            cell: ({ row }) => row.original.emp_side_name || row.original.side_name || row.original.department_name,
         },
         {
-            accessorKey: 'side_nameeng', // DB Schema naming
+            accessorKey: 'emp_side_nameeng', // Priority Field
             header: 'ชื่อฝ่าย (EN)',
-            cell: ({ row }) => <span className="text-gray-500">{row.original.side_nameeng || row.original.department_name_en || '-'}</span>
+            cell: ({ row }) => <span className="text-gray-500">{row.original.emp_side_nameeng || row.original.side_nameeng || row.original.department_name_en || '-'}</span>
         },
         {
             accessorKey: 'is_active',
@@ -139,30 +144,20 @@ export default function EmployeeSideList() {
             size: 100,
         },
         {
-            accessorKey: 'created_at',
-            header: 'วันที่สร้าง',
-            cell: ({ getValue }) => getValue() ? new Date(getValue() as string).toLocaleDateString('th-TH') : '-',
-        },
-        {
-            accessorKey: 'updated_at',
-            header: 'วันที่แก้ไข',
-            cell: ({ getValue }) => getValue() ? new Date(getValue() as string).toLocaleDateString('th-TH') : '-',
-        },
-        {
             id: 'actions',
             header: 'จัดการ',
             size: 100,
             cell: ({ row }) => (
                 <div className="flex items-center gap-2">
                     <button 
-                        onClick={() => handleEdit(row.original.id)}
+                        onClick={() => handleEdit(row.original.emp_side_id || row.original.id)}
                         className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                         title="แก้ไข"
                     >
                         <Edit2 size={18} />
                     </button>
                     <button 
-                        onClick={() => handleDelete(row.original.id)}
+                        onClick={() => handleDelete(row.original.emp_side_id || row.original.id)}
                         className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                         title="ลบ"
                     >
@@ -225,7 +220,7 @@ export default function EmployeeSideList() {
                         onPageChange: handlePageChange,
                         onPageSizeChange: (size) => setFilters({ limit: size, page: 1 }),
                     }}
-                    rowIdField="id"
+                    rowIdField="emp_side_id"
                     className="shadow-sm"
                 />
             </div>
@@ -235,7 +230,7 @@ export default function EmployeeSideList() {
                 isOpen={isModalOpen} 
                 onClose={handleModalClose}
                 editId={editingId}
-                onSuccess={refetch}
+                onSuccess={handleSaveSuccess}
             />
         </div>
     );

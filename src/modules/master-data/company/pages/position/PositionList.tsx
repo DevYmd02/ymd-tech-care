@@ -18,7 +18,7 @@ import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
-import { PositionService } from '@company/services/position.service';
+import { PositionService } from '@company/services/org-position.service';
 
 // ====================================================================================
 // CONFIG

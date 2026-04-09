@@ -3,18 +3,24 @@ import { styles } from '@/shared/constants/styles';
 
 interface QuotationSummaryProps {
     subTotal: number;
+    discountInput: string | undefined;
     discountAmount: number;
+    taxRate: number;
     vatAmount: number;
     totalAmount: number;
+    currencySymbol?: string;
     lineCount: number;
-    onDiscountChange: (value: number) => void;
+    onDiscountChange: (value: string) => void;
 }
 
 export function QuotationSummary({ 
     subTotal, 
-    discountAmount, 
+    discountInput, 
+    discountAmount,
+    taxRate,
     vatAmount, 
     totalAmount, 
+    currencySymbol = 'บาท',
     lineCount,
     onDiscountChange 
 }: QuotationSummaryProps) {
@@ -41,29 +47,28 @@ export function QuotationSummary({
 
                 <div className="flex justify-between items-center text-sm group">
                     <span className="text-gray-500">ส่วนลดท้ายบิล (discount_amount):</span>
-                    <div className="relative w-32">
+                    <div className="relative w-40">
                         <input 
-                            type="number" 
-                            step="0.01"
-                            value={discountAmount || 0} 
-                            onChange={(e) => onDiscountChange(parseFloat(e.target.value) || 0)}
-                            className={`${styles.input} h-9 py-0 text-right pr-8 bg-white border-blue-200 focus:border-blue-500`}
+                            type="text" 
+                            placeholder={discountAmount > 0 ? discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2 }) : "0.00 หรือ 0%"}
+                            value={discountInput ?? ''} 
+                            onChange={(e) => onDiscountChange(e.target.value)}
+                            className={`${styles.input} h-9 py-0 text-right bg-white border-blue-200 focus:border-blue-500`}
                         />
-                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">บาท</span>
                     </div>
                 </div>
 
                 <div className="flex justify-between items-center text-sm">
                     <span className="text-gray-500">ยอดก่อนภาษี (sub_total):</span>
                     <span className="font-semibold text-gray-800 dark:text-gray-200">
-                        {subTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท
+                        {subTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currencySymbol}
                     </span>
                 </div>
 
                 <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-500">ภาษี VAT 7% (vat_amount):</span>
+                    <span className="text-gray-500">ภาษี VAT {taxRate}% (vat_amount):</span>
                     <span className="font-semibold text-gray-800 dark:text-gray-200">
-                        {vatAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท
+                        {vatAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currencySymbol}
                     </span>
                 </div>
 
@@ -73,7 +78,7 @@ export function QuotationSummary({
                         <span className="text-2xl font-black text-blue-700 dark:text-blue-400">
                             {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
-                        <span className="ml-2 text-sm font-bold text-blue-600/60">บาท</span>
+                        <span className="ml-2 text-sm font-bold text-blue-600/60">{currencySymbol}</span>
                     </div>
                 </div>
                 

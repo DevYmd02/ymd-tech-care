@@ -8,7 +8,7 @@ import { useForm, type SubmitHandler, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { EmployeeDeptService } from '@company/services/employee-dept.service';
+import { EmployeeDeptService } from '@company/services/org-section.service';
 import { EmployeeSideService } from '@company/services/employee-side.service';
 import type { EmployeeDeptFormData } from '@company/types/employee-dept.types';
 import { logger } from '@/shared/utils/logger';

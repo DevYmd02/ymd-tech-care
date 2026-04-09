@@ -18,7 +18,7 @@ import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
-import { JobService } from '@company/services/job.service';
+import { JobService } from '@company/services/org-job.service';
 
 // ====================================================================================
 // CONFIG

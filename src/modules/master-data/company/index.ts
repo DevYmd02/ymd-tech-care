@@ -5,13 +5,15 @@
  */
 
 // Services
-export { EmployeeSideService as DepartmentService, EmployeeSideService } from './services/employee-side.service';
-export { EmployeeDeptService as SectionService, EmployeeDeptService } from './services/employee-dept.service';
-export { JobService } from './services/job.service';
+export { EmployeeSideService } from './services/employee-side.service';
+export { DepartmentService } from './services/org-department.service';
+export { EmployeeDeptService as SectionService, EmployeeDeptService } from './services/org-section.service';
+export { JobService } from './services/org-job.service';
 export { EmployeeGroupService } from './services/employee-group.service';
-export { PositionService } from './services/position.service';
+export { PositionService } from './services/org-position.service';
 export { OrgEmployeeService } from './services/employee.service';
-export { CompanyInfoService } from './services/company-info.service';
+export { CompanyInfoService } from './services/org-company-info.service';
+export { BranchService } from './services/org-branch.service';
 
 // Re-exports for backward compatibility or future use
 export { SalesZoneService, SalesChannelService, SalesTargetService } from './services/sales-org.service';

@@ -4,7 +4,7 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { JobService } from '@company/services/job.service';
+import { JobService } from '@company/services/org-job.service';
 import type { TableFilters } from '@/shared/hooks/useTableFilters';
 
 export function useJobList(filters: Partial<TableFilters>) {

@@ -5,7 +5,7 @@ import { useForm, useWatch, type SubmitHandler, type Resolver } from 'react-hook
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { WarehouseService } from '../services/warehouse.service';
-import { BranchService } from '@/modules/master-data/company/services/branch.service';
+import { BranchService } from '@/modules/master-data/company/services/org-branch.service';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import { logger } from '@/shared/utils/logger';
 import type { WarehouseMaster, WarehouseCreateRequest } from '@/modules/master-data/types/master-data-types';
