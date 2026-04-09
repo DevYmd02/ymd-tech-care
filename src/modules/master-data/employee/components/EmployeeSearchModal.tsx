@@ -98,9 +98,9 @@ export const EmployeeSearchModal: React.FC<EmployeeSearchModalProps> = React.mem
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                                 {filteredData.length > 0 ? (
-                                    filteredData.map((emp) => (
+                                    filteredData.map((emp, index) => (
                                         <tr 
-                                            key={emp.id} 
+                                            key={emp.id || `emp-${index}`} 
                                             className="hover:bg-blue-50/50 dark:hover:bg-blue-900/10 cursor-pointer transition-colors"
                                             onDoubleClick={() => handleSelect(emp)}
                                         >
@@ -128,7 +128,7 @@ export const EmployeeSearchModal: React.FC<EmployeeSearchModalProps> = React.mem
                                         </tr>
                                     ))
                                 ) : (
-                                    <tr>
+                                    <tr key="empty-row">
                                         <td colSpan={5} className="px-4 py-20 text-center text-gray-400">
                                             <Search size={48} className="mx-auto mb-4 opacity-20" />
                                             <p className="font-medium text-base">ไม่พบข้อมูลพนักงาน</p>

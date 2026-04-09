@@ -12,9 +12,13 @@ import { usePriceListForm } from '@master-data/sales/pages/price-list/hooks/useP
 import { ProductSearchModal } from '@/modules/master-data/inventory/components/ProductSearchModal';
 import { CustomerSearchModal } from '@/modules/master-data/customer/customer-master/components/CustomerSearchModal';
 import { EmployeeSearchModal } from '@/modules/master-data/employee/components/EmployeeSearchModal';
+import { EmployeeDeptService } from '@company/services/employee-dept.service';
+import { BranchService } from '@company/services/branch.service';
+import { useQuery } from '@tanstack/react-query';
 import type { CustomerMaster } from '@customer/customer-master/types/customer-types';
 import type { ItemListItem } from '@/modules/master-data/inventory/types/product-types';
 import type { IEmployee } from '@/modules/master-data/company/types/employee-types';
+import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
 
 interface Props {
     isOpen: boolean;
@@ -43,45 +47,102 @@ export default function PriceListFormModal({ isOpen, onClose, editId, onSuccess 
     const [isPermitEmpSearchOpen, setIsPermitEmpSearchOpen] = useState(false);
     const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
 
+    // Fetch Departments for selection
+    const { data: deptsData } = useQuery({
+        queryKey: ['employee-depts-lookup'],
+        queryFn: () => EmployeeDeptService.getList({ page: 1, limit: 1000 }),
+    });
+
+    const { data: branchesData } = useQuery({
+        queryKey: ['org-branches-lookup'],
+        queryFn: () => BranchService.getList({ page: 1, limit: 1000 }),
+    });
+
+    const { data: unitsData } = useQuery({
+        queryKey: ['units-lookup'],
+        queryFn: () => UnitService.getAll({ page: 1, limit: 1000 }),
+    });
+
     const handleAddProduct = () => {
-        setActiveRowIndex(null);
-        setIsProductSearchOpen(true);
+        append({
+            itemId: '',
+            itemCode: '',
+            itemName: '',
+            uomId: null,
+            uomName: '-',
+            unitPrice: 0,
+            lineDiscount: 0,
+            lineDiscountAmnt: 0,
+            unitPriceNet: 0,
+            remark: ''
+        });
     };
 
     const handleSelectProduct = (product: ItemListItem) => {
+        // Smart UOM Mapping: Try ID match first, fallback to Name match if ID is missing (0/null)
+        let targetUomId = product.uom_id ? String(product.uom_id) : (product.unit_id ? String(product.unit_id) : '');
+        const targetUomName = product.uom_name || product.unit_name || '';
+        const targetPrice = Number(product.standard_cost || 0);
+
+        // Debug diagnostic
+        console.group('🔍 Product Selection Diagnostic');
+        console.log('Selected Product:', product);
+        
+        // If ID is shaky, try matching by name against the loaded unitsData
+        if (!targetUomId || targetUomId === '0' || targetUomId === 'undefined') {
+            const matchedUnit = unitsData?.items.find(u => 
+                (u.uom_name && u.uom_name === targetUomName) || 
+                (u.unit_name && u.unit_name === targetUomName)
+            );
+            if (matchedUnit) {
+                console.log('✅ Smart Match found UOM by Name:', matchedUnit);
+                targetUomId = String(matchedUnit.uom_id || matchedUnit.unit_id);
+            } else {
+                console.warn('⚠️ No UOM match found for name:', targetUomName);
+            }
+        }
+        // Smart Match Log
+        console.log('Final targetUomId:', targetUomId);
+        console.groupEnd();
+
         if (activeRowIndex !== null) {
-            // Update existing row
             handleItemChange(activeRowIndex, 'itemId', String(product.item_id || product.id));
             handleItemChange(activeRowIndex, 'itemCode', product.item_code);
             handleItemChange(activeRowIndex, 'itemName', product.item_name);
-            handleItemChange(activeRowIndex, 'uomId', product.uom_id ? String(product.uom_id) : null);
-            handleItemChange(activeRowIndex, 'uomName', product.uom_name || product.unit_name || '-');
+            handleItemChange(activeRowIndex, 'uomId', targetUomId);
+            handleItemChange(activeRowIndex, 'uomName', targetUomName || '-');
+            handleItemChange(activeRowIndex, 'unitPrice', targetPrice);
+            const bId = (product as { item_brand_id?: number | string; brand_id?: number | string }).item_brand_id || (product as { brand_id?: number | string }).brand_id || 0;
+            handleItemChange(activeRowIndex, 'itemBrandId', bId);
         } else {
-            // Add new row logic (if needed)
+            const bId = (product as { item_brand_id?: number | string; brand_id?: number | string }).item_brand_id || (product as { brand_id?: number | string }).brand_id || 0;
             append({
                 itemId: String(product.item_id || product.id),
                 itemCode: product.item_code,
                 itemName: product.item_name,
-                uomId: product.uom_id ? String(product.uom_id) : null,
-                uomName: product.uom_name || product.unit_name || '-',
-                unitPrice: Number(product.standard_cost || 0),
+                uomId: targetUomId,
+                uomName: targetUomName || '-',
+                unitPrice: targetPrice,
                 lineDiscount: 0,
                 lineDiscountAmnt: 0,
-                unitPriceNet: Number(product.standard_cost || 0),
-                remark: ''
+                unitPriceNet: targetPrice,
+                remark: '',
+                itemBrandId: bId
             });
         }
         setIsProductSearchOpen(false);
     };
 
     const handleSelectCustomer = (customer: CustomerMaster) => {
-        setValue('customerId', customer.customer_code || customer.code);
-        setValue('customerName', customer.customer_name_th || customer.name_th || customer.customer_name || '');
+        setValue('customerId', String(customer.customer_id || customer.id));
+        setValue('customerCode', customer.customer_code);
+        setValue('customerName', customer.customer_name_th || customer.customer_name);
         setIsCustomerSearchOpen(false);
     };
     
     const handleSelectPermitEmp = (employee: IEmployee) => {
-        setValue('permitEmpId', String(employee.id));
+        const empId = employee.id || ('employee_id' in employee ? (employee as { employee_id: number | string }).employee_id : '');
+        setValue('permitEmpId', String(empId || ''));
         setValue('permitEmpName', `${employee.employee_firstname_th} ${employee.employee_lastname_th}`);
         setIsPermitEmpSearchOpen(false);
     };
@@ -213,12 +274,36 @@ export default function PriceListFormModal({ isOpen, onClose, editId, onSuccess 
                                 />
                             </div>
 
-                            <div>
+                             <div>
                                 <label className={styles.label}>สาขา <span className="text-red-500">*</span></label>
-                                <select {...register('branchId')} className={styles.input}>
-                                    <option value="">เลือกสาขา</option>
-                                    <option value="default">สำนักงานใหญ่</option>
+                                <select 
+                                    {...register('branchId')} 
+                                    className={`${styles.input} ${errors.branchId ? 'border-red-500' : ''}`}
+                                >
+                                    <option value="">-- เลือกสาขา --</option>
+                                    {branchesData?.items?.map((branch, index) => (
+                                        <option key={branch.branch_id || branch.id || `branch-${index}`} value={String(branch.branch_id)}>
+                                            {branch.branch_code} - {branch.branch_name}
+                                        </option>
+                                    ))}
                                 </select>
+                                {errors.branchId && <p className="text-red-500 text-xs mt-1">{errors.branchId.message}</p>}
+                             </div>
+
+                            <div>
+                                <label className={styles.label}>แผนก (Department) <span className="text-red-500">*</span></label>
+                                <select 
+                                    {...register('empDeptId')} 
+                                    className={`${styles.input} ${errors.empDeptId ? 'border-red-500' : ''}`}
+                                >
+                                    <option value="">-- เลือกแผนก --</option>
+                                    {deptsData?.items?.map((dept, index) => (
+                                        <option key={dept.emp_dept_id || dept.id || `dept-${index}`} value={dept.emp_dept_id || dept.id}>
+                                            {dept.emp_dept_code || dept.dept_code} - {dept.emp_dept_name || dept.dept_name || dept.department_name} {dept.emp_side_name ? `(${dept.emp_side_name})` : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                                {errors.empDeptId && <p className="text-red-500 text-xs mt-1">{errors.empDeptId.message}</p>}
                             </div>
 
                             {/* Row 3 */}
@@ -226,7 +311,7 @@ export default function PriceListFormModal({ isOpen, onClose, editId, onSuccess 
                                 <label className={styles.label}>ลูกค้า (ถ้าเจาะจง / Specific Customer)</label>
                                 <div className="grid grid-cols-[180px_1fr_45px] gap-2">
                                     <input 
-                                        {...register('customerId')} 
+                                        {...register('customerCode')} 
                                         type="text" 
                                         className={`${styles.input} font-bold text-blue-600`} 
                                         placeholder="รหัสลูกค้า" 
@@ -263,7 +348,7 @@ export default function PriceListFormModal({ isOpen, onClose, editId, onSuccess 
 
                             {/* Row 4 */}
                             <div>
-                                <label className={styles.label}>ผู้อนุมัติ (Approver)</label>
+                                <label className={styles.label}>ผู้อนุมัติ (Approver) <span className="text-red-500">*</span></label>
                                 <div className="grid grid-cols-[1fr_45px] gap-2">
                                     <input 
                                         {...register('permitEmpName')} 
@@ -355,10 +440,10 @@ export default function PriceListFormModal({ isOpen, onClose, editId, onSuccess 
                                     <tr>
                                         <th className="p-3 text-sm font-bold border-b border-gray-200 dark:border-gray-700 w-[50px] text-center">ลำดับ</th>
                                         <th className="p-3 text-sm font-bold border-b border-gray-200 dark:border-gray-700 min-w-[150px]">รหัสสินค้า</th>
-                                        <th className="p-3 text-sm font-bold border-b border-gray-200 dark:border-gray-700 min-w-[200px]">ชื่อสินค้า</th>
-                                        <th className="p-3 text-sm font-bold border-b border-gray-200 dark:border-gray-700 w-[100px]">หน่วย</th>
+                                        <th className="p-3 text-sm font-bold border-b border-gray-200 dark:border-gray-700 min-w-[350px]">ชื่อสินค้า</th>
+                                        <th className="p-3 text-sm font-bold border-b border-gray-200 dark:border-gray-700 min-w-[150px]">หน่วย</th>
                                         <th className="p-3 text-sm font-bold border-b border-gray-200 dark:border-gray-700 w-[130px] text-right">ราคา</th>
-                                        <th className="p-3 text-sm font-bold border-b border-gray-200 dark:border-gray-700 w-[130px] text-right">ส่วนลด %</th>
+                                        <th className="p-3 text-sm font-bold border-b border-gray-200 dark:border-gray-700 w-[130px] text-right">ส่วนลด </th>
                                         <th className="p-3 text-sm font-bold border-b border-gray-200 dark:border-gray-700 w-[140px] text-right">มูลค่าส่วนลด</th>
                                         <th className="p-3 text-sm font-bold border-b border-gray-200 dark:border-gray-700 w-[140px] text-right">ราคาสุทธิ</th>
                                         <th className="p-3 text-sm font-bold border-b border-gray-200 dark:border-gray-700 min-w-[200px]">หมายเหตุ</th>
@@ -367,7 +452,7 @@ export default function PriceListFormModal({ isOpen, onClose, editId, onSuccess 
                                 </thead>
                                 <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
                                     {fields.length === 0 ? (
-                                        <tr>
+                                        <tr key="empty-row">
                                             <td colSpan={10} className="p-10 text-center text-gray-400 italic">
                                                 ยังไม่มีรายการสินค้า กรุณากดปุ่มเพิ่มสินค้า
                                             </td>
@@ -396,8 +481,39 @@ export default function PriceListFormModal({ isOpen, onClose, editId, onSuccess 
                                                 <td className="p-3 text-sm text-gray-600 dark:text-gray-300">
                                                     {watch(`items.${index}.itemName`)}
                                                 </td>
-                                                <td className="p-3 text-xs text-gray-500 dark:text-gray-400">
-                                                    {watch(`items.${index}.uomName`)}
+                                                <td className="p-3">
+                                                    <div className="flex flex-col gap-1 min-w-[150px]">
+                                                        <select
+                                                            {...register(`items.${index}.uomId`)}
+                                                            value={watch(`items.${index}.uomId`) || ''}
+                                                            onChange={(e) => {
+                                                                const val = e.target.value;
+                                                                const unit = unitsData?.items.find(u => String(u.uom_id) === val);
+                                                                handleItemChange(index, 'uomId', val);
+                                                                handleItemChange(index, 'uomName', unit?.uom_name || '-');
+                                                            }}
+                                                            className={`${styles.input} text-xs py-1 h-8 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all ${errors.items?.[index]?.uomId ? 'border-red-500 ring-2 ring-red-500/20 bg-red-50 dark:bg-red-900/20' : ''}`}
+                                                        >
+                                                            <option value="" className="text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800">-- เลือกหน่วย --</option>
+                                                            {unitsData?.items.map(unit => (
+                                                                <option 
+                                                                    key={unit.uom_id} 
+                                                                    value={String(unit.uom_id)}
+                                                                    className="text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800"
+                                                                >
+                                                                    {unit.uom_code} - {unit.uom_name}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                        {errors.items?.[index]?.uomId && (
+                                                            <div className="flex items-center gap-1 mt-1 whitespace-nowrap">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shrink-0" />
+                                                                <span className="text-[10px] text-red-600 dark:text-red-400 font-bold tracking-tight">
+                                                                    {errors.items[index]?.uomId?.message}
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td className="p-3">
                                                     <input

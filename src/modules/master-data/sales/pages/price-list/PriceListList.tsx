@@ -74,6 +74,7 @@ export default function PriceListList() {
         {
             accessorKey: 'price_list_no',
             header: 'เลขที่ PRICELIST',
+            size: 150,
             cell: ({ getValue }) => (
                 <span className="font-semibold text-blue-600 dark:text-blue-400">
                     {getValue() as string}
@@ -83,17 +84,23 @@ export default function PriceListList() {
         {
             accessorKey: 'price_list_name',
             header: 'ชื่อ PRICELIST',
+            size: 220,
         },
         {
             id: 'customer',
             header: 'ลูกค้า',
+            size: 180,
             cell: ({ row }) => {
-                const { customer_code, customer_name } = row.original;
-                if (!customer_code && !customer_name) return '-';
+                const data = row.original;
+                const code = data.customer_code || data.customer_id_code || '-';
+                const name = data.customer_name_th || data.customer_name || '';
+                
+                if (code === '-' && !name) return '-';
+                
                 return (
                     <div className="flex flex-col">
-                        <span className="text-sm font-medium">{customer_code || '-'}</span>
-                        <span className="text-xs text-gray-500">{customer_name || ''}</span>
+                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{name}</span>
+                        <span className="text-xs text-blue-500 font-medium">{code}</span>
                     </div>
                 );
             }
@@ -101,16 +108,19 @@ export default function PriceListList() {
         {
             accessorKey: 'begin_date',
             header: 'วันที่เริ่มต้น',
+            size: 110,
             cell: ({ getValue }) => getValue() ? new Date(getValue() as string).toLocaleDateString('th-TH') : '-',
         },
         {
             accessorKey: 'end_date',
             header: 'วันที่สิ้นสุด',
+            size: 110,
             cell: ({ getValue }) => getValue() ? new Date(getValue() as string).toLocaleDateString('th-TH') : '-',
         },
         {
             accessorKey: 'approve_status',
             header: 'สถานะอนุมัติ',
+            size: 110,
             cell: ({ getValue }) => {
                 const status = getValue() as string || 'WAITING';
                 return (
@@ -120,40 +130,44 @@ export default function PriceListList() {
                     />
                 );
             },
-            size: 120,
         },
         {
             accessorKey: 'is_active',
             header: 'ใช้งาน',
+            size: 80,
             cell: ({ getValue }) => <ActiveStatusBadge isActive={getValue() as boolean} />,
-            size: 100,
         },
         {
             id: 'actions',
-            header: 'จัดการ',
-            size: 150,
+            header: () => <div className="text-center w-full">จัดการ</div>,
+            size: 180,
             cell: ({ row }) => (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-center gap-2">
                     {/* ปุ่มอนุมัติ - โชว์เฉพาะตอนรออนุมัติ */}
                     {row.original.approve_status !== 'APPROVED' && (
                         <button 
-                            onClick={() => handleApprove(row.original.price_list_id)}
-                            className="p-1.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors"
+                            onClick={() => handleApprove(String(row.original.price_list_header_id || row.original.price_list_id || ''))}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-lg transition-colors border border-emerald-200 dark:border-emerald-800/50"
                             title="อนุมัติรายการ"
                         >
-                            <CheckCircle size={18} />
+                            <CheckCircle size={16} />
+                            <span className="text-xs font-bold whitespace-nowrap">อนุมัติ</span>
                         </button>
                     )}
                     
                     <button 
-                        onClick={() => handleEdit(row.original.price_list_id)}
+                        onClick={() => {
+                            const actualId = row.original.price_list_header_id || row.original.price_list_id;
+                            console.log('📑 Editing Price List Row (ID Found):', actualId);
+                            handleEdit(String(actualId || ''));
+                        }}
                         className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                         title="แก้ไข"
                     >
                         <Edit2 size={18} />
                     </button>
                     <button 
-                        onClick={() => handleDelete(row.original.price_list_id)}
+                        onClick={() => handleDelete(String(row.original.price_list_header_id || row.original.price_list_id || ''))}
                         className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                         title="ลบ"
                     >

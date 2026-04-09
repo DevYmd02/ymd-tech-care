@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { PriceListService } from '@master-data/sales/pages/price-list/services/price-list.service';
+import { CustomerService } from '@customer/customer-master/services/customer.service';
 import type { PriceListHeader } from '@master-data/sales/pages/price-list/types/price-list.types';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import toast from 'react-hot-toast';
@@ -30,10 +31,38 @@ export function usePriceList() {
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
-            const data = await PriceListService.getList();
-            setAllPriceLists(data);
+            // STEP 1: Fetch both Price Lists and Customers in parallel for efficiency
+            const [plResponse, custResponse] = await Promise.all([
+                PriceListService.getList(),
+                CustomerService.getList({ limit: 1000 }) // Load a large batch to catch most customers
+            ]);
+
+            const priceLists = Array.isArray(plResponse) ? plResponse : [];
+            const customers = custResponse?.data || [];
+            
+            // STEP 2: Create a quick-lookup map for customers
+            const customerMap = new Map();
+            customers.forEach(cust => {
+                const id = String(cust.customer_id || cust.id);
+                customerMap.set(id, cust);
+            });
+
+            // STEP 3: Hydrate Price List data with Customer names/codes
+            const hydratedData = priceLists.map(pl => {
+                const custId = String(pl.customer_id || '');
+                const custBase = customerMap.get(custId);
+                
+                return {
+                    ...pl,
+                    customer_code: custBase?.customer_code || pl.customer_code,
+                    customer_name_th: custBase?.customer_name_th || custBase?.customer_name || pl.customer_name_th || pl.customer_name
+                };
+            });
+
+            setAllPriceLists(hydratedData);
         } catch (error) {
-            console.error('Failed to fetch price lists:', error);
+            console.error('Failed to fetch price lists/customers:', error);
+            toast.error('ไม่สามารถโหลดข้อมูลได้');
         } finally {
             setIsLoading(false);
         }

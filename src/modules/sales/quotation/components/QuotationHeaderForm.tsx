@@ -154,7 +154,7 @@ export function QuotationHeaderForm({
                     >
                         <option value="">-- เลือกสาขา --</option>
                         {branches.map(branch => (
-                            <option key={branch.branch_id} value={branch.branch_id.toString()}>
+                            <option key={branch.branch_id} value={String(branch.branch_id || '')}>
                                 {branch.branch_name}
                             </option>
                         ))}
@@ -214,7 +214,7 @@ export function QuotationHeaderForm({
                     >
                         <option value="">-- เลือกประเภทสินค้า --</option>
                         {itemTypes.map(item => (
-                            <option key={item.item_type_id} value={item.item_type_id.toString()}>
+                            <option key={item.item_type_id} value={String(item.item_type_id || '')}>
                                 {item.item_type_name}
                             </option>
                         ))}
@@ -231,7 +231,7 @@ export function QuotationHeaderForm({
                     >
                         <option value="">-- เลือกภาษี --</option>
                         {taxGroups.map(group => (
-                            <option key={group.tax_group_id} value={group.tax_group_id.toString()}>
+                            <option key={group.tax_group_id} value={String(group.tax_group_id || '')}>
                                 {group.tax_group_name || group.tax_group_code}
                             </option>
                         ))}
@@ -247,7 +247,7 @@ export function QuotationHeaderForm({
                     >
                         <option value="">-- เลือกแผนก --</option>
                         {departments.map(dept => (
-                            <option key={dept.id} value={dept.id.toString()}>
+                            <option key={dept.id || dept.emp_side_id || dept.side_id} value={String(dept.id || dept.emp_side_id || dept.side_id || '')}>
                                 {dept.side_name}
                             </option>
                         ))}
@@ -264,7 +264,7 @@ export function QuotationHeaderForm({
                     >
                         <option value="">-- เลือกงาน --</option>
                         {projects.map(proj => (
-                            <option key={proj.project_id} value={proj.project_id.toString()}>
+                            <option key={proj.project_id} value={String(proj.project_id || '')}>
                                 {proj.project_name}
                             </option>
                         ))}
