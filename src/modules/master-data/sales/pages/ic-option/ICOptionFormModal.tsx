@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useForm, type SubmitHandler, type UseFormWatch, type UseFormSetValue, type UseFormRegister, type FieldErrors } from 'react-hook-form';
+import { useForm, useWatch, type UseFormWatch, type UseFormSetValue, type UseFormRegister, type FieldErrors, type FieldValues, type SubmitHandler, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { DialogFormLayout } from '@ui';
 import { Settings, Save, X, PlusCircle, AlertCircle, Package, Database, Info } from 'lucide-react';
@@ -19,8 +19,18 @@ interface ICOptionFormModalProps {
 }
 
 // ==========================================
-// SUB-COMPONENTS
+// CONSTANTS
 // ==========================================
+
+const IC_OPTION_FLAG_KEYS: (keyof ICOptionFormData)[] = [
+    'auto_perpetual_cost', 'barcode_flag', 'check_deficit', 'check_deficit_option',
+    'check_max_qty', 'check_min_qty', 'check_qty_flag', 'check_standcost',
+    'expire_alert_flag', 'order_alert_flag', 'post_cost_flag', 'reorder_flag',
+    'set_autopost', 'set_costcn', 'set_costcn_ap', 'set_costcn_ap_refinv',
+    'set_costcn_refinv', 'set_cost_return_issueref', 'set_goodqty', 'set_inve',
+    'set_price', 'set_price_ic', 'set_price_pack', 'set_price_po', 'trasfer_cost_flag'
+];
+
 
 interface FlagToggleFieldProps {
     name: keyof ICOptionFormData;
@@ -93,11 +103,13 @@ export default function ICOptionFormModal({ isOpen, onClose, editId, onSuccess }
         reset,
         watch,
         setValue,
+        control,
         formState: { errors, isSubmitting },
     } = useForm<ICOptionFormData>({
-        resolver: zodResolver(icOptionSchema),
+        resolver: zodResolver(icOptionSchema) as Resolver<ICOptionFormData>,
+        mode: 'onChange',
         defaultValues: {
-            branch_id: '',
+            branch_id: 0,
             aging_expire: '',
             set_price1: 0,
             set_price2: 0,
@@ -130,6 +142,11 @@ export default function ICOptionFormModal({ isOpen, onClose, editId, onSuccess }
             trasfer_cost_flag: 'N',
         }
     });
+ 
+    const watchedBranchId = useWatch({
+        control,
+        name: 'branch_id'
+    });
 
     const [levelNameMap, setLevelNameMap] = useState<Map<number, string>>(new Map());
 
@@ -161,7 +178,15 @@ export default function ICOptionFormModal({ isOpen, onClose, editId, onSuccess }
             if (isEditMode) {
                 ICOptionService.getICOptionById(editId).then(data => {
                     if (data) {
-                        reset(data);
+                        // Normalize flags: convert null/undefined to 'N'
+                        const normalizedData = { ...data };
+                        
+                        IC_OPTION_FLAG_KEYS.forEach(key => {
+                            // The schema now handles 0/1 to 'Y'/'N' conversion via preprocess
+                            (normalizedData as Record<string, unknown>)[key] = data[key];
+                        });
+                        
+                        reset(normalizedData);
                     } else {
                         toast.error('ไม่พบข้อมูล Base IC Option');
                         onClose();
@@ -172,23 +197,34 @@ export default function ICOptionFormModal({ isOpen, onClose, editId, onSuccess }
             }
         }
     }, [isOpen, isEditMode, editId, reset, onClose]);
-
-    const onSubmit: SubmitHandler<ICOptionFormData> = useCallback(async (data: ICOptionFormData) => {
+ 
+    const onSubmit: SubmitHandler<FieldValues> = useCallback(async (formData) => {
+        const data = formData as ICOptionFormData;
         try {
-            // Ensure ID fields are sent as integers
-            const submissionData = {
-                ...data,
+            // WHITELIST APPROACH: Only send fields that exist in the database table
+            // This prevents "400 Bad Request" caused by extra virtual or metadata fields
+            const payload: Record<string, unknown> = {
+                branch_id: Number(data.branch_id),
+                aging_expire: String(data.aging_expire),
                 set_price1: Number(data.set_price1 || 0),
                 set_price2: Number(data.set_price2 || 0),
                 set_price3: Number(data.set_price3 || 0),
                 set_price4: Number(data.set_price4 || 0),
             };
 
+            // Add all 25 flags
+            IC_OPTION_FLAG_KEYS.forEach(key => {
+                payload[key] = data[key];
+            });
+
             if (isEditMode && editId) {
-                await ICOptionService.updateICOption(editId, submissionData);
+                // For updates, we send the payload without the ID in the body
+                // as it's already in the URL: /inventory-option/:id
+                await ICOptionService.updateICOption(editId, payload);
                 toast.success('บันทึกการตั้งค่าสำเร็จ');
             } else {
-                await ICOptionService.createICOption(submissionData);
+                // For creation, we include everything
+                await ICOptionService.createICOption(payload as ICOptionFormData);
                 toast.success('บันทึกข้อมูลสำเร็จ');
             }
             onSuccess();
@@ -261,6 +297,23 @@ export default function ICOptionFormModal({ isOpen, onClose, editId, onSuccess }
             width="max-w-6xl"
         >
             <div className="p-6 bg-gray-50/30 dark:bg-gray-900/10">
+                {/* Error Summary Banner */}
+                {Object.keys(errors).length > 0 && (
+                    <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
+                        <AlertCircle className="text-red-600 dark:text-red-400 shrink-0 mt-0.5" size={20} />
+                        <div>
+                            <h4 className="text-sm font-bold text-red-800 dark:text-red-300">พบข้อผิดพลาดในการตรวจสอบข้อมูล:</h4>
+                            <ul className="mt-1 text-xs text-red-700 dark:text-red-400 list-disc list-inside space-y-0.5">
+                                {Object.entries(errors).map(([key, error]) => (
+                                    <li key={key}>
+                                        <span className="font-semibold uppercase opacity-70">[{key}]:</span> {String(error?.message || 'ข้อมูลไม่ถูกต้อง')}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+                )}
+
                 <form id="icOptionForm" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                     
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -272,14 +325,16 @@ export default function ICOptionFormModal({ isOpen, onClose, editId, onSuccess }
                             </div>
                             <div className="space-y-4">
                                 <div className="space-y-1">
+                                    {isEditMode && <input type="hidden" {...register('branch_id')} />}
                                     <select
                                         disabled={isEditMode}
+                                        value={watchedBranchId}
                                         className={`w-full px-3 py-2 border rounded-lg shadow-sm sm:text-sm ${
                                             isEditMode 
                                                 ? 'bg-gray-100 dark:bg-gray-900/50 dark:border-gray-600 dark:text-gray-500 cursor-not-allowed' 
                                                 : 'bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-indigo-500'
                                         } ${errors.branch_id ? 'border-red-500' : 'border-gray-300'}`}
-                                        {...register('branch_id')}
+                                        {...(!isEditMode ? register('branch_id') : {})}
                                     >
                                         <option value="">-- เลือกสาขา --</option>
                                         {branchesData?.items?.map((branch, index) => (

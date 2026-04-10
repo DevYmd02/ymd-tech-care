@@ -68,14 +68,22 @@ export default function ICOptionList() {
             size: 60,
         },
         {
-            accessorKey: 'branch_id',
+            accessorKey: 'branch_code',
             header: 'รหัสสาขา',
             size: 150,
-            cell: ({ getValue }) => (
-                <span className="font-semibold text-indigo-600 dark:text-indigo-400">
-                    {getValue() as string || '-'}
-                </span>
-            ),
+            cell: ({ row }) => {
+                const code = row.original.branch_code;
+                const name = row.original.branch_name;
+                const id = row.original.branch_id;
+                
+                return (
+                    <div className="flex flex-col">
+                        <span className="font-semibold text-indigo-600 dark:text-indigo-400">
+                            {code ? `${code} (${name || '-'})` : `ID: ${id}`}
+                        </span>
+                    </div>
+                );
+            },
         },
         {
             accessorKey: 'aging_expire',
