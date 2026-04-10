@@ -8,6 +8,7 @@ import { PriceListService } from '@master-data/sales/pages/price-list/services/p
 import { CustomerService } from '@customer/customer-master/services/customer.service';
 import type { PriceListHeader } from '@master-data/sales/pages/price-list/types/price-list.types';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
+import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import toast from 'react-hot-toast';
 
 export function usePriceList() {
@@ -22,6 +23,8 @@ export function usePriceList() {
           search2: 'price_list_name'
         }
     });
+
+    const { confirm: confirmDialog } = useConfirmation();
 
     const [allPriceLists, setAllPriceLists] = useState<PriceListHeader[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -116,7 +119,14 @@ export function usePriceList() {
     };
 
     const handleDelete = useCallback(async (id: string) => {
-        if (confirm('คุณต้องการลบรายการราคานี้หรือไม่?')) {
+        const isConfirmed = await confirmDialog({
+            title: 'ยืนยันการลบ',
+            description: 'คุณต้องการลบรายการราคานี้หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้',
+            variant: 'danger',
+            confirmText: 'ลบรายการ'
+        });
+
+        if (isConfirmed) {
             try {
                 await PriceListService.delete(id);
                 fetchData();
@@ -124,10 +134,17 @@ export function usePriceList() {
                 console.error('Failed to delete price list:', error);
             }
         }
-    }, [fetchData]);
+    }, [confirmDialog, fetchData]);
 
     const handleApprove = useCallback(async (id: string) => {
-        if (confirm('คุณต้องการอนุมัติรายการราคานี้หรือไม่?')) {
+        const isConfirmed = await confirmDialog({
+            title: 'ยืนยันการอนุมัติ',
+            description: 'คุณต้องการอนุมัติรายการราคานี้หรือไม่?',
+            variant: 'info',
+            confirmText: 'อนุมัติ'
+        });
+
+        if (isConfirmed) {
             try {
                 const result = await PriceListService.approve(id);
                 if (result.success) {
@@ -141,7 +158,7 @@ export function usePriceList() {
                 toast.error('เกิดข้อผิดพลาดในการอนุมัติ');
             }
         }
-    }, [fetchData]);
+    }, [confirmDialog, fetchData]);
 
     const handleModalClose = () => {
         setIsModalOpen(false);

@@ -19,7 +19,9 @@ export function usePriceLevel() {
         resetFilters
     } = useTableFilters({
         customParamKeys: {
-          search: 'item_name'
+          search: 'item_code',
+          search2: 'item_name',
+          search3: 'uom_name'
         }
     });
 
@@ -69,13 +71,28 @@ export function usePriceLevel() {
     const filteredData = useMemo(() => {
         let result = [...allPriceLevels];
 
-        // Filter by Search (Item Code or Name)
+        // Filter by Item Code
         if (filters.search) {
             const term = filters.search.toLowerCase();
             result = result.filter(item => 
+                (item.item_code || '').toLowerCase().includes(term)
+            );
+        }
+
+        // Filter by Item Name
+        if (filters.search2) {
+            const term = filters.search2.toLowerCase();
+            result = result.filter(item => 
                 (item.item_name || '').toLowerCase().includes(term) ||
-                (item.item_code || '').toLowerCase().includes(term) ||
                 (item.item_name_en || '').toLowerCase().includes(term)
+            );
+        }
+
+        // Filter by UOM Name
+        if (filters.search3) {
+            const term = filters.search3.toLowerCase();
+            result = result.filter(item => 
+                (item.uom_name || '').toLowerCase().includes(term)
             );
         }
 

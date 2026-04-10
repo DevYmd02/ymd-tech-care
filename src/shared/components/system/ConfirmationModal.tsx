@@ -61,7 +61,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         },
     };
 
-    const config = variantConfig[variant];
+    const config = variantConfig[variant] || variantConfig.info;
     const Icon = icon || config.icon;
 
     return createPortal(
