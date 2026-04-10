@@ -336,6 +336,11 @@ export const sidebarMenuItems: MenuItem[] = [
                         label: 'กำหนดราคาสินค้า (Price List)',
                         path: '/master-data/price-list',
                     },
+                    {
+                        id: 'ic-option',
+                        label: 'กำหนดราคาสินค้า (Base IC Option)',
+                        path: '/master-data/ic-option',
+                    },
                 ]
             },
             {

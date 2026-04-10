@@ -88,6 +88,7 @@ export const ROUTES = {
     STANDARD_COST: '/master-data/standard-cost',
     PRICE_LEVEL: '/master-data/price-level',
     PRICE_LIST: '/master-data/price-list',
+    IC_OPTION: '/master-data/ic-option',
   },
     SALES: {
     DASHBOARD: '/sales/dashboard',
