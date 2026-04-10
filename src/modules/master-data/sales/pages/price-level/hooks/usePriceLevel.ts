@@ -7,6 +7,9 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { PriceLevelService } from '../services/price-level.service';
 import type { PriceLevel } from '../types/price-level.types';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
+import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
+import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
+import type { ItemListItem, UnitListItem } from '@/modules/master-data/inventory/types/product-types';
 
 export function usePriceLevel() {
     const { 
@@ -23,14 +26,36 @@ export function usePriceLevel() {
     const [allPriceLevels, setAllPriceLevels] = useState<PriceLevel[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editingId, setEditingId] = useState<string | number | null>(null);
 
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
-            const data = await PriceLevelService.getList();
-            setAllPriceLevels(data);
-        } catch (error) {
+            // Fetch everything in parallel for performance
+            const [priceLevels, itemsResponse, unitsResponse] = await Promise.all([
+                PriceLevelService.getList(),
+                ItemMasterService.getAll({ limit: 1000 }), // Get enough items for mapping
+                UnitService.getAll()
+            ]);
+
+            const itemMap = new Map<number, ItemListItem>((itemsResponse.items || []).map((item: ItemListItem) => [Number(item.item_id), item]));
+            const unitMap = new Map<number, UnitListItem>((unitsResponse.items || []).map((unit: UnitListItem) => [Number(unit.unit_id), unit]));
+
+            const mappedData = priceLevels.map((pl: PriceLevel) => {
+                const item = itemMap.get(Number(pl.item_id));
+                const unit = unitMap.get(Number(pl.uom_id));
+                
+                return {
+                    ...pl,
+                    item_code: item?.item_code || pl.item_code || '-',
+                    item_name: item?.item_name || pl.item_name || '-',
+                    item_name_en: item?.item_name_en || pl.item_name_en || '',
+                    uom_name: unit?.unit_name || pl.uom_name || '-',
+                };
+            });
+
+            setAllPriceLevels(mappedData);
+        } catch (error: unknown) {
             console.error('Failed to fetch price levels:', error);
         } finally {
             setIsLoading(false);
@@ -70,19 +95,19 @@ export function usePriceLevel() {
         setIsModalOpen(true);
     };
 
-    const handleEdit = (id: string) => {
+    const handleEdit = (id: string | number) => {
         setEditingId(id);
         setIsModalOpen(true);
     };
 
-    const handleDelete = useCallback(async (id: string) => {
+    const handleDelete = useCallback(async (id: string | number) => {
         if (confirm('คุณต้องการลบรายการนี้หรือไม่?')) {
             try {
                 const success = await PriceLevelService.delete(id);
                 if (success) {
                     fetchData();
                 }
-            } catch (error) {
+            } catch (error: unknown) {
                 console.error('Failed to delete price level:', error);
             }
         }

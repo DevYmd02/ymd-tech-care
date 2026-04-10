@@ -18,7 +18,7 @@ import type { ItemListItem } from '@/modules/master-data/inventory/types/product
 interface Props {
     isOpen: boolean;
     onClose: () => void;
-    editId?: string | null;
+    editId?: number | string | null;
     onSuccess?: () => void;
 }
 
@@ -50,12 +50,12 @@ export default function PriceLevelFormModal({ isOpen, onClose, editId, onSuccess
     }, [isOpen]);
 
     const handleSelectProduct = (product: ItemListItem) => {
-        setValue('itemId', String(product.item_id || product.id));
+        setValue('itemId', product.item_id || product.id);
         setValue('itemCode', product.item_code);
         setValue('itemName', product.item_name);
-        setValue('itemNameEn', product.item_name_en || ''); // Changed: Use empty string if missing, don't fallback to Thai name
+        setValue('itemNameEn', product.item_name_en || ''); 
         if (product.uom_id) {
-            setValue('uomId', String(product.uom_id));
+            setValue('uomId', product.uom_id);
         }
         setIsProductSearchOpen(false);
     };
