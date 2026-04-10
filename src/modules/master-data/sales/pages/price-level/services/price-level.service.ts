@@ -31,8 +31,8 @@ export const PriceLevelService = {
     return {
       item_id: Number(data.itemId),
       uom_id: Number(data.uomId),
-      item_from_qty: Number(data.itemFromQty || 0),
-      item_to_qty: Number(data.itemToQty || 0),
+      item_from_qty: data.itemFromQty !== null && data.itemFromQty !== undefined ? Number(data.itemFromQty) : null,
+      item_to_qty: data.itemToQty !== null && data.itemToQty !== undefined ? Number(data.itemToQty) : null,
       item_price1: data.itemPrice1 !== null && data.itemPrice1 !== undefined ? Number(data.itemPrice1) : null,
       item_price2: data.itemPrice2 !== null && data.itemPrice2 !== undefined ? Number(data.itemPrice2) : null,
       item_price3: data.itemPrice3 !== null && data.itemPrice3 !== undefined ? Number(data.itemPrice3) : null,

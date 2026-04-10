@@ -14,8 +14,8 @@ export interface PriceLevel extends BaseMasterData {
     id?: number; 
     item_id: number;
     uom_id: number;
-    item_from_qty: number;
-    item_to_qty: number;
+    item_from_qty: number | null;
+    item_to_qty: number | null;
     item_price1: number | null;
     item_price2: number | null;
     item_price3: number | null;
@@ -26,7 +26,7 @@ export interface PriceLevel extends BaseMasterData {
     item_price8: number | null;
     item_price9: number | null;
     item_price10: number | null;
-    listno: number;
+    listno: number | null;
     item_name: string;
     item_name_en: string;
     
@@ -74,8 +74,8 @@ export interface ApiPriceLevel {
 export interface PriceLevelFormData {
     itemId: number | string;
     uomId: number | string;
-    itemFromQty: number;
-    itemToQty: number;
+    itemFromQty: number | null;
+    itemToQty: number | null;
     itemPrice1: number | null;
     itemPrice2: number | null;
     itemPrice3: number | null;
@@ -86,7 +86,7 @@ export interface PriceLevelFormData {
     itemPrice8: number | null;
     itemPrice9: number | null;
     itemPrice10: number | null;
-    listno?: number;
+    listno: number | null;
     itemName?: string;
     itemNameEn?: string;
     

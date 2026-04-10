@@ -4,7 +4,7 @@
  */
 
 import { useEffect } from 'react';
-import { useForm, type SubmitHandler, type Resolver } from 'react-hook-form';
+import { useForm, type SubmitHandler, type Resolver, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PriceLevelService } from '../services/price-level.service';
@@ -14,22 +14,28 @@ import toast from 'react-hot-toast';
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import type { ApiPriceLevel } from '../types/price-level.types';
 
+const nullableNumber = z.preprocess((val) => {
+  if (val === '' || val === undefined || val === null) return null;
+  const num = Number(val);
+  return isNaN(num) ? null : num;
+}, z.number().nullable());
+
 const priceLevelSchema = z.object({
   itemId: z.union([z.string(), z.number()]).refine(val => val !== '', 'กรุณาเลือกสินค้า'),
   uomId: z.union([z.string(), z.number()]).refine(val => val !== '', 'กรุณาเลือกหน่วยนับ'),
-  itemFromQty: z.number().min(0, 'จำนวนเริ่มต้นต้องไม่ติดลบ'),
-  itemToQty: z.number().min(0, 'ถึงจำนวนต้องไม่ติดลบ'),
-  itemPrice1: z.number().nullable(),
-  itemPrice2: z.number().nullable(),
-  itemPrice3: z.number().nullable(),
-  itemPrice4: z.number().nullable(),
-  itemPrice5: z.number().nullable(),
-  itemPrice6: z.number().nullable(),
-  itemPrice7: z.number().nullable(),
-  itemPrice8: z.number().nullable(),
-  itemPrice9: z.number().nullable(),
-  itemPrice10: z.number().nullable(),
-  listno: z.number().optional().default(0),
+  itemFromQty: nullableNumber,
+  itemToQty: nullableNumber,
+  itemPrice1: nullableNumber,
+  itemPrice2: nullableNumber,
+  itemPrice3: nullableNumber,
+  itemPrice4: nullableNumber,
+  itemPrice5: nullableNumber,
+  itemPrice6: nullableNumber,
+  itemPrice7: nullableNumber,
+  itemPrice8: nullableNumber,
+  itemPrice9: nullableNumber,
+  itemPrice10: nullableNumber,
+  listno: nullableNumber,
   itemName: z.string().optional(),
   itemNameEn: z.string().optional(),
   itemCode: z.string().optional(),
@@ -39,19 +45,19 @@ const priceLevelSchema = z.object({
 const initialValues: PriceLevelFormData = {
   itemId: '',
   uomId: '',
-  itemFromQty: 0,
-  itemToQty: 0,
-  itemPrice1: 0,
-  itemPrice2: 0,
-  itemPrice3: 0,
-  itemPrice4: 0,
-  itemPrice5: 0,
-  itemPrice6: 0,
-  itemPrice7: 0,
-  itemPrice8: 0,
-  itemPrice9: 0,
-  itemPrice10: 0,
-  listno: 0,
+  itemFromQty: null,
+  itemToQty: null,
+  itemPrice1: null,
+  itemPrice2: null,
+  itemPrice3: null,
+  itemPrice4: null,
+  itemPrice5: null,
+  itemPrice6: null,
+  itemPrice7: null,
+  itemPrice8: null,
+  itemPrice9: null,
+  itemPrice10: null,
+  listno: null,
   itemName: '',
   itemNameEn: '',
   itemCode: '',
@@ -90,10 +96,11 @@ export function usePriceLevelForm(editId: string | number | null, onSuccess?: ()
             return;
           }
 
-          // Defensive helper to extract numeric values safely
-          const num = (val: number | string | null | undefined): number => {
+          // Defensive helper to extract numeric values safely (now preserves null)
+          const num = (val: number | string | null | undefined): number | null => {
+            if (val === null || val === undefined) return null;
             const parsed = Number(val);
-            return isNaN(parsed) ? 0 : parsed;
+            return isNaN(parsed) ? null : parsed;
           };
 
           // Fallback for missing item info: fetch from item service if not present in joined response
@@ -122,10 +129,10 @@ export function usePriceLevelForm(editId: string | number | null, onSuccess?: ()
           }
 
           reset({
-            itemId: itemId || '',
-            uomId: uomId || '',
-            itemFromQty: num(rawData.item_from_qty || rawData.itemFromQty),
-            itemToQty: num(rawData.item_to_qty || rawData.itemToQty),
+            itemId: itemId ?? '',
+            uomId: uomId ?? '',
+            itemFromQty: num(rawData.item_from_qty ?? rawData.itemFromQty),
+            itemToQty: num(rawData.item_to_qty ?? rawData.itemToQty),
             itemPrice1: rawData.item_price1 !== null && rawData.item_price1 !== undefined ? num(rawData.item_price1) : null,
             itemPrice2: rawData.item_price2 !== null && rawData.item_price2 !== undefined ? num(rawData.item_price2) : null,
             itemPrice3: rawData.item_price3 !== null && rawData.item_price3 !== undefined ? num(rawData.item_price3) : null,
@@ -171,9 +178,14 @@ export function usePriceLevelForm(editId: string | number | null, onSuccess?: ()
     }
   };
 
+  const onValidationError = (validationErrors: FieldErrors<PriceLevelFormData>) => {
+    console.error('❌ Form Validation Errors:', validationErrors);
+    toast.error('กรุณาตรวจสอบข้อมูลให้ถูกต้อง');
+  };
+
   return {
     register,
-    handleSubmit: handleSubmit(onSubmit),
+    handleSubmit: handleSubmit(onSubmit, onValidationError),
     control,
     errors,
     isSubmitting,
