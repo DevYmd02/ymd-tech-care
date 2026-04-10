@@ -3,7 +3,7 @@ import type { ICOption } from '../types/ic-option.types';
 export const mockICOptions: ICOption[] = [
     {
         ic_option_id: 'b14e3650-6a15-412e-a0e2-65a58cfaba01',
-        branch_id: 'b9a89c8a-f56f-42ae-9bc6-e26b1df5f381',
+        branch_id: 1,
         aging_expire: '30 วัน',
         auto_perpetual_cost: 'Y',
         barcode_flag: 'Y',
@@ -37,7 +37,7 @@ export const mockICOptions: ICOption[] = [
     },
     {
         ic_option_id: 'b14e3650-6a15-412e-a0e2-65a58cfaba02',
-        branch_id: 'c2e89c8a-f56f-42ae-9bc6-e26b1df5f382',
+        branch_id: 2,
         aging_expire: '60 วัน',
         auto_perpetual_cost: 'N',
         barcode_flag: 'Y',

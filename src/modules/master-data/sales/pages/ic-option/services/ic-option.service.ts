@@ -8,7 +8,7 @@ export const ICOptionService = {
     async getICOptions(params?: Record<string, string | number | boolean>): Promise<ICOption[]> {
         try {
             // Note: The specific endpoint should match the backend router (usually table name or kebab-case)
-            const response = await api.get<ICOption[]>('/ic-option', { params });
+            const response = await api.get<ICOption[]>('/inventory-option', { params });
             return Array.isArray(response) ? response : response;
         } catch (error) {
             console.error('Failed to get IC Options:', error);
@@ -21,7 +21,7 @@ export const ICOptionService = {
      */
     async getICOptionById(id: string): Promise<ICOption | undefined> {
         try {
-            const response = await api.get<ICOption>(`/ic-option/${id}`);
+            const response = await api.get<ICOption>(`/inventory-option/${id}`);
             return response;
         } catch (error) {
             console.error(`Failed to get IC Option ID ${id}:`, error);
@@ -34,7 +34,7 @@ export const ICOptionService = {
      */
     async createICOption(data: ICOptionFormData): Promise<ICOption> {
         try {
-            const response = await api.post<ICOption>('/ic-option', data);
+            const response = await api.post<ICOption>('/inventory-option', data);
             return response;
         } catch (error) {
             console.error('Failed to create IC Option:', error);
@@ -47,7 +47,7 @@ export const ICOptionService = {
      */
     async updateICOption(id: string, data: Partial<ICOptionFormData>): Promise<ICOption> {
         try {
-            const response = await api.patch<ICOption>(`/ic-option/${id}`, data);
+            const response = await api.patch<ICOption>(`/inventory-option/${id}`, data);
             return response;
         } catch (error) {
             console.error(`Failed to update IC Option ID ${id}:`, error);
@@ -60,7 +60,7 @@ export const ICOptionService = {
      */
     async deleteICOption(id: string): Promise<void> {
         try {
-            await api.delete(`/ic-option/${id}`);
+            await api.delete(`/inventory-option/${id}`);
         } catch (error) {
             console.error(`Failed to delete IC Option ID ${id}:`, error);
             throw error;

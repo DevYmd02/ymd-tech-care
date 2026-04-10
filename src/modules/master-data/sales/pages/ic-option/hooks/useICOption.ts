@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import type { ICOption, ICOptionFilters } from '../types/ic-option.types';
 import { ICOptionService } from '../services/ic-option.service';
+import { BranchService } from '@/modules/master-data/company/services/branch.service';
 
 export function useICOption() {
     const [data, setData] = useState<ICOption[]>([]);
@@ -18,8 +19,25 @@ export function useICOption() {
     const fetchData = useCallback(async () => {
         try {
             setIsLoading(true);
-            const res = await ICOptionService.getICOptions();
-            setData(res);
+            const [res, branchesRes] = await Promise.all([
+                ICOptionService.getICOptions(),
+                BranchService.getList({ page: 1, limit: 1000 })
+            ]);
+            
+            const branches = Array.isArray(branchesRes) ? branchesRes : (branchesRes?.items ?? []);
+            const branchMap = new Map(branches.map(b => [b.id || b.branch_id, b]));
+
+            // Map branch details into ICOption data
+            const enrichedData = res.map(item => {
+                const branch = branchMap.get(item.branch_id);
+                return {
+                    ...item,
+                    branch_code: branch?.branch_code,
+                    branch_name: branch?.branch_name
+                };
+            });
+
+            setData(enrichedData);
         } catch (error) {
             toast.error('เกิดข้อผิดพลาดในการโหลดข้อมูล Base IC Option');
             console.error('Fetch error:', error);
@@ -42,7 +60,7 @@ export function useICOption() {
             const query = filters.search.toLowerCase();
             sorted = sorted.filter(item => 
                 item.aging_expire?.toLowerCase().includes(query) ||
-                item.branch_id?.toLowerCase().includes(query)
+                String(item.branch_id ?? '').includes(query)
             );
         }
         return sorted;

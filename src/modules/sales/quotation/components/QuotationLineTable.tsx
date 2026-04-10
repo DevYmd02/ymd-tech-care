@@ -13,7 +13,7 @@ interface QuotationLineTableProps {
 
 export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChange, onSearchProduct, uoms = [] }: QuotationLineTableProps) {
     const compactInputClass = "h-8 w-full px-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-900 dark:text-white transition-all disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm";
-    const headerThClass = "px-3 py-3 text-[10px] font-bold uppercase tracking-wider bg-gray-50 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700";
+    const headerThClass = "px-3 py-3 text-xs font-bold uppercase tracking-wider bg-gray-50 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700 whitespace-nowrap";
     
     return (
         <section className="space-y-6">
@@ -36,15 +36,16 @@ export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChang
                 <table className="w-full text-sm text-left">
                     <thead className="bg-gray-50 dark:bg-gray-800/50">
                         <tr>
-                            <th className={`${headerThClass} w-10 text-center`}>#</th>
-                            <th className={`${headerThClass} min-w-[180px]`}>รหัสสินค้า (ITEM CODE)</th>
-                            <th className={`${headerThClass} min-w-[220px]`}>ชื่อสินค้า (ITEM NAME)</th>
-                            <th className={`${headerThClass} w-24 text-right`}>จำนวน (QTY)</th>
-                            <th className={`${headerThClass} w-28`}>หน่วย (UOM)</th>
-                            <th className={`${headerThClass} w-28 text-right`}>ราคา/หน่วย</th>
-                            <th className={`${headerThClass} w-28 text-right`}>ส่วนลด</th>
-                            <th className={`${headerThClass} w-28 text-right`}>ยอดสุทธิ</th>
-                            <th className={`${headerThClass} w-14 text-center`}>จัดการ</th>
+                             <th className={`${headerThClass} w-10 text-center`}>#</th>
+                             <th className={`${headerThClass} min-w-[180px]`}>รหัสสินค้า (ITEM CODE)</th>
+                             <th className={`${headerThClass} min-w-[380px]`}>ชื่อสินค้า (ITEM NAME)</th>
+                             <th className={`${headerThClass} w-24 text-right`}>จำนวน (QTY)</th>
+                             <th className={`${headerThClass} w-32`}>หน่วย (UOM)</th>
+                             <th className={`${headerThClass} w-28 text-right`}>ราคา/หน่วย</th>
+                             <th className={`${headerThClass} w-28 text-right`}>ส่วนลด</th>
+                             <th className={`${headerThClass} min-w-[180px]`}>หมายเหตุ (REMARK)</th>
+                             <th className={`${headerThClass} w-32 text-right`}>ยอดสุทธิ</th>
+                             <th className={`${headerThClass} w-14 text-center`}>จัดการ</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-gray-900">
@@ -123,16 +124,25 @@ export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChang
                                         className={`${compactInputClass} text-right font-medium text-blue-600`}
                                     />
                                 </td>
-                                <td className="px-2 py-1.5">
-                                    <input 
-                                        type="text" 
-                                        value={line.line_discount_input ?? ''} 
-                                        onChange={(e) => onLineChange(index, 'line_discount_input', e.target.value)}
-                                        onFocus={(e) => e.target.select()}
-                                        placeholder="0%"
-                                        className={`${compactInputClass} text-right`}
-                                    />
-                                </td>
+                                 <td className="px-2 py-1.5">
+                                     <input 
+                                         type="text" 
+                                         value={line.line_discount_input ?? ''} 
+                                         onChange={(e) => onLineChange(index, 'line_discount_input', e.target.value)}
+                                         onFocus={(e) => e.target.select()}
+                                         placeholder="0%"
+                                         className={`${compactInputClass} text-right`}
+                                     />
+                                 </td>
+                                 <td className="px-2 py-1.5 text-right">
+                                     <input 
+                                         type="text" 
+                                         value={line.note || ''} 
+                                         onChange={(e) => onLineChange(index, 'note', e.target.value)}
+                                         placeholder="..."
+                                         className={`${compactInputClass} italic text-gray-500`}
+                                     />
+                                 </td>
                                 <td className="px-2 py-1.5 text-right font-bold text-gray-900 dark:text-white text-sm">
                                     {(line.line_total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </td>
@@ -149,7 +159,7 @@ export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChang
                         ))}
                         {lines.length === 0 && (
                             <tr>
-                                <td colSpan={9} className="px-4 py-10 text-center text-gray-400 bg-gray-50/30 dark:bg-gray-800/20">
+                                 <td colSpan={10} className="px-4 py-10 text-center text-gray-400 bg-gray-50/30 dark:bg-gray-800/20">
                                     <Package size={32} className="mx-auto mb-2 opacity-20" />
                                     ไม่มีรายการสินค้า กรุณาคลิกเพื่อเพิ่มรายการ
                                 </td>
