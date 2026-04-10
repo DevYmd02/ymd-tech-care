@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { Edit2, Trash2, Settings } from 'lucide-react';
+import { useMemo, useCallback } from 'react';
+import { Settings } from 'lucide-react';
 import ICOptionFormModal from './ICOptionFormModal';
 import { useICOption } from './hooks/useICOption';
 import type { ICOption } from './types/ic-option.types';
@@ -21,9 +21,33 @@ export default function ICOptionList() {
         fetchData,
         handleCreateNew,
         handleEdit,
-        handleDelete,
         handleModalClose
     } = useICOption();
+
+    // ==================== PRICE SOURCE MAPPING ====================
+    const priceSourceMap = useMemo(() => {
+        const map = new Map<number, string>([
+            [0, 'ไม่ใช้งาน'],
+            [11, 'ราคาสินค้า Price List'],
+            [12, 'ราคาขายล่าสุด'],
+            [13, 'ต้นทุนเฉลี่ย'],
+            [14, 'ต้นทุนมาตรฐาน'],
+        ]);
+        // Add Price Levels 1-10
+        for (let i = 1; i <= 10; i++) {
+            map.set(i, `ราคาสินค้า Price Level ${i}`);
+        }
+        return map;
+    }, []);
+
+    const renderPriceSource = useCallback((val: string | number | null | undefined) => {
+        const id = Number(val || 0);
+        return (
+            <span className={`px-2 py-0.5 text-xs rounded border ${id === 0 ? 'bg-gray-50 text-gray-400 border-gray-200' : 'bg-indigo-50 text-indigo-700 border-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-300 dark:border-indigo-800'}`}>
+                {priceSourceMap.get(id) || `ระบุ (${id})`}
+            </span>
+        );
+    }, [priceSourceMap]);
 
     // ==================== FILTER CONFIG ====================
     const filterConfig: FilterFieldConfig<keyof typeof filters & string>[] = useMemo(() => [
@@ -60,23 +84,23 @@ export default function ICOptionList() {
         },
         {
             accessorKey: 'set_price1',
-            header: 'ราคาขาย 1',
-            size: 100,
-            cell: ({ getValue }) => Number(getValue() || 0).toLocaleString(undefined, { minimumFractionDigits: 2 }),
+            header: 'ที่มาของราคา 1',
+            size: 150,
+            cell: ({ getValue }) => renderPriceSource(getValue() as number),
         },
         {
             accessorKey: 'set_price2',
-            header: 'ราคาขาย 2',
-            size: 100,
-            cell: ({ getValue }) => Number(getValue() || 0).toLocaleString(undefined, { minimumFractionDigits: 2 }),
+            header: 'ที่มาของราคา 2',
+            size: 150,
+            cell: ({ getValue }) => renderPriceSource(getValue() as number),
         },
         {
             accessorKey: 'check_deficit',
             header: 'ตรวจสอบติดลบ',
             size: 120,
             cell: ({ getValue }) => (
-                <span className={`px-2 py-1 text-xs font-medium rounded-full ${getValue() === '1' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'}`}>
-                    {getValue() === '1' ? 'เปิดใช้งาน' : 'ปิด'}
+                <span className={`px-2 py-1 text-xs font-medium rounded-full ${getValue() === 'Y' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'}`}>
+                    {getValue() === 'Y' ? 'เปิดใช้งาน' : 'ปิด'}
                 </span>
             ),
         },
@@ -85,8 +109,8 @@ export default function ICOptionList() {
             header: 'เช็คราคามาตรฐาน',
             size: 130,
             cell: ({ getValue }) => (
-                <span className={`px-2 py-1 text-xs font-medium rounded-full ${getValue() === '1' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'}`}>
-                    {getValue() === '1' ? 'เปิดใช้งาน' : 'ปิด'}
+                <span className={`px-2 py-1 text-xs font-medium rounded-full ${getValue() === 'Y' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'}`}>
+                    {getValue() === 'Y' ? 'เปิดใช้งาน' : 'ปิด'}
                 </span>
             ),
         },
@@ -97,26 +121,19 @@ export default function ICOptionList() {
             cell: ({ row }) => {
                 const id = row.original.ic_option_id;
                 return (
-                    <div className="flex items-center gap-2 text-center">
+                    <div className="flex items-center justify-center gap-2">
                         <button 
                             onClick={() => id && handleEdit(id)}
-                            className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-                            title="แก้ไข"
+                            className="p-1.5 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors border border-indigo-100 dark:border-indigo-800"
+                            title="ตั้งค่า"
                         >
-                            <Edit2 size={18} />
-                        </button>
-                        <button 
-                            onClick={() => id && handleDelete(id)}
-                            className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-                            title="ลบ"
-                        >
-                            <Trash2 size={18} />
+                            <Settings size={18} />
                         </button>
                     </div>
                 );
             },
         },
-    ], [filters.page, filters.limit, handleEdit, handleDelete]);
+    ], [filters.page, filters.limit, handleEdit, renderPriceSource]);
 
     // ==================== RENDER ====================
     return (
@@ -127,10 +144,10 @@ export default function ICOptionList() {
                 <div>
                     <h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
                         <Settings className="text-indigo-600" />
-                        กำหนดราคาสินค้า (Base IC Option)
+                        ตั้งค่าโมดูลสินค้าคงคลัง (IC Option Settings)
                     </h1>
                     <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">
-                        จัดการตั้งค่าเงื่อนไขสินค้าคงคลังและราคามาตรฐาน
+                        จัดการตั้งค่าเงื่อนไขการทำงานและราคาขายเริ่มต้นแยกตามแต่ละสาขา
                     </p>
                 </div>
             </div>
@@ -144,7 +161,7 @@ export default function ICOptionList() {
                     onSearch={() => handlePageChange(1)}
                     onReset={resetFilters}
                     onCreate={handleCreateNew}
-                    createLabel="เพิ่ม IC Option"
+                    createLabel="เพิ่มการตั้งค่าราคา"
                     accentColor="indigo"
                 />
             </div>

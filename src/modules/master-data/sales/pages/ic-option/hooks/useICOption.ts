@@ -68,19 +68,6 @@ export function useICOption() {
         setIsModalOpen(true);
     };
 
-    const handleDelete = async (id: string) => {
-        if (!window.confirm('คุณต้องการลบข้อมูลนี้หรือไม่?')) return;
-        
-        try {
-            await ICOptionService.deleteICOption(id);
-            toast.success('ลบข้อมูลสำเร็จ');
-            fetchData();
-        } catch (err) {
-            toast.error('เกิดข้อผิดพลาดในการลบข้อมูล');
-            console.error(err);
-        }
-    };
-
     const handleModalClose = () => {
         setIsModalOpen(false);
         setTimeout(() => setEditingId(null), 200); // Wait for modal close animation
@@ -98,7 +85,6 @@ export function useICOption() {
         fetchData,
         handleCreateNew,
         handleEdit,
-        handleDelete,
         handleModalClose,
         resetFilters: () => setFilters({ search: '', page: 1, limit: 10 }),
         handlePageChange: (page: number) => handleSetFilters({ page }),

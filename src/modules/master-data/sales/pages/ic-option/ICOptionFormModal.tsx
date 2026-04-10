@@ -1,11 +1,13 @@
-import { useState, useEffect } from 'react';
-import { useForm, type SubmitHandler } from 'react-hook-form';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useForm, type SubmitHandler, type UseFormWatch, type UseFormSetValue, type UseFormRegister, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { DialogFormLayout } from '@ui';
-import { Settings, Save, X } from 'lucide-react';
+import { Settings, Save, X, PlusCircle, AlertCircle, Package, Database, Info } from 'lucide-react';
 import { ICOptionService } from './services/ic-option.service';
 import { icOptionSchema, type ICOptionFormData } from './types/ic-option.types';
 import { PriceLevelNameService } from '@sales-master/pages/price-level-name/services/price-level-name.service';
+import { BranchService } from '@company/services/branch.service';
+import { useQuery } from '@tanstack/react-query';
 import { logger } from '@/shared/utils/logger';
 import toast from 'react-hot-toast';
 
@@ -16,6 +18,72 @@ interface ICOptionFormModalProps {
     onSuccess: () => void;
 }
 
+// ==========================================
+// SUB-COMPONENTS
+// ==========================================
+
+interface FlagToggleFieldProps {
+    name: keyof ICOptionFormData;
+    label: string;
+    watch: UseFormWatch<ICOptionFormData>;
+    setValue: UseFormSetValue<ICOptionFormData>;
+}
+
+const FlagToggleField = ({ name, label, watch, setValue }: FlagToggleFieldProps) => {
+    const value = watch(name);
+    const isActive = value === 'Y';
+
+    const toggle = () => {
+        setValue(name, isActive ? 'N' : 'Y', { shouldDirty: true, shouldValidate: true });
+    };
+
+    return (
+        <div className="flex items-center justify-between gap-4 p-2.5 rounded-lg border border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30 hover:border-indigo-200 dark:hover:border-indigo-900 transition-colors">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 line-clamp-1">
+                {label}
+            </label>
+            <button
+                type="button"
+                onClick={toggle}
+                className={`relative inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase transition-all duration-200 border ${
+                    isActive 
+                        ? 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800' 
+                        : 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700'
+                }`}
+            >
+                <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`} />
+                {isActive ? 'เปิดใช้งาน' : 'ปิด'}
+            </button>
+        </div>
+    );
+};
+
+interface PriceSourceFieldProps {
+    name: keyof ICOptionFormData;
+    label: string;
+    register: UseFormRegister<ICOptionFormData>;
+    errors: FieldErrors<ICOptionFormData>;
+    options: { id: number; name: string }[];
+}
+
+const PriceSourceField = ({ name, label, register, errors, options }: PriceSourceFieldProps) => (
+    <div className="space-y-1">
+        <label className="block text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+            {label}
+        </label>
+        <select
+            {...register(name, { valueAsNumber: true })}
+            className={`w-full px-3 py-2 border rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white sm:text-sm ${
+                errors[name] ? 'border-red-500' : 'border-gray-300'
+            }`}
+        >
+            {options.map(opt => (
+                <option key={opt.id} value={opt.id}>{opt.name}</option>
+            ))}
+        </select>
+    </div>
+);
+
 export default function ICOptionFormModal({ isOpen, onClose, editId, onSuccess }: ICOptionFormModalProps) {
     const isEditMode = !!editId;
 
@@ -23,6 +91,8 @@ export default function ICOptionFormModal({ isOpen, onClose, editId, onSuccess }
         register,
         handleSubmit,
         reset,
+        watch,
+        setValue,
         formState: { errors, isSubmitting },
     } = useForm<ICOptionFormData>({
         resolver: zodResolver(icOptionSchema),
@@ -33,31 +103,31 @@ export default function ICOptionFormModal({ isOpen, onClose, editId, onSuccess }
             set_price2: 0,
             set_price3: 0,
             set_price4: 0,
-            auto_perpetual_cost: '0',
-            barcode_flag: '0',
-            check_deficit: '0',
-            check_deficit_option: '0',
-            check_max_qty: '0',
-            check_min_qty: '0',
-            check_qty_flag: '0',
-            check_standcost: '0',
-            expire_alert_flag: '0',
-            order_alert_flag: '0',
-            post_cost_flag: '0',
-            reorder_flag: '0',
-            set_autopost: '0',
-            set_costcn: '0',
-            set_costcn_ap: '0',
-            set_costcn_ap_refinv: '0',
-            set_costcn_refinv: '0',
-            set_cost_return_issueref: '0',
-            set_goodqty: '0',
-            set_inve: '0',
-            set_price: '0',
-            set_price_ic: '0',
-            set_price_pack: '0',
-            set_price_po: '0',
-            trasfer_cost_flag: '0',
+            auto_perpetual_cost: 'N',
+            barcode_flag: 'N',
+            check_deficit: 'N',
+            check_deficit_option: 'N',
+            check_max_qty: 'N',
+            check_min_qty: 'N',
+            check_qty_flag: 'N',
+            check_standcost: 'N',
+            expire_alert_flag: 'N',
+            order_alert_flag: 'N',
+            post_cost_flag: 'N',
+            reorder_flag: 'N',
+            set_autopost: 'N',
+            set_costcn: 'N',
+            set_costcn_ap: 'N',
+            set_costcn_ap_refinv: 'N',
+            set_costcn_refinv: 'N',
+            set_cost_return_issueref: 'N',
+            set_goodqty: 'N',
+            set_inve: 'N',
+            set_price: 'N',
+            set_price_ic: 'N',
+            set_price_pack: 'N',
+            set_price_po: 'N',
+            trasfer_cost_flag: 'N',
         }
     });
 
@@ -80,10 +150,15 @@ export default function ICOptionFormModal({ isOpen, onClose, editId, onSuccess }
         }
     }, [isOpen]);
 
+    // Fetch Branches for selection
+    const { data: branchesData } = useQuery({
+        queryKey: ['org-branches-lookup'],
+        queryFn: () => BranchService.getList({ page: 1, limit: 1000 }),
+    });
+
     useEffect(() => {
         if (isOpen) {
             if (isEditMode) {
-                // Fetch data
                 ICOptionService.getICOptionById(editId).then(data => {
                     if (data) {
                         reset(data);
@@ -93,18 +168,27 @@ export default function ICOptionFormModal({ isOpen, onClose, editId, onSuccess }
                     }
                 });
             } else {
-                reset(); // Clear form for new entry
+                reset();
             }
         }
     }, [isOpen, isEditMode, editId, reset, onClose]);
 
-    const onSubmit: SubmitHandler<ICOptionFormData> = async (data) => {
+    const onSubmit: SubmitHandler<ICOptionFormData> = useCallback(async (data: ICOptionFormData) => {
         try {
+            // Ensure ID fields are sent as integers
+            const submissionData = {
+                ...data,
+                set_price1: Number(data.set_price1 || 0),
+                set_price2: Number(data.set_price2 || 0),
+                set_price3: Number(data.set_price3 || 0),
+                set_price4: Number(data.set_price4 || 0),
+            };
+
             if (isEditMode && editId) {
-                await ICOptionService.updateICOption(editId, data);
-                toast.success('แก้ไขข้อมูลสำเร็จ');
+                await ICOptionService.updateICOption(editId, submissionData);
+                toast.success('บันทึกการตั้งค่าสำเร็จ');
             } else {
-                await ICOptionService.createICOption(data);
+                await ICOptionService.createICOption(submissionData);
                 toast.success('บันทึกข้อมูลสำเร็จ');
             }
             onSuccess();
@@ -112,27 +196,36 @@ export default function ICOptionFormModal({ isOpen, onClose, editId, onSuccess }
             toast.error('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
             console.error('Submit Error:', error);
         }
-    };
+    }, [isEditMode, editId, onSuccess]);
 
     /**
-     * Helper to render Select dropdown for '1'/'0' flags
+     * WINSPEED Price Source Options
      */
-    const renderFlagSelect = (name: keyof ICOptionFormData, label: string) => (
-        <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                {label}
-            </label>
-            <select
-                {...register(name)}
-                className={`w-full px-3 py-2 border rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white sm:text-sm ${
-                    errors[name] ? 'border-red-500 ring-red-500' : 'border-gray-300'
-                }`}
-            >
-                <option value="0">ปิด (0)</option>
-                <option value="1">เปิดใช้งาน (1)</option>
-            </select>
-        </div>
-    );
+    const priceSourceOptions = useMemo(() => {
+        const options = [];
+        
+        // 1. เลือก
+        options.push({ id: 0, name: '-- เลือก --' });
+
+        // 2. Price List (WINSPEED ID 11)
+        options.push({ id: 11, name: 'ราคาสินค้า Price List' });
+
+        // 3. Price Levels (WINSPEED ID 1-10)
+        for (let i = 1; i <= 10; i++) {
+            const levelName = levelNameMap.get(i);
+            options.push({
+                id: i,
+                name: `ราคาสินค้า Price Level ${i} ${levelName ? `(${levelName})` : ''}`
+            });
+        }
+
+        // 4. อื่นๆ
+        options.push({ id: 12, name: 'ราคาขายล่าสุด (Last Selling Price)' });
+        options.push({ id: 13, name: 'ต้นทุนเฉลี่ย (Average Cost)' });
+        options.push({ id: 14, name: 'ต้นทุนมาตรฐาน (Standard Cost)' });
+
+        return options;
+    }, [levelNameMap]);
 
     const TitleIcon = <Settings size={24} className="text-indigo-600" />;
 
@@ -150,10 +243,10 @@ export default function ICOptionFormModal({ isOpen, onClose, editId, onSuccess }
                 type="submit"
                 form="icOptionForm"
                 disabled={isSubmitting}
-                className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50 font-medium"
+                className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50 font-semibold"
             >
                 <Save size={18} />
-                {isSubmitting ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
+                {isSubmitting ? 'กำลังบันทึก...' : 'บันทึกการตั้งค่า'}
             </button>
         </div>
     );
@@ -162,35 +255,44 @@ export default function ICOptionFormModal({ isOpen, onClose, editId, onSuccess }
         <DialogFormLayout
             isOpen={isOpen}
             onClose={onClose}
-            title={isEditMode ? 'แก้ไขข้อมูล Base IC Option' : 'เพิ่ม Base IC Option'}
+            title={isEditMode ? 'ตั้งค่าโมดูลสินค้าคงคลัง (IC Option Settings)' : 'เพิ่มการตั้งค่า IC Option'}
             titleIcon={TitleIcon}
             footer={FormFooter}
             width="max-w-6xl"
         >
             <div className="p-6 bg-gray-50/30 dark:bg-gray-900/10">
-                    <form id="icOptionForm" onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-                        
-                        {/* ================= SECTION 1: BASIC INFO ================= */}
-                        <section className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-                            <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4 border-b pb-2">ข้อมูลเบื้องต้น</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <form id="icOptionForm" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                    
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* ข้อมูลพื้นฐาน */}
+                        <section className="lg:col-span-1 bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                            <div className="flex items-center gap-2 mb-4 text-indigo-600 dark:text-indigo-400 border-b pb-2">
+                                <Info size={20} />
+                                <h3 className="font-semibold">ข้อมูลสาขาและการใช้งาน</h3>
+                            </div>
+                            <div className="space-y-4">
                                 <div className="space-y-1">
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        รหัสสาขา (Branch ID) <span className="text-red-500">*</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        placeholder="ตัวอย่าง: b9a89c8a..."
-                                        className={`w-full px-3 py-2 border rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white sm:text-sm ${
-                                            errors.branch_id ? 'border-red-500' : 'border-gray-300'
-                                        }`}
+                                    <select
+                                        disabled={isEditMode}
+                                        className={`w-full px-3 py-2 border rounded-lg shadow-sm sm:text-sm ${
+                                            isEditMode 
+                                                ? 'bg-gray-100 dark:bg-gray-900/50 dark:border-gray-600 dark:text-gray-500 cursor-not-allowed' 
+                                                : 'bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-indigo-500'
+                                        } ${errors.branch_id ? 'border-red-500' : 'border-gray-300'}`}
                                         {...register('branch_id')}
-                                    />
-                                    {errors.branch_id && <p className="text-xs text-red-500">{errors.branch_id.message}</p>}
+                                    >
+                                        <option value="">-- เลือกสาขา --</option>
+                                        {branchesData?.items?.map((branch, index) => (
+                                            <option key={branch.branch_id || branch.id || `br-${index}`} value={String(branch.branch_id)}>
+                                                {branch.branch_code} - {branch.branch_name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {errors.branch_id && <p className="text-red-500 text-xs mt-1">{errors.branch_id.message}</p>}
                                 </div>
                                 <div className="space-y-1">
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Aging สินค้ามีอายุ <span className="text-red-500">*</span>
+                                        ระยะเวลา Aging สินค้า <span className="text-red-500">*</span>
                                     </label>
                                     <input
                                         type="text"
@@ -200,71 +302,100 @@ export default function ICOptionFormModal({ isOpen, onClose, editId, onSuccess }
                                         }`}
                                         {...register('aging_expire')}
                                     />
-                                    {errors.aging_expire && <p className="text-xs text-red-500">{errors.aging_expire.message}</p>}
                                 </div>
                             </div>
                         </section>
 
-                        {/* ================= SECTION 2: PRICING ================= */}
-                        <section className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-                            <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4 border-b pb-2">ราคาสินค้าเริ่มต้น</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                                {[1, 2, 3, 4].map(idx => (
-                                    <div key={`set_price${idx}`} className="space-y-1">
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                            {levelNameMap.get(idx) 
-                                                ? `${idx}. ${levelNameMap.get(idx)} (ระดับ ${idx})`
-                                                : `ราคาขายลำดับที่ ${idx}`
-                                            }
-                                        </label>
-                                        <input
-                                            type="number"
-                                            className={`w-full px-3 py-2 border rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white sm:text-sm ${
-                                                errors[`set_price${idx}` as keyof ICOptionFormData] ? 'border-red-500' : 'border-gray-300'
-                                            }`}
-                                            {...register(`set_price${idx}` as keyof ICOptionFormData, { valueAsNumber: true })}
-                                            onFocus={(e) => e.target.select()}
-                                            onWheel={(e) => e.currentTarget.blur()}
-                                        />
-                                    </div>
-                                ))}
+                        {/* ลำดับที่มาของราคาขาย */}
+                        <section className="lg:col-span-2 bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                            <div className="flex items-center gap-2 mb-4 text-emerald-600 dark:text-emerald-400 border-b pb-2">
+                                <Database size={20} />
+                                <h3 className="font-semibold">ลำดับที่มาของราคาขาย (Selling Price Priority)</h3>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                                <PriceSourceField name="set_price1" label="ลำดับราคาที่ 1" register={register} errors={errors} options={priceSourceOptions} />
+                                <PriceSourceField name="set_price2" label="ลำดับราคาที่ 2" register={register} errors={errors} options={priceSourceOptions} />
+                                <PriceSourceField name="set_price3" label="ลำดับราคาที่ 3" register={register} errors={errors} options={priceSourceOptions} />
+                                <PriceSourceField name="set_price4" label="ลำดับราคาที่ 4" register={register} errors={errors} options={priceSourceOptions} />
+                            </div>
+                            <p className="mt-4 text-xs text-gray-400 italic">
+                                * ระบบจะดึงราคาตามลำดับ 1-4 หากลำดับก่อนหน้าไม่มีข้อมูลราคา จะข้ามไปดึงลำดับถัดไปให้อัตโนมัติ
+                            </p>
+                        </section>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* บัญชีและต้นทุน */}
+                        <section className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                            <h3 className="font-bold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2 border-b pb-3">
+                                <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-lg"><Package size={18} /></div>
+                                บัญชีและต้นทุน (Account & Costing)
+                            </h3>
+                            <div className="grid grid-cols-1 gap-2.5">
+                                <FlagToggleField name="auto_perpetual_cost" label="ลงบัญชีต้นทุน Perpetual อัตโนมัติ" watch={watch} setValue={setValue} />
+                                <FlagToggleField name="post_cost_flag" label="Post ต้นทุนอัตโนมัติ" watch={watch} setValue={setValue} />
+                                <FlagToggleField name="set_autopost" label="โพสต์รายการอัตโนมัติ" watch={watch} setValue={setValue} />
+                                <FlagToggleField name="trasfer_cost_flag" label="คำนวณต้นทุนการโอนสินค้า" watch={watch} setValue={setValue} />
+                                <FlagToggleField name="set_cost_return_issueref" label="กำหนดต้นทุนรับคืนอ้างอิงใบเบิก" watch={watch} setValue={setValue} />
                             </div>
                         </section>
 
-                        {/* ================= SECTION 3: CONFIGURATION FLAGS ================= */}
-                        <section className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-                            <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4 border-b pb-2">การตั้งค่าตัวเลือก (Options/Flags)</h3>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-4">
-                                {renderFlagSelect('auto_perpetual_cost', 'ลงบัญชีต้นทุน Perpetual อัตโนมัติ')}
-                                {renderFlagSelect('barcode_flag', 'มีการใช้ Barcode')}
-                                {renderFlagSelect('check_deficit', 'ตรวจสอบสินค้าติดลบ')}
-                                {renderFlagSelect('check_deficit_option', 'เงื่อนไขตรวจสอบสินค้าติดลบ')}
-                                {renderFlagSelect('check_max_qty', 'เตือนยอดคงเหลือสูงสุด')}
-                                {renderFlagSelect('check_min_qty', 'เตือนยอดตํ่ากว่าตํ่าสุด')}
-                                {renderFlagSelect('check_qty_flag', 'ตรวจสอบความถูกต้องจำนวนสินค้า')}
-                                {renderFlagSelect('check_standcost', 'เช็คราคามาตรฐาน')}
-                                {renderFlagSelect('expire_alert_flag', 'แจ้งเมื่อสินค้าหมดอายุ')}
-                                {renderFlagSelect('order_alert_flag', 'แจ้งเมื่อสินค้าต้องสั่งซื้อ')}
-                                {renderFlagSelect('post_cost_flag', 'Post ต้นทุนอัตโนมัติ')}
-                                {renderFlagSelect('reorder_flag', 'แจ้งเตือนเมื่อถึงจุดสั่งซื้อ (Reorder)')}
-                                {renderFlagSelect('set_autopost', 'โพสต์รายการอัตโนมัติ')}
-                                {renderFlagSelect('set_costcn', 'กำหนดต้นทุนลดหนี้')}
-                                {renderFlagSelect('set_costcn_ap', 'กำหนดต้นทุนลดหนี้ (ซื้อ)')}
-                                {renderFlagSelect('set_costcn_ap_refinv', 'กำหนดต้นทุนลดหนี้ (ซื้อ) อ้างอิงใบกำกับ')}
-                                {renderFlagSelect('set_costcn_refinv', 'กำหนดต้นทุนลดหนี้ใบกำกับ')}
-                                {renderFlagSelect('set_cost_return_issueref', 'กำหนดต้นทุนรับคืนอ้างอิงใบเบิก')}
-                                {renderFlagSelect('set_goodqty', 'กำหนดจำนวนอัตโนมัติ')}
-                                {renderFlagSelect('set_inve', 'กำหนดคลังเก็บอัตโนมัติ')}
-                                {renderFlagSelect('set_price', 'กำหนดราคาขายระบบ SO')}
-                                {renderFlagSelect('set_price_ic', 'กำหนดราคาระบบสินค้า PO')}
-                                {renderFlagSelect('set_price_pack', 'ใช้ราคาขายตามแพ็คบรรจุ')}
-                                {renderFlagSelect('set_price_po', 'กำหนดราคาระบบสินค้า IC')}
-                                {renderFlagSelect('trasfer_cost_flag', 'คำนวณต้นทุนการโอนสินค้า')}
+                        {/* การควบคุมสต็อก */}
+                        <section className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                            <h3 className="font-bold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2 border-b pb-3">
+                                <div className="p-1.5 bg-green-100 dark:bg-green-900/30 text-green-600 rounded-lg"><Settings size={18} /></div>
+                                การควบคุมสินค้า (Stock Control)
+                            </h3>
+                            <div className="grid grid-cols-1 gap-2.5">
+                                <FlagToggleField name="barcode_flag" label="มีการใช้ Barcode" watch={watch} setValue={setValue} />
+                                <FlagToggleField name="check_deficit" label="ตรวจสอบสินค้าติดลบ" watch={watch} setValue={setValue} />
+                                <FlagToggleField name="check_deficit_option" label="เงื่อนไขตรวจสอบสินค้าติดลบ" watch={watch} setValue={setValue} />
+                                <FlagToggleField name="check_max_qty" label="เตือนยอดคงเหลือสูงสุด" watch={watch} setValue={setValue} />
+                                <FlagToggleField name="check_min_qty" label="เตือนยอดตํ่ากว่าตํ่าสุด" watch={watch} setValue={setValue} />
+                                <FlagToggleField name="check_qty_flag" label="ตรวจสอบความถูกต้องจำนวนสินค้า" watch={watch} setValue={setValue} />
+                                <FlagToggleField name="set_goodqty" label="กำหนดจำนวนอัตโนมัติ" watch={watch} setValue={setValue} />
+                                <FlagToggleField name="set_inve" label="กำหนดคลังเก็บอัตโนมัติ" watch={watch} setValue={setValue} />
                             </div>
                         </section>
 
-                    </form>
-                </div>
+                        {/* ระบบขายและราคา */}
+                        <section className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                            <h3 className="font-bold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2 border-b pb-3">
+                                <div className="p-1.5 bg-amber-100 dark:bg-amber-900/30 text-amber-600 rounded-lg"><PlusCircle size={18} /></div>
+                                ระบบขายและราคา (Sales & Pricing)
+                            </h3>
+                            <div className="grid grid-cols-1 gap-2.5">
+                                <FlagToggleField name="set_price" label="กำหนดราคาขายระบบ SO" watch={watch} setValue={setValue} />
+                                <FlagToggleField name="set_price_ic" label="กำหนดราคาระบบสินค้า PO" watch={watch} setValue={setValue} />
+                                <FlagToggleField name="set_price_po" label="กำหนดราคาระบบสินค้า IC" watch={watch} setValue={setValue} />
+                                <FlagToggleField name="set_price_pack" label="ใช้ราคาขายตามแพ็คบรรจุ" watch={watch} setValue={setValue} />
+                                <FlagToggleField name="check_standcost" label="เช็คราคามาตรฐาน" watch={watch} setValue={setValue} />
+                            </div>
+                        </section>
+
+                        {/* ใบลดหนี้และการแจ้งเตือน */}
+                        <section className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                            <h3 className="font-bold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2 border-b pb-3">
+                                <div className="p-1.5 bg-red-100 dark:bg-red-900/30 text-red-600 rounded-lg"><AlertCircle size={18} /></div>
+                                ใบลดหนี้และการแจ้งเตือน (CN & Alerts)
+                            </h3>
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-1 gap-2">
+                                    <FlagToggleField name="set_costcn" label="กำหนดต้นทุนลดหนี้" watch={watch} setValue={setValue} />
+                                    <FlagToggleField name="set_costcn_refinv" label="ต้นทุนลดหนี้ตามใบกำกับ" watch={watch} setValue={setValue} />
+                                    <FlagToggleField name="set_costcn_ap" label="ต้นทุนลดหนี้ (ซื้อ)" watch={watch} setValue={setValue} />
+                                    <FlagToggleField name="set_costcn_ap_refinv" label="ต้นทุนลดหนี้ (ซื้อ) อ้างใบกำกับ" watch={watch} setValue={setValue} />
+                                </div>
+                                <div className="pt-3 border-t dark:border-gray-700 grid grid-cols-1 gap-2">
+                                    <FlagToggleField name="expire_alert_flag" label="แจ้งเมื่อสินค้าหมดอายุ" watch={watch} setValue={setValue} />
+                                    <FlagToggleField name="order_alert_flag" label="แจ้งเมื่อต้องสั่งซื้อ" watch={watch} setValue={setValue} />
+                                    <FlagToggleField name="reorder_flag" label="แจ้งเตือนจุดสั่งซื้อ (Reorder)" watch={watch} setValue={setValue} />
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </form>
+            </div>
         </DialogFormLayout>
     );
 }
