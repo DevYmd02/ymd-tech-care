@@ -31,7 +31,7 @@ export default function PriceLevelList() {
     } = usePriceLevel();
 
     // ==================== FILTER CONFIG ====================
-    const filterConfig: FilterFieldConfig<keyof typeof filters>[] = useMemo(() => [
+    const filterConfig: FilterFieldConfig<keyof typeof filters & string>[] = useMemo(() => [
         { 
             name: 'search', 
             label: 'ค้นหาสินค้า', 
@@ -105,14 +105,14 @@ export default function PriceLevelList() {
             cell: ({ row }) => (
                 <div className="flex items-center gap-2 text-center">
                     <button 
-                        onClick={() => handleEdit(row.original.item_id)}
+                        onClick={() => handleEdit(row.original.multi_price_item_id || row.original.id || row.original.item_id)}
                         className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                         title="แก้ไข"
                     >
                         <Edit2 size={18} />
                     </button>
                     <button 
-                        onClick={() => handleDelete(row.original.item_id)}
+                        onClick={() => handleDelete(row.original.multi_price_item_id || row.original.id || row.original.item_id)}
                         className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                         title="ลบ"
                     >
@@ -173,7 +173,7 @@ export default function PriceLevelList() {
                         onPageChange: handlePageChange,
                         onPageSizeChange: (size) => setFilters({ limit: size, page: 1 }),
                     }}
-                    rowIdField="item_id"
+                    rowIdField="multi_price_item_id"
                     className="shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700 rounded-xl"
                 />
             </div>
