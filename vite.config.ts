@@ -44,6 +44,7 @@ export default defineConfig(({ mode }) => {
         '@inventory': path.resolve(__dirname, './src/modules/master-data/inventory'),
         '@currency': path.resolve(__dirname, './src/modules/master-data/currency'),
         '@company': path.resolve(__dirname, './src/modules/master-data/company'),
+        '@sales-master': path.resolve(__dirname, './src/modules/master-data/sales'),
       },
     },
     server: {

@@ -103,6 +103,7 @@ export interface CustomerMaster {
     credit_term_days?: number;
     payment_method?: string;
     payment_method_default?: string;
+    price_level_id?: number;
     phone?: string | null;
     email?: string | null;
     website?: string | null;
@@ -149,6 +150,7 @@ export interface CustomerFormData {
     credit_limit: number;
     credit_term: number;
     payment_method_id: string;
+    price_level_id: number | string;
     
     additional_contacts: CustomerContactPerson[];
     note: string;
@@ -227,6 +229,7 @@ export const initialCustomerFormData: CustomerFormData = {
     credit_limit: 0,
     credit_term: 30,
     payment_method_id: '',
+    price_level_id: '',
     additional_contacts: [],
     note: '',
     status: 'ACTIVE',
@@ -274,6 +277,7 @@ export const toCustomerFormData = (c: CustomerMaster): CustomerFormData => {
         credit_limit: Number(c.credit_limit || 0),
         credit_term: c.credit_term_days || c.credit_days || 0,
         payment_method_id: c.payment_method_default || c.payment_method || '',
+        price_level_id: c.price_level_id || '',
         additional_contacts: (c.contacts || []).slice(1).map((contact) => ({
             id: contact.contact_id || String(Math.random()),
             name: contact.contact_name || '',

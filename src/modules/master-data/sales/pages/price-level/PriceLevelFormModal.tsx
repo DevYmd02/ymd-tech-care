@@ -14,6 +14,8 @@ import { usePriceLevelForm } from './hooks/usePriceLevelForm';
 import type { PriceLevelFormData } from './types/price-level.types';
 import { ProductSearchModal } from '@/modules/master-data/inventory/components/ProductSearchModal';
 import type { ItemListItem } from '@/modules/master-data/inventory/types/product-types';
+import { PriceLevelNameService } from '@sales-master/pages/price-level-name/services/price-level-name.service';
+import { logger } from '@/shared/utils/logger';
 
 interface Props {
     isOpen: boolean;
@@ -33,19 +35,27 @@ export default function PriceLevelFormModal({ isOpen, onClose, editId, onSuccess
 
     const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
     const [units, setUnits] = useState<UnitListItem[]>([]);
+    const [levelNameMap, setLevelNameMap] = useState<Map<number, string>>(new Map());
 
-    // Fetch units for dropdown
+    // Fetch units and level names
     useEffect(() => {
-        const fetchUnits = async () => {
+        const fetchData = async () => {
             try {
-                const response = await UnitService.getAll();
-                setUnits(response.items || []);
+                const [unitRes, levelNames] = await Promise.all([
+                    UnitService.getAll(),
+                    PriceLevelNameService.getList().catch(() => []), // Fallback
+                ]);
+                setUnits(unitRes.items || []);
+                const nameMap = new Map<number, string>(
+                    (Array.isArray(levelNames) ? levelNames : []).map(ln => [Number(ln.level_no), ln.name])
+                );
+                setLevelNameMap(nameMap);
             } catch (error) {
-                console.error('Failed to fetch units:', error);
+                logger.error('Failed to fetch form data:', error);
             }
         };
         if (isOpen) {
-            fetchUnits();
+            fetchData();
         }
     }, [isOpen]);
 
@@ -62,7 +72,7 @@ export default function PriceLevelFormModal({ isOpen, onClose, editId, onSuccess
 
     // ==================== RENDERING ====================
     
-    const TitleIcon = <DollarSign size={24} className="text-blue-600" />;
+    const TitleIcon = <DollarSign size={24} className="text-blue-600 dark:text-blue-400" />;
 
     const FormFooter = (
         <div className="flex justify-end gap-3 p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700">
@@ -117,7 +127,7 @@ export default function PriceLevelFormModal({ isOpen, onClose, editId, onSuccess
                                         onClick={() => setIsProductSearchOpen(true)}
                                         className="h-[42px] flex items-center justify-center border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg shadow-sm transition-all"
                                     >
-                                        <Search size={18} />
+                                        <Search size={18} className="text-blue-600 dark:text-blue-400" />
                                     </button>
                                 </div>
                                 {errors.itemId && <p className="text-red-500 text-xs mt-1">{errors.itemId.message}</p>}
@@ -193,7 +203,12 @@ export default function PriceLevelFormModal({ isOpen, onClose, editId, onSuccess
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
                                 <div key={num} className="flex flex-col gap-1">
-                                    <label className="text-xs font-semibold text-gray-500 dark:text-gray-400">ระดับที่ {num}</label>
+                                    <label className="text-xs font-semibold text-gray-500 dark:text-gray-400">
+                                        {levelNameMap.get(num)
+                                            ? `${num}. ${levelNameMap.get(num)} (ระดับ ${num})`
+                                            : `ระดับที่ ${num}`
+                                        }
+                                    </label>
                                     <input
                                         {...register(`itemPrice${num}` as Path<PriceLevelFormData>, { valueAsNumber: true })}
                                         type="number"

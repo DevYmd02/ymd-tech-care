@@ -10,8 +10,10 @@ import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
 import type { ItemListItem, UnitListItem } from '@/modules/master-data/inventory/types/product-types';
+import { PriceLevelNameService } from '@sales-master/pages/price-level-name/services/price-level-name.service';
+import { logger } from '@/shared/utils/logger';
 
-export function usePriceLevel() {
+export function usePriceLevel(isActive: boolean = true) {
     const { 
         filters, 
         setFilters, 
@@ -29,16 +31,25 @@ export function usePriceLevel() {
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | number | null>(null);
+    const [levelNameMap, setLevelNameMap] = useState<Map<number, string>>(new Map());
 
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
             // Fetch everything in parallel for performance
-            const [priceLevels, itemsResponse, unitsResponse] = await Promise.all([
+            const [priceLevels, itemsResponse, unitsResponse, levelNames] = await Promise.all([
                 PriceLevelService.getList(),
                 ItemMasterService.getAll({ limit: 1000 }), // Get enough items for mapping
-                UnitService.getAll()
+                UnitService.getAll(),
+                PriceLevelNameService.getList().catch(() => []), // Fallback to empty array if 404
+
             ]);
+
+            // Build level name map: level_no -> name
+            const nameMap = new Map<number, string>(
+                (Array.isArray(levelNames) ? levelNames : []).map(ln => [Number(ln.level_no), ln.name])
+            );
+            setLevelNameMap(nameMap);
 
             const itemMap = new Map<number, ItemListItem>((itemsResponse.items || []).map((item: ItemListItem) => [Number(item.item_id), item]));
             const unitMap = new Map<number, UnitListItem>((unitsResponse.items || []).map((unit: UnitListItem) => [Number(unit.unit_id), unit]));
@@ -58,15 +69,20 @@ export function usePriceLevel() {
 
             setAllPriceLevels(mappedData);
         } catch (error: unknown) {
-            console.error('Failed to fetch price levels:', error);
+            logger.error('Failed to fetch price levels:', error);
         } finally {
             setIsLoading(false);
         }
     }, []);
 
+    const [hasFetched, setHasFetched] = useState(false);
+
     useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+        if (isActive && !hasFetched) {
+            fetchData();
+            setHasFetched(true);
+        }
+    }, [isActive, fetchData, hasFetched]);
 
     const filteredData = useMemo(() => {
         let result = [...allPriceLevels];
@@ -125,7 +141,7 @@ export function usePriceLevel() {
                     fetchData();
                 }
             } catch (error: unknown) {
-                console.error('Failed to delete price level:', error);
+                logger.error('Failed to delete price level:', error);
             }
         }
     }, [fetchData]);
@@ -149,6 +165,7 @@ export function usePriceLevel() {
         handleCreateNew,
         handleEdit,
         handleDelete,
-        handleModalClose
+        handleModalClose,
+        levelNameMap,
     };
 }

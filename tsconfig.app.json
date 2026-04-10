@@ -68,7 +68,9 @@
       "@currency": ["./src/modules/master-data/currency"],
       "@currency/*": ["./src/modules/master-data/currency/*"],
       "@company": ["./src/modules/master-data/company"],
-      "@company/*": ["./src/modules/master-data/company/*"]
+      "@company/*": ["./src/modules/master-data/company/*"],
+      "@sales-master": ["./src/modules/master-data/sales"],
+      "@sales-master/*": ["./src/modules/master-data/sales/*"]
     }
   },
   "include": ["src"]

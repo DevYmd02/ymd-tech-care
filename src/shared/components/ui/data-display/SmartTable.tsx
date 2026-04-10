@@ -44,6 +44,8 @@ interface SmartTableProps<TData> {
     showFooter?: boolean; // Enable/disable footer row (default: false)
     sortConfig?: SortConfig | null;
     onSortChange?: (key: string) => void;
+    stickyColumns?: boolean; // Enable sticky columns logic (default: false)
+    stickyBorders?: boolean; // Show border/shadow for sticky columns (default: true)
 }
 
 export function SmartTable<TData>({
@@ -60,6 +62,8 @@ export function SmartTable<TData>({
     showFooter = false,
     sortConfig,
     onSortChange,
+    stickyColumns = false,
+    stickyBorders = true,
 }: SmartTableProps<TData>) {
     const [rowSelection, setRowSelection] = React.useState<Record<string, boolean>>({});
 
@@ -121,6 +125,35 @@ export function SmartTable<TData>({
         enableSorting: true,
     });
 
+    const visibleColumns = table.getVisibleFlatColumns();
+    const stickyOffsets = React.useMemo(() => {
+        if (!stickyColumns) return { left: {}, right: {} };
+        
+        const leftOffsets: Record<string, number> = {};
+        const rightOffsets: Record<string, number> = {};
+        
+        let leftSum = 0;
+        visibleColumns.forEach(column => {
+            const meta = column.columnDef.meta as { sticky?: 'left' | 'right' } | undefined;
+            if (meta?.sticky === 'left') {
+                leftOffsets[column.id] = leftSum;
+                leftSum += column.getSize() || 0;
+            }
+        });
+
+        let rightSum = 0;
+        for (let i = visibleColumns.length - 1; i >= 0; i--) {
+            const column = visibleColumns[i];
+            const meta = column.columnDef.meta as { sticky?: 'left' | 'right' } | undefined;
+            if (meta?.sticky === 'right') {
+                rightOffsets[column.id] = rightSum;
+                rightSum += column.getSize() || 0;
+            }
+        }
+        
+        return { left: leftOffsets, right: rightOffsets };
+    }, [visibleColumns, stickyColumns]);
+
     // Pagination calculations
     const totalPages = Math.ceil(pagination.totalCount / pagination.pageSize);
     const startRow = (pagination.pageIndex - 1) * pagination.pageSize + 1;
@@ -129,28 +162,39 @@ export function SmartTable<TData>({
     return (
         <div className={`flex flex-col h-full ${styles.bg.surface} rounded-lg shadow-sm border ${styles.border.default} ${className}`}>
             {/* Table Container */}
-            <div className="flex-1 overflow-auto relative">
-                <div className="inline-block min-w-full align-middle">
-                    <table 
-                        className="w-full text-left border-collapse table-fixed min-w-[900px] text-sm"
-                    >
-                    <thead className={`${styles.bg.header} ${styles.text.secondary} uppercase text-xs sticky top-0 z-10`}>
+            <div className={`flex-1 overflow-auto relative ${stickyColumns ? 'rounded-lg' : ''} ${styles.bg.surface}`}>
+                <table 
+                    className={`w-full text-left border-collapse table-fixed text-sm ${stickyColumns ? 'min-w-max' : 'min-w-[900px]'}`}
+                >
+                    <thead className={`${styles.bg.header} ${styles.text.secondary} uppercase text-xs sticky top-0 ${stickyColumns ? 'z-30' : 'z-10'}`}>
                         {table.getHeaderGroups().map(headerGroup => (
                             <tr key={headerGroup.id} className={`border-b ${styles.border.default}`}>
                                 {headerGroup.headers.map(header => {
                                     const canSort = header.column.getCanSort();
+                                    const meta = header.column.columnDef.meta as { thClassName?: string, sticky?: 'left' | 'right', align?: string } | undefined;
+                                    const stickyType = stickyColumns ? meta?.sticky : undefined;
+                                    const stickyOffset = stickyType === 'left' ? stickyOffsets.left[header.id] : stickyType === 'right' ? stickyOffsets.right[header.id] : undefined;
 
-                                    const meta = header.column.columnDef.meta as { thClassName?: string, tdClassName?: string, align?: string } | undefined;
                                     const alignClass = meta?.thClassName?.includes('text-center') ? 'justify-center' :
                                                        meta?.thClassName?.includes('text-right') ? 'justify-end' : '';
 
                                     return (
                                         <th
                                             key={header.id}
-                                            style={meta?.thClassName?.includes('w-') ? undefined : { width: header.getSize() }}
+                                            style={{ 
+                                                width: header.getSize(),
+                                                minWidth: header.getSize(), // Ensure it doesn't collapse
+                                                ...(stickyType === 'left' ? { left: stickyOffset, position: 'sticky', zIndex: 32 } : {}),
+                                                ...(stickyType === 'right' ? { right: stickyOffset, position: 'sticky', zIndex: 32 } : {}),
+                                            }}
                                             className={`${meta?.thClassName || 'px-2 py-3 font-semibold'} select-none group transition-all ${
                                                 canSort ? `cursor-pointer ${styles.state.hover}` : ''
-                                            } ${sortConfig?.key === header.column.id ? styles.state.active : ''}`}
+                                            } ${sortConfig?.key === header.column.id ? styles.state.active : ''} ${
+                                                stickyColumns ? '!bg-gray-100 dark:!bg-gray-700' : `${styles.bg.header}`
+                                            } ${
+                                                stickyType === 'left' && stickyBorders ? 'border-r border-gray-200 dark:border-gray-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]' : 
+                                                stickyType === 'right' && stickyBorders ? 'border-l border-gray-200 dark:border-gray-700 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]' : ''
+                                            }`}
                                             onClick={() => {
                                                 if (canSort && onSortChange) {
                                                     onSortChange(header.column.id);
@@ -207,9 +251,28 @@ export function SmartTable<TData>({
                                     `}
                                 >
                                     {row.getVisibleCells().map(cell => {
-                                        const meta = cell.column.columnDef.meta as { thClassName?: string, tdClassName?: string } | undefined;
+                                        const meta = cell.column.columnDef.meta as { tdClassName?: string, sticky?: 'left' | 'right' } | undefined;
+                                        const stickyType = stickyColumns ? meta?.sticky : undefined;
+                                        const stickyOffset = stickyType === 'left' ? stickyOffsets.left[cell.column.id] : stickyType === 'right' ? stickyOffsets.right[cell.column.id] : undefined;
+
                                         return (
-                                        <td key={cell.id} className={`${meta?.tdClassName || 'px-2 py-3 text-sm'} text-gray-700 dark:text-gray-300`}>
+                                        <td 
+                                            key={cell.id} 
+                                            style={{
+                                                width: cell.column.getSize(),
+                                                minWidth: cell.column.getSize(),
+                                                ...(stickyType === 'left' ? { left: stickyOffset, position: 'sticky', zIndex: 21 } : {}),
+                                                ...(stickyType === 'right' ? { right: stickyOffset, position: 'sticky', zIndex: 21 } : {}),
+                                            }}
+                                            className={`${meta?.tdClassName || 'px-2 py-3 text-sm'} text-gray-700 dark:text-gray-300 transition-colors ${
+                                                stickyType 
+                                                    ? 'bg-white dark:bg-[#1f2937] group-even:bg-[#f9fafb] dark:group-even:bg-[#26303f] group-hover:bg-[#f0f7ff] dark:group-hover:bg-[#2b3544]' 
+                                                    : 'group-even:bg-[#f9fafb] dark:group-even:bg-[#26303f] group-hover:bg-[#f0f7ff] dark:group-hover:bg-[#2b3544]'
+                                            } ${
+                                                stickyType === 'left' && stickyBorders ? `border-r border-gray-100 dark:border-gray-700/50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]` :
+                                                stickyType === 'right' && stickyBorders ? `border-l border-gray-100 dark:border-gray-700/50 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]` : ''
+                                            }`}
+                                        >
                                             {flexRender(
                                                 cell.column.columnDef.cell,
                                                 cell.getContext()
@@ -253,7 +316,6 @@ export function SmartTable<TData>({
                     )}
                     </table>
                 </div>
-            </div>
 
             {/* Pagination Footer */}
             <div className={`px-4 py-3 ${styles.bg.subtle} border-t ${styles.border.default} flex flex-col sm:flex-row items-center justify-between gap-4 select-none`}>

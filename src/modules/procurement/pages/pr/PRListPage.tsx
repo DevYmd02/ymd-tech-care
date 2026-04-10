@@ -322,7 +322,7 @@ export default function PRListPage() {
                     </div>
                 );
             },
-            size: 140,
+            size: 120,
             enableSorting: false,
         }),
         columnHelper.accessor(row => row.total_amount ?? Number(row.pr_base_total_amount ?? 0), {

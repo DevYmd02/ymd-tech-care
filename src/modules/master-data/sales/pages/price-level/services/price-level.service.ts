@@ -4,6 +4,7 @@
  */
 
 import api from '@/core/api/api';
+import { logger } from '@/shared/utils/logger';
 import type { 
   PriceLevel, 
   PriceLevelFormData 
@@ -52,12 +53,12 @@ export const PriceLevelService = {
   create: async (data: PriceLevelFormData): Promise<{ success: boolean; data?: PriceLevel; message?: string }> => {
     try {
       const payload = PriceLevelService._sanitizePayload(data);
-      console.log('📦 POST /multi-price-item payload:', payload);
+      logger.info('📦 POST /multi-price-item payload:', payload);
       const response = await api.post<PriceLevel>('/multi-price-item', payload);
       return { success: true, data: response };
     } catch (error: unknown) {
       const axiosError = error as { response?: { data?: { message?: string } }; message?: string };
-      console.error('❌ Create Error:', axiosError.response?.data || axiosError.message);
+      logger.error('❌ Create Error:', axiosError.response?.data || axiosError.message);
       return { success: false, message: axiosError.response?.data?.message || 'สร้างไม่สำเร็จ' };
     }
   },
@@ -68,12 +69,12 @@ export const PriceLevelService = {
   update: async (id: string | number, data: PriceLevelFormData): Promise<{ success: boolean; data?: PriceLevel; message?: string }> => {
     try {
       const payload = PriceLevelService._sanitizePayload(data);
-      console.log(`📡 PATCH /multi-price-item/${id} payload:`, payload);
+      logger.info(`📡 PATCH /multi-price-item/${id} payload:`, payload);
       const response = await api.patch<PriceLevel>(`/multi-price-item/${id}`, payload);
       return { success: true, data: response };
     } catch (error: unknown) {
       const axiosError = error as { response?: { data?: { message?: string } }; message?: string };
-      console.error('❌ Update Error:', axiosError.response?.data || axiosError.message);
+      logger.error('❌ Update Error:', axiosError.response?.data || axiosError.message);
       return { success: false, message: axiosError.response?.data?.message || 'บันทึกไม่สำเร็จ' };
     }
   },
@@ -87,7 +88,7 @@ export const PriceLevelService = {
       return true;
     } catch (error: unknown) {
       const axiosError = error as { response?: { data?: { message?: string } }; message?: string };
-      console.error('❌ Delete Error:', axiosError.response?.data || axiosError.message);
+      logger.error('❌ Delete Error:', axiosError.response?.data || axiosError.message);
       return false;
     }
   },
