@@ -34,9 +34,21 @@ export default function PriceLevelList() {
     const filterConfig: FilterFieldConfig<keyof typeof filters & string>[] = useMemo(() => [
         { 
             name: 'search', 
-            label: 'ค้นหาสินค้า', 
+            label: 'รหัสสินค้า', 
             type: 'text', 
-            placeholder: 'ค้นหาด้วย รหัสสินค้า หรือ ชื่อสินค้า...' 
+            placeholder: 'ค้นหารหัสสินค้า...' 
+        },
+        { 
+            name: 'search2', 
+            label: 'ชื่อสินค้า', 
+            type: 'text', 
+            placeholder: 'ค้นหาชื่อสินค้า...' 
+        },
+        { 
+            name: 'search3', 
+            label: 'หน่วยนับ', 
+            type: 'text', 
+            placeholder: 'ค้นหาหน่วยนับ...' 
         },
     ], []);
 
