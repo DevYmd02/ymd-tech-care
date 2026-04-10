@@ -201,6 +201,7 @@ export function useCustomerForm({
                     phone:                  formData.phone,
                     email:                  formData.email,
                     website:                formData.website,
+                    price_level_id:         formData.price_level_id ? Number(formData.price_level_id) : undefined,
                     is_active:              formData.is_active,
                     addresses:              mappedAddresses, // Changed from customerAddresses
                 };
@@ -226,6 +227,7 @@ export function useCustomerForm({
                     phone:                  formData.phone || undefined,
                     email:                  formData.email || undefined,
                     website:                formData.website || undefined,
+                    price_level_id:         formData.price_level_id ? Number(formData.price_level_id) : undefined,
                     is_active:              formData.is_active,
                     addresses:              mappedAddresses,
                 };

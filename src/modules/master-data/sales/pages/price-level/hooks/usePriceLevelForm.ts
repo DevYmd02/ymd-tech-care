@@ -13,6 +13,7 @@ import toast from 'react-hot-toast';
 
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import type { ApiPriceLevel } from '../types/price-level.types';
+import { logger } from '@/shared/utils/logger';
 
 const nullableNumber = z.preprocess((val) => {
   if (val === '' || val === undefined || val === null) return null;
@@ -86,7 +87,7 @@ export function usePriceLevelForm(editId: string | number | null, onSuccess?: ()
       const fetchDetail = async () => {
         try {
           const responseData = await PriceLevelService.get(editId);
-          console.log('🔍 PriceLevel Detail:', responseData);
+          logger.debug('🔍 PriceLevel Detail:', responseData);
 
           // Handle array response (if backend returns an array for detail)
           const rawData = (Array.isArray(responseData) ? responseData[0] : responseData) as ApiPriceLevel;
@@ -124,7 +125,7 @@ export function usePriceLevelForm(editId: string | number | null, onSuccess?: ()
                 };
               }
             } catch (err) {
-              console.warn('Could not fetch additional item info:', err);
+              logger.warn('Could not fetch additional item info:', err);
             }
           }
 
@@ -150,7 +151,7 @@ export function usePriceLevelForm(editId: string | number | null, onSuccess?: ()
             uomName: rawData.uom_name || '',
           });
         } catch (error: unknown) {
-          console.error('Failed to fetch price level detail:', error);
+          logger.error('Failed to fetch price level detail:', error);
           toast.error('ไม่สามารถดึงข้อมูลได้');
         }
       };
@@ -173,13 +174,13 @@ export function usePriceLevelForm(editId: string | number | null, onSuccess?: ()
         toast.error(result.message || 'บันทึกไม่สำเร็จ');
       }
     } catch (error: unknown) {
-      console.error('Submit error:', error);
+      logger.error('Submit error:', error);
       toast.error('เกิดข้อผิดพลาดในการบันทึก');
     }
   };
 
   const onValidationError = (validationErrors: FieldErrors<PriceLevelFormData>) => {
-    console.error('❌ Form Validation Errors:', validationErrors);
+    logger.error('❌ Form Validation Errors:', validationErrors);
     toast.error('กรุณาตรวจสอบข้อมูลให้ถูกต้อง');
   };
 

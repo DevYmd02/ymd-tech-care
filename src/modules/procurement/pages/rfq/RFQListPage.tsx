@@ -504,7 +504,7 @@ export default function RFQListPage() {
                     </span>
                 );
             },
-            size: 110,
+            size: 100,
             enableSorting: false,
         }),
         columnHelper.display({

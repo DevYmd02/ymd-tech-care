@@ -108,13 +108,13 @@ export default function PriceListList() {
         {
             accessorKey: 'begin_date',
             header: 'วันที่เริ่มต้น',
-            size: 110,
+            size: 100,
             cell: ({ getValue }) => getValue() ? new Date(getValue() as string).toLocaleDateString('th-TH') : '-',
         },
         {
             accessorKey: 'end_date',
             header: 'วันที่สิ้นสุด',
-            size: 110,
+            size: 100,
             cell: ({ getValue }) => getValue() ? new Date(getValue() as string).toLocaleDateString('th-TH') : '-',
         },
         {
@@ -134,7 +134,7 @@ export default function PriceListList() {
         {
             accessorKey: 'is_active',
             header: 'ใช้งาน',
-            size: 80,
+            size: 70,
             cell: ({ getValue }) => <ActiveStatusBadge isActive={getValue() as boolean} />,
         },
         {

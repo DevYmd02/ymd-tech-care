@@ -331,6 +331,7 @@ export const sidebarMenuItems: MenuItem[] = [
                         label: 'กำหนดราคาสินค้า (Price Level)',
                         path: '/master-data/price-level',
                     },
+
                     {
                         id: 'pricelist',
                         label: 'กำหนดราคาสินค้า (Price List)',

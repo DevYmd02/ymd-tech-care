@@ -1,10 +1,12 @@
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { DialogFormLayout } from '@ui';
 import { Settings, Save, X } from 'lucide-react';
 import { ICOptionService } from './services/ic-option.service';
 import { icOptionSchema, type ICOptionFormData } from './types/ic-option.types';
+import { PriceLevelNameService } from '@sales-master/pages/price-level-name/services/price-level-name.service';
+import { logger } from '@/shared/utils/logger';
 import toast from 'react-hot-toast';
 
 interface ICOptionFormModalProps {
@@ -58,6 +60,25 @@ export default function ICOptionFormModal({ isOpen, onClose, editId, onSuccess }
             trasfer_cost_flag: '0',
         }
     });
+
+    const [levelNameMap, setLevelNameMap] = useState<Map<number, string>>(new Map());
+
+    useEffect(() => {
+        const fetchPriceLevelNames = async () => {
+            try {
+                const levelNames = await PriceLevelNameService.getList();
+                const nameMap = new Map<number, string>(
+                    (Array.isArray(levelNames) ? levelNames : []).map(ln => [Number(ln.level_no), ln.name])
+                );
+                setLevelNameMap(nameMap);
+            } catch (error) {
+                logger.error('Failed to fetch price level names:', error);
+            }
+        };
+        if (isOpen) {
+            fetchPriceLevelNames();
+        }
+    }, [isOpen]);
 
     useEffect(() => {
         if (isOpen) {
@@ -191,7 +212,10 @@ export default function ICOptionFormModal({ isOpen, onClose, editId, onSuccess }
                                 {[1, 2, 3, 4].map(idx => (
                                     <div key={`set_price${idx}`} className="space-y-1">
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                            ราคาขายลำดับที่ {idx}
+                                            {levelNameMap.get(idx) 
+                                                ? `${idx}. ${levelNameMap.get(idx)} (ระดับ ${idx})`
+                                                : `ราคาขายลำดับที่ ${idx}`
+                                            }
                                         </label>
                                         <input
                                             type="number"
@@ -199,6 +223,8 @@ export default function ICOptionFormModal({ isOpen, onClose, editId, onSuccess }
                                                 errors[`set_price${idx}` as keyof ICOptionFormData] ? 'border-red-500' : 'border-gray-300'
                                             }`}
                                             {...register(`set_price${idx}` as keyof ICOptionFormData, { valueAsNumber: true })}
+                                            onFocus={(e) => e.target.select()}
+                                            onWheel={(e) => e.currentTarget.blur()}
                                         />
                                     </div>
                                 ))}
@@ -209,31 +235,31 @@ export default function ICOptionFormModal({ isOpen, onClose, editId, onSuccess }
                         <section className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
                             <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4 border-b pb-2">การตั้งค่าตัวเลือก (Options/Flags)</h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-4">
-                                {renderFlagSelect('auto_perpetual_cost', '0')}
+                                {renderFlagSelect('auto_perpetual_cost', 'ลงบัญชีต้นทุน Perpetual อัตโนมัติ')}
                                 {renderFlagSelect('barcode_flag', 'มีการใช้ Barcode')}
                                 {renderFlagSelect('check_deficit', 'ตรวจสอบสินค้าติดลบ')}
                                 {renderFlagSelect('check_deficit_option', 'เงื่อนไขตรวจสอบสินค้าติดลบ')}
                                 {renderFlagSelect('check_max_qty', 'เตือนยอดคงเหลือสูงสุด')}
                                 {renderFlagSelect('check_min_qty', 'เตือนยอดตํ่ากว่าตํ่าสุด')}
-                                {renderFlagSelect('check_qty_flag', '0')}
+                                {renderFlagSelect('check_qty_flag', 'ตรวจสอบความถูกต้องจำนวนสินค้า')}
                                 {renderFlagSelect('check_standcost', 'เช็คราคามาตรฐาน')}
                                 {renderFlagSelect('expire_alert_flag', 'แจ้งเมื่อสินค้าหมดอายุ')}
                                 {renderFlagSelect('order_alert_flag', 'แจ้งเมื่อสินค้าต้องสั่งซื้อ')}
                                 {renderFlagSelect('post_cost_flag', 'Post ต้นทุนอัตโนมัติ')}
-                                {renderFlagSelect('reorder_flag', '0')}
-                                {renderFlagSelect('set_autopost', '0')}
+                                {renderFlagSelect('reorder_flag', 'แจ้งเตือนเมื่อถึงจุดสั่งซื้อ (Reorder)')}
+                                {renderFlagSelect('set_autopost', 'โพสต์รายการอัตโนมัติ')}
                                 {renderFlagSelect('set_costcn', 'กำหนดต้นทุนลดหนี้')}
-                                {renderFlagSelect('set_costcn_ap', '0')}
-                                {renderFlagSelect('set_costcn_ap_refinv', '0')}
+                                {renderFlagSelect('set_costcn_ap', 'กำหนดต้นทุนลดหนี้ (ซื้อ)')}
+                                {renderFlagSelect('set_costcn_ap_refinv', 'กำหนดต้นทุนลดหนี้ (ซื้อ) อ้างอิงใบกำกับ')}
                                 {renderFlagSelect('set_costcn_refinv', 'กำหนดต้นทุนลดหนี้ใบกำกับ')}
-                                {renderFlagSelect('set_cost_return_issueref', '0')}
+                                {renderFlagSelect('set_cost_return_issueref', 'กำหนดต้นทุนรับคืนอ้างอิงใบเบิก')}
                                 {renderFlagSelect('set_goodqty', 'กำหนดจำนวนอัตโนมัติ')}
                                 {renderFlagSelect('set_inve', 'กำหนดคลังเก็บอัตโนมัติ')}
                                 {renderFlagSelect('set_price', 'กำหนดราคาขายระบบ SO')}
                                 {renderFlagSelect('set_price_ic', 'กำหนดราคาระบบสินค้า PO')}
-                                {renderFlagSelect('set_price_pack', '0')}
+                                {renderFlagSelect('set_price_pack', 'ใช้ราคาขายตามแพ็คบรรจุ')}
                                 {renderFlagSelect('set_price_po', 'กำหนดราคาระบบสินค้า IC')}
-                                {renderFlagSelect('trasfer_cost_flag', '0')}
+                                {renderFlagSelect('trasfer_cost_flag', 'คำนวณต้นทุนการโอนสินค้า')}
                             </div>
                         </section>
 

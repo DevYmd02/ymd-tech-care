@@ -169,7 +169,7 @@ export function CustomerGeneralInfo({ formData, onChange, errors }: CustomerGene
 
                 {/* Toggles */}
                 <div className="md:col-span-2 pt-2">
-                    <label className="flex items-center gap-3 cursor-pointer group">
+                    <label className="flex items-center gap-3 cursor-pointer group w-fit">
                         <div className="relative">
                             <input 
                                 type="checkbox" 
