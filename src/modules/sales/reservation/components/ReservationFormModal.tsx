@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Save, FileBox, Printer, Loader2 } from 'lucide-react';
+import { logger } from '@/shared/utils/logger';
 import { useForm, FormProvider, useWatch } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { WindowFormLayout } from '@ui';
@@ -293,7 +294,7 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
             vat_amount: vatAmount, 
             total_amount: totalAmount 
         };
-        console.log('Submitting Reservation:', finalData);
+        logger.debug('Submitting Reservation:', finalData);
         
         await new Promise(r => setTimeout(r, 1000));
         

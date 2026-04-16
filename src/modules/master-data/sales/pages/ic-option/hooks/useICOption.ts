@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import toast from 'react-hot-toast';
+import { logger } from '@/shared/utils/logger';
 import type { ICOption, ICOptionFilters } from '../types/ic-option.types';
 import { ICOptionService } from '../services/ic-option.service';
 import { BranchService } from '@/modules/master-data/company/services/branch.service';
@@ -40,7 +41,7 @@ export function useICOption() {
             setData(enrichedData);
         } catch (error) {
             toast.error('เกิดข้อผิดพลาดในการโหลดข้อมูล Base IC Option');
-            console.error('Fetch error:', error);
+            logger.error('Fetch error:', error);
         } finally {
             setIsLoading(false);
         }

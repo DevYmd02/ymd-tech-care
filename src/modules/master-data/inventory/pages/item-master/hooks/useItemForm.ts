@@ -359,7 +359,7 @@ export function useItemForm(editId: number | null, onSuccess?: () => void) {
     }, [setValue]);
 
     const handleSave = rhfHandleSubmit((data) => {
-        console.log('Data being sent to API:', data);
+        logger.debug('Data being sent to API:', data);
         saveMutation.mutate(data);
     });
 

@@ -3,6 +3,8 @@
  * @description Service สำหรับจัดการข้อมูลประมาณการราคา (Sales Estimate)
  */
 
+import { logger } from '@/shared/utils/logger';
+
 export interface EstimateListParams {
     estimate_no?: string;
     inquiry_no?: string;
@@ -26,7 +28,7 @@ export const EstimateService = {
      */
     getList: async (_params: EstimateListParams = {}) => {
         // สำหรับนักพัฒนา: เชื่อมต่อ API จริงได้ที่นี่
-        console.log('Fetching estimates with params:', _params);
+        logger.debug('Fetching estimates with params:', _params);
         
         await new Promise(resolve => setTimeout(resolve, 500));
         

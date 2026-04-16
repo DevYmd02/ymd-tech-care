@@ -84,7 +84,7 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
 
             // Load Currencies and Rate Types
             CurrencyService.getCurrencies().then(res => {
-                console.log('💎 [GRN] Currencies Loaded:', res);
+                logger.debug('💎 [GRN] Currencies Loaded:', res);
                 setCurrencyOptions(res.items);
                 // System Default to THB
                 const thb = res.items.find(c => c.code === 'THB');
@@ -192,7 +192,7 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
     useEffect(() => {
         const fetchRate = async () => {
             if (!isMulticurrency || !currencyId || !targetCurrencyId || !rateDate) {
-                console.log('💎 [GRN] fetchRate skipped:', { isMulticurrency, currencyId, targetCurrencyId, rateDate });
+                logger.debug('💎 [GRN] fetchRate skipped:', { isMulticurrency, currencyId, targetCurrencyId, rateDate });
                 return;
             }
             
@@ -209,7 +209,7 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
                     const tRate = Number(targetCurr.exchange_rate) || 1;
                     const masterRate = bRate / tRate;
                     setExchangeRate(Number(masterRate.toFixed(6)));
-                    console.log(`💎 [GRN] Calculated Master Rate: ${baseCurr.code}(${bRate}) / ${targetCurr.code}(${tRate}) = ${masterRate}`);
+                    logger.debug(`💎 [GRN] Calculated Master Rate: ${baseCurr.code}(${bRate}) / ${targetCurr.code}(${tRate}) = ${masterRate}`);
                 }
             }
 
@@ -218,7 +218,7 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
                 setIsRateLoading(true);
                 try {
                     const res = await CurrencyService.getLatestExchangeRate(currencyId, rateDate);
-                    console.log('💎 [GRN] API Rate Response:', res);
+                    logger.debug('💎 [GRN] API Rate Response:', res);
                     if (res && res.rate && Number(res.rate) !== 0) { 
                         setExchangeRate(Number(res.rate));
                     }

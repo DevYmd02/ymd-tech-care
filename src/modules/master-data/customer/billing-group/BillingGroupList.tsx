@@ -11,7 +11,7 @@ import { useTableFilters, useDebounce, useConfirmation } from '@/shared/hooks';
 import { createColumnHelper } from '@tanstack/react-table';
 import { BillingGroupService } from './services/billing-group.service';
 import type { CustomerBillingGroup } from './types/billing-group.types';
-
+import { logger } from '@/shared/utils/logger';
 import { BillingGroupFormModal } from './BillingGroupFormModal';
 
 export default function BillingGroupList() {
@@ -57,7 +57,7 @@ export default function BillingGroupList() {
           refetch();
         }
       } catch (error) {
-        console.error('Delete error:', error);
+        logger.error('Delete error:', error);
         toast.error('ไม่สามารถลบข้อมูลได้');
       }
     }

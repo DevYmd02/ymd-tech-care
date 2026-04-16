@@ -1,5 +1,6 @@
 import type { ICOption, ICOptionFormData } from '../types/ic-option.types';
 import api from '@/core/api/api';
+import { logger } from '@/shared/utils/logger';
 
 export const ICOptionService = {
     /**
@@ -11,7 +12,7 @@ export const ICOptionService = {
             const response = await api.get<ICOption[]>('/inventory-option', { params });
             return Array.isArray(response) ? response : response;
         } catch (error) {
-            console.error('Failed to get IC Options:', error);
+            logger.error('Failed to get IC Options:', error);
             throw error;
         }
     },
@@ -24,7 +25,7 @@ export const ICOptionService = {
             const response = await api.get<ICOption>(`/inventory-option/${id}`);
             return response;
         } catch (error) {
-            console.error(`Failed to get IC Option ID ${id}:`, error);
+            logger.error(`Failed to get IC Option ID ${id}:`, error);
             return undefined;
         }
     },
@@ -37,7 +38,7 @@ export const ICOptionService = {
             const response = await api.post<ICOption>('/inventory-option', data);
             return response;
         } catch (error) {
-            console.error('Failed to create IC Option:', error);
+            logger.error('Failed to create IC Option:', error);
             throw error;
         }
     },
@@ -50,7 +51,7 @@ export const ICOptionService = {
             const response = await api.patch<ICOption>(`/inventory-option/${id}`, data);
             return response;
         } catch (error) {
-            console.error(`Failed to update IC Option ID ${id}:`, error);
+            logger.error(`Failed to update IC Option ID ${id}:`, error);
             throw error;
         }
     },
@@ -62,7 +63,7 @@ export const ICOptionService = {
         try {
             await api.delete(`/inventory-option/${id}`);
         } catch (error) {
-            console.error(`Failed to delete IC Option ID ${id}:`, error);
+            logger.error(`Failed to delete IC Option ID ${id}:`, error);
             throw error;
         }
     }

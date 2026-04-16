@@ -3,6 +3,8 @@
  * @description Service สำหรับจัดการข้อมูลใบเสนอราคาขาย (Sales Quotation)
  */
 
+import { logger } from '@/shared/utils/logger';
+
 export interface QuotationListParams {
     sq_no?: string;
     customer_name?: string;
@@ -32,7 +34,7 @@ export const QuotationService = {
      */
     getList: async (params: QuotationListParams = {}) => {
         // สำหรับนักพัฒนา: เชื่อมต่อ API จริงได้ที่นี่
-        console.log('Fetching quotations with params:', params);
+        logger.debug('Fetching quotations with params:', params);
         
         await new Promise(resolve => setTimeout(resolve, 500));
         

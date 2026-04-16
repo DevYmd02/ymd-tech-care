@@ -351,8 +351,8 @@ export const POAService = {
 
         // DIAGNOSTIC LOG (Temporary)
         if (rawApprovalItems && rawApprovalItems.length > 0) {
-            console.log('[POA List Raw Data] First item keys:', Object.keys(rawApprovalItems[0]));
-            console.log('[POA List Raw Data] Item 0 values:', JSON.stringify(rawApprovalItems[0]));
+            logger.debug('[POA List Raw Data] First item keys:', Object.keys(rawApprovalItems[0]));
+            logger.debug('[POA List Raw Data] Item 0 values:', JSON.stringify(rawApprovalItems[0]));
         }
         
         // 2. Build Robust Lookup Maps
@@ -499,10 +499,10 @@ export const POAService = {
         const combinedItems = Array.from(listMap.values());
         
         // 🔍 MEGA DIAGNOSTIC LOG (Finding the 0-item bug)
-        console.log(`[POAService] FINAL COMBINED PRE-FILTER: ${combinedItems.length} items`);
+        logger.debug(`[POAService] FINAL COMBINED PRE-FILTER: ${combinedItems.length} items`);
         combinedItems.forEach((item, idx) => {
             if (idx < 10) {
-                console.log(`[POAService] Item[${idx}] PO: ${item.po_no}, Status: "${item.status}", Type: ${typeof item.status}`);
+                logger.debug(`[POAService] Item[${idx}] PO: ${item.po_no}, Status: "${item.status}", Type: ${typeof item.status}`);
             }
         });
 
@@ -516,8 +516,8 @@ export const POAService = {
         if (filterParams.status) {
             filterParams.status = String(filterParams.status).trim().toUpperCase() as any;
         }
-
-        console.log(`[POAService] Applying filter with params:`, JSON.stringify(filterParams));
+        
+        logger.debug(`[POAService] Applying filter with params:`, JSON.stringify(filterParams));
 
         const result = applyClientFilters<POListItem>(combinedItems, filterParams as any, {
             searchableFields: ['po_no', 'poa_no', 'vendor_name', 'pr_no', 'qc_no'],
@@ -525,9 +525,9 @@ export const POAService = {
             exactMatchFields: ['status']
         });
 
-        console.log(`[POAService] CLIENT FILTER RESULT: total=${result.total}, data.length=${result.data.length}`);
+        logger.debug(`[POAService] CLIENT FILTER RESULT: total=${result.total}, data.length=${result.data.length}`);
         if (result.data.length > 0) {
-            console.log(`[POAService] Result[0] Status: "${result.data[0].status}"`);
+            logger.debug(`[POAService] Result[0] Status: "${result.data[0].status}"`);
         }
 
         return result;

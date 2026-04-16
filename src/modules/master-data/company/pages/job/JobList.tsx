@@ -19,6 +19,7 @@ import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
 import { JobService } from '@company/services/org-job.service';
+import { logger } from '@/shared/utils/logger';
 
 // ====================================================================================
 // CONFIG
@@ -94,7 +95,7 @@ export default function JobList() {
                 await JobService.delete(id);
                 refetch();
             } catch (error) {
-                console.error('Failed to delete job:', error);
+                logger.error('Failed to delete job:', error);
                 alert('ไม่สามารถลบข้อมูลได้ในขณะนี้');
             }
         }

@@ -11,6 +11,7 @@ import {
     Building
 } from 'lucide-react';
 import { EmployeeSideFormModal } from './EmployeeSideFormModal';
+import { logger } from '@/shared/utils/logger';
 import { useEmployeeSideList } from './hooks/useEmployeeSideList';
 import type { EmployeeSideListItem } from '@master-data/types/master-data-types';
 import { ActiveStatusBadge } from '@ui';
@@ -94,7 +95,7 @@ export default function EmployeeSideList() {
                 await EmployeeSideService.delete(id);
                 refetch();
             } catch (error) {
-                console.error('Failed to delete department:', error);
+                logger.error('Failed to delete department:', error);
                 alert('ไม่สามารถลบข้อมูลได้ในขณะนี้');
             }
         }

@@ -9,6 +9,7 @@ import { CustomerService } from '@customer/customer-master/services/customer.ser
 import type { PriceListHeader } from '@master-data/sales/pages/price-list/types/price-list.types';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
+import { logger } from '@/shared/utils/logger';
 import toast from 'react-hot-toast';
 
 export function usePriceList() {
@@ -64,7 +65,7 @@ export function usePriceList() {
 
             setAllPriceLists(hydratedData);
         } catch (error) {
-            console.error('Failed to fetch price lists/customers:', error);
+            logger.error('Failed to fetch price lists/customers:', error);
             toast.error('ไม่สามารถโหลดข้อมูลได้');
         } finally {
             setIsLoading(false);
@@ -131,7 +132,7 @@ export function usePriceList() {
                 await PriceListService.delete(id);
                 fetchData();
             } catch (error) {
-                console.error('Failed to delete price list:', error);
+                logger.error('Failed to delete price list:', error);
             }
         }
     }, [confirmDialog, fetchData]);
@@ -154,7 +155,7 @@ export function usePriceList() {
                     toast.error(result.message || 'อนุมัติไม่สำเร็จ');
                 }
             } catch (error) {
-                console.error('Failed to approve price list:', error);
+                logger.error('Failed to approve price list:', error);
                 toast.error('เกิดข้อผิดพลาดในการอนุมัติ');
             }
         }

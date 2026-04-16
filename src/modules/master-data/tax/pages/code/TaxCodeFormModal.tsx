@@ -8,6 +8,7 @@ import type { TaxCode, TaxGroup } from '@/modules/master-data/tax/types/tax-type
 import { TaxCodeService } from '@/modules/master-data/tax/services/tax-code.service';
 import { TaxGroupService } from '@/modules/master-data/tax/services/tax-group.service';
 import { DialogFormLayout } from '@ui';
+import { logger } from '@/shared/utils/logger';
 
 interface TaxCodeFormModalProps {
     isOpen: boolean;
@@ -73,7 +74,7 @@ export function TaxCodeFormModal({ isOpen, onClose, taxId, onSuccess }: TaxCodeF
             onSuccess();
             onClose();
         } catch (error) {
-            console.error(error);
+            logger.error('Failed to save tax code:', error);
             alert('An error occurred');
         } finally {
             setIsLoading(false);

@@ -1,8 +1,4 @@
-/**
- * @file reservation.service.ts
- * @description Service สำหรับจัดการข้อมูลใบสั่งจอง (Sales Reservation)
- */
-
+import { logger } from '@/shared/utils/logger';
 import type { ReservationFormData } from '../types/reservation.types';
 
 export interface ReservationListParams {
@@ -36,7 +32,7 @@ export const ReservationService = {
      * ดึงรายการ Reservation
      */
     getList: async (params: ReservationListParams = {}) => {
-        console.log('Fetching reservations with params:', params);
+        logger.debug('Fetching reservations with params:', params);
         await new Promise(resolve => setTimeout(resolve, 500));
         
         return {
@@ -49,7 +45,7 @@ export const ReservationService = {
      * ดึงข้อมูล Reservation รายใบ
      */
     getById: async (id: string): Promise<ReservationFormData | null> => {
-        console.log('Fetching reservation by id:', id);
+        logger.debug('Fetching reservation by id:', id);
         await new Promise(resolve => setTimeout(resolve, 500));
         return null; // Mock return
     },
@@ -58,7 +54,7 @@ export const ReservationService = {
      * สร้าง Reservation ใหม่
      */
     create: async (data: ReservationFormData) => {
-        console.log('Creating reservation:', data);
+        logger.debug('Creating reservation:', data);
         await new Promise(resolve => setTimeout(resolve, 1000));
         return { success: true, data };
     },
@@ -67,7 +63,7 @@ export const ReservationService = {
      * อัปเดต Reservation
      */
     update: async (id: string, data: Partial<ReservationFormData>) => {
-        console.log('Updating reservation:', id, data);
+        logger.debug('Updating reservation:', id, data);
         await new Promise(resolve => setTimeout(resolve, 1000));
         return { success: true, data };
     },
@@ -76,7 +72,7 @@ export const ReservationService = {
      * ลบ Reservation
      */
     delete: async (id: string) => {
-        console.log('Deleting reservation:', id);
+        logger.debug('Deleting reservation:', id);
         await new Promise(resolve => setTimeout(resolve, 500));
         return { success: true };
     }

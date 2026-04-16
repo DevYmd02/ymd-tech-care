@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, type ChangeEvent, type FormEvent } fr
 import { BillingGroupService } from '../services/billing-group.service';
 import { initialBillingGroupFormData, type BillingGroupFormData } from '../types/billing-group.types';
 import { toast } from 'react-hot-toast';
+import { logger } from '@/shared/utils/logger';
 import { extractErrorMessage } from '@/core/api/api';
 import { useDebounce } from '@/shared/hooks';
 
@@ -36,7 +37,7 @@ export function useBillingGroupForm({ id, onSuccess, onClose, isOpen }: UseBilli
         });
       }
     } catch (error) {
-      console.error('[useBillingGroupForm] fetchDetail error:', error);
+      logger.error('[useBillingGroupForm] fetchDetail error:', error);
       toast.error('ไม่สามารถดึงข้อมูลได้');
     } finally {
       setIsLoading(false);
@@ -71,7 +72,7 @@ export function useBillingGroupForm({ id, onSuccess, onClose, isOpen }: UseBilli
           setError(null);
         }
       } catch (err) {
-        console.error('Real-time validation error:', err);
+        logger.error('Real-time validation error:', err);
       }
     };
 
@@ -130,7 +131,7 @@ export function useBillingGroupForm({ id, onSuccess, onClose, isOpen }: UseBilli
         }
       }
     } catch (error) {
-      console.error('[useBillingGroupForm] handleSubmit error:', error);
+      logger.error('[useBillingGroupForm] handleSubmit error:', error);
       const msg = extractErrorMessage(error);
       if (msg.includes('รหัส') || msg.toLowerCase().includes('duplicate') || msg.includes('ซ้ำ')) {
         const errMsg = `รหัส "${formData.bill_group_code}" มีอยู่ในระบบแล้ว`;

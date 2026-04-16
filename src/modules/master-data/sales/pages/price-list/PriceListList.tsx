@@ -12,6 +12,7 @@ import { ActiveStatusBadge, StatusBadge } from '@ui';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';
 import { CheckCircle } from 'lucide-react';
+import { logger } from '@/shared/utils/logger';
 import type { ColumnDef } from '@tanstack/react-table';
 
 // ==================== CONFIG ====================
@@ -158,7 +159,7 @@ export default function PriceListList() {
                     <button 
                         onClick={() => {
                             const actualId = row.original.price_list_header_id || row.original.price_list_id;
-                            console.log('📑 Editing Price List Row (ID Found):', actualId);
+                            logger.debug('📑 Editing Price List Row (ID Found):', actualId);
                             handleEdit(String(actualId || ''));
                         }}
                         className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"

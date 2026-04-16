@@ -88,7 +88,7 @@ export const POService = {
         const response = await api.get<POListResponse>(ENDPOINTS.list, { params: apiParams });
         const rawItems = extractArrayFromResponse<POListItem>(response);
         
-        console.log(`[POService] RAW BACKEND RESULT: total=${response.total}, items_returned=${rawItems.length}, api_status_used="${(apiParams as any).status || 'NONE'}"`);
+        logger.debug(`[POService] RAW BACKEND RESULT: total=${response.total}, items_returned=${rawItems.length}, api_status_used="${(apiParams as any).status || 'NONE'}"`);
 
         // 1. Hydrate Vendors
         const vendorMap: Record<number, string> = {};

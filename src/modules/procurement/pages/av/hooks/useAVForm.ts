@@ -73,7 +73,7 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess, approvalItem }: UseA
   });
 
   const handleFormError = useCallback((fieldErrors: FieldErrors<AVFormData>) => {
-    console.error("[useAVForm] Validation Errors:", fieldErrors);
+    logger.error("[useAVForm] Validation Errors:", fieldErrors);
     const errorMessages: string[] = [];
     const extractMessages = (errs: object) => {
       Object.values(errs).forEach((val) => {
@@ -270,7 +270,7 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess, approvalItem }: UseA
         }, { keepDefaultValues: false }); // Ensure UI updates
       }
     } catch (error) {
-      console.error('Failed to fetch AV details:', error);
+      logger.error('Failed to fetch AV details:', error);
       showAlert('ดึงข้อมูลผิดพลาด');
     } finally {
       setIsSubmitting(false);

@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { SaleAreaService } from '../services/area.service';
 import type { SaleAreaListItem } from '../types/area.types';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
+import { logger } from '@/shared/utils/logger';
 
 export function useSalesAreaList() {
     const { 
@@ -32,7 +33,7 @@ export function useSalesAreaList() {
             const data = await SaleAreaService.getList();
             setAllAreas(data);
         } catch (error) {
-            console.error('Failed to fetch sales areas:', error);
+            logger.error('Failed to fetch sales areas:', error);
         } finally {
             setIsLoading(false);
         }
@@ -91,7 +92,7 @@ export function useSalesAreaList() {
                 await SaleAreaService.delete(id);
                 fetchData();
             } catch (error) {
-                console.error('Failed to delete sales area:', error);
+                logger.error('Failed to delete sales area:', error);
             }
         }
     }, [fetchData]);

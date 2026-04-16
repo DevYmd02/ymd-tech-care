@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, type ChangeEvent, type FormEvent } fr
 import { CustomerTypeService } from '@customer/customer-type/services/customer-type.service';
 import { initialCustomerTypeFormData, type CustomerTypeFormData } from '@customer/customer-type/types/customer-type.types';
 import { toast } from 'react-hot-toast';
+import { logger } from '@/shared/utils/logger';
 import { extractErrorMessage } from '@/core/api/api';
 import { useDebounce } from '@/shared/hooks';
 
@@ -35,7 +36,7 @@ export function useCustomerTypeForm({ id, onSuccess, onClose, isOpen }: UseCusto
         });
       }
     } catch (error) {
-      console.error('[useCustomerTypeForm] fetchDetail error:', error);
+      logger.error('[useCustomerTypeForm] fetchDetail error:', error);
       toast.error('ไม่สามารถดึงข้อมูลได้');
     } finally {
       setIsLoading(false);
@@ -70,7 +71,7 @@ export function useCustomerTypeForm({ id, onSuccess, onClose, isOpen }: UseCusto
           setError(null);
         }
       } catch (err) {
-        console.error('Real-time validation error:', err);
+        logger.error('Real-time validation error:', err);
       }
     };
 
@@ -128,7 +129,7 @@ export function useCustomerTypeForm({ id, onSuccess, onClose, isOpen }: UseCusto
         }
       }
     } catch (error) {
-      console.error('[useCustomerTypeForm] handleSubmit error:', error);
+      logger.error('[useCustomerTypeForm] handleSubmit error:', error);
       const msg = extractErrorMessage(error);
       
       // Specifically handle database unique constraint errors if the backend returns them

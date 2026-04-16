@@ -19,6 +19,7 @@ import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
 import { PositionService } from '@company/services/org-position.service';
+import { logger } from '@/shared/utils/logger';
 
 // ====================================================================================
 // CONFIG
@@ -94,7 +95,7 @@ export default function PositionList() {
                 await PositionService.delete(id);
                 refetch();
             } catch (error) {
-                console.error('Failed to delete position:', error);
+                logger.error('Failed to delete position:', error);
                 alert('ไม่สามารถลบข้อมูลได้ในขณะนี้');
             }
         }

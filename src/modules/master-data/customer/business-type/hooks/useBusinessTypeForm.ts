@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, type ChangeEvent, type FormEvent } fr
 import { BusinessTypeService } from '@customer/business-type/services/business-type.service';
 import { initialBusinessTypeFormData, type BusinessTypeFormData } from '@customer/business-type/types/business-type.types';
 import { toast } from 'react-hot-toast';
+import { logger } from '@/shared/utils/logger';
 import { extractErrorMessage } from '@/core/api/api';
 import { useDebounce } from '@/shared/hooks';
 
@@ -36,7 +37,7 @@ export function useBusinessTypeForm({ id, onSuccess, onClose, isOpen }: UseBusin
         });
       }
     } catch (error) {
-      console.error('[useBusinessTypeForm] fetchDetail error:', error);
+      logger.error('[useBusinessTypeForm] fetchDetail error:', error);
       toast.error('ไม่สามารถดึงข้อมูลได้');
     } finally {
       setIsLoading(false);
@@ -71,7 +72,7 @@ export function useBusinessTypeForm({ id, onSuccess, onClose, isOpen }: UseBusin
           setError(null);
         }
       } catch (err) {
-        console.error('Real-time validation error:', err);
+        logger.error('Real-time validation error:', err);
       }
     };
 
@@ -130,7 +131,7 @@ export function useBusinessTypeForm({ id, onSuccess, onClose, isOpen }: UseBusin
         }
       }
     } catch (error) {
-      console.error('[useBusinessTypeForm] handleSubmit error:', error);
+      logger.error('[useBusinessTypeForm] handleSubmit error:', error);
       const msg = extractErrorMessage(error);
       if (msg.includes('รหัส') || msg.toLowerCase().includes('duplicate') || msg.includes('ซ้ำ')) {
         const errMsg = `รหัส "${formData.business_type_code}" มีอยู่ในระบบแล้ว`;
