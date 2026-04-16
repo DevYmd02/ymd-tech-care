@@ -26,18 +26,15 @@ export default function ICOptionList() {
 
     // ==================== PRICE SOURCE MAPPING ====================
     const priceSourceMap = useMemo(() => {
-        const map = new Map<number, string>([
-            [0, 'ไม่ใช้งาน'],
-            [11, 'ราคาสินค้า Price List'],
-            [12, 'ราคาขายล่าสุด'],
-            [13, 'ต้นทุนเฉลี่ย'],
-            [14, 'ต้นทุนมาตรฐาน'],
+        return new Map<number, string>([
+            [0, 'ไม่มีการกำหนด'],
+            [1, 'ราคาสินค้า Price List'],
+            [2, 'ราคาสินค้า Price Level'],
+            [3, 'ราคา Promotion'],
+            [4, 'ราคาตามระยะเวลาเครดิต'],
+            [5, 'ราคาขายหลังสุด'],
+            [6, 'ราคาขายหลังสุดตามลูกค้า'],
         ]);
-        // Add Price Levels 1-10
-        for (let i = 1; i <= 10; i++) {
-            map.set(i, `ราคาสินค้า Price Level ${i}`);
-        }
-        return map;
     }, []);
 
     const renderPriceSource = useCallback((val: string | number | null | undefined) => {

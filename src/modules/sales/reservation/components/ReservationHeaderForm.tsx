@@ -12,6 +12,7 @@ import type {
 } from '@/modules/master-data/types/master-data-types';
 import type { CustomerMaster } from '@/modules/master-data/customer/customer-master/types/customer-types';
 import type { TaxGroup } from '@/modules/master-data/tax/types/tax-types';
+import type { SaleAreaMaster } from '@/modules/master-data/sales/pages/area/types/area.types';
 
 interface ReservationHeaderFormProps {
     branches: BranchListItem[];
@@ -21,6 +22,7 @@ interface ReservationHeaderFormProps {
     departments: DepartmentListItem[];
     projects: Project[];
     itemTypes: ItemTypeListItem[];
+    saleAreas: SaleAreaMaster[];
     readOnly?: boolean;
     onSearchCustomer?: () => void;
 }
@@ -33,6 +35,7 @@ export function ReservationHeaderForm({
     departments,
     projects,
     itemTypes,
+    saleAreas,
     readOnly = false,
     onSearchCustomer
 }: ReservationHeaderFormProps) {
@@ -240,7 +243,11 @@ export function ReservationHeaderForm({
                         className={selectClass}
                     >
                         <option value="">-- เลือกเขตการขาย --</option>
-                        {/* Area data usually coming from master data as well */}
+                        {saleAreas.map(area => (
+                            <option key={area.sale_area_id} value={area.sale_area_id}>
+                                {area.sale_area_code} - {area.sale_area_name}
+                            </option>
+                        ))}
                     </select>
                 </div>
 

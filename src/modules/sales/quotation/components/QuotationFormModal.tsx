@@ -3,6 +3,7 @@ import { Save, FileText, Printer, Loader2 } from 'lucide-react';
 import { useForm, FormProvider, useWatch } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { WindowFormLayout } from '@ui';
+import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal';
 import { MasterDataService } from '@/modules/master-data';
 import { CustomerService } from '@/modules/master-data/customer/customer-master/services/customer.service';
 import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
@@ -71,6 +72,10 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
     const [isCustomerSearchOpen, setIsCustomerSearchOpen] = useState(false);
     const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
     const [activeLineIndex, setActiveLineIndex] = useState<number | null>(null);
+    
+    // Confirmation Modal State
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const [pendingData, setPendingData] = useState<QuotationFormData | null>(null);
     
     // React Hook Form Setup
     const methods = useForm<QuotationFormData>({
@@ -273,11 +278,18 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
     const vatAmount = formData.tax_group_id ? (subTotal * (taxRate / 100)) : 0;
     const totalAmount = (subTotal + vatAmount) - calculatedDiscount;
 
-    const onFormSubmit = async (data: QuotationFormData) => {
+    const onFormSubmit = (data: QuotationFormData) => {
+        setPendingData(data);
+        setIsConfirmOpen(true);
+    };
+
+    const handleConfirmSave = async () => {
+        if (!pendingData) return;
+        
         setIsSubmitting(true);
-        // Ensure numeric discount_amount is synced before submit
+
         const finalData = { 
-            ...data, 
+            ...pendingData, 
             discount_amount: calculatedDiscount,
             sub_total: subTotal, 
             vat_amount: vatAmount, 
@@ -285,9 +297,11 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
         };
         console.log('Submitting Quotation:', finalData);
         
+        // Mock API Call
         await new Promise(r => setTimeout(r, 1000));
         
         setIsSubmitting(false);
+        setIsConfirmOpen(false);
         onSuccess?.();
         onClose();
     };
@@ -409,6 +423,18 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
                 isOpen={isProductSearchOpen}
                 onClose={() => setIsProductSearchOpen(false)}
                 onSelect={handleSelectProduct}
+            />
+
+            <ConfirmationModal 
+                isOpen={isConfirmOpen}
+                onClose={() => !isSubmitting && setIsConfirmOpen(false)}
+                onConfirm={handleConfirmSave}
+                title="ยืนยันการบันทึกข้อมูล"
+                description="คุณต้องการบันทึกข้อมูลใบเสนอราคานี้ใช่หรือไม่?"
+                confirmText="ยืนยันการบันทึก"
+                cancelText="ยกเลิก"
+                variant="info"
+                isLoading={isSubmitting}
             />
         </WindowFormLayout>
     );

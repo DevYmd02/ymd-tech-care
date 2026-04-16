@@ -18,9 +18,9 @@ import { QuotationFormModal } from './components/QuotationFormModal';
 
 const STATUS_OPTIONS = [
     { value: 'ALL', label: 'ทั้งหมด' },
-    { value: 'Draft', label: 'Draft' },
-    { value: 'Sent', label: 'Sent' },
-    { value: 'Approved', label: 'Approved' },
+    { value: 'Draft', label: 'แบบร่าง' },
+    { value: 'Sent', label: 'รออนุมัติ' },
+    { value: 'Approved', label: 'อนุมัติแล้ว' },
 ];
 
 // ====================================================================================
@@ -29,15 +29,15 @@ const STATUS_OPTIONS = [
 
 const StatusBadge = ({ status }: { status: string }) => {
     const config = {
-        Draft: 'bg-gray-100 text-gray-600 border-gray-200',
-        Sent: 'bg-blue-100 text-blue-600 border-blue-200',
-        Approved: 'bg-emerald-100 text-emerald-600 border-emerald-200',
-        Rejected: 'bg-red-100 text-red-600 border-red-200',
-    }[status] || 'bg-gray-100 text-gray-600 border-gray-200';
+        Draft: { className: 'bg-gray-100 text-gray-600 border-gray-200', label: 'แบบร่าง' },
+        Sent: { className: 'bg-blue-100 text-blue-600 border-blue-200', label: 'รออนุมัติ' },
+        Approved: { className: 'bg-emerald-100 text-emerald-600 border-emerald-200', label: 'อนุมัติแล้ว' },
+        Rejected: { className: 'bg-red-100 text-red-600 border-red-200', label: 'ไม่อนุมัติ' },
+    }[status] || { className: 'bg-gray-100 text-gray-600 border-gray-200', label: status };
 
     return (
-        <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${config}`}>
-            {status}
+        <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${config.className}`}>
+            {config.label}
         </span>
     );
 };
@@ -84,6 +84,12 @@ export default function QuotationListPage() {
     const columnHelper = createColumnHelper<QuotationHeader>();
     
     const columns = useMemo(() => [
+        columnHelper.display({
+            id: 'index',
+            header: 'ลำดับ',
+            cell: (info) => info.row.index + 1,
+            size: 50,
+        }),
         columnHelper.accessor('sq_no', {
             header: 'เลขที่ใบเสนอราคา',
             cell: (info) => (
@@ -143,23 +149,40 @@ export default function QuotationListPage() {
         columnHelper.display({
             id: 'actions',
             header: 'การจัดการ',
-            cell: (info) => (
-                <div className="flex items-center gap-3">
-                    <button className="text-blue-500 hover:text-blue-700 transition-colors">
-                        <Eye size={18} />
-                    </button>
-                    <button 
-                        onClick={() => handleEdit(info.row.original.sq_no)}
-                        className="text-orange-500 hover:text-orange-700 transition-colors"
-                    >
-                        <Edit size={18} />
-                    </button>
-                    <button className="text-emerald-500 hover:text-emerald-700 transition-colors">
-                        <Send size={18} />
-                    </button>
-                </div>
-            ),
-            size: 120,
+            cell: (info) => {
+                const status = info.row.original.status;
+                const isDraft = status === 'Draft';
+                
+                return (
+                    <div className="flex items-center gap-3">
+                        <button 
+                            className="text-blue-500 hover:text-blue-700 transition-colors" 
+                            title="ดูรายละเอียด"
+                        >
+                            <Eye size={18} />
+                        </button>
+                        
+                        {isDraft && (
+                            <>
+                                <button 
+                                    onClick={() => handleEdit(info.row.original.sq_no)}
+                                    className="text-orange-500 hover:text-orange-700 transition-colors"
+                                    title="แก้ไข"
+                                >
+                                    <Edit size={18} />
+                                </button>
+                                <button 
+                                    className="text-emerald-500 hover:text-emerald-700 transition-colors"
+                                    title="ส่งอนุมัติ"
+                                >
+                                    <Send size={18} />
+                                </button>
+                            </>
+                        )}
+                    </div>
+                );
+            },
+            size: 150,
         }),
     ], [columnHelper]);
 
