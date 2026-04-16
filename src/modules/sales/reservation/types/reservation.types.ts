@@ -16,6 +16,7 @@ export interface ReservationLineData {
     unit_price: number;
     uom_id: string;
     lot_id?: string;
+    lot_no?: string;
     reserve_policy: 'AUTO' | 'MANUAL';
     line_discount: number;
     line_discount_input?: string;

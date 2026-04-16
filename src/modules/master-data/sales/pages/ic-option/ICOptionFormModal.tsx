@@ -1,14 +1,12 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useEffect, useMemo, useCallback } from 'react';
 import { useForm, useWatch, type UseFormWatch, type UseFormSetValue, type UseFormRegister, type FieldErrors, type FieldValues, type SubmitHandler, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { DialogFormLayout } from '@ui';
 import { Settings, Save, X, PlusCircle, AlertCircle, Package, Database, Info } from 'lucide-react';
 import { ICOptionService } from './services/ic-option.service';
 import { icOptionSchema, type ICOptionFormData } from './types/ic-option.types';
-import { PriceLevelNameService } from '@sales-master/pages/price-level-name/services/price-level-name.service';
 import { BranchService } from '@company/services/branch.service';
 import { useQuery } from '@tanstack/react-query';
-import { logger } from '@/shared/utils/logger';
 import toast from 'react-hot-toast';
 
 interface ICOptionFormModalProps {
@@ -148,25 +146,6 @@ export default function ICOptionFormModal({ isOpen, onClose, editId, onSuccess }
         name: 'branch_id'
     });
 
-    const [levelNameMap, setLevelNameMap] = useState<Map<number, string>>(new Map());
-
-    useEffect(() => {
-        const fetchPriceLevelNames = async () => {
-            try {
-                const levelNames = await PriceLevelNameService.getList();
-                const nameMap = new Map<number, string>(
-                    (Array.isArray(levelNames) ? levelNames : []).map(ln => [Number(ln.level_no), ln.name])
-                );
-                setLevelNameMap(nameMap);
-            } catch (error) {
-                logger.error('Failed to fetch price level names:', error);
-            }
-        };
-        if (isOpen) {
-            fetchPriceLevelNames();
-        }
-    }, [isOpen]);
-
     // Fetch Branches for selection
     const { data: branchesData } = useQuery({
         queryKey: ['org-branches-lookup'],
@@ -238,30 +217,16 @@ export default function ICOptionFormModal({ isOpen, onClose, editId, onSuccess }
      * WINSPEED Price Source Options
      */
     const priceSourceOptions = useMemo(() => {
-        const options = [];
-        
-        // 1. เลือก
-        options.push({ id: 0, name: '-- เลือก --' });
-
-        // 2. Price List (WINSPEED ID 11)
-        options.push({ id: 11, name: 'ราคาสินค้า Price List' });
-
-        // 3. Price Levels (WINSPEED ID 1-10)
-        for (let i = 1; i <= 10; i++) {
-            const levelName = levelNameMap.get(i);
-            options.push({
-                id: i,
-                name: `ราคาสินค้า Price Level ${i} ${levelName ? `(${levelName})` : ''}`
-            });
-        }
-
-        // 4. อื่นๆ
-        options.push({ id: 12, name: 'ราคาขายล่าสุด (Last Selling Price)' });
-        options.push({ id: 13, name: 'ต้นทุนเฉลี่ย (Average Cost)' });
-        options.push({ id: 14, name: 'ต้นทุนมาตรฐาน (Standard Cost)' });
-
-        return options;
-    }, [levelNameMap]);
+        return [
+            { id: 0, name: 'ไม่มีการกำหนด' },
+            { id: 1, name: 'ราคาสินค้า Price List' },
+            { id: 2, name: 'ราคาสินค้า Price Level' },
+            { id: 3, name: 'ราคา Promotion' },
+            { id: 4, name: 'ราคาตามระยะเวลาเครดิต' },
+            { id: 5, name: 'ราคาขายหลังสุด' },
+            { id: 6, name: 'ราคาขายหลังสุดตามลูกค้า' },
+        ];
+    }, []);
 
     const TitleIcon = <Settings size={24} className="text-indigo-600" />;
 

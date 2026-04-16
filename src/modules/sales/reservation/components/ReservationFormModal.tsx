@@ -9,6 +9,7 @@ import { UnitService } from '@/modules/master-data/inventory/services/unit.servi
 import { TaxGroupService } from '@/modules/master-data/tax/services/tax-group.service';
 import { WarehouseService } from '@/modules/master-data/inventory/services/warehouse.service';
 import { LocationService } from '@/modules/master-data/inventory/services/inventory-master.service';
+import { SaleAreaService } from '@/modules/master-data/sales/pages/area/services/area.service';
 import type { Currency } from '@/modules/master-data/types/master-data-types';
 import type { ReservationFormData, ReservationLineData } from '../types/reservation.types';
 import { ReservationHeaderForm } from './ReservationHeaderForm';
@@ -131,6 +132,12 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
         enabled: isOpen
     });
 
+    const { data: saleAreas = [] } = useQuery({
+        queryKey: ['master-sale-areas'],
+        queryFn: () => SaleAreaService.getList(),
+        enabled: isOpen
+    });
+
     // Exchange Rate Sync Logic
     const sourceCurrency = useWatch({ control, name: 'base_currency_code' }) as string;
     const targetCurrency = useWatch({ control, name: 'quote_currency_code' }) as string;
@@ -188,6 +195,7 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
             location_id: '',
             uom_id: 'PCS', 
             unit_price: 0, 
+            lot_no: '',
             line_discount_input: '',
             line_discount: 0, 
             reserve_policy: 'AUTO',
@@ -358,6 +366,7 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
                                     departments={departments}
                                     projects={projects}
                                     itemTypes={itemTypes}
+                                    saleAreas={saleAreas}
                                     onSearchCustomer={() => setIsCustomerSearchOpen(true)}
                                 />
                             </div>

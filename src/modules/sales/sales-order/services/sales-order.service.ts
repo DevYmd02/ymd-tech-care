@@ -1,7 +1,10 @@
 /**
  * @file sales-order.service.ts
  * @description Service สำหรับจัดการข้อมูลคำสั่งขาย (Sales Order)
+ * @tables sale_order_header (D9)
  */
+
+import type { SalesOrderFormData } from '../types/sales-order.types';
 
 export interface SalesOrderListParams {
     so_no?: string;
@@ -13,32 +16,48 @@ export interface SalesOrderListParams {
     limit?: number;
 }
 
+/** แสดงในตาราง List Page */
 export interface SalesOrderHeader {
-    id: number;
-    so_no: string;
-    date: string;
-    customer_name: string;
-    customer_code: string;
-    status: 'Draft' | 'Approved' | 'Closed';
-    amount: number;
-    currency: string;
-    delivery_date: string;
-    remarks: string;
+    so_id: string;              // PK uuid
+    so_no: string;              // เลขที่ SO
+    so_date: string;            // วันที่ SO (so_date)
+    customer_name: string;      // ชื่อลูกค้า (join)
+    customer_code: string;      // รหัสลูกค้า (join)
+    status: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'CONFIRMED' | 'CLOSED' | 'CANCELLED';
+    total_amount: number;       // total_amount
+    currency_code: string;      // currency_code
+    ship_date?: string;         // วันที่กำหนดส่ง
+    cust_po_no?: string;        // เลขที่ PO ลูกค้า
+    remarks?: string;           // หมายเหตุ
+    onhold: 'Y' | 'N';         // onhold
 }
 
 export const SalesOrderService = {
-    /**
-     * ดึงรายการ Sales Order
-     */
+    /** ดึงรายการ Sales Order */
     getList: async (params: SalesOrderListParams = {}) => {
-        // สำหรับนักพัฒนา: เชื่อมต่อ API จริงได้ที่นี่
         console.log('Fetching sales orders with params:', params);
-        
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        return {
-            data: [], 
-            total: 0
-        };
-    }
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        return { data: [] as SalesOrderHeader[], total: 0 };
+    },
+
+    /** ดึงข้อมูล Sales Order รายตัว */
+    getById: async (id: string): Promise<SalesOrderFormData | null> => {
+        console.log('Fetching sales order:', id);
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        return null;
+    },
+
+    /** สร้าง Sales Order ใหม่ */
+    create: async (data: SalesOrderFormData) => {
+        console.log('Creating sales order:', data);
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        return { success: true };
+    },
+
+    /** แก้ไข Sales Order */
+    update: async (id: string, data: SalesOrderFormData) => {
+        console.log('Updating sales order:', id, data);
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        return { success: true };
+    },
 };
