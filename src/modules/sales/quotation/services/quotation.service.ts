@@ -4,6 +4,10 @@
  */
 
 import { logger } from '@/shared/utils/logger';
+import type { QuotationFormData, QuotationHeader } from '@sales/quotation/types/quotation.types';
+import type { QuotationFormValues } from '@sales/quotation/schemas/quotation-schemas';
+
+export type { QuotationHeader };
 
 export interface QuotationListParams {
     sq_no?: string;
@@ -15,32 +19,48 @@ export interface QuotationListParams {
     limit?: number;
 }
 
-export interface QuotationHeader {
-    id: number;
-    sq_no: string;
-    date: string;
-    customer_name: string;
-    customer_code: string;
-    total_amount: number;
-    currency: string;
-    status: 'Draft' | 'Sent' | 'Approved' | 'Rejected';
-    expiry_date: string;
-    workflow_status: string;
+export interface QuotationListResponse {
+    data: QuotationHeader[];
+    total: number;
 }
 
-export const QuotationService = {
+export class QuotationService {
     /**
      * ดึงรายการ Quotation
      */
-    getList: async (params: QuotationListParams = {}) => {
-        // สำหรับนักพัฒนา: เชื่อมต่อ API จริงได้ที่นี่
+    static async getList(params?: QuotationListParams): Promise<QuotationListResponse> {
         logger.debug('Fetching quotations with params:', params);
-        
         await new Promise(resolve => setTimeout(resolve, 500));
-        
         return {
             data: [], 
             total: 0
         };
     }
-};
+
+    /**
+     * ดึงรายละเอียด Quotation ตาม ID
+     */
+    static async getById(id: string): Promise<QuotationFormData | null> {
+        logger.debug('Fetching quotation detail for id:', id);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        return null;
+    }
+
+    /**
+     * สร้าง Quotation ใหม่
+     */
+    static async create(data: QuotationFormValues): Promise<void> {
+        logger.info('Creating Quotation:', data);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        return Promise.resolve();
+    }
+
+    /**
+     * อัปเดตข้อมูล Quotation
+     */
+    static async update(id: string, data: Partial<QuotationFormValues>): Promise<void> {
+        logger.info('Updating Quotation:', id, data);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        return Promise.resolve();
+    }
+}

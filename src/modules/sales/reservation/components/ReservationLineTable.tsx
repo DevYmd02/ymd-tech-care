@@ -53,7 +53,7 @@ export function ReservationLineTable({
                 <table className="w-full text-sm text-left border-collapse">
                     <thead className="bg-gray-50 dark:bg-gray-800/50">
                         <tr>
-                             <th className={`${headerThClass} w-10 text-center`}>#</th>
+                             <th className={`${headerThClass} w-10 text-center`}>ลำดับ</th>
                              <th className={`${headerThClass} w-[120px]`}>รหัสสินค้า</th>
                              <th className={`${headerThClass} min-w-[200px]`}>ชื่อสินค้า</th>
                              <th className={`${headerThClass} w-[70px] text-right`}>จอง (qty)</th>

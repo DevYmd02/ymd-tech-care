@@ -1,8 +1,8 @@
-import { FileText, Search, User } from 'lucide-react';
+import { FileText, Search, User, ClipboardList} from 'lucide-react';
 import { useFormContext, Controller } from 'react-hook-form';
 import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWrapper';
 import { CustomDateInput, StatusCheckbox } from '@ui';
-import type { QuotationFormData } from '../types/quotation.types';
+import type { QuotationFormValues } from '@sales/quotation/schemas/quotation-schemas';
 import type { 
     BranchListItem, 
     Currency, 
@@ -23,6 +23,7 @@ interface QuotationHeaderFormProps {
     itemTypes: ItemTypeListItem[];
     readOnly?: boolean;
     onSearchCustomer?: () => void;
+    onSearchLead?: () => void;
 }
 
 export function QuotationHeaderForm({ 
@@ -34,9 +35,10 @@ export function QuotationHeaderForm({
     projects,
     itemTypes,
     readOnly = false,
-    onSearchCustomer
+    onSearchCustomer,
+    onSearchLead
 }: QuotationHeaderFormProps) {
-    const { register, watch, setValue, control } = useFormContext<QuotationFormData>();
+    const { register, watch, setValue, control, formState: { errors } } = useFormContext<QuotationFormValues>();
     
     const formData = watch();
     const isLocked = readOnly;
@@ -46,6 +48,9 @@ export function QuotationHeaderForm({
     const selectClass = "h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white cursor-pointer disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm";
     const labelClass = "block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider";
     const cardSection = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-4 bg-blue-50/10 dark:bg-blue-900/5 p-6 rounded-2xl border border-blue-100 dark:border-blue-900/20";
+    
+    const getErrorClass = (fieldName: keyof QuotationFormValues) => 
+        errors[fieldName] ? "border-red-500 focus:ring-red-500 ring-2 ring-red-500/50" : "";
 
     // Find selected customer name for display
     const selectedCustomer = customers.find(c => String(c.customer_id || c.id) === String(formData.customer_id));
@@ -85,10 +90,11 @@ export function QuotationHeaderForm({
                                 value={field.value || ''}
                                 onChange={field.onChange}
                                 disabled={isLocked}
-                                className={inputClass}
+                                className={`${inputClass} ${getErrorClass('sq_date')}`}
                             />
                         )}
                     />
+                    {errors.sq_date && <span className="text-[10px] text-red-500 font-medium whitespace-nowrap">กรุณาระบุวันที่</span>}
                 </div>
 
                 <div className="space-y-1">
@@ -99,20 +105,21 @@ export function QuotationHeaderForm({
                                 value={customerDisplay}
                                 readOnly
                                 disabled={isLocked}
-                                className={`${inputClass} pl-9 bg-gray-50/50 italic cursor-not-allowed group-hover:border-blue-400 transition-colors`}
+                                className={`${inputClass} pl-9 bg-gray-50/50 italic cursor-not-allowed group-hover:border-blue-400 transition-colors ${getErrorClass('customer_id')}`}
                                 placeholder="-- คลิกเพื่อค้นหาลูกค้า --"
                             />
-                            <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                            <User size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${errors.customer_id ? 'text-red-500' : 'text-gray-400'}`} />
                         </div>
                         <button 
                             type="button" 
                             disabled={isLocked} 
                             onClick={() => onSearchCustomer?.()}
-                            className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center shrink-0 w-9 h-9"
+                            className={`p-2 ${errors.customer_id ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-lg transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center shrink-0 w-9 h-9`}
                         >
                             <Search size={18} />
                         </button>
                     </div>
+                    {errors.customer_id && <span className="text-[10px] text-red-500 font-medium">กรุณาเลือกลูกค้า</span>}
                 </div>
 
                 <div className="space-y-1">
@@ -139,8 +146,13 @@ export function QuotationHeaderForm({
                                 placeholder="EST2024-xxx (ถ้ามี)"
                             />
                         </div>
-                        <button type="button" disabled={isLocked} className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50">
-                            <Search size={16} />
+                        <button 
+                            type="button" 
+                            disabled={isLocked} 
+                            onClick={() => onSearchLead?.()}
+                            className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center shrink-0 w-9 h-9"
+                        >
+                            <ClipboardList size={18} />
                         </button>
                     </div>
                 </div>
@@ -150,7 +162,7 @@ export function QuotationHeaderForm({
                     <select
                         {...register('branch_id')}
                         disabled={isLocked}
-                        className={selectClass}
+                        className={`${selectClass} ${getErrorClass('branch_id')}`}
                     >
                         <option value="">-- เลือกสาขา --</option>
                         {branches.map(branch => (
@@ -159,6 +171,7 @@ export function QuotationHeaderForm({
                             </option>
                         ))}
                     </select>
+                    {errors.branch_id && <span className="text-[10px] text-red-500 font-medium whitespace-nowrap">กรุณาเลือกสาขา</span>}
                 </div>
 
                 <div className="space-y-1">
@@ -210,7 +223,7 @@ export function QuotationHeaderForm({
                     <select 
                         {...register('item_id')}
                         disabled={isLocked}
-                        className={selectClass}
+                        className={`${selectClass} ${getErrorClass('item_id')}`}
                     >
                         <option value="">-- เลือกประเภทสินค้า --</option>
                         {itemTypes.map(item => (
@@ -219,6 +232,7 @@ export function QuotationHeaderForm({
                             </option>
                         ))}
                     </select>
+                    {errors.item_id && <span className="text-[10px] text-red-500 font-medium whitespace-nowrap">ข้อมูลประเภทสินค้าไม่ถูกต้อง</span>}
                 </div>
 
                 {/* Row 4 */}
@@ -227,7 +241,7 @@ export function QuotationHeaderForm({
                     <select 
                         {...register('tax_group_id')}
                         disabled={isLocked}
-                        className={selectClass}
+                        className={`${selectClass} ${getErrorClass('tax_group_id')}`}
                     >
                         <option value="">-- เลือกภาษี --</option>
                         {taxGroups.map(group => (
@@ -236,6 +250,7 @@ export function QuotationHeaderForm({
                             </option>
                         ))}
                     </select>
+                    {errors.tax_group_id && <span className="text-[10px] text-red-500 font-medium whitespace-nowrap">ข้อมูลกลุ่มภาษีไม่ถูกต้อง</span>}
                 </div>
 
                 <div className="space-y-1">
@@ -243,7 +258,7 @@ export function QuotationHeaderForm({
                     <select 
                         {...register('emp_dept_id')}
                         disabled={isLocked}
-                        className={selectClass}
+                        className={`${selectClass} ${getErrorClass('emp_dept_id')}`}
                     >
                         <option value="">-- เลือกแผนก --</option>
                         {departments.map(dept => (
@@ -254,6 +269,7 @@ export function QuotationHeaderForm({
                             </option>
                         ))}
                     </select>
+                    {errors.emp_dept_id && <span className="text-[10px] text-red-500 font-medium whitespace-nowrap">ข้อมูลแผนกไม่ถูกต้อง</span>}
                 </div>
 
                 {/* Row 5 */}
@@ -262,7 +278,7 @@ export function QuotationHeaderForm({
                     <select 
                         {...register('job_id')}
                         disabled={isLocked}
-                        className={selectClass}
+                        className={`${selectClass} ${getErrorClass('job_id')}`}
                     >
                         <option value="">-- เลือกงาน --</option>
                         {projects.map(proj => (
@@ -271,6 +287,7 @@ export function QuotationHeaderForm({
                             </option>
                         ))}
                     </select>
+                    {errors.job_id && <span className="text-[10px] text-red-500 font-medium whitespace-nowrap">ข้อมูลงานไม่ถูกต้อง</span>}
                 </div>
 
                 <div className="lg:col-span-3 space-y-1">

@@ -144,10 +144,10 @@ export const CustomerSearchModal: React.FC<CustomerSearchModalProps> = React.mem
                                 ) : (
                                     <tr>
                                         <td colSpan={5} className="px-6 py-20 text-center items-center justify-center">
-                                            <div className="flex flex-col items-center opacity-30">
-                                                <Search size={64} className="mb-4" />
+                                            <div className="flex flex-col items-center text-gray-400 dark:text-gray-500">
+                                                <Search size={64} className="mb-4 opacity-20" />
                                                 <p className="text-xl font-bold">ไม่พบข้อมูลลูกค้า</p>
-                                                <p className="text-sm">ลองเปลี่ยนคำค้นหาอีกครั้ง</p>
+                                                <p className="text-sm opacity-80">ลองเปลี่ยนคำค้นหาอีกครั้ง</p>
                                             </div>
                                         </td>
                                     </tr>

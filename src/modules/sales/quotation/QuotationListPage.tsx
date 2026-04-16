@@ -1,16 +1,15 @@
 /**
  * @file QuotationListPage.tsx
  * @description หน้ารายการใบเสนอราคาขาย (Sales Quotation List Page)
- * @route /sales/quotation
  */
 
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { FileText, Search, Plus, Edit, Eye, Send } from 'lucide-react';
 import { PageListLayout, SmartTable, FilterField } from '@ui';
 import { createColumnHelper } from '@tanstack/react-table';
-import { QuotationService, type QuotationHeader } from '@sales/quotation/services/quotation.service';
-import { QuotationFormModal } from './components/QuotationFormModal';
+import type { QuotationHeader } from '@sales/quotation/services/quotation.service';
+import { QuotationFormModal } from '@sales/quotation/components/QuotationFormModal';
+import { useQuotationList } from '@sales/quotation/hooks/useQuotation';
 
 // ====================================================================================
 // CONSTANTS
@@ -56,17 +55,16 @@ export default function QuotationListPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
 
-    // API Integration
-    const { data: apiData, isLoading, refetch } = useQuery({
-        queryKey: ['sales-quotations', sqNo, customer, statusFilter, startDate, endDate],
-        queryFn: () => QuotationService.getList({
-            sq_no: sqNo,
-            customer_name: customer,
-            status: statusFilter === 'ALL' ? undefined : statusFilter,
-            start_date: startDate,
-            end_date: endDate
-        }),
-    });
+    // 🏗️ Memoize query params to prevent unstable identities
+    const queryParams = useMemo(() => ({
+        sq_no: sqNo,
+        customer_name: customer,
+        status: statusFilter === 'ALL' ? undefined : statusFilter,
+        start_date: startDate,
+        end_date: endDate
+    }), [sqNo, customer, statusFilter, startDate, endDate]);
+
+    const { data: apiData, isLoading, refetch } = useQuotationList(queryParams);
 
     const displayData = useMemo(() => apiData?.data || [], [apiData]);
 
