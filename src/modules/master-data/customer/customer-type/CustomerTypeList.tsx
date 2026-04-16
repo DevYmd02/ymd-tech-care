@@ -11,7 +11,7 @@ import { createColumnHelper } from '@tanstack/react-table';
 import { CustomerTypeService } from '@customer/customer-type/services/customer-type.service';
 import type { CustomerType } from '@customer/customer-type/types/customer-type.types';
 import { toast } from 'react-hot-toast';
-
+import { logger } from '@/shared/utils/logger';
 import { CustomerTypeFormModal } from './CustomerTypeFormModal';
 
 export default function CustomerTypeList() {
@@ -59,7 +59,7 @@ export default function CustomerTypeList() {
           toast.error(response.message || 'ลบข้อมูลไม่สำเร็จ');
         }
       } catch (error) {
-        console.error('[CustomerTypeList] handleDelete error:', error);
+        logger.error('[CustomerTypeList] handleDelete error:', error);
         toast.error('เกิดข้อผิดพลาดในการลบข้อมูล');
       }
     }

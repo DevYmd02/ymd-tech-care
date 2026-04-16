@@ -1,5 +1,6 @@
 import toast from 'react-hot-toast';
 import axios, { AxiosError } from 'axios';
+import { logger } from '@/shared/utils/logger';
 
 // 1. Define Strict Interface for Backend Error
 export interface ApiErrorResponse {
@@ -10,7 +11,7 @@ export interface ApiErrorResponse {
 
 export const handleError = (error: unknown, context: string = 'Operation') => {
   // 1. Developer Log (Detailed)
-  console.error(`❌ [${context}] Failed:`, error);
+  logger.error(`❌ [${context}] Failed:`, error);
 
   // 2. User Feedback (Friendly)
   const message = extractErrorMessage(error);

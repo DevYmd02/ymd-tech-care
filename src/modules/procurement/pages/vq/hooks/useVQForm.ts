@@ -288,7 +288,7 @@ export const useVQForm = (
             logger.debug("[useVQForm] VQ Data Loaded for ID", vqId);
             
             if (!data) {
-                console.warn("VQ Data Not Found for ID:", vqId);
+                logger.warn("VQ Data Not Found for ID:", vqId);
                 setIsDataLoading(false);
                 return;
             }
@@ -347,7 +347,7 @@ export const useVQForm = (
             
             // @Agent_Backend_Diagnostic - Failsafe Alert
             if (linesToMap.length === 0 && apiLines.length === 0) {
-                console.warn("VQ Lines Not Found", data);
+                logger.warn("VQ Lines Not Found", data);
             }
 
             const mappedLines: QuotationLineFormData[] = (apiLines.length > 0 ? apiLines : linesToMap).map((l: RawVQLine) => {
@@ -471,7 +471,7 @@ export const useVQForm = (
             setIsDataLoading(false);
         }).catch(err => {
             logger.error('[useVQForm] Failed to fetch VQ detail:', err);
-            console.error("💥 [useVQForm] CRASH IN LOAD PROMISE:", err);
+            logger.error("💥 [useVQForm] CRASH IN LOAD PROMISE:", err);
             setIsDataLoading(false);
         });
       } else if (initialRFQ) {

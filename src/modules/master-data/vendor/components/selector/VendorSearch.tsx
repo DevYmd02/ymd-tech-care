@@ -4,6 +4,7 @@ import { VendorService } from '@/modules/master-data/vendor/services/vendor.serv
 import type { VendorMaster } from '@/modules/master-data/vendor/types/vendor-types';
 import type { VendorSelection } from '@/modules/procurement/types/pr-types';
 import { VendorSearchModal } from './VendorSearchModal';
+import { logger } from '@/shared/utils/logger';
 
 interface VendorSearchProps {
   onVendorSelect: (vendor: VendorSelection | null) => void;
@@ -62,7 +63,7 @@ export const VendorSearch: React.FC<VendorSearchProps> = ({
       const data = await VendorService.search(searchQuery);
       setResults(data);
     } catch (err) {
-      console.error('Failed to search vendors:', err);
+      logger.error('Failed to search vendors:', err);
       setResults([]);
     } finally {
       setIsLoading(false);

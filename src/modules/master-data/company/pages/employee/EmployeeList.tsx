@@ -18,6 +18,7 @@ import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
 import { OrgEmployeeService } from '@company/services/employee.service';
+import { logger } from '@/shared/utils/logger';
 
 // ====================================================================================
 // CONFIG
@@ -93,7 +94,7 @@ export default function EmployeeList() {
                 await OrgEmployeeService.delete(id);
                 refetch();
             } catch (error) {
-                console.error('Failed to delete employee:', error);
+                logger.error('Failed to delete employee:', error);
                 alert('ไม่สามารถลบข้อมูลได้ในขณะนี้');
             }
         }

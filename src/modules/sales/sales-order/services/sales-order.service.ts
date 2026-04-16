@@ -1,9 +1,4 @@
-/**
- * @file sales-order.service.ts
- * @description Service สำหรับจัดการข้อมูลคำสั่งขาย (Sales Order)
- * @tables sale_order_header (D9)
- */
-
+import { logger } from '@/shared/utils/logger';
 import type { SalesOrderFormData } from '../types/sales-order.types';
 
 export interface SalesOrderListParams {
@@ -35,28 +30,28 @@ export interface SalesOrderHeader {
 export const SalesOrderService = {
     /** ดึงรายการ Sales Order */
     getList: async (params: SalesOrderListParams = {}) => {
-        console.log('Fetching sales orders with params:', params);
+        logger.debug('Fetching sales orders with params:', params);
         await new Promise((resolve) => setTimeout(resolve, 500));
         return { data: [] as SalesOrderHeader[], total: 0 };
     },
 
     /** ดึงข้อมูล Sales Order รายตัว */
     getById: async (id: string): Promise<SalesOrderFormData | null> => {
-        console.log('Fetching sales order:', id);
+        logger.debug('Fetching sales order:', id);
         await new Promise((resolve) => setTimeout(resolve, 300));
         return null;
     },
 
     /** สร้าง Sales Order ใหม่ */
     create: async (data: SalesOrderFormData) => {
-        console.log('Creating sales order:', data);
+        logger.debug('Creating sales order:', data);
         await new Promise((resolve) => setTimeout(resolve, 800));
         return { success: true };
     },
 
     /** แก้ไข Sales Order */
     update: async (id: string, data: SalesOrderFormData) => {
-        console.log('Updating sales order:', id, data);
+        logger.debug('Updating sales order:', id, data);
         await new Promise((resolve) => setTimeout(resolve, 800));
         return { success: true };
     },

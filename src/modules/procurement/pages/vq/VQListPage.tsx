@@ -6,7 +6,7 @@
  * @refactored Uses PageListLayout, FilterFormBuilder, useTableFilters, React Query, SmartTable
  */
 
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect, lazy, Suspense } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/react-query';
 import { Eye, Edit, FileText, Search, Plus, XCircle } from 'lucide-react';
@@ -21,7 +21,10 @@ import { VQService, type VQListParams } from '@/modules/procurement/services/vq.
 import { RFQService } from '@/modules/procurement/services/rfq.service';
 
 import type { VQListItem, VQStatus, RFQHeader, VQPendingQueueItem } from '@/modules/procurement/types';
-import { VQFormModal, VQVendorTrackingModal } from './components';
+
+const VQFormModal = lazy(() => import('./components/VQFormModal'));
+const VQVendorTrackingModal = lazy(() => import('./components/VQVendorTrackingModal').then(m => ({ default: m.VQVendorTrackingModal })));
+
 // import { RFQSendConfirmModal } from '@/modules/procurement/pages/rfq/components/RFQSendConfirmModal';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { logger } from '@/shared/utils/logger';
@@ -30,7 +33,8 @@ import { getColumns, getPendingColumns } from './components/VQColumns';
 import { RFQNoDisplay, PRNoDisplay } from './components/VQColumnComponents';
 import { useVendorsBatchQuery } from './hooks/useVendorsBatchQuery';
 import { VQ_STATUS_MAP, RFQ_VENDOR_STATUS_MAP } from './constants/vq.constants';
-import { CancelVendorModal } from '@/modules/procurement/pages/rfq/components/CancelVendorModal';
+
+const CancelVendorModal = lazy(() => import('@/modules/procurement/pages/rfq/components/CancelVendorModal').then(m => ({ default: m.CancelVendorModal })));
 
 
 // ====================================================================================
@@ -873,43 +877,49 @@ export default function VQListPage() {
             </PageListLayout>
 
              {/* Modals - Only mount when open and positioned outside layout */}
-            {isVqModalOpen && (
-                <VQFormModal 
-                    isOpen={isVqModalOpen}
-                    onClose={handleCloseModal}
-                    onSuccess={handleVqSuccess}
-                    initialRFQ={initialRFQForCreate}
-                    vqId={selectedVqId}
-                    isViewMode={isViewMode}
-                />
-            )}
+            <Suspense fallback={null}>
+                {isVqModalOpen && (
+                    <VQFormModal 
+                        isOpen={isVqModalOpen}
+                        onClose={handleCloseModal}
+                        onSuccess={handleVqSuccess}
+                        initialRFQ={initialRFQForCreate}
+                        vqId={selectedVqId}
+                        isViewMode={isViewMode}
+                    />
+                )}
 
-            <VQVendorTrackingModal
-                isOpen={isTrackingOpen}
-                onClose={() => setIsTrackingOpen(false)}
-                rfqId={selectedRfqId}
-                rfqNo={selectedRfqNo}
-            />
+                {isTrackingOpen && (
+                    <VQVendorTrackingModal
+                        isOpen={isTrackingOpen}
+                        onClose={() => setIsTrackingOpen(false)}
+                        rfqId={selectedRfqId}
+                        rfqNo={selectedRfqNo}
+                    />
+                )}
 
-            <CancelVendorModal
-                isOpen={isCancelModalOpen}
-                onClose={() => setIsCancelModalOpen(false)}
-                onConfirm={async (remark) => {
-                    if (!selectedRfqVendorId) return;
-                    setIsCancelling(true);
-                    try {
-                        await RFQService.cancelVendor(selectedRfqVendorId, remark);
-                        toast('ยกเลิกผู้ขายสำเร็จ', 'success');
-                        refetchWaitingVq();
-                        setIsCancelModalOpen(false);
-                    } catch (error) {
-                        toast(error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการยกเลิก', 'error');
-                    } finally {
-                        setIsCancelling(false);
-                    }
-                }}
-                isLoading={isCancelling}
-            />
+                {isCancelModalOpen && (
+                    <CancelVendorModal
+                        isOpen={isCancelModalOpen}
+                        onClose={() => setIsCancelModalOpen(false)}
+                        onConfirm={async (remark) => {
+                            if (!selectedRfqVendorId) return;
+                            setIsCancelling(true);
+                            try {
+                                await RFQService.cancelVendor(selectedRfqVendorId, remark);
+                                toast('ยกเลิกผู้ขายสำเร็จ', 'success');
+                                refetchWaitingVq();
+                                setIsCancelModalOpen(false);
+                            } catch (error) {
+                                toast(error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการยกเลิก', 'error');
+                            } finally {
+                                setIsCancelling(false);
+                            }
+                        }}
+                        isLoading={isCancelling}
+                    />
+                )}
+            </Suspense>
         </>
     );
 }

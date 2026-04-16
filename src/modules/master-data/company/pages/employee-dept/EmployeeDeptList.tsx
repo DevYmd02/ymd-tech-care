@@ -4,6 +4,7 @@ import {
     Trash2, 
     Layers
 } from 'lucide-react';
+import { logger } from '@/shared/utils/logger';
 import { EmployeeDeptFormModal } from './EmployeeDeptFormModal';
 import { useEmployeeDeptList } from './hooks/useEmployeeDeptList';
 import type { EmployeeDeptListItem } from '@company/types/employee-dept.types';
@@ -113,7 +114,7 @@ export default function EmployeeDeptList() {
                 const response = await EmployeeDeptService.delete(id);
                 if (response) refetch();
             } catch (error) {
-                console.error('Failed to delete department:', error);
+                logger.error('Failed to delete department:', error);
                 alert('ไม่สามารถลบข้อมูลได้ในขณะนี้');
             }
         }

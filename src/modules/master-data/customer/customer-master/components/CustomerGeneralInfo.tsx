@@ -12,6 +12,7 @@ import type { CustomerBusinessType } from '@customer/business-type/types/busines
 import type { CustomerType } from '@customer/customer-type/types/customer-type.types';
 import type { CustomerGroup } from '@customer/customer-group/types/customer-group.types';
 import type { CustomerBillingGroup } from '@customer/billing-group/types/billing-group.types';
+import { logger } from '@/shared/utils/logger';
 
 interface CustomerGeneralInfoProps {
     formData: CustomerFormData;
@@ -39,7 +40,7 @@ export function CustomerGeneralInfo({ formData, onChange, errors }: CustomerGene
                 setCustomerGroups(cGroups.data || []);
                 setBillingGroups(bGroups.data || []);
             } catch (error) {
-                console.error("Failed to fetch customer dropdown data", error);
+                logger.error("Failed to fetch customer dropdown data", error);
             }
         };
         fetchDropdownData();

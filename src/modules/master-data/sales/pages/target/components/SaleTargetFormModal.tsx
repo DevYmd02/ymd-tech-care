@@ -9,6 +9,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { User, Save } from 'lucide-react';
+import { logger } from '@/shared/utils/logger';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
 
@@ -80,7 +81,7 @@ export function SaleTargetFormModal({ isOpen, onClose, editId, onSuccess }: Prop
                 setEmployees(empRes.items || []);
 
             } catch (err) {
-                console.error('Failed to fetch dropdown data:', err);
+                logger.error('Failed to fetch dropdown data:', err);
             }
         };
 
@@ -100,7 +101,7 @@ export function SaleTargetFormModal({ isOpen, onClose, editId, onSuccess }: Prop
                             });
                         }
                     } catch (error) {
-                        console.error('Failed to fetch sale target detail:', error);
+                        logger.error('Failed to fetch sale target detail:', error);
                     }
                 };
                 fetchDetail();
@@ -132,7 +133,7 @@ export function SaleTargetFormModal({ isOpen, onClose, editId, onSuccess }: Prop
             if (onSuccess) onSuccess();
             onClose();
         } catch (error) {
-            console.error('Failed to save sale target:', error);
+            logger.error('Failed to save sale target:', error);
         }
     }, [editId, onSuccess, onClose]);
 

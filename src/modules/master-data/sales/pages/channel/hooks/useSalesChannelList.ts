@@ -8,6 +8,7 @@ import { SalesChannelService } from '../services/channel.service';
 import type { SalesChannelListItem } from '../types/channel.types';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
+import { logger } from '@/shared/utils/logger';
 
 export function useSalesChannelList() {
     const { 
@@ -34,7 +35,7 @@ export function useSalesChannelList() {
             const data = await SalesChannelService.getList();
             setAllChannels(data);
         } catch (error) {
-            console.error('Failed to fetch sales channels:', error);
+            logger.error('Failed to fetch sales channels:', error);
         } finally {
             setIsLoading(false);
         }
@@ -101,7 +102,7 @@ export function useSalesChannelList() {
                 await SalesChannelService.delete(id);
                 fetchData();
             } catch (error) {
-                console.error('Failed to delete sales channel:', error);
+                logger.error('Failed to delete sales channel:', error);
             }
         }
     }, [fetchData, confirm]);

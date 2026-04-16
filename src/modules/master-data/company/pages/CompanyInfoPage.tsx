@@ -21,6 +21,7 @@ import { CompanyInfoService } from '../services/company-info.service';
 import { type CompanyInfo, type CompanyInfoFormData } from '../types/company-info.types';
 import toast from 'react-hot-toast';
 import { extractErrorMessage } from '@/core/api/api';
+import { logger } from '@/shared/utils/logger';
 
 /**
  * @file CompanyInfoPage.tsx
@@ -51,7 +52,7 @@ const CompanyInfoPage: React.FC = () => {
         reset(data);
       }
     } catch (error) {
-      console.error('Failed to fetch company info:', error);
+      logger.error('Failed to fetch company info:', error);
       toast.error('ไม่สามารถดึงข้อมูลบริษัทได้: ' + extractErrorMessage(error));
     } finally {
       setIsLoading(false);

@@ -4,6 +4,7 @@
  */
 
 import api, { extractErrorMessage } from '@/core/api/api';
+import { logger } from '@/shared/utils/logger';
 import type { EmployeeGroupMaster, EmployeeGroupFormData } from '@/modules/master-data/company/types/employee-group.types';
 import { type PaginatedListResponse } from '@/shared/types/api-response.types';
 import { type TableFilters } from '@/shared/hooks/useTableFilters';
@@ -60,7 +61,7 @@ export const EmployeeGroupService = {
       const response = await api.post<EmployeeGroupMaster>('/employee-group', payload);
       return { success: true, data: response };
     } catch (error) {
-      console.error('[EmployeeGroupService] create failed:', error);
+      logger.error('[EmployeeGroupService] create failed:', error);
       return { success: false, message: extractErrorMessage(error) };
     }
   },
@@ -76,7 +77,7 @@ export const EmployeeGroupService = {
       const response = await api.patch<EmployeeGroupMaster>(`/employee-group/${id}`, payload);
       return { success: true, data: response };
     } catch (error) {
-      console.error('[EmployeeGroupService] update failed:', error);
+      logger.error('[EmployeeGroupService] update failed:', error);
       return { success: false, message: extractErrorMessage(error) };
     }
   },
@@ -87,7 +88,7 @@ export const EmployeeGroupService = {
       await api.delete(`/employee-group/${id}`);
       return true;
     } catch (error) {
-      console.error('[EmployeeGroupService] delete failed:', error);
+      logger.error('[EmployeeGroupService] delete failed:', error);
       return false;
     }
   },

@@ -4,6 +4,8 @@
  */
 
 
+import { logger } from '@/shared/utils/logger';
+
 export interface InquiryListParams {
     inquiry_no?: string;
     customer_name?: string;
@@ -28,7 +30,7 @@ export const InquiryService = {
         // สำหรับนักพัฒนา: เชื่อมต่อ API จริงได้ที่นี่
         // const response = await axios.get('/api/sales/inquiry', { params });
         // return response.data;
-        console.log('Fetching inquiries with params:', params);
+        logger.debug('Fetching inquiries with params:', params);
         
         // จำลองการ delay ของ API
         await new Promise(resolve => setTimeout(resolve, 500));

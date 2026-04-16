@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { logger } from '@/shared/utils/logger';
 import type { GenericMasterDataItem } from '@/modules/master-data/types/generic-master-data-types';
 
 /**
@@ -86,7 +87,7 @@ export function useGenericMasterDataList<T extends GenericMasterDataItem>(
             const data = await fetchData();
             setAllItems(data);
         } catch (error) {
-            console.error('Error fetching data:', error);
+            logger.error('Error fetching data:', error);
             setAllItems([]);
         } finally {
             setIsLoading(false);

@@ -14,6 +14,7 @@ import { VQFormHeader } from './VQFormHeader';
 import { VQFormLines } from './VQFormLines';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal';
+import { logger } from '@/shared/utils/logger';
 import type { RFQHeader } from '@/modules/procurement/types';
 
 interface Props {
@@ -109,7 +110,7 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
       setIsProductModalOpen(false);
       setActiveRowIndex(null); // Clear active index
     } else {
-      console.warn('⚠️ [VQFormModal] selectProduct called but activeRowIndex is null');
+      logger.warn('⚠️ [VQFormModal] selectProduct called but activeRowIndex is null');
     }
   };
 

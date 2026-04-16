@@ -1,6 +1,7 @@
 import React, { createContext, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { ConfirmationModal } from './ConfirmationModal';
+import { logger } from '@/shared/utils/logger';
 import type { ConfirmationVariant } from './ConfirmationModal';
 
 interface ConfirmationOptions {
@@ -47,7 +48,7 @@ export const ConfirmationProvider: React.FC<{ children: ReactNode }> = ({ childr
                 if (resolver) resolver.resolve(true);
                 setIsOpen(false);
             } catch (error) {
-                console.error("Async confirmation failed", error);
+                logger.error("Async confirmation failed", error);
                 // Keep modal open on error, stop loading
             } finally {
                 setIsLoading(false);

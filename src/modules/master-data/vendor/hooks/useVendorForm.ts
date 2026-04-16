@@ -427,7 +427,7 @@ export function useVendorForm({
         e.preventDefault();
         
         await rhfHandleSubmit(onSubmit as any, (invalidErrors) => {
-            console.error('Validation Errors:', invalidErrors);
+            logger.error('Validation Errors:', invalidErrors);
             toast('กรุณาตรวจสอบข้อมูลสีแดงในแบบฟอร์ม', 'error');
             
             setTimeout(() => {

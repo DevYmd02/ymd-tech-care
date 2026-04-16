@@ -13,6 +13,7 @@ import {
   mockEmployees 
 } from '@/modules/master-data/mocks/masterDataMocks';
 import { applyMockFilters } from '@/core/api/mockUtils';
+import { logger } from '@/shared/utils/logger';
 import type { FilterValue } from '@/core/api/mockUtils';
 import type { 
   EmployeeGroupListItem, 
@@ -291,7 +292,7 @@ export const setupMasterDataHandlers = (mock: MockAdapter) => {
       });
       return [200, applyMockFilters(joinedRates, (config.params || {}) as Record<string, FilterValue>)];
     } catch (error) {
-      console.error('[Mock] Error in GET /master-data/exchange-rates:', error);
+      logger.error('[Mock] Error in GET /master-data/exchange-rates:', error);
       return [500, { message: 'Internal Server Error in Mock Handler' }];
     }
   });
@@ -314,7 +315,7 @@ export const setupMasterDataHandlers = (mock: MockAdapter) => {
       else if (code === 'CNY') rate = 4.9;
       else if (code === 'THB') rate = 1;
       
-      console.log(`💎 [Mock] Exchange Rate for ${currencyIdParam}(${code}): ${rate}`);
+      logger.debug(`💎 [Mock] Exchange Rate for ${currencyIdParam}(${code}): ${rate}`);
 
       return [200, {
           rate,

@@ -19,6 +19,7 @@ import type { CustomerMaster } from '@customer/customer-master/types/customer-ty
 import type { ItemListItem } from '@/modules/master-data/inventory/types/product-types';
 import type { IEmployee } from '@/modules/master-data/company/types/employee-types';
 import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
+import { logger } from '@/shared/utils/logger';
 
 interface Props {
     isOpen: boolean;
@@ -85,8 +86,7 @@ export default function PriceListFormModal({ isOpen, onClose, editId, onSuccess 
         const targetPrice = Number(product.standard_cost || 0);
 
         // Debug diagnostic
-        console.group('🔍 Product Selection Diagnostic');
-        console.log('Selected Product:', product);
+        logger.debug('🔍 Product Selection Diagnostic', { product });
         
         // If ID is shaky, try matching by name against the loaded unitsData
         if (!targetUomId || targetUomId === '0' || targetUomId === 'undefined') {
@@ -95,15 +95,14 @@ export default function PriceListFormModal({ isOpen, onClose, editId, onSuccess 
                 (u.unit_name && u.unit_name === targetUomName)
             );
             if (matchedUnit) {
-                console.log('✅ Smart Match found UOM by Name:', matchedUnit);
+                logger.info('✅ Smart Match found UOM by Name:', matchedUnit);
                 targetUomId = String(matchedUnit.uom_id || matchedUnit.unit_id);
             } else {
-                console.warn('⚠️ No UOM match found for name:', targetUomName);
+                logger.warn('⚠️ No UOM match found for name:', targetUomName);
             }
         }
         // Smart Match Log
-        console.log('Final targetUomId:', targetUomId);
-        console.groupEnd();
+        logger.debug('Final targetUomId:', targetUomId);
 
         if (activeRowIndex !== null) {
             handleItemChange(activeRowIndex, 'itemId', String(product.item_id || product.id));

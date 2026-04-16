@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Save, FileText, Printer, Loader2 } from 'lucide-react';
+import { logger } from '@/shared/utils/logger';
 import { useForm, FormProvider, useWatch } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { WindowFormLayout } from '@ui';
@@ -295,7 +296,7 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
             vat_amount: vatAmount, 
             total_amount: totalAmount 
         };
-        console.log('Submitting Quotation:', finalData);
+        logger.debug('Submitting Quotation:', finalData);
         
         // Mock API Call
         await new Promise(r => setTimeout(r, 1000));

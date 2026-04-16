@@ -5,6 +5,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { Target, Users, Package } from 'lucide-react';
+import { logger } from '@/shared/utils/logger';
 
 // Components
 import { 
@@ -92,7 +93,7 @@ export default function SalesTargetList() {
             }
             setMonthlyTargets(items);
         } catch (error) {
-            console.error('Failed to fetch sale periods:', error);
+            logger.error('Failed to fetch sale periods:', error);
         } finally {
             setIsLoading(false);
         }
@@ -104,7 +105,7 @@ export default function SalesTargetList() {
             const response = await SaleTargetService.getList(filters as unknown as Partial<SaleTargetFilters>);
             setSaleTargets(response.items || []);
         } catch (error) {
-            console.error('Failed to fetch sale targets:', error);
+            logger.error('Failed to fetch sale targets:', error);
         } finally {
             setIsLoading(false);
         }

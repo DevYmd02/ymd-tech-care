@@ -11,6 +11,7 @@ import {
     UsersRound
 } from 'lucide-react';
 import { EmployeeGroupFormModal } from './EmployeeGroupFormModal';
+import { logger } from '@/shared/utils/logger';
 import { useEmployeeGroupList } from './hooks/useEmployeeGroupList';
 import type { EmployeeGroupListItem } from '@company/types/employee-group.types';
 import { ActiveStatusBadge } from '@ui';
@@ -105,7 +106,7 @@ export default function EmployeeGroupList() {
                 await EmployeeGroupService.delete(id);
                 refetch();
             } catch (error) {
-                console.error('Failed to delete employee group:', error);
+                logger.error('Failed to delete employee group:', error);
                 alert('ไม่สามารถลบข้อมูลได้ในขณะนี้');
             }
         }

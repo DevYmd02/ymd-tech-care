@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, type ChangeEvent, type FormEvent } fr
 import { CustomerGroupService } from '@customer/customer-group/services/customer-group.service';
 import { initialCustomerGroupFormData, type CustomerGroupFormData } from '@customer/customer-group/types/customer-group.types';
 import { toast } from 'react-hot-toast';
+import { logger } from '@/shared/utils/logger';
 import { extractErrorMessage } from '@/core/api/api';
 import { useDebounce } from '@/shared/hooks';
 
@@ -35,7 +36,7 @@ export function useCustomerGroupForm({ id, onSuccess, onClose, isOpen }: UseCust
         });
       }
     } catch (error) {
-      console.error('[useCustomerGroupForm] fetchDetail error:', error);
+      logger.error('[useCustomerGroupForm] fetchDetail error:', error);
       toast.error('ไม่สามารถดึงข้อมูลได้');
     } finally {
       setIsLoading(false);
@@ -70,7 +71,7 @@ export function useCustomerGroupForm({ id, onSuccess, onClose, isOpen }: UseCust
           setError(null);
         }
       } catch (err) {
-        console.error('Real-time validation error:', err);
+        logger.error('Real-time validation error:', err);
       }
     };
 
@@ -129,7 +130,7 @@ export function useCustomerGroupForm({ id, onSuccess, onClose, isOpen }: UseCust
         }
       }
     } catch (error) {
-      console.error('[useCustomerGroupForm] handleSubmit error:', error);
+      logger.error('[useCustomerGroupForm] handleSubmit error:', error);
       const msg = extractErrorMessage(error);
       if (msg.includes('รหัส') || msg.toLowerCase().includes('duplicate') || msg.includes('ซ้ำ')) {
         const errMsg = `รหัส "${formData.customer_group_code}" มีอยู่ในระบบแล้ว`;

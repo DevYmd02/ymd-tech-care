@@ -4,7 +4,7 @@
  * @purpose แสดง Tab-based navigation สำหรับ Master Data ต่างๆ พร้อม Card-based list และ Database Relations
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { logger } from '@/shared/utils/logger';
@@ -22,30 +22,30 @@ import { VendorService } from '@/modules/master-data/vendor/services/vendor.serv
 import { CostCenterService } from '@/modules/master-data/accounting/services/cost-center.service';
 import { ProjectService } from '@/modules/master-data/project/services/project.service';
 
-// Import Form Modals
-import { VendorFormModal } from '@/modules/master-data/vendor/pages';
-import { BranchFormModal } from '@/modules/master-data/company/pages/branch';
-import { WarehouseFormModal } from '@/modules/master-data/inventory/pages/warehouse';
-import { ItemMasterFormModal } from '@/modules/master-data/inventory/pages/item-master/ItemMasterFormModal';
-import { CostCenterFormModal } from '@/modules/master-data/accounting/pages/cost-center/CostCenterFormModal';
-import { ProjectFormModal } from '@/modules/master-data/project/pages/ProjectFormModal';
-import { UnitFormModal } from '@/modules/master-data/inventory/pages/unit/UnitFormModal';
-import { CategoryFormModal } from '@/modules/master-data/inventory/pages/category/CategoryFormModal';
+// Lazy loaded Form Modals
+const VendorFormModal = lazy(() => import('@/modules/master-data/vendor/pages').then(m => ({ default: m.VendorFormModal })));
+const BranchFormModal = lazy(() => import('@/modules/master-data/company/pages/branch').then(m => ({ default: m.BranchFormModal })));
+const WarehouseFormModal = lazy(() => import('@/modules/master-data/inventory/pages/warehouse').then(m => ({ default: m.WarehouseFormModal })));
+const ItemMasterFormModal = lazy(() => import('@/modules/master-data/inventory/pages/item-master/ItemMasterFormModal').then(m => ({ default: m.ItemMasterFormModal })));
+const CostCenterFormModal = lazy(() => import('@/modules/master-data/accounting/pages/cost-center/CostCenterFormModal').then(m => ({ default: m.CostCenterFormModal })));
+const ProjectFormModal = lazy(() => import('@/modules/master-data/project/pages/ProjectFormModal').then(m => ({ default: m.ProjectFormModal })));
+const UnitFormModal = lazy(() => import('@/modules/master-data/inventory/pages/unit/UnitFormModal').then(m => ({ default: m.UnitFormModal })));
+const CategoryFormModal = lazy(() => import('@/modules/master-data/inventory/pages/category/CategoryFormModal').then(m => ({ default: m.CategoryFormModal })));
+
+// Lazy loaded Tab components
+const VendorTab = lazy(() => import('./dashboard/tabs/VendorTab').then(m => ({ default: m.VendorTab })));
+const BranchTab = lazy(() => import('./dashboard/tabs/BranchTab').then(m => ({ default: m.BranchTab })));
+const WarehouseTab = lazy(() => import('./dashboard/tabs/WarehouseTab').then(m => ({ default: m.WarehouseTab })));
+const CostCenterTab = lazy(() => import('./dashboard/tabs/CostCenterTab').then(m => ({ default: m.CostCenterTab })));
+const ProjectTab = lazy(() => import('./dashboard/tabs/ProjectTab').then(m => ({ default: m.ProjectTab })));
+const ItemTab = lazy(() => import('./dashboard/tabs/ItemTab').then(m => ({ default: m.ItemTab })));
+const UnitTab = lazy(() => import('./dashboard/tabs/UnitTab').then(m => ({ default: m.UnitTab })));
+const CategoryTab = lazy(() => import('./dashboard/tabs/CategoryTab').then(m => ({ default: m.CategoryTab })));
 
 // Import sub-components
 import { MasterDataHeader } from './components/MasterDataHeader';
 import { MasterDataTabs } from './components/MasterDataTabs';
 import { MasterDataToolbar } from './components/MasterDataToolbar';
-
-// Import extracted tab components
-import { VendorTab } from './dashboard/tabs/VendorTab';
-import { BranchTab } from './dashboard/tabs/BranchTab';
-import { WarehouseTab } from './dashboard/tabs/WarehouseTab';
-import { CostCenterTab } from './dashboard/tabs/CostCenterTab';
-import { ProjectTab } from './dashboard/tabs/ProjectTab';
-import { ItemTab } from './dashboard/tabs/ItemTab';
-import { UnitTab } from './dashboard/tabs/UnitTab';
-import { CategoryTab } from './dashboard/tabs/CategoryTab';
 
 // Import types
 import type { VendorListItem, VendorMaster } from '@/modules/master-data/vendor/types/vendor-types';
@@ -568,7 +568,14 @@ export default function MasterDataDashboard() {
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                         <span className="ml-3 text-gray-600">กำลังโหลดข้อมูล...</span>
                     </div>
-                ) : activeTab === 'vendor' ? (
+                ) : (
+                <Suspense fallback={
+                    <div className="flex items-center justify-center py-12">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        <span className="ml-3 text-gray-600">กำลังโหลดส่วนประกอบ...</span>
+                    </div>
+                }>
+                {activeTab === 'vendor' ? (
                     <VendorTab 
                         data={paginatedData as VendorListItem[]}
                         expandedId={expandedId}
@@ -645,6 +652,8 @@ export default function MasterDataDashboard() {
                         <p>{currentTab.label} - Coming Soon</p>
                     </div>
                 )}
+                </Suspense>
+                )}
             </div>
 
             {/* Pagination Footer - Show for all tabs now */}
@@ -707,57 +716,67 @@ export default function MasterDataDashboard() {
             )}
 
             {/* Form Modals */}
-            <VendorFormModal 
-                isOpen={isModalOpen && activeTab === 'vendor'} 
-                onClose={handleModalClose} 
-                vendorId={editingId || undefined}
-                initialData={selectedVendor}
-                onSuccess={fetchData} 
-                predictedVendorId={!editingId && activeTab === 'vendor' ? `V${String((currentTab.recordCount || 0) + 1).padStart(3, '0')}` : undefined}
-            />
-            <BranchFormModal isOpen={isModalOpen && activeTab === 'branch'} onClose={handleModalClose} editId={editingId} />
-            <WarehouseFormModal isOpen={isModalOpen && activeTab === 'warehouse'} onClose={handleModalClose} editId={editingId} />
-            <ItemMasterFormModal 
-                isOpen={isModalOpen && activeTab === 'item'} 
-                onClose={handleModalClose} 
-                editId={editingId}
-                onSuccess={() => {
-                    refetchItems();
-                    handleModalClose();
-                }}
-            />
-
-            <CostCenterFormModal 
-                isOpen={isModalOpen && activeTab === 'cost-center'} 
-                onClose={handleModalClose} 
-                editId={editingId}
-                initialData={editingId ? costCenters.find(c => c.cost_center_id === editingId) : null}
-                onSuccess={fetchData}
-            />
-
-            <ProjectFormModal 
-                isOpen={isModalOpen && activeTab === 'project'} 
-                onClose={handleModalClose} 
-                editId={editingId}
-                initialData={editingId ? projects.find(p => p.project_id === editingId) : null}
-                onSuccess={fetchData}
-            />
-
-            <UnitFormModal 
-                isOpen={isModalOpen && activeTab === 'unit'} 
-                onClose={handleModalClose} 
-                editId={editingId}
-                initialData={editingId ? units.find(u => u.unit_id === editingId) : null}
-                onSuccess={fetchData}
-            />
-
-            <CategoryFormModal 
-                isOpen={isModalOpen && activeTab === 'category'} 
-                onClose={handleModalClose} 
-                editId={editingId}
-                initialData={editingId ? categories.find(c => c.category_id === editingId) : null}
-                onSuccess={fetchData}
-            />
+            <Suspense fallback={null}>
+                {isModalOpen && activeTab === 'vendor' && (
+                    <VendorFormModal 
+                        isOpen={true} 
+                        onClose={handleModalClose} 
+                        vendorId={editingId || undefined}
+                        initialData={selectedVendor}
+                        onSuccess={fetchData} 
+                        predictedVendorId={!editingId ? `V${String((currentTab.recordCount || 0) + 1).padStart(3, '0')}` : undefined}
+                    />
+                )}
+                {isModalOpen && activeTab === 'branch' && <BranchFormModal isOpen={true} onClose={handleModalClose} editId={editingId} />}
+                {isModalOpen && activeTab === 'warehouse' && <WarehouseFormModal isOpen={true} onClose={handleModalClose} editId={editingId} />}
+                {isModalOpen && activeTab === 'item' && (
+                    <ItemMasterFormModal 
+                        isOpen={true} 
+                        onClose={handleModalClose} 
+                        editId={editingId}
+                        onSuccess={() => {
+                            refetchItems();
+                            handleModalClose();
+                        }}
+                    />
+                )}
+                {isModalOpen && activeTab === 'cost-center' && (
+                    <CostCenterFormModal 
+                        isOpen={true} 
+                        onClose={handleModalClose} 
+                        editId={editingId}
+                        initialData={editingId ? costCenters.find(c => c.cost_center_id === editingId) : null}
+                        onSuccess={fetchData}
+                    />
+                )}
+                {isModalOpen && activeTab === 'project' && (
+                    <ProjectFormModal 
+                        isOpen={true} 
+                        onClose={handleModalClose} 
+                        editId={editingId}
+                        initialData={editingId ? projects.find(p => p.project_id === editingId) : null}
+                        onSuccess={fetchData}
+                    />
+                )}
+                {isModalOpen && activeTab === 'unit' && (
+                    <UnitFormModal 
+                        isOpen={true} 
+                        onClose={handleModalClose} 
+                        editId={editingId}
+                        initialData={editingId ? units.find(u => u.unit_id === editingId) : null}
+                        onSuccess={fetchData}
+                    />
+                )}
+                {isModalOpen && activeTab === 'category' && (
+                    <CategoryFormModal 
+                        isOpen={true} 
+                        onClose={handleModalClose} 
+                        editId={editingId}
+                        initialData={editingId ? categories.find(c => c.category_id === editingId) : null}
+                        onSuccess={fetchData}
+                    />
+                )}
+            </Suspense>
         </div>
     );
 }

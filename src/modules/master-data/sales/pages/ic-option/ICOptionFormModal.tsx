@@ -8,6 +8,7 @@ import { icOptionSchema, type ICOptionFormData } from './types/ic-option.types';
 import { BranchService } from '@company/services/branch.service';
 import { useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
+import { logger } from '@/shared/utils/logger';
 
 interface ICOptionFormModalProps {
     isOpen: boolean;
@@ -209,7 +210,7 @@ export default function ICOptionFormModal({ isOpen, onClose, editId, onSuccess }
             onSuccess();
         } catch (error) {
             toast.error('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
-            console.error('Submit Error:', error);
+            logger.error('Submit Error:', error);
         }
     }, [isEditMode, editId, onSuccess]);
 

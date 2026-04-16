@@ -10,6 +10,7 @@ import type { VQListItem, PRHeader } from '@/modules/procurement/types';
 import type { IReadyForPOPR, QCListItem, QCListParams } from '@/modules/procurement/schemas/qc-schemas';
 import { ModalLayout } from '@/shared/components/ui/layout';
 import { cn } from '@/shared/utils/cn';
+import { logger } from '@/shared/utils/logger';
 
 interface DocumentSourceSelectorModalProps {
     isOpen: boolean;
@@ -223,7 +224,7 @@ export const DocumentSourceSelectorModal: React.FC<DocumentSourceSelectorModalPr
 
                 return mergedResult;
             } catch (err) {
-                console.error('[DocumentSourceSelectorModal] Triple scan failed:', err);
+                logger.error('[DocumentSourceSelectorModal] Triple scan failed:', err);
                 return QCService.getReadyForPO();
             }
         },

@@ -24,6 +24,7 @@ import { useQCForm } from '../hooks/useQCForm';
 import { useConfirmation } from '@/shared/hooks';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
+import { logger } from '@/shared/utils/logger';
 
 interface QCFormModalProps {
   isOpen: boolean;
@@ -141,7 +142,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
 
       if (mappedWinnerId) setSelectedVQIds([Number(mappedWinnerId)]);
       
-      console.log('🛡️ [QCFormModal] Legitimate Hydration from initialData (Console Cleanse Mode)');
+      logger.debug('🛡️ [QCFormModal] Legitimate Hydration from initialData (Console Cleanse Mode)');
     }
   }, [qcData, initialData, mode, setValue, watch]);
 
@@ -152,15 +153,15 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
     const creatorId = actualQC?.created_by || actualInitial?.created_by;
     
     if (creatorId && !createdBy && (mode === 'view' || mode === 'edit')) {
-      console.log('👤 [QCFormModal] Attempting to fetch creator name for ID:', creatorId);
+      logger.debug('👤 [QCFormModal] Attempting to fetch creator name for ID:', creatorId);
       OrgEmployeeService.get(creatorId as number).then((response: any) => {
         const emp = response?.data || response;
         const name = emp?.employee_name || emp?.first_name || emp?.first_name_th || emp?.employee_name_th || '';
         if (name) {
-          console.log('✅ [QCFormModal] Found creator name:', name);
+          logger.debug('✅ [QCFormModal] Found creator name:', name);
           setCreatedBy(name);
         }
-      }).catch(err => console.warn('[QCFormModal] Failed to fetch creator employee name:', err));
+      }).catch(err => logger.warn('[QCFormModal] Failed to fetch creator employee name:', err));
     }
   }, [qcData, initialData, createdBy, mode]);
 
@@ -177,7 +178,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
         
         return waitingItems;
       } catch (err) {
-        console.error('❌ [QCFormModal] Failed to fetch waiting list:', err);
+        logger.error('❌ [QCFormModal] Failed to fetch waiting list:', err);
         return [];
       }
     },

@@ -4,11 +4,8 @@
  */
 
 import api from '@/core/api/api';
-import type { 
-  PriceListMaster, 
-  PriceListFormData,
-  PriceListItemFormData
-} from '../types/price-list.types';
+import type { PriceListMaster, PriceListFormData,PriceListItemFormData } from '../types/price-list.types';
+import { logger } from '@/shared/utils/logger';
 
 export const PriceListService = {
   /**
@@ -53,7 +50,7 @@ export const PriceListService = {
       }))
     };
 
-    console.log('📦 Final Sanitized Payload:', sanitized);
+    logger.debug('📦 Final Sanitized Payload:', sanitized);
     return sanitized;
   },
 
@@ -67,7 +64,7 @@ export const PriceListService = {
       return { success: true, data: response };
     } catch (error: unknown) {
       const axiosError = error as { response?: { data?: { message?: string } }; message?: string };
-      console.error('❌ Create Error:', axiosError.response?.data || axiosError.message);
+      logger.error('❌ Create Error:', axiosError.response?.data || axiosError.message);
       return { success: false, message: axiosError.response?.data?.message || 'สร้างไม่สำเร็จ' };
     }
   },
@@ -82,12 +79,12 @@ export const PriceListService = {
       if ('price_list_flag' in payload) {
           delete (payload as { price_list_flag?: string }).price_list_flag;
       }
-      console.log('📡 PATCH Payload to Backend:', payload);
+      logger.debug('📡 PATCH Payload to Backend:', payload);
       const response = await api.patch<PriceListMaster>(`/price-list/${id}`, payload);
       return { success: true, data: response };
     } catch (error: unknown) {
       const axiosError = error as { response?: { data?: { message?: string } }; message?: string };
-      console.error('❌ Update Error:', axiosError.response?.data || axiosError.message);
+      logger.error('❌ Update Error:', axiosError.response?.data || axiosError.message);
       return { success: false, message: axiosError.response?.data?.message || 'บันทึกไม่สำเร็จ' };
     }
   },

@@ -331,7 +331,7 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
                 }));
 
                 // 🔍 Debug Audit Log for defaults
-                console.log('[RFQSendConfirmModal] fetch details:', {
+                logger.debug('[RFQSendConfirmModal] fetch details:', {
                     rfq_id: rfq.rfq_id,
                     rfq_status: response.status,
                     isDraftRFQ: String(response.status || '').toUpperCase() === 'DRAFT',

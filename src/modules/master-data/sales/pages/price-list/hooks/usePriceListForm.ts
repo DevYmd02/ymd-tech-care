@@ -17,6 +17,7 @@ import { ItemMasterService } from '@inventory/services/item-master.service';
 import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
 import type { IEmployee } from '@/modules/master-data/company/types/employee-types';
 import type { FieldErrors } from 'react-hook-form';
+import { logger } from '@/shared/utils/logger';
 
 const priceListItemSchema = z.object({
     priceListItemId: z.string().optional(),
@@ -128,7 +129,7 @@ export function usePriceListForm(editId: string | null, onSuccess?: () => void, 
         if (!isOpen) return;
 
         if (editId) {
-            console.log('🔄 Fetching Price List for Edit:', editId);
+            logger.debug('🔄 Fetching Price List for Edit:', editId);
             const fetchDetail = async () => {
                 try {
                     // Step 1: Fetch basic Price List detail and all employees for lookups
@@ -137,7 +138,7 @@ export function usePriceListForm(editId: string | null, onSuccess?: () => void, 
                         EmployeeService.getAll()
                     ]);
                     
-                    console.log('✅ Base Price List fetched:', data);
+                    logger.info('✅ Base Price List fetched:', data);
 
                     // Step 2: Hydrate Customer information
                     const customerIdNum = Number(data.customer_id || data.customer_code || 0);
@@ -216,7 +217,7 @@ export function usePriceListForm(editId: string | null, onSuccess?: () => void, 
                         items: hydratedItems,
                     });
                 } catch (error) {
-                    console.error('Failed to fetch price list detail:', error);
+                    logger.error('Failed to fetch price list detail:', error);
                     toast.error('ไม่สามารถดึงข้อมูลได้');
                 }
             };
@@ -253,7 +254,7 @@ export function usePriceListForm(editId: string | null, onSuccess?: () => void, 
                 })
             } satisfies PriceListFormData;
 
-            console.log('📝 Form Submission Data:', submissionData);
+            logger.debug('📝 Form Submission Data:', submissionData);
 
             const result = editId 
                 ? await PriceListService.update(editId, submissionData)
@@ -266,13 +267,13 @@ export function usePriceListForm(editId: string | null, onSuccess?: () => void, 
                 toast.error(result.message || 'บันทึกไม่สำเร็จ');
             }
         } catch (error) {
-            console.error('Submit error:', error);
+            logger.error('Submit error:', error);
             toast.error('เกิดข้อผิดพลาดในการบันทึก');
         }
     };
 
     const onInvalid = (errors: FieldErrors<FormValues>) => {
-        console.warn('Form Validation Errors:', errors);
+        logger.warn('Form Validation Errors:', errors);
         const firstErrorField = Object.keys(errors)[0] as keyof FormValues;
         if (firstErrorField) {
             const error = errors[firstErrorField] as { message?: string };

@@ -5,6 +5,7 @@ import { styles } from '@/shared/constants/styles';
 import type { TaxGroup } from '@/modules/master-data/tax/types/tax-types';
 import { TaxGroupService } from '@/modules/master-data/tax/services/tax-group.service';
 import { DialogFormLayout } from '@ui';
+import { logger } from '@/shared/utils/logger';
 
 interface TaxGroupFormModalProps {
     isOpen: boolean;
@@ -75,7 +76,7 @@ export function TaxGroupFormModal({ isOpen, onClose, editId, initialData, onSucc
             onSuccess();
             onClose();
         } catch (error) {
-            console.error(error);
+            logger.error('Failed to save tax group:', error);
             alert('An error occurred');
         } finally {
             setIsLoading(false);

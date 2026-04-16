@@ -6,6 +6,7 @@
 
 import { useState, useEffect } from 'react';
 import { Save, ShoppingCart, Printer, Loader2 } from 'lucide-react';
+import { logger } from '@/shared/utils/logger';
 import { useForm, FormProvider, useWatch } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { WindowFormLayout } from '@ui';
@@ -308,7 +309,7 @@ export function SalesOrderFormModal({
             vat_amount: vatAmount,
             total_amount: totalAmount,
         };
-        console.log('Submitting Sales Order:', finalData);
+        logger.debug('Submitting Sales Order:', finalData);
         await new Promise((r) => setTimeout(r, 1000));
         setIsSubmitting(false);
         onSuccess?.();

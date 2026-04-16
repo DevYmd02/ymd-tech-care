@@ -290,7 +290,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                 };
             });
             
-            console.log(`🐞 [DEBUG] Matched ${matchedLines.length} lines for RFQ`, matchedLines);
+            logger.debug(`🐞 [DEBUG] Matched ${matchedLines.length} lines for RFQ`, matchedLines);
             
             // 🎯 Update using setValue for better reactivity across components
             setValue('rfqLines', matchedLines, { shouldDirty: true, shouldValidate: true });
