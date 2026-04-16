@@ -262,22 +262,7 @@ export default function ICOptionFormModal({ isOpen, onClose, editId, onSuccess }
             width="max-w-6xl"
         >
             <div className="p-6 bg-gray-50/30 dark:bg-gray-900/10">
-                {/* Error Summary Banner */}
-                {Object.keys(errors).length > 0 && (
-                    <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
-                        <AlertCircle className="text-red-600 dark:text-red-400 shrink-0 mt-0.5" size={20} />
-                        <div>
-                            <h4 className="text-sm font-bold text-red-800 dark:text-red-300">พบข้อผิดพลาดในการตรวจสอบข้อมูล:</h4>
-                            <ul className="mt-1 text-xs text-red-700 dark:text-red-400 list-disc list-inside space-y-0.5">
-                                {Object.entries(errors).map(([key, error]) => (
-                                    <li key={key}>
-                                        <span className="font-semibold uppercase opacity-70">[{key}]:</span> {String(error?.message || 'ข้อมูลไม่ถูกต้อง')}
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    </div>
-                )}
+
 
                 <form id="icOptionForm" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                     
@@ -301,7 +286,7 @@ export default function ICOptionFormModal({ isOpen, onClose, editId, onSuccess }
                                         } ${errors.branch_id ? 'border-red-500' : 'border-gray-300'}`}
                                         {...(!isEditMode ? register('branch_id') : {})}
                                     >
-                                        <option value="">-- เลือกสาขา --</option>
+                                        <option value={0}>-- เลือกสาขา --</option>
                                         {branchesData?.items?.map((branch, index) => (
                                             <option key={branch.branch_id || branch.id || `br-${index}`} value={String(branch.branch_id)}>
                                                 {branch.branch_code} - {branch.branch_name}
