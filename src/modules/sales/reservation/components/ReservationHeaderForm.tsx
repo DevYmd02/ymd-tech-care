@@ -283,22 +283,6 @@ export function ReservationHeaderForm({
                     </select>
                 </div>
 
-                {/* Settings Row */}
-                <div className="space-y-1">
-                    <label className={labelClass}>สกุลเงิน (currency_code) <span className="text-red-500">*</span></label>
-                    <select 
-                        {...register('currency_code')}
-                        disabled={isLocked}
-                        className={selectClass}
-                    >
-                        {currencies.map(c => (
-                            <option key={c.currency_id} value={c.currency_code}>
-                                {c.currency_code}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-
                 <div className="space-y-1">
                     <label className={labelClass}>กลุ่มภาษี (tax_group_id)</label>
                     <select 
@@ -315,7 +299,7 @@ export function ReservationHeaderForm({
                     </select>
                 </div>
 
-                <div className="lg:col-span-2 space-y-1">
+                <div className="lg:col-span-3 space-y-1">
                     <label className={labelClass}>หมายเหตุ (remarks)</label>
                     <textarea 
                         {...register('remarks')}

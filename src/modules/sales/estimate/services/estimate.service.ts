@@ -22,11 +22,16 @@ export interface EstimateHeader {
     status: 'DRAFT' | 'SUBMITTED';
 }
 
+export interface EstimateListResponse {
+    data: EstimateHeader[];
+    total: number;
+}
+
 export const EstimateService = {
     /**
      * ดึงรายการ Estimate
      */
-    getList: async (_params: EstimateListParams = {}) => {
+    getList: async (_params: EstimateListParams = {}): Promise<EstimateListResponse> => {
         // สำหรับนักพัฒนา: เชื่อมต่อ API จริงได้ที่นี่
         logger.debug('Fetching estimates with params:', _params);
         

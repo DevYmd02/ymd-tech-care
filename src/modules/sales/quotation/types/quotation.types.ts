@@ -23,9 +23,9 @@ export interface QuotationFormData {
     sq_id?: string;       // UUID (PK)
     sq_no: string;        // Varchar(30)
     sq_date: string;      // Date
-    lead_id?: string;     // UUID (FK)
+    lead_id?: string | null;     // UUID (FK)
     customer_id: string;  // UUID (FK)
-    branch_id?: string;   // UUID (FK)
+    branch_id?: string | null;   // UUID (FK)
     currency_code: string; // Varchar(3)
     isMulticurrency?: boolean;
     base_currency_code?: string;
@@ -42,11 +42,11 @@ export interface QuotationFormData {
     remarks?: string;       // Text
     payment_term_days: number; // Int
     onhold: 'Y' | 'N';      // Char(1)
-    tax_group_id?: string;  // UUID (FK)
-    item_id?: string;       // UUID (FK) - Item/Service Class
-    emp_area_id?: string;   // UUID (FK) - Salesperson
-    emp_dept_id?: string;   // UUID (FK) - Department
-    job_id?: string;        // UUID (FK) - Job
+    tax_group_id?: string | null;  // UUID (FK)
+    item_id?: string | null;       // UUID (FK) - Item/Service Class
+    emp_area_id?: string | null;   // UUID (FK) - Salesperson
+    emp_dept_id?: string | null;   // UUID (FK) - Department
+    job_id?: string | null;        // UUID (FK) - Job
     sq_status?: string;     // Varchar(255)
     status_remark?: string; // Varchar(255)
     ship_date?: string;     // Datetime(8)
