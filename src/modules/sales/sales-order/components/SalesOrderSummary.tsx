@@ -3,7 +3,7 @@
  * @description สรุปยอดเงินคำสั่งขาย (sub_total, discount_amount, vat_amount, total_amount)
  */
 
-import { Calculator } from 'lucide-react';
+import { Calculator, AlertCircle } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 
 interface SalesOrderSummaryProps {
@@ -29,6 +29,8 @@ export function SalesOrderSummary({
     lineCount,
     onDiscountChange,
 }: SalesOrderSummaryProps) {
+    const isNegative = totalAmount < 0;
+
     return (
         <section className="flex flex-col lg:flex-row justify-between gap-8">
             {/* Left side */}
@@ -96,21 +98,28 @@ export function SalesOrderSummary({
                 </div>
 
                 <div className="pt-3 border-t-2 border-white dark:border-gray-800 flex justify-between items-center">
-                    <span className="text-lg font-bold text-emerald-700 dark:text-emerald-400 text-nowrap">
+                    <span className={`text-lg font-bold ${isNegative ? 'text-red-600 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'} text-nowrap`}>
                         มูลค่าสุทธิ:
                     </span>
                     <div className="text-right">
-                        <span className="text-2xl font-black text-emerald-700 dark:text-emerald-400">
+                        <span className={`text-2xl font-black ${isNegative ? 'text-red-600 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
                             {totalAmount.toLocaleString(undefined, {
                                 minimumFractionDigits: 2,
                                 maximumFractionDigits: 2,
                             })}
                         </span>
-                        <span className="ml-2 text-sm font-bold text-emerald-600/60">
+                        <span className={`ml-2 text-sm font-bold ${isNegative ? 'text-red-500/60' : 'text-emerald-600/60'}`}>
                             {currencySymbol}
                         </span>
                     </div>
                 </div>
+
+                {isNegative && (
+                    <div className="flex items-center gap-1.5 justify-end text-[11px] font-bold text-red-500 animate-pulse">
+                        <AlertCircle size={12} />
+                        <span>ยอดรวมติดลบ กรุณาตรวจสอบส่วนลด</span>
+                    </div>
+                )}
 
                 <div className="pt-4 text-[10px] text-gray-300 dark:text-gray-600 text-right font-mono uppercase">
                     total_amount field value

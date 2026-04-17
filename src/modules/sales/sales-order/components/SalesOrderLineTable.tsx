@@ -3,7 +3,9 @@
  * @description ตารางรายการสินค้าในคำสั่งขาย (sale_order_line D10) - รุ่นอัปเกรด High-Density & Sticky
  */
 
-import { Plus, Trash2, ShoppingBag, Search } from 'lucide-react';
+import { Plus, Trash2, ShoppingBag, Search, AlertCircle } from 'lucide-react';
+import { useFormContext } from 'react-hook-form';
+import type { SalesOrderLineValues, SalesOrderFormValues } from '../schemas/sales-order.schemas';
 import type { SalesOrderLineData } from '../types/sales-order.types';
 import type { UnitListItem, WarehouseListItem } from '@/modules/master-data/types/master-data-types';
 import type { Location } from '@/modules/master-data/inventory/types/inventory-master.types';
@@ -31,7 +33,18 @@ export function SalesOrderLineTable({
     locations = [],
     readOnly = false,
 }: SalesOrderLineTableProps) {
+    const { formState: { errors } } = useFormContext<SalesOrderFormValues>();
     const isLocked = readOnly;
+
+    const getLineError = (index: number) => {
+        if (!errors.lines || !Array.isArray(errors.lines)) return undefined;
+        return errors.lines[index];
+    };
+
+    const hasLineFieldError = (index: number, fieldName: keyof SalesOrderLineValues) => {
+        const lineError = getLineError(index);
+        return !!(lineError as Record<string, unknown> | undefined)?.[fieldName];
+    };
     
     // Aesthetic classes matching Reservation but themed Emerald
     const compactInputClass =
@@ -266,8 +279,14 @@ export function SalesOrderLineTable({
 
                                         {/* Line Total */}
                                         <td className="px-2 py-2">
-                                            <div className="h-8 flex items-center justify-end px-3 font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-gray-900 rounded border border-emerald-200 dark:border-emerald-700 shadow-inner">
-                                                {(line.line_total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            <div className={`h-8 flex flex-col items-end justify-center px-3 font-bold bg-white dark:bg-gray-900 rounded border shadow-inner ${line.line_total < 0 ? 'text-red-500 border-red-200 dark:border-red-800' : 'text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-700'}`}>
+                                                <span>{(line.line_total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                {hasLineFieldError(index, 'line_total') && (
+                                                    <div className="flex items-center gap-0.5 text-[8px] font-medium text-red-500 mt-[-2px]">
+                                                        <AlertCircle size={8} />
+                                                        <span>ส่วนลดเกิน</span>
+                                                    </div>
+                                                )}
                                             </div>
                                         </td>
 

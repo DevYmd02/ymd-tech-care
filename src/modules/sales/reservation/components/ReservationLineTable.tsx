@@ -1,4 +1,6 @@
-import { Plus, Trash2, Package, Search } from 'lucide-react';
+import { Plus, Trash2, Package, Search, AlertCircle } from 'lucide-react';
+import { useFormContext } from 'react-hook-form';
+import type { ReservationLineValues, ReservationFormValues } from '../schemas/reservation-schemas';
 import type { ReservationLineData } from '../types/reservation.types';
 import type { UnitListItem, WarehouseListItem } from '@/modules/master-data/types/master-data-types';
 import type { Location } from '@/modules/master-data/inventory/types/inventory-master.types';
@@ -28,7 +30,19 @@ export function ReservationLineTable({
     locations = [],
     readOnly = false
 }: ReservationLineTableProps) {
+    const { formState: { errors } } = useFormContext<ReservationFormValues>();
     const isLocked = readOnly;
+
+    const getLineError = (index: number) => {
+        if (!errors.lines || !Array.isArray(errors.lines)) return undefined;
+        return errors.lines[index];
+    };
+
+    const hasLineFieldError = (index: number, fieldName: keyof ReservationLineValues) => {
+        const lineError = getLineError(index);
+        return !!(lineError as Record<string, unknown> | undefined)?.[fieldName];
+    };
+
     const compactInputClass = "h-8 w-full px-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-900 dark:text-white transition-all disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm";
     const headerThClass = "px-3 py-3 font-bold uppercase text-xs tracking-tighter border-b border-gray-200 dark:border-gray-700 whitespace-nowrap";
     
@@ -275,8 +289,14 @@ export function ReservationLineTable({
                                     </td>
                                     
                                     <td className="px-2 py-2">
-                                        <div className="h-8 flex items-center justify-end px-3 font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-gray-900 rounded border border-emerald-200 dark:border-emerald-700 shadow-inner">
-                                            {(line.line_total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        <div className={`h-8 flex flex-col items-end justify-center px-3 font-bold bg-white dark:bg-gray-900 rounded border shadow-inner ${line.line_total < 0 ? 'text-red-500 border-red-200 dark:border-red-800' : 'text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-700'}`}>
+                                            <span>{(line.line_total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                            {hasLineFieldError(index, 'line_total') && (
+                                                <div className="flex items-center gap-0.5 text-[8px] font-medium text-red-500 mt-[-2px]">
+                                                    <AlertCircle size={8} />
+                                                    <span>ส่วนลดเกิน</span>
+                                                </div>
+                                            )}
                                         </div>
                                     </td>
 
