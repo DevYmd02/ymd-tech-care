@@ -123,12 +123,12 @@ export function QuotationHeaderForm({
                 </div>
 
                 <div className="space-y-1">
-                    <label className={labelClass}>On Hold (onhold)</label>
+                    <label className={labelClass}>&nbsp;</label>
                     <div className="flex items-center h-9">
                         <StatusCheckbox 
                             name="onhold"
                             control={control}
-                            label={formData.onhold === 'Y' ? 'ระงับ (Hold)' : 'ปกติ (Active)'}
+                            label="ON HOLD"
                             disabled={isLocked}
                         />
                     </div>
