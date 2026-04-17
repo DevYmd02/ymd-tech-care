@@ -70,6 +70,7 @@ export function SalesOrderSummary({
                             }
                             value={discountInput ?? ''}
                             onChange={(e) => onDiscountChange(e.target.value)}
+                            maxLength={15}
                             className={`${styles.input} h-9 py-0 text-right bg-white border-emerald-200 focus:border-emerald-500 font-semibold text-emerald-600`}
                         />
                     </div>
@@ -101,8 +102,8 @@ export function SalesOrderSummary({
                     <span className={`text-lg font-bold ${isNegative ? 'text-red-600 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'} text-nowrap`}>
                         มูลค่าสุทธิ:
                     </span>
-                    <div className="text-right">
-                        <span className={`text-2xl font-black ${isNegative ? 'text-red-600 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
+                    <div className="text-right overflow-hidden max-w-[250px]">
+                        <span className={`text-2xl font-black truncate block ${isNegative ? 'text-red-600 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
                             {totalAmount.toLocaleString(undefined, {
                                 minimumFractionDigits: 2,
                                 maximumFractionDigits: 2,

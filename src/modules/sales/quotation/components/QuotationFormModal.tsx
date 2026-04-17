@@ -194,14 +194,14 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
                             <div className="p-6">
                                 <QuotationSummary 
                                     subTotal={formData.sub_total || 0}
-                                    discountInput={formData.discount_input}
+                                    discountInput={formData.discount_expression}
                                     discountAmount={formData.discount_amount || 0}
                                     taxRate={taxRate}
                                     vatAmount={formData.vat_amount || 0}
                                     totalAmount={formData.total_amount || 0}
                                     currencySymbol={formData.isMulticurrency ? (formData.base_currency_code || 'บาท') : 'บาท'}
                                     lineCount={(formData.lines || []).length}
-                                    onDiscountChange={(val) => setValue('discount_input', val, { shouldDirty: true })}
+                                    onDiscountChange={(val) => setValue('discount_expression', val, { shouldDirty: true })}
                                 />
                             </div>
                         </div>

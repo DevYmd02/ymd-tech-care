@@ -140,8 +140,8 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Par
     const watchedLines = useWatch({ control, name: 'lines' });
     const lines = useMemo(() => watchedLines || [], [watchedLines]);
     
-    const watchedDiscountInput = useWatch({ control, name: 'discount_input' });
-    const discountInput = useMemo(() => watchedDiscountInput || '', [watchedDiscountInput]);
+    const watchedDiscountExpression = useWatch({ control, name: 'discount_expression' });
+    const discountExpression = useMemo(() => watchedDiscountExpression || '', [watchedDiscountExpression]);
     
     const taxCodeId = useWatch({ control, name: 'tax_code_id' });
 
@@ -155,11 +155,11 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Par
 
         // Header Discount
         let calculatedDiscount = 0;
-        if (discountInput.endsWith('%')) {
-            const percent = parseFloat(discountInput.replace('%', '')) || 0;
+        if (discountExpression.endsWith('%')) {
+            const percent = parseFloat(discountExpression.replace('%', '')) || 0;
             calculatedDiscount = calculatedSubTotal * (percent / 100);
         } else {
-            calculatedDiscount = parseFloat(discountInput) || 0;
+            calculatedDiscount = parseFloat(discountExpression) || 0;
         }
         
         if (getValues('discount_amount') !== calculatedDiscount) {
@@ -181,7 +181,7 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Par
             setValue('total_amount', totalAmountValue);
         }
 
-    }, [lines, discountInput, taxCodeId, taxCodes, setValue, getValues]);
+    }, [lines, discountExpression, taxCodeId, taxCodes, setValue, getValues]);
 
     // --------------------------------------------------------
     // Tax Propagation Logic
@@ -206,13 +206,13 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Par
 
     const handleAddLine = useCallback(() => {
         const newLine: QuotationLineValues = { 
-            item_id: '', 
+            item_id: 0, 
             item_code: '', 
             item_name: '', 
             qty: 0, 
-            uom_id: 'PCS', 
+            uom_id: 0, 
             unit_price: 0, 
-            line_discount_input: '',
+            discount_expression: '',
             line_discount: 0, 
             line_total: 0, 
             tax_code_id: taxCodeId || undefined,
@@ -235,11 +235,11 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Par
         const updatedLine = { ...newLines[index], [field]: value };
         
         // Recalculate Line Total if dependent fields change
-        if (field === 'qty' || field === 'unit_price' || field === 'line_discount_input') {
+        if (field === 'qty' || field === 'unit_price' || field === 'discount_expression') {
             const qty = Number(field === 'qty' ? value : updatedLine.qty) || 0;
             const price = Number(field === 'unit_price' ? value : updatedLine.unit_price) || 0;
             
-            const ldInput = (field === 'line_discount_input' ? (value as string) : updatedLine.line_discount_input) || '';
+            const ldInput = (field === 'discount_expression' ? (value as string) : updatedLine.discount_expression) || '';
             let calculatedLD = 0;
             if (ldInput.endsWith('%')) {
                 const percent = parseFloat(ldInput.replace('%', '')) || 0;
@@ -291,7 +291,7 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Par
                 // Re-calc line discount and total
                 const qty = Number(updatedLine.qty) || 0;
                 const price = resolvedPrice.unitPrice;
-                const ldInput = updatedLine.line_discount_input || '';
+                const ldInput = updatedLine.discount_expression || '';
                 let calculatedLD = 0;
                 if (ldInput.endsWith('%')) {
                     const percent = parseFloat(ldInput.replace('%', '')) || 0;
@@ -316,12 +316,12 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Par
     }, [getValues, setValue]);
 
     const handleSelectCustomer = useCallback((customer: CustomerMaster) => {
-        setValue('customer_id', String(customer.customer_id || customer.id || ''));
+        setValue('customer_id', Number(customer.customer_id || customer.id || 0));
         setIsCustomerSearchOpen(false);
     }, [setValue]);
 
     const handleSelectLead = useCallback((estimate: EstimateHeader) => {
-        setValue('lead_id', String(estimate.estimate_no || estimate.id || ''));
+        setValue('lead_id', estimate.estimate_no || estimate.id || '');
         setIsLeadSearchOpen(false);
     }, [setValue]);
 
@@ -333,7 +333,7 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Par
             const newLines = [...currentLines];
             const line = newLines[activeLineIndex];
             
-            line.item_id = String(product.item_id || product.id || '');
+            line.item_id = Number(product.item_id || product.id || 0);
             line.item_code = product.item_code || '';
             line.item_name = product.item_name || '';
             
@@ -345,10 +345,10 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Par
                 (productUomName && (u.unit_name === productUomName || u.uom_name === productUomName))
             );
 
-            line.uom_id = foundUom ? String(foundUom.id || foundUom.unit_id) : String(productUomId || productUomName || 'PCS');
+            line.uom_id = foundUom ? Number(foundUom.id || foundUom.unit_id) : Number(productUomId || 0);
             line.unit_price = Number(product.standard_cost || 0);
             line.qty = 1; 
-            line.line_discount_input = '';
+            line.discount_expression = '';
             line.line_discount = 0;
             line.line_total = line.unit_price; 
             line.price_source = undefined;

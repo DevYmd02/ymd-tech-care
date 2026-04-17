@@ -52,8 +52,12 @@ export function QuotationHeaderForm({
     const getErrorClass = (fieldName: keyof QuotationFormValues) => 
         errors[fieldName] ? "border-red-500 focus:ring-red-500 ring-2 ring-red-500/50" : "";
 
-    // Find selected customer name for display
-    const selectedCustomer = customers.find(c => String(c.customer_id || c.id) === String(formData.customer_id));
+    // Find selected customer name for display (Direct numeric comparison preferred)
+    const currentCustomerId = Number(formData.customer_id || 0);
+    const selectedCustomer = currentCustomerId > 0 
+        ? customers.find(c => Number(c.customer_id || c.id) === currentCustomerId)
+        : undefined;
+
     const customerDisplay = selectedCustomer 
         ? `${selectedCustomer.customer_code || selectedCustomer.code || ''} - ${selectedCustomer.customer_name_th || selectedCustomer.customer_name || selectedCustomer.name_th || ''}` 
         : '';
@@ -160,7 +164,9 @@ export function QuotationHeaderForm({
                 <div className="space-y-1">
                     <label className={labelClass}>สาขา (branch_id) <span className="text-red-500">*</span></label>
                     <select
-                        {...register('branch_id')}
+                        {...register('branch_id', {
+                            setValueAs: (v) => (v === '' ? null : Number(v)),
+                        })}
                         disabled={isLocked}
                         className={`${selectClass} ${getErrorClass('branch_id')}`}
                     >
@@ -221,7 +227,9 @@ export function QuotationHeaderForm({
                 <div className="space-y-1">
                     <label className={labelClass}>ประเภทสินค้า (item_id)</label>
                     <select 
-                        {...register('item_id')}
+                        {...register('item_id', {
+                            setValueAs: (v) => (v === '' ? null : Number(v)),
+                        })}
                         disabled={isLocked}
                         className={`${selectClass} ${getErrorClass('item_id')}`}
                     >
@@ -258,7 +266,9 @@ export function QuotationHeaderForm({
                 <div className="space-y-1">
                     <label className={labelClass}>แผนก (emp_dept_id)</label>
                     <select 
-                        {...register('emp_dept_id')}
+                        {...register('emp_dept_id', {
+                            setValueAs: (v) => (v === '' ? null : Number(v)),
+                        })}
                         disabled={isLocked}
                         className={`${selectClass} ${getErrorClass('emp_dept_id')}`}
                     >
@@ -276,20 +286,22 @@ export function QuotationHeaderForm({
 
                 {/* Row 5 */}
                 <div className="space-y-1">
-                    <label className={labelClass}>Job (job_id)</label>
+                    <label className={labelClass}>Job/Project (project_id)</label>
                     <select 
-                        {...register('job_id')}
+                        {...register('project_id', {
+                            setValueAs: (v) => (v === '' ? null : Number(v)),
+                        })}
                         disabled={isLocked}
-                        className={`${selectClass} ${getErrorClass('job_id')}`}
+                        className={`${selectClass} ${getErrorClass('project_id')}`}
                     >
-                        <option value="">-- เลือกงาน --</option>
+                        <option value="">-- เลือกโครงการ --</option>
                         {projects.map(proj => (
                             <option key={proj.project_id} value={String(proj.project_id || '')}>
                                 {proj.project_name}
                             </option>
                         ))}
                     </select>
-                    {errors.job_id && <span className="text-[10px] text-red-500 font-medium whitespace-nowrap">ข้อมูลงานไม่ถูกต้อง</span>}
+                    {errors.project_id && <span className="text-[10px] text-red-500 font-medium whitespace-nowrap">ข้อมูลโครงการไม่ถูกต้อง</span>}
                 </div>
 
                 <div className="lg:col-span-3 space-y-1">

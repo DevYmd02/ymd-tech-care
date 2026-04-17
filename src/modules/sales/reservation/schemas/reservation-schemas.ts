@@ -18,7 +18,7 @@ export const ReservationLineSchema = z.object({
     line_discount_input: z.string().optional(),
     line_discount: z.coerce.number().default(0),
     reserve_policy: z.enum(['AUTO', 'MANUAL']).default('AUTO'),
-    line_total: z.coerce.number().min(0, 'ยอดรวมต้องไม่ติดลบ (ตรวจสอบส่วนลด)').default(0),
+    line_total: z.coerce.number().min(0, 'ยอดรวมต้องไม่ติดลบ (ตรวจสอบส่วนลด)').max(9999999999999, 'ค่าที่ระบุมีจำนวนมากเกินไป').default(0),
     tax_code_id: z.coerce.number().optional(),
     note: z.string().optional(),
 });
@@ -48,7 +48,7 @@ export const ReservationFormSchema = z.object({
     discount_input: z.string().optional(),
     discount_amount: z.coerce.number().default(0),
     vat_amount: z.coerce.number().default(0),
-    total_amount: z.coerce.number().min(0, 'ยอดรวมต้องไม่ติดลบ (ตรวจสอบส่วนลด)').default(0),
+    total_amount: z.coerce.number().min(0, 'ยอดรวมต้องไม่ติดลบ (ตรวจสอบส่วนลด)').max(9999999999999, 'ค่าที่ระบุมีจำนวนมากเกินไป').default(0),
     onhold: z.enum(['Y', 'N']).default('N'),
     tax_code_id: z.coerce.number().nullable().optional(),
     item_id: z.string().or(z.literal('')).nullable().optional().transform(v => v === '' ? null : v),

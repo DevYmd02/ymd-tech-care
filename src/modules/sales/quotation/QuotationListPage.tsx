@@ -10,6 +10,8 @@ import { createColumnHelper } from '@tanstack/react-table';
 import type { QuotationHeader } from '@sales/quotation/services/quotation.service';
 import { QuotationFormModal } from '@sales/quotation/components/QuotationFormModal';
 import { useQuotationList } from '@sales/quotation/hooks/useQuotation';
+import { useQuery } from '@tanstack/react-query';
+import { CustomerService } from '@/modules/master-data/customer/customer-master/services/customer.service';
 
 // ====================================================================================
 // CONSTANTS
@@ -66,6 +68,21 @@ export default function QuotationListPage() {
 
     const { data: apiData, isLoading, refetch } = useQuotationList(queryParams);
 
+    // 🏷️ Fetch Customers for Name Lookup
+    const { data: customerResponse } = useQuery({
+        queryKey: ['master-customers-lookup'],
+        queryFn: () => CustomerService.getList({ limit: 1000 }),
+        staleTime: 30 * 60 * 1000,
+    });
+
+    const customerMap = useMemo(() => {
+        const map = new Map<string | number, string>();
+        (customerResponse?.data || []).forEach(c => {
+            map.set(String(c.customer_id), c.customer_name_th || c.customer_name || '');
+        });
+        return map;
+    }, [customerResponse]);
+
     const displayData = useMemo(() => apiData?.data || [], [apiData]);
 
     const handleCreate = () => {
@@ -92,7 +109,7 @@ export default function QuotationListPage() {
             header: 'เลขที่ใบเสนอราคา',
             cell: (info) => (
                 <span 
-                    onClick={() => handleEdit(info.row.original.sq_no)}
+                    onClick={() => handleEdit(String(info.row.original.sq_id || info.row.original.id))}
                     className="text-blue-600 font-semibold cursor-pointer hover:underline"
                 >
                     {info.getValue()}
@@ -102,17 +119,28 @@ export default function QuotationListPage() {
         }),
         columnHelper.accessor('date', {
             header: 'วันที่',
-            cell: (info) => info.getValue(),
+            cell: (info) => {
+                const val = info.getValue();
+                if (!val) return '-';
+                const d = new Date(val);
+                return isNaN(d.getTime()) ? val : d.toLocaleDateString('en-GB');
+            },
             size: 120,
         }),
         columnHelper.accessor('customer_name', {
             header: 'ลูกค้า',
-            cell: (info) => (
-                <div className="flex flex-col">
-                    <span className="font-medium text-gray-900 dark:text-gray-100">{info.getValue()}</span>
-                    <span className="text-xs text-gray-500">{info.row.original.customer_code}</span>
-                </div>
-            ),
+            cell: (info) => {
+                const customerId = info.row.original.customer_id;
+                const nameFromLookup = customerMap.get(String(customerId));
+                const displayName = nameFromLookup || info.getValue() || 'ไม่ระบุ';
+
+                return (
+                    <div className="flex flex-col">
+                        <span className="font-medium text-gray-900 dark:text-gray-100">{displayName}</span>
+                        <span className="text-xs text-gray-500">{info.row.original.customer_code}</span>
+                    </div>
+                );
+            },
             size: 200,
         }),
         columnHelper.accessor('total_amount', {
@@ -120,14 +148,19 @@ export default function QuotationListPage() {
             cell: (info) => (
                 <div className="flex items-center gap-1 text-emerald-600 font-semibold">
                     <span>{info.row.original.currency === 'USD' ? '$' : '฿'}</span>
-                    <span>{info.getValue().toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    <span>{(Number(info.getValue()) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                 </div>
             ),
             size: 150,
         }),
         columnHelper.accessor('expiry_date', {
             header: 'หมดอายุ',
-            cell: (info) => info.getValue(),
+            cell: (info) => {
+                const val = info.getValue();
+                if (!val) return '-';
+                const d = new Date(val);
+                return isNaN(d.getTime()) ? val : d.toLocaleDateString('en-GB');
+            },
             size: 120,
         }),
         columnHelper.accessor('status', {
@@ -140,7 +173,7 @@ export default function QuotationListPage() {
             header: 'การจัดการ',
             cell: (info) => {
                 const status = info.row.original.status;
-                const isDraft = status === 'Draft';
+                const isDraft = status === 'Draft' || status === 'DRAFT';
                 
                 return (
                     <div className="flex items-center gap-3">
@@ -154,7 +187,7 @@ export default function QuotationListPage() {
                         {isDraft && (
                             <>
                                 <button 
-                                    onClick={() => handleEdit(info.row.original.sq_no)}
+                                    onClick={() => handleEdit(String(info.row.original.sq_id || info.row.original.id))}
                                     className="text-orange-500 hover:text-orange-700 transition-colors"
                                     title="แก้ไข"
                                 >
@@ -173,7 +206,7 @@ export default function QuotationListPage() {
             },
             size: 150,
         }),
-    ], [columnHelper]);
+    ], [columnHelper, customerMap]);
 
     return (
         <PageListLayout

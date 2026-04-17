@@ -135,6 +135,7 @@ export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChang
                                             if (onQtyBlur && line.item_id) onQtyBlur(index);
                                         }}
                                         placeholder="0"
+                                        maxLength={12}
                                         className={`${compactInputClass} text-right ${getFieldErrorClass(index, 'qty')}`}
                                     />
                                     {hasLineFieldError(index, 'qty') && <span className="text-[10px] text-red-500 block text-right mt-0.5">ขั้นต่ำ 0.001</span>}
@@ -166,6 +167,7 @@ export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChang
                                             }}
                                             onFocus={(e) => e.target.select()}
                                             placeholder="0.00"
+                                            maxLength={12}
                                             disabled={isFetchingPrice}
                                             className={`${compactInputClass} text-right font-medium text-blue-600 pr-7 ${getFieldErrorClass(index, 'unit_price')} ${isFetchingPrice ? 'opacity-50' : ''}`}
                                         />
@@ -189,10 +191,11 @@ export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChang
                                  <td className="px-2 py-1.5">
                                      <input 
                                          type="text" 
-                                         value={line.line_discount_input ?? ''} 
-                                         onChange={(e) => onLineChange(index, 'line_discount_input', e.target.value)}
+                                         value={line.discount_expression ?? ''} 
+                                         onChange={(e) => onLineChange(index, 'discount_expression', e.target.value)}
                                          onFocus={(e) => e.target.select()}
                                          placeholder="0%"
+                                         maxLength={20}
                                          className={`${compactInputClass} text-right`}
                                      />
                                  </td>
@@ -206,8 +209,8 @@ export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChang
                                      />
                                  </td>
                                 <td className={`px-2 py-1.5 text-right font-bold text-sm ${(line.line_total ?? 0) < 0 ? 'text-red-500' : 'text-gray-900 dark:text-white'}`}>
-                                    <div className="flex flex-col items-end">
-                                        <span>{(line.line_total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                    <div className="flex flex-col items-end overflow-hidden max-w-[150px]">
+                                        <span className="truncate w-full text-right">{(line.line_total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                         {hasLineFieldError(index, 'line_total') && (
                                             <div className="flex items-center gap-0.5 text-[9px] font-medium text-red-500 mt-0.5">
                                                 <AlertCircle size={8} />

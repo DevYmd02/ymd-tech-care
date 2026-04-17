@@ -54,14 +54,33 @@ export interface QuotationFormData {
 }
 
 export interface QuotationHeader {
-    id: number;
+    id: number | string;
+    sq_id: number | string;
     sq_no: string;
     date: string;
+    customer_id: number | string;
     customer_name: string;
     customer_code: string;
     total_amount: number;
     currency: string;
-    status: 'Draft' | 'Sent' | 'Approved' | 'Rejected';
+    status: 'Draft' | 'Sent' | 'Approved' | 'Rejected' | 'DRAFT' | 'SENT' | 'ACCEPTED' | 'EXPIRED' | 'CANCELLED';
     expiry_date: string;
     workflow_status: string;
+}
+
+/** Interface for raw list item from Backend API */
+export interface QuotationListItem {
+    sq_id: number | string;
+    sq_no: string;
+    sq_date: string;
+    customer_id: number | string;
+    customer_name?: string;
+    customer_name_th?: string;
+    customer_code?: string;
+    quote_total_amount: string | number;
+    quote_currency_code?: string;
+    status: string;
+    valid_until?: string;
+    sq_status?: string;
+    [key: string]: unknown; // Allow for other metadata
 }
