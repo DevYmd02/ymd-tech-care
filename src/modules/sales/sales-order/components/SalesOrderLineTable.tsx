@@ -148,8 +148,12 @@ export function SalesOrderLineTable({
                                                 value={line.warehouse_id || ''}
                                                 disabled={isLocked}
                                                 onChange={(e) => {
-                                                    onLineChange(index, 'warehouse_id', e.target.value);
-                                                    onLineChange(index, 'location_id', '');
+                                                    const nextWhId = e.target.value;
+                                                    onLineChange(index, 'warehouse_id', nextWhId);
+                                                    
+                                                    // Auto-map first location for this warehouse
+                                                    const firstLoc = locations.find(loc => String(loc.warehouse_id) === String(nextWhId));
+                                                    onLineChange(index, 'location_id', firstLoc ? String(firstLoc.location_id) : '');
                                                 }}
                                                 className={`${compactInputClass} bg-white dark:bg-gray-800 dark:text-white/80 border-gray-200 dark:border-gray-700`}
                                                 style={{ colorScheme: 'dark' }}

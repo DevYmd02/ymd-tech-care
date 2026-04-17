@@ -167,11 +167,13 @@ export function useSalesOrderForm({
             note: '',
             tax_code_id: watchHeaderTaxCodeId || undefined,
         };
-        setValue('lines', [...(formData.lines || []), newLine]);
+        const currentLines = getValues('lines') || [];
+        setValue('lines', [...currentLines, newLine]);
     };
 
     const handleRemoveLine = (index: number) => {
-        setValue('lines', (formData.lines || []).filter((_, i) => i !== index));
+        const currentLines = getValues('lines') || [];
+        setValue('lines', currentLines.filter((_, i) => i !== index));
     };
 
     const handleLineChange = (
@@ -179,7 +181,8 @@ export function useSalesOrderForm({
         field: keyof SalesOrderLineValues,
         value: string | number | boolean | undefined
     ) => {
-        const newLines = [...(formData.lines || [])];
+        const currentLines = getValues('lines') || [];
+        const newLines = [...currentLines];
         const updatedLine = { ...newLines[index], [field]: value };
 
         // Auto-calculate line total
@@ -218,7 +221,8 @@ export function useSalesOrderForm({
     };
 
     const handleSelectProduct = (index: number, product: ItemListItem) => {
-        const newLines = [...(formData.lines || [])];
+        const currentLines = getValues('lines') || [];
+        const newLines = [...currentLines];
         const line = newLines[index];
         if (line) {
             line.item_id = String(product.item_id || product.id || '');
