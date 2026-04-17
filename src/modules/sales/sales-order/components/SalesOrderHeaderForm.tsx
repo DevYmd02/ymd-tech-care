@@ -18,6 +18,7 @@ import type {
 } from '@/modules/master-data/types/master-data-types';
 import type { CustomerMaster } from '@/modules/master-data/customer/customer-master/types/customer-types';
 import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
+import type { SaleAreaListItem } from '@master-data/sales/pages/area/types/area.types';
 
 interface SalesOrderHeaderFormProps {
     branches: BranchListItem[];
@@ -27,6 +28,7 @@ interface SalesOrderHeaderFormProps {
     departments: DepartmentListItem[];
     projects: Project[];
     itemTypes: ItemTypeListItem[];
+    saleAreas: SaleAreaListItem[];
     readOnly?: boolean;
     onSearchCustomer?: () => void;
 }
@@ -39,6 +41,7 @@ export function SalesOrderHeaderForm({
     departments,
     projects,
     itemTypes,
+    saleAreas,
     readOnly = false,
     onSearchCustomer,
 }: SalesOrderHeaderFormProps) {
@@ -270,6 +273,11 @@ export function SalesOrderHeaderForm({
                         className={selectClass}
                     >
                         <option value="">-- เลือกเขตการขาย --</option>
+                        {saleAreas.map((area) => (
+                            <option key={area.sale_area_id} value={area.sale_area_id}>
+                                {area.sale_area_code} - {area.sale_area_name}
+                            </option>
+                        ))}
                     </select>
                 </div>
 

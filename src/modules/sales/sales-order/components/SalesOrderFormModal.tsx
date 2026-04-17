@@ -23,6 +23,7 @@ import { SalesOrderLineTable } from './SalesOrderLineTable';
 import { SalesOrderSummary } from './SalesOrderSummary';
 import { CustomerSearchModal } from '@/modules/sales/quotation/components/CustomerSearchModal';
 import { ProductSearchModal } from '@/modules/sales/quotation/components/ProductSearchModal';
+import { SaleAreaService } from '@/modules/master-data/sales/pages/area/services/area.service';
 import type { ItemListItem } from '@/modules/master-data/inventory/types/product-types';
 
 // ============================================================
@@ -95,6 +96,12 @@ export function SalesOrderFormModal({
     const { data: itemTypes = [] } = useQuery({
         queryKey: ['master-item-types'],
         queryFn: MasterDataService.getItemTypes,
+        enabled: isOpen,
+    });
+
+    const { data: saleAreas = [] } = useQuery({
+        queryKey: ['master-sale-areas'],
+        queryFn: () => SaleAreaService.getList(),
         enabled: isOpen,
     });
 
@@ -233,6 +240,7 @@ export function SalesOrderFormModal({
                                     departments={departments}
                                     projects={projects}
                                     itemTypes={itemTypes}
+                                    saleAreas={saleAreas}
                                     onSearchCustomer={() => setIsCustomerSearchOpen(true)}
                                 />
                             </div>
