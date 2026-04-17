@@ -64,7 +64,7 @@ export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChang
                 <table className="w-full text-sm text-left">
                     <thead className="bg-gray-50 dark:bg-gray-800/50">
                         <tr>
-                             <th className={`${headerThClass} w-10 text-center`}>#</th>
+                             <th className={`${headerThClass} w-10 text-center`}>ลำดับ</th>
                              <th className={`${headerThClass} min-w-[180px]`}>รหัสสินค้า (ITEM CODE)</th>
                              <th className={`${headerThClass} min-w-[380px]`}>ชื่อสินค้า (ITEM NAME)</th>
                              <th className={`${headerThClass} w-24 text-right`}>จำนวน (QTY)</th>

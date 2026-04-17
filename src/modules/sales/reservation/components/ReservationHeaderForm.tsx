@@ -25,6 +25,7 @@ interface ReservationHeaderFormProps {
     saleAreas: SaleAreaMaster[];
     readOnly?: boolean;
     onSearchCustomer?: () => void;
+    onSearchLead?: () => void;
 }
 
 export function ReservationHeaderForm({ 
@@ -37,7 +38,8 @@ export function ReservationHeaderForm({
     itemTypes,
     saleAreas,
     readOnly = false,
-    onSearchCustomer
+    onSearchCustomer,
+    onSearchLead
 }: ReservationHeaderFormProps) {
     const { register, watch, setValue, control } = useFormContext<ReservationFormData>();
     
@@ -153,20 +155,36 @@ export function ReservationHeaderForm({
                             className={inputClass} 
                             placeholder="SQxxxx-xxx (ถ้ามี)"
                         />
-                        <button type="button" disabled={isLocked} className="p-2 bg-slate-200 text-slate-600 rounded-md hover:bg-slate-300 transition-colors disabled:opacity-50">
-                            <ClipboardList size={16} />
+                        <button 
+                            type="button" 
+                            disabled={isLocked} 
+                            className="p-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center shrink-0 w-9 h-9"
+                        >
+                            <ClipboardList size={18} />
                         </button>
                     </div>
                 </div>
 
                 <div className="space-y-1">
                     <label className={labelClass}>Lead/CRM (lead_id)</label>
-                    <input 
-                        {...register('lead_id')}
-                        disabled={isLocked}
-                        className={inputClass} 
-                        placeholder="Lead ID"
-                    />
+                    <div className="flex gap-2">
+                        <div className="relative flex-1 group">
+                             <input 
+                                {...register('lead_id')}
+                                disabled={isLocked}
+                                className={inputClass} 
+                                placeholder="Lead ID (ถ้ามี)"
+                            />
+                        </div>
+                        <button 
+                            type="button" 
+                            disabled={isLocked} 
+                            onClick={() => onSearchLead?.()}
+                            className="p-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center shrink-0 w-9 h-9"
+                        >
+                            <ClipboardList size={18} />
+                        </button>
+                    </div>
                 </div>
 
                 {/* Terms Row */}

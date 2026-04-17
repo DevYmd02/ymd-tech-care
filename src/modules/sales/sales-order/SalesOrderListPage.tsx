@@ -128,6 +128,12 @@ export default function SalesOrderListPage() {
 
     const columns = useMemo(
         () => [
+            columnHelper.display({
+                id: 'index',
+                header: 'ลำดับ',
+                cell: (info) => info.row.index + 1,
+                size: 50,
+            }),
             columnHelper.accessor('so_no', {
                 header: 'เลขที่ SO',
                 cell: (info) => (
@@ -138,7 +144,7 @@ export default function SalesOrderListPage() {
                         {info.getValue()}
                     </span>
                 ),
-                size: 150,
+                size: 130,
             }),
             columnHelper.accessor('so_date', {
                 header: 'วันที่ SO',
@@ -155,29 +161,7 @@ export default function SalesOrderListPage() {
                         </span>
                     </div>
                 ),
-                size: 220,
-            }),
-            columnHelper.accessor('cust_po_no', {
-                header: 'เลขที่ PO ลูกค้า',
-                cell: (info) => info.getValue() || '-',
-                size: 140,
-            }),
-            columnHelper.accessor('status', {
-                header: 'สถานะ',
-                cell: (info) => <StatusBadge status={info.getValue()} />,
-                size: 140,
-            }),
-            columnHelper.accessor('onhold', {
-                header: 'OnHold',
-                cell: (info) =>
-                    info.getValue() === 'Y' ? (
-                        <span className="px-2 py-0.5 bg-orange-100 text-orange-600 text-xs font-bold rounded border border-orange-200">
-                            ON HOLD
-                        </span>
-                    ) : (
-                        <span className="text-gray-400 text-xs">-</span>
-                    ),
-                size: 90,
+                size: 200,
             }),
             columnHelper.accessor('total_amount', {
                 header: 'มูลค่าสุทธิ',
@@ -193,17 +177,22 @@ export default function SalesOrderListPage() {
                         </span>
                     </div>
                 ),
-                size: 130,
+                size: 110,
             }),
             columnHelper.accessor('ship_date', {
                 header: 'วันที่กำหนดส่ง',
                 cell: (info) => info.getValue() || '-',
-                size: 130,
+                size: 110,
             }),
             columnHelper.accessor('remarks', {
                 header: 'หมายเหตุ',
                 cell: (info) => info.getValue() || '-',
-                size: 180,
+                size: 150,
+            }),
+            columnHelper.accessor('status', {
+                header: 'สถานะ',
+                cell: (info) => <StatusBadge status={info.getValue()} />,
+                size: 120,
             }),
             columnHelper.display({
                 id: 'actions',
@@ -226,7 +215,7 @@ export default function SalesOrderListPage() {
                         </button>
                     </div>
                 ),
-                size: 100,
+                size: 90,
             }),
         ],
         [columnHelper]
@@ -258,14 +247,6 @@ export default function SalesOrderListPage() {
                             accentColor="emerald"
                         />
                         <FilterField
-                            label="สถานะ"
-                            type="select"
-                            value={statusFilter}
-                            onChange={setStatusFilter}
-                            options={STATUS_OPTIONS}
-                            accentColor="emerald"
-                        />
-                        <FilterField
                             label="วันที่ตั้งแต่"
                             type="date"
                             value={startDate}
@@ -279,14 +260,18 @@ export default function SalesOrderListPage() {
                             onChange={setEndDate}
                             accentColor="emerald"
                         />
+                        <FilterField
+                            label="สถานะ"
+                            type="select"
+                            value={statusFilter}
+                            onChange={setStatusFilter}
+                            options={STATUS_OPTIONS}
+                            accentColor="emerald"
+                        />
 
                         {/* Action Buttons */}
-                        <div className="md:col-span-5 flex flex-col sm:flex-row justify-between gap-4 mt-2">
+                        <div className="md:col-span-5 flex flex-col sm:flex-row justify-end gap-4 mt-2">
                             <div className="flex gap-2">
-                                <button className="h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2">
-                                    <Search size={18} />
-                                    ค้นหา
-                                </button>
                                 <button
                                     onClick={() => {
                                         setSoNo('');
@@ -299,6 +284,10 @@ export default function SalesOrderListPage() {
                                 >
                                     <Plus size={18} className="rotate-45" />
                                     ล้างค่า
+                                </button>
+                                <button className="h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2">
+                                    <Search size={18} />
+                                    ค้นหา
                                 </button>
                             </div>
 
