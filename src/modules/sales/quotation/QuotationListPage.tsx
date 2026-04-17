@@ -125,24 +125,15 @@ export default function QuotationListPage() {
             ),
             size: 150,
         }),
-        columnHelper.accessor('status', {
-            header: 'สถานะ',
-            cell: (info) => <StatusBadge status={info.getValue()} />,
-            size: 100,
-        }),
         columnHelper.accessor('expiry_date', {
             header: 'หมดอายุ',
             cell: (info) => info.getValue(),
             size: 120,
         }),
-        columnHelper.accessor('workflow_status', {
-            header: 'สถานะงาน',
-            cell: (info) => (
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {info.getValue()}
-                </span>
-            ),
-            size: 120,
+        columnHelper.accessor('status', {
+            header: 'สถานะ',
+            cell: (info) => <StatusBadge status={info.getValue()} />,
+            size: 100,
         }),
         columnHelper.display({
             id: 'actions',

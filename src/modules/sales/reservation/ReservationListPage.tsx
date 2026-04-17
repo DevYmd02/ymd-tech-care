@@ -5,12 +5,12 @@
  */
 
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { Package, Search, Plus, Edit, FileCheck } from 'lucide-react';
 import { PageListLayout, SmartTable, FilterField } from '@ui';
 import { createColumnHelper } from '@tanstack/react-table';
-import { ReservationService, type ReservationHeader } from '@sales/reservation/services/reservation.service';
 import { ReservationFormModal } from './components/ReservationFormModal';
+import { useReservationList } from './hooks/useReservation';
+import type { ReservationHeader } from './services/reservation.service';
 
 // ====================================================================================
 // CONSTANTS
@@ -58,17 +58,16 @@ export default function ReservationListPage() {
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [selectedReservationId, setSelectedReservationId] = useState<string | undefined>(undefined);
 
-    // API Integration
-    const { data: apiData, isLoading, refetch } = useQuery({
-        queryKey: ['sales-reservations', rsNo, customer, statusFilter, startDate, endDate],
-        queryFn: () => ReservationService.getList({
-            rs_no: rsNo,
-            customer_name: customer,
-            status: statusFilter === 'ALL' ? undefined : statusFilter,
-            start_date: startDate,
-            end_date: endDate
-        }),
-    });
+    // API Integration via Hook
+    const filterParams = useMemo(() => ({
+        rs_no: rsNo,
+        customer_name: customer,
+        status: statusFilter === 'ALL' ? undefined : statusFilter,
+        start_date: startDate,
+        end_date: endDate
+    }), [rsNo, customer, statusFilter, startDate, endDate]);
+
+    const { data: apiData, isLoading, refetch } = useReservationList(filterParams);
 
     const displayData = useMemo(() => apiData?.data || [], [apiData]);
 
@@ -81,6 +80,14 @@ export default function ReservationListPage() {
     const handleEdit = (id: string) => {
         setSelectedReservationId(id);
         setIsFormModalOpen(true);
+    };
+
+    const handleReset = () => {
+        setRsNo('');
+        setCustomer('');
+        setStatusFilter('ALL');
+        setStartDate('');
+        setEndDate('');
     };
 
     // Columns Definition
@@ -108,7 +115,7 @@ export default function ReservationListPage() {
             header: 'ลูกค้า',
             cell: (info) => (
                 <div className="flex flex-col">
-                    <span className="font-medium text-gray-900">{info.getValue()}</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">{info.getValue()}</span>
                     <span className="text-xs text-gray-500">{info.row.original.customer_code}</span>
                 </div>
             ),
@@ -119,7 +126,7 @@ export default function ReservationListPage() {
             cell: (info) => (
                 <div className="flex items-center gap-1 text-emerald-600 font-semibold">
                     <span>{info.row.original.currency === 'USD' ? '$' : '฿'}</span>
-                    <span>{info.getValue().toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    <span>{(info.getValue() || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                 </div>
             ),
             size: 150,
@@ -137,10 +144,14 @@ export default function ReservationListPage() {
                     <button 
                         onClick={() => handleEdit(info.row.original.reservation_id)}
                         className="text-orange-500 hover:text-orange-700 transition-colors"
+                        title="แก้ไข"
                     >
                         <Edit size={18} />
                     </button>
-                    <button className="text-emerald-500 hover:text-emerald-700 transition-colors">
+                    <button 
+                        className="text-emerald-500 hover:text-emerald-700 transition-colors"
+                        title="ยืนยัน"
+                    >
                         <FileCheck size={18} />
                     </button>
                 </div>
@@ -200,19 +211,16 @@ export default function ReservationListPage() {
                         {/* Action Buttons Group */}
                         <div className="md:col-span-5 flex flex-col sm:flex-row justify-end gap-3 mt-2">
                             <button 
-                                onClick={() => {
-                                    setRsNo('');
-                                    setCustomer('');
-                                    setStatusFilter('ALL');
-                                    setStartDate('');
-                                    setEndDate('');
-                                }}
+                                onClick={handleReset}
                                 className="h-10 px-6 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors flex items-center gap-2"
                             >
                                 <Plus size={18} className="rotate-45" />
                                 ล้างค่า
                             </button>
-                            <button className="h-10 px-6 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2">
+                            <button 
+                                onClick={() => refetch()}
+                                className="h-10 px-6 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2"
+                            >
                                 <Search size={18} />
                                 ค้นหา
                             </button>
