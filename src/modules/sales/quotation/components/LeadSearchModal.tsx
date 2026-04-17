@@ -21,7 +21,7 @@ export const LeadSearchModal: React.FC<LeadSearchModalProps> = React.memo(({
     isOpen,
     onClose,
     onSelect,
-    title = 'ค้นหาใบประมาณการราคา - Find Estimate'
+    title = 'ค้นหาข้อมูล Lead - Find Lead'
 }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const debouncedSearch = useDebounce(searchTerm, 400);
@@ -65,7 +65,7 @@ export const LeadSearchModal: React.FC<LeadSearchModalProps> = React.memo(({
                             type="text"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            placeholder="ค้นหาเลขที่ประมาณการราคา หรือเลขที่คำขอ..."
+                            placeholder="ค้นหาเลขที่ Lead หรือเลขที่คำขอ..."
                             className="w-full pl-12 pr-4 h-12 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-base text-gray-900 dark:text-white shadow-sm group-hover:border-gray-300 dark:group-hover:border-gray-600 transition-all font-medium placeholder-gray-400 dark:placeholder-gray-500"
                             autoFocus
                         />
@@ -91,7 +91,7 @@ export const LeadSearchModal: React.FC<LeadSearchModalProps> = React.memo(({
                         <table className="w-full text-left border-separate border-spacing-0">
                             <thead className="sticky top-0 z-10 bg-gray-100/90 dark:bg-gray-800/90 backdrop-blur-md">
                                 <tr>
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">เลขที่ประมาณการ</th>
+                                    <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">เลขที่ Lead</th>
                                     <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">เลขที่คำขอ (Inquiry)</th>
                                     <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 text-right">ยอดเงินรวม</th>
                                     <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 text-center">สถานะ</th>
@@ -145,7 +145,7 @@ export const LeadSearchModal: React.FC<LeadSearchModalProps> = React.memo(({
                                         <td colSpan={5} className="px-6 py-20 text-center items-center justify-center">
                                             <div className="flex flex-col items-center text-gray-400 dark:text-gray-500">
                                                 <Search size={64} className="mb-4 opacity-20" />
-                                                <p className="text-xl font-bold">ไม่พบข้อมูลประมาณการราคา</p>
+                                                <p className="text-xl font-bold">ไม่พบข้อมูล Lead</p>
                                                 <p className="text-sm opacity-80">ลองเปลี่ยนคำค้นหาอีกครั้ง</p>
                                             </div>
                                         </td>

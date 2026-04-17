@@ -136,14 +136,14 @@ export function QuotationHeaderForm({
 
                 {/* Row 2 */}
                 <div className="space-y-1">
-                    <label className={labelClass}>อ้างอิงเลขที่ประมาณการราคา (lead_id)</label>
+                    <label className={labelClass}>อ้างอิงเลขที่ Lead (lead_id)</label>
                     <div className="flex gap-2">
                         <div className="relative flex-1">
                             <input 
                                 {...register('lead_id')}
                                 disabled={isLocked}
                                 className={inputClass} 
-                                placeholder="EST2024-xxx (ถ้ามี)"
+                                placeholder="LEAD-xxx (ถ้ามี)"
                             />
                         </div>
                         <button 

@@ -15,7 +15,7 @@ export const QuotationLineSchema = z.object({
     line_discount_input: z.string().optional(),
     line_discount: z.coerce.number().default(0),
     tax_code_id: z.coerce.number().optional(),
-    line_total: z.coerce.number().default(0),
+    line_total: z.coerce.number().min(0, 'ยอดรวมต้องไม่ติดลบ (ตรวจสอบส่วนลด)').default(0),
     note: z.string().optional(),
     // Data from Pricing Engine
     price_source: z.number().optional(),      // 1=Price List, 2=Price Level
@@ -44,7 +44,7 @@ export const QuotationFormSchema = z.object({
     discount_input: z.string().optional(),
     discount_amount: z.coerce.number().default(0),
     vat_amount: z.coerce.number().default(0),
-    total_amount: z.coerce.number().default(0),
+    total_amount: z.coerce.number().min(0, 'ยอดรวมต้องไม่ติดลบ (ตรวจสอบส่วนลด)').default(0),
     remarks: z.string().optional(),
     payment_term_days: z.coerce.number().default(0),
     onhold: z.enum(['Y', 'N']).default('N'),

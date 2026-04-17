@@ -205,8 +205,16 @@ export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChang
                                          className={`${compactInputClass} italic text-gray-500`}
                                      />
                                  </td>
-                                <td className="px-2 py-1.5 text-right font-bold text-gray-900 dark:text-white text-sm">
-                                    {(line.line_total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                <td className={`px-2 py-1.5 text-right font-bold text-sm ${(line.line_total ?? 0) < 0 ? 'text-red-500' : 'text-gray-900 dark:text-white'}`}>
+                                    <div className="flex flex-col items-end">
+                                        <span>{(line.line_total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                        {hasLineFieldError(index, 'line_total') && (
+                                            <div className="flex items-center gap-0.5 text-[9px] font-medium text-red-500 mt-0.5">
+                                                <AlertCircle size={8} />
+                                                <span>ส่วนลดเกิน</span>
+                                            </div>
+                                        )}
+                                    </div>
                                 </td>
                                 <td className="px-2 py-1.5 text-center">
                                     <button 
