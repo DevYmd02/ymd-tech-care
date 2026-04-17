@@ -108,13 +108,15 @@ export function ReservationHeaderForm({
                     </select>
                 </div>
 
-                <div className="space-y-1">
-                    <label className={labelClass}>สถานะ (status)</label>
-                    <input 
-                        value={formData.status}
-                        readOnly
-                        className={`${inputClass} bg-gray-50/50 font-bold ${formData.status === 'DRAFT' ? 'text-gray-500' : 'text-emerald-600'}`}
-                    />
+                <div className="space-y-1 pt-[22px]">
+                    <div className="flex items-center h-9">
+                        <StatusCheckbox 
+                            name="onhold"
+                            control={control}
+                            label="ON HOLD"
+                            disabled={isLocked}
+                        />
+                    </div>
                 </div>
 
                 {/* Customer & Leads Row */}
@@ -206,17 +208,7 @@ export function ReservationHeaderForm({
                     />
                 </div>
 
-                <div className="space-y-1">
-                    <label className={labelClass}>ระงับชั่วคราว (onhold)</label>
-                    <div className="flex items-center h-9">
-                        <StatusCheckbox 
-                            name="onhold"
-                            control={control}
-                            label={formData.onhold === 'Y' ? 'ON HOLD (ระงับ)' : 'NORMAL (ปกติ)'}
-                            disabled={isLocked}
-                        />
-                    </div>
-                </div>
+
 
                 {/* Sales Org Row */}
                 <div className="space-y-1">

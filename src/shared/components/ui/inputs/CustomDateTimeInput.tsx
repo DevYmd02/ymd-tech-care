@@ -38,7 +38,7 @@ export const CustomDateTimeInput: React.FC<CustomDateTimeInputProps> = ({
     };
 
     return (
-        <div className="relative w-full">
+        <div className="relative w-full inline-block align-top">
             {/* 1. Visible Formatted Display */}
             <input
                 type="text"

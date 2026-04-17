@@ -29,7 +29,7 @@ export const CustomDateInput: React.FC<CustomDateInputProps> = ({
   };
 
   return (
-    <div className="relative w-full">
+    <div className="relative w-full inline-block align-top">
       {/* 1. Visible Text Input */}
       <input
         type="text"

@@ -386,8 +386,8 @@ export default function POAFormModal({
                                     <button
                                         type="button"
                                         onClick={handleRejectInit}
-                                        disabled={isSubmitting}
-                                        className="px-6 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400 transition-all font-medium flex items-center gap-2 disabled:opacity-50"
+                                        disabled={isSubmitting || !formValues?.po_no || fields.length === 0}
+                                        className="px-6 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400 transition-all font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         <XCircle size={18} />
                                         ไม่อนุมัติ
@@ -395,8 +395,8 @@ export default function POAFormModal({
                                     <button
                                         type="button"
                                         onClick={handleSubmit(onSubmit, onInvalidSubmit)}
-                                        disabled={isSubmitting}
-                                        className="px-8 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 transition-all font-semibold flex items-center gap-2 disabled:opacity-50"
+                                        disabled={isSubmitting || !formValues?.po_no || fields.length === 0}
+                                        className="px-8 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 transition-all font-semibold flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         {isSubmitting ? (
                                             <Loader2 className="w-5 h-5 animate-spin" />

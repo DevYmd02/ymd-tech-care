@@ -334,11 +334,16 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Par
             line.line_discount_input = '';
             line.line_discount = 0;
             line.line_total = line.unit_price; 
+            line.price_source = undefined;
+            line.price_source_name = 'STANDARD_COST';
             
             setValue('lines', newLines, { shouldValidate: true, shouldDirty: true });
+            
+            // 💰 Trigger price lookup immediately using the new qty and item
+            handleLinePriceSync(activeLineIndex);
         }
         setIsProductSearchOpen(false);
-    }, [activeLineIndex, getValues, setValue, uoms]);
+    }, [activeLineIndex, getValues, setValue, uoms, handleLinePriceSync]);
 
     return {
         isEdit,

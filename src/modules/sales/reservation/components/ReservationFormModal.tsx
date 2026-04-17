@@ -18,8 +18,10 @@ import { ReservationLineTable } from './ReservationLineTable';
 import { ReservationSummary } from './ReservationSummary';
 import { CustomerSearchModal } from '@/modules/sales/quotation/components/CustomerSearchModal';
 import { ProductSearchModal } from '@/modules/sales/quotation/components/ProductSearchModal';
+import { LotSearchModal } from './LotSearchModal';
 import type { CustomerMaster } from '@/modules/master-data/customer/customer-master/types/customer-types';
 import type { ItemListItem } from '@/modules/master-data/inventory/types/product-types';
+import type { LotNo } from '@/modules/master-data/inventory/types/inventory-master.types';
 
 interface ReservationFormModalProps {
     isOpen: boolean;
@@ -71,7 +73,9 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
     // Search Modals State
     const [isCustomerSearchOpen, setIsCustomerSearchOpen] = useState(false);
     const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
+    const [isLotSearchOpen, setIsLotSearchOpen] = useState(false);
     const [activeLineIndex, setActiveLineIndex] = useState<number | null>(null);
+    const [activeLotLineIndex, setActiveLotLineIndex] = useState<number | null>(null);
     
     // React Hook Form Setup
     const methods = useForm<ReservationFormData>({
@@ -79,7 +83,7 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
         mode: 'onBlur',
     });
 
-    const { setValue, handleSubmit, reset, control } = methods;
+    const { setValue, handleSubmit, reset, control, getValues } = methods;
     const formData = (useWatch({ control }) || {}) as ReservationFormData;
 
     // Reset form when modal opens with new data
@@ -203,15 +207,15 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
             line_total: 0, 
             note: '' 
         };
-        setValue('lines', [...(formData.lines || []), newLine]);
+        setValue('lines', [...(getValues('lines') || []), newLine]);
     };
 
     const handleRemoveLine = (index: number) => {
-        setValue('lines', (formData.lines || []).filter((_, i) => i !== index));
+        setValue('lines', (getValues('lines') || []).filter((_, i) => i !== index));
     };
 
     const handleLineChange = (index: number, field: keyof ReservationLineData, value: string | number) => {
-        const newLines = [...(formData.lines || [])];
+        const newLines = [...(getValues('lines') || [])];
         const updatedLine = { ...newLines[index], [field]: value };
         
         // Auto-calculate line total
@@ -244,7 +248,7 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
 
     const handleSelectProduct = (product: ItemListItem) => {
         if (activeLineIndex !== null) {
-            const newLines = [...(formData.lines || [])];
+            const newLines = [...(getValues('lines') || [])];
             const line = newLines[activeLineIndex];
             
             if (line) {
@@ -265,6 +269,21 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
             }
         }
         setIsProductSearchOpen(false);
+    };
+
+    const handleSelectLot = (lot: LotNo) => {
+        if (activeLotLineIndex !== null) {
+            const newLines = [...(getValues('lines') || [])];
+            if (newLines[activeLotLineIndex]) {
+                newLines[activeLotLineIndex] = {
+                    ...newLines[activeLotLineIndex],
+                    lot_no: lot.code || '',
+                    reserve_policy: 'MANUAL'
+                };
+                setValue('lines', newLines, { shouldValidate: true, shouldDirty: true });
+            }
+            setIsLotSearchOpen(false);
+        }
     };
 
     // Calculate Totals
@@ -388,6 +407,10 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
                                         setActiveLineIndex(index);
                                         setIsProductSearchOpen(true);
                                     }}
+                                    onSearchLot={(index) => {
+                                        setActiveLotLineIndex(index);
+                                        setIsLotSearchOpen(true);
+                                    }}
                                 />
                             </div>
                         </div>
@@ -423,6 +446,13 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
                 isOpen={isProductSearchOpen}
                 onClose={() => setIsProductSearchOpen(false)}
                 onSelect={handleSelectProduct}
+            />
+
+            <LotSearchModal
+                isOpen={isLotSearchOpen}
+                onClose={() => setIsLotSearchOpen(false)}
+                onSelect={handleSelectLot}
+                itemId={activeLotLineIndex !== null ? getValues(`lines.${activeLotLineIndex}.item_id`) : undefined}
             />
         </WindowFormLayout>
     );

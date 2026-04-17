@@ -175,14 +175,6 @@ export default function ReservationListPage() {
                             accentColor="purple"
                         />
                         <FilterField
-                            label="สถานะ"
-                            type="select"
-                            value={statusFilter}
-                            onChange={setStatusFilter}
-                            options={STATUS_OPTIONS}
-                            accentColor="purple"
-                        />
-                        <FilterField
                             label="วันที่ตั้งแต่"
                             type="date"
                             value={startDate}
@@ -196,29 +188,34 @@ export default function ReservationListPage() {
                             onChange={setEndDate}
                             accentColor="purple"
                         />
+                        <FilterField
+                            label="สถานะ"
+                            type="select"
+                            value={statusFilter}
+                            onChange={setStatusFilter}
+                            options={STATUS_OPTIONS}
+                            accentColor="purple"
+                        />
                         
                         {/* Action Buttons Group */}
-                        <div className="md:col-span-5 flex flex-col sm:flex-row justify-between gap-4 mt-2">
-                            <div className="flex gap-2">
-                                <button className="h-10 px-6 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2">
-                                    <Search size={18} />
-                                    ค้นหา
-                                </button>
-                                <button 
-                                    onClick={() => {
-                                        setRsNo('');
-                                        setCustomer('');
-                                        setStatusFilter('ALL');
-                                        setStartDate('');
-                                        setEndDate('');
-                                    }}
-                                    className="h-10 px-6 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors flex items-center gap-2"
-                                >
-                                    <Plus size={18} className="rotate-45" />
-                                    ล้างค่า
-                                </button>
-                            </div>
-                            
+                        <div className="md:col-span-5 flex flex-col sm:flex-row justify-end gap-3 mt-2">
+                            <button 
+                                onClick={() => {
+                                    setRsNo('');
+                                    setCustomer('');
+                                    setStatusFilter('ALL');
+                                    setStartDate('');
+                                    setEndDate('');
+                                }}
+                                className="h-10 px-6 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors flex items-center gap-2"
+                            >
+                                <Plus size={18} className="rotate-45" />
+                                ล้างค่า
+                            </button>
+                            <button className="h-10 px-6 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2">
+                                <Search size={18} />
+                                ค้นหา
+                            </button>
                             <button 
                                 onClick={handleCreateNew}
                                 className="h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2"
