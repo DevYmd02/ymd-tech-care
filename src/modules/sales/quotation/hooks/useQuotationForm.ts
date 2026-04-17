@@ -5,11 +5,11 @@ import { useQuery } from '@tanstack/react-query';
 import { MasterDataService } from '@/modules/master-data';
 import { CustomerService } from '@/modules/master-data/customer/customer-master/services/customer.service';
 import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
-import { TaxGroupService } from '@/modules/master-data/tax/services/tax-group.service';
+import { TaxCodeService } from '@/modules/master-data/tax/services/tax-code.service';
 import type { Currency } from '@/modules/master-data/types/master-data-types';
 import type { CustomerMaster } from '@/modules/master-data/customer/customer-master/types/customer-types';
 import type { ItemListItem, UnitListItem } from '@/modules/master-data/inventory/types/product-types';
-import type { TaxGroup } from '@/modules/master-data/tax/types/tax-types';
+import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
 import { QuotationFormSchema, type QuotationFormValues, type QuotationLineValues, getQuotationDefaultValues } from '@sales/quotation/schemas/quotation-schemas';
 import type { EstimateHeader } from '@/modules/sales/estimate/services/estimate.service';
 import { PricingService } from '@sales/quotation/services/pricing.service';
@@ -75,9 +75,9 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Par
     });
     const customers = customerResponse?.data || [];
 
-    const { data: taxGroups = [] } = useQuery<TaxGroup[]>({
-        queryKey: ['master-tax-groups'],
-        queryFn: TaxGroupService.getTaxGroups,
+    const { data: taxCodes = [] } = useQuery<TaxCode[]>({
+        queryKey: ['master-tax-codes'],
+        queryFn: TaxCodeService.getTaxCodes,
         enabled: isOpen
     });
 
@@ -143,7 +143,7 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Par
     const watchedDiscountInput = useWatch({ control, name: 'discount_input' });
     const discountInput = useMemo(() => watchedDiscountInput || '', [watchedDiscountInput]);
     
-    const taxGroupId = useWatch({ control, name: 'tax_group_id' });
+    const taxCodeId = useWatch({ control, name: 'tax_code_id' });
 
     useEffect(() => {
         // Line Totals & Header Subtotal
@@ -167,9 +167,9 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Par
         }
 
         // VAT Calculation
-        const selectedTaxGroup = taxGroups.find(t => String(t.tax_group_id) === String(taxGroupId));
-        const taxRate = selectedTaxGroup ? (Number(selectedTaxGroup.tax_rate) || 0) : 0;
-        const vatAmountValue = taxGroupId ? (calculatedSubTotal * (taxRate / 100)) : 0;
+        const selectedTaxCode = taxCodes.find(t => String(t.tax_code_id) === String(taxCodeId));
+        const taxRate = selectedTaxCode ? (Number(selectedTaxCode.tax_rate) || 0) : 0;
+        const vatAmountValue = taxCodeId ? (calculatedSubTotal * (taxRate / 100)) : 0;
         
         if (getValues('vat_amount') !== vatAmountValue) {
             setValue('vat_amount', vatAmountValue);
@@ -181,7 +181,24 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Par
             setValue('total_amount', totalAmountValue);
         }
 
-    }, [lines, discountInput, taxGroupId, taxGroups, setValue, getValues]);
+    }, [lines, discountInput, taxCodeId, taxCodes, setValue, getValues]);
+
+    // --------------------------------------------------------
+    // Tax Propagation Logic
+    // --------------------------------------------------------
+    useEffect(() => {
+        if (taxCodeId !== undefined) {
+             const currentLines = getValues('lines') || [];
+             const needsUpdate = currentLines.some(l => Number(l.tax_code_id) !== Number(taxCodeId));
+             if (needsUpdate) {
+                 const updatedLines = currentLines.map(l => ({
+                     ...l,
+                     tax_code_id: taxCodeId
+                 }));
+                 setValue('lines', updatedLines as QuotationLineValues[], { shouldDirty: true });
+             }
+        }
+    }, [taxCodeId, setValue, getValues]);
 
     // ========================================================================
     // EVENT HANDLERS
@@ -198,12 +215,12 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Par
             line_discount_input: '',
             line_discount: 0, 
             line_total: 0, 
-            tax_code_id: '',
-            note: '' 
+            tax_code_id: taxCodeId || undefined,
+            note: '',
         };
         const currentLines = getValues('lines') || [];
         setValue('lines', [...currentLines, newLine]);
-    }, [setValue, getValues]);
+    }, [setValue, getValues, taxCodeId]);
 
     const handleRemoveLine = useCallback((index: number) => {
         const currentLines = getValues('lines') || [];
@@ -355,7 +372,7 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Par
         branches,
         currencies,
         customers,
-        taxGroups,
+        taxCodes,
         departments,
         projects,
         itemTypes,

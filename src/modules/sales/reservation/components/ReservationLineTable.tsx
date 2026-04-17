@@ -51,8 +51,8 @@ export function ReservationLineTable({
                 )}
             </div>
 
-            <div className="rounded-xl border border-gray-200 dark:border-gray-800/60 shadow-sm overflow-hidden bg-white dark:bg-[#1a1625]">
-                <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-purple-200 dark:scrollbar-thumb-purple-500/20 scrollbar-track-transparent bg-white dark:bg-[#1a1625]">
+            <div className="rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden bg-white dark:bg-gray-900">
+                <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-purple-200 dark:scrollbar-thumb-purple-500/20 scrollbar-track-transparent bg-white dark:bg-gray-900">
                 <table className="table-fixed text-sm text-left border-separate border-spacing-0 w-full min-w-[2130px]">
                     <colgroup>
                         <col className="w-[60px]" />
@@ -69,11 +69,11 @@ export function ReservationLineTable({
                         <col className="w-[300px]" />
                         <col className="w-[60px]" />
                     </colgroup>
-                    <thead className="bg-[#fbfaff] dark:bg-[#1a1625] sticky top-0 z-40">
+                    <thead className="bg-[#fbfaff] dark:bg-gray-800 sticky top-0 z-40">
                         <tr className="bg-purple-50/50 dark:bg-purple-900/10">
-                             <th className={`${headerThClass} text-center text-purple-600 dark:text-purple-400 sticky left-0 bg-[#fbfaff] dark:bg-[#181424] z-50 border-r-0 after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[1px] after:bg-gray-200 dark:after:bg-gray-700`}>ลำดับ</th>
-                             <th className={`${headerThClass} text-purple-700 dark:text-purple-300 sticky left-[60px] bg-[#fbfaff] dark:bg-[#181424] z-50 border-r-0 after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[1px] after:bg-gray-200 dark:after:bg-gray-700`}>รหัสสินค้า</th>
-                             <th className={`${headerThClass} text-purple-700 dark:text-purple-300 sticky left-[260px] bg-[#fbfaff] dark:bg-[#181424] z-50 border-r-0 after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[2px] after:bg-purple-100 dark:after:bg-purple-800/40`}>ชื่อสินค้า</th>
+                             <th className={`${headerThClass} text-center text-purple-600 dark:text-purple-400 sticky left-0 bg-[#fbfaff] dark:bg-gray-800 z-50 border-r-0 after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[1px] after:bg-gray-200 dark:after:bg-gray-700`}>ลำดับ</th>
+                             <th className={`${headerThClass} text-purple-700 dark:text-purple-300 sticky left-[60px] bg-[#fbfaff] dark:bg-gray-800 z-50 border-r-0 after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[1px] after:bg-gray-200 dark:after:bg-gray-700`}>รหัสสินค้า</th>
+                             <th className={`${headerThClass} text-purple-700 dark:text-purple-300 sticky left-[260px] bg-[#fbfaff] dark:bg-gray-800 z-50 border-r-0 after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[2px] after:bg-purple-100 dark:after:bg-purple-800/40`}>ชื่อสินค้า</th>
                              <th className={`${headerThClass} text-purple-700 dark:text-purple-300/60`}>คลัง</th>
                              <th className={`${headerThClass} text-purple-700 dark:text-purple-300/60`}>ที่เก็บ</th>
                              <th className={`${headerThClass} text-right text-purple-700 dark:text-purple-300/60`}>จอง (QTY)</th>
@@ -83,10 +83,10 @@ export function ReservationLineTable({
                              <th className={`${headerThClass} text-right text-purple-700 dark:text-purple-300/60`}>ส่วนลด</th>
                              <th className={`${headerThClass} text-right text-purple-700 dark:text-purple-300/60`}>ยอดรวม</th>
                              <th className={`${headerThClass} text-purple-700 dark:text-purple-300/60`}>หมายเหตุ</th>
-                             {!isLocked && <th className={`${headerThClass} text-center sticky right-[-1px] bg-[#fbfaff] dark:bg-[#1a1625] z-[60] border-l border-gray-200 dark:border-gray-800/50 shadow-[-12px_0_20px_-10px_rgba(0,0,0,0.15)] dark:shadow-[-12px_0_20px_-10px_rgba(0,0,0,0.4)] pr-[13px]`}></th>}
+                             {!isLocked && <th className={`${headerThClass} text-center sticky right-[-1px] bg-[#fbfaff] dark:bg-gray-800 z-[60] border-l border-gray-200 dark:border-gray-700 shadow-[-12px_0_20px_-10px_rgba(0,0,0,0.15)] dark:shadow-[-12px_0_20px_-10px_rgba(0,0,0,0.4)] pr-[13px]`}></th>}
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800/40 bg-white dark:bg-[#1a1625]">
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-gray-900">
                         {lines.length > 0 && lines.map((line, index) => {
                             const filteredLocations = locations.filter(loc => 
                                 !line.warehouse_id || String(loc.warehouse_id) === String(line.warehouse_id)
@@ -94,16 +94,16 @@ export function ReservationLineTable({
 
                             return (
                                 <tr key={index} className="hover:bg-purple-50/50 dark:hover:bg-purple-900/10 transition-colors group">
-                                    <td className="px-2 py-2 text-center text-purple-400 dark:text-purple-500/70 font-bold sticky left-0 bg-white dark:bg-[#1a1625] group-hover:bg-[#fcfaff] dark:group-hover:bg-[#1d1929] z-10 transition-colors after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[1px] after:bg-gray-100 dark:after:bg-gray-800/40">
+                                    <td className="px-2 py-2 text-center text-purple-400 dark:text-purple-500/70 font-bold sticky left-0 bg-white dark:bg-gray-900 group-hover:bg-gray-50 dark:group-hover:bg-gray-800 z-10 transition-colors after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[1px] after:bg-gray-100 dark:after:bg-gray-800/40">
                                         {index + 1}
                                     </td>
                                     
-                                    <td className="px-2 py-2 sticky left-[60px] bg-white dark:bg-[#1a1625] group-hover:bg-[#fcfaff] dark:group-hover:bg-[#1d1929] z-10 transition-colors after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[1px] after:bg-gray-100 dark:after:bg-gray-800/40">
+                                    <td className="px-2 py-2 sticky left-[60px] bg-white dark:bg-gray-900 group-hover:bg-gray-50 dark:group-hover:bg-gray-800 z-10 transition-colors after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[1px] after:bg-gray-100 dark:after:bg-gray-800/40">
                                         <div className="flex gap-1 items-center">
                                             <input 
                                                 value={line.item_code || ''}
                                                 readOnly
-                                                className={`${compactInputClass} bg-gray-50/50 dark:bg-[#1c182c] italic cursor-not-allowed text-purple-700 dark:text-white/70 border-gray-200 dark:border-gray-800/60`}
+                                                className={`${compactInputClass} bg-gray-50/50 dark:bg-gray-800 italic cursor-not-allowed text-purple-700 dark:text-white/70 border-gray-200 dark:border-gray-700`}
                                                 placeholder="รหัส"
                                             />
                                             {!isLocked && (
@@ -118,11 +118,11 @@ export function ReservationLineTable({
                                         </div>
                                     </td>
 
-                                    <td className="px-2 py-2 sticky left-[260px] bg-white dark:bg-[#1a1625] group-hover:bg-[#fcfaff] dark:group-hover:bg-[#1d1929] z-10 transition-colors after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[2px] after:bg-purple-50 dark:after:bg-purple-800/20">
+                                    <td className="px-2 py-2 sticky left-[260px] bg-white dark:bg-gray-900 group-hover:bg-[#fcfaff] dark:group-hover:bg-gray-800 z-10 transition-colors after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[2px] after:bg-purple-50 dark:after:bg-purple-800/20">
                                         <input 
                                             value={line.item_name || ''}
                                             readOnly
-                                            className={`${compactInputClass} bg-gray-50/50 dark:bg-[#1c182c] cursor-not-allowed truncate text-gray-600 dark:text-white/80 border-gray-200 dark:border-gray-800/60`}
+                                            className={`${compactInputClass} bg-gray-50/50 dark:bg-gray-800 cursor-not-allowed truncate text-gray-600 dark:text-white/80 border-gray-200 dark:border-gray-700`}
                                             placeholder="ชื่อสินค้า"
                                         />
                                     </td>
@@ -141,7 +141,7 @@ export function ReservationLineTable({
                                                     onLineChange(index, 'location_id', ''); 
                                                 }
                                             }}
-                                            className={`${compactInputClass} bg-white dark:bg-[#1c182c] dark:text-white/80 border-gray-200 dark:border-gray-800/60`}
+                                            className={`${compactInputClass} bg-white dark:bg-gray-800 dark:text-white/80 border-gray-200 dark:border-gray-700`}
                                             style={{ colorScheme: 'dark' }}
                                         >
                                             <option value="">-- คลัง --</option>
@@ -158,7 +158,7 @@ export function ReservationLineTable({
                                             value={line.location_id || ''} 
                                             disabled={isLocked}
                                             onChange={(e) => onLineChange(index, 'location_id', e.target.value)}
-                                            className={`${compactInputClass} bg-white dark:bg-[#1c182c] dark:text-white/80 border-gray-200 dark:border-gray-800/60`}
+                                            className={`${compactInputClass} bg-white dark:bg-gray-800 dark:text-white/80 border-gray-200 dark:border-gray-700`}
                                             style={{ colorScheme: 'dark' }}
                                         >
                                             <option value="">-- ที่เก็บ --</option>
@@ -183,7 +183,7 @@ export function ReservationLineTable({
                                             }}
                                             onFocus={(e) => e.target.select()}
                                             placeholder="0"
-                                            className={`${compactInputClass} text-right font-bold text-purple-600 dark:text-white bg-white dark:bg-[#1c182c] border-purple-100 dark:border-gray-800/60`}
+                                            className={`${compactInputClass} text-right font-bold text-purple-600 dark:text-white bg-white dark:bg-gray-800 border-purple-100 dark:border-gray-700`}
                                         />
                                     </td>
 
@@ -192,7 +192,7 @@ export function ReservationLineTable({
                                             value={line.uom_id || ''} 
                                             disabled={isLocked}
                                             onChange={(e) => onLineChange(index, 'uom_id', e.target.value)}
-                                            className={`${compactInputClass} text-center bg-white dark:bg-[#1c182c] dark:text-white/80 border-gray-200 dark:border-gray-800/60`}
+                                            className={`${compactInputClass} text-center bg-white dark:bg-gray-800 dark:text-white/80 border-gray-200 dark:border-gray-700`}
                                             style={{ colorScheme: 'dark' }}
                                         >
                                             <option value="">-- หน่วย --</option>
@@ -221,7 +221,7 @@ export function ReservationLineTable({
                                                         disabled={isLocked}
                                                         onClick={!isLocked ? () => onSearchLot?.(index) : undefined}
                                                         placeholder="เลือกล็อต..."
-                                                        className={`${compactInputClass} pl-7 cursor-pointer font-bold text-orange-600 dark:text-orange-400 bg-white dark:bg-[#1c182c] border-orange-100 dark:border-gray-800/60 focus:ring-orange-500`}
+                                                        className={`${compactInputClass} pl-7 cursor-pointer font-bold text-orange-600 dark:text-orange-400 bg-white dark:bg-gray-800 border-orange-100 dark:border-gray-700 focus:ring-orange-500`}
                                                     />
                                                 </>
                                             ) : (
@@ -238,7 +238,7 @@ export function ReservationLineTable({
                                                         readOnly
                                                         disabled={isLocked}
                                                         onClick={!isLocked ? () => onSearchLot?.(index) : undefined}
-                                                        className={`${compactInputClass} pl-7 cursor-pointer font-bold text-blue-500 dark:text-blue-400 bg-white dark:bg-[#1c182c] border-blue-100 dark:border-gray-800/60 hover:border-blue-400 focus:ring-blue-500 transition-colors`}
+                                                        className={`${compactInputClass} pl-7 cursor-pointer font-bold text-blue-500 dark:text-blue-400 bg-white dark:bg-gray-800 border-blue-100 dark:border-gray-700 hover:border-blue-400 focus:ring-blue-500 transition-colors`}
                                                     />
                                                 </>
                                             )}
@@ -258,7 +258,7 @@ export function ReservationLineTable({
                                             }}
                                             onFocus={(e) => e.target.select()}
                                             placeholder="0.00"
-                                            className={`${compactInputClass} text-right font-medium bg-white dark:bg-[#1c182c] text-gray-900 dark:text-gray-200 border-gray-200 dark:border-gray-800/60`}
+                                            className={`${compactInputClass} text-right font-medium bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200 border-gray-200 dark:border-gray-700`}
                                         />
                                     </td>
 
@@ -270,12 +270,12 @@ export function ReservationLineTable({
                                             onChange={(e) => onLineChange(index, 'line_discount_input', e.target.value)}
                                             onFocus={(e) => e.target.select()}
                                             placeholder="0"
-                                            className={`${compactInputClass} text-right bg-white dark:bg-[#1c182c] dark:text-gray-200 border-gray-200 dark:border-gray-800/60`}
+                                            className={`${compactInputClass} text-right bg-white dark:bg-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700`}
                                         />
                                     </td>
                                     
                                     <td className="px-2 py-2">
-                                        <div className="h-8 flex items-center justify-end px-3 font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-[#1c182c] rounded border border-emerald-200 dark:border-emerald-800/40 shadow-inner">
+                                        <div className="h-8 flex items-center justify-end px-3 font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-gray-900 rounded border border-emerald-200 dark:border-emerald-700 shadow-inner">
                                             {(line.line_total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </div>
                                     </td>
@@ -287,12 +287,12 @@ export function ReservationLineTable({
                                             disabled={isLocked}
                                             onChange={(e) => onLineChange(index, 'note', e.target.value)}
                                             placeholder="หมายเหตุ..."
-                                            className={`${compactInputClass} italic text-gray-400 dark:text-gray-300 placeholder-gray-300 dark:placeholder-gray-700 bg-white dark:bg-[#1c182c] border-gray-100 dark:border-gray-800/60`}
+                                            className={`${compactInputClass} italic text-gray-400 dark:text-gray-300 placeholder-gray-300 dark:placeholder-gray-700 bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700`}
                                         />
                                     </td>
                                     
                                     {!isLocked && (
-                                        <td className="px-2 py-2 text-center sticky right-[-1px] pr-[9px] bg-white dark:bg-[#1a1625] group-hover:bg-[#fcfaff] dark:group-hover:bg-[#1d1929] z-[30] transition-colors border-l border-gray-100 dark:border-gray-800/60 shadow-[-12px_0_20px_-10px_rgba(0,0,0,0.1)] dark:shadow-[-20px_0_30px_-15px_rgba(0,0,0,0.8)] isolate">
+                                        <td className="px-2 py-2 text-center sticky right-[-1px] pr-[9px] bg-white dark:bg-gray-900 group-hover:bg-[#fcfaff] dark:group-hover:bg-gray-800 z-[30] transition-colors border-l border-gray-100 dark:border-gray-700 shadow-[-12px_0_20px_-10px_rgba(0,0,0,0.1)] dark:shadow-[-20px_0_30px_-15px_rgba(0,0,0,0.8)] isolate">
                                             <button 
                                                 type="button" 
                                                 onClick={() => onRemoveLine(index)}
@@ -309,8 +309,8 @@ export function ReservationLineTable({
                 </table>
 
                 {lines.length === 0 && (
-                    <div className="sticky left-0 w-full flex flex-col items-center justify-center py-16 text-gray-400 dark:text-purple-300/40">
-                        <Package className="w-16 h-16 mb-4 text-purple-200 dark:text-purple-500/30 opacity-40" />
+                    <div className="sticky left-0 w-full flex flex-col items-center justify-center py-16 text-gray-400 dark:text-gray-500 bg-gray-50/30 dark:bg-gray-800/20">
+                        <Package className="w-16 h-16 mb-4 text-gray-200 dark:text-gray-700 opacity-40" />
                         <p className="text-base font-medium">ยังไม่มีรายการจองสินค้า</p>
                         <button 
                             type="button"

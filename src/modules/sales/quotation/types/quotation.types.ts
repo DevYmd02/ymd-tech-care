@@ -14,7 +14,7 @@ export interface QuotationLineData {
     unit_price: number;  // Numeric(18,2)
     line_discount_input?: string; // Raw input (e.g. "5%" or "100")
     line_discount: number; // Numeric(18,2)
-    tax_code_id?: string; // UUID (FK)
+    tax_code_id?: number | string | null; // FK→tax_code
     line_total: number;   // Numeric(18,2)
     note?: string;        // Text
 }
@@ -42,7 +42,7 @@ export interface QuotationFormData {
     remarks?: string;       // Text
     payment_term_days: number; // Int
     onhold: 'Y' | 'N';      // Char(1)
-    tax_group_id?: string | null;  // UUID (FK)
+    tax_code_id?: number | string | null;  // FK→tax_code
     item_id?: string | null;       // UUID (FK) - Item/Service Class
     emp_area_id?: string | null;   // UUID (FK) - Salesperson
     emp_dept_id?: string | null;   // UUID (FK) - Department

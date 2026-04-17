@@ -35,7 +35,7 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
         branches,
         currencies,
         customers,
-        taxGroups,
+        taxCodes,
         departments,
         projects,
         itemTypes,
@@ -97,8 +97,8 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
     };
 
     // 🎨 UI Logic for Calculations (to be passed to components)
-    const selectedTaxGroup = taxGroups.find(t => String(t.tax_group_id) === String(formData.tax_group_id));
-    const taxRate = selectedTaxGroup ? (Number(selectedTaxGroup.tax_rate) || 0) : 0;
+    const selectedTaxCode = taxCodes.find(t => String(t.tax_code_id) === String(formData.tax_code_id));
+    const taxRate = selectedTaxCode ? (Number(selectedTaxCode.tax_rate) || 0) : 0;
 
     // 🛠️ Modal Footer Component
     const ModalFooter = (
@@ -160,7 +160,7 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
                                     branches={branches}
                                     currencies={currencies}
                                     customers={customers}
-                                    taxGroups={taxGroups}
+                                    taxCodes={taxCodes}
                                     departments={departments}
                                     projects={projects}
                                     itemTypes={itemTypes}

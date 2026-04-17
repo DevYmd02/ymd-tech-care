@@ -20,7 +20,7 @@ export interface SalesOrderLineData {
     unit_price: number;                               // numeric(18,2)
     line_discount: number;                            // numeric(18,2) ส่วนลดบรรทัด
     line_discount_input?: string;                     // UI helper (e.g. "10%")
-    tax_code_id?: string;                             // FK→tax_code (nullable)
+    tax_code_id?: number | string;                    // FK→tax_code (nullable)
     line_total: number;                               // numeric(18,2)
     lot_id?: string;                                  // FK→item_lot (nullable) [NEW]
     lot_no?: string;                                  // display/input helper
@@ -48,7 +48,7 @@ export interface SalesOrderFormData {
     total_amount: number;                             // numeric(18,2)
     remarks?: string;                                 // text (nullable)
     ship_days?: number;                               // smallint(2) ส่งของภายใน (วัน)
-    tax_group_id?: string;                            // FK→tax_group (nullable)
+    tax_code_id?: number | string;                    // FK→tax_code (nullable)
     item_id?: string;                                 // FK→item (nullable)
     emp_area_id?: string;                             // ID เขตการขาย (nullable)
     emp_dept_id?: string;                             // ID แผนก

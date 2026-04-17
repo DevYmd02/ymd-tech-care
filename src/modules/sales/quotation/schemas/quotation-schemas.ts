@@ -14,7 +14,7 @@ export const QuotationLineSchema = z.object({
     unit_price: z.coerce.number().min(0, 'ราคาต้องไม่ติดลบ'),
     line_discount_input: z.string().optional(),
     line_discount: z.coerce.number().default(0),
-    tax_code_id: z.string().optional(),
+    tax_code_id: z.coerce.number().optional(),
     line_total: z.coerce.number().default(0),
     note: z.string().optional(),
     // Data from Pricing Engine
@@ -48,7 +48,7 @@ export const QuotationFormSchema = z.object({
     remarks: z.string().optional(),
     payment_term_days: z.coerce.number().default(0),
     onhold: z.enum(['Y', 'N']).default('N'),
-    tax_group_id: z.string().or(z.literal('')).nullable().optional().transform(v => v === '' ? null : v),
+    tax_code_id: z.coerce.number().nullable().optional(),
     item_id: z.string().or(z.literal('')).nullable().optional().transform(v => v === '' ? null : v), // Item/Service Class
     emp_area_id: z.string().or(z.literal('')).nullable().optional().transform(v => v === '' ? null : v),
     emp_dept_id: z.string().or(z.literal('')).nullable().optional().transform(v => v === '' ? null : v),
@@ -84,7 +84,7 @@ export const getQuotationDefaultValues = (): QuotationFormValues => ({
     total_amount: 0,
     lead_id: null,
     branch_id: '',
-    tax_group_id: null,
+    tax_code_id: null,
     item_id: null,
     emp_area_id: null,
     emp_dept_id: null,
