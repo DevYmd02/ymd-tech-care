@@ -33,7 +33,7 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
         branches,
         currencies,
         customers,
-        taxGroups,
+        taxCodes,
         departments,
         projects,
         itemTypes,
@@ -67,8 +67,8 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
     const { setValue, getValues } = methods;
 
     // Derived values for summary
-    const selectedTaxGroup = taxGroups.find(t => String(t.tax_group_id) === String(formData.tax_group_id));
-    const taxRate = selectedTaxGroup ? (Number(selectedTaxGroup.tax_rate) || 0) : 0;
+    const selectedTaxCode = taxCodes.find(t => String(t.tax_code_id) === String(formData.tax_code_id));
+    const taxRate = selectedTaxCode ? (Number(selectedTaxCode.tax_rate) || 0) : 0;
 
     const onFormSubmit = async (data: ReservationFormData) => {
         setIsSubmitting(true);
@@ -141,7 +141,7 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
                                     branches={branches}
                                     currencies={currencies}
                                     customers={customers}
-                                    taxGroups={taxGroups}
+                                    taxCodes={taxCodes}
                                     departments={departments}
                                     projects={projects}
                                     itemTypes={itemTypes}

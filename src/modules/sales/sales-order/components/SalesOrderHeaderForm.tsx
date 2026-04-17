@@ -17,13 +17,13 @@ import type {
     ItemTypeListItem,
 } from '@/modules/master-data/types/master-data-types';
 import type { CustomerMaster } from '@/modules/master-data/customer/customer-master/types/customer-types';
-import type { TaxGroup } from '@/modules/master-data/tax/types/tax-types';
+import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
 
 interface SalesOrderHeaderFormProps {
     branches: BranchListItem[];
     currencies: Currency[];
     customers: CustomerMaster[];
-    taxGroups: TaxGroup[];
+    taxCodes: TaxCode[];
     departments: DepartmentListItem[];
     projects: Project[];
     itemTypes: ItemTypeListItem[];
@@ -35,7 +35,7 @@ export function SalesOrderHeaderForm({
     branches,
     currencies,
     customers,
-    taxGroups,
+    taxCodes,
     departments,
     projects,
     itemTypes,
@@ -120,20 +120,14 @@ export function SalesOrderHeaderForm({
                 </div>
 
                 <div className="space-y-1">
-                    <label className={labelClass}>สถานะ (status)</label>
-                    <input
-                        value={formData.status}
-                        readOnly
-                        className={`${inputClass} bg-gray-50/50 font-bold ${
-                            formData.status === 'DRAFT'
-                                ? 'text-gray-500'
-                                : formData.status === 'APPROVED' || formData.status === 'CONFIRMED'
-                                  ? 'text-emerald-600'
-                                  : formData.status === 'CANCELLED'
-                                    ? 'text-red-500'
-                                    : 'text-blue-500'
-                        }`}
-                    />
+                    <div className="flex items-center h-9 mt-5">
+                        <StatusCheckbox
+                            name="onhold"
+                            control={control}
+                            label="ON HOLD"
+                            disabled={isLocked}
+                        />
+                    </div>
                 </div>
 
                 {/* Row 2: Customer / Reservation Ref */}
@@ -179,18 +173,6 @@ export function SalesOrderHeaderForm({
                         >
                             <ClipboardList size={16} />
                         </button>
-                    </div>
-                </div>
-
-                <div className="space-y-1">
-                    <label className={labelClass}>ระงับชั่วคราว (onhold)</label>
-                    <div className="flex items-center h-9">
-                        <StatusCheckbox
-                            name="onhold"
-                            control={control}
-                            label={formData.onhold === 'Y' ? 'ON HOLD (ระงับ)' : 'NORMAL (ปกติ)'}
-                            disabled={isLocked}
-                        />
                     </div>
                 </div>
 
@@ -318,30 +300,23 @@ export function SalesOrderHeaderForm({
                     </select>
                 </div>
 
-                {/* Row 6: Currency / Tax / Remarks */}
+                {/* Row 6: Tax / Remarks */}
                 <div className="space-y-1">
-                    <label className={labelClass}>
-                        สกุลเงิน (currency_code) <span className="text-red-500">*</span>
-                    </label>
-                    <select {...register('currency_code')} disabled={isLocked} className={selectClass}>
-                        {currencies.map((c) => (
-                            <option key={c.currency_id} value={c.currency_code}>
-                                {c.currency_code}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-
-                <div className="space-y-1">
-                    <label className={labelClass}>กลุ่มภาษี (tax_group_id)</label>
-                    <select {...register('tax_group_id')} disabled={isLocked} className={selectClass}>
-                        <option value="">-- เลือกภาษี --</option>
-                        {taxGroups.map((group) => (
+                    <label className={labelClass}>ประเภทภาษี (tax_code_id)</label>
+                    <select
+                        {...register('tax_code_id', {
+                            setValueAs: (v) => (v === '' ? undefined : Number(v)),
+                        })}
+                        disabled={isLocked}
+                        className={selectClass}
+                    >
+                        <option value="">-- เลือกประเภทภาษี --</option>
+                        {taxCodes.map((group) => (
                             <option
-                                key={group.tax_group_id}
-                                value={String(group.tax_group_id || '')}
+                                key={group.tax_code_id}
+                                value={String(group.tax_code_id || '')}
                             >
-                                {group.tax_group_name || group.tax_group_code}
+                                {group.tax_code}
                             </option>
                         ))}
                     </select>

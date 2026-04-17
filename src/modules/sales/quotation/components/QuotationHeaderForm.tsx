@@ -11,13 +11,13 @@ import type {
     ItemTypeListItem 
 } from '@/modules/master-data/types/master-data-types';
 import type { CustomerMaster } from '@/modules/master-data/customer/customer-master/types/customer-types';
-import type { TaxGroup } from '@/modules/master-data/tax/types/tax-types';
+import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
 
 interface QuotationHeaderFormProps {
     branches: BranchListItem[];
     currencies: Currency[];
     customers: CustomerMaster[];
-    taxGroups: TaxGroup[];
+    taxCodes: TaxCode[];
     departments: DepartmentListItem[];
     projects: Project[];
     itemTypes: ItemTypeListItem[];
@@ -30,7 +30,7 @@ export function QuotationHeaderForm({
     branches, 
     currencies, 
     customers, 
-    taxGroups,
+    taxCodes,
     departments,
     projects,
     itemTypes,
@@ -237,20 +237,22 @@ export function QuotationHeaderForm({
 
                 {/* Row 4 */}
                 <div className="space-y-1">
-                    <label className={labelClass}>กลุ่มภาษี (tax_group_id)</label>
+                    <label className={labelClass}>ประเภทภาษี (tax_code_id)</label>
                     <select 
-                        {...register('tax_group_id')}
+                        {...register('tax_code_id', {
+                            setValueAs: (v) => (v === '' ? null : Number(v)),
+                        })}
                         disabled={isLocked}
-                        className={`${selectClass} ${getErrorClass('tax_group_id')}`}
+                        className={`${selectClass} ${getErrorClass('tax_code_id')}`}
                     >
-                        <option value="">-- เลือกภาษี --</option>
-                        {taxGroups.map(group => (
-                            <option key={group.tax_group_id} value={String(group.tax_group_id || '')}>
-                                {group.tax_group_name || group.tax_group_code}
+                        <option value="">-- เลือกประเภทภาษี --</option>
+                        {taxCodes.map(group => (
+                            <option key={group.tax_code_id} value={String(group.tax_code_id || '')}>
+                                {group.tax_code}
                             </option>
                         ))}
                     </select>
-                    {errors.tax_group_id && <span className="text-[10px] text-red-500 font-medium whitespace-nowrap">ข้อมูลกลุ่มภาษีไม่ถูกต้อง</span>}
+                    {errors.tax_code_id && <span className="text-[10px] text-red-500 font-medium whitespace-nowrap">ข้อมูลประเภทภาษีไม่ถูกต้อง</span>}
                 </div>
 
                 <div className="space-y-1">

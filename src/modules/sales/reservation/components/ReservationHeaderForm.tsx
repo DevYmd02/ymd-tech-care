@@ -11,14 +11,14 @@ import type {
     ItemTypeListItem 
 } from '@/modules/master-data/types/master-data-types';
 import type { CustomerMaster } from '@/modules/master-data/customer/customer-master/types/customer-types';
-import type { TaxGroup } from '@/modules/master-data/tax/types/tax-types';
+import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
 import type { SaleAreaMaster } from '@/modules/master-data/sales/pages/area/types/area.types';
 
 interface ReservationHeaderFormProps {
     branches: BranchListItem[];
     currencies: Currency[];
     customers: CustomerMaster[];
-    taxGroups: TaxGroup[];
+    taxCodes: TaxCode[];
     departments: DepartmentListItem[];
     projects: Project[];
     itemTypes: ItemTypeListItem[];
@@ -32,7 +32,7 @@ export function ReservationHeaderForm({
     branches, 
     currencies, 
     customers, 
-    taxGroups,
+    taxCodes,
     departments,
     projects,
     itemTypes,
@@ -294,16 +294,18 @@ export function ReservationHeaderForm({
                 </div>
 
                 <div className="space-y-1">
-                    <label className={labelClass}>กลุ่มภาษี (tax_group_id)</label>
+                    <label className={labelClass}>ประเภทภาษี (tax_code_id)</label>
                     <select 
-                        {...register('tax_group_id')}
+                        {...register('tax_code_id', {
+                            setValueAs: (v) => (v === '' ? null : Number(v)),
+                        })}
                         disabled={isLocked}
                         className={selectClass}
                     >
-                        <option value="">-- เลือกภาษี --</option>
-                        {taxGroups.map(group => (
-                            <option key={group.tax_group_id} value={String(group.tax_group_id || '')}>
-                                {group.tax_group_name || group.tax_group_code}
+                        <option value="">-- เลือกประเภทภาษี --</option>
+                        {taxCodes.map(group => (
+                            <option key={group.tax_code_id} value={String(group.tax_code_id || '')}>
+                                {group.tax_code}
                             </option>
                         ))}
                     </select>

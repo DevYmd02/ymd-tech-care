@@ -19,6 +19,7 @@ export const ReservationLineSchema = z.object({
     line_discount: z.coerce.number().default(0),
     reserve_policy: z.enum(['AUTO', 'MANUAL']).default('AUTO'),
     line_total: z.coerce.number().default(0),
+    tax_code_id: z.coerce.number().optional(),
     note: z.string().optional(),
 });
 
@@ -49,7 +50,7 @@ export const ReservationFormSchema = z.object({
     vat_amount: z.coerce.number().default(0),
     total_amount: z.coerce.number().default(0),
     onhold: z.enum(['Y', 'N']).default('N'),
-    tax_group_id: z.string().or(z.literal('')).nullable().optional().transform(v => v === '' ? null : v),
+    tax_code_id: z.coerce.number().nullable().optional(),
     item_id: z.string().or(z.literal('')).nullable().optional().transform(v => v === '' ? null : v),
     emp_area_id: z.string().or(z.literal('')).nullable().optional().transform(v => v === '' ? null : v),
     emp_dept_id: z.string().min(1, 'กรุณาเลือกแผนก'),
