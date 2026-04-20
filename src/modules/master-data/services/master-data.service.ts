@@ -9,6 +9,7 @@ import type {
   ItemListItem,
   DepartmentListItem,
   Currency,
+  SaleAreaListItem,
 } from '@/modules/master-data/types/master-data-types';
 import { logger } from '@/shared/utils/logger';
 
@@ -23,6 +24,7 @@ import { ProductCategoryService } from '@/modules/master-data/inventory/services
 import { ItemTypeService } from '@/modules/master-data/inventory/services/item-type.service';
 import { EmployeeDeptService as DepartmentService } from '@/modules/master-data/company/services/employee-dept.service';
 import { CurrencyService } from '@/modules/master-data/currency/services/currency.service';
+import { SaleAreaService } from '@/modules/master-data/sales/pages/area/services/area.service';
 
 export const MasterDataService = {
   getBranches: async (): Promise<BranchListItem[]> => {
@@ -173,6 +175,16 @@ export const MasterDataService = {
       return response?.items || [];
     } catch (error) {
       logger.error('[MasterDataService] getCurrencies failed:', error);
+      return [];
+    }
+  },
+  
+  getSaleAreas: async (): Promise<SaleAreaListItem[]> => {
+    try {
+      const response = await SaleAreaService.getList();
+      return response || [];
+    } catch (error) {
+      logger.error('[MasterDataService] getSaleAreas failed:', error);
       return [];
     }
   }

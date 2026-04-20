@@ -4,12 +4,19 @@
  */
 
 import { useState, useMemo } from 'react';
-import { FileText, Search, Plus, Edit, Eye, Send } from 'lucide-react';
+import { FileText, Search, Plus, Send } from 'lucide-react';
 import { PageListLayout, SmartTable, FilterField } from '@ui';
 import { createColumnHelper } from '@tanstack/react-table';
-import type { QuotationHeader } from '@sales/quotation/services/quotation.service';
+import { QuotationService } from '@sales/quotation/services/quotation.service';
+import type { QuotationHeader, QuotationLineData } from '@sales/quotation/types/quotation.types';
+import type { QuotationFormValues } from '@sales/quotation/schemas/quotation-schemas';
 import { QuotationFormModal } from '@sales/quotation/components/QuotationFormModal';
 import { useQuotationList } from '@sales/quotation/hooks/useQuotation';
+import { useQuery } from '@tanstack/react-query';
+import { CustomerService } from '@/modules/master-data/customer/customer-master/services/customer.service';
+import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal';
+import { SQStatusBadge } from '@/modules/sales/shared/components/SQStatusBadge';
+import { SQActionsCell } from './components/SQActionsCell';
 
 // ====================================================================================
 // CONSTANTS
@@ -17,29 +24,16 @@ import { useQuotationList } from '@sales/quotation/hooks/useQuotation';
 
 const STATUS_OPTIONS = [
     { value: 'ALL', label: 'ทั้งหมด' },
-    { value: 'Draft', label: 'แบบร่าง' },
-    { value: 'Sent', label: 'รออนุมัติ' },
-    { value: 'Approved', label: 'อนุมัติแล้ว' },
+    { value: 'DRAFT', label: 'แบบร่าง' },
+    { value: 'PENDING', label: 'รออนุมัติ' },
+    { value: 'SENT', label: 'ส่งแล้ว' },
+    { value: 'ACCEPTED', label: 'อนุมัติแล้ว' },
 ];
 
 // ====================================================================================
 // COMPONENTS
 // ====================================================================================
 
-const StatusBadge = ({ status }: { status: string }) => {
-    const config = {
-        Draft: { className: 'bg-gray-100 text-gray-600 border-gray-200', label: 'แบบร่าง' },
-        Sent: { className: 'bg-blue-100 text-blue-600 border-blue-200', label: 'รออนุมัติ' },
-        Approved: { className: 'bg-emerald-100 text-emerald-600 border-emerald-200', label: 'อนุมัติแล้ว' },
-        Rejected: { className: 'bg-red-100 text-red-600 border-red-200', label: 'ไม่อนุมัติ' },
-    }[status] || { className: 'bg-gray-100 text-gray-600 border-gray-200', label: status };
-
-    return (
-        <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${config.className}`}>
-            {config.label}
-        </span>
-    );
-};
 
 // ====================================================================================
 // MAIN COMPONENT
@@ -54,6 +48,11 @@ export default function QuotationListPage() {
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
+    const [selectedData, setSelectedData] = useState<Partial<QuotationHeader> | undefined>(undefined);
+    const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('create');
+    const [isApproveConfirmOpen, setIsApproveConfirmOpen] = useState(false);
+    const [isApproveLoading, setIsApproveLoading] = useState(false);
+    const [pendingApproveId, setPendingApproveId] = useState<string | null>(null);
 
     // 🏗️ Memoize query params to prevent unstable identities
     const queryParams = useMemo(() => ({
@@ -66,16 +65,110 @@ export default function QuotationListPage() {
 
     const { data: apiData, isLoading, refetch } = useQuotationList(queryParams);
 
+    // 🏷️ Fetch Customers for Name Lookup
+    const { data: customerResponse } = useQuery({
+        queryKey: ['master-customers-lookup'],
+        queryFn: () => CustomerService.getList({ limit: 1000 }),
+        staleTime: 30 * 60 * 1000,
+    });
+
+    const customerMap = useMemo(() => {
+        const map = new Map<string | number, string>();
+        (customerResponse?.data || []).forEach(c => {
+            map.set(String(c.customer_id), c.customer_name_th || c.customer_name || '');
+        });
+        return map;
+    }, [customerResponse]);
+
     const displayData = useMemo(() => apiData?.data || [], [apiData]);
 
     const handleCreate = () => {
         setSelectedId(undefined);
+        setSelectedData(undefined);
+        setModalMode('create');
         setIsModalOpen(true);
     };
 
-    const handleEdit = (id: string) => {
+    const handleView = (id: string, row?: QuotationHeader) => {
         setSelectedId(id);
+        setSelectedData(row);
+        setModalMode('view');
         setIsModalOpen(true);
+    };
+
+    const handleEdit = (id: string, row?: QuotationHeader) => {
+        setSelectedId(id);
+        setSelectedData(row);
+        setModalMode('edit');
+        setIsModalOpen(true);
+    };
+
+    const handleSendApprove = (id: string) => {
+        setPendingApproveId(id);
+        setIsApproveConfirmOpen(true);
+    };
+
+    const confirmSendApprove = async () => {
+        if (!pendingApproveId) return;
+        setIsApproveLoading(true);
+        try {
+            // 🔍 Resilience Strategy: Use type-safe casting instead of 'any' to satisfy Lint rules.
+            const rawRecord = displayData.find(item => String(item.id) === pendingApproveId) as unknown;
+            const record = rawRecord as Record<string, unknown>;
+            
+            if (record) {
+                // Map List Record to Partial Form Values to satisfy Backend mandatory fields.
+                // 🛡️ Resolution Priority: 
+                // 1. Existing tax_code_id in record
+                // 2. Hidden tax_code_id in rawData 
+                // 3. undefined (to prevent sending '0' which backend rejects)
+                const rawData = (record.rawData || {}) as Record<string, unknown>;
+                const resolvedTaxCode = record.tax_code_id || rawData.tax_code_id;
+                
+                const updatePayload: Partial<QuotationFormValues> = {
+                    status: 'PENDING' as const,
+                    sq_status: 'PENDING' as const,
+                    // 🛡️ Rescue Lines: Explicitly map and cast types to satisfy QuotationLineSchema requirements
+                    lines: ((record.lines || []) as QuotationLineData[]).map(line => ({
+                        sq_line_id: line.sq_line_id ? String(line.sq_line_id) : undefined,
+                        sq_id: line.sq_id ? String(line.sq_id) : undefined,
+                        item_id: Number(line.item_id || 0),
+                        item_code: line.item_code,
+                        item_name: line.item_name,
+                        qty: Number(line.qty || 0),
+                        uom_id: Number(line.uom_id || 0),
+                        unit_price: Number(line.unit_price || 0),
+                        discount_expression: line.discount_expression,
+                        line_discount: Number(line.line_discount || 0),
+                        tax_code_id: line.tax_code_id ? Number(line.tax_code_id) : null,
+                        line_total: Number(line.line_total || 0),
+                        note: line.note,
+                        price_source: line.price_source,
+                        price_source_name: line.price_source_name
+                    })),
+                    sq_date: String(record.date || record.sq_date || new Date().toISOString().split('T')[0]),
+                    customer_id: record.customer_id ? Number(record.customer_id) : undefined,
+                    branch_id: record.branch_id ? Number(record.branch_id) : undefined,
+                    lead_id: record.lead_id ? Number(record.lead_id) : null,
+                    // 🛡️ Resolve tracking IDs: Prioritize mapped record values, then rawData fallback to satisfy backend integer requirements
+                    emp_area_id: (record.emp_area_id ?? (record.rawData as Record<string, unknown>)?.emp_area_id) ? Number(record.emp_area_id ?? (record.rawData as Record<string, unknown>)?.emp_area_id) : undefined,
+                    emp_dept_id: (record.emp_dept_id ?? (record.rawData as Record<string, unknown>)?.emp_dept_id) ? Number(record.emp_dept_id ?? (record.rawData as Record<string, unknown>)?.emp_dept_id) : undefined,
+                    project_id: (record.project_id ?? (record.rawData as Record<string, unknown>)?.project_id) ? Number(record.project_id ?? (record.rawData as Record<string, unknown>)?.project_id) : undefined,
+                    tax_code_id: resolvedTaxCode ? Number(resolvedTaxCode) : undefined,
+                    exchange_rate_date: String(record.exchange_rate_date || record.date || new Date().toISOString().split('T')[0]),
+                };
+
+                await QuotationService.update(pendingApproveId, updatePayload);
+            }
+            
+            refetch();
+            setIsApproveConfirmOpen(false);
+        } catch (error) {
+            console.error('Failed to send for approval:', error);
+        } finally {
+            setIsApproveLoading(false);
+            setPendingApproveId(null);
+        }
     };
 
     // Columns Definition
@@ -84,15 +177,15 @@ export default function QuotationListPage() {
     const columns = useMemo(() => [
         columnHelper.display({
             id: 'index',
-            header: 'ลำดับ',
-            cell: (info) => info.row.index + 1,
+            header: () => <div className="flex justify-center items-center w-full">ลำดับ</div>,
+            cell: (info) => <div className="flex justify-center items-center w-full">{info.row.index + 1}</div>,
             size: 50,
         }),
         columnHelper.accessor('sq_no', {
             header: 'เลขที่ใบเสนอราคา',
             cell: (info) => (
                 <span 
-                    onClick={() => handleEdit(info.row.original.sq_no)}
+                    onClick={() => handleEdit(String(info.row.original.id), info.row.original)}
                     className="text-blue-600 font-semibold cursor-pointer hover:underline"
                 >
                     {info.getValue()}
@@ -102,78 +195,88 @@ export default function QuotationListPage() {
         }),
         columnHelper.accessor('date', {
             header: 'วันที่',
-            cell: (info) => info.getValue(),
+            cell: (info) => {
+                const val = info.getValue();
+                if (!val) return '-';
+                const d = new Date(val);
+                return isNaN(d.getTime()) ? val : d.toLocaleDateString('en-GB');
+            },
             size: 120,
         }),
         columnHelper.accessor('customer_name', {
             header: 'ลูกค้า',
-            cell: (info) => (
-                <div className="flex flex-col">
-                    <span className="font-medium text-gray-900 dark:text-gray-100">{info.getValue()}</span>
-                    <span className="text-xs text-gray-500">{info.row.original.customer_code}</span>
-                </div>
-            ),
+            cell: (info) => {
+                const customerId = info.row.original.customer_id;
+                const nameFromLookup = customerMap.get(String(customerId));
+                const displayName = nameFromLookup || info.getValue() || 'ไม่ระบุ';
+
+                return (
+                    <div className="flex flex-col">
+                        <span className="font-medium text-gray-900 dark:text-gray-100">{displayName}</span>
+                        <span className="text-xs text-gray-500">{info.row.original.customer_code}</span>
+                    </div>
+                );
+            },
             size: 200,
         }),
         columnHelper.accessor('total_amount', {
-            header: 'มูลค่ารวม',
-            cell: (info) => (
-                <div className="flex items-center gap-1 text-emerald-600 font-semibold">
-                    <span>{info.row.original.currency === 'USD' ? '$' : '฿'}</span>
-                    <span>{info.getValue().toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                </div>
-            ),
-            size: 150,
-        }),
-        columnHelper.accessor('expiry_date', {
-            header: 'หมดอายุ',
-            cell: (info) => info.getValue(),
-            size: 120,
-        }),
-        columnHelper.accessor('status', {
-            header: 'สถานะ',
-            cell: (info) => <StatusBadge status={info.getValue()} />,
-            size: 100,
-        }),
-        columnHelper.display({
-            id: 'actions',
-            header: 'การจัดการ',
+            header: () => <div className="text-center w-full">มูลค่ารวม (บาท)</div>,
             cell: (info) => {
-                const status = info.row.original.status;
-                const isDraft = status === 'Draft';
-                
+                const raw = info.row.original.rawData as Record<string, unknown>;
+                const rate = Number(raw?.exchange_rate || 1);
+                const totalAmount = Number(info.getValue()) || 0;
+                const convertedAmount = totalAmount * rate;
+                const currency = info.row.original.currency;
+
                 return (
-                    <div className="flex items-center gap-3">
-                        <button 
-                            className="text-blue-500 hover:text-blue-700 transition-colors" 
-                            title="ดูรายละเอียด"
-                        >
-                            <Eye size={18} />
-                        </button>
-                        
-                        {isDraft && (
-                            <>
-                                <button 
-                                    onClick={() => handleEdit(info.row.original.sq_no)}
-                                    className="text-orange-500 hover:text-orange-700 transition-colors"
-                                    title="แก้ไข"
-                                >
-                                    <Edit size={18} />
-                                </button>
-                                <button 
-                                    className="text-emerald-500 hover:text-emerald-700 transition-colors"
-                                    title="ส่งอนุมัติ"
-                                >
-                                    <Send size={18} />
-                                </button>
-                            </>
+                    <div className="flex flex-col items-center gap-0.5 w-full">
+                        <div className="flex items-center gap-1 text-emerald-600 font-bold">
+                            <span className="text-xs">฿</span>
+                            <span>{convertedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                        {currency !== 'THB' && (
+                            <div className="text-[10px] text-gray-400 font-medium italic">
+                                ({currency} {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })})
+                            </div>
                         )}
                     </div>
                 );
             },
             size: 150,
         }),
-    ], [columnHelper]);
+        columnHelper.accessor('expiry_date', {
+            header: 'หมดอายุ',
+            cell: (info) => {
+                const val = info.getValue();
+                if (!val) return '-';
+                const d = new Date(val);
+                return isNaN(d.getTime()) ? val : d.toLocaleDateString('en-GB');
+            },
+            size: 120,
+        }),
+        columnHelper.accessor('status', {
+            header: () => <div className="flex justify-center items-center w-full">สถานะ</div>,
+            cell: (info) => (
+                <div className="flex justify-center items-center w-full">
+                    <SQStatusBadge status={info.getValue()} />
+                </div>
+            ),
+            size: 100,
+        }),
+        columnHelper.display({
+            id: 'actions',
+            header: () => <div className="flex justify-center items-center w-full">การจัดการ</div>,
+            cell: (info) => (
+                <SQActionsCell 
+                    row={info.row.original}
+                    onView={handleView}
+                    onEdit={handleEdit}
+                    onSendApprove={handleSendApprove}
+                />
+            ),
+            size: 180,
+        }),
+    ], [columnHelper, customerMap]);
 
     return (
         <PageListLayout
@@ -275,7 +378,23 @@ export default function QuotationListPage() {
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 id={selectedId}
+                initialData={selectedData as unknown as QuotationFormValues}
                 onSuccess={() => refetch()}
+                readOnly={modalMode === 'view'}
+            />
+
+            {/* Send Approve Confirmation */}
+            <ConfirmationModal 
+                isOpen={isApproveConfirmOpen}
+                onClose={() => !isApproveLoading && setIsApproveConfirmOpen(false)}
+                onConfirm={confirmSendApprove}
+                title="ยืนยันการส่งอนุมัติ"
+                description="คุณต้องการส่งใบเสนอราคานี้เพื่อขออนุมัติใช่หรือไม่? เมื่อส่งแล้วสถานะจะเปลี่ยนเป็น 'รออนุมัติ'"
+                confirmText="ยืนยันส่งอนุมัติ"
+                cancelText="ยกเลิก"
+                variant="info"
+                isLoading={isApproveLoading}
+                icon={Send}
             />
         </PageListLayout>
     );

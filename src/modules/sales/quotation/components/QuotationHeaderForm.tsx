@@ -7,11 +7,11 @@ import type {
     BranchListItem, 
     Currency, 
     DepartmentListItem, 
-    Project, 
-    ItemTypeListItem 
+    Project
 } from '@/modules/master-data/types/master-data-types';
 import type { CustomerMaster } from '@/modules/master-data/customer/customer-master/types/customer-types';
 import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
+import type { SaleAreaListItem } from '@master-data/sales/pages/area/types/area.types';
 
 interface QuotationHeaderFormProps {
     branches: BranchListItem[];
@@ -20,7 +20,7 @@ interface QuotationHeaderFormProps {
     taxCodes: TaxCode[];
     departments: DepartmentListItem[];
     projects: Project[];
-    itemTypes: ItemTypeListItem[];
+    saleAreas: SaleAreaListItem[];
     readOnly?: boolean;
     onSearchCustomer?: () => void;
     onSearchLead?: () => void;
@@ -33,7 +33,7 @@ export function QuotationHeaderForm({
     taxCodes,
     departments,
     projects,
-    itemTypes,
+    saleAreas,
     readOnly = false,
     onSearchCustomer,
     onSearchLead
@@ -52,24 +52,40 @@ export function QuotationHeaderForm({
     const getErrorClass = (fieldName: keyof QuotationFormValues) => 
         errors[fieldName] ? "border-red-500 focus:ring-red-500 ring-2 ring-red-500/50" : "";
 
-    // Find selected customer name for display
-    const selectedCustomer = customers.find(c => String(c.customer_id || c.id) === String(formData.customer_id));
+    // Find selected customer name for display (Direct numeric comparison preferred)
+    const currentCustomerId = Number(formData.customer_id || 0);
+    const selectedCustomer = currentCustomerId > 0 
+        ? customers.find(c => Number(c.customer_id || c.id) === currentCustomerId)
+        : undefined;
+
     const customerDisplay = selectedCustomer 
         ? `${selectedCustomer.customer_code || selectedCustomer.code || ''} - ${selectedCustomer.customer_name_th || selectedCustomer.customer_name || selectedCustomer.name_th || ''}` 
         : '';
 
     return (
         <section className="space-y-6">
-            <div className="flex items-center gap-2 pb-3 border-b border-gray-100 dark:border-gray-800 text-blue-600 dark:text-blue-400">
-                <FileText size={20} strokeWidth={2.5} />
-                <h3 className="text-lg font-bold">ข้อมูลใบเสนอราคา — Header Quotation</h3>
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
+                <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                    <FileText size={20} strokeWidth={2.5} />
+                    <h3 className="text-lg font-bold">ข้อมูลใบเสนอราคา — Header Quotation</h3>
+                </div>
+                
+                {/* 🛡️ Strategic Placement: ON HOLD moves to the header row for maximum visibility and better layout balance */}
+                <div className="flex items-center h-9 px-3 bg-blue-50/50 dark:bg-blue-900/20 rounded-full border border-blue-100 dark:border-blue-900/30">
+                    <StatusCheckbox 
+                        name="onhold"
+                        control={control}
+                        label="ON HOLD"
+                        disabled={isLocked}
+                    />
+                </div>
             </div>
 
             <div className={cardSection}>
                 
-                {/* Row 1 */}
+                {/* Row 1: Main Identification */}
                 <div className="space-y-1">
-                    <label className={labelClass}>เลขที่ใบเสนอราคา (sq_no) <span className="text-red-500">*</span></label>
+                    <label className={labelClass}>เลขที่ใบเสนอราคา (SQ_NO) <span className="text-red-500">*</span></label>
                     <div className="relative">
                         <input 
                             {...register('sq_no')}
@@ -81,7 +97,7 @@ export function QuotationHeaderForm({
                 </div>
 
                 <div className="space-y-1">
-                    <label className={labelClass}>วันที่ (sq_date) <span className="text-red-500">*</span></label>
+                    <label className={labelClass}>วันที่ (SQ_DATE) <span className="text-red-500">*</span></label>
                     <Controller
                         name="sq_date"
                         control={control}
@@ -97,8 +113,8 @@ export function QuotationHeaderForm({
                     {errors.sq_date && <span className="text-[10px] text-red-500 font-medium whitespace-nowrap">กรุณาระบุวันที่</span>}
                 </div>
 
-                <div className="space-y-1">
-                    <label className={labelClass}>ลูกค้า (customer_id) <span className="text-red-500">*</span></label>
+                <div className="lg:col-span-2 space-y-1">
+                    <label className={labelClass}>ลูกค้า (CUSTOMER_ID) <span className="text-red-500">*</span></label>
                     <div className="flex gap-2">
                         <div className="relative flex-1 group">
                             <input 
@@ -119,31 +135,19 @@ export function QuotationHeaderForm({
                             <Search size={18} />
                         </button>
                     </div>
-                    {errors.customer_id && <span className="text-[10px] text-red-500 font-medium">กรุณาเลือกลูกค้า</span>}
+                    {errors.customer_id && <span className="text-[10px] text-red-500 font-medium tracking-tight">กรุณาเลือกลูกค้า</span>}
                 </div>
 
-                <div className="space-y-1">
-                    <label className={labelClass}>&nbsp;</label>
-                    <div className="flex items-center h-9">
-                        <StatusCheckbox 
-                            name="onhold"
-                            control={control}
-                            label="ON HOLD"
-                            disabled={isLocked}
-                        />
-                    </div>
-                </div>
-
-                {/* Row 2 */}
-                <div className="space-y-1">
-                    <label className={labelClass}>อ้างอิงเลขที่ Lead (lead_id)</label>
+                {/* Row 2: Secondary Tracking - Now balanced with 2:2 ratio */}
+                <div className="lg:col-span-2 space-y-1">
+                    <label className={labelClass}>อ้างอิงเลขที่ Lead (LEAD_ID)</label>
                     <div className="flex gap-2">
-                        <div className="relative flex-1">
+                        <div className="relative flex-1 group">
                             <input 
                                 {...register('lead_id')}
                                 disabled={isLocked}
-                                className={inputClass} 
-                                placeholder="LEAD-xxx (ถ้ามี)"
+                                className={`${inputClass} group-hover:border-blue-400 transition-colors`} 
+                                placeholder="LEAD-xxx (ถ้ามีชื่อ Lead อ้างอิง)"
                             />
                         </div>
                         <button 
@@ -157,14 +161,16 @@ export function QuotationHeaderForm({
                     </div>
                 </div>
 
-                <div className="space-y-1">
-                    <label className={labelClass}>สาขา (branch_id) <span className="text-red-500">*</span></label>
+                <div className="lg:col-span-2 space-y-1">
+                    <label className={labelClass}>สาขา (BRANCH_ID) <span className="text-red-500">*</span></label>
                     <select
-                        {...register('branch_id')}
+                        {...register('branch_id', {
+                            setValueAs: (v) => (v === '' || v === '0' ? null : Number(v)),
+                        })}
                         disabled={isLocked}
                         className={`${selectClass} ${getErrorClass('branch_id')}`}
                     >
-                        <option value="">-- เลือกสาขา --</option>
+                        <option value="0">-- เลือกสาขา --</option>
                         {branches.map(branch => (
                             <option key={branch.branch_id} value={String(branch.branch_id || '')}>
                                 {branch.branch_name}
@@ -174,8 +180,9 @@ export function QuotationHeaderForm({
                     {errors.branch_id && <span className="text-[10px] text-red-500 font-medium whitespace-nowrap">กรุณาเลือกสาขา</span>}
                 </div>
 
+                {/* Row 3: Terms and Classification */}
                 <div className="space-y-1">
-                    <label className={labelClass}>ยื่นราคาจนถึงวันที่ (valid_until)</label>
+                    <label className={labelClass}>ยื่นราคาจนถึงวันที่ (VALID_UNTIL)</label>
                     <Controller
                         name="valid_until"
                         control={control}
@@ -190,133 +197,116 @@ export function QuotationHeaderForm({
                     />
                 </div>
 
-                {/* Row 3 */}
                 <div className="space-y-1">
-                    <label className={labelClass}>วันที่กำหนดส่งของ (ship_date)</label>
-                    <Controller
-                        name="ship_date"
-                        control={control}
-                        render={({ field }) => (
-                            <CustomDateInput
-                                value={field.value || ''}
-                                onChange={field.onChange}
-                                disabled={isLocked}
-                                className={inputClass}
-                            />
-                        )}
-                    />
-                </div>
-
-                <div className="space-y-1">
-                    <label className={labelClass}>เครดิตเทอม (วัน) (payment_term_days)</label>
+                    <label className={labelClass}>เครดิตเทอม (วัน) (PAYMENT_TERM_DAYS)</label>
                     <input 
                         type="number"
                         {...register('payment_term_days', { valueAsNumber: true })}
                         disabled={isLocked}
                         className={inputClass} 
-                        placeholder="เช่น 30 วัน, 60 วัน"
+                        placeholder="0"
                     />
                 </div>
 
                 <div className="space-y-1">
-                    <label className={labelClass}>ประเภทสินค้า (item_id)</label>
-                    <select 
-                        {...register('item_id')}
-                        disabled={isLocked}
-                        className={`${selectClass} ${getErrorClass('item_id')}`}
-                    >
-                        <option value="">-- เลือกประเภทสินค้า --</option>
-                        {itemTypes.map(item => (
-                            <option key={item.item_type_id} value={String(item.item_type_id || '')}>
-                                {item.item_type_name}
-                            </option>
-                        ))}
-                    </select>
-                    {errors.item_id && <span className="text-[10px] text-red-500 font-medium whitespace-nowrap">ข้อมูลประเภทสินค้าไม่ถูกต้อง</span>}
-                </div>
-
-                {/* Row 4 */}
-                <div className="space-y-1">
-                    <label className={labelClass}>ประเภทภาษี (tax_code_id)</label>
+                    <label className={labelClass}>ประเภทภาษี (TAX_CODE_ID)</label>
                     <select 
                         {...register('tax_code_id', {
-                            setValueAs: (v) => (v === '' ? null : Number(v)),
+                            setValueAs: (v) => (v === '' || v === '0' ? null : Number(v)),
                         })}
                         disabled={isLocked}
                         className={`${selectClass} ${getErrorClass('tax_code_id')}`}
                     >
-                        <option value="">-- เลือกประเภทภาษี --</option>
+                        <option value="0">-- เลือกประเภทภาษี --</option>
                         {taxCodes.map(group => (
                             <option key={group.tax_code_id} value={String(group.tax_code_id || '')}>
                                 {group.tax_code}
                             </option>
                         ))}
                     </select>
-                    {errors.tax_code_id && <span className="text-[10px] text-red-500 font-medium whitespace-nowrap">ข้อมูลประเภทภาษีไม่ถูกต้อง</span>}
+                    {errors.tax_code_id && <span className="text-[10px] text-red-500 font-medium whitespace-nowrap">ระบุประเภทภาษี</span>}
                 </div>
 
                 <div className="space-y-1">
-                    <label className={labelClass}>แผนก (emp_dept_id)</label>
+                    <label className={labelClass}>แผนก (EMP_DEPT_ID)</label>
                     <select 
-                        {...register('emp_dept_id')}
+                        {...register('emp_dept_id', {
+                            setValueAs: (v) => (v === '' || v === '0' ? null : Number(v)),
+                        })}
                         disabled={isLocked}
                         className={`${selectClass} ${getErrorClass('emp_dept_id')}`}
                     >
-                        <option value="">-- เลือกแผนก --</option>
+                        <option value="0">-- เลือกแผนก --</option>
                         {departments.map(dept => (
                             <option key={dept.emp_dept_id || dept.dept_id || dept.id} value={String(dept.emp_dept_id || dept.dept_id || dept.id || '')}>
                                 {(dept.emp_dept_code || dept.dept_code) ? `${dept.emp_dept_code || dept.dept_code} - ` : ''}
                                 {dept.emp_dept_name || dept.dept_name || dept.department_name}
-                                {dept.emp_side_name ? ` (${dept.emp_side_name})` : ''}
                             </option>
                         ))}
                     </select>
-                    {errors.emp_dept_id && <span className="text-[10px] text-red-500 font-medium whitespace-nowrap">ข้อมูลแผนกไม่ถูกต้อง</span>}
                 </div>
 
-                {/* Row 5 */}
+                {/* Row 4: Project and Notes */}
                 <div className="space-y-1">
-                    <label className={labelClass}>Job (job_id)</label>
+                    <label className={labelClass}>JOB (PROJECT_ID)</label>
                     <select 
-                        {...register('job_id')}
+                        {...register('project_id', {
+                            setValueAs: (v) => (v === '' || v === '0' ? null : Number(v)),
+                        })}
                         disabled={isLocked}
-                        className={`${selectClass} ${getErrorClass('job_id')}`}
+                        className={`${selectClass} ${getErrorClass('project_id')}`}
                     >
-                        <option value="">-- เลือกงาน --</option>
+                        <option value="0">-- เลือกโครงการ --</option>
                         {projects.map(proj => (
                             <option key={proj.project_id} value={String(proj.project_id || '')}>
                                 {proj.project_name}
                             </option>
                         ))}
                     </select>
-                    {errors.job_id && <span className="text-[10px] text-red-500 font-medium whitespace-nowrap">ข้อมูลงานไม่ถูกต้อง</span>}
+                </div>
+                
+                <div className="space-y-1">
+                    <label className={labelClass}>เขตการขาย (SALE AREA)</label>
+                    <select 
+                        {...register('emp_area_id', {
+                            setValueAs: (v) => (v === '' || v === '0' ? null : Number(v)),
+                        })}
+                        disabled={isLocked}
+                        className={`${selectClass} ${getErrorClass('emp_area_id')}`}
+                    >
+                        <option value="0">-- เลือกเขตการขาย --</option>
+                        {saleAreas.map(area => (
+                            <option key={area.sale_area_id} value={String(area.sale_area_id || '')}>
+                                {area.sale_area_code} - {area.sale_area_name}
+                            </option>
+                        ))}
+                    </select>
                 </div>
 
-                <div className="lg:col-span-3 space-y-1">
-                    <label className={labelClass}>หมายเหตุทั่วไป (remarks)</label>
+                <div className="lg:col-span-2 space-y-1">
+                    <label className={labelClass}>หมายเหตุทั่วไป (REMARKS)</label>
                     <textarea 
                         {...register('remarks')}
                         disabled={isLocked}
                         rows={1}
-                        className={`${inputClass} py-1.5 resize-none`}
-                        placeholder="ระบุหมายเหตุเพิ่มเติม"
+                        className={`${inputClass} py-1.5 resize-none h-9`}
+                        placeholder="ระบุหมายเหตุเพิ่มเติม (ถ้ามี)"
                     />
                 </div>
-
-
             </div>
+
 
             {/* Multicurrency Section */}
             <div className="bg-slate-50 dark:bg-slate-900/40 p-6 rounded-2xl border border-slate-200 dark:border-slate-800">
                 <MulticurrencyWrapper 
                     name="isMulticurrency"
+                    alwaysVisible={!!formData.sq_id || isLocked}
                     checked={formData.isMulticurrency} 
                     onCheckedChange={(checked) => {
                         if (isLocked) return;
                         setValue('isMulticurrency', checked);
                         if (!checked) {
                             setValue('exchange_rate_date', '');
-                            setValue('base_currency_code', 'THB');
                             setValue('quote_currency_code', 'THB');
                             setValue('exchange_rate', 1);
                         } else {
@@ -324,7 +314,6 @@ export function QuotationHeaderForm({
                                 const today = new Date().toISOString().split('T')[0];
                                 setValue('exchange_rate_date', today, { shouldValidate: true, shouldDirty: true });
                             }
-                            // Default to THB when enabled if no currency is selected
                             if (!formData.base_currency_code) {
                                 setValue('base_currency_code', 'THB', { shouldValidate: true, shouldDirty: true });
                             }
@@ -354,34 +343,46 @@ export function QuotationHeaderForm({
                             />
                         </div>
                         <div>
-                            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">รหัสสกุลเงิน (Base)</label>
-                            <select 
-                                {...register('base_currency_code')}
-                                className={selectClass}
-                                disabled={!formData.isMulticurrency || isLocked}
-                            >
-                                <option value="">เลือกสกุลเงิน</option>
-                                {currencies.map((c) => (
-                                    <option key={c.currency_id} value={c.currency_code}>
-                                        {c.currency_code} - {c.name_th}
-                                    </option>
-                                ))}
-                            </select>
+                            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">สกุลเงิน (Currency)</label>
+                            <Controller
+                                name="base_currency_code"
+                                control={control}
+                                render={({ field }) => (
+                                    <select 
+                                        {...field}
+                                        className={selectClass}
+                                        disabled={isLocked}
+                                    >
+                                        <option value="">เลือกสกุลเงิน</option>
+                                        {currencies.map((c) => (
+                                            <option key={c.currency_id} value={c.currency_code}>
+                                                {c.currency_code} - {c.name_th}
+                                            </option>
+                                        ))}
+                                    </select>
+                                )}
+                            />
                         </div>
                         <div>
                             <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">ไปยังสกุลเงิน (Quote)</label>
-                            <select 
-                                {...register('quote_currency_code')}
-                                className={selectClass}
-                                disabled={!formData.isMulticurrency || isLocked}
-                            >
-                                <option value="">เลือกสกุลเงิน</option>
-                                {currencies.map((c) => (
-                                    <option key={c.currency_id} value={c.currency_code}>
-                                        {c.currency_code} - {c.name_th}
-                                    </option>
-                                ))}
-                            </select>
+                            <Controller
+                                name="quote_currency_code"
+                                control={control}
+                                render={({ field }) => (
+                                    <select 
+                                        {...field}
+                                        className={selectClass}
+                                        disabled={!formData.isMulticurrency || isLocked}
+                                    >
+                                        <option value="">เลือกสกุลเงิน</option>
+                                        {currencies.map((c) => (
+                                            <option key={c.currency_id} value={c.currency_code}>
+                                                {c.currency_code} - {c.name_th}
+                                            </option>
+                                        ))}
+                                    </select>
+                                )}
+                            />
                         </div>
                         <div>
                             <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">อัตราแลกเปลี่ยน</label>
@@ -389,9 +390,9 @@ export function QuotationHeaderForm({
                                 type="number"
                                 step="0.000001"
                                 {...register('exchange_rate', { valueAsNumber: true })}
-                                readOnly={formData.base_currency_code === 'THB'}
-                                className={`${inputClass} text-right font-semibold ${formData.base_currency_code === 'THB' ? 'bg-gray-100 italic' : ''}`}
-                                disabled={!formData.isMulticurrency || isLocked}
+                                readOnly={formData.base_currency_code === 'THB' || !formData.isMulticurrency}
+                                className={`${inputClass} text-right font-semibold ${(formData.base_currency_code === 'THB' || !formData.isMulticurrency) ? 'bg-gray-100 italic' : ''}`}
+                                disabled={isLocked}
                                 placeholder="0.000000"
                             />
                         </div>

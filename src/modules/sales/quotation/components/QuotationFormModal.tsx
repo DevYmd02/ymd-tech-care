@@ -19,11 +19,12 @@ interface QuotationFormModalProps {
     id?: string;
     initialData?: Partial<QuotationFormValues>;
     onSuccess?: () => void;
+    readOnly?: boolean;
 }
 
 const cardClass = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm overflow-hidden';
 
-export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess }: QuotationFormModalProps) {
+export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess, readOnly = false }: QuotationFormModalProps) {
     // 🏗️ Use custom hook for all business logic
     const {
         isEdit,
@@ -38,7 +39,7 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
         taxCodes,
         departments,
         projects,
-        itemTypes,
+        saleAreas,
         uoms,
         // Search Modals State
         isCustomerSearchOpen,
@@ -63,6 +64,7 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
         handleSelectProduct,
         handleLinePriceSync,
         loadingPriceLines,
+        isLoadingDetail,
     } = useQuotationForm(isOpen, id, initialData);
 
     const { setValue } = methods;
@@ -123,15 +125,17 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
                 >
                     {isEdit ? 'ปิด' : 'ยกเลิก'}
                 </button>
-                <button 
-                    type="submit" 
-                    form="quotation-form"
-                    disabled={isSubmitting}
-                    className="h-10 px-8 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold shadow-sm transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50"
-                >
-                    {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                    {isEdit ? 'บันทึกการแก้ไข' : 'บันทึกข้อมูล'}
-                </button>
+                {!readOnly && (
+                    <button 
+                        type="submit" 
+                        form="quotation-form"
+                        disabled={isSubmitting}
+                        className="h-10 px-8 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold shadow-sm transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50"
+                    >
+                        {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                        {isEdit ? 'บันทึกการแก้ไข' : 'บันทึกข้อมูล'}
+                    </button>
+                )}
             </div>
         </div>
     );
@@ -140,9 +144,10 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
         <WindowFormLayout
             isOpen={isOpen}
             onClose={onClose}
-            title={isEdit ? 'รายละเอียดใบเสนอราคา (VIEW Sales Quotation)' : 'สร้างใบเสนอราคาใหม่ (CREATE Sales Quotation)'}
-            headerColor="bg-blue-600"
+            title={readOnly ? 'รายละเอียดใบเสนอราคา (VIEW Sales Quotation)' : (isEdit ? 'แก้ไขใบเสนอราคา (EDIT Sales Quotation)' : 'สร้างใบเสนอราคาใหม่ (CREATE Sales Quotation)')}
+            headerColor={readOnly ? 'bg-slate-600' : 'bg-blue-600'}
             footer={ModalFooter}
+            isLoading={isLoadingDetail}
             titleIcon={
                 <div className="bg-white/20 p-1.5 rounded shadow-sm">
                     <FileText size={16} strokeWidth={3} className="text-white" />
@@ -163,9 +168,10 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
                                     taxCodes={taxCodes}
                                     departments={departments}
                                     projects={projects}
-                                    itemTypes={itemTypes}
+                                    saleAreas={saleAreas}
                                     onSearchCustomer={() => setIsCustomerSearchOpen(true)}
                                     onSearchLead={() => setIsLeadSearchOpen(true)}
+                                    readOnly={readOnly}
                                 />
                             </div>
                         </div>
@@ -185,6 +191,7 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
                                         setActiveLineIndex(index);
                                         setIsProductSearchOpen(true);
                                     }}
+                                    readOnly={readOnly}
                                 />
                             </div>
                         </div>
@@ -194,14 +201,15 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
                             <div className="p-6">
                                 <QuotationSummary 
                                     subTotal={formData.sub_total || 0}
-                                    discountInput={formData.discount_input}
+                                    discountInput={formData.discount_expression}
                                     discountAmount={formData.discount_amount || 0}
                                     taxRate={taxRate}
                                     vatAmount={formData.vat_amount || 0}
                                     totalAmount={formData.total_amount || 0}
-                                    currencySymbol={formData.isMulticurrency ? (formData.base_currency_code || 'บาท') : 'บาท'}
+                                    currencySymbol={formData.base_currency_code || formData.currency_code || 'บาท'}
                                     lineCount={(formData.lines || []).length}
-                                    onDiscountChange={(val) => setValue('discount_input', val, { shouldDirty: true })}
+                                    onDiscountChange={(val) => setValue('discount_expression', val, { shouldDirty: true })}
+                                    readOnly={readOnly}
                                 />
                             </div>
                         </div>

@@ -55,6 +55,7 @@ export function ReservationSummary({
                             placeholder={discountAmount > 0 ? discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2 }) : "0.00 หรือ 0%"}
                             value={discountInput ?? ''} 
                             onChange={(e) => onDiscountChange(e.target.value)}
+                            maxLength={15}
                             className={`${styles.input} h-9 py-0 text-right bg-white border-purple-200 focus:border-purple-500 font-semibold text-purple-600`}
                         />
                     </div>
@@ -76,8 +77,8 @@ export function ReservationSummary({
 
                 <div className="pt-3 border-t-2 border-white dark:border-gray-800 flex justify-between items-center group">
                     <span className={`text-lg font-bold ${isNegative ? 'text-red-600 dark:text-red-400' : 'text-purple-700 dark:text-purple-400'} text-nowrap`}>มูลค่าสุทธิ:</span>
-                    <div className="text-right">
-                        <span className={`text-2xl font-black ${isNegative ? 'text-red-600 dark:text-red-400' : 'text-purple-700 dark:text-purple-400'}`}>
+                    <div className="text-right overflow-hidden max-w-[250px]">
+                        <span className={`text-2xl font-black truncate block ${isNegative ? 'text-red-600 dark:text-red-400' : 'text-purple-700 dark:text-purple-400'}`}>
                             {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                         <span className={`ml-2 text-sm font-bold ${isNegative ? 'text-red-500/60' : 'text-purple-600/60'}`}>{currencySymbol}</span>

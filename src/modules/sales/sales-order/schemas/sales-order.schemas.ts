@@ -18,7 +18,7 @@ export const SalesOrderLineSchema = z.object({
     lot_no: z.string().optional(),
     line_discount_input: z.string().optional(),
     line_discount: z.coerce.number().default(0),
-    line_total: z.coerce.number().min(0, 'ยอดรวมต้องไม่ติดลบ (ตรวจสอบส่วนลด)').default(0),
+    line_total: z.coerce.number().min(0, 'ยอดรวมต้องไม่ติดลบ (ตรวจสอบส่วนลด)').max(9999999999999, 'ค่าที่ระบุมีจำนวนมากเกินไป').default(0),
     note: z.string().optional(),
     tax_code_id: z.coerce.number().optional(),
 });
@@ -47,7 +47,7 @@ export const SalesOrderFormSchema = z.object({
     discount_input: z.string().optional(),
     discount_amount: z.coerce.number().default(0),
     vat_amount: z.coerce.number().default(0),
-    total_amount: z.coerce.number().min(0, 'ยอดรวมต้องไม่ติดลบ (ตรวจสอบส่วนลด)').default(0),
+    total_amount: z.coerce.number().min(0, 'ยอดรวมต้องไม่ติดลบ (ตรวจสอบส่วนลด)').max(9999999999999, 'ค่าที่ระบุมีจำนวนมากเกินไป').default(0),
     onhold: z.enum(['Y', 'N']).default('N'),
     tax_code_id: z.coerce.number().optional(),
     item_id: z.string().optional(),

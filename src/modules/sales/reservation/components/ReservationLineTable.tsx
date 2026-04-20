@@ -197,6 +197,7 @@ export function ReservationLineTable({
                                             }}
                                             onFocus={(e) => e.target.select()}
                                             placeholder="0"
+                                            maxLength={12}
                                             className={`${compactInputClass} text-right font-bold text-purple-600 dark:text-white bg-white dark:bg-gray-800 border-purple-100 dark:border-gray-700`}
                                         />
                                     </td>
@@ -272,6 +273,7 @@ export function ReservationLineTable({
                                             }}
                                             onFocus={(e) => e.target.select()}
                                             placeholder="0.00"
+                                            maxLength={12}
                                             className={`${compactInputClass} text-right font-medium bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200 border-gray-200 dark:border-gray-700`}
                                         />
                                     </td>
@@ -284,13 +286,14 @@ export function ReservationLineTable({
                                             onChange={(e) => onLineChange(index, 'line_discount_input', e.target.value)}
                                             onFocus={(e) => e.target.select()}
                                             placeholder="0"
+                                            maxLength={20}
                                             className={`${compactInputClass} text-right bg-white dark:bg-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700`}
                                         />
                                     </td>
                                     
                                     <td className="px-2 py-2">
-                                        <div className={`h-8 flex flex-col items-end justify-center px-3 font-bold bg-white dark:bg-gray-900 rounded border shadow-inner ${line.line_total < 0 ? 'text-red-500 border-red-200 dark:border-red-800' : 'text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-700'}`}>
-                                            <span>{(line.line_total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                        <div className={`h-8 flex flex-col items-end justify-center px-3 font-bold bg-white dark:bg-gray-900 rounded border shadow-inner overflow-hidden max-w-[150px] ${line.line_total < 0 ? 'text-red-500 border-red-200 dark:border-red-800' : 'text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-700'}`}>
+                                            <span className="truncate w-full text-right overflow-hidden">{(line.line_total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                             {hasLineFieldError(index, 'line_total') && (
                                                 <div className="flex items-center gap-0.5 text-[8px] font-medium text-red-500 mt-[-2px]">
                                                     <AlertCircle size={8} />
