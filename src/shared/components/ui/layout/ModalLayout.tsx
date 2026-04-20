@@ -124,10 +124,16 @@ export const ModalLayout: React.FC<ModalLayoutProps> = ({
         >
             <div 
                 className={cn(
-                    `${styles.bg.surface} shadow-2xl flex flex-col overflow-hidden transition-all duration-300 ease-out`,
+                    "shadow-2xl flex flex-col overflow-hidden transition-all duration-300 ease-out",
                     sizeClasses[size],
-                    variant === 'window' ? "border-4 rounded-none h-full w-full" : "rounded-2xl w-full max-h-[90vh]",
-                    variant === 'window' ? headerColor.replace('bg-', 'border-') : "",
+                    /* Frame for Window Variant */
+                    variant === 'window' ? cn(
+                        "border-4 rounded-none h-full w-full bg-gray-200 dark:bg-gray-900 shadow-inner",
+                        headerColor === 'bg-emerald-700' ? "border-emerald-700" : 
+                        headerColor === 'bg-blue-600' ? "border-blue-600" : 
+                        headerColor === 'bg-slate-600' ? "border-slate-600" : 
+                        headerColor.replace('bg-', 'border-')
+                    ) : cn(styles.bg.surface, "rounded-2xl w-full max-h-[90vh]"),
                     isAnimating 
                         ? "opacity-100 translate-y-0 scale-100" 
                         : "opacity-0 translate-y-8 scale-95"

@@ -1,0 +1,361 @@
+/**
+ * @file AQFormModal.tsx
+ * @description Modal for reviewing and approving/rejecting a Sales Quotation
+ * @pattern Mirrors AVFormModal.tsx from Procurement domain
+ */
+
+import React, { useState } from 'react';
+import { FormProvider } from 'react-hook-form';
+import {
+  CheckCircle, XCircle, Loader2, Calendar, ShieldCheck, Printer, User, Clock,
+} from 'lucide-react';
+
+import { WindowFormLayout } from '@/shared/components/ui/layout/WindowFormLayout';
+import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal';
+import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWrapper';
+
+import { useAQForm } from '../hooks/useAQForm';
+import { AQHeader } from './AQHeader';
+import { AQFormLines } from './AQFormLines';
+import { AQFormSummary } from './AQFormSummary';
+import { AQSQSearchModal } from './AQSQSearchModal';
+import { AQHistoryModal } from './AQHistoryModal';
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface Props {
+  isOpen: boolean;
+  onClose: () => void;
+  sqId?: number;
+  approvalItem?: Record<string, unknown>;
+  onSuccess?: () => void;
+}
+
+const formatDisplayDate = (val?: string) => {
+  if (!val) return '';
+  const cleaned = val.split('T')[0];
+  const [y, m, d] = cleaned.split('-');
+  return y && m && d ? `${d}/${m}/${y}` : cleaned;
+};
+
+export const AQFormModal: React.FC<Props> = ({
+  isOpen, onClose, sqId, approvalItem, onSuccess,
+}) => {
+  const {
+    isSubmitting, isRejecting, formMethods,
+    lines, updateLine,
+    handleApprove, handleConfirmApprove,
+    isConfirmModalOpen, setIsConfirmModalOpen,
+    handleRejectInit, handleConfirmReject,
+    isConfirmRejectOpen, setIsConfirmRejectOpen,
+    activeId, loadSQData,
+  } = useAQForm({ sqId, isOpen, onClose, onSuccess, approvalItem });
+
+  const { register, watch, setValue, formState: { errors } } = formMethods;
+  const [isSQSearchOpen, setIsSQSearchOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
+  const cardClass = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm overflow-hidden';
+
+  // Determine if we're in read-only mode (already processed)
+  const currentStatus = watch('status');
+  const isAlreadyProcessed =
+    currentStatus === 'APPROVED' ||
+    currentStatus === 'REJECTED' ||
+    currentStatus === 'CANCELLED';
+
+  const aqNo = watch('aq_no');
+  const aqId = watch('aq_id');
+
+  return (
+    <>
+      <WindowFormLayout
+        isOpen={isOpen}
+        onClose={onClose}
+        title="พิจารณาอนุมัติใบเสนอราคา (Quotation Approval)"
+        titleIcon={
+          <div className="bg-emerald-600 p-1 rounded-md shadow-sm">
+            <ShieldCheck size={14} strokeWidth={3} className="text-white" />
+          </div>
+        }
+        headerColor="bg-emerald-700"
+        footer={
+          <div className="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-between items-center bg-white dark:bg-gray-900 sticky bottom-0 z-10 gap-x-2">
+            {/* Left actions */}
+            <div className="flex items-center gap-2">
+              {activeId && (
+                <button
+                  type="button"
+                  onClick={() => setIsHistoryOpen(true)}
+                  className="px-3 py-2 bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded-md text-sm font-medium flex items-center gap-1.5 border border-emerald-200 dark:border-emerald-800"
+                >
+                  <Clock size={16} /> ประวัติการอนุมัติ
+                </button>
+              )}
+              {aqId && (isAlreadyProcessed) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+                    if (aqId) window.open(`${apiUrl}/sq-approval/${aqId}/pdf`, '_blank');
+                  }}
+                  className="px-3 py-2 bg-blue-50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-md text-sm font-medium flex items-center gap-1.5 border border-blue-200 dark:border-blue-800"
+                >
+                  <Printer size={16} /> พิมพ์ใบอนุมัติ
+                </button>
+              )}
+            </div>
+
+            {/* Right actions */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={isSubmitting || isRejecting}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-md text-sm font-medium"
+              >
+                ปิด
+              </button>
+
+              {/* Show approve/reject only for PENDING SQs */}
+              {activeId && !isAlreadyProcessed && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleRejectInit}
+                    disabled={isSubmitting || isRejecting}
+                    className="px-4 py-2 bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 rounded-md text-sm font-medium flex items-center gap-2 border border-red-200 dark:border-red-800/50"
+                  >
+                    <XCircle size={16} /> ไม่อนุมัติ
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleApprove}
+                    disabled={isSubmitting || isRejecting}
+                    className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-sm font-medium flex items-center gap-2"
+                  >
+                    {isSubmitting && <Loader2 className="animate-spin" size={16} />}
+                    <CheckCircle size={16} /> อนุมัติ
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        }
+      >
+        <FormProvider {...formMethods}>
+          <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6">
+            <div className="max-w-[1400px] mx-auto space-y-6">
+
+              {/* ── SQ Header Info ───────────────────────────────────────── */}
+              <div className={cardClass}>
+                <div className="p-6">
+                  <AQHeader
+                    onSearch={() => setIsSQSearchOpen(true)}
+                    showSearch={!isAlreadyProcessed && (!sqId || !activeId)}
+                  />
+                </div>
+              </div>
+
+              {/* ── AQ Document Section ──────────────────────────────────── */}
+              <div className={`${cardClass} p-6`}>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-start">
+
+                {/* เลขที่อนุมัติ AQ */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                    เลขที่อนุมัติ (AQ_NO)
+                  </label>
+                  <input
+                    {...register('aq_no')}
+                    readOnly
+                    placeholder="ระบบจะออกให้อัตโนมัติ"
+                    className="w-full h-9 px-3 text-sm bg-gray-50 dark:bg-gray-800/50 border border-gray-300 dark:border-gray-600 rounded text-gray-500 dark:text-gray-400 italic cursor-not-allowed font-bold"
+                  />
+                </div>
+
+                {/* วันที่อนุมัติ */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                    วันที่อนุมัติ (AQ_DATE)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      readOnly
+                      value={aqNo ? formatDisplayDate(watch('aq_date')) : formatDisplayDate(new Date().toISOString())}
+                      className="w-full h-9 pl-3 pr-8 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white cursor-not-allowed"
+                    />
+                    <Calendar size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
+
+                {/* ผู้อนุมัติ */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                    ผู้อนุมัติ (APPROVAL_EMP)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      readOnly
+                      value={watch('approval_emp_name') || ''}
+                      className="w-full h-9 pl-9 pr-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white cursor-not-allowed font-semibold"
+                    />
+                    <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
+
+                {/* เหตุผลที่ไม่อนุมัติ */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                    เหตุผล <span className="text-xs text-gray-400">(กรณีไม่อนุมัติ)</span>
+                    {!isAlreadyProcessed && <span className="text-red-400 ml-1">*จำเป็นถ้าไม่อนุมัติ</span>}
+                  </label>
+                  <input
+                    {...register('reject_reason')}
+                    type="text"
+                    placeholder="ระบุเหตุผล..."
+                    readOnly={isAlreadyProcessed}
+                    className={`w-full h-9 px-3 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white ${
+                      errors?.reject_reason
+                        ? 'border-red-500 ring-1 ring-red-500'
+                        : 'border-gray-300 dark:border-gray-600'
+                    } ${isAlreadyProcessed ? 'bg-gray-50 italic cursor-not-allowed' : ''}`}
+                  />
+                  {errors?.reject_reason && (
+                    <p className="text-red-500 text-[10px] mt-1">{errors.reject_reason.message}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* ── Multicurrency Section ────────────────────────────────── */}
+            <div className="bg-slate-50 dark:bg-slate-900/40 p-6 rounded-2xl border border-slate-200 dark:border-slate-800">
+              <MulticurrencyWrapper
+                name="isMulticurrency"
+                label="ระบุสกุลเงินต่างประเทศ (MULTICURRENCY)"
+                checked={watch('isMulticurrency')}
+                onCheckedChange={(val) => setValue('isMulticurrency', val)}
+                alwaysVisible={false}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-5 items-start mt-2">
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">
+                      วันที่อัตราแลกเปลี่ยน
+                    </label>
+                    <div className="relative group">
+                      <input
+                        type="text"
+                        value={formatDisplayDate(watch('exchange_rate_date'))}
+                        readOnly
+                        className="h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md text-gray-900 dark:text-white cursor-not-allowed shadow-sm italic"
+                      />
+                      <Calendar size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">
+                      สกุลเงินหลัก (Base)
+                    </label>
+                    <input
+                      type="text"
+                      value={watch('base_currency_code') || 'THB'}
+                      readOnly
+                      className="h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md text-gray-900 dark:text-white cursor-not-allowed shadow-sm font-bold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">
+                      สกุลเงินใบเสนอราคา (Quote)
+                    </label>
+                    <input
+                      type="text"
+                      value={watch('quote_currency_code') || 'THB'}
+                      readOnly
+                      className="h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md text-emerald-600 dark:text-emerald-400 cursor-not-allowed shadow-sm font-bold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">
+                      อัตราแลกเปลี่ยน
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        value={watch('exchange_rate') ?? 1}
+                        readOnly
+                        className="h-9 w-full px-3 text-sm text-right bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md text-gray-900 dark:text-white font-mono font-bold cursor-not-allowed shadow-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </MulticurrencyWrapper>
+            </div>
+
+              <div className={cardClass}>
+                <div className="p-6">
+                  <AQFormLines
+                    lines={lines as unknown as import('../schemas/aq.schema').AQLineFormData[]}
+                    updateLine={updateLine}
+                    readOnly={isAlreadyProcessed}
+                  />
+                </div>
+              </div>
+
+              {/* ── Summary ──────────────────────────────────────────────── */}
+              <div className={cardClass}>
+                <div className="p-6">
+                  <AQFormSummary />
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </FormProvider>
+      </WindowFormLayout>
+
+      {/* ── Confirm Approve Modal ─────────────────────────────────────── */}
+      <ConfirmationModal
+        isOpen={isConfirmModalOpen}
+        onClose={() => setIsConfirmModalOpen(false)}
+        onConfirm={handleConfirmApprove}
+        title="ยืนยันการอนุมัติใบเสนอราคา"
+        description="คุณต้องการอนุมัติรายการที่เลือกใช่หรือไม่? ข้อมูลจะถูกบันทึกและสถานะ SQ จะเปลี่ยนเป็น 'อนุมัติแล้ว'"
+        confirmText="อนุมัติ"
+        isLoading={isSubmitting}
+        variant="success"
+      />
+
+      {/* ── Confirm Reject Modal ──────────────────────────────────────── */}
+      <ConfirmationModal
+        isOpen={isConfirmRejectOpen}
+        onClose={() => setIsConfirmRejectOpen(false)}
+        onConfirm={handleConfirmReject}
+        title="ยืนยันการไม่อนุมัติใบเสนอราคา"
+        description="คุณต้องการปฏิเสธใบเสนอราคานี้ใช่หรือไม่? สถานะ SQ จะเปลี่ยนเป็น 'ไม่อนุมัติ'"
+        confirmText="ยืนยันไม่อนุมัติ"
+        isLoading={isRejecting}
+        variant="danger"
+      />
+      {/* ── SQ Search Modal ────────────────────────────────────────── */}
+      <AQSQSearchModal
+        isOpen={isSQSearchOpen}
+        onClose={() => setIsSQSearchOpen(false)}
+        onSelect={(newSqId) => {
+          loadSQData(newSqId);
+        }}
+      />
+      {/* ── AQ History Modal ────────────────────────────────────────── */}
+      <AQHistoryModal
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        sqId={activeId as number}
+        sqNo={watch('sq_no')}
+      />
+    </>
+  );
+};

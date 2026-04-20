@@ -187,10 +187,10 @@ export function SmartTable<TData>({
                                                 ...(stickyType === 'left' ? { left: stickyOffset, position: 'sticky', zIndex: 32 } : {}),
                                                 ...(stickyType === 'right' ? { right: stickyOffset, position: 'sticky', zIndex: 32 } : {}),
                                             }}
-                                            className={`${meta?.thClassName || 'px-2 py-3 font-semibold'} select-none group transition-all ${
+                                            className={`${meta?.thClassName || 'px-2 py-3 font-semibold'} select-none group ${
                                                 canSort ? `cursor-pointer ${styles.state.hover}` : ''
                                             } ${sortConfig?.key === header.column.id ? styles.state.active : ''} ${
-                                                stickyColumns ? '!bg-gray-100 dark:!bg-gray-700' : `${styles.bg.header}`
+                                                styles.bg.header
                                             } ${
                                                 stickyType === 'left' && stickyBorders ? 'border-r border-gray-200 dark:border-gray-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]' : 
                                                 stickyType === 'right' && stickyBorders ? 'border-l border-gray-200 dark:border-gray-700 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]' : ''
