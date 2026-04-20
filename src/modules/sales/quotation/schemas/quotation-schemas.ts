@@ -38,7 +38,7 @@ export const QuotationFormSchema = z.object({
     quote_currency_code: z.string().optional(),
     exchange_rate: z.coerce.number().default(1),
     exchange_rate_date: z.string().optional(),
-    status: z.enum(['DRAFT', 'SENT', 'ACCEPTED', 'EXPIRED', 'CANCELLED']).default('DRAFT'),
+    status: z.enum(['DRAFT', 'PENDING', 'SENT', 'ACCEPTED', 'EXPIRED', 'CANCELLED']).default('DRAFT'),
     valid_until: z.string().optional(),
     sub_total: z.coerce.number().default(0),
     discount_expression: z.string().optional(),
@@ -55,7 +55,6 @@ export const QuotationFormSchema = z.object({
     project_id: z.coerce.number().nullable().optional(),
     sq_status: z.string().optional(),
     status_remark: z.string().optional(),
-    ship_date: z.string().optional(),
     lines: z.array(QuotationLineSchema).min(1, 'กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ'),
 });
 
@@ -84,10 +83,10 @@ export const getQuotationDefaultValues = (): QuotationFormValues => ({
     total_amount: 0,
     lead_id: null,
     branch_id: 0,
-    tax_code_id: null,
-    item_id: null,
-    emp_area_id: null,
-    emp_dept_id: null,
-    project_id: null,
+    tax_code_id: 0,
+    item_id: 0,
+    emp_area_id: 0,
+    emp_dept_id: 0,
+    project_id: 0,
     lines: [],
 });

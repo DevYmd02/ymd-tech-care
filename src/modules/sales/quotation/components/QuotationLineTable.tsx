@@ -13,15 +13,16 @@ interface QuotationLineTableProps {
     onQtyBlur?: (index: number) => void;
     loadingPriceLines?: Set<number>;
     uoms?: UnitListItem[];
+    readOnly?: boolean;
 }
 
 const PRICE_SOURCE_BADGE: Record<string, { label: string; cls: string }> = {
-    PRICE_LIST:     { label: 'Price List',  cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border-blue-200 dark:border-blue-800' },
-    PRICE_LEVEL:    { label: 'Price Level', cls: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 border-purple-200 dark:border-purple-800' },
-    MANUAL:         { label: 'Manual',      cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 border-amber-200 dark:border-amber-800' },
+    PRICE_LIST:     { label: 'Price List',  cls: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200/50 dark:border-emerald-800/50' },
+    PRICE_LEVEL:    { label: 'Price Level', cls: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 border-indigo-200/50 dark:border-indigo-800/50' },
+    MANUAL:         { label: 'Manual',      cls: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200/50 dark:border-amber-800/50' },
 };
 
-export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChange, onSearchProduct, onQtyBlur, loadingPriceLines = new Set(), uoms = [] }: QuotationLineTableProps) {
+export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChange, onSearchProduct, onQtyBlur, loadingPriceLines = new Set(), uoms = [], readOnly = false }: QuotationLineTableProps) {
     const { formState: { errors } } = useFormContext<QuotationFormValues>();
     
     const compactInputClass = "h-8 w-full px-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-900 dark:text-white transition-all disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm";
@@ -50,14 +51,16 @@ export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChang
                     <Package size={20} strokeWidth={2.5} />
                     <h3 className="text-lg font-bold">รายการสินค้า/บริการ — Line Items</h3>
                 </div>
-                <button 
-                    type="button" 
-                    onClick={onAddLine}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold shadow-sm transition-all active:scale-95"
-                >
-                    <Plus size={16} strokeWidth={3} />
-                    เพิ่มรายการ
-                </button>
+                {!readOnly && (
+                    <button 
+                        type="button" 
+                        onClick={onAddLine}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold shadow-sm transition-all active:scale-95"
+                    >
+                        <Plus size={16} strokeWidth={3} />
+                        เพิ่มรายการ
+                    </button>
+                )}
             </div>
 
             <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
@@ -79,8 +82,15 @@ export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChang
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-gray-900">
                         {lines.map((line, index) => {
                             const isFetchingPrice = loadingPriceLines.has(index);
-                            const sourceInfo = line.price_source_name
-                                ? PRICE_SOURCE_BADGE[line.price_source_name]
+                            
+                            // 🧪 DEBUG: See what exactly comes from the backend per line
+                            if (index === 0) console.log('🧪 [QuotationLineTable] Data:', line);
+
+                            const normalizedSource = line.price_source_name 
+                                ? String(line.price_source_name).toUpperCase().replace(/\s+/g, '_') 
+                                : undefined;
+                            const sourceInfo = normalizedSource
+                                ? PRICE_SOURCE_BADGE[normalizedSource]
                                 : undefined;
 
                             return (
@@ -99,7 +109,8 @@ export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChang
                                         <button 
                                             type="button" 
                                             onClick={() => onSearchProduct?.(index)}
-                                            className={`p-1.5 ${getFieldErrorClass(index, 'item_id') ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded transition-all shadow-sm active:scale-95 shrink-0 h-8 w-8 flex items-center justify-center`}
+                                            disabled={readOnly}
+                                            className={`p-1.5 ${getFieldErrorClass(index, 'item_id') ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded transition-all shadow-sm active:scale-95 shrink-0 h-8 w-8 flex items-center justify-center disabled:opacity-50`}
                                         >
                                             <Search size={14} />
                                         </button>
@@ -136,6 +147,7 @@ export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChang
                                         }}
                                         placeholder="0"
                                         maxLength={12}
+                                        disabled={readOnly}
                                         className={`${compactInputClass} text-right ${getFieldErrorClass(index, 'qty')}`}
                                     />
                                     {hasLineFieldError(index, 'qty') && <span className="text-[10px] text-red-500 block text-right mt-0.5">ขั้นต่ำ 0.001</span>}
@@ -144,6 +156,7 @@ export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChang
                                     <select 
                                         value={line.uom_id || ''} 
                                         onChange={(e) => onLineChange(index, 'uom_id', e.target.value)}
+                                        disabled={readOnly}
                                         className={`${compactInputClass} ${getFieldErrorClass(index, 'uom_id')}`}
                                     >
                                         <option value="">-- หน่วย --</option>
@@ -168,8 +181,8 @@ export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChang
                                             onFocus={(e) => e.target.select()}
                                             placeholder="0.00"
                                             maxLength={12}
-                                            disabled={isFetchingPrice}
-                                            className={`${compactInputClass} text-right font-medium text-blue-600 pr-7 ${getFieldErrorClass(index, 'unit_price')} ${isFetchingPrice ? 'opacity-50' : ''}`}
+                                            disabled={isFetchingPrice || readOnly}
+                                            className={`${compactInputClass} text-right font-medium text-blue-600 pr-7 ${getFieldErrorClass(index, 'unit_price')} ${(isFetchingPrice || readOnly) ? 'opacity-50' : ''}`}
                                         />
                                         {isFetchingPrice && (
                                             <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -196,6 +209,7 @@ export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChang
                                          onFocus={(e) => e.target.select()}
                                          placeholder="0%"
                                          maxLength={20}
+                                         disabled={readOnly}
                                          className={`${compactInputClass} text-right`}
                                      />
                                  </td>
@@ -204,6 +218,7 @@ export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChang
                                          type="text" 
                                          value={line.note || ''} 
                                          onChange={(e) => onLineChange(index, 'note', e.target.value)}
+                                         disabled={readOnly}
                                          placeholder="..."
                                          className={`${compactInputClass} italic text-gray-500`}
                                      />
@@ -220,13 +235,15 @@ export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChang
                                     </div>
                                 </td>
                                 <td className="px-2 py-1.5 text-center">
-                                    <button 
-                                        type="button" 
-                                        onClick={() => onRemoveLine(index)}
-                                        className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
+                                    {!readOnly && (
+                                        <button 
+                                            type="button" 
+                                            onClick={() => onRemoveLine(index)}
+                                            className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    )}
                                 </td>
                             </tr>
                         );

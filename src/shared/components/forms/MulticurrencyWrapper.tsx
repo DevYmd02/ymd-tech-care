@@ -10,6 +10,7 @@ interface MulticurrencyWrapperProps<T extends FieldValues> {
   onCheckedChange?: (checked: boolean) => void;
   layout?: 'stacked' | 'inline';
   disabled?: boolean;
+  alwaysVisible?: boolean;
 }
 
 const MulticurrencyUI: React.FC<{
@@ -20,7 +21,8 @@ const MulticurrencyUI: React.FC<{
     name: string;
     layout?: 'stacked' | 'inline';
     disabled?: boolean;
-}> = ({ isChecked, onToggle, label, children, name, layout = 'stacked', disabled = false }) => {
+    alwaysVisible?: boolean;
+}> = ({ isChecked, onToggle, label, children, name, layout = 'stacked', disabled = false, alwaysVisible = false }) => {
     if (layout === 'inline') {
         return (
             <div className="flex items-center gap-4 py-2">
@@ -37,7 +39,7 @@ const MulticurrencyUI: React.FC<{
                         {label}
                     </label>
                 </div>
-                {isChecked && (
+                {(isChecked || alwaysVisible) && (
                     <div className="flex-1 flex items-center gap-4">
                         {children}
                     </div>
@@ -62,18 +64,18 @@ const MulticurrencyUI: React.FC<{
                 </label>
             </div>
 
-            <div className={`grid transition-[grid-template-rows] duration-500 ease-in-out ${isChecked ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
-        <div className="overflow-hidden min-h-0">
-            <div className="p-1 pb-4 pt-2">
-                {children}
+            <div className={`grid transition-[grid-template-rows] duration-500 ease-in-out ${(isChecked || alwaysVisible) ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+                <div className="overflow-hidden min-h-0">
+                    <div className="p-1 pb-4 pt-2">
+                        {children}
+                    </div>
+                </div>
             </div>
-        </div>
-      </div>
         </div>
     );
 };
 
-const RHFMulticurrencyWrapper = <T extends FieldValues>({ control, name, label, children, layout = 'stacked', disabled }: MulticurrencyWrapperProps<T>) => {
+const RHFMulticurrencyWrapper = <T extends FieldValues>({ control, name, label, children, layout = 'stacked', disabled, alwaysVisible }: MulticurrencyWrapperProps<T>) => {
     const { field } = useController({
         name,
         control,
@@ -86,6 +88,7 @@ const RHFMulticurrencyWrapper = <T extends FieldValues>({ control, name, label, 
             name={name}
             layout={layout}
             disabled={disabled}
+            alwaysVisible={alwaysVisible}
         >
             {children}
         </MulticurrencyUI>
@@ -105,6 +108,7 @@ export const MulticurrencyWrapper = <T extends FieldValues>(props: Multicurrency
         name={props.name}
         layout={props.layout}
         disabled={props.disabled}
+        alwaysVisible={props.alwaysVisible}
     >
         {props.children}
     </MulticurrencyUI>

@@ -11,6 +11,7 @@ interface QuotationSummaryProps {
     currencySymbol?: string;
     lineCount: number;
     onDiscountChange: (value: string) => void;
+    readOnly?: boolean;
 }
 
 export function QuotationSummary({ 
@@ -22,7 +23,8 @@ export function QuotationSummary({
     totalAmount, 
     currencySymbol = 'บาท',
     lineCount,
-    onDiscountChange 
+    onDiscountChange,
+    readOnly = false
 }: QuotationSummaryProps) {
     const isNegative = totalAmount < 0;
 
@@ -55,8 +57,9 @@ export function QuotationSummary({
                             placeholder={discountAmount > 0 ? discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2 }) : "0.00 หรือ 0%"}
                             value={discountInput ?? ''} 
                             onChange={(e) => onDiscountChange(e.target.value)}
+                            disabled={readOnly}
                             maxLength={15}
-                            className={`${styles.input} h-9 py-0 text-right bg-white border-blue-200 focus:border-blue-500`}
+                            className={`${styles.input} h-9 py-0 text-right ${readOnly ? 'bg-gray-100 italic cursor-not-allowed border-gray-200' : 'bg-white border-blue-200 focus:border-blue-500'}`}
                         />
                     </div>
                 </div>

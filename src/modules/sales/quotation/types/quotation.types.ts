@@ -1,56 +1,112 @@
 /**
  * @file quotation.types.ts
- * @description Type definitions for Sales Quotation module based on DB Schema D1 & D2
+ * @description Type definitions for Sales Quotation module
  */
 
 export interface QuotationLineData {
-    sq_line_id?: string; // UUID (PK)
-    sq_id?: string;      // UUID (FK)
-    item_id: string;     // UUID (FK)
-    item_code?: string;  // Display only (from item_master)
-    item_name?: string;  // Display only (from item_master)
-    qty: number;         // Numeric(18,3)
-    uom_id: string | number; // UUID or Int (FK)
-    unit_price: number;  // Numeric(18,2)
-    line_discount_input?: string; // Raw input (e.g. "5%" or "100")
-    line_discount: number; // Numeric(18,2)
-    tax_code_id?: number | string | null; // FK→tax_code
-    line_total: number;   // Numeric(18,2)
-    note?: string;        // Text
+    sq_line_id?: string | number;
+    sq_id?: string | number;
+    item_id: string | number;
+    item_code?: string;
+    item_name?: string;
+    qty: number;
+    uom_id: string | number;
+    unit_price: number;
+    line_discount_input?: string;
+    discount_expression?: string; // Some APIs use this name
+    line_discount: number;
+    tax_code_id?: number | string | null;
+    line_total: number;
+    note?: string;
+    // Data from Pricing Engine
+    price_source?: number;
+    price_source_name?: string;
+}
+
+export interface RawQuotationLine {
+    sq_line_id?: string | number;
+    sq_id?: string | number;
+    item_id?: string | number;
+    item_code?: string;
+    item_name?: string;
+    qty?: number | string;
+    uom_id?: string | number;
+    unit_price?: number | string;
+    line_discount?: number | string;
+    line_discount_input?: string;
+    discount_expression?: string;
+    line_total?: number | string;
+    note?: string;
+    tax_code_id?: number | string | null;
+    // Price sources variants from backend
+    source?: number | string;
+    sourceName?: string;
+    source_name?: string;
+    price_source?: number | string;
+    price_source_name?: string;
+}
+
+export interface RawQuotationData {
+    sq_id?: string | number;
+    sq_no?: string;
+    sq_date?: string;
+    customer_id?: string | number;
+    currency_code?: string;
+    status?: string;
+    sub_total?: number | string;
+    discount_amount?: number | string;
+    vat_amount?: number | string;
+    total_amount?: number | string;
+    payment_term_days?: number | string;
+    onhold?: string;
+    remarks?: string;
+    tax_code_id?: number | string | null;
+    item_id?: string | number | null;
+    emp_area_id?: string | number | null;
+    emp_dept_id?: string | number | null;
+    project_id?: string | number | null;
+    sq_status?: string;
+    status_remark?: string;
+    valid_until?: string;
+    workflow_status?: string;
+    lines?: RawQuotationLine[];
+    saleQuotationLines?: RawQuotationLine[];
 }
 
 export interface QuotationFormData {
-    sq_id?: string;       // UUID (PK)
-    sq_no: string;        // Varchar(30)
-    sq_date: string;      // Date
-    lead_id?: string | null;     // UUID (FK)
-    customer_id: string;  // UUID (FK)
-    branch_id?: string | null;   // UUID (FK)
-    currency_code: string; // Varchar(3)
+    sq_id?: string | number;
+    sq_no: string;
+    sq_date: string;
+    lead_id?: string | number | null;
+    customer_id: string | number;
+    branch_id?: string | number | null;
+    currency_code: string;
     isMulticurrency?: boolean;
     base_currency_code?: string;
     quote_currency_code?: string;
     exchange_rate?: number;
     exchange_rate_date?: string;
-    status: 'DRAFT' | 'SENT' | 'ACCEPTED' | 'EXPIRED' | 'CANCELLED'; // Varchar(20)
-    valid_until?: string; // Date
-    sub_total: number;    // Numeric(18,2)
-    discount_input?: string; // Raw input (e.g. "5%" or "100")
-    discount_amount: number; // Numeric(18,2)
-    vat_amount: number;     // Numeric(18,2)
-    total_amount: number;   // Numeric(18,2)
-    remarks?: string;       // Text
-    payment_term_days: number; // Int
-    onhold: 'Y' | 'N';      // Char(1)
-    tax_code_id?: number | string | null;  // FK→tax_code
-    item_id?: string | null;       // UUID (FK) - Item/Service Class
-    emp_area_id?: string | null;   // UUID (FK) - Salesperson
-    emp_dept_id?: string | null;   // UUID (FK) - Department
-    job_id?: string | null;        // UUID (FK) - Job
-    sq_status?: string;     // Varchar(255)
-    status_remark?: string; // Varchar(255)
-    ship_date?: string;     // Datetime(8)
+    status: string;
+    valid_until?: string;
+    sub_total: number;
+    discount_input?: string;
+    discount_expression?: string; // Header discount input
+    discount_amount: number;
+    vat_amount: number;
+    total_amount: number;
+    remarks?: string;
+    payment_term_days: number;
+    onhold: 'Y' | 'N' | string;
+    tax_code_id?: number | string | null;
+    item_id?: string | number | null;
+    emp_area_id?: string | number | null;
+    emp_dept_id?: string | number | null;
+    project_id?: string | number | null;
+    job_id?: string | number | null;
+    sq_status?: string;
+    status_remark?: string;
     lines: QuotationLineData[];
+    saleQuotationLines?: QuotationLineData[];
 }
 
 export interface QuotationHeader {
@@ -63,12 +119,20 @@ export interface QuotationHeader {
     customer_code: string;
     total_amount: number;
     currency: string;
-    status: 'Draft' | 'Sent' | 'Approved' | 'Rejected' | 'DRAFT' | 'SENT' | 'ACCEPTED' | 'EXPIRED' | 'CANCELLED';
+    status: string;
     expiry_date: string;
     workflow_status: string;
+    sq_status?: string;
+    branch_id?: number | null;
+    lead_id?: number | string | null;
+    emp_area_id?: number | null;
+    emp_dept_id?: number | null;
+    project_id?: number | null;
+    // Data-Reuse property
+    lines?: QuotationLineData[];
+    rawData?: Record<string, unknown>; 
 }
 
-/** Interface for raw list item from Backend API */
 export interface QuotationListItem {
     sq_id: number | string;
     sq_no: string;
@@ -82,5 +146,7 @@ export interface QuotationListItem {
     status: string;
     valid_until?: string;
     sq_status?: string;
-    [key: string]: unknown; // Allow for other metadata
+    branch_id?: number | string | null;
+    lead_id?: number | string | null;
+    [key: string]: unknown;
 }

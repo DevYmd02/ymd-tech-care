@@ -31,7 +31,9 @@ export interface ModuleStatusBadgeProps {
 }
 
 export interface StatusBadgeProps {
-  status: string;
+  status?: string; // Optional if label/colorClass provided
+  label?: string;
+  colorClass?: string;
   colorMap?: Record<string, string>;
   labelMap?: Record<string, string>;
   variant?: StatusVariant;  // Manual override
@@ -278,27 +280,38 @@ const variantClasses: Record<StatusVariant, string> = {
 };
 
 export const StatusBadge: React.FC<StatusBadgeProps> = ({
-  status,
+  status = '',
+  label,
+  colorClass,
   colorMap,
   labelMap,
   variant,
   size = 'sm',
   className = '',
 }) => {
-  // If colorMap is provided, use it (for PR/RFQ status)
-  if (colorMap) {
-    const colorClass = colorMap[status] || 'bg-gray-100 text-gray-700';
-    const label = labelMap?.[status] || status;
-
+  // 1. Direct label and colorClass (Modular approach)
+  if (label || colorClass) {
     return (
-      <BaseBadge className={`${colorClass} ${className}`} size={size}>
-        {label}
+      <BaseBadge className={`${colorClass || ''} ${className}`} size={size}>
+        {label || status}
       </BaseBadge>
     );
   }
 
-  // Otherwise, use variant mapping (for generic status)
-  const resolvedVariant = variant || statusVariantMap[status.toLowerCase()] || 'neutral';
+  // 2. If colorMap is provided, use it (for legacy PR/RFQ status in some places)
+  if (colorMap) {
+    const mappedColor = colorMap[status] || 'bg-gray-100 text-gray-700';
+    const mappedLabel = labelMap?.[status] || status;
+
+    return (
+      <BaseBadge className={`${mappedColor} ${className}`} size={size}>
+        {mappedLabel}
+      </BaseBadge>
+    );
+  }
+
+  // 3. Otherwise, use variant mapping (for generic status)
+  const resolvedVariant = variant || statusVariantMap[status?.toLowerCase()] || 'neutral';
 
   return (
     <BaseBadge className={`border ${variantClasses[resolvedVariant]} ${className}`} size={size}>
