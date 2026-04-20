@@ -30,7 +30,7 @@ export const BG_SUBTLE = 'bg-gray-50 dark:bg-gray-800';
 export const BG_ACTIVE = 'bg-blue-50 dark:bg-gray-700/50';
 
 /** Header background (Table headers, Footers) */
-export const BG_HEADER = 'bg-gray-100/80 dark:bg-gray-700';
+export const BG_HEADER = 'bg-gray-100 dark:bg-gray-700';
 
 /** Accent background (for headers, primary actions) */
 export const BG_ACCENT = 'bg-blue-600 dark:bg-blue-700';
@@ -96,7 +96,7 @@ export const CARD_HOVER = 'bg-white dark:bg-gray-800/50 dark:backdrop-blur-sm ro
 export const TABLE_CONTAINER = 'bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden';
 
 /** Table header row */
-export const TABLE_HEADER = 'bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600';
+export const TABLE_HEADER = 'bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600';
 
 /** Table header cell */
 export const TABLE_TH = 'px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider';

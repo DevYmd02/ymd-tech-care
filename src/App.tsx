@@ -111,6 +111,7 @@ const BillingGroupList = React.lazy(() => import('@customer/billing-group/Billin
 const InquiryListPage = React.lazy(() => import('@sales/inquiry/InquiryListPage'));
 const EstimateListPage = React.lazy(() => import('@sales/estimate/EstimateListPage'));
 const QuotationListPage = React.lazy(() => import('@sales/quotation/QuotationListPage'));
+const QuotationApproveListPage = React.lazy(() => import('@sales/quotation-approve/QuotationApproveListPage'));
 const ReservationListPage = React.lazy(() => import('@sales/reservation/ReservationListPage'));
 const SalesOrderListPage = React.lazy(() => import('@sales/sales-order/SalesOrderListPage'));
 const SalesDashboard = React.lazy(() => import('@sales/dashboard/SalesDashboard'));
@@ -302,6 +303,17 @@ function AppContent() {
             {/* Generic Coming Soon for Work in Progress */}
             <Route path="/coming-soon" element={<ComingSoon />} />
 
+            {/* ==================== IMPLEMENTED MODULES ==================== */}
+            
+            {/* Sales Module */}
+            <Route path="sales/dashboard" element={<SalesDashboard />} />
+            <Route path="sales/inquiry" element={<InquiryListPage />} />
+            <Route path="sales/estimate" element={<EstimateListPage />} />
+            <Route path="sales/quotation" element={<QuotationListPage />} />
+            <Route path="sales/quotation-approval" element={<QuotationApproveListPage />} />
+            <Route path="sales/reservation" element={<ReservationListPage />} />
+            <Route path="sales/order" element={<SalesOrderListPage />} />
+
             {/* ==================== PLACEHOLDER ROUTES ==================== */}
             
             {/* Procurement Placeholders */}
@@ -328,14 +340,6 @@ function AppContent() {
             {placeholderRoutes.audit.map(({ path, title }: { path: string; title: string }) => (
               <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
             ))}
-
-            {/* Sales Module */}
-            <Route path="sales/dashboard" element={<SalesDashboard />} />
-            <Route path="sales/inquiry" element={<InquiryListPage />} />
-            <Route path="sales/estimate" element={<EstimateListPage />} />
-            <Route path="sales/quotation" element={<QuotationListPage />} />
-            <Route path="sales/reservation" element={<ReservationListPage />} />
-            <Route path="sales/order" element={<SalesOrderListPage />} />
 
             {/* Sales Placeholders */}
             {placeholderRoutes.sales.map(({ path, title }: { path: string; title: string }) => (

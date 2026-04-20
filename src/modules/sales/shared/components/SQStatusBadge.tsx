@@ -23,9 +23,17 @@ const SQ_STATUS_CONFIG: Record<string, { label: string; colorClass: string }> = 
     label: 'หมดอายุ',
     colorClass: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
   },
+  REJECTED: {
+    label: 'ไม่อนุมัติ',
+    colorClass: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+  },
   CANCELLED: {
     label: 'ยกเลิก',
     colorClass: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+  },
+  APPROVED: {
+    label: 'อนุมัติแล้ว',
+    colorClass: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
   },
   // UI/Legacy fallbacks
   Draft: {
