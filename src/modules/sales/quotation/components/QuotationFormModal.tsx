@@ -12,12 +12,13 @@ import { useQuotationForm } from '@sales/quotation/hooks/useQuotationForm';
 import { QuotationService } from '@sales/quotation/services/quotation.service';
 import { logger } from '@/shared/utils/logger';
 import type { QuotationFormValues } from '@sales/quotation/schemas/quotation-schemas';
+import type { QuotationHeader } from '@sales/quotation/types/quotation.types';
 
 interface QuotationFormModalProps {
     isOpen: boolean;
     onClose: () => void;
     id?: string;
-    initialData?: Partial<QuotationFormValues>;
+    initialData?: QuotationHeader;
     onSuccess?: () => void;
     readOnly?: boolean;
 }
@@ -147,7 +148,7 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
             title={readOnly ? 'รายละเอียดใบเสนอราคา (VIEW Sales Quotation)' : (isEdit ? 'แก้ไขใบเสนอราคา (EDIT Sales Quotation)' : 'สร้างใบเสนอราคาใหม่ (CREATE Sales Quotation)')}
             headerColor={readOnly ? 'bg-slate-600' : 'bg-blue-600'}
             footer={ModalFooter}
-            isLoading={isLoadingDetail}
+            isLoading={isLoadingDetail && !formData.sq_no}
             titleIcon={
                 <div className="bg-white/20 p-1.5 rounded shadow-sm">
                     <FileText size={16} strokeWidth={3} className="text-white" />

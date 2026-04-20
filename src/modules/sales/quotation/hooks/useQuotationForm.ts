@@ -14,11 +14,11 @@ import { QuotationFormSchema, type QuotationFormValues, type QuotationLineValues
 import type { EstimateHeader } from '@/modules/sales/estimate/services/estimate.service';
 import { PricingService } from '@sales/quotation/services/pricing.service';
 import { QuotationService } from '@sales/quotation/services/quotation.service';
-import type { QuotationFormData, RawQuotationLine } from '@sales/quotation/types/quotation.types';
+import type { QuotationFormData, QuotationHeader, RawQuotationLine } from '@sales/quotation/types/quotation.types';
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import { logger } from '@/shared/utils/logger';
 
-export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Partial<QuotationFormValues>) => {
+export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: QuotationHeader) => {
     const isEdit = !!id;
     const [isSubmitting, setIsSubmitting] = useState(false);
     
@@ -38,7 +38,7 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Par
     // React Hook Form Setup
     const methods = useForm<QuotationFormValues>({
         resolver: zodResolver(QuotationFormSchema) as Resolver<QuotationFormValues>,
-        defaultValues: initialData ? { ...getQuotationDefaultValues(), ...initialData } : getQuotationDefaultValues(),
+        defaultValues: getQuotationDefaultValues(),
         mode: 'onBlur',
     });
 
@@ -54,7 +54,7 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Par
         isLoading: isLoadingDetail,
         isError: isDetailError,
         error: detailError
-    } = useQuery({
+    } = useQuery<QuotationFormData | null>({
         queryKey: ['quotation-detail', id],
         queryFn: () => id ? QuotationService.getById(id) : null,
         enabled: !!id && isOpen, // Allow detail query to run!
@@ -200,24 +200,24 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Par
         return {
             sq_id: String(apiData.sq_id || ''),
             sq_no: apiData.sq_no || '',
-            sq_date: toFormDate(apiData.sq_date || ((apiData as unknown as Record<string, unknown>).date as string)),
+            sq_date: toFormDate(apiData.sq_date),
             lead_id: apiData.lead_id || null,
             customer_id: Number(apiData.customer_id || 0),
             branch_id: apiData.branch_id ? Number(apiData.branch_id) : 0,
-            currency_code: apiData.currency_code || ((apiData as unknown as Record<string, unknown>).currency as string) || 'THB',
+            currency_code: apiData.currency_code || 'THB',
             isMulticurrency: !!apiData.isMulticurrency,
             base_currency_code: apiData.base_currency_code && apiData.base_currency_code !== '' ? apiData.base_currency_code : 'THB',
             quote_currency_code: apiData.quote_currency_code && apiData.quote_currency_code !== '' ? apiData.quote_currency_code : 'THB',
             exchange_rate: Number(apiData.exchange_rate || 1),
             exchange_rate_date: toFormDate(apiData.exchange_rate_date),
             status: ((apiData.status || '').toUpperCase() as QuotationFormValues['status']) || 'DRAFT',
-            valid_until: toFormDate(apiData.valid_until || ((apiData as unknown as Record<string, unknown>).expiry_date as string)),
+            valid_until: toFormDate(apiData.valid_until),
             sub_total: Number(apiData.sub_total || 0),
-            discount_expression: apiData.discount_input || ((apiData as unknown as Record<string, unknown>).discount_expression as string) || '0',
+            discount_expression: apiData.discount_expression || '0',
             discount_amount: Number(apiData.discount_amount || 0),
             vat_amount: Number(apiData.vat_amount || 0),
-            total_amount: Number(apiData.total_amount || ((apiData as unknown as Record<string, unknown>).total_amount as number) || 0),
-            remarks: apiData.remarks || (apiData as unknown as { remark?: string }).remark || '',
+            total_amount: Number(apiData.total_amount || 0),
+            remarks: apiData.remarks || '',
             payment_term_days: Number(apiData.payment_term_days || 0),
             onhold: (apiData.onhold === 'Y' ? 'Y' : 'N') as QuotationFormValues['onhold'],
             tax_code_id: apiData.tax_code_id ? Number(apiData.tax_code_id) : 0,
@@ -225,7 +225,7 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Par
             emp_area_id: apiData.emp_area_id ? Number(apiData.emp_area_id) : 0,
             emp_dept_id: apiData.emp_dept_id ? Number(apiData.emp_dept_id) : 0,
             project_id: apiData.project_id ? Number(apiData.project_id) : 0,
-            sq_status: apiData.sq_status || ((apiData as unknown as Record<string, unknown>).workflow_status as string) || '',
+            sq_status: apiData.sq_status || '',
             status_remark: apiData.status_remark || '',
             lines: (apiData.lines || []).map(lineRaw => {
                 const line = lineRaw as RawQuotationLine;
@@ -294,16 +294,16 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Par
             logger.info('🎯 [QuotationForm] Using Data-Reuse Pattern (from List)');
             
             // 🏗️ Reconstruct full payload using rawData to preserve all fields not in the list interface
-            const raw = (initialData as unknown as Record<string, unknown>).rawData as Record<string, unknown> || {};
-            const linesToUse = (initialData as unknown as Record<string, unknown>).lines || raw.saleQuotationLines || raw.lines || [];
+            const raw = initialData.rawData || {};
+            const linesToUse = initialData.lines || raw.saleQuotationLines || raw.lines || [];
             
             const constructedPayload: QuotationFormData = {
                 ...raw, // Spread all hidden fields like branch_id, project_id, etc.
-                sq_id: initialData?.sq_id || (raw.sq_id as string | number),
-                sq_no: initialData?.sq_no || (raw.sq_no as string),
-                sq_date: (initialData as unknown as Record<string, unknown>).date as string || (raw.sq_date as string),
-                lines: linesToUse as QuotationLineValues[]
-            } as unknown as QuotationFormData;
+                sq_id: initialData.sq_id,
+                sq_no: initialData.sq_no,
+                sq_date: initialData.date || (raw.sq_date as string) || '',
+                lines: linesToUse as RawQuotationLine[]
+            } as QuotationFormData;
 
             const mappedData = mapApiToForm(constructedPayload);
             logger.info('📦 [QuotationForm] Initial Mapped Data:', mappedData);
@@ -334,8 +334,28 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Par
                 void enrichLinesWithItemData(mappedData.lines || []);
             } else if (!id && lastInitializedId.current !== currentTarget) {
                 console.log('✨ [QuotationForm] Resetting with Defaults');
-                // 🛡️ Rescue: Ensure 'THB' is set if initialData has empty strings
-                const mergedValues = initialData ? { ...defaultValues, ...initialData } : defaultValues;
+                // 🛡️ Rescue: Ensure types match QuotationFormValues (convert ID strings to numbers)
+                const mergedValues: QuotationFormValues = initialData ? { 
+                    ...defaultValues, 
+                    sq_id: String(initialData.sq_id || ''),
+                    sq_no: initialData.sq_no || '',
+                    sq_date: initialData.date || defaultValues.sq_date,
+                    customer_id: Number(initialData.customer_id || 0),
+                    branch_id: Number(initialData.branch_id || 0),
+                    status: (initialData.status as QuotationFormValues['status']) || 'DRAFT',
+                    valid_until: initialData.expiry_date || defaultValues.valid_until,
+                    emp_area_id: Number(initialData.emp_area_id || 0),
+                    emp_dept_id: Number(initialData.emp_dept_id || 0),
+                    project_id: Number(initialData.project_id || 0),
+                    lines: (initialData.lines || []).map(l => ({
+                        ...l,
+                        sq_id: String(l.sq_id || ''),
+                        sq_line_id: String(l.sq_line_id || ''),
+                        item_id: Number(l.item_id || 0),
+                        uom_id: Number(l.uom_id || 0),
+                    })) as QuotationLineValues[]
+                } : defaultValues;
+
                 if (!mergedValues.base_currency_code || mergedValues.base_currency_code === '') mergedValues.base_currency_code = 'THB';
                 if (!mergedValues.quote_currency_code || mergedValues.quote_currency_code === '') mergedValues.quote_currency_code = 'THB';
                 

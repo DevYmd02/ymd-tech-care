@@ -48,7 +48,7 @@ export default function QuotationListPage() {
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
-    const [selectedData, setSelectedData] = useState<Partial<QuotationHeader> | undefined>(undefined);
+    const [selectedData, setSelectedData] = useState<QuotationHeader | undefined>(undefined);
     const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('create');
     const [isApproveConfirmOpen, setIsApproveConfirmOpen] = useState(false);
     const [isApproveLoading, setIsApproveLoading] = useState(false);
@@ -378,7 +378,7 @@ export default function QuotationListPage() {
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 id={selectedId}
-                initialData={selectedData as unknown as QuotationFormValues}
+                initialData={selectedData}
                 onSuccess={() => refetch()}
                 readOnly={modalMode === 'view'}
             />
