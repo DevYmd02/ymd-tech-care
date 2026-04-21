@@ -9,6 +9,9 @@ import { TaxCodeService } from '@/modules/master-data/tax/services/tax-code.serv
 import { WarehouseService } from '@/modules/master-data/inventory/services/warehouse.service';
 import { LocationService } from '@/modules/master-data/inventory/services/inventory-master.service';
 import { SaleAreaService } from '@/modules/master-data/sales/pages/area/services/area.service';
+import { EmployeeService } from '@/modules/master-data/employee/services/employee.service';
+import { QuotationService } from '@/modules/sales/quotation/services/quotation.service';
+import { toast } from 'react-hot-toast';
 import type { Currency } from '@/modules/master-data/types/master-data-types';
 import type { CustomerMaster } from '@/modules/master-data/customer/customer-master/types/customer-types';
 import type { ItemListItem, UnitListItem } from '@/modules/master-data/inventory/types/product-types';
@@ -105,6 +108,12 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
     const { data: saleAreas = [] } = useQuery({
         queryKey: ['master-sale-areas'],
         queryFn: () => SaleAreaService.getList(),
+        enabled: isOpen
+    });
+
+    const { data: employees = [] } = useQuery({
+        queryKey: ['master-employees'],
+        queryFn: () => EmployeeService.getAll(),
         enabled: isOpen
     });
 
@@ -320,6 +329,97 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         }
     }, [activeLotLineIndex, getValues, setValue]);
 
+    const handleFetchQuotation = useCallback(async (type: 'SQ' | 'AQ') => {
+        const field = type === 'SQ' ? 'sq_id' : 'aq_id';
+        const val = getValues(field);
+        
+        if (!val) {
+            toast.error(`กรุณาระบุเลขที่ ${type}`);
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            // 1. Try to find the Quotation
+            // If it's a UUID, we can use getById directly.
+            // If not (e.g. SQ2024-001), use getList to find it.
+            let quotationId: string | number | undefined;
+            const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+            
+            if (isUUID) {
+                quotationId = val;
+            } else {
+                const searchRes = await QuotationService.getList({ sq_no: val, limit: 1 });
+                if (searchRes.data && searchRes.data.length > 0) {
+                    quotationId = searchRes.data[0].sq_id || searchRes.data[0].id;
+                }
+            }
+
+            if (!quotationId) {
+                toast.error(`ไม่พบข้อมูล ${type} เลขที่ ${val}`);
+                setIsSubmitting(false);
+                return;
+            }
+
+            // 2. Fetch full detail
+            const detail = await QuotationService.getById(quotationId);
+            if (!detail) {
+                toast.error(`ไม่สามารถดึงข้อมูลรายละเอียดของ ${val} ได้`);
+                setIsSubmitting(false);
+                return;
+            }
+
+            // 3. Populate Header Fields
+            if (detail.customer_id) setValue('customer_id', String(detail.customer_id), { shouldDirty: true });
+            if (detail.branch_id) setValue('branch_id', String(detail.branch_id), { shouldDirty: true });
+            if (detail.currency_code) {
+                setValue('currency_code', detail.currency_code, { shouldDirty: true });
+                setValue('isMulticurrency', detail.currency_code !== 'THB', { shouldDirty: true });
+                if (detail.currency_code !== 'THB') {
+                    setValue('base_currency_code', detail.currency_code, { shouldDirty: true });
+                    setValue('quote_currency_code', 'THB', { shouldDirty: true });
+                    setValue('exchange_rate', Number(detail.exchange_rate || 1), { shouldDirty: true });
+                }
+            }
+            if (detail.payment_term_days) setValue('payment_term_days', Number(detail.payment_term_days), { shouldDirty: true });
+            if (detail.remarks) setValue('remarks', detail.remarks, { shouldDirty: true });
+            if (detail.tax_code_id) setValue('tax_code_id', Number(detail.tax_code_id), { shouldDirty: true });
+            if (detail.sale_area_id) setValue('sale_area_id', String(detail.sale_area_id), { shouldDirty: true });
+            if (detail.emp_sale_id) setValue('emp_sale_id', String(detail.emp_sale_id), { shouldDirty: true });
+            if (detail.emp_dept_id) setValue('emp_dept_id', String(detail.emp_dept_id), { shouldDirty: true });
+            if (detail.project_id) setValue('job_id', String(detail.project_id), { shouldDirty: true });
+
+            // 4. Populate Line Items
+            if (detail.lines && detail.lines.length > 0) {
+                const mappedLines: ReservationLineValues[] = detail.lines.map(qLine => ({
+                    item_id: String(qLine.item_id),
+                    item_code: qLine.item_code || '',
+                    item_name: qLine.item_name || '',
+                    qty_reserved: Number(qLine.qty || 0),
+                    warehouse_id: '', // User must select
+                    location_id: '',  // User must select
+                    uom_id: String(qLine.uom_id || 'PCS'),
+                    unit_price: Number(qLine.unit_price || 0),
+                    lot_no: '',
+                    line_discount_input: qLine.discount_expression || '',
+                    line_discount: Number(qLine.line_discount || 0),
+                    reserve_policy: 'AUTO',
+                    line_total: Number(qLine.line_total || 0),
+                    tax_code_id: qLine.tax_code_id ? Number(qLine.tax_code_id) : (detail.tax_code_id ? Number(detail.tax_code_id) : undefined),
+                    note: qLine.note || '',
+                }));
+                setValue('lines', mappedLines, { shouldDirty: true, shouldValidate: true });
+            }
+
+            toast.success(`ซิงค์ข้อมูลจาก ${val} สำเร็จ`);
+        } catch (error) {
+            console.error('Fetch Quotation Error:', error);
+            toast.error('เกิดข้อผิดพลาดในการดึงข้อมูล');
+        } finally {
+            setIsSubmitting(false);
+        }
+    }, [getValues, setValue]);
+
     return {
         isEdit,
         isSubmitting,
@@ -335,6 +435,7 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         projects,
         itemTypes,
         saleAreas,
+        employees,
         uoms,
         warehouses,
         locations,
@@ -360,5 +461,6 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         handleSelectProduct,
         handleSelectLot,
         handleSelectLead,
+        handleFetchQuotation,
     };
 };

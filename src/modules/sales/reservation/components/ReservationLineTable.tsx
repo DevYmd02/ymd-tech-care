@@ -86,8 +86,8 @@ export function ReservationLineTable({
                     <thead className="bg-[#fbfaff] dark:bg-gray-800 sticky top-0 z-40">
                         <tr className="bg-purple-50/50 dark:bg-purple-900/10">
                              <th className={`${headerThClass} text-center text-purple-600 dark:text-purple-400 sticky left-0 bg-[#fbfaff] dark:bg-gray-800 z-50 border-r-0 after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[1px] after:bg-gray-200 dark:after:bg-gray-700`}>ลำดับ</th>
-                             <th className={`${headerThClass} text-purple-700 dark:text-purple-300 sticky left-[60px] bg-[#fbfaff] dark:bg-gray-800 z-50 border-r-0 after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[1px] after:bg-gray-200 dark:after:bg-gray-700`}>รหัสสินค้า</th>
-                             <th className={`${headerThClass} text-purple-700 dark:text-purple-300 sticky left-[260px] bg-[#fbfaff] dark:bg-gray-800 z-50 border-r-0 after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[2px] after:bg-purple-100 dark:after:bg-purple-800/40`}>ชื่อสินค้า</th>
+                             <th className={`${headerThClass} text-purple-700 dark:text-purple-300 sticky left-[60px] bg-[#fbfaff] dark:bg-gray-800 z-50 border-r-0 after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[2px] after:bg-purple-100 dark:after:bg-purple-800/40`}>รหัสสินค้า</th>
+                             <th className={`${headerThClass} text-purple-700 dark:text-purple-300`}>ชื่อสินค้า</th>
                              <th className={`${headerThClass} text-purple-700 dark:text-purple-300/60`}>คลัง</th>
                              <th className={`${headerThClass} text-purple-700 dark:text-purple-300/60`}>ที่เก็บ</th>
                              <th className={`${headerThClass} text-right text-purple-700 dark:text-purple-300/60`}>จอง (QTY)</th>
@@ -112,7 +112,7 @@ export function ReservationLineTable({
                                         {index + 1}
                                     </td>
                                     
-                                    <td className="px-2 py-2 sticky left-[60px] bg-white dark:bg-gray-900 group-hover:bg-gray-50 dark:group-hover:bg-gray-800 z-10 transition-colors after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[1px] after:bg-gray-100 dark:after:bg-gray-800/40">
+                                    <td className="px-2 py-2 sticky left-[60px] bg-white dark:bg-gray-900 group-hover:bg-gray-50 dark:group-hover:bg-gray-800 z-10 transition-colors after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[2px] after:bg-purple-50 dark:after:bg-purple-800/20">
                                         <div className="flex gap-1 items-center">
                                             <input 
                                                 value={line.item_code || ''}
@@ -132,7 +132,7 @@ export function ReservationLineTable({
                                         </div>
                                     </td>
 
-                                    <td className="px-2 py-2 sticky left-[260px] bg-white dark:bg-gray-900 group-hover:bg-[#fcfaff] dark:group-hover:bg-gray-800 z-10 transition-colors after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[2px] after:bg-purple-50 dark:after:bg-purple-800/20">
+                                    <td className="px-2 py-2">
                                         <input 
                                             value={line.item_name || ''}
                                             readOnly

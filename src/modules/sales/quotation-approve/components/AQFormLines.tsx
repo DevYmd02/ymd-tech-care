@@ -43,12 +43,12 @@ export function AQFormLines({ lines, updateLine, readOnly = false }: AQFormLines
               <th className={`${thClass} w-10 text-center`}>ลำดับ</th>
               <th className={`${thClass} min-w-[130px]`}>รหัสสินค้า</th>
               <th className={`${thClass} min-w-[250px]`}>ชื่อสินค้า</th>
-              <th className={`${thClass} w-28 text-right`}>จำนวนเสนอ</th>
-              <th className={`${thClass} w-24`}>หน่วย</th>
+              <th className={`${thClass} w-28 text-center`}>จำนวนเสนอ</th>
+              <th className={`${thClass} w-36 text-center`}>จำนวนอนุมัติ</th>
+              <th className={`${thClass} w-24 text-center`}>หน่วย</th>
               <th className={`${thClass} w-28 text-right`}>ราคา/หน่วย</th>
               <th className={`${thClass} w-28 text-right`}>ส่วนลด</th>
               <th className={`${thClass} w-32 text-right`}>ยอดสุทธิ (เสนอ)</th>
-              <th className={`${thClass} w-36 text-right`}>จำนวนอนุมัติ</th>
               <th className={`${thClass} w-32 text-right`}>ยอดที่อนุมัติ</th>
               <th className={`${thClass} min-w-[150px]`}>หมายเหตุรายการ</th>
             </tr>
@@ -98,10 +98,29 @@ export function AQFormLines({ lines, updateLine, readOnly = false }: AQFormLines
                   </td>
 
                   {/* จำนวนเสนอ */}
-                  <td className={`${tdClass} text-right`}>
+                  <td className={`${tdClass} text-center`}>
                     <span className="font-semibold text-gray-700 dark:text-gray-300">
                       {fmtQty(line.qty)}
                     </span>
+                  </td>
+
+                  {/* จำนวนอนุมัติ */}
+                  <td className={tdClass}>
+                    <input
+                      type="number"
+                      step="0.001"
+                      min={0}
+                      max={line.qty}
+                      value={line.approved_qty ?? 0}
+                      disabled={readOnly || !isApproved}
+                      onChange={(e) => updateLine(index, 'approved_qty', Number(e.target.value))}
+                      onFocus={(e) => e.target.select()}
+                      className={`${inputClass} text-center font-bold ${
+                        !isApproved 
+                          ? 'bg-gray-100 dark:bg-gray-700/50 text-gray-400 cursor-not-allowed border-gray-200' 
+                          : 'text-emerald-700 dark:text-emerald-400 border-emerald-500 ring-1 ring-emerald-500/20 bg-emerald-50/10 dark:bg-emerald-900/10'
+                      }`}
+                    />
                   </td>
 
                   {/* หน่วย */}
@@ -132,22 +151,6 @@ export function AQFormLines({ lines, updateLine, readOnly = false }: AQFormLines
                   {/* ยอดสุทธิเสนอ */}
                   <td className={`${tdClass} text-right font-bold text-gray-900 dark:text-gray-100`}>
                     {fmt(line.net_amount)}
-                  </td>
-                  {/* จำนวนอนุมัติ */}
-                  <td className={tdClass}>
-                    <input
-                      type="number"
-                      step="0.001"
-                      min={0}
-                      max={line.qty}
-                      value={line.approved_qty ?? 0}
-                      disabled={readOnly || !isApproved}
-                      onChange={(e) => updateLine(index, 'approved_qty', Number(e.target.value))}
-                      onFocus={(e) => e.target.select()}
-                      className={`${inputClass} text-right font-semibold ${
-                        !isApproved ? 'bg-gray-100 dark:bg-gray-700/50 text-gray-400 cursor-not-allowed' : 'text-emerald-700 dark:text-emerald-300'
-                      }`}
-                    />
                   </td>
 
                   {/* ยอดที่อนุมัติ */}
