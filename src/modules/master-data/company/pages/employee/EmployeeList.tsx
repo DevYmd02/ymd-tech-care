@@ -123,23 +123,55 @@ export default function EmployeeList() {
             ),
         },
         {
-            accessorKey: 'employee_name',
+            id: 'employee_name',
             header: 'ชื่อ-นามสกุล',
+            cell: ({ row }) => {
+                const item = row.original;
+                // 1. Priority: employee_fullname
+                if (item.employee_fullname) return item.employee_fullname;
+                
+                // 2. Secondary: Combine Thai fields
+                const titleTh = item.employee_title_th || '';
+                const firstTh = item.employee_firstname_th || '';
+                const lastTh = item.employee_lastname_th || '';
+                if (firstTh || lastTh) return `${titleTh} ${firstTh} ${lastTh}`.trim();
+
+                // 3. Tertiary: Combine English/Standard fields
+                const titleEn = item.title_name || '';
+                const firstEn = item.first_name || '';
+                const lastEn = item.last_name || '';
+                if (firstEn || lastEn) return `${titleEn} ${firstEn} ${lastEn}`.trim();
+                
+                // 4. Final Fallback: employee_name or '-'
+                return item.employee_name || '-';
+            },
         },
         {
-            accessorKey: 'position_name',
+            id: 'position_name',
             header: 'ตำแหน่ง',
-            cell: ({ getValue }) => getValue() || '-',
+            cell: ({ row }) => {
+                const item = row.original;
+                return item.position_name || item.position?.position_name || '-';
+            },
         },
         {
-            accessorKey: 'department_name',
+            id: 'department_name',
             header: 'ฝ่าย',
-            cell: ({ getValue }) => getValue() || '-',
+            cell: ({ row }) => {
+                const item = row.original;
+                return item.department_name || 
+                       item.department?.department_name || 
+                       item.side_name || 
+                       item.side?.side_name || '-';
+            },
         },
         {
             accessorKey: 'is_active',
             header: 'สถานะ',
-            cell: ({ getValue }) => <ActiveStatusBadge isActive={getValue() as boolean} />,
+            cell: ({ getValue, row }) => {
+                const status = (getValue() as boolean) ?? row.original.is_active;
+                return <ActiveStatusBadge isActive={status} />;
+            },
             size: 100,
         },
         {

@@ -46,6 +46,7 @@ interface SmartTableProps<TData> {
     onSortChange?: (key: string) => void;
     stickyColumns?: boolean; // Enable sticky columns logic (default: false)
     stickyBorders?: boolean; // Show border/shadow for sticky columns (default: true)
+    showPagination?: boolean; // Enable/disable pagination footer (default: true)
 }
 
 export function SmartTable<TData>({
@@ -64,6 +65,7 @@ export function SmartTable<TData>({
     onSortChange,
     stickyColumns = false,
     stickyBorders = true,
+    showPagination = true,
 }: SmartTableProps<TData>) {
     const [rowSelection, setRowSelection] = React.useState<Record<string, boolean>>({});
 
@@ -164,7 +166,7 @@ export function SmartTable<TData>({
             {/* Table Container */}
             <div className={`flex-1 overflow-auto relative ${stickyColumns ? 'rounded-lg' : ''} ${styles.bg.surface}`}>
                 <table 
-                    className={`w-full text-left border-collapse table-fixed text-sm ${stickyColumns ? 'min-w-max' : 'min-w-[900px]'}`}
+                    className={`w-full text-left border-collapse table-fixed text-sm ${stickyColumns ? 'min-w-max' : 'min-w-full'}`}
                 >
                     <thead className={`${styles.bg.header} ${styles.text.secondary} uppercase text-xs sticky top-0 ${stickyColumns ? 'z-30' : 'z-10'}`}>
                         {table.getHeaderGroups().map(headerGroup => (
@@ -316,80 +318,82 @@ export function SmartTable<TData>({
                     )}
                     </table>
                 </div>
-
+ 
             {/* Pagination Footer */}
-            <div className={`px-4 py-3 ${styles.bg.subtle} border-t ${styles.border.default} flex flex-col sm:flex-row items-center justify-between gap-4 select-none`}>
-                
-                {/* Left: Info & Size Selector */}
-                <div className={`flex flex-col sm:flex-row items-center gap-4 text-sm ${styles.text.secondary} w-full sm:w-auto`}>
-                    <div className="flex items-center gap-2">
-                        <span>แสดง</span>
-                        <select
-                            value={pagination.pageSize}
-                            onChange={e => pagination.onPageSizeChange(Number(e.target.value))}
-                            className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 outline-none text-gray-700 dark:text-gray-200"
-                        >
-                            {[5, 10, 20, 50, 100].map(pageSize => (
-                                <option key={pageSize} value={pageSize}>
-                                    {pageSize}
-                                </option>
-                            ))}
-                        </select>
-                        <span>แถว</span>
+            {showPagination && (
+                <div className={`px-4 py-3 ${styles.bg.subtle} border-t ${styles.border.default} flex flex-col sm:flex-row items-center justify-between gap-4 select-none`}>
+                    
+                    {/* Left: Info & Size Selector */}
+                    <div className={`flex flex-col sm:flex-row items-center gap-4 text-sm ${styles.text.secondary} w-full sm:w-auto`}>
+                        <div className="flex items-center gap-2">
+                            <span>แสดง</span>
+                            <select
+                                value={pagination.pageSize}
+                                onChange={e => pagination.onPageSizeChange(Number(e.target.value))}
+                                className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 outline-none text-gray-700 dark:text-gray-200"
+                            >
+                                {[5, 10, 20, 50, 100].map(pageSize => (
+                                    <option key={pageSize} value={pageSize}>
+                                        {pageSize}
+                                    </option>
+                                ))}
+                            </select>
+                            <span>แถว</span>
+                        </div>
+                        
+                        <span className="hidden sm:inline text-gray-300">|</span>
+                        
+                        <span>
+                            แสดง {pagination.totalCount > 0 ? startRow : 0} ถึง {endRow} จาก {pagination.totalCount} รายการ
+                        </span>
                     </div>
-                    
-                    <span className="hidden sm:inline text-gray-300">|</span>
-                    
-                    <span>
-                        แสดง {pagination.totalCount > 0 ? startRow : 0} ถึง {endRow} จาก {pagination.totalCount} รายการ
-                    </span>
+    
+                    {/* Right: Navigation Buttons */}
+                    <div className="flex items-center gap-1">
+                        <button
+                            className="p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:hover:bg-transparent transition-colors text-gray-600 dark:text-gray-300"
+                            onClick={() => pagination.onPageChange(1)}
+                            disabled={pagination.pageIndex === 1 || isLoading}
+                            title="หน้าแรก"
+                            aria-label="Go to first page"
+                        >
+                            <ChevronsLeft size={20} />
+                        </button>
+                        <button
+                            className="p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:hover:bg-transparent transition-colors text-gray-600 dark:text-gray-300"
+                            onClick={() => pagination.onPageChange(Math.max(1, pagination.pageIndex - 1))}
+                            disabled={pagination.pageIndex === 1 || isLoading}
+                            title="ก่อนหน้า"
+                            aria-label="Go to previous page"
+                        >
+                            <ChevronLeft size={20} />
+                        </button>
+                        
+                        <span className="px-2 text-sm font-medium text-gray-700 dark:text-gray-200 min-w-[3rem] text-center">
+                            หน้า {pagination.pageIndex} / {Math.max(1, totalPages)}
+                        </span>
+    
+                        <button
+                            className="p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:hover:bg-transparent transition-colors text-gray-600 dark:text-gray-300"
+                            onClick={() => pagination.onPageChange(Math.min(totalPages, pagination.pageIndex + 1))}
+                            disabled={pagination.pageIndex === totalPages || totalPages === 0 || isLoading}
+                            title="ถัดไป"
+                            aria-label="Go to next page"
+                        >
+                            <ChevronRight size={20} />
+                        </button>
+                        <button
+                            className="p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:hover:bg-transparent transition-colors text-gray-600 dark:text-gray-300"
+                            onClick={() => pagination.onPageChange(totalPages)}
+                            disabled={pagination.pageIndex === totalPages || totalPages === 0 || isLoading}
+                            title="หน้าสุดท้าย"
+                            aria-label="Go to last page"
+                        >
+                            <ChevronsRight size={20} />
+                        </button>
+                    </div>
                 </div>
-
-                {/* Right: Navigation Buttons */}
-                <div className="flex items-center gap-1">
-                    <button
-                        className="p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:hover:bg-transparent transition-colors text-gray-600 dark:text-gray-300"
-                        onClick={() => pagination.onPageChange(1)}
-                        disabled={pagination.pageIndex === 1 || isLoading}
-                        title="หน้าแรก"
-                        aria-label="Go to first page"
-                    >
-                        <ChevronsLeft size={20} />
-                    </button>
-                    <button
-                        className="p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:hover:bg-transparent transition-colors text-gray-600 dark:text-gray-300"
-                        onClick={() => pagination.onPageChange(Math.max(1, pagination.pageIndex - 1))}
-                        disabled={pagination.pageIndex === 1 || isLoading}
-                        title="ก่อนหน้า"
-                        aria-label="Go to previous page"
-                    >
-                        <ChevronLeft size={20} />
-                    </button>
-                    
-                    <span className="px-2 text-sm font-medium text-gray-700 dark:text-gray-200 min-w-[3rem] text-center">
-                        หน้า {pagination.pageIndex} / {Math.max(1, totalPages)}
-                    </span>
-
-                    <button
-                        className="p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:hover:bg-transparent transition-colors text-gray-600 dark:text-gray-300"
-                        onClick={() => pagination.onPageChange(Math.min(totalPages, pagination.pageIndex + 1))}
-                        disabled={pagination.pageIndex === totalPages || totalPages === 0 || isLoading}
-                        title="ถัดไป"
-                        aria-label="Go to next page"
-                    >
-                        <ChevronRight size={20} />
-                    </button>
-                    <button
-                        className="p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:hover:bg-transparent transition-colors text-gray-600 dark:text-gray-300"
-                        onClick={() => pagination.onPageChange(totalPages)}
-                        disabled={pagination.pageIndex === totalPages || totalPages === 0 || isLoading}
-                        title="หน้าสุดท้าย"
-                        aria-label="Go to last page"
-                    >
-                        <ChevronsRight size={20} />
-                    </button>
-                </div>
-            </div>
+            )}
         </div>
     );
 }

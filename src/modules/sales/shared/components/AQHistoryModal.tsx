@@ -9,9 +9,9 @@ import { Clock } from 'lucide-react';
 import { createColumnHelper } from '@tanstack/react-table';
 import { ModalLayout } from '@/shared/components/ui/layout/ModalLayout';
 import { SmartTable } from '@/shared/components/ui/data-display/SmartTable';
-import { AQService } from '../services/aq.service';
+import { AQService } from '@/modules/sales/quotation-approve/services/aq.service';
 import { SQStatusBadge } from '@/modules/sales/shared/components/SQStatusBadge';
-import type { AQHeader } from '../types/quotation-approve.types';
+import type { AQHeader } from '@/modules/sales/quotation-approve/types/quotation-approve.types';
 
 interface AQHistoryModalProps {
   isOpen: boolean;
@@ -58,12 +58,12 @@ export const AQHistoryModal: React.FC<AQHistoryModalProps> = ({
       id: 'index',
       header: () => <div className="text-center w-full">ลำดับ</div>,
       cell: (info) => <div className="text-center">{info.row.index + 1}</div>,
-      size: 60,
+      size: 50,
     }),
     columnHelper.accessor('aq_no', {
       header: 'เลขที่อนุมัติ AQ',
       cell: (info) => <span className="font-bold text-emerald-600 dark:text-emerald-400">{info.getValue() || '-'}</span>,
-      size: 160,
+      size: 140,
     }),
     columnHelper.accessor('aq_date', {
       header: 'วันที่อนุมัติ',
@@ -73,12 +73,12 @@ export const AQHistoryModal: React.FC<AQHistoryModalProps> = ({
         const [y, m, d] = val.split('T')[0].split('-');
         return y && m && d ? `${d}/${m}/${y}` : val;
       },
-      size: 120,
+      size: 100,
     }),
     columnHelper.accessor('approval_emp_name', {
       header: 'ผู้อนุมัติ',
       cell: (info) => <span className="font-semibold">{info.getValue() || '-'}</span>,
-      size: 160,
+      size: 140,
     }),
     columnHelper.accessor('base_total_amount', {
       header: () => <div className="text-right w-full">ยอดรวม (บาท)</div>,
@@ -87,7 +87,7 @@ export const AQHistoryModal: React.FC<AQHistoryModalProps> = ({
           {new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2 }).format(info.getValue() || 0)}
         </div>
       ),
-      size: 140,
+      size: 120,
     }),
     columnHelper.accessor('status', {
       header: () => <div className="text-center w-full">สถานะ</div>,
@@ -101,7 +101,7 @@ export const AQHistoryModal: React.FC<AQHistoryModalProps> = ({
           )}
         </div>
       ),
-      size: 150,
+      size: 130,
     }),
   ], []);
 
@@ -144,6 +144,7 @@ export const AQHistoryModal: React.FC<AQHistoryModalProps> = ({
               data={displayData}
               columns={columns}
               isLoading={isLoading}
+              showPagination={false}
               pagination={{
                 pageIndex: 1,
                 pageSize: 10,

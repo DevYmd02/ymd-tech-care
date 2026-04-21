@@ -286,7 +286,7 @@ export function QuotationHeaderForm({
                     </select>
                 </div>
 
-                <div className="space-y-1">
+                <div className="lg:col-span-2 space-y-1">
                     <label className={labelClass}>พนักงานขาย (SALES PERSON) <span className="text-red-500">*</span></label>
                     <select 
                         {...register('emp_sale_id', {
@@ -296,22 +296,27 @@ export function QuotationHeaderForm({
                         className={`${selectClass} ${getErrorClass('emp_sale_id')}`}
                     >
                         <option value="0">-- เลือกพนักงานขาย --</option>
-                        {employees.map(emp => (
-                            <option key={emp.employee_id} value={String(emp.employee_id || '')}>
-                                {emp.employee_code} - {emp.employee_name}
-                            </option>
-                        ))}
+                        {employees.map(emp => {
+                            const fullName = emp.employee_fullname || 
+                                `${emp.employee_title_th || emp.title_name || ''} ${emp.employee_firstname_th || emp.first_name || ''} ${emp.employee_lastname_th || emp.last_name || ''}`.trim() || 
+                                emp.employee_name || '-';
+                            return (
+                                <option key={emp.employee_id} value={String(emp.employee_id || '')}>
+                                    {emp.employee_code} - {fullName}
+                                </option>
+                            );
+                        })}
                     </select>
                     {errors.emp_sale_id && <span className="text-[10px] text-red-500 font-medium whitespace-nowrap">กรุณาเลือกพนักงานขาย</span>}
                 </div>
 
-                <div className="lg:col-span-2 space-y-1">
+                <div className="lg:col-span-4 space-y-1">
                     <label className={labelClass}>หมายเหตุทั่วไป (REMARKS)</label>
                     <textarea 
                         {...register('remarks')}
                         disabled={isLocked}
-                        rows={1}
-                        className={`${inputClass} py-1.5 resize-none h-9`}
+                        rows={2}
+                        className={`${inputClass} py-2 resize-none h-auto min-h-[60px]`}
                         placeholder="ระบุหมายเหตุเพิ่มเติม (ถ้ามี)"
                     />
                 </div>
