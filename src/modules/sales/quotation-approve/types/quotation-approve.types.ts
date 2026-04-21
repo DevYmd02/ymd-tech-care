@@ -53,6 +53,8 @@ export interface AQHeader {
     customer_name?: string;
     customer_code?: string;
     status?: string;
+    sale_area_id?: number;
+    emp_sale_id?: number;
   };
 
   // Flattened convenience fields
@@ -60,6 +62,10 @@ export interface AQHeader {
   sq_date?: string;
   customer_name?: string;
   customer_code?: string;
+  sale_area_id?: number;
+  sale_area_name?: string;
+  emp_sale_id?: number;
+  emp_sale_name?: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -123,6 +129,9 @@ export interface SQForApproval {
   remarks?: string;
   valid_until?: string;
   payment_term_days?: number;
+  sale_area_id?: number;
+  emp_area_id?: number; // Legacy support
+  emp_sale_id?: number;
 
   lines: SQLineForApproval[];
   saleQuotationLines?: SQLineForApproval[];
@@ -178,6 +187,7 @@ export interface AQLineFormData {
 
 export interface ApproveQuotationPayload {
   sq_id: number;
+  branch_id?: number;
   aq_date: string;
   status: 'APPROVED' | 'REJECTED';
   remarks: string;
@@ -185,33 +195,29 @@ export interface ApproveQuotationPayload {
   approval_emp_name: string;
 
   base_currency_code: string;
-  base_currency_id: number;
   quote_currency_code: string;
-  quote_currency_id: number;
   exchange_rate: number;
   exchange_rate_date: string;
 
-  base_total_amount: number;
-  quote_total_amount: number;
   tax_code_id?: number;
-  tax_rate?: number;
-  base_tax_amount?: number;
-  quote_tax_amount?: number;
   discount_expression?: string;
-  base_discount_amount?: number;
-  quote_discount_amount?: number;
 
-  sq_approval_lines: ApproveQuotationLine[];
+  aq_lines: ApproveQuotationLine[];
+  sale_area_id?: number;
+  emp_sale_id?: number;
 }
 
 export interface ApproveQuotationLine {
   sq_line_id: number;
+  item_id?: number;
+  qty?: number;
+  uom_id?: number;
   approved_qty: number;
   remarks?: string;
   unit_price?: number;
   discount_expression?: string;
-  net_amount?: number;
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AQ List Item (merged display in list page)

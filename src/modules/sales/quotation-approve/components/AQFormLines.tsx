@@ -17,7 +17,7 @@ const fmt = (n: number) =>
   new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n || 0);
 
 const fmtQty = (n: number) =>
-  new Intl.NumberFormat('th-TH', { minimumFractionDigits: 3, maximumFractionDigits: 3 }).format(n || 0);
+  new Intl.NumberFormat('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 3 }).format(n || 0);
 
 export function AQFormLines({ lines, updateLine, readOnly = false }: AQFormLinesProps) {
   const thClass =
@@ -39,6 +39,7 @@ export function AQFormLines({ lines, updateLine, readOnly = false }: AQFormLines
         <table className="w-full text-sm text-left">
           <thead>
             <tr>
+              <th className={`${thClass} w-20 text-center`}>✓ อนุมัติ</th>
               <th className={`${thClass} w-10 text-center`}>ลำดับ</th>
               <th className={`${thClass} min-w-[130px]`}>รหัสสินค้า</th>
               <th className={`${thClass} min-w-[250px]`}>ชื่อสินค้า</th>
@@ -47,7 +48,6 @@ export function AQFormLines({ lines, updateLine, readOnly = false }: AQFormLines
               <th className={`${thClass} w-28 text-right`}>ราคา/หน่วย</th>
               <th className={`${thClass} w-28 text-right`}>ส่วนลด</th>
               <th className={`${thClass} w-32 text-right`}>ยอดสุทธิ (เสนอ)</th>
-              <th className={`${thClass} w-20 text-center`}>✓ อนุมัติ</th>
               <th className={`${thClass} w-36 text-right`}>จำนวนอนุมัติ</th>
               <th className={`${thClass} w-32 text-right`}>ยอดที่อนุมัติ</th>
               <th className={`${thClass} min-w-[150px]`}>หมายเหตุรายการ</th>
@@ -65,6 +65,17 @@ export function AQFormLines({ lines, updateLine, readOnly = false }: AQFormLines
                       : 'hover:bg-gray-50/50 dark:hover:bg-gray-800/20'
                   }`}
                 >
+                  {/* Checkbox อนุมัติ */}
+                  <td className={`${tdClass} text-center`}>
+                    <input
+                      type="checkbox"
+                      checked={!!isApproved}
+                      disabled={readOnly}
+                      onChange={(e) => updateLine(index, 'is_approved', e.target.checked)}
+                      className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                    />
+                  </td>
+
                   {/* ลำดับ */}
                   <td className={`${tdClass} text-center text-gray-500 font-medium`}>{index + 1}</td>
 
@@ -122,18 +133,6 @@ export function AQFormLines({ lines, updateLine, readOnly = false }: AQFormLines
                   <td className={`${tdClass} text-right font-bold text-gray-900 dark:text-gray-100`}>
                     {fmt(line.net_amount)}
                   </td>
-
-                  {/* Checkbox อนุมัติ */}
-                  <td className={`${tdClass} text-center`}>
-                    <input
-                      type="checkbox"
-                      checked={!!isApproved}
-                      disabled={readOnly}
-                      onChange={(e) => updateLine(index, 'is_approved', e.target.checked)}
-                      className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
-                    />
-                  </td>
-
                   {/* จำนวนอนุมัติ */}
                   <td className={tdClass}>
                     <input

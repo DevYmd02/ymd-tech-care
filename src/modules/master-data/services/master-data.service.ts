@@ -12,6 +12,7 @@ import type {
   SaleAreaListItem,
 } from '@/modules/master-data/types/master-data-types';
 import { logger } from '@/shared/utils/logger';
+import type { CustomerMaster } from '@/modules/master-data/customer/customer-master/types/customer-types';
 
 // Import services
 import { BranchService } from '@/modules/master-data/company/services/org-branch.service';
@@ -25,8 +26,21 @@ import { ItemTypeService } from '@/modules/master-data/inventory/services/item-t
 import { EmployeeDeptService as DepartmentService } from '@/modules/master-data/company/services/employee-dept.service';
 import { CurrencyService } from '@/modules/master-data/currency/services/currency.service';
 import { SaleAreaService } from '@/modules/master-data/sales/pages/area/services/area.service';
+import { CustomerService } from '@/modules/master-data/customer/customer-master/services/customer.service';
+import { OrgEmployeeService as EmployeeService } from '@/modules/master-data/company/services/employee.service';
+import type { EmployeeListItem } from '@/modules/master-data/company/types/employee.types';
 
 export const MasterDataService = {
+  getCustomers: async (): Promise<CustomerMaster[]> => {
+    try {
+      const response = await CustomerService.getList({ limit: 1000 });
+      return response.data || [];
+    } catch (error) {
+      logger.error('[MasterDataService] getCustomers failed:', error);
+      return [];
+    }
+  },
+
   getBranches: async (): Promise<BranchListItem[]> => {
     try {
       const response = await BranchService.getList();
@@ -185,6 +199,18 @@ export const MasterDataService = {
       return response || [];
     } catch (error) {
       logger.error('[MasterDataService] getSaleAreas failed:', error);
+      return [];
+    }
+  },
+
+  getEmployees: async (): Promise<EmployeeListItem[]> => {
+    try {
+      const response = await EmployeeService.getList({ limit: 1000 });
+      // EmployeeService.getList returns PaginatedListResponse<EmployeeMaster> as the response body
+      const list = (response as unknown as { data: EmployeeListItem[] })?.data || (response as unknown as EmployeeListItem[]);
+      return Array.isArray(list) ? list : [];
+    } catch (error) {
+      logger.error('[MasterDataService] getEmployees failed:', error);
       return [];
     }
   }

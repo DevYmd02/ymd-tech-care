@@ -12,7 +12,6 @@ import {
 
 import { WindowFormLayout } from '@/shared/components/ui/layout/WindowFormLayout';
 import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal';
-import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWrapper';
 
 import { useAQForm } from '../hooks/useAQForm';
 import { AQHeader } from './AQHeader';
@@ -20,6 +19,7 @@ import { AQFormLines } from './AQFormLines';
 import { AQFormSummary } from './AQFormSummary';
 import { AQSQSearchModal } from './AQSQSearchModal';
 import { AQHistoryModal } from './AQHistoryModal';
+import type { AQListItem, SQForApproval } from '../types/quotation-approve.types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -27,7 +27,7 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   sqId?: number;
-  approvalItem?: Record<string, unknown>;
+  approvalItem?: AQListItem | SQForApproval;
   onSuccess?: () => void;
 }
 
@@ -49,9 +49,10 @@ export const AQFormModal: React.FC<Props> = ({
     handleRejectInit, handleConfirmReject,
     isConfirmRejectOpen, setIsConfirmRejectOpen,
     activeId, loadSQData,
+    currencies,
   } = useAQForm({ sqId, isOpen, onClose, onSuccess, approvalItem });
 
-  const { register, watch, setValue, formState: { errors } } = formMethods;
+  const { register, watch, formState: { errors } } = formMethods;
   const [isSQSearchOpen, setIsSQSearchOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
@@ -153,6 +154,8 @@ export const AQFormModal: React.FC<Props> = ({
                   <AQHeader
                     onSearch={() => setIsSQSearchOpen(true)}
                     showSearch={!isAlreadyProcessed && (!sqId || !activeId)}
+                    currencies={currencies}
+                    readOnly={isAlreadyProcessed}
                   />
                 </div>
               </div>
@@ -230,71 +233,7 @@ export const AQFormModal: React.FC<Props> = ({
               </div>
             </div>
 
-            {/* ── Multicurrency Section ────────────────────────────────── */}
-            <div className="bg-slate-50 dark:bg-slate-900/40 p-6 rounded-2xl border border-slate-200 dark:border-slate-800">
-              <MulticurrencyWrapper
-                name="isMulticurrency"
-                label="ระบุสกุลเงินต่างประเทศ (MULTICURRENCY)"
-                checked={watch('isMulticurrency')}
-                onCheckedChange={(val) => setValue('isMulticurrency', val)}
-                alwaysVisible={false}
-              >
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-5 items-start mt-2">
-                  <div>
-                    <label className="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">
-                      วันที่อัตราแลกเปลี่ยน
-                    </label>
-                    <div className="relative group">
-                      <input
-                        type="text"
-                        value={formatDisplayDate(watch('exchange_rate_date'))}
-                        readOnly
-                        className="h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md text-gray-900 dark:text-white cursor-not-allowed shadow-sm italic"
-                      />
-                      <Calendar size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    </div>
-                  </div>
 
-                  <div>
-                    <label className="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">
-                      สกุลเงินหลัก (Base)
-                    </label>
-                    <input
-                      type="text"
-                      value={watch('base_currency_code') || 'THB'}
-                      readOnly
-                      className="h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md text-gray-900 dark:text-white cursor-not-allowed shadow-sm font-bold"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">
-                      สกุลเงินใบเสนอราคา (Quote)
-                    </label>
-                    <input
-                      type="text"
-                      value={watch('quote_currency_code') || 'THB'}
-                      readOnly
-                      className="h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md text-emerald-600 dark:text-emerald-400 cursor-not-allowed shadow-sm font-bold"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">
-                      อัตราแลกเปลี่ยน
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        value={watch('exchange_rate') ?? 1}
-                        readOnly
-                        className="h-9 w-full px-3 text-sm text-right bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md text-gray-900 dark:text-white font-mono font-bold cursor-not-allowed shadow-sm"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </MulticurrencyWrapper>
-            </div>
 
               <div className={cardClass}>
                 <div className="p-6">
@@ -345,8 +284,8 @@ export const AQFormModal: React.FC<Props> = ({
       <AQSQSearchModal
         isOpen={isSQSearchOpen}
         onClose={() => setIsSQSearchOpen(false)}
-        onSelect={(newSqId) => {
-          loadSQData(newSqId);
+        onSelect={(newSqId, item) => {
+          loadSQData(newSqId, item);
         }}
       />
       {/* ── AQ History Modal ────────────────────────────────────────── */}

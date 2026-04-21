@@ -88,8 +88,10 @@ export const AQFormSchema = z.object({
   emp_dept_name: z.string().optional().default(''),
   project_id: z.coerce.number().optional().default(0),
   project_name: z.string().optional().default(''),
-  emp_area_id: z.coerce.number().optional().default(0),
-  emp_area_name: z.string().optional().default(''),
+  sale_area_id: z.coerce.number().optional().default(0),
+  sale_area_name: z.string().optional().default(''),
+  emp_sale_id: z.coerce.number().optional().default(0),
+  emp_sale_name: z.string().optional().default(''),
 
   valid_until: z.string().optional().default(''),
   payment_term_days: z.coerce.number().default(0),

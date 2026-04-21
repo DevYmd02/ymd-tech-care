@@ -5,11 +5,14 @@ import { DialogFormLayout } from '@/shared/components/ui/layout/DialogFormLayout
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { AQService } from '../services/aq.service';
 import type { SQForApproval } from '../types/quotation-approve.types';
+import { CustomerService } from '@/modules/master-data/customer/customer-master/services/customer.service';
+import type { CustomerMaster } from '@customer/customer-master/types/customer-types';
+import { extractArrayFromResponse } from '@/shared/utils/clientFilterUtils';
 
 export interface AQSQSearchModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (sqId: number) => void;
+  onSelect: (sqId: number, itemArg?: SQForApproval) => void;
 }
 
 export const AQSQSearchModal: React.FC<AQSQSearchModalProps> = React.memo(({
@@ -30,19 +33,53 @@ export const AQSQSearchModal: React.FC<AQSQSearchModalProps> = React.memo(({
 
   const allPending = useMemo(() => (rawData || []) as unknown as SQForApproval[], [rawData]);
 
+  // Fetch customers for name mapping
+  const { data: customerRes } = useQuery({
+    queryKey: ['customer-lookup-modal', isOpen],
+    queryFn: () => CustomerService.getList(),
+    enabled: isOpen,
+    staleTime: 1000 * 60 * 30,
+  });
+
+  const customerMap = useMemo(() => {
+    const map = new Map<string, string>();
+    const items = extractArrayFromResponse<CustomerMaster>(customerRes as object);
+    items.forEach((c) => {
+      const id = String(c.id || c.customer_id);
+      const name = String(c.customer_name_th || c.customer_name || '');
+      if (id && name) map.set(id, name);
+    });
+    return map;
+  }, [customerRes]);
+
   // Client-side filtering since we fetch all pending (usually a manageable number)
   const filteredData = useMemo(() => {
     if (!debouncedSearch) return allPending;
     const term = debouncedSearch.toLowerCase();
-    return allPending.filter((item) =>
-      String(item.sq_no || '').toLowerCase().includes(term) ||
-      String(item.customer_name || '').toLowerCase().includes(term) ||
-      String(item.customer_code || '').toLowerCase().includes(term)
-    );
-  }, [allPending, debouncedSearch]);
+    return allPending.filter((item) => {
+      const cname = item.customer_name || customerMap.get(String(item.customer_id)) || '';
+      return (
+        String(item.sq_no || '').toLowerCase().includes(term) ||
+        String(cname).toLowerCase().includes(term) ||
+        String(item.customer_code || '').toLowerCase().includes(term)
+      );
+    });
+  }, [allPending, debouncedSearch, customerMap]);
 
-  const handleSelect = (sqId: number) => {
-    onSelect(sqId);
+  // 🔍 Aggressive ID Discovery
+  const handleSelect = (item: SQForApproval) => {
+    const rawId = (
+      item.sq_id || 
+      item.id || 
+      0
+    );
+    const finalId = Number(rawId);
+    
+    if (!finalId) {
+      console.warn('[AQSQSearchModal] Could not discover a valid numeric ID in item:', item);
+    }
+    
+    onSelect(finalId, item);
     onClose();
   };
 
@@ -122,7 +159,7 @@ export const AQSQSearchModal: React.FC<AQSQSearchModalProps> = React.memo(({
                     <tr
                       key={item.sq_id}
                       className="hover:bg-emerald-50/50 dark:hover:bg-emerald-900/10 transition-colors group cursor-pointer"
-                      onClick={() => handleSelect(item.sq_id)}
+                      onClick={() => handleSelect(item)}
                     >
                       <td className="px-6 py-4">
                         <span className="font-bold text-emerald-600 dark:text-emerald-400 group-hover:scale-105 transition-transform inline-block uppercase">
@@ -134,7 +171,7 @@ export const AQSQSearchModal: React.FC<AQSQSearchModalProps> = React.memo(({
                       </td>
                       <td className="px-6 py-4">
                         <div className="font-semibold text-gray-800 dark:text-gray-200 truncate max-w-[250px]">
-                          {item.customer_name || '-'}
+                          {item.customer_name || customerMap.get(String(item.customer_id)) || '-'}
                         </div>
                         {item.customer_code && (
                           <div className="text-[10px] text-gray-400 font-bold uppercase">
@@ -149,7 +186,7 @@ export const AQSQSearchModal: React.FC<AQSQSearchModalProps> = React.memo(({
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleSelect(Number(item.sq_id || item.id || 0));
+                            handleSelect(item);
                           }}
                           className="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95"
                         >

@@ -6,6 +6,8 @@
 
 import api from '@/core/api/api';
 import type { ApproveQuotationPayload } from '../types/quotation-approve.types';
+import { QuotationService } from '@/modules/sales/quotation/services/quotation.service';
+import { extractArrayFromResponse } from '@/shared/utils/clientFilterUtils';
 
 // API Endpoint constants
 const ENDPOINTS = {
@@ -24,25 +26,35 @@ export const AQService = {
     const res = await api.get<unknown>(ENDPOINTS.pendingSQs, {
       params: { limit: 1000, page: 1 },
     });
-    // Normalize: handle { data: [...] } or array directly
-    if (Array.isArray(res)) return res;
-    const r = res as Record<string, unknown>;
-    if (r && Array.isArray(r.data)) return r.data as unknown[];
-    return [];
+    return extractArrayFromResponse<unknown>(res as object);
+  },
+
+  /**
+   * ดึงรายการ SQ ทั้งหมดที่มีสถานะ PENDING (Source of Truth Fallback)
+   */
+  getAllPendingSQsFallback: async (): Promise<unknown[]> => {
+    const res = await QuotationService.getList({
+      status: 'PENDING',
+      limit: 1000,
+      page: 1,
+    });
+    return res.data || [];
   },
 
   /**
    * ดึงรายละเอียด SQ รายตัว (เพื่อ clone ข้อมูลเข้า form)
    */
   getSQById: async (sqId: string | number): Promise<unknown> => {
-    return await api.get<unknown>(ENDPOINTS.sqDetail(sqId));
+    return await QuotationService.getById(sqId);
   },
 
   /**
    * ดึงรายการ AQ ทั้งหมด (ประวัติการอนุมัติ)
    */
   getApprovalList: async (params?: Record<string, unknown>): Promise<unknown> => {
-    return await api.get<unknown>(ENDPOINTS.approvalList, { params });
+    const res = await api.get<unknown>(ENDPOINTS.approvalList, { params });
+    // Keep raw for pagination compatibility in page, but we can also wrap it
+    return res;
   },
 
   /**
