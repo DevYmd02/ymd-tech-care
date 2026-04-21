@@ -84,10 +84,16 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
         try {
             logger.debug('💾 [QuotationForm] Submitting Data:', pendingData);
             
+            // 🔄 Unified Flow: Automatically resubmit rejected quotations
+            const finalData = { ...pendingData };
+            if (finalData.status === 'REJECTED') {
+                finalData.status = 'PENDING';
+            }
+
             if (isEdit && id) {
-                await QuotationService.update(id, pendingData);
+                await QuotationService.update(id, finalData);
             } else {
-                await QuotationService.create(pendingData);
+                await QuotationService.create(finalData);
             }
             
             setIsConfirmOpen(false);
@@ -135,7 +141,10 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
                         className="h-10 px-8 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold shadow-sm transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50"
                     >
                         {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                        {isEdit ? 'บันทึกการแก้ไข' : 'บันทึกข้อมูล'}
+                        {isEdit 
+                            ? (formData.status === 'REJECTED' ? 'บันทึกและส่งอนุมัติใหม่' : 'บันทึกการแก้ไข') 
+                            : 'บันทึกข้อมูล'
+                        }
                     </button>
                 )}
             </div>

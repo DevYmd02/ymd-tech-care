@@ -51,7 +51,10 @@ const findObject = (source: Record<string, unknown>): Record<string, unknown> =>
   if (Array.isArray(source.data) && source.data[0]) return source.data[0] as Record<string, unknown>;
   if (source.sale_quotation && typeof source.sale_quotation === 'object') return source.sale_quotation as Record<string, unknown>;
   if (source.quotation && typeof source.quotation === 'object') return source.quotation as Record<string, unknown>;
+  if (source.sq && typeof source.sq === 'object') return source.sq as Record<string, unknown>;
+  if (source.sale_quotation_header && typeof source.sale_quotation_header === 'object') return source.sale_quotation_header as Record<string, unknown>;
   return source;
+
 };
 
 /**
@@ -191,11 +194,12 @@ function normalizeSQ(raw: unknown): SQForApproval | null {
     branch_name: String(obj.branch_name || branch.name || '').replace(/^-$/, ''),
     emp_dept_id: Number(obj.emp_dept_id || dept.id || obj.id_dept || obj.id_department || obj.dept_id || 0),
     emp_dept_name: String(obj.emp_dept_name || dept.name || '').replace(/^-$/, ''),
-    project_name: String(obj.project_name || (obj.project as Record<string, unknown>)?.name || '').replace(/^-$/, ''),
+    project_id: Number(obj.project_id || obj.id_project || (obj.project as Record<string, unknown>)?.project_id || (obj.project as Record<string, unknown>)?.id || 0),
+    project_name: String(obj.project_name || (obj.project as Record<string, unknown>)?.project_name || (obj.project as Record<string, unknown>)?.name || '').replace(/^-$/, ''),
     sale_area_id: Number(obj.sale_area_id || obj.emp_area_id || area.id || obj.id_sale_area || obj.id_area || 0),
     sale_area_name: String(obj.sale_area_name || area.name || '').replace('-', ''),
-    emp_sale_id: Number(obj.emp_sale_id || 0),
-    emp_sale_name: String(obj.emp_sale_name || ''),
+    emp_sale_id: Number(obj.emp_sale_id || obj.id_emp_sale || 0),
+    emp_sale_name: String(obj.emp_sale_name || (obj.emp_sale as Record<string, unknown>)?.employee_fullname || (obj.emp_sale as Record<string, unknown>)?.employee_name || ''),
 
     discount_expression: String(obj.discount_expression || obj.discount_rate_expression || '0'),
     discount_amount: Number(obj.discount_amount || obj.quote_discount_amount || 0),
@@ -342,10 +346,6 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
       setActiveId(id);
       prevSqIdRef.current = id;
       logger.info('[useAQForm] Normalized SQ Success:', sq.sq_no);
-      console.log('--- [useAQForm] Normalized SQ Object ---', sq);
-      if (sq.lines.length === 0) {
-        console.warn('[useAQForm] CRITICAL: Normalized SQ has 0 lines! Raw keys:', Object.keys(raw || {}));
-      }
 
       // If opening an existing AQ, try to load AQ detail for pre-fill
       let aqDetails: Record<string, unknown> | null = null;
@@ -358,39 +358,39 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
         }
       }
 
-      const isNew = !aqDetails;
+      const isHistory = !!aqItemArg?.aq_id;
+      const isNew = !isHistory;
       
       // 🕵️ DUAL-SOURCE DISCOVERY: Check both SQ detail AND AQ detail for lines
       const discoveredAQLines = aqDetails ? findLines(aqDetails as Record<string, unknown>) : [];
       const discoveredSQLines = sq.lines || [];
       
+      // If we are in history mode but detail API failed (404), try to find lines in the row data itself
+      const fallbackAQLines = (isHistory && discoveredAQLines.length === 0 && aqItemArg) 
+        ? findLines(aqItemArg as Record<string, unknown>) 
+        : [];
+
       let sqLinesSource: SQLineForApproval[] = [];
       
       if (discoveredSQLines.length > 0) {
         sqLinesSource = discoveredSQLines;
       } else if (discoveredAQLines.length > 0) {
-        logger.info('[useAQForm] SQ lines empty. Using discovered lines from AQ detail.');
         sqLinesSource = discoveredAQLines as SQLineForApproval[];
+      } else if (fallbackAQLines.length > 0) {
+        sqLinesSource = fallbackAQLines as SQLineForApproval[];
       } else if (aqItemArg) {
-        const fallbackLines = findLines(aqItemArg as Record<string, unknown>);
-        if (fallbackLines.length > 0) {
-          logger.info('[useAQForm] Detail lines empty. Using discovered lines from list data.');
-          sqLinesSource = fallbackLines as SQLineForApproval[];
-        }
+        const anyFallback = findLines(aqItemArg as Record<string, unknown>);
+        if (anyFallback.length > 0) sqLinesSource = anyFallback as SQLineForApproval[];
       }
 
-      if (sqLinesSource.length === 0) {
-        logger.warn(`[useAQForm] No lines found in any source (SQ, AQ, or List) for SQ ID: ${id}`);
-      }
-
-      // Map lines (Logic follows PR > AV pattern)
+      // Map lines
       const mappedLines = sqLinesSource.map((sqLine) => {
-        const aqLine = (discoveredAQLines as Record<string, unknown>[]).find(
+        // Try to find the approval info for this specific line
+        const aqLine = [...(discoveredAQLines as Record<string, unknown>[]), ...(fallbackAQLines as Record<string, unknown>[])].find(
           (al) => Number(al.sq_line_id || al.id) === Number(sqLine.sq_line_id)
         );
 
         const originalQty = Number(sqLine.qty || 0);
-        const discExpr = String(sqLine.discount_expression || '0');
         const discAmt = Number(sqLine.discount_amount || 0);
         const netAmt = Number(sqLine.net_amount ?? sqLine.line_total ?? 0);
 
@@ -398,7 +398,7 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
           ? Number(aqLine.approved_qty || 0)
           : (isNew ? originalQty : 0);
 
-        // 🛡️ SOURCE FIDELITY: If quantity matches original, use original net amount to avoid rounding mismatch
+        // Calculate net amount for approval
         const approvedNet = (approvedQty === originalQty)
           ? netAmt
           : approvedQty > 0
@@ -414,24 +414,22 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
           uom_id: Number(sqLine.uom_id),
           uom_name: sqLine.uom_name || '',
           unit_price: Number(sqLine.unit_price),
-          discount_expression: discExpr,
+          discount_expression: String(sqLine.discount_expression || '0'),
           discount_amount: discAmt,
           net_amount: netAmt,
-          is_approved: aqLine ? Number(aqLine.approved_qty || 0) > 0 : isNew,
+          // 🛡️ RE-CALCULATION CONSISTENCY: If it's history, we assume it was approved unless explicitly rejected
+          is_approved: aqLine ? Number(aqLine.approved_qty || 0) > 0 : (isHistory ? true : isNew),
           approved_qty: approvedQty,
           approved_net_amount: Number(approvedNet.toFixed(2)),
           remarks: String(aqLine?.remarks || sqLine.note || sqLine.remarks || ''),
         };
       });
 
-      console.log('[useAQForm] Final Mapped Lines for Form:', mappedLines);
-
-      // 🕵️ ENRICHMENT: Fetch missing names from Master Data if they are missing after normalization
+      // 🕵️ ENRICHMENT
       const needsLineEnrichment = mappedLines.some(l => !l.item_name || !l.uom_name || l.item_name === '-' || l.uom_name === '-');
       const needsHeaderEnrichment = sq && (!sq.customer_name || !sq.branch_name || !sq.project_name || !sq.emp_dept_name || !sq.emp_area_name || !sq.tax_code || sq.tax_code === '-');
 
       if (needsHeaderEnrichment || needsLineEnrichment) {
-        logger.info('[useAQForm] Some display names are missing. Triggering master data enrichment...');
         try {
           const results = await Promise.all([
             MasterDataService.getCustomers(),
@@ -444,91 +442,71 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
             needsLineEnrichment ? MasterDataService.getItems() : Promise.resolve([]),
             needsLineEnrichment ? MasterDataService.getUnits() : Promise.resolve([]),
           ]);
-
           const [customers, branches, projects, depts, areas, employees, taxCodes, items, uoms] = results;
-
-          // 1. Header Enrichment
           if (sq.customer_id && (!sq.customer_name || sq.customer_name === '-')) {
-            const customerMatch = customers.find(c => Number(c.customer_id || c.id) === Number(sq.customer_id));
-            if (customerMatch) {
-              sq.customer_name = customerMatch.customer_name_th || customerMatch.name_th || customerMatch.customer_name || '';
-            }
+            const m = customers.find(c => Number(c.customer_id || c.id) === Number(sq.customer_id));
+            if (m) sq.customer_name = m.customer_name_th || m.name_th || m.customer_name || '';
           }
           if (sq.branch_id && (!sq.branch_name || sq.branch_name === '-')) {
             sq.branch_name = branches.find(b => Number(b.branch_id) === Number(sq.branch_id))?.branch_name || sq.branch_name;
           }
-          if (sq.project_id && (!sq.project_name || sq.project_name === '-')) {
-            sq.project_name = projects.find(p => Number(p.project_id) === Number(sq.project_id))?.project_name || sq.project_name;
+          if (sq.project_id && (!sq.project_name || sq.project_name === '-' || sq.project_name === '')) {
+            const m = projects.find(p => Number(p.project_id || p.id) === Number(sq.project_id));
+            if (m) sq.project_name = m.project_name || sq.project_name;
           }
-          if (sq.emp_dept_id && (!sq.emp_dept_name || sq.emp_dept_name === '-')) {
-            sq.emp_dept_name = depts.find(d => Number(d.emp_dept_id) === Number(sq.emp_dept_id))?.emp_dept_name || sq.emp_dept_name;
+          if (sq.emp_dept_id && (!sq.emp_dept_name || sq.emp_dept_name === '-' || sq.emp_dept_name === '')) {
+            const m = depts.find(d => Number(d.emp_dept_id || d.dept_id || d.id) === Number(sq.emp_dept_id));
+            if (m) sq.emp_dept_name = m.emp_dept_name || m.dept_name || m.department_name || sq.emp_dept_name;
           }
           if (sq.sale_area_id && (!sq.sale_area_name || sq.sale_area_name === '-')) {
             sq.sale_area_name = areas.find(a => String(a.sale_area_id) === String(sq.sale_area_id))?.sale_area_name || sq.sale_area_name;
           }
-          if (sq.emp_sale_id && (!sq.emp_sale_name || sq.emp_sale_name === '-')) {
-            sq.emp_sale_name = employees.find(e => Number(e.employee_id) === Number(sq.emp_sale_id))?.employee_name || sq.emp_sale_name;
+          if (sq.emp_sale_id && (!sq.emp_sale_name || sq.emp_sale_name === '-' || sq.emp_sale_name === '')) {
+            const m = employees.find(e => Number(e.employee_id) === Number(sq.emp_sale_id));
+            if (m) {
+              sq.emp_sale_name = m.employee_fullname || 
+                `${m.employee_title_th || m.title_name || ''} ${m.employee_firstname_th || m.first_name || ''} ${m.employee_lastname_th || m.last_name || ''}`.trim() || 
+                m.employee_name || '';
+            }
           }
+
           if (sq.tax_code_id && (!sq.tax_code || sq.tax_code === '-')) {
             const taxMatch = taxCodes.find(t => Number(t.tax_code_id || t.tax_id) === Number(sq.tax_code_id));
             if (taxMatch) sq.tax_code = taxMatch.tax_code || taxMatch.tax_name || '';
           }
-
-          // 2. Line enrichment
           if (needsLineEnrichment) {
             mappedLines.forEach(l => {
               if (!l.item_name || l.item_name === '-') {
                 const match = items.find(i => Number(i.item_id || i.id) === Number(l.item_id));
-                if (match) {
-                  l.item_name = match.item_name || match.description || '';
-                  l.item_code = match.item_code || l.item_code;
-                }
+                if (match) { l.item_name = match.item_name || match.description || ''; l.item_code = match.item_code || l.item_code; }
               }
               if (!l.uom_name || l.uom_name === '-') {
                 const match = uoms.find(u => Number(u.uom_id || u.id) === Number(l.uom_id));
-                if (match) {
-                  l.uom_name = match.uom_name || match.unit_name || '';
-                }
+                if (match) l.uom_name = match.uom_name || match.unit_name || '';
               }
             });
           }
-
-          logger.info('[useAQForm] Master data enrichment complete.');
-        } catch (e) {
-          logger.error('[useAQForm] Enrichment failed:', e);
-        }
+        } catch (e) { logger.error('[useAQForm] Enrichment failed:', e); }
       }
 
-      // 💹 Fetch currencies for dropdowns if not already fetched (AWAIT to prevent race condition)
       if (currencies.length === 0) {
-        try {
-          const fetchedCurrencies = await MasterDataService.getCurrencies();
-          setCurrencies(fetchedCurrencies);
-        } catch (e) {
-          logger.error('[useAQForm] Failed to fetch currencies:', e);
-        }
+        try { const fc = await MasterDataService.getCurrencies(); setCurrencies(fc); } catch (e) { logger.error('[useAQForm] Failed to fetch currencies:', e); }
       }
 
-      // Reset form with SQ data
+      // Reset form with SQ data + AQ details + AQ List Fallbacks
       reset({
-        aq_id: aqDetails ? Number((aqDetails as Record<string, unknown>).aq_id) : undefined,
+        aq_id: aqDetails ? Number((aqDetails as Record<string, unknown>).aq_id) : (aqItemArg?.aq_id ? Number(aqItemArg.aq_id) : undefined),
         aq_no: String((aqDetails as Record<string, unknown>)?.aq_no || aqItemArg?.aq_no || ''),
-        aq_date: String((aqDetails as Record<string, unknown>)?.aq_date || '').split('T')[0],
+        aq_date: String((aqDetails as Record<string, unknown>)?.aq_date || '').split('T')[0] || String(aqItemArg?.aq_date || ''),
         sq_id: sq.sq_id,
-        sq_no: sq.sq_no,
-        sq_date: sq.sq_date,
-        customer_name: sq.customer_name || '',
-        customer_code: sq.customer_code || '',
-        status: String(
-          (aqDetails as Record<string, unknown>)?.status ||
-          aqItemArg?.status ||
-          sq.status
-        ) as AQFormData['status'],
-        reject_reason: String((aqDetails as Record<string, unknown>)?.status === 'REJECTED'
-          ? ((aqDetails as Record<string, unknown>).remarks || '')
-          : ''),
-        approval_emp_id: user?.employee_id || 1,
-        approval_emp_name: user?.employee?.employee_fullname || 'Admin',
+        sq_no: sq.sq_no || String(aqItemArg?.sq_no || ''),
+        sq_date: sq.sq_date || String(aqItemArg?.sq_date || ''),
+        customer_name: sq.customer_name || String(aqItemArg?.customer_name || ''),
+        customer_code: sq.customer_code || String(aqItemArg?.customer_code || ''),
+        status: String((aqDetails as Record<string, unknown>)?.status || aqItemArg?.status || sq.status) as AQFormData['status'],
+        reject_reason: String((aqDetails as Record<string, unknown>)?.status === 'REJECTED' ? ((aqDetails as Record<string, unknown>).remarks || '') : ''),
+        approval_emp_id: Number((aqDetails as Record<string, unknown>)?.approval_emp_id || user?.employee_id || 1),
+        approval_emp_name: String((aqDetails as Record<string, unknown>)?.approval_emp_name || aqItemArg?.approval_emp_name || user?.employee?.employee_fullname || ''),
 
         base_currency_code: sq.base_currency_code || 'THB',
         base_currency_id: sq.base_currency_id || 1,
@@ -536,7 +514,6 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
         quote_currency_id: sq.quote_currency_id || 1,
         exchange_rate: Number(sq.exchange_rate || 1),
         exchange_rate_date: sq.exchange_rate_date || sq.sq_date || new Date().toISOString(),
-
         sub_total: sq.sub_total || 0,
         base_total_amount: sq.base_total_amount || 0,
         quote_total_amount: sq.quote_total_amount || sq.total_amount || 0,
@@ -548,12 +525,9 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
         discount_rate: 0,
         base_discount_amount: sq.base_discount_amount || 0,
         quote_discount_amount: sq.quote_discount_amount || sq.discount_amount || 0,
-
         valid_until: sq.valid_until || '',
         payment_term_days: sq.payment_term_days || 0,
         remarks: sq.remarks || '',
-
-        // 🏗️ Missing Display Fields (Enriched names prioritized)
         branch_id: sq.branch_id || 0,
         branch_name: sq.branch_name || String(aqItemArg?.branch_name || ''),
         lead_id: sq.lead_id || '',
@@ -566,9 +540,7 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
         emp_dept_id: sq.emp_dept_id || 0,
         emp_dept_name: sq.emp_dept_name || String(aqItemArg?.emp_dept_name || ''),
         tax_code: sq.tax_code || String(aqItemArg?.tax_code || ''),
-
         isMulticurrency: Boolean(sq.isMulticurrency),
-
         lines: mappedLines,
       } as AQFormData);
     } catch (err) {
@@ -578,6 +550,7 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
       setIsSubmitting(false);
     }
   }, [reset, user, showAlert, currencies.length]);
+
 
   // ── Reactive Auto-load ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -676,7 +649,7 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
       status: finalStatus,
       remarks: data.remarks || '',
       approval_emp_id: user?.employee_id || 1,
-      approval_emp_name: user?.employee?.employee_fullname || 'Admin',
+      approval_emp_name: user?.employee?.employee_fullname || '',
       base_currency_code: data.base_currency_code || 'THB',
       quote_currency_code: data.quote_currency_code || 'THB',
       exchange_rate: data.exchange_rate || 1,
@@ -684,7 +657,7 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
       tax_code_id: data.tax_code_id ? Number(data.tax_code_id) : undefined,
       discount_expression: data.discount_expression || '0',
       aq_lines: data.lines.filter(l => l.is_approved).map(l => ({
-        sq_line_id: l.sq_line_id,
+        sq_line_id: Number(l.sq_line_id),
         item_id: l.item_id,
         qty: l.qty,
         uom_id: l.uom_id,
@@ -693,8 +666,6 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
         discount_expression: l.discount_expression,
         remarks: l.remarks || '',
       })),
-      sale_area_id: data.sale_area_id ? Number(data.sale_area_id) : undefined,
-      emp_sale_id: data.emp_sale_id ? Number(data.emp_sale_id) : undefined,
     };
 
     setIsSubmitting(true);
@@ -744,7 +715,7 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
       status: 'REJECTED',
       remarks: reason,
       approval_emp_id: user?.employee_id || 1,
-      approval_emp_name: user?.employee?.employee_fullname || 'Admin',
+      approval_emp_name: user?.employee?.employee_fullname || '',
       base_currency_code: data.base_currency_code || 'THB',
       quote_currency_code: data.quote_currency_code || 'THB',
       exchange_rate: data.exchange_rate || 1,
@@ -755,10 +726,9 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
         qty: l.qty,
         uom_id: l.uom_id,
         approved_qty: 0,
+        unit_price: l.unit_price,
         remarks: reason,
       })),
-      sale_area_id: data.sale_area_id ? Number(data.sale_area_id) : undefined,
-      emp_sale_id: data.emp_sale_id ? Number(data.emp_sale_id) : undefined,
     };
 
     setIsRejecting(true);

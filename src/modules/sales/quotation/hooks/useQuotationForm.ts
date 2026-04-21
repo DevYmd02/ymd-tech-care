@@ -344,6 +344,11 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
     // 🔄 Syncing with Fetched/Initial Data
     useEffect(() => {
         if (!isOpen) {
+            // 🧹 Explicit Cleanup: Reset form when modal closes
+            if (lastInitializedId.current !== null) {
+                logger.info('🧹 [QuotationForm] Modal closed. Resetting form to defaults.');
+                reset(getQuotationDefaultValues());
+            }
             lastInitializedId.current = null;
             return;
         }
@@ -420,7 +425,7 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
                     status: (initialData.status as QuotationFormValues['status']) || 'DRAFT',
                     valid_until: initialData.expiry_date || defaultValues.valid_until,
                     sale_area_id: Number(initialData.sale_area_id || initialData.emp_area_id || 0),
-                    emp_sale_id: Number(initialData.emp_sale_id || (user?.employee_id) || 0),
+                    emp_sale_id: Number(initialData.emp_sale_id || 0),
                     emp_dept_id: Number(initialData.emp_dept_id || 0),
                     project_id: Number(initialData.project_id || 0),
                     lines: (initialData.lines || []).map(l => ({
@@ -435,11 +440,6 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
                 if (!mergedValues.base_currency_code || mergedValues.base_currency_code === '') mergedValues.base_currency_code = 'THB';
                 if (!mergedValues.quote_currency_code || mergedValues.quote_currency_code === '') mergedValues.quote_currency_code = 'THB';
                 
-                // 🚀 SMART DEFAULT: For new quotations, default the salesperson to current user
-                if (!id && mergedValues.emp_sale_id === 0 && user?.employee_id) {
-                    mergedValues.emp_sale_id = user.employee_id;
-                }
-
                 reset(mergedValues);
                 lastInitializedId.current = currentTarget;
             }

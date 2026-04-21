@@ -17,6 +17,7 @@ import { CustomerService } from '@/modules/master-data/customer/customer-master/
 import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal';
 import { SQStatusBadge } from '@/modules/sales/shared/components/SQStatusBadge';
 import { SQActionsCell } from './components/SQActionsCell';
+import { AQHistoryModal } from '@/modules/sales/shared/components/AQHistoryModal';
 
 // ====================================================================================
 // CONSTANTS
@@ -26,6 +27,7 @@ const STATUS_OPTIONS = [
     { value: 'ALL', label: 'ทั้งหมด' },
     { value: 'DRAFT', label: 'แบบร่าง' },
     { value: 'PENDING', label: 'รออนุมัติ' },
+    { value: 'REJECTED', label: 'ไม่อนุมัติ' },
     { value: 'SENT', label: 'ส่งแล้ว' },
     { value: 'ACCEPTED', label: 'อนุมัติแล้ว' },
 ];
@@ -53,6 +55,11 @@ export default function QuotationListPage() {
     const [isApproveConfirmOpen, setIsApproveConfirmOpen] = useState(false);
     const [isApproveLoading, setIsApproveLoading] = useState(false);
     const [pendingApproveId, setPendingApproveId] = useState<string | null>(null);
+    
+    // 🏷️ History Modal State
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+    const [historySqId, setHistorySqId] = useState<number | undefined>(undefined);
+    const [historySqNo, setHistorySqNo] = useState<string>('');
 
     // 🏗️ Memoize query params to prevent unstable identities
     const queryParams = useMemo(() => ({
@@ -172,6 +179,12 @@ export default function QuotationListPage() {
         }
     };
 
+    const handleViewHistory = (row: QuotationHeader) => {
+        setHistorySqId(Number(row.sq_id || row.id));
+        setHistorySqNo(row.sq_no || '');
+        setIsHistoryOpen(true);
+    };
+
     // Columns Definition
     const columnHelper = createColumnHelper<QuotationHeader>();
     
@@ -186,7 +199,10 @@ export default function QuotationListPage() {
         columnHelper.accessor('sq_no', {
             header: 'เลขที่ใบเสนอราคา',
             cell: (info) => (
-                <span className="text-blue-600 font-semibold hover:underline cursor-default">
+                <span 
+                    onClick={() => handleViewHistory(info.row.original)}
+                    className="text-blue-600 font-semibold hover:underline cursor-pointer transition-all"
+                >
                     {info.getValue()}
                 </span>
             ),
@@ -277,6 +293,7 @@ export default function QuotationListPage() {
                     onView={handleView}
                     onEdit={handleEdit}
                     onSendApprove={handleSendApprove}
+                    onViewHistory={handleViewHistory}
                 />
             ),
             size: 180,
@@ -401,6 +418,18 @@ export default function QuotationListPage() {
                 variant="info"
                 isLoading={isApproveLoading}
                 icon={Send}
+            />
+
+            {/* Approval History Modal */}
+            <AQHistoryModal 
+                isOpen={isHistoryOpen}
+                onClose={() => {
+                    setIsHistoryOpen(false);
+                    setHistorySqId(undefined);
+                    setHistorySqNo('');
+                }}
+                sqId={historySqId}
+                sqNo={historySqNo}
             />
         </PageListLayout>
     );

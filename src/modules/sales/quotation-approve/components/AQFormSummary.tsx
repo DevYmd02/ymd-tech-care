@@ -11,7 +11,9 @@ export function AQFormSummary() {
   const { watch } = useFormContext<AQFormData>();
 
   const lines = watch('lines') || [];
-  const quoteCurrency = watch('quote_currency_code') || 'THB';
+  const docCurrency = watch('base_currency_code') || 'THB';
+
+  const systemCurrency = watch('quote_currency_code') || 'THB';
   const exchangeRate = watch('exchange_rate') || 1;
   const subTotal = watch('sub_total') || 0;
   const quoteTotal = watch('quote_total_amount') || 0;
@@ -19,6 +21,7 @@ export function AQFormSummary() {
   const taxRate = watch('tax_rate') || 0;
   const discountAmount = watch('quote_discount_amount') || 0;
   const discountExpr = watch('discount_expression') || '0';
+
 
   // 🛡️ SOURCE FIDELITY: If everything is approved exactly as-is, use original totals to avoid rounding discrepancy
   const isFullApproval = lines.length > 0 && lines.every(l => l.is_approved && Number(l.approved_qty) === Number(l.qty));
@@ -35,8 +38,8 @@ export function AQFormSummary() {
   const approvedTaxAmountDisplay = isFullApproval ? quoteTax : totalAfterDiscount * approvedTaxRate;
   const finalApprovedTotalDisplay = isFullApproval ? quoteTotal : totalAfterDiscount + approvedTaxAmountDisplay;
 
-  const baseCurrency = watch('base_currency_code') || 'THB';
-  const isMC = quoteCurrency !== 'THB' && quoteCurrency !== baseCurrency;
+  const isMC = docCurrency !== systemCurrency;
+
 
   const fmt = (n: number) =>
     new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n || 0);
@@ -123,13 +126,14 @@ export function AQFormSummary() {
               
               <div className="mt-1 flex items-center gap-2">
                 <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded text-[10px] font-bold uppercase tracking-widest">
-                  {quoteCurrency}
+                  {docCurrency}
                 </span>
                 {isMC && (
                   <span className="text-[10px] text-gray-400 italic">
-                    ( ≈ {fmt(finalApprovedTotalDisplay * exchangeRate)} {baseCurrency} )
+                    ( ≈ {fmt(finalApprovedTotalDisplay * exchangeRate)} {systemCurrency} )
                   </span>
                 )}
+
               </div>
             </div>
           </div>

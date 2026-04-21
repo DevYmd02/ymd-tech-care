@@ -49,18 +49,29 @@ export function QuotationSummary({
                     <span className="font-bold text-gray-700 dark:text-gray-300">{lineCount} รายการ</span>
                 </div>
 
-                <div className="flex justify-between items-center text-sm group">
-                    <span className="text-gray-500">ส่วนลดท้ายบิล (discount_amount):</span>
-                    <div className="relative w-40">
+                <div className="flex justify-between items-start text-sm group">
+                    <span className="text-gray-500 mt-1.5 line-clamp-1">ส่วนลดท้ายบิล:</span>
+                    <div className="flex flex-col items-end w-40 gap-1.5">
                         <input 
                             type="text" 
                             placeholder={discountAmount > 0 ? discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2 }) : "0.00 หรือ 0%"}
                             value={discountInput ?? ''} 
-                            onChange={(e) => onDiscountChange(e.target.value)}
+                            onChange={(e) => {
+                                // 🚫 Restrict to: Digits, Dot, and Percent sign only
+                                const val = e.target.value;
+                                const filtered = val.replace(/[^0-9.%]/g, '');
+                                onDiscountChange(filtered);
+                            }}
                             disabled={readOnly}
                             maxLength={15}
                             className={`${styles.input} h-9 py-0 text-right ${readOnly ? 'bg-gray-100 italic cursor-not-allowed border-gray-200' : 'bg-white border-blue-200 focus:border-blue-500'}`}
                         />
+                        {/* ✨ Show calculated savings if using % expression */}
+                        {discountInput?.includes('%') && discountAmount > 0 && !readOnly && (
+                            <div className="text-[11px] font-bold text-red-600 dark:text-red-400 whitespace-nowrap animate-in fade-in slide-in-from-top-1 duration-200">
+                                {`-${discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} ${currencySymbol}`}
+                            </div>
+                        )}
                     </div>
                 </div>
 

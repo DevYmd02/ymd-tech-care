@@ -5,13 +5,14 @@
  */
 
 import { useState, useMemo } from 'react';
-import { ShieldCheck, Search, Plus, FileText } from 'lucide-react';
+import { ShieldCheck, Search, Plus, FileText, Eye, Clock } from 'lucide-react';
 import { PageListLayout, SmartTable, FilterField } from '@ui';
 import { createColumnHelper } from '@tanstack/react-table';
 import { useQuery } from '@tanstack/react-query';
 import { CustomerService } from '@/modules/master-data/customer/customer-master/services/customer.service';
 import { SQStatusBadge } from '@/modules/sales/shared/components/SQStatusBadge';
 import { AQFormModal } from './components/AQFormModal';
+import { AQHistoryModal } from '@/modules/sales/shared/components/AQHistoryModal';
 import { AQService } from './services/aq.service';
 import type { AQListItem, SQForApproval } from './types/quotation-approve.types';
 import type { QuotationHeader } from '@/modules/sales/quotation/types/quotation.types';
@@ -50,6 +51,11 @@ export default function QuotationApproveListPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedSqId, setSelectedSqId] = useState<number | undefined>(undefined);
   const [selectedItem, setSelectedItem] = useState<SQForApproval | AQListItem | undefined>(undefined);
+
+  // ── History Modal State ────────────────────────────────────────────────────
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [historySqId, setHistorySqId] = useState<number | undefined>(undefined);
+  const [historySqNo, setHistorySqNo] = useState<string>('');
 
   // ─────────────────────────────────────────────────────────────────────────
   // Data Fetching — "Hybrid" pattern: PENDING SQs + AQ history
@@ -221,14 +227,7 @@ export default function QuotationApproveListPage() {
     // ───────────────
     // 5. Map History rows (Resilient Discovery Pattern)
     // ───────────────
-    const historyRows: AQListItem[] = aqHistory
-      .filter((aq) => {
-        const sqId = getAnyId(aq);
-        const s = String(aq.status || '').toUpperCase();
-        if (pendingIdSet.has(sqId) && (s === 'REJECTED' || s === 'APPROVED')) return false;
-        return true;
-      })
-      .map((aq, index) => {
+    const historyRows: AQListItem[] = aqHistory.map((aq, index) => {
         const obj = aq as Record<string, unknown>;
         const sqObj = (obj.sq || obj.sale_quotation || obj.quotation || obj.sale_quotation_header) as Record<string, unknown> | undefined;
         
@@ -273,6 +272,13 @@ export default function QuotationApproveListPage() {
           ''
         );
 
+        // 🕵️ Robust Amount Discovery
+        const rawQuoteAmount = Number(obj.quote_total_amount || obj.base_total_amount || 0);
+        const sqTotalAmount = Number(sqObj?.quote_total_amount || sqObj?.base_total_amount || sqObj?.total_amount || 0);
+
+        // For rejected items, or if AQ amount is 0 but SQ has value, show the SQ value
+        const displayQuoteAmount = (rawQuoteAmount === 0 && sqTotalAmount > 0) ? sqTotalAmount : rawQuoteAmount;
+
         return {
           row_key: `history-${obj.aq_id || obj.id || index}`,
           aq_id: Number(obj.aq_id || obj.id),
@@ -285,11 +291,13 @@ export default function QuotationApproveListPage() {
           customer_code: customerCode,
           status: String(obj.status || 'PENDING'),
           approval_emp_name: String(obj.approval_emp_name || ''),
-          quote_total_amount: Number(obj.quote_total_amount || obj.base_total_amount || 0),
-          base_total_amount: Number(obj.base_total_amount || obj.quote_total_amount || 0),
+          quote_total_amount: displayQuoteAmount,
+          // 🛡️ RE-CALCULATION CONSISTENCY: Derive base total from the chosen quote amount * rate
+          base_total_amount: displayQuoteAmount * Number(obj.exchange_rate || 1),
           currency: String(obj.currency || obj.quote_currency_code || obj.currency_code || 'THB'),
           raw: obj,
         } satisfies AQListItem;
+
       });
 
     return [...pendingRows, ...historyRows];
@@ -355,9 +363,13 @@ export default function QuotationApproveListPage() {
       columnHelper.accessor('sq_no', {
         header: 'เลขที่ SQ',
         cell: (info) => (
-          <span
-            onClick={() => handleOpenApproval(info.row.original)}
-            className="text-blue-600 dark:text-blue-400 font-semibold cursor-pointer hover:underline"
+          <span 
+            onClick={() => {
+              setHistorySqId(info.row.original.sq_id);
+              setHistorySqNo(info.row.original.sq_no || '');
+              setIsHistoryOpen(true);
+            }}
+            className="text-blue-600 dark:text-blue-400 font-semibold hover:underline cursor-pointer transition-all"
           >
             {info.getValue() || '-'}
           </span>
@@ -368,8 +380,7 @@ export default function QuotationApproveListPage() {
         header: 'เลขที่ AQ',
         cell: (info) => (
           <span
-            onClick={() => handleOpenApproval(info.row.original)}
-            className={`font-semibold cursor-pointer hover:underline ${
+            className={`font-bold ${
               info.getValue()
                 ? 'text-emerald-600 dark:text-emerald-400'
                 : 'text-gray-400 italic text-xs'
@@ -447,32 +458,49 @@ export default function QuotationApproveListPage() {
         cell: (info) => {
           const row = info.row.original;
           const isPending = row.status === 'PENDING';
+          const canViewHistory = row.status === 'APPROVED' || row.status === 'REJECTED';
+
           return (
-            <div className="flex justify-center gap-2">
-              <button
-                onClick={() => handleOpenApproval(row)}
-                className={`px-3 py-1.5 rounded text-xs font-medium transition-colors flex items-center gap-1.5 ${
-                  isPending
-                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                    : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
-                }`}
-              >
-                {isPending ? (
-                  <>
-                    <ShieldCheck size={14} strokeWidth={2.5} />
-                    พิจารณาอนุมัติ
-                  </>
-                ) : (
-                  <>
-                    <FileText size={14} />
-                    ดูรายละเอียด
-                  </>
-                )}
-              </button>
+            <div className="flex justify-center items-center gap-2">
+              {isPending ? (
+                <button
+                  onClick={() => handleOpenApproval(row)}
+                  className="h-8 px-2.5 bg-[#00a67e] hover:bg-[#008f6d] text-white rounded-lg text-[11px] font-bold shadow-sm transition-all active:scale-95 flex items-center gap-1"
+                >
+                  <ShieldCheck size={13} strokeWidth={2.5} />
+                  พิจารณาอนุมัติ
+                </button>
+              ) : (
+                <>
+                  {/* 👁️ View Detail Button */}
+                  <button
+                    onClick={() => handleOpenApproval(row)}
+                    title="ดูรายละเอียด"
+                    className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-all active:scale-90"
+                  >
+                    <Eye size={16} strokeWidth={2} />
+                  </button>
+                  
+                  {/* 🕒 View History Button */}
+                  {canViewHistory && (
+                    <button
+                      onClick={() => {
+                        setHistorySqId(row.sq_id);
+                        setHistorySqNo(row.sq_no || '');
+                        setIsHistoryOpen(true);
+                      }}
+                      title="ดูประวัติการอนุมัติ"
+                      className="p-1 text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/10 rounded-full transition-all active:scale-90"
+                    >
+                      <Clock size={16} strokeWidth={2.5} />
+                    </button>
+                  )}
+                </>
+              )}
             </div>
           );
         },
-        size: 140,
+        size: 120,
       }),
     ],
     [],
@@ -604,6 +632,18 @@ export default function QuotationApproveListPage() {
         onSuccess={() => {
           refetch();
         }}
+      />
+
+      {/* History Modal */}
+      <AQHistoryModal 
+        isOpen={isHistoryOpen}
+        onClose={() => {
+          setIsHistoryOpen(false);
+          setHistorySqId(undefined);
+          setHistorySqNo('');
+        }}
+        sqId={historySqId}
+        sqNo={historySqNo}
       />
 
     </>

@@ -18,7 +18,7 @@ import { AQHeader } from './AQHeader';
 import { AQFormLines } from './AQFormLines';
 import { AQFormSummary } from './AQFormSummary';
 import { AQSQSearchModal } from './AQSQSearchModal';
-import { AQHistoryModal } from './AQHistoryModal';
+import { AQHistoryModal } from '@/modules/sales/shared/components/AQHistoryModal';
 import type { AQListItem, SQForApproval } from '../types/quotation-approve.types';
 
 // ─────────────────────────────────────────────────────────────────────────────
