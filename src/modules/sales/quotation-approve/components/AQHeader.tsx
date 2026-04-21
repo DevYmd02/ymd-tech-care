@@ -1,7 +1,9 @@
-import { FileText, User, Search, ClipboardList } from 'lucide-react';
-import { useFormContext } from 'react-hook-form';
+import { FileText, User, Search, ClipboardList, Calendar } from 'lucide-react';
+import { useFormContext, Controller } from 'react-hook-form';
+import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWrapper';
 import type { AQFormData } from '../schemas/aq.schema';
 import { SQStatusBadge } from '@/modules/sales/shared/components/SQStatusBadge';
+import type { Currency } from '@/modules/master-data/types/master-data-types';
 
 const formatDate = (val?: string): string => {
   if (!val) return '-';
@@ -15,10 +17,12 @@ const formatDate = (val?: string): string => {
 interface AQHeaderProps {
   onSearch?: () => void;
   showSearch?: boolean;
+  currencies?: Currency[];
+  readOnly?: boolean;
 }
 
-export function AQHeader({ onSearch, showSearch }: AQHeaderProps) {
-  const { watch } = useFormContext<AQFormData>();
+export function AQHeader({ onSearch, showSearch, currencies = [], readOnly = false }: AQHeaderProps) {
+  const { watch, control, setValue, register } = useFormContext<AQFormData>();
 
   const sqNo = watch('sq_no');
   const sqDate = watch('sq_date');
@@ -34,7 +38,8 @@ export function AQHeader({ onSearch, showSearch }: AQHeaderProps) {
   const leadId = watch('lead_id');
   const empDeptName = watch('emp_dept_name');
   const projectName = watch('project_name');
-  const empAreaName = watch('emp_area_name');
+  const saleAreaName = watch('sale_area_name');
+  const empSaleName = watch('emp_sale_name');
   const taxCode = watch('tax_code');
 
   const inputClass = "h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md text-gray-900 dark:text-white placeholder-gray-400 transition-all disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm italic cursor-not-allowed";
@@ -184,7 +189,17 @@ export function AQHeader({ onSearch, showSearch }: AQHeaderProps) {
           <label className={labelClass}>เขตการขาย (SALE AREA)</label>
           <input
             type="text"
-            value={empAreaName || '-'}
+            value={saleAreaName || '-'}
+            readOnly
+            className={inputClass}
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label className={labelClass}>พนักงานขาย (SALES PERSON)</label>
+          <input
+            type="text"
+            value={empSaleName || '-'}
             readOnly
             className={inputClass}
           />
@@ -200,6 +215,96 @@ export function AQHeader({ onSearch, showSearch }: AQHeaderProps) {
             placeholder="ไม่มีหมายเหตุ"
           />
         </div>
+      </div>
+
+      {/* 💹 Multicurrency Section — Integrated into Header Flow */}
+      <div className="bg-slate-50 dark:bg-slate-900/40 p-6 rounded-2xl border border-slate-200 dark:border-slate-800">
+        <MulticurrencyWrapper
+          name="isMulticurrency"
+          label="ระบุสกุลเงินต่างประเทศ (Multicurrency)"
+          checked={watch('isMulticurrency')}
+          onCheckedChange={(val) => {
+            if (readOnly) return;
+            setValue('isMulticurrency', val);
+
+            // 🚀 Smart Filling: When activated, ensure fields are not empty
+            if (val) {
+              const currentData = watch();
+              if (!currentData.base_currency_code) setValue('base_currency_code', 'THB');
+              if (!currentData.quote_currency_code) setValue('quote_currency_code', 'THB');
+              if (!currentData.exchange_rate) setValue('exchange_rate', 1);
+              if (!currentData.exchange_rate_date) {
+                setValue('exchange_rate_date', new Date().toISOString());
+              }
+            }
+          }}
+          alwaysVisible={!!watch('sq_id')}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-5 items-start mt-2">
+            <div>
+              <label className={labelClass}>วันที่อัตราแลกเปลี่ยน</label>
+              <Controller
+                name="exchange_rate_date"
+                control={control}
+                render={({ field }) => (
+                  <div className="relative group">
+                    <input
+                      type="text"
+                      value={formatDate(field.value)}
+                      readOnly
+                      className={`${inputClass} bg-gray-50/50 italic pr-10`}
+                    />
+                    <Calendar size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  </div>
+                )}
+              />
+            </div>
+
+            <div>
+              <label className={labelClass}>สกุลเงิน (Currency)</label>
+              <select
+                {...register('base_currency_code')}
+                disabled
+                className="h-9 w-full px-3 text-sm bg-gray-100 dark:bg-gray-800/50 border border-gray-300 dark:border-gray-700 rounded-md text-gray-900 dark:text-white cursor-not-allowed shadow-sm"
+              >
+                <option value="">เลือกสกุลเงิน</option>
+                {currencies.map((c) => (
+                  <option key={c.currency_id} value={c.currency_code}>
+                    {c.currency_code} - {c.name_th}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className={labelClass}>ไปยังสกุลเงิน (Quote)</label>
+              <select
+                {...register('quote_currency_code')}
+                disabled
+                className="h-9 w-full px-3 text-sm bg-gray-100 dark:bg-gray-800/50 border border-gray-300 dark:border-gray-700 rounded-md text-gray-900 dark:text-white cursor-not-allowed shadow-sm"
+              >
+                <option value="">เลือกสกุลเงิน</option>
+                {currencies.map((c) => (
+                  <option key={c.currency_id} value={c.currency_code}>
+                    {c.currency_code} - {c.name_th}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className={labelClass}>อัตราแลกเปลี่ยน</label>
+              <div className="relative">
+                <input
+                  type="number"
+                  {...register('exchange_rate')}
+                  readOnly
+                  className="h-9 w-full px-3 text-right bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md text-gray-900 dark:text-white font-mono font-bold cursor-not-allowed shadow-sm focus:ring-0"
+                />
+              </div>
+            </div>
+          </div>
+        </MulticurrencyWrapper>
       </div>
     </section>
   );

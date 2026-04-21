@@ -62,7 +62,8 @@ export interface RawQuotationData {
     remarks?: string;
     tax_code_id?: number | string | null;
     item_id?: string | number | null;
-    emp_area_id?: string | number | null;
+    sale_area_id?: string | number | null;
+    emp_sale_id?: string | number | null;
     emp_dept_id?: string | number | null;
     project_id?: string | number | null;
     sq_status?: string;
@@ -99,7 +100,8 @@ export interface QuotationFormData {
     onhold: 'Y' | 'N' | string;
     tax_code_id?: number | string | null;
     item_id?: string | number | null;
-    emp_area_id?: string | number | null;
+    sale_area_id?: string | number | null;
+    emp_sale_id?: string | number | null;
     emp_dept_id?: string | number | null;
     project_id?: string | number | null;
     job_id?: string | number | null;
@@ -125,12 +127,14 @@ export interface QuotationHeader {
     sq_status?: string;
     branch_id?: number | null;
     lead_id?: number | string | null;
-    emp_area_id?: number | null;
+    sale_area_id?: number | null;
+    emp_sale_id?: number | null;
     emp_dept_id?: number | null;
     project_id?: number | null;
     // Data-Reuse property
     lines?: QuotationLineData[];
-    rawData?: Record<string, unknown>; 
+    rawData?: Record<string, unknown>;
+    [key: string]: unknown;
 }
 
 export interface QuotationListItem {

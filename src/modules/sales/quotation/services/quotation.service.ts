@@ -75,7 +75,8 @@ export class QuotationService {
                 workflow_status: item.sq_status || '',
                 sq_status: item.sq_status || '',
                 // 📡 Explicitly map business tracking IDs from list item to header object
-                emp_area_id: item.emp_area_id ? Number(item.emp_area_id) : null,
+                sale_area_id: item.sale_area_id ? Number(item.sale_area_id) : (item.emp_area_id ? Number(item.emp_area_id) : null),
+                emp_sale_id: item.emp_sale_id ? Number(item.emp_sale_id) : null,
                 emp_dept_id: item.emp_dept_id ? Number(item.emp_dept_id) : null,
                 project_id: item.project_id ? Number(item.project_id) : null,
                 lines: (item.saleQuotationLines || item.lines) as QuotationLineData[],
@@ -133,6 +134,12 @@ export class QuotationService {
             
             const response = await api.get<RawQuotationData & WrappedRawResponse>(ENDPOINTS.detail(String(id)));
             
+            // 🚨 CRITICAL DIAGNOSTIC: Log the raw data so we can see exactly what the backend sends
+            console.info(`[QuotationService] 🚨 RAW DATA for ID ${id}:`, response);
+            if (response && typeof response === 'object') {
+                console.info('[QuotationService] Keys found:', Object.keys(response as object));
+            }
+
             // 🧪 Smart Mapping Logic: Parse strings and isolate the core quotation object
             let extracted: unknown = response;
             const responseType = typeof response;
@@ -144,9 +151,27 @@ export class QuotationService {
                 } catch {
                     logger.warn(`[QuotationService] Response is a string but not valid JSON for ID: ${id}`);
                 }
-            } else if (response && responseType === 'object' && (response as Record<string, unknown>).data !== undefined) {
-                // Handle wrapped { data: ... } structure from Axios/API
-                extracted = (response as Record<string, unknown>).data;
+            } else if (response && responseType === 'object') {
+                const rObj = response as Record<string, unknown>;
+                
+                // Shape A: Standard Wrapper
+                if (rObj.data !== undefined) {
+                    extracted = rObj.data;
+                } 
+                // Shape B: ERP-specific Header/Lines wrapper
+                else if (rObj.header !== undefined && typeof rObj.header === 'object') {
+                    // Combine header and lines if they are split
+                    const header = rObj.header as Record<string, unknown>;
+                    const lines = Array.isArray(rObj.lines) ? rObj.lines : 
+                                 (Array.isArray(rObj.saleQuotationLines) ? rObj.saleQuotationLines : []);
+                    extracted = { ...header, saleQuotationLines: lines };
+                }
+                // Shape C: Named Object
+                else if (rObj.sale_quotation !== undefined) {
+                    extracted = rObj.sale_quotation;
+                } else if (rObj.quotation !== undefined) {
+                    extracted = rObj.quotation;
+                }
             }
 
             // 2. Handle single-item arrays gracefully (common in some backend architectures)
@@ -154,18 +179,30 @@ export class QuotationService {
 
             // 3. Final structural validation with Silence & Resilience
             if (!finalObject || typeof finalObject !== 'object' || Array.isArray(finalObject)) {
-                // 🛡️ Silence Recovery: If API returns empty or invalid structure, return null silently 
-                // to avoid cluttering the console. This satisfies the user's request for a clean console.
+                logger.warn(`[QuotationService] Normalization failed for ID: ${id}. Final object is invalid.`);
                 return null;
             }
 
             // 4. Safe cast to RawQuotationData for property mapping
-            const raw = finalObject as RawQuotationData;
+            const raw = finalObject as RawQuotationData & Record<string, unknown>;
 
-            // 2. Determine where the lines are located
-            const rawLines = raw.saleQuotationLines || 
-                             raw.lines || 
-                             [];
+            // 2. Determine where the lines are located — EXHAUSTIVE DETECTION
+            const priority = ['saleQuotationLines', 'sale_quotation_lines', 'sq_lines', 'lines', 'items', 'sale_quotation_detail', 'sale_quotation_line', 'sq_line'];
+            let rawLines: unknown[] = [];
+            
+            for (const p of priority) {
+                const val = raw[p];
+                if (Array.isArray(val) && val.length > 0) {
+                    rawLines = val as unknown[];
+                    break;
+                }
+            }
+
+            if (rawLines.length === 0) {
+                // Secondary check: first non-empty array found in the object
+                const firstArray = Object.keys(raw).find(k => Array.isArray(raw[k]) && (raw[k] as unknown[]).length > 0);
+                if (firstArray) rawLines = raw[firstArray] as unknown[];
+            }
 
             // 3. Assemble the final strictly-typed object
             const { lines: _rawLines, saleQuotationLines: _rawSaleLines, ...safeRaw } = raw;
@@ -190,6 +227,10 @@ export class QuotationService {
                 payment_term_days: Number(raw.payment_term_days || 0),
                 onhold: raw.onhold || 'N',
                 remarks: raw.remarks || '',
+                sale_area_id: raw.sale_area_id !== undefined 
+                    ? Number(raw.sale_area_id) 
+                    : (raw.emp_area_id !== undefined ? Number(raw.emp_area_id) : undefined),
+                emp_sale_id: raw.emp_sale_id !== undefined ? Number(raw.emp_sale_id) : undefined,
                 lines: Array.isArray(rawLines) ? (rawLines as RawQuotationLine[]).map(line => {
                     const sourceVal = line.price_source !== undefined ? line.price_source : line.source;
                     const sourceNameRaw = line.price_source_name || line.source_name || line.sourceName || '';
@@ -288,7 +329,9 @@ export class QuotationService {
         if (data.lead_id) payload.lead_id = data.lead_id;
         
         // 📡 Relation IDs: Omit them entirely if invalid (Backend fails on both null and undefined inside connect)
-        if (isValidId(data.emp_area_id)) payload.emp_area_id = Number(data.emp_area_id);
+        if (isValidId(data.sale_area_id)) payload.sale_area_id = Number(data.sale_area_id);
+        
+        if (isValidId(data.emp_sale_id)) payload.emp_sale_id = Number(data.emp_sale_id);
         if (isValidId(data.emp_dept_id)) payload.emp_dept_id = Number(data.emp_dept_id);
         if (isValidId(data.project_id)) payload.project_id = Number(data.project_id);
         if (isValidId(data.tax_code_id)) payload.tax_code_id = Number(data.tax_code_id);

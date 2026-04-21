@@ -7,7 +7,8 @@ import type {
     BranchListItem, 
     Currency, 
     DepartmentListItem, 
-    Project
+    Project,
+    EmployeeListItem
 } from '@/modules/master-data/types/master-data-types';
 import type { CustomerMaster } from '@/modules/master-data/customer/customer-master/types/customer-types';
 import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
@@ -21,6 +22,7 @@ interface QuotationHeaderFormProps {
     departments: DepartmentListItem[];
     projects: Project[];
     saleAreas: SaleAreaListItem[];
+    employees: EmployeeListItem[];
     readOnly?: boolean;
     onSearchCustomer?: () => void;
     onSearchLead?: () => void;
@@ -34,6 +36,7 @@ export function QuotationHeaderForm({
     departments,
     projects,
     saleAreas,
+    employees,
     readOnly = false,
     onSearchCustomer,
     onSearchLead
@@ -268,11 +271,11 @@ export function QuotationHeaderForm({
                 <div className="space-y-1">
                     <label className={labelClass}>เขตการขาย (SALE AREA)</label>
                     <select 
-                        {...register('emp_area_id', {
+                        {...register('sale_area_id', {
                             setValueAs: (v) => (v === '' || v === '0' ? null : Number(v)),
                         })}
                         disabled={isLocked}
-                        className={`${selectClass} ${getErrorClass('emp_area_id')}`}
+                        className={`${selectClass} ${getErrorClass('sale_area_id')}`}
                     >
                         <option value="0">-- เลือกเขตการขาย --</option>
                         {saleAreas.map(area => (
@@ -281,6 +284,25 @@ export function QuotationHeaderForm({
                             </option>
                         ))}
                     </select>
+                </div>
+
+                <div className="space-y-1">
+                    <label className={labelClass}>พนักงานขาย (SALES PERSON) <span className="text-red-500">*</span></label>
+                    <select 
+                        {...register('emp_sale_id', {
+                            setValueAs: (v) => (v === '' || v === '0' ? null : Number(v)),
+                        })}
+                        disabled={isLocked}
+                        className={`${selectClass} ${getErrorClass('emp_sale_id')}`}
+                    >
+                        <option value="0">-- เลือกพนักงานขาย --</option>
+                        {employees.map(emp => (
+                            <option key={emp.employee_id} value={String(emp.employee_id || '')}>
+                                {emp.employee_code} - {emp.employee_name}
+                            </option>
+                        ))}
+                    </select>
+                    {errors.emp_sale_id && <span className="text-[10px] text-red-500 font-medium whitespace-nowrap">กรุณาเลือกพนักงานขาย</span>}
                 </div>
 
                 <div className="lg:col-span-2 space-y-1">

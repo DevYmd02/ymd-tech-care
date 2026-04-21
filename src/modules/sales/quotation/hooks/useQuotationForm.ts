@@ -17,9 +17,11 @@ import { QuotationService } from '@sales/quotation/services/quotation.service';
 import type { QuotationFormData, QuotationHeader, RawQuotationLine } from '@sales/quotation/types/quotation.types';
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import { logger } from '@/shared/utils/logger';
+import { useAuth } from '@/core/auth/contexts/AuthContext';
 
 export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: QuotationHeader) => {
     const isEdit = !!id;
+    const { user } = useAuth();
     const [isSubmitting, setIsSubmitting] = useState(false);
     
     // Search Modals State
@@ -205,7 +207,7 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
             customer_id: Number(apiData.customer_id || 0),
             branch_id: apiData.branch_id ? Number(apiData.branch_id) : 0,
             currency_code: apiData.currency_code || 'THB',
-            isMulticurrency: !!apiData.isMulticurrency,
+            isMulticurrency: apiData.isMulticurrency === true || (!!apiData.sq_id && !!apiData.base_currency_code),
             base_currency_code: apiData.base_currency_code && apiData.base_currency_code !== '' ? apiData.base_currency_code : 'THB',
             quote_currency_code: apiData.quote_currency_code && apiData.quote_currency_code !== '' ? apiData.quote_currency_code : 'THB',
             exchange_rate: Number(apiData.exchange_rate || 1),
@@ -222,7 +224,10 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
             onhold: (apiData.onhold === 'Y' ? 'Y' : 'N') as QuotationFormValues['onhold'],
             tax_code_id: apiData.tax_code_id ? Number(apiData.tax_code_id) : 0,
             item_id: apiData.item_id ? Number(apiData.item_id) : 0,
-            emp_area_id: apiData.emp_area_id ? Number(apiData.emp_area_id) : 0,
+            sale_area_id: apiData.sale_area_id !== undefined
+                ? Number(apiData.sale_area_id)
+                : Number((apiData as unknown as Record<string, unknown>).emp_area_id || 0),
+            emp_sale_id: apiData.emp_sale_id ? Number(apiData.emp_sale_id) : 0,
             emp_dept_id: apiData.emp_dept_id ? Number(apiData.emp_dept_id) : 0,
             project_id: apiData.project_id ? Number(apiData.project_id) : 0,
             sq_status: apiData.sq_status || '',
@@ -279,10 +284,80 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
         };
     }, []);
     
+    // Data Fetching (Master Data)
+    const { data: branches = [] } = useQuery({
+        queryKey: ['master-branches'],
+        queryFn: MasterDataService.getBranches,
+        enabled: isOpen
+    });
+
+    const { data: currencies = [] } = useQuery<Currency[]>({
+        queryKey: ['master-currencies'],
+        queryFn: MasterDataService.getCurrencies,
+        enabled: isOpen
+    });
+
+    const { data: customerResponse } = useQuery({
+        queryKey: ['master-customers'],
+        queryFn: () => CustomerService.getList({ limit: 100 }),
+        enabled: isOpen
+    });
+    const customers = customerResponse?.data || [];
+
+    const { data: taxCodes = [] } = useQuery<TaxCode[]>({
+        queryKey: ['master-tax-codes'],
+        queryFn: TaxCodeService.getTaxCodes,
+        enabled: isOpen
+    });
+
+    const { data: departments = [] } = useQuery({
+        queryKey: ['master-departments'],
+        queryFn: MasterDataService.getDepartments,
+        enabled: isOpen
+    });
+
+    const { data: projects = [] } = useQuery({
+        queryKey: ['master-projects'],
+        queryFn: MasterDataService.getProjects,
+        enabled: isOpen
+    });
+
+    const { data: saleAreas = [] } = useQuery({
+        queryKey: ['master-sale-areas'],
+        queryFn: () => MasterDataService.getSaleAreas(),
+        enabled: isOpen,
+    });
+
+    const { data: employees = [] } = useQuery({
+        queryKey: ['master-employees'],
+        queryFn: () => MasterDataService.getEmployees(),
+        enabled: isOpen,
+    });
+
+    const { data: uomResponse } = useQuery({
+        queryKey: ['master-units'],
+        queryFn: () => UnitService.getAll({ limit: 1000 }),
+        enabled: isOpen
+    });
+    const uoms = useMemo(() => uomResponse?.items || [], [uomResponse]);
+
     // 🔄 Syncing with Fetched/Initial Data
     useEffect(() => {
         if (!isOpen) {
             lastInitializedId.current = null;
+            return;
+        }
+
+        // 🏗️ Step 0: Ensure critical master data is loaded before initializing form.
+        // This prevents dropdowns from showing "-- เลือก --" because the ID has no matching option yet.
+        const isMasterDataReady = (
+            (branches?.length > 0 || !isOpen) && 
+            (taxCodes?.length > 0 || !isOpen) && 
+            (departments?.length > 0 || !isOpen)
+        );
+
+        if (id && !isMasterDataReady) {
+            logger.info('⏳ [QuotationForm] Waiting for master data before initialization...');
             return;
         }
 
@@ -344,7 +419,8 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
                     branch_id: Number(initialData.branch_id || 0),
                     status: (initialData.status as QuotationFormValues['status']) || 'DRAFT',
                     valid_until: initialData.expiry_date || defaultValues.valid_until,
-                    emp_area_id: Number(initialData.emp_area_id || 0),
+                    sale_area_id: Number(initialData.sale_area_id || initialData.emp_area_id || 0),
+                    emp_sale_id: Number(initialData.emp_sale_id || (user?.employee_id) || 0),
                     emp_dept_id: Number(initialData.emp_dept_id || 0),
                     project_id: Number(initialData.project_id || 0),
                     lines: (initialData.lines || []).map(l => ({
@@ -359,6 +435,11 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
                 if (!mergedValues.base_currency_code || mergedValues.base_currency_code === '') mergedValues.base_currency_code = 'THB';
                 if (!mergedValues.quote_currency_code || mergedValues.quote_currency_code === '') mergedValues.quote_currency_code = 'THB';
                 
+                // 🚀 SMART DEFAULT: For new quotations, default the salesperson to current user
+                if (!id && mergedValues.emp_sale_id === 0 && user?.employee_id) {
+                    mergedValues.emp_sale_id = user.employee_id;
+                }
+
                 reset(mergedValues);
                 lastInitializedId.current = currentTarget;
             }
@@ -374,59 +455,15 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
         hasInitialLines, 
         setValue, 
         recoverMissingPriceSources, 
-        enrichLinesWithItemData
+        enrichLinesWithItemData,
+        branches?.length,
+        taxCodes?.length,
+        departments?.length,
+        projects?.length,
+        saleAreas?.length,
+        employees?.length,
+        user?.employee_id
     ]);
-
-    // Data Fetching (Master Data)
-    const { data: branches = [] } = useQuery({
-        queryKey: ['master-branches'],
-        queryFn: MasterDataService.getBranches,
-        enabled: isOpen
-    });
-
-    const { data: currencies = [] } = useQuery<Currency[]>({
-        queryKey: ['master-currencies'],
-        queryFn: MasterDataService.getCurrencies,
-        enabled: isOpen
-    });
-
-    const { data: customerResponse } = useQuery({
-        queryKey: ['master-customers'],
-        queryFn: () => CustomerService.getList({ limit: 100 }),
-        enabled: isOpen
-    });
-    const customers = customerResponse?.data || [];
-
-    const { data: taxCodes = [] } = useQuery<TaxCode[]>({
-        queryKey: ['master-tax-codes'],
-        queryFn: TaxCodeService.getTaxCodes,
-        enabled: isOpen
-    });
-
-    const { data: departments = [] } = useQuery({
-        queryKey: ['master-departments'],
-        queryFn: MasterDataService.getDepartments,
-        enabled: isOpen
-    });
-
-    const { data: projects = [] } = useQuery({
-        queryKey: ['master-projects'],
-        queryFn: MasterDataService.getProjects,
-        enabled: isOpen
-    });
-
-    const { data: saleAreas = [] } = useQuery({
-        queryKey: ['master-sale-areas'],
-        queryFn: () => MasterDataService.getSaleAreas(),
-        enabled: isOpen,
-    });
-
-    const { data: uomResponse } = useQuery({
-        queryKey: ['master-units'],
-        queryFn: () => UnitService.getAll({ limit: 1000 }),
-        enabled: isOpen
-    });
-    const uoms = useMemo(() => uomResponse?.items || [], [uomResponse]);
 
     // ========================================================================
     // CALCULATIONS & SYNC LOGIC
@@ -713,6 +750,7 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
         departments,
         projects,
         saleAreas,
+        employees,
         uoms,
         // Search Modals State
         isCustomerSearchOpen,

@@ -151,7 +151,8 @@ export default function QuotationListPage() {
                     branch_id: record.branch_id ? Number(record.branch_id) : undefined,
                     lead_id: record.lead_id ? Number(record.lead_id) : null,
                     // 🛡️ Resolve tracking IDs: Prioritize mapped record values, then rawData fallback to satisfy backend integer requirements
-                    emp_area_id: (record.emp_area_id ?? (record.rawData as Record<string, unknown>)?.emp_area_id) ? Number(record.emp_area_id ?? (record.rawData as Record<string, unknown>)?.emp_area_id) : undefined,
+                    sale_area_id: (record.sale_area_id ?? record.emp_area_id ?? (record.rawData as Record<string, unknown>)?.sale_area_id ?? (record.rawData as Record<string, unknown>)?.emp_area_id) ? Number(record.sale_area_id ?? record.emp_area_id ?? (record.rawData as Record<string, unknown>)?.sale_area_id ?? (record.rawData as Record<string, unknown>)?.emp_area_id) : undefined,
+                    emp_sale_id: (record.emp_sale_id ?? (record.rawData as Record<string, unknown>)?.emp_sale_id) ? Number(record.emp_sale_id ?? (record.rawData as Record<string, unknown>)?.emp_sale_id) : undefined,
                     emp_dept_id: (record.emp_dept_id ?? (record.rawData as Record<string, unknown>)?.emp_dept_id) ? Number(record.emp_dept_id ?? (record.rawData as Record<string, unknown>)?.emp_dept_id) : undefined,
                     project_id: (record.project_id ?? (record.rawData as Record<string, unknown>)?.project_id) ? Number(record.project_id ?? (record.rawData as Record<string, unknown>)?.project_id) : undefined,
                     tax_code_id: resolvedTaxCode ? Number(resolvedTaxCode) : undefined,
@@ -180,18 +181,17 @@ export default function QuotationListPage() {
             header: () => <div className="flex justify-center items-center w-full">ลำดับ</div>,
             cell: (info) => <div className="flex justify-center items-center w-full">{info.row.index + 1}</div>,
             size: 50,
+            enableSorting: false,
         }),
         columnHelper.accessor('sq_no', {
             header: 'เลขที่ใบเสนอราคา',
             cell: (info) => (
-                <span 
-                    onClick={() => handleEdit(String(info.row.original.id), info.row.original)}
-                    className="text-blue-600 font-semibold cursor-pointer hover:underline"
-                >
+                <span className="text-blue-600 font-semibold hover:underline cursor-default">
                     {info.getValue()}
                 </span>
             ),
             size: 150,
+            enableSorting: false,
         }),
         columnHelper.accessor('date', {
             header: 'วันที่',
@@ -202,6 +202,7 @@ export default function QuotationListPage() {
                 return isNaN(d.getTime()) ? val : d.toLocaleDateString('en-GB');
             },
             size: 120,
+            enableSorting: false,
         }),
         columnHelper.accessor('customer_name', {
             header: 'ลูกค้า',
@@ -218,6 +219,7 @@ export default function QuotationListPage() {
                 );
             },
             size: 200,
+            enableSorting: false,
         }),
         columnHelper.accessor('total_amount', {
             header: () => <div className="text-center w-full">มูลค่ารวม (บาท)</div>,
@@ -243,6 +245,7 @@ export default function QuotationListPage() {
                 );
             },
             size: 150,
+            enableSorting: false,
         }),
         columnHelper.accessor('expiry_date', {
             header: 'หมดอายุ',
@@ -253,6 +256,7 @@ export default function QuotationListPage() {
                 return isNaN(d.getTime()) ? val : d.toLocaleDateString('en-GB');
             },
             size: 120,
+            enableSorting: false,
         }),
         columnHelper.accessor('status', {
             header: () => <div className="flex justify-center items-center w-full">สถานะ</div>,
@@ -262,6 +266,7 @@ export default function QuotationListPage() {
                 </div>
             ),
             size: 100,
+            enableSorting: false,
         }),
         columnHelper.display({
             id: 'actions',
@@ -275,6 +280,7 @@ export default function QuotationListPage() {
                 />
             ),
             size: 180,
+            enableSorting: false,
         }),
     ], [columnHelper, customerMap]);
 

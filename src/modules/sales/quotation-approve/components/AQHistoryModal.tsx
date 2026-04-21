@@ -37,11 +37,20 @@ export const AQHistoryModal: React.FC<AQHistoryModalProps> = ({
 
   const displayData = React.useMemo(() => {
     if (!historyData) return [];
+    let rawItems: AQHeader[] = [];
     const r = historyData as Record<string, unknown>;
-    if (Array.isArray(r.data)) return r.data as AQHeader[];
-    if (Array.isArray(historyData)) return historyData as AQHeader[];
-    return [];
-  }, [historyData]);
+    if (Array.isArray(r.data)) {
+      rawItems = r.data as AQHeader[];
+    } else if (Array.isArray(historyData)) {
+      rawItems = historyData as AQHeader[];
+    }
+
+    // Defensive client-side filtering by sqId to ensure each record shows its own history
+    if (sqId) {
+      return rawItems.filter((item) => Number(item.sq_id) === Number(sqId));
+    }
+    return rawItems;
+  }, [historyData, sqId]);
 
   // 2. Table Columns
   const columns = React.useMemo(() => [

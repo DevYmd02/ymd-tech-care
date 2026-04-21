@@ -41,6 +41,7 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
         departments,
         projects,
         saleAreas,
+        employees,
         uoms,
         // Search Modals State
         isCustomerSearchOpen,
@@ -170,6 +171,7 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
                                     departments={departments}
                                     projects={projects}
                                     saleAreas={saleAreas}
+                                    employees={employees}
                                     onSearchCustomer={() => setIsCustomerSearchOpen(true)}
                                     onSearchLead={() => setIsLeadSearchOpen(true)}
                                     readOnly={readOnly}
