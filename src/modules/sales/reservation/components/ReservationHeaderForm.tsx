@@ -13,6 +13,7 @@ import type {
 import type { CustomerMaster } from '@/modules/master-data/customer/customer-master/types/customer-types';
 import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
 import type { SaleAreaMaster } from '@/modules/master-data/sales/pages/area/types/area.types';
+import type { IEmployee } from '@/modules/master-data/company/types/employee-types';
 
 interface ReservationHeaderFormProps {
     branches: BranchListItem[];
@@ -23,9 +24,11 @@ interface ReservationHeaderFormProps {
     projects: Project[];
     itemTypes: ItemTypeListItem[];
     saleAreas: SaleAreaMaster[];
+    employees: IEmployee[];
     readOnly?: boolean;
     onSearchCustomer?: () => void;
     onSearchLead?: () => void;
+    onFetchQuotation?: (type: 'SQ' | 'AQ') => void;
 }
 
 export function ReservationHeaderForm({ 
@@ -37,9 +40,11 @@ export function ReservationHeaderForm({
     projects,
     itemTypes,
     saleAreas,
+    employees,
     readOnly = false,
     onSearchCustomer,
-    onSearchLead
+    onSearchLead,
+    onFetchQuotation
 }: ReservationHeaderFormProps) {
     const { register, watch, setValue, control } = useFormContext<ReservationFormData>();
     
@@ -63,23 +68,31 @@ export function ReservationHeaderForm({
             <div className="flex items-center gap-2 pb-3 border-b border-gray-100 dark:border-gray-800 text-purple-600 dark:text-purple-400">
                 <FileBox size={20} strokeWidth={2.5} />
                 <h3 className="text-lg font-bold">ข้อมูลส่วนหัวใบสั่งจอง (Header Reservation)</h3>
+                <div className="ml-auto">
+                    <StatusCheckbox 
+                        name="onhold"
+                        control={control}
+                        label="ON HOLD"
+                        disabled={isLocked}
+                    />
+                </div>
             </div>
 
             <div className={cardSection}>
                 
-                {/* Basic Info Row */}
+                {/* Row 1: Document Info & Sync */}
                 <div className="space-y-1">
-                    <label className={labelClass}>เลขที่ใบสั่งจอง (reservation_no) <span className="text-red-500">*</span></label>
+                    <label className={labelClass}>เลขที่ใบสั่งจอง (RESERVATION_NO) <span className="text-red-500">*</span></label>
                     <input 
                         {...register('reservation_no')}
                         readOnly
                         placeholder="RS-AUTO"
-                        className={`${inputClass} bg-gray-50 border-gray-200 cursor-not-allowed`}
+                        className={`${inputClass} bg-gray-100 border-gray-200 cursor-not-allowed font-medium`}
                     />
                 </div>
 
                 <div className="space-y-1">
-                    <label className={labelClass}>วันที่จอง (reservation_date) <span className="text-red-500">*</span></label>
+                    <label className={labelClass}>วันที่จอง (RESERVATION_DATE) <span className="text-red-500">*</span></label>
                     <Controller
                         name="reservation_date"
                         control={control}
@@ -95,35 +108,50 @@ export function ReservationHeaderForm({
                 </div>
 
                 <div className="space-y-1">
-                    <label className={labelClass}>สาขา (branch_id) <span className="text-red-500">*</span></label>
-                    <select
-                        {...register('branch_id')}
-                        disabled={isLocked}
-                        className={selectClass}
-                    >
-                        <option value="">-- เลือกสาขา --</option>
-                        {branches.map(branch => (
-                            <option key={branch.branch_id} value={String(branch.branch_id || '')}>
-                                {branch.branch_name}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-
-                <div className="space-y-1 pt-[22px]">
-                    <div className="flex items-center h-9">
-                        <StatusCheckbox 
-                            name="onhold"
-                            control={control}
-                            label="ON HOLD"
+                    <label className={labelClass}>อ้างอิงใบเสนอราคา (SQ_ID)</label>
+                    <div className="flex gap-2">
+                        <input 
+                            {...register('sq_id')}
                             disabled={isLocked}
+                            className={inputClass} 
+                            placeholder="SQxxxx-xxx (ถ้ามี)"
                         />
+                        <button 
+                            type="button" 
+                            disabled={isLocked} 
+                            onClick={() => onFetchQuotation?.('SQ')}
+                            className="p-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center shrink-0 w-9 h-9"
+                            title="ค้นหาข้อมูลจากใบเสนอราคา"
+                        >
+                            <Search size={18} />
+                        </button>
                     </div>
                 </div>
 
-                {/* Customer & Leads Row */}
+                <div className="space-y-1">
+                    <label className={labelClass}>อ้างอิงใบเสนอราคาอนุมัติ (AQ_ID)</label>
+                    <div className="flex gap-2">
+                        <input 
+                            {...register('aq_id')}
+                            disabled={isLocked}
+                            className={inputClass} 
+                            placeholder="AQxxxx-xxx (ถ้ามี)"
+                        />
+                        <button 
+                            type="button" 
+                            disabled={isLocked} 
+                            onClick={() => onFetchQuotation?.('AQ')}
+                            className="p-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center shrink-0 w-9 h-9"
+                            title="ค้นหาข้อมูลจากใบอนุมัติ"
+                        >
+                            <Search size={18} />
+                        </button>
+                    </div>
+                </div>
+
+                {/* Row 2: Client & Logistics */}
                 <div className="space-y-1 lg:col-span-2">
-                    <label className={labelClass}>ลูกค้า (customer_id) <span className="text-red-500">*</span></label>
+                    <label className={labelClass}>ลูกค้า (CUSTOMER_ID) <span className="text-red-500">*</span></label>
                     <div className="flex gap-2">
                         <div className="relative flex-1 group">
                             <input 
@@ -147,26 +175,7 @@ export function ReservationHeaderForm({
                 </div>
 
                 <div className="space-y-1">
-                    <label className={labelClass}>อ้างอิงใบเสนอราคา (sq_id)</label>
-                    <div className="flex gap-2">
-                        <input 
-                            {...register('sq_id')}
-                            disabled={isLocked}
-                            className={inputClass} 
-                            placeholder="SQxxxx-xxx (ถ้ามี)"
-                        />
-                        <button 
-                            type="button" 
-                            disabled={isLocked} 
-                            className="p-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center shrink-0 w-9 h-9"
-                        >
-                            <ClipboardList size={18} />
-                        </button>
-                    </div>
-                </div>
-
-                <div className="space-y-1">
-                    <label className={labelClass}>Lead/CRM (lead_id)</label>
+                    <label className={labelClass}>Lead/CRM (LEAD_ID)</label>
                     <div className="flex gap-2">
                         <div className="relative flex-1 group">
                              <input 
@@ -187,9 +196,25 @@ export function ReservationHeaderForm({
                     </div>
                 </div>
 
-                {/* Terms Row */}
                 <div className="space-y-1">
-                    <label className={labelClass}>เครดิตเทอม (วัน) (payment_term_days)</label>
+                    <label className={labelClass}>สาขา (BRANCH_ID) <span className="text-red-500">*</span></label>
+                    <select
+                        {...register('branch_id')}
+                        disabled={isLocked}
+                        className={selectClass}
+                    >
+                        <option value="">-- เลือกสาขา --</option>
+                        {branches.map((branch, idx) => (
+                            <option key={`branch-${branch.branch_id || idx}`} value={String(branch.branch_id || '')}>
+                                {branch.branch_name}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
+                {/* Row 3: Terms & Dates */}
+                <div className="space-y-1">
+                    <label className={labelClass}>เครดิตเทอม (วัน) (PAYMENT_TERM_DAYS)</label>
                     <input 
                         type="number"
                         {...register('payment_term_days', { valueAsNumber: true })}
@@ -200,7 +225,7 @@ export function ReservationHeaderForm({
                 </div>
 
                 <div className="space-y-1">
-                    <label className={labelClass}>ส่งของภายใน (วัน) (ship_days)</label>
+                    <label className={labelClass}>ส่งของภายใน (วัน) (SHIP_DAYS)</label>
                     <input 
                         type="number"
                         {...register('ship_days', { valueAsNumber: true })}
@@ -211,7 +236,7 @@ export function ReservationHeaderForm({
                 </div>
 
                 <div className="space-y-1">
-                    <label className={labelClass}>วันที่กำหนดส่ง (ship_date) <span className="text-red-500">*</span></label>
+                    <label className={labelClass}>วันที่กำหนดส่ง (SHIP_DATE) <span className="text-red-500">*</span></label>
                     <Controller
                         name="ship_date"
                         control={control}
@@ -226,35 +251,51 @@ export function ReservationHeaderForm({
                     />
                 </div>
 
-
-
-                {/* Sales Org Row */}
                 <div className="space-y-1">
-                    <label className={labelClass}>แผนก (emp_dept_id)</label>
+                    <label className={labelClass}>แผนก (EMP_DEPT_ID)</label>
                     <select 
                         {...register('emp_dept_id')}
                         disabled={isLocked}
                         className={selectClass}
                     >
                         <option value="">-- เลือกแผนก --</option>
-                        {departments.map(dept => (
-                            <option key={dept.emp_dept_id || dept.dept_id || dept.id} value={String(dept.emp_dept_id || dept.dept_id || dept.id || '')}>
+                        {departments.map((dept, idx) => (
+                            <option key={`dept-${dept.emp_dept_id || dept.dept_id || dept.id || idx}`} value={String(dept.emp_dept_id || dept.dept_id || dept.id || '')}>
                                 {dept.emp_dept_name || dept.dept_name || dept.department_name}
                             </option>
                         ))}
                     </select>
                 </div>
 
+
+
+                {/* Row 4: Sales Team & Item Type */}
                 <div className="space-y-1">
-                    <label className={labelClass}>เขตการขาย (emp_area_id)</label>
+                    <label className={labelClass}>พนักงานขาย (EMP_SALE_ID)</label>
                     <select 
-                        {...register('emp_area_id')}
+                        {...register('emp_sale_id')}
+                        disabled={isLocked}
+                        className={selectClass}
+                    >
+                        <option value="">-- เลือกพนักงานขาย --</option>
+                        {employees.map((emp, idx) => (
+                            <option key={`emp-${emp.id || idx}`} value={String(emp.id)}>
+                                {emp.employee_code} - {emp.employee_firstname_th} {emp.employee_lastname_th}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
+                <div className="space-y-1">
+                    <label className={labelClass}>เขตการขาย (SALE_AREA_ID)</label>
+                    <select 
+                        {...register('sale_area_id')}
                         disabled={isLocked}
                         className={selectClass}
                     >
                         <option value="">-- เลือกเขตการขาย --</option>
-                        {saleAreas.map(area => (
-                            <option key={area.sale_area_id} value={area.sale_area_id}>
+                        {saleAreas.map((area, idx) => (
+                            <option key={`area-${area.sale_area_id || idx}`} value={area.sale_area_id}>
                                 {area.sale_area_code} - {area.sale_area_name}
                             </option>
                         ))}
@@ -262,15 +303,15 @@ export function ReservationHeaderForm({
                 </div>
 
                 <div className="space-y-1">
-                    <label className={labelClass}>โครงการ/งาน (job_id)</label>
+                    <label className={labelClass}>โครงการ/งาน (JOB_ID)</label>
                     <select 
                         {...register('job_id')}
                         disabled={isLocked}
                         className={selectClass}
                     >
                         <option value="">-- เลือกโครงการ --</option>
-                        {projects.map(proj => (
-                            <option key={proj.project_id} value={String(proj.project_id || '')}>
+                        {projects.map((proj, idx) => (
+                            <option key={`proj-${proj.project_id || idx}`} value={String(proj.project_id || '')}>
                                 {proj.project_name}
                             </option>
                         ))}
@@ -278,23 +319,24 @@ export function ReservationHeaderForm({
                 </div>
 
                 <div className="space-y-1">
-                    <label className={labelClass}>ประเภทสินค้าหลัก (item_id)</label>
+                    <label className={labelClass}>ประเภทสินค้าหลัก (ITEM_ID)</label>
                     <select 
                         {...register('item_id')}
                         disabled={isLocked}
                         className={selectClass}
                     >
                         <option value="">-- เลือกประเภทสินค้า --</option>
-                        {itemTypes.map(item => (
-                            <option key={item.item_type_id} value={String(item.item_type_id || '')}>
+                        {itemTypes.map((item, idx) => (
+                            <option key={`item-${item.item_type_id || idx}`} value={String(item.item_type_id || '')}>
                                 {item.item_type_name}
                             </option>
                         ))}
                     </select>
                 </div>
 
+                {/* Row 5: Financials & Notes */}
                 <div className="space-y-1">
-                    <label className={labelClass}>ประเภทภาษี (tax_code_id)</label>
+                    <label className={labelClass}>ประเภทภาษี (TAX_CODE_ID)</label>
                     <select 
                         {...register('tax_code_id', {
                             setValueAs: (v) => (v === '' ? null : Number(v)),
@@ -303,8 +345,8 @@ export function ReservationHeaderForm({
                         className={selectClass}
                     >
                         <option value="">-- เลือกประเภทภาษี --</option>
-                        {taxCodes.map(group => (
-                            <option key={group.tax_code_id} value={String(group.tax_code_id || '')}>
+                        {taxCodes.map((group, idx) => (
+                            <option key={`tax-${group.tax_code_id || idx}`} value={String(group.tax_code_id || '')}>
                                 {group.tax_code}
                             </option>
                         ))}
@@ -312,7 +354,7 @@ export function ReservationHeaderForm({
                 </div>
 
                 <div className="lg:col-span-3 space-y-1">
-                    <label className={labelClass}>หมายเหตุ (remarks)</label>
+                    <label className={labelClass}>หมายเหตุ (REMARKS)</label>
                     <textarea 
                         {...register('remarks')}
                         disabled={isLocked}
@@ -388,8 +430,8 @@ export function ReservationHeaderForm({
                                 disabled={!formData.isMulticurrency || isLocked}
                             >
                                 <option value="">เลือกสกุลเงิน</option>
-                                {currencies.map((c) => (
-                                    <option key={c.currency_id} value={c.currency_code}>
+                                {currencies.map((c, idx) => (
+                                    <option key={`currency-base-${c.currency_id || idx}`} value={c.currency_code}>
                                         {c.currency_code} - {c.name_th}
                                     </option>
                                 ))}
@@ -403,8 +445,8 @@ export function ReservationHeaderForm({
                                 disabled={!formData.isMulticurrency || isLocked}
                             >
                                 <option value="">เลือกสกุลเงิน</option>
-                                {currencies.map((c) => (
-                                    <option key={c.currency_id} value={c.currency_code}>
+                                {currencies.map((c, idx) => (
+                                    <option key={`currency-quote-${c.currency_id || idx}`} value={c.currency_code}>
                                         {c.currency_code} - {c.name_th}
                                     </option>
                                 ))}

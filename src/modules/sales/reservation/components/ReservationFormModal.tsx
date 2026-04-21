@@ -38,6 +38,7 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
         projects,
         itemTypes,
         saleAreas,
+        employees,
         uoms,
         warehouses,
         locations,
@@ -62,6 +63,7 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
         handleSelectProduct,
         handleSelectLot,
         handleSelectLead,
+        handleFetchQuotation,
     } = useReservationForm(isOpen, id, initialData);
 
     const { setValue, getValues } = methods;
@@ -146,8 +148,10 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
                                     projects={projects}
                                     itemTypes={itemTypes}
                                     saleAreas={saleAreas}
+                                    employees={employees}
                                     onSearchCustomer={() => setIsCustomerSearchOpen(true)}
                                     onSearchLead={() => setIsLeadSearchOpen(true)}
+                                    onFetchQuotation={handleFetchQuotation}
                                 />
                             </div>
                         </div>
