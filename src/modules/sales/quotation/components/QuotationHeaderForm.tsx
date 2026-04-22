@@ -2,6 +2,7 @@ import { FileText, Search, User, ClipboardList} from 'lucide-react';
 import { useFormContext, Controller } from 'react-hook-form';
 import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWrapper';
 import { CustomDateInput, StatusCheckbox } from '@ui';
+import { SQStatusBadge } from '@/modules/sales/shared/components/SQStatusBadge';
 import type { QuotationFormValues } from '@sales/quotation/schemas/quotation-schemas';
 import type { 
     BranchListItem, 
@@ -71,6 +72,12 @@ export function QuotationHeaderForm({
                 <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
                     <FileText size={20} strokeWidth={2.5} />
                     <h3 className="text-lg font-bold">ข้อมูลใบเสนอราคา — Header Quotation</h3>
+                    {formData.status && (
+                        <SQStatusBadge 
+                            status={formData.status} 
+                            className="ml-2 py-0.5 px-2 text-[10px] font-bold uppercase tracking-wider shadow-sm" 
+                        />
+                    )}
                 </div>
                 
                 {/* 🛡️ Strategic Placement: ON HOLD moves to the header row for maximum visibility and better layout balance */}
