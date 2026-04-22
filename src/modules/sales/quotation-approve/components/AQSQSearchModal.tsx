@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, FileText, Check, X, ShieldCheck } from 'lucide-react';
+import { Search, FileText, Check, X, ShieldCheck} from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { DialogFormLayout } from '@/shared/components/ui/layout/DialogFormLayout';
 import { useDebounce } from '@/shared/hooks/useDebounce';
@@ -143,46 +143,50 @@ export const AQSQSearchModal: React.FC<AQSQSearchModalProps> = React.memo(({
               <p className="text-gray-500 font-medium">กำลังโหลดข้อมูล...</p>
             </div>
           ) : (
-            <table className="w-full text-left border-separate border-spacing-0 table-fixed">
-              <thead className="sticky top-0 z-10 bg-gray-100/90 dark:bg-gray-800/90 backdrop-blur-md">
+            <table className="w-full text-left border-separate border-spacing-0">
+              <thead className="sticky top-0 z-10 bg-gray-50/90 dark:bg-gray-800/90 backdrop-blur-md">
                 <tr>
-                  <th className="w-[150px] px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">เลขที่ SQ</th>
-                  <th className="w-[120px] px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">วันที่</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">ลูกค้า</th>
-                  <th className="w-[140px] px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 text-right">ยอดรวม</th>
-                  <th className="w-[100px] px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 text-center">จัดการ</th>
+                  <th className="px-6 py-4 text-xs font-extrabold text-gray-500 dark:text-gray-400 uppercase tracking-widest border-b border-gray-100 dark:border-gray-700 whitespace-nowrap">เลขที่ SQ</th>
+                  <th className="px-6 py-4 text-xs font-extrabold text-gray-500 dark:text-gray-400 uppercase tracking-widest border-b border-gray-100 dark:border-gray-700 whitespace-nowrap">วันที่</th>
+                  <th className="px-6 py-4 text-xs font-extrabold text-gray-500 dark:text-gray-400 uppercase tracking-widest border-b border-gray-100 dark:border-gray-700">ลูกค้า</th>
+                  <th className="px-6 py-4 text-xs font-extrabold text-gray-500 dark:text-gray-400 uppercase tracking-widest border-b border-gray-100 dark:border-gray-700 text-right whitespace-nowrap">ยอดรวมสุทธิ</th>
+                  <th className="px-6 py-4 text-xs font-extrabold text-gray-500 dark:text-gray-400 uppercase tracking-widest border-b border-gray-100 dark:border-gray-700 text-center whitespace-nowrap w-[100px]">จัดการ</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-[#0b1120]/30 transition-all">
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-transparent">
                 {filteredData.length > 0 ? (
                   filteredData.map((item) => (
                     <tr
                       key={item.sq_id}
-                      className="hover:bg-emerald-50/50 dark:hover:bg-emerald-900/10 transition-colors group cursor-pointer"
+                      className="hover:bg-emerald-50/40 dark:hover:bg-emerald-900/10 transition-colors group cursor-pointer"
                       onClick={() => handleSelect(item)}
                     >
-                      <td className="px-6 py-4">
-                        <span className="font-bold text-emerald-600 dark:text-emerald-400 group-hover:scale-105 transition-transform inline-block uppercase">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-tight">
                           {item.sq_no || '-'}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300 font-medium italic">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
                         {formatDate(item.sq_date)}
                       </td>
                       <td className="px-6 py-4">
-                        <div className="font-semibold text-gray-800 dark:text-gray-200 truncate max-w-[250px]">
-                          {item.customer_name || customerMap.get(String(item.customer_id)) || '-'}
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-gray-800 dark:text-gray-200">
+                            {item.customer_name || customerMap.get(String(item.customer_id)) || '-'}
+                          </span>
+                          {item.customer_code && (
+                            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
+                              {item.customer_code}
+                            </span>
+                          )}
                         </div>
-                        {item.customer_code && (
-                          <div className="text-[10px] text-gray-400 font-bold uppercase">
-                            {item.customer_code}
-                          </div>
-                        )}
                       </td>
-                      <td className="px-6 py-4 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm">
-                        {fmt(item.quote_total_amount || item.total_amount)}
+                      <td className="px-6 py-4 text-right whitespace-nowrap">
+                        <span className="font-mono font-bold text-gray-900 dark:text-emerald-400">
+                          {fmt(item.quote_total_amount || item.total_amount)}
+                        </span>
                       </td>
-                      <td className="px-6 py-4 text-center">
+                      <td className="px-6 py-4 text-center whitespace-nowrap">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -200,9 +204,8 @@ export const AQSQSearchModal: React.FC<AQSQSearchModalProps> = React.memo(({
                   <tr>
                     <td colSpan={5} className="px-6 py-20 text-center items-center justify-center">
                       <div className="flex flex-col items-center text-gray-400 dark:text-gray-500">
-                        <FileText size={64} className="mb-4 opacity-20" />
-                        <p className="text-xl font-bold">ไม่พบข้อมูลใบเสนอราคาที่รออนุมัติ</p>
-                        <p className="text-sm opacity-80">ไม่มีรายการที่ต้องดำเนินการในขณะนี้</p>
+                        <FileText size={48} className="mb-4 opacity-20" />
+                        <p className="text-lg font-bold">ไม่พบข้อมูล</p>
                       </div>
                     </td>
                   </tr>

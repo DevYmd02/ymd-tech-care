@@ -18,21 +18,23 @@ import type { QuotationFormData, QuotationHeader, RawQuotationLine } from '@sale
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import { logger } from '@/shared/utils/logger';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
+import { 
+    calculateDiscountAmount, 
+    calculateVatAmount, 
+    calculateNetTotal,
+    calculateLineTotal 
+} from '@sales/shared/utils/sales-calculations';
+import { useQuotationModals } from './useQuotationModals';
 
 export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: QuotationHeader) => {
     const isEdit = !!id;
     const { user } = useAuth();
     const [isSubmitting, setIsSubmitting] = useState(false);
     
-    // Search Modals State
-    const [isCustomerSearchOpen, setIsCustomerSearchOpen] = useState(false);
-    const [isLeadSearchOpen, setIsLeadSearchOpen] = useState(false);
-    const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
-    const [activeLineIndex, setActiveLineIndex] = useState<number | null>(null);
+    // 🏷️ Extracted Modal States
+    const modals = useQuotationModals();
     
-    // Confirmation Modal State
-    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-    const [pendingData, setPendingData] = useState<QuotationFormValues | null>(null);
+    // Pricing State
     
     // Pricing State
     const [loadingPriceLines, setLoadingPriceLines] = useState<Set<number>>(new Set());
@@ -67,7 +69,6 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
     useEffect(() => {
         if (isDetailError) {
             logger.error(`❌ [QuotationForm] Failed to fetch ID: ${id}`, detailError);
-            console.error('❌ [QuotationForm] Fetch Error Detail:', detailError);
         }
     }, [isDetailError, detailError, id]);
 
@@ -525,14 +526,7 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
         }
 
         // Header Discount
-        let calculatedDiscount = 0;
-        if (discountExpression.endsWith('%')) {
-            const percent = parseFloat(discountExpression.replace('%', '')) || 0;
-            calculatedDiscount = calculatedSubTotal * (percent / 100);
-        } else {
-            calculatedDiscount = parseFloat(discountExpression) || 0;
-        }
-        
+        const calculatedDiscount = calculateDiscountAmount(calculatedSubTotal, discountExpression);
         if (getValues('discount_amount') !== calculatedDiscount) {
             setValue('discount_amount', calculatedDiscount);
         }
@@ -542,14 +536,14 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
         const taxRate = selectedTaxCode ? (Number(selectedTaxCode.tax_rate) || 0) : 0;
         
         const amountAfterDiscount = calculatedSubTotal - calculatedDiscount;
-        const vatAmountValue = taxCodeId ? (amountAfterDiscount * (taxRate / 100)) : 0;
+        const vatAmountValue = calculateVatAmount(amountAfterDiscount, taxRate);
         
         if (getValues('vat_amount') !== vatAmountValue) {
             setValue('vat_amount', vatAmountValue);
         }
 
         // Final Total
-        const totalAmountValue = amountAfterDiscount + vatAmountValue;
+        const totalAmountValue = calculateNetTotal(calculatedSubTotal, calculatedDiscount, vatAmountValue);
         if (getValues('total_amount') !== totalAmountValue) {
             setValue('total_amount', totalAmountValue);
         }
@@ -613,16 +607,10 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
             const price = Number(field === 'unit_price' ? value : updatedLine.unit_price) || 0;
             
             const ldInput = (field === 'discount_expression' ? (value as string) : updatedLine.discount_expression) || '';
-            let calculatedLD = 0;
-            if (ldInput.endsWith('%')) {
-                const percent = parseFloat(ldInput.replace('%', '')) || 0;
-                calculatedLD = (qty * price) * (percent / 100);
-            } else {
-                calculatedLD = parseFloat(ldInput) || 0;
-            }
+            const calculatedLD = calculateDiscountAmount(qty * price, ldInput);
             
             updatedLine.line_discount = calculatedLD;
-            updatedLine.line_total = (qty * price) - calculatedLD;
+            updatedLine.line_total = calculateLineTotal(qty, price, calculatedLD);
 
             // If user manually changed the unit_price, clear the system source
             if (field === 'unit_price') {
@@ -665,16 +653,10 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
                 const qty = Number(updatedLine.qty) || 0;
                 const price = resolvedPrice.unitPrice;
                 const ldInput = updatedLine.discount_expression || '';
-                let calculatedLD = 0;
-                if (ldInput.endsWith('%')) {
-                    const percent = parseFloat(ldInput.replace('%', '')) || 0;
-                    calculatedLD = (qty * price) * (percent / 100);
-                } else {
-                    calculatedLD = parseFloat(ldInput) || 0;
-                }
+                const calculatedLD = calculateDiscountAmount(qty * price, ldInput);
                 
                 updatedLine.line_discount = calculatedLD;
-                updatedLine.line_total = (qty * price) - calculatedLD;
+                updatedLine.line_total = calculateLineTotal(qty, price, calculatedLD);
 
                 updatedLines[index] = updatedLine;
                 setValue('lines', updatedLines, { shouldValidate: true, shouldDirty: true });
@@ -690,21 +672,21 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
 
     const handleSelectCustomer = useCallback((customer: CustomerMaster) => {
         setValue('customer_id', Number(customer.customer_id || customer.id || 0));
-        setIsCustomerSearchOpen(false);
-    }, [setValue]);
+        modals.setIsCustomerSearchOpen(false);
+    }, [setValue, modals]);
 
     const handleSelectLead = useCallback((estimate: EstimateHeader) => {
         setValue('lead_id', estimate.estimate_no || estimate.id || '');
-        setIsLeadSearchOpen(false);
-    }, [setValue]);
+        modals.setIsLeadSearchOpen(false);
+    }, [setValue, modals]);
 
     const handleSelectProduct = useCallback((product: ItemListItem) => {
-        if (activeLineIndex !== null) {
+        if (modals.activeLineIndex !== null) {
             const currentLines = getValues('lines') || [];
-            if (!currentLines[activeLineIndex]) return;
+            if (!currentLines[modals.activeLineIndex]) return;
 
             const newLines = [...currentLines];
-            const line = newLines[activeLineIndex];
+            const line = newLines[modals.activeLineIndex];
             
             line.item_id = Number(product.item_id || product.id || 0);
             line.item_code = product.item_code || '';
@@ -730,10 +712,10 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
             setValue('lines', newLines, { shouldValidate: true, shouldDirty: true });
             
             // 💰 Trigger price lookup immediately using the new qty and item
-            handleLinePriceSync(activeLineIndex);
+            handleLinePriceSync(modals.activeLineIndex);
         }
-        setIsProductSearchOpen(false);
-    }, [activeLineIndex, getValues, setValue, uoms, handleLinePriceSync]);
+        modals.setIsProductSearchOpen(false);
+    }, [modals, getValues, setValue, uoms, handleLinePriceSync]);
 
     return {
         isEdit,
@@ -752,20 +734,8 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
         saleAreas,
         employees,
         uoms,
-        // Search Modals State
-        isCustomerSearchOpen,
-        setIsCustomerSearchOpen,
-        isLeadSearchOpen,
-        setIsLeadSearchOpen,
-        isProductSearchOpen,
-        setIsProductSearchOpen,
-        activeLineIndex,
-        setActiveLineIndex,
-        // Confirmation State
-        isConfirmOpen,
-        setIsConfirmOpen,
-        pendingData,
-        setPendingData,
+        // Modal States & Handlers
+        ...modals,
         // Handlers
         handleSubmit,
         handleAddLine,
