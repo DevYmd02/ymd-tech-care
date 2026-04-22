@@ -37,7 +37,7 @@ export const ItemFinancials: React.FC<ItemFinancialsProps> = ({
                                     onChange('tax_rate', selectedTax.tax_rate);
                                 }
                             }} 
-                            className="w-full h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-purple-500 outline-none"
+                            className="w-full h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-[11px] text-gray-900 dark:text-white focus:ring-1 focus:ring-purple-500 outline-none"
                         >
                             <option value="">-- เลือก --</option>
                             {taxCodes.map(t => (

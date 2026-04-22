@@ -6,10 +6,13 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Package, Edit2, Trash2 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
+import { ItemMasterService } from '@inventory/services/item-master.service';
 import { logger } from '@/shared/utils/logger';
-import type { ItemListItem } from '@/modules/master-data/types/master-data-types';
+import type { ItemListItem } from '@master-data/types/master-data-types';
 import { ItemMasterFormModal } from './ItemMasterFormModal';
+import { ItemLotModal } from './components/ItemLotModal';
+
+
 import { ActiveStatusBadge } from '@ui';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';
@@ -50,6 +53,11 @@ export default function ItemMasterList() {
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editId, setEditId] = useState<number | null>(null);
+    
+    // Lot Modal State
+    const [isLotModalOpen, setIsLotModalOpen] = useState(false);
+    const [selectedItemForLot, setSelectedItemForLot] = useState<{ id: number; code: string; name: string } | null>(null);
+
 
     // ==================== FILTER CONFIG ====================
     const filterConfig: FilterFieldConfig<Extract<keyof typeof filters, string>>[] = useMemo(() => [
@@ -161,17 +169,29 @@ export default function ItemMasterList() {
         }
     }, [confirm, deleteMutation]);
 
+    const handleLotManage = useCallback((id: number, code: string, name: string) => {
+        setSelectedItemForLot({ id, code, name });
+        setIsLotModalOpen(true);
+    }, []);
+
+
     // ==================== TABLE COLUMNS ====================
     const columns = useMemo<ColumnDef<ItemListItem>[]>(() => [
         {
             id: 'sequence',
             header: 'ลำดับ',
             accessorFn: (_, index) => (filters.page - 1) * filters.limit + index + 1,
+            meta: {
+                thClassName: 'text-center',
+                tdClassName: 'text-center'
+            },
             size: 50,
+            enableSorting: false,
         },
         {
             accessorKey: 'item_code',
             header: 'รหัสสินค้า',
+            enableSorting: false,
             cell: ({ getValue, row }) => (
                 <span 
                     className="font-medium text-blue-600 dark:text-blue-400 cursor-pointer hover:underline"
@@ -180,62 +200,105 @@ export default function ItemMasterList() {
                     {getValue() as string}
                 </span>
             ),
-            size: 120,
+            size: 100,
         },
+
         {
             accessorKey: 'item_name',
             header: 'ชื่อสินค้า (ไทย)',
-            cell: ({ getValue }) => <span className="truncate block w-full" title={getValue() as string}>{getValue() as string}</span>,
+            enableSorting: false,
+            cell: ({ getValue }) => <span className="line-clamp-2 whitespace-normal block w-full" title={getValue() as string}>{getValue() as string}</span>,
         },
-        {
-            accessorKey: 'item_name_en',
-            header: 'ชื่อสินค้า (Eng)',
-            cell: ({ getValue }) => <span className="truncate block w-full text-gray-500" title={getValue() as string || '-'}>{getValue() as string || '-'}</span>,
-        },
+
         {
             accessorKey: 'item_category_name',
             header: 'หมวดหมู่',
-            cell: ({ row }) => <span className="text-gray-700 dark:text-gray-300">{row.original.item_category_name || '-'}</span>,
-            size: 120,
+            enableSorting: false,
+            cell: ({ row }) => <span className="whitespace-nowrap text-gray-700 dark:text-gray-300">{row.original.item_category_name || '-'}</span>,
+            size: 180,
         },
+
+
         {
             accessorKey: 'item_brand_name',
             header: 'ยี่ห้อ',
+            enableSorting: false,
             cell: ({ row }) => <span className="text-gray-700 dark:text-gray-300">{row.original.item_brand_name || '-'}</span>,
-            size: 120,
+            size: 100,
         },
+
         {
             accessorKey: 'item_type_name',
             header: 'ประเภท',
+            enableSorting: false,
+            meta: {
+                thClassName: 'text-center',
+                tdClassName: 'text-center'
+            },
             cell: ({ row }) => (
-                <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600">
-                    {row.original.item_type_name || '-'}
-                </span>
-            ),
-            size: 80,
-        },
-        {
-            accessorKey: 'base_uom_name',
-            header: 'หน่วยนับ (ID)',
-            cell: ({ row }) => <span className="text-gray-600 dark:text-gray-300">{row.original.base_uom_name || '-'}</span>,
-            size: 80,
-        },
-        {
-            accessorKey: 'is_active',
-            header: () => <div className="text-center w-full">สถานะ</div>,
-            cell: ({ getValue }) => (
                 <div className="flex justify-center">
-                    <ActiveStatusBadge isActive={getValue() as boolean} />
+                    <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 whitespace-nowrap">
+                        {row.original.item_type_name || '-'}
+                    </span>
                 </div>
             ),
+            size: 100,
+        },
+
+
+        {
+            accessorKey: 'base_uom_name',
+
+
+            header: 'หน่วยนับ',
+            enableSorting: false,
+            meta: {
+                thClassName: 'text-center',
+                tdClassName: 'text-center'
+            },
+            cell: ({ row }) => <span className="text-gray-600 dark:text-gray-300 block w-full text-center">{row.original.base_uom_name || '-'}</span>,
             size: 80,
         },
+
+
+        {
+            accessorKey: 'is_active',
+            header: 'สถานะ',
+            enableSorting: false,
+            meta: {
+                thClassName: 'text-center',
+                tdClassName: 'text-center'
+            },
+            cell: ({ getValue }) => (
+                <ActiveStatusBadge isActive={getValue() as boolean} />
+            ),
+            size: 80,
+        },
+
         {
             id: 'actions',
-            header: () => <div className="text-center w-full">จัดการ</div>,
-            size: 80,
+            header: 'จัดการ',
+            meta: {
+                thClassName: 'text-center',
+                tdClassName: 'text-center'
+            },
+            size: 120,
+            enableSorting: false,
+
             cell: ({ row }) => (
                 <div className="flex items-center justify-center gap-2">
+                    {/* Lot Manage Button - Only show if batch control is enabled or level is not NONE */}
+                    {(row.original.is_batch_control || row.original.lot_tracking_level !== 'NONE') && (
+                        <button 
+                            onClick={() => handleLotManage(row.original.item_id, row.original.item_code, row.original.item_name)}
+                            className="px-2 py-1 text-[10px] font-bold bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border border-orange-100 dark:border-orange-800/50 rounded hover:bg-orange-100 transition-colors"
+                            title="จัดการ Lot Number"
+                        >
+                            LOT
+                        </button>
+                    )}
+
+
                     <button 
                         onClick={() => handleEdit(row.original.item_id)}
                         className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
@@ -253,7 +316,8 @@ export default function ItemMasterList() {
                 </div>
             ),
         },
-    ], [filters.page, filters.limit, handleEdit, handleDelete]);
+    ], [filters.page, filters.limit, handleEdit, handleDelete, handleLotManage]);
+
 
     // ==================== RENDER ====================
     return (
@@ -320,6 +384,13 @@ export default function ItemMasterList() {
                 editId={editId}
                 onSuccess={handleModalSuccess}
             />
+
+            <ItemLotModal
+                isOpen={isLotModalOpen}
+                onClose={() => setIsLotModalOpen(false)}
+                item={selectedItemForLot}
+            />
         </div>
     );
 }
+

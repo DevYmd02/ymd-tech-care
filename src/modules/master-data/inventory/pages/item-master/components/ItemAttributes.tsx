@@ -68,7 +68,7 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
 
         onChange('item_type_id', selected ? selected.item_type_id : 0);
         }}
-                            className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
+                            className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-[11px] text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
                         >
                             <option value="">-- เลือก --</option>
                             {itemTypes.map(t => (
@@ -79,7 +79,7 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                             type="text"
                             readOnly
                             value={getItemName(formData.item_type_id || 0, itemTypes, 'item_type_id', 'item_type_name')}
-                            className="w-[65%] h-8 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 text-xs text-gray-500 dark:text-gray-400 cursor-not-allowed outline-none"
+                            className="w-[65%] h-8 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 text-[11px] text-gray-500 dark:text-gray-400 cursor-not-allowed outline-none"
                         />
                     </div>
                 </div>
@@ -95,7 +95,7 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                                 onChange('item_category_id', id);
                                 onChange('item_category_code', selected ? selected.category_code : '');
                             }}
-                            className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
+                            className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-[11px] text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
                         >
                             <option value="">-- เลือก --</option>
                             {categories.map(c => (
@@ -106,7 +106,7 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                             type="text"
                             readOnly
                             value={getItemName(formData.item_category_id || 0, categories, 'category_id', 'category_name')}
-                            className="w-[65%] h-8 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 text-xs text-gray-500 dark:text-gray-400 cursor-not-allowed outline-none"
+                            className="w-[65%] h-8 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 text-[11px] text-gray-500 dark:text-gray-400 cursor-not-allowed outline-none"
                         />
                     </div>
                 </div>
@@ -122,7 +122,7 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                                 onChange('item_group_id', id);
                                 onChange('item_group_code', selected ? selected.item_group_code : '');
                             }}
-                            className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
+                            className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-[11px] text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
                         >
                             <option value="">-- เลือก --</option>
                             {itemGroups.map(o => (<option key={o.item_group_id} value={o.item_group_id}>{o.item_group_code}</option>))}
@@ -131,7 +131,7 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                             type="text"
                             readOnly
                             value={getItemName(formData.item_group_id || 0, itemGroups, 'item_group_id', 'item_group_name')}
-                            className="w-[65%] h-8 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 text-xs text-gray-500 dark:text-gray-400 cursor-not-allowed outline-none"
+                            className="w-[65%] h-8 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 text-[11px] text-gray-500 dark:text-gray-400 cursor-not-allowed outline-none"
                         />
                     </div>
                 </div>
@@ -147,7 +147,7 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                                 onChange('item_brand_id', id);
                                 onChange('item_brand_code', selected ? selected.item_brand_code : '');
                             }}
-                            className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
+                            className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-[11px] text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
                         >
                             <option value="">-- เลือก --</option>
                             {itemBrands.map(o => (<option key={o.item_brand_id} value={o.item_brand_id}>{o.item_brand_code}</option>))}
@@ -156,7 +156,7 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                             type="text"
                             readOnly
                             value={getItemName(formData.item_brand_id || 0, itemBrands, 'item_brand_id', 'item_brand_name')}
-                            className="w-[65%] h-8 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 text-xs text-gray-500 dark:text-gray-400 cursor-not-allowed outline-none"
+                            className="w-[65%] h-8 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 text-[11px] text-gray-500 dark:text-gray-400 cursor-not-allowed outline-none"
                         />
                     </div>
                 </div>
@@ -172,7 +172,7 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                                 onChange('item_pattern_id', id);
                                 onChange('item_pattern_code', selected ? selected.item_pattern_code : '');
                             }}
-                            className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
+                            className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-[11px] text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
                         >
                             <option value="">-- เลือก --</option>
                             {itemPatterns.map(o => <option key={o.item_pattern_id} value={o.item_pattern_id}>{o.item_pattern_code}</option>)}
@@ -181,7 +181,7 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                             type="text"
                             readOnly
                             value={getItemName(formData.item_pattern_id || 0, itemPatterns, 'item_pattern_id', 'item_pattern_name')}
-                            className="w-[65%] h-8 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 text-xs text-gray-500 dark:text-gray-400 cursor-not-allowed outline-none"
+                            className="w-[65%] h-8 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 text-[11px] text-gray-500 dark:text-gray-400 cursor-not-allowed outline-none"
                         />
                     </div>
                 </div>
@@ -197,7 +197,7 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                                 onChange('item_design_id', id);
                                 onChange('item_design_code', selected ? selected.item_design_code : '');
                             }}
-                            className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
+                            className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-[11px] text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
                         >
                             <option value="">-- เลือก --</option>
                             {itemDesigns.map(o => (<option key={o.item_design_id} value={o.item_design_id}>{o.item_design_code}</option>))}
@@ -206,7 +206,7 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                             type="text"
                             readOnly
                             value={getItemName(formData.item_design_id || 0, itemDesigns, 'item_design_id', 'item_design_name')}
-                            className="w-[65%] h-8 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 text-xs text-gray-500 dark:text-gray-400 cursor-not-allowed outline-none"
+                            className="w-[65%] h-8 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 text-[11px] text-gray-500 dark:text-gray-400 cursor-not-allowed outline-none"
                         />
                     </div>
                 </div>
@@ -222,7 +222,7 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                                 onChange('item_grade_id', id);
                                 onChange('item_grade_code', selected ? selected.item_grade_code : '');
                             }}
-                            className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
+                            className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-[11px] text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
                         >
                             <option value="">-- เลือก --</option>
                             {itemGrades.map(o => <option key={o.item_grade_id} value={o.item_grade_id}>{o.item_grade_code}</option>)}
@@ -231,7 +231,7 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                             type="text"
                             readOnly
                             value={getItemName(formData.item_grade_id || 0, itemGrades || [], 'item_grade_id', 'item_grade_name')}
-                            className="w-[65%] h-8 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 text-xs text-gray-500 dark:text-gray-400 cursor-not-allowed outline-none"
+                            className="w-[65%] h-8 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 text-[11px] text-gray-500 dark:text-gray-400 cursor-not-allowed outline-none"
                         />
                     </div>
                 </div>
@@ -247,7 +247,7 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                                 onChange('item_class_id', id);
                                 onChange('item_class_code', selected ? selected.item_class_code : '');
                             }}
-                            className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
+                            className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-[11px] text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
                         >
                             <option value="">-- เลือก --</option>
                             {itemClasses?.map(o => <option key={o.item_class_id} value={o.item_class_id}>{o.item_class_code}</option>)}
@@ -256,7 +256,7 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                             type="text"
                             readOnly
                             value={getItemName(formData.item_class_id || 0, itemClasses || [], 'item_class_id', 'item_class_name')}
-                            className="w-[65%] h-8 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 text-xs text-gray-500 dark:text-gray-400 cursor-not-allowed outline-none"
+                            className="w-[65%] h-8 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 text-[11px] text-gray-500 dark:text-gray-400 cursor-not-allowed outline-none"
                         />
                     </div>
                 </div>
@@ -272,7 +272,7 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                                 onChange('item_size_id', id);
                                 onChange('item_size_code', selected ? selected.item_size_code : '');
                             }}
-                            className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
+                            className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-[11px] text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
                         >
                             <option value="">-- เลือก --</option>
                             {itemSizes.map(o => <option key={o.item_size_id} value={o.item_size_id}>{o.item_size_code}</option>)}
@@ -281,7 +281,7 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                             type="text"
                             readOnly
                             value={getItemName(formData.item_size_id || 0, itemSizes || [], 'item_size_id', 'item_size_name')}
-                            className="w-[65%] h-8 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 text-xs text-gray-500 dark:text-gray-400 cursor-not-allowed outline-none"
+                            className="w-[65%] h-8 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 text-[11px] text-gray-500 dark:text-gray-400 cursor-not-allowed outline-none"
                         />
                     </div>
                 </div>
@@ -297,7 +297,7 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                                 onChange('item_color_id', id);
                                 onChange('item_color_code', selected ? selected.item_color_code : '');
                             }}
-                            className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
+                            className="w-[35%] h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-[11px] text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none"
                         >
                             <option value="">-- เลือก --</option>
                             {itemColors.map(o => <option key={o.item_color_id} value={o.item_color_id}>{o.item_color_code}</option>)}
@@ -306,7 +306,7 @@ export const ItemAttributes: React.FC<ItemAttributesProps> = ({
                             type="text"
                             readOnly
                             value={getItemName(formData.item_color_id || 0, itemColors || [], 'item_color_id', 'item_color_name')}
-                            className="w-[65%] h-8 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 text-xs text-gray-500 dark:text-gray-400 cursor-not-allowed outline-none"
+                            className="w-[65%] h-8 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 text-[11px] text-gray-500 dark:text-gray-400 cursor-not-allowed outline-none"
                         />
                     </div>
                 </div>

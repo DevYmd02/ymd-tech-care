@@ -198,18 +198,26 @@ export function ReservationHeaderForm({
 
                 <div className="space-y-1">
                     <label className={labelClass}>สาขา (BRANCH_ID) <span className="text-red-500">*</span></label>
-                    <select
-                        {...register('branch_id')}
-                        disabled={isLocked}
-                        className={selectClass}
-                    >
-                        <option value="">-- เลือกสาขา --</option>
-                        {branches.map((branch, idx) => (
-                            <option key={`branch-${branch.branch_id || idx}`} value={String(branch.branch_id || '')}>
-                                {branch.branch_name}
-                            </option>
-                        ))}
-                    </select>
+                    <Controller
+                        name="branch_id"
+                        control={control}
+                        render={({ field }) => (
+                            <select
+                                {...field}
+                                value={field.value ?? ''}
+                                key={`branch-select-${branches.length}`}
+                                disabled={isLocked}
+                                className={selectClass}
+                            >
+                                <option value="">-- เลือกสาขา --</option>
+                                {branches.map((branch, idx) => (
+                                    <option key={`branch-${branch.branch_id || idx}`} value={String(branch.branch_id || '')}>
+                                        {branch.branch_name}
+                                    </option>
+                                ))}
+                            </select>
+                        )}
+                    />
                 </div>
 
                 {/* Row 3: Terms & Dates */}
@@ -253,18 +261,26 @@ export function ReservationHeaderForm({
 
                 <div className="space-y-1">
                     <label className={labelClass}>แผนก (EMP_DEPT_ID)</label>
-                    <select 
-                        {...register('emp_dept_id')}
-                        disabled={isLocked}
-                        className={selectClass}
-                    >
-                        <option value="">-- เลือกแผนก --</option>
-                        {departments.map((dept, idx) => (
-                            <option key={`dept-${dept.emp_dept_id || dept.dept_id || dept.id || idx}`} value={String(dept.emp_dept_id || dept.dept_id || dept.id || '')}>
-                                {dept.emp_dept_name || dept.dept_name || dept.department_name}
-                            </option>
-                        ))}
-                    </select>
+                    <Controller
+                        name="emp_dept_id"
+                        control={control}
+                        render={({ field }) => (
+                            <select 
+                                {...field}
+                                value={field.value ?? ''}
+                                key={`dept-select-${departments.length}`}
+                                disabled={isLocked}
+                                className={selectClass}
+                            >
+                                <option value="">-- เลือกแผนก --</option>
+                                {departments.map((dept, idx) => (
+                                    <option key={`dept-${dept.emp_dept_id || dept.dept_id || dept.id || idx}`} value={String(dept.emp_dept_id || dept.dept_id || dept.id || '')}>
+                                        {dept.emp_dept_name || dept.dept_name || dept.department_name}
+                                    </option>
+                                ))}
+                            </select>
+                        )}
+                    />
                 </div>
 
 
@@ -272,85 +288,124 @@ export function ReservationHeaderForm({
                 {/* Row 4: Sales Team & Item Type */}
                 <div className="space-y-1">
                     <label className={labelClass}>พนักงานขาย (EMP_SALE_ID)</label>
-                    <select 
-                        {...register('emp_sale_id')}
-                        disabled={isLocked}
-                        className={selectClass}
-                    >
-                        <option value="">-- เลือกพนักงานขาย --</option>
-                        {employees.map((emp, idx) => (
-                            <option key={`emp-${emp.id || idx}`} value={String(emp.id)}>
-                                {emp.employee_code} - {emp.employee_firstname_th} {emp.employee_lastname_th}
-                            </option>
-                        ))}
-                    </select>
+                    <Controller
+                        name="emp_sale_id"
+                        control={control}
+                        render={({ field }) => (
+                            <select 
+                                {...field}
+                                value={field.value ?? ''}
+                                key={`emp-select-${employees.length}`}
+                                disabled={isLocked}
+                                className={selectClass}
+                            >
+                                <option value="">-- เลือกพนักงานขาย --</option>
+                                {employees.map((emp, idx) => (
+                                    <option key={`emp-${emp.id || idx}`} value={String(emp.id)}>
+                                        {emp.employee_code} - {emp.employee_firstname_th} {emp.employee_lastname_th}
+                                    </option>
+                                ))}
+                            </select>
+                        )}
+                    />
                 </div>
 
                 <div className="space-y-1">
                     <label className={labelClass}>เขตการขาย (SALE_AREA_ID)</label>
-                    <select 
-                        {...register('sale_area_id')}
-                        disabled={isLocked}
-                        className={selectClass}
-                    >
-                        <option value="">-- เลือกเขตการขาย --</option>
-                        {saleAreas.map((area, idx) => (
-                            <option key={`area-${area.sale_area_id || idx}`} value={area.sale_area_id}>
-                                {area.sale_area_code} - {area.sale_area_name}
-                            </option>
-                        ))}
-                    </select>
+                    <Controller
+                        name="sale_area_id"
+                        control={control}
+                        render={({ field }) => (
+                            <select 
+                                {...field}
+                                value={field.value ?? ''}
+                                key={`area-select-${saleAreas.length}`}
+                                disabled={isLocked}
+                                className={selectClass}
+                            >
+                                <option value="">-- เลือกเขตการขาย --</option>
+                                {saleAreas.map((area, idx) => (
+                                    <option key={`area-${area.sale_area_id || idx}`} value={String(area.sale_area_id)}>
+                                        {area.sale_area_code} - {area.sale_area_name}
+                                    </option>
+                                ))}
+                            </select>
+                        )}
+                    />
                 </div>
 
                 <div className="space-y-1">
                     <label className={labelClass}>โครงการ/งาน (JOB_ID)</label>
-                    <select 
-                        {...register('job_id')}
-                        disabled={isLocked}
-                        className={selectClass}
-                    >
-                        <option value="">-- เลือกโครงการ --</option>
-                        {projects.map((proj, idx) => (
-                            <option key={`proj-${proj.project_id || idx}`} value={String(proj.project_id || '')}>
-                                {proj.project_name}
-                            </option>
-                        ))}
-                    </select>
+                    <Controller
+                        name="job_id"
+                        control={control}
+                        render={({ field }) => (
+                            <select 
+                                {...field}
+                                value={field.value ?? ''}
+                                key={`job-select-${projects.length}`}
+                                disabled={isLocked}
+                                className={selectClass}
+                            >
+                                <option value="">-- เลือกโครงการ --</option>
+                                {projects.map((proj, idx) => (
+                                    <option key={`proj-${proj.project_id || idx}`} value={String(proj.project_id || '')}>
+                                        {proj.project_name}
+                                    </option>
+                                ))}
+                            </select>
+                        )}
+                    />
                 </div>
 
                 <div className="space-y-1">
                     <label className={labelClass}>ประเภทสินค้าหลัก (ITEM_ID)</label>
-                    <select 
-                        {...register('item_id')}
-                        disabled={isLocked}
-                        className={selectClass}
-                    >
-                        <option value="">-- เลือกประเภทสินค้า --</option>
-                        {itemTypes.map((item, idx) => (
-                            <option key={`item-${item.item_type_id || idx}`} value={String(item.item_type_id || '')}>
-                                {item.item_type_name}
-                            </option>
-                        ))}
-                    </select>
+                    <Controller
+                        name="item_id"
+                        control={control}
+                        render={({ field }) => (
+                            <select 
+                                {...field}
+                                value={field.value ?? ''}
+                                key={`item-type-select-${itemTypes.length}`}
+                                disabled={isLocked}
+                                className={selectClass}
+                            >
+                                <option value="">-- เลือกประเภทสินค้า --</option>
+                                {itemTypes.map((item, idx) => (
+                                    <option key={`item-${item.item_type_id || idx}`} value={String(item.item_type_id || '')}>
+                                        {item.item_type_name}
+                                    </option>
+                                ))}
+                            </select>
+                        )}
+                    />
                 </div>
 
                 {/* Row 5: Financials & Notes */}
                 <div className="space-y-1">
                     <label className={labelClass}>ประเภทภาษี (TAX_CODE_ID)</label>
-                    <select 
-                        {...register('tax_code_id', {
-                            setValueAs: (v) => (v === '' ? null : Number(v)),
-                        })}
-                        disabled={isLocked}
-                        className={selectClass}
-                    >
-                        <option value="">-- เลือกประเภทภาษี --</option>
-                        {taxCodes.map((group, idx) => (
-                            <option key={`tax-${group.tax_code_id || idx}`} value={String(group.tax_code_id || '')}>
-                                {group.tax_code}
-                            </option>
-                        ))}
-                    </select>
+                    <Controller
+                        name="tax_code_id"
+                        control={control}
+                        render={({ field }) => (
+                            <select 
+                                {...field}
+                                value={field.value ?? ''}
+                                key={`tax-select-${taxCodes.length}`}
+                                disabled={isLocked}
+                                className={selectClass}
+                                onChange={(e) => field.onChange(e.target.value === '' ? null : Number(e.target.value))}
+                            >
+                                <option value="">-- เลือกประเภทภาษี --</option>
+                                {taxCodes.map((group, idx) => (
+                                    <option key={`tax-${group.tax_code_id || idx}`} value={String(group.tax_code_id || '')}>
+                                        {group.tax_code}
+                                    </option>
+                                ))}
+                            </select>
+                        )}
+                    />
                 </div>
 
                 <div className="lg:col-span-3 space-y-1">
@@ -424,33 +479,49 @@ export function ReservationHeaderForm({
                         </div>
                         <div>
                             <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">รหัสสกุลเงิน (Base)</label>
-                            <select 
-                                {...register('base_currency_code')}
-                                className={selectClass}
-                                disabled={!formData.isMulticurrency || isLocked}
-                            >
-                                <option value="">เลือกสกุลเงิน</option>
-                                {currencies.map((c, idx) => (
-                                    <option key={`currency-base-${c.currency_id || idx}`} value={c.currency_code}>
-                                        {c.currency_code} - {c.name_th}
-                                    </option>
-                                ))}
-                            </select>
+                            <Controller
+                                name="base_currency_code"
+                                control={control}
+                                render={({ field }) => (
+                                    <select 
+                                        {...field}
+                                        value={field.value ?? ''}
+                                        key={`currency-base-select-${currencies.length}`}
+                                        className={selectClass}
+                                        disabled={!formData.isMulticurrency || isLocked}
+                                    >
+                                        <option value="">เลือกสกุลเงิน</option>
+                                        {currencies.map((c, idx) => (
+                                            <option key={`currency-base-${c.currency_id || idx}`} value={c.currency_code}>
+                                                {c.currency_code} - {c.name_th}
+                                            </option>
+                                        ))}
+                                    </select>
+                                )}
+                            />
                         </div>
                         <div>
                             <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">ไปยังสกุลเงิน (Quote)</label>
-                            <select 
-                                {...register('quote_currency_code')}
-                                className={selectClass}
-                                disabled={!formData.isMulticurrency || isLocked}
-                            >
-                                <option value="">เลือกสกุลเงิน</option>
-                                {currencies.map((c, idx) => (
-                                    <option key={`currency-quote-${c.currency_id || idx}`} value={c.currency_code}>
-                                        {c.currency_code} - {c.name_th}
-                                    </option>
-                                ))}
-                            </select>
+                            <Controller
+                                name="quote_currency_code"
+                                control={control}
+                                render={({ field }) => (
+                                    <select 
+                                        {...field}
+                                        value={field.value ?? ''}
+                                        key={`currency-quote-select-${currencies.length}`}
+                                        className={selectClass}
+                                        disabled={!formData.isMulticurrency || isLocked}
+                                    >
+                                        <option value="">เลือกสกุลเงิน</option>
+                                        {currencies.map((c, idx) => (
+                                            <option key={`currency-quote-${c.currency_id || idx}`} value={c.currency_code}>
+                                                {c.currency_code} - {c.name_th}
+                                            </option>
+                                        ))}
+                                    </select>
+                                )}
+                            />
                         </div>
                         <div>
                             <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">อัตราแลกเปลี่ยน</label>

@@ -48,6 +48,8 @@ function mapItemFields(raw: Partial<ItemListItem> & Record<string, unknown>): It
     item_size_name: raw.item_size_name ? String(raw.item_size_name) : undefined,
     item_color_name: raw.item_color_name ? String(raw.item_color_name) : undefined,
     item_pattern_name: raw.item_pattern_name ? String(raw.item_pattern_name) : undefined,
+    is_batch_control: raw.is_batch_control !== undefined ? Boolean(raw.is_batch_control) : undefined,
+    lot_tracking_level: raw.lot_tracking_level ? String(raw.lot_tracking_level) : undefined,
   };
 }
 
@@ -308,5 +310,6 @@ export const ItemMasterService = {
       logger.error('[ItemMasterService] delete error:', error);
       return false;
     }
-  }
+  },
 };
+
