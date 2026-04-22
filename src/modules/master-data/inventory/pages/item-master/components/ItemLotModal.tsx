@@ -1,5 +1,5 @@
 import React from 'react';
-import { Database, Plus, Trash2, Edit2, X, AlertTriangle, CheckCircle, Package, Calendar, Info, Search, RotateCcw } from 'lucide-react';
+import { Database, Plus, Trash2, Edit2, X, AlertTriangle, CheckCircle, Package, Info, Search, RotateCcw } from 'lucide-react';
 import { DialogFormLayout, CustomDateInput } from '@ui';
 import { useItemLot } from '@inventory/pages/item-master/hooks/useItemLot';
 import { useQuery } from '@tanstack/react-query';
@@ -62,10 +62,9 @@ export function ItemLotModal({ isOpen, onClose, item }: ItemLotModalProps) {
             width="max-w-[1600px]"
         >
             <div className="space-y-6">
-                {/* Header Info Dashboard */}
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 bg-gray-50/50 dark:bg-gray-900/40 p-5 rounded-2xl border border-gray-200 dark:border-gray-700/50 shadow-sm backdrop-blur-sm">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-gray-50/50 dark:bg-gray-900/40 p-5 rounded-2xl border border-gray-200 dark:border-gray-700/50 shadow-sm backdrop-blur-sm">
                     {/* Item Info (Left) */}
-                    <div className="md:col-span-5 flex items-center gap-4 border-r border-gray-200/50 dark:border-gray-700/50 pr-6">
+                    <div className="flex items-center gap-4">
                         <div className="p-3 bg-emerald-600 rounded-xl shadow-lg shadow-emerald-600/20">
                             <Package className="w-7 h-7 text-white" />
                         </div>
@@ -80,14 +79,15 @@ export function ItemLotModal({ isOpen, onClose, item }: ItemLotModalProps) {
                         </div>
                     </div>
 
-                    {/* Summary Metrics (Right) */}
-                    <div className="md:col-span-7 flex items-center justify-between pl-2">
-                        <div className="flex gap-2">
+                    {/* Summary Metrics (Right) - Hidden for now */}
+                    <div className="flex items-center gap-4">
+                        {/* <div className="flex gap-2">
                             <SummaryCard label="คงคลัง" value={summary.totalStock} icon={<Package size={14} />} color="blue" />
                             <SummaryCard label="จองแล้ว" value={summary.totalReserved} icon={<Calendar size={14} />} color="amber" />
                             <SummaryCard label="พร้อมใช้" value={summary.totalAvailable} icon={<CheckCircle size={14} />} color="emerald" />
                             <SummaryCard label="เบิกสะสม" value={summary.totalIssued} icon={<RotateCcw size={14} />} color="blue" />
-                        </div>
+                        </div> */}
+                        
                         {summary.expiredCount > 0 && (
                             <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/50 px-4 py-2 rounded-xl text-red-600 dark:text-red-400">
                                 <AlertTriangle size={18} className="animate-bounce" />
@@ -444,6 +444,7 @@ function LotFormRow({
     );
 }
 
+/*
 function SummaryCard({ label, value, icon, color }: { label: string; value: number; icon: React.ReactNode; color: 'blue' | 'amber' | 'emerald' | 'red' }) {
     const colors = {
         blue: 'text-blue-600 bg-white dark:bg-gray-800 border-blue-100 dark:border-blue-900/30',
@@ -475,6 +476,7 @@ function SummaryCard({ label, value, icon, color }: { label: string; value: numb
         </div>
     );
 }
+*/
 
 function StatusBadge({ status }: { status: string }) {
     const configs: Record<string, { label: string; class: string }> = {

@@ -4,7 +4,7 @@
  * @pattern Mirrors AVFormLines.tsx
  */
 
-import { Package } from 'lucide-react';
+import { Package, Tag } from 'lucide-react';
 import type { AQLineFormData } from '../schemas/aq.schema';
 
 interface AQFormLinesProps {
@@ -134,9 +134,32 @@ export function AQFormLines({ lines, updateLine, readOnly = false }: AQFormLines
 
                   {/* ราคา/หน่วย */}
                   <td className={`${tdClass} text-right`}>
-                    <span className="text-blue-600 dark:text-blue-400 font-semibold">
-                      {fmt(line.unit_price)}
-                    </span>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="text-blue-600 dark:text-blue-400 font-bold text-base">
+                        {fmt(line.unit_price)}
+                      </span>
+                      
+                      {/* 🏷️ Price Source Badge */}
+                      {(() => {
+                        const source = String(line.price_source_name || '').toUpperCase();
+                        if (!source) return null;
+
+                        const config: Record<string, { label: string; class: string }> = {
+                          'MANUAL': { label: 'Manual', class: 'bg-orange-50 text-orange-600 border-orange-200 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-900/30' },
+                          'PRICE_LEVEL': { label: 'Price Level', class: 'bg-purple-50 text-purple-600 border-purple-200 dark:bg-purple-950/20 dark:text-purple-400 dark:border-purple-900/30' },
+                          'PRICE_LIST': { label: 'Price List', class: 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30' },
+                        };
+
+                        const item = config[source] || { label: source, class: 'bg-gray-50 text-gray-600 border-gray-200' };
+
+                        return (
+                          <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-bold uppercase tracking-tight ${item.class}`}>
+                            <Tag size={10} strokeWidth={3} />
+                            {item.label}
+                          </div>
+                        );
+                      })()}
+                    </div>
                   </td>
 
                   {/* ส่วนลด */}

@@ -13,6 +13,7 @@ import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
 import { extractErrorMessage } from '@/core/api/api';
 import { logger } from '@/shared/utils/logger';
+import { calculateLineTotal } from '@sales/shared/utils/sales-calculations';
 
 // Enrichment Services
 import { MasterDataService } from '@/modules/master-data/services/master-data.service';
@@ -129,6 +130,41 @@ function normalizeSQ(raw: unknown): SQForApproval | null {
       net_amount: Number(line.line_total || line.net_amount || 0),
       remarks: String(line.remarks || line.note || ''),
       tax_code_id: line.tax_code_id ? Number(line.tax_code_id) : null,
+      price_source: (
+        line.price_source !== undefined ? Number(line.price_source) : 
+        line.source !== undefined ? Number(line.source) : 
+        line.source_id !== undefined ? Number(line.source_id) :
+        line.price_type !== undefined ? Number(line.price_type) :
+        undefined
+      ),
+      price_source_name: (() => {
+        // 🔍 Aggressive Discovery from both AQ and SQ naming conventions
+        const name = String(
+          line.price_source_name || 
+          line.source_name || 
+          line.sourceName || 
+          line.price_type_name || 
+          line.price_source_text ||
+          ''
+        ).trim();
+
+        if (name && name !== 'null' && name !== 'undefined' && name !== '-') {
+          return name.toUpperCase().replace(/\s+/g, '_').replace('PRICELIST', 'PRICE_LIST');
+        }
+        
+        // 🧩 Hard-coded Fallback for known IDs
+        const s = (
+          line.price_source !== undefined ? Number(line.price_source) : 
+          line.source !== undefined ? Number(line.source) : 
+          line.source_id !== undefined ? Number(line.source_id) :
+          line.price_type !== undefined ? Number(line.price_type) :
+          undefined
+        );
+        if (s === 1) return 'PRICE_LIST';
+        if (s === 2) return 'PRICE_LEVEL';
+        if (s === 3) return 'MANUAL';
+        return '';
+      })(),
     };
   });
 
@@ -402,7 +438,7 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
         const approvedNet = (approvedQty === originalQty)
           ? netAmt
           : approvedQty > 0
-            ? (approvedQty * Number(sqLine.unit_price || 0)) - (originalQty > 0 ? (discAmt * approvedQty / originalQty) : 0)
+            ? calculateLineTotal(approvedQty, Number(sqLine.unit_price || 0), (originalQty > 0 ? (discAmt * approvedQty / originalQty) : 0))
             : 0;
 
         return {
@@ -422,6 +458,8 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
           approved_qty: approvedQty,
           approved_net_amount: Number(approvedNet.toFixed(2)),
           remarks: String(aqLine?.remarks || sqLine.note || sqLine.remarks || ''),
+          price_source: sqLine.price_source,
+          price_source_name: sqLine.price_source_name,
         };
       });
 
@@ -486,7 +524,19 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
               }
             });
           }
+          
         } catch (e) { logger.error('[useAQForm] Enrichment failed:', e); }
+      }
+
+      // 💰 PRICE SOURCE ENRICHMENT (Unconditional): Ensure price source is NEVER empty
+      for (const line of mappedLines) {
+        if (!line.price_source_name || line.price_source_name === '-' || line.price_source_name === 'undefined' || line.price_source_name === '') {
+          // If we have an ID but no name, use fallback
+          const s = Number(line.price_source);
+          if (s === 1) line.price_source_name = 'PRICE_LIST';
+          else if (s === 2) line.price_source_name = 'PRICE_LEVEL';
+          else if (s === 3) line.price_source_name = 'MANUAL';
+        }
       }
 
       if (currencies.length === 0) {
@@ -612,7 +662,7 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
         const netApproved = (approvedQty === origQty)
           ? line.net_amount
           : origQty > 0
-            ? (approvedQty * line.unit_price) - (discAmt * approvedQty / origQty)
+            ? calculateLineTotal(approvedQty, line.unit_price, (discAmt * approvedQty / origQty))
             : 0;
         setValue(
           `lines.${index}.approved_net_amount` as Path<AQFormData>,

@@ -82,11 +82,20 @@ export const AQHistoryModal: React.FC<AQHistoryModalProps> = ({
     }),
     columnHelper.accessor('base_total_amount', {
       header: () => <div className="text-right w-full">ยอดรวม (บาท)</div>,
-      cell: (info) => (
-        <div className="text-right font-bold">
-          {new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2 }).format(info.getValue() || 0)}
-        </div>
-      ),
+      cell: (info) => {
+        const row = info.row.original;
+        // 🛡️ Financial Consistency: Prioritize original SQ total if available in snapshot
+        const rawRow = row as unknown as Record<string, unknown>;
+        const sqObj = (row.sq || rawRow.sale_quotation || rawRow.quotation) as Record<string, unknown> | undefined;
+        const sqTotal = Number(sqObj?.base_total_amount || sqObj?.total_amount || sqObj?.quote_total_amount || 0);
+        const displayAmount = (sqTotal > 0) ? sqTotal : (info.getValue() || 0);
+
+        return (
+          <div className="text-right font-bold">
+            {new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2 }).format(displayAmount)}
+          </div>
+        );
+      },
       size: 120,
     }),
     columnHelper.accessor('status', {

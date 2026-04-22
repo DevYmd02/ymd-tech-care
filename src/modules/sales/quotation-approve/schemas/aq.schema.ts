@@ -23,6 +23,8 @@ export const AQLineSchema = z.object({
   discount_expression: z.string().optional().default('0'),
   discount_amount: z.coerce.number().default(0),
   net_amount: z.coerce.number().default(0),
+  price_source: z.coerce.number().optional(),
+  price_source_name: z.string().optional().default(''),
 
   // Approval interaction
   is_approved: z.boolean().default(false),

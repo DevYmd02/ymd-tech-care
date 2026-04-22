@@ -156,6 +156,8 @@ export interface SQLineForApproval {
   note?: string;
   remarks?: string;
   tax_code_id?: number | null;
+  price_source?: number;
+  price_source_name?: string;
   [key: string]: unknown;
 }
 
@@ -179,6 +181,8 @@ export interface AQLineFormData {
   approved_qty: number;
   approved_net_amount: number;
   remarks?: string;
+  price_source?: number;
+  price_source_name?: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
