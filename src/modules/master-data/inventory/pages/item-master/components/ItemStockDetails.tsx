@@ -100,7 +100,7 @@ export const ItemStockDetails: React.FC<ItemStockDetailsProps> = ({
                 <div className="space-y-2">
                     <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">นโยบายคลังสินค้า (Inventory Policy)</label>
                     
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-2">
                         <div>
                             <label className="block text-[10px] text-gray-500 dark:text-gray-400 mb-0.5">การตัดสต็อก (Issue Policy)</label>
                             <select 
@@ -113,6 +113,34 @@ export const ItemStockDetails: React.FC<ItemStockDetailsProps> = ({
                                 <option value="FEFO">FEFO (หมดอายุก่อนออกก่อน)</option>
                             </select>
                         </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                            <div>
+                                <label className="block text-[10px] text-gray-500 dark:text-gray-400 mb-0.5">Lot Control</label>
+                                <select 
+                                    value={formData.lot_tracking_level || 'NONE'} 
+                                    onChange={(e) => onChange('lot_tracking_level', e.target.value)} 
+                                    className="w-full h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-emerald-500 outline-none"
+                                >
+                                    <option value="NONE">ไม่บังคับ</option>
+                                    <option value="OPTIONAL">ระบุหรือไม่ก็ได้</option>
+                                    <option value="REQUIRED">บังคับระบุ</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-[10px] text-gray-500 dark:text-gray-400 mb-0.5">Serial Control</label>
+                                <select 
+                                    value={formData.serial_tracking_level || 'NONE'} 
+                                    onChange={(e) => onChange('serial_tracking_level', e.target.value)} 
+                                    className="w-full h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-emerald-500 outline-none"
+                                >
+                                    <option value="NONE">ไม่บังคับ</option>
+                                    <option value="OPTIONAL">ระบุหรือไม่ก็ได้</option>
+                                    <option value="REQUIRED">บังคับระบุ</option>
+                                </select>
+                            </div>
+                        </div>
+
                         <div>
                             <label className="block text-[10px] text-gray-500 dark:text-gray-400 mb-0.5">อายุการเก็บรักษา (วัน)</label>
                             <input 
@@ -123,35 +151,24 @@ export const ItemStockDetails: React.FC<ItemStockDetailsProps> = ({
                             />
                         </div>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                        <div>
-                            <label className="block text-[10px] text-gray-500 dark:text-gray-400 mb-0.5">Lot Control</label>
-                            <select 
-                                value={formData.lot_tracking_level || 'NONE'} 
-                                onChange={(e) => onChange('lot_tracking_level', e.target.value)} 
-                                className="w-full h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-emerald-500 outline-none"
-                            >
-                                <option value="NONE">ไม่บังคับ</option>
-                                <option value="OPTIONAL">ระบุหรือไม่ก็ได้</option>
-                                <option value="REQUIRED">บังคับระบุ</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-[10px] text-gray-500 dark:text-gray-400 mb-0.5">Serial Control</label>
-                            <select 
-                                value={formData.serial_tracking_level || 'NONE'} 
-                                onChange={(e) => onChange('serial_tracking_level', e.target.value)} 
-                                className="w-full h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-emerald-500 outline-none"
-                            >
-                                <option value="NONE">ไม่บังคับ</option>
-                                <option value="OPTIONAL">ระบุหรือไม่ก็ได้</option>
-                                <option value="REQUIRED">บังคับระบุ</option>
-                            </select>
-                        </div>
-                    </div>
                 </div>
                 
+                <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">การคำนวณต้นทุน (Costing Method)</label>
+                    <select 
+                        value={formData.costing_method || ''} 
+                        onChange={(e) => onChange('costing_method', e.target.value)} 
+                        className="w-full h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-emerald-500 outline-none"
+                    >
+                        <option value="">-- เลือก --</option>
+                        {ITEM_COSTING_METHODS.map(m => (
+                            <option key={m.id} value={m.id}>{m.id}</option>
+                        ))}
+                    </select>
+                </div>
+
+                <hr className="border-dashed border-gray-200 dark:border-gray-700" />
+
                 <div className="flex flex-col gap-2 pt-2">
                     <label className="flex items-center gap-2 cursor-pointer">
                         <input 
@@ -180,22 +197,6 @@ export const ItemStockDetails: React.FC<ItemStockDetailsProps> = ({
                         />
                         <span className="text-xs text-gray-700 dark:text-gray-300">Serial Control</span>
                     </label>
-                </div>
-
-                <hr className="border-dashed border-gray-200 dark:border-gray-700" />
-
-                <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">การคำนวณต้นทุน (Costing Method)</label>
-                    <select 
-                        value={formData.costing_method || ''} 
-                        onChange={(e) => onChange('costing_method', e.target.value)} 
-                        className="w-full h-8 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-emerald-500 outline-none"
-                    >
-                        <option value="">-- เลือก --</option>
-                        {ITEM_COSTING_METHODS.map(m => (
-                            <option key={m.id} value={m.id}>{m.id}</option>
-                        ))}
-                    </select>
                 </div>
             </div>
         </div>

@@ -687,6 +687,8 @@ export interface ItemListItem {
     item_color_name?: string;
     item_pattern_name?: string;
     sale_uom_name?: string;
+    is_batch_control?: boolean;
+    lot_tracking_level?: string;
 }
 
 export const initialItemMasterFormData: ItemMasterFormData = {

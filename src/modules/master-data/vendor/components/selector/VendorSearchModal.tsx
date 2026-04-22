@@ -206,7 +206,7 @@ export const VendorSearchModalBase: React.FC<VendorSearchModalBaseProps> = ({
                                     <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase w-28">
                                         สถานะ
                                     </th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase w-28">
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase w-48">
                                         รหัสผู้ขาย
                                     </th>
                                     <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">
@@ -250,7 +250,7 @@ export const VendorSearchModalBase: React.FC<VendorSearchModalBaseProps> = ({
                                                     {vendor.status && <VendorStatusBadge status={vendor.status} />}
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <span className="font-bold text-purple-600 dark:text-purple-400">
+                                                    <span className="font-bold text-purple-600 dark:text-purple-400 whitespace-nowrap">
                                                         {vendor.code}
                                                     </span>
                                                 </td>

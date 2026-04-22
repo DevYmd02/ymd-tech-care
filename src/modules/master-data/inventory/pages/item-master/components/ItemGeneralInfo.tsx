@@ -60,7 +60,7 @@ export const ItemGeneralInfo: React.FC<ItemGeneralInfoProps> = ({
                 </div>
 
                 {/* Item Name TH */}
-                <div className="md:col-span-5">
+                <div className="md:col-span-9">
                     <label className="block text-xs font-medium text-gray-700 dark:text-gray-400 mb-0.5">
                         ชื่อสินค้า (ไทย) *
                     </label>
@@ -78,18 +78,6 @@ export const ItemGeneralInfo: React.FC<ItemGeneralInfoProps> = ({
                     )}
                 </div>
 
-                {/* Item Name EN */}
-                <div className="md:col-span-4">
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-400 mb-0.5">ชื่อสินค้า (Eng)</label>
-                    <input 
-                        type="text"
-                        value={formData.item_name_en} 
-                        onChange={(e) => onChange('item_name_en', e.target.value)} 
-                        className="w-full h-8 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                        placeholder="Enter Item Name in English"
-                    />
-                </div>
-
                 {/* Row 2: Marketing Name & Billing Name */}
                 <div className="md:col-span-12 grid grid-cols-1 md:grid-cols-2 gap-3 mt-1">
                     <div>
@@ -98,7 +86,7 @@ export const ItemGeneralInfo: React.FC<ItemGeneralInfoProps> = ({
                             type="text" 
                             value={formData.marketing_name} 
                             onChange={(e) => onChange('marketing_name', e.target.value)} 
-                            className="w-full h-8 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                            className="w-full h-8 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded px-2 text-[11px] text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                             placeholder="Marketing Name"
                         />
                     </div>
@@ -109,7 +97,7 @@ export const ItemGeneralInfo: React.FC<ItemGeneralInfoProps> = ({
                             type="text" 
                             value={formData.billing_name} 
                             onChange={(e) => onChange('billing_name', e.target.value)} 
-                            className="w-full h-8 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded px-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                            className="w-full h-8 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded px-2 text-[11px] text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                             placeholder="Billing Name"
                         />
                     </div>
