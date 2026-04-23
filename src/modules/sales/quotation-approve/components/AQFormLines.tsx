@@ -11,6 +11,7 @@ interface AQFormLinesProps {
   lines: AQLineFormData[];
   updateLine: (index: number, field: keyof AQLineFormData, value: unknown) => void;
   readOnly?: boolean;
+  priceLevelNames?: import('@/modules/master-data/sales/pages/price-level-name/types/price-level-name.types').PriceLevelName[];
 }
 
 const fmt = (n: number) =>
@@ -19,7 +20,7 @@ const fmt = (n: number) =>
 const fmtQty = (n: number) =>
   new Intl.NumberFormat('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 3 }).format(n || 0);
 
-export function AQFormLines({ lines, updateLine, readOnly = false }: AQFormLinesProps) {
+export function AQFormLines({ lines, updateLine, readOnly = false, priceLevelNames = [] }: AQFormLinesProps) {
   const thClass =
     'px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 whitespace-nowrap bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-700';
   const tdClass = 'px-2 py-2 text-sm align-middle';
@@ -150,10 +151,16 @@ export function AQFormLines({ lines, updateLine, readOnly = false }: AQFormLines
                           'PRICE_LIST': { label: 'Price List', class: 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30' },
                         };
 
-                        const item = config[source] || { label: source, class: 'bg-gray-50 text-gray-600 border-gray-200' };
+                        const item = { ...(config[source] || { label: source, class: 'bg-gray-50 text-gray-600 border-gray-200' }) };
+
+                        // 🏆 Enhancement: If it's Price Level, show the Level No & Name
+                        if (source === 'PRICE_LEVEL' && line.price_level_priority) {
+                          const levelName = priceLevelNames.find(l => (Number(l.level_no) || Number(l.levelNo)) === Number(line.price_level_priority))?.name;
+                          item.label = `Price Level ${line.price_level_priority}${levelName ? ` - ${levelName}` : ''}`;
+                        }
 
                         return (
-                          <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-bold uppercase tracking-tight ${item.class}`}>
+                          <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-bold uppercase tracking-tight whitespace-nowrap ${item.class}`}>
                             <Tag size={10} strokeWidth={3} />
                             {item.label}
                           </div>

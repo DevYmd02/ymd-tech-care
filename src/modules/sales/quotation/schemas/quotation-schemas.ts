@@ -20,6 +20,7 @@ export const QuotationLineSchema = z.object({
     // Data from Pricing Engine
     price_source: z.number().optional(),      // 1=Price List, 2=Price Level
     price_source_name: z.string().optional(), // "PRICE_LIST", "PRICE_LEVEL", "MANUAL"
+    price_level_priority: z.number().optional(), // Level Number (1, 2, 3...)
 });
 
 /**

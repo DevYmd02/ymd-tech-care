@@ -172,6 +172,12 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
     });
     const locations = useMemo(() => locationResponse?.items || [], [locationResponse]);
 
+    const { data: priceLevelNames = [] } = useQuery({
+        queryKey: ['master-price-level-names'],
+        queryFn: MasterDataService.getPriceLevelNames,
+        enabled: isOpen
+    });
+
     // 🏗️ Initialization Guard: Wait for critical master data
     useEffect(() => {
         const currentTarget = id || 'new';
@@ -740,6 +746,9 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
                         line_total: (qtyToUse * price) - calculatedLD,
                         tax_code_id: qLine.tax_code_id ? Number(qLine.tax_code_id) : (detail.tax_code_id ? Number(detail.tax_code_id) : undefined),
                         note: String(qLine.note || ''),
+                        price_source: qLine.price_source !== undefined ? Number(qLine.price_source) : undefined,
+                        price_source_name: String(qLine.price_source_name || ''),
+                        price_level_priority: qLine.price_level_priority !== undefined ? Number(qLine.price_level_priority) : (qLine.priority !== undefined ? Number(qLine.priority) : undefined),
                     };
                 });
                 
@@ -806,6 +815,7 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         uoms,
         warehouses,
         locations,
+        priceLevelNames,
         // Search Modals State
         isCustomerSearchOpen,
         setIsCustomerSearchOpen,

@@ -21,6 +21,9 @@ export const ReservationLineSchema = z.object({
     line_total: z.coerce.number().min(0, 'ยอดรวมต้องไม่ติดลบ (ตรวจสอบส่วนลด)').max(9999999999999, 'ค่าที่ระบุมีจำนวนมากเกินไป').default(0),
     tax_code_id: z.coerce.number().optional(),
     note: z.string().optional(),
+    price_source: z.coerce.number().optional(),
+    price_source_name: z.string().optional(),
+    price_level_priority: z.coerce.number().optional(),
 });
 
 /**
@@ -58,7 +61,6 @@ export const ReservationFormSchema = z.object({
     emp_dept_id: z.string().min(1, 'กรุณาเลือกแผนก'),
     job_id: z.string().or(z.literal('')).nullable().optional().transform(v => v === '' ? null : v),
     status_remark: z.string().optional(),
-    ship_date: z.string().optional(),
     lines: z.array(ReservationLineSchema).min(1, 'กรุณาเพิ่มรายการอย่างน้อย 1 รายการ'),
 });
 
@@ -92,6 +94,5 @@ export const getReservationDefaultValues = (): Partial<ReservationFormValues> =>
     emp_dept_id: '',
     job_id: '',
     remarks: '',
-    ship_date: new Date().toISOString().split('T')[0],
     lines: [],
 });

@@ -25,6 +25,7 @@ export const AQLineSchema = z.object({
   net_amount: z.coerce.number().default(0),
   price_source: z.coerce.number().optional(),
   price_source_name: z.string().optional().default(''),
+  price_level_priority: z.coerce.number().optional(),
 
   // Approval interaction
   is_approved: z.boolean().default(false),

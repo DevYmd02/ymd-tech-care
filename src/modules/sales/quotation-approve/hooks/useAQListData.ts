@@ -202,6 +202,11 @@ export const useAQListData = (params: UseAQListDataParams) => {
         // 🛡️ Financial Consistency: Favor original SQ total if available, as it's the primary source of truth.
         const displayQuoteAmount = (sqTotalAmount > 0) ? sqTotalAmount : rawQuoteAmount;
 
+        const status = String(obj.status || 'PENDING').toUpperCase();
+        const isRejected = status === 'REJECTED';
+        const finalQuoteAmount = isRejected ? 0 : displayQuoteAmount;
+        const finalBaseAmount = isRejected ? 0 : Number(obj.base_total_amount || sqObj?.base_total_amount || (finalQuoteAmount * Number(obj.exchange_rate || 1)));
+
         return {
           row_key: `history-${obj.aq_id || obj.id || index}`,
           aq_id: Number(obj.aq_id || obj.id),
@@ -212,10 +217,10 @@ export const useAQListData = (params: UseAQListDataParams) => {
           sq_date: sqDate,
           customer_name: customerName,
           customer_code: customerCode,
-          status: String(obj.status || 'PENDING'),
+          status,
           approval_emp_name: String(obj.approval_emp_name || ''),
-          quote_total_amount: displayQuoteAmount,
-          base_total_amount: Number(obj.base_total_amount || sqObj?.base_total_amount || (displayQuoteAmount * Number(obj.exchange_rate || 1))),
+          quote_total_amount: finalQuoteAmount,
+          base_total_amount: finalBaseAmount,
           currency: String(obj.currency || obj.quote_currency_code || obj.currency_code || 'THB'),
           raw: obj,
         } satisfies AQListItem;

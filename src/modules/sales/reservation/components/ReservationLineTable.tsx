@@ -17,6 +17,7 @@ interface ReservationLineTableProps {
     uoms?: UnitListItem[];
     warehouses?: WarehouseListItem[];
     locations?: Location[];
+    priceLevelNames?: import('@/modules/master-data/sales/pages/price-level-name/types/price-level-name.types').PriceLevelName[];
     readOnly?: boolean;
     currencySymbol?: string;
 }
@@ -33,6 +34,7 @@ export function ReservationLineTable({
     uoms = [],
     warehouses = [],
     locations = [],
+    priceLevelNames = [],
     readOnly = false,
     currencySymbol = 'บาท'
 }: ReservationLineTableProps) {
@@ -273,6 +275,32 @@ export function ReservationLineTable({
                                             maxLength={12}
                                             className={`${compactInputClass} text-right font-medium bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200 border-gray-200 dark:border-gray-700`}
                                         />
+                                        
+                                        {/* 🏷️ Price Source Badge */}
+                                        {(() => {
+                                            const source = String(line.price_source_name || '').toUpperCase();
+                                            if (!source) return null;
+
+                                            const config: Record<string, { label: string; class: string }> = {
+                                                'MANUAL': { label: 'Manual', class: 'bg-orange-50 text-orange-600 border-orange-200 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-900/30' },
+                                                'PRICE_LEVEL': { label: 'Price Level', class: 'bg-purple-50 text-purple-600 border-purple-200 dark:bg-purple-950/20 dark:text-purple-400 dark:border-purple-900/30' },
+                                                'PRICE_LIST': { label: 'Price List', class: 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30' },
+                                            };
+
+                                            const item = { ...(config[source] || { label: source, class: 'bg-gray-50 text-gray-600 border-gray-200' }) };
+
+                                            // 🏆 Enhancement: If it's Price Level, show the Level No & Name
+                                            if (source === 'PRICE_LEVEL' && line.price_level_priority) {
+                                                const levelName = priceLevelNames.find(l => (Number(l.level_no) || Number(l.levelNo)) === Number(line.price_level_priority))?.name;
+                                                item.label = `Price Level ${line.price_level_priority}${levelName ? ` - ${levelName}` : ''}`;
+                                            }
+
+                                            return (
+                                                <div className={`mt-1 flex items-center justify-end gap-1 px-1.5 py-0.5 rounded border text-[10px] font-bold uppercase tracking-tight whitespace-nowrap ${item.class}`}>
+                                                    {item.label}
+                                                </div>
+                                            );
+                                        })()}
                                     </td>
 
                                     <td className="px-2 py-2">

@@ -30,7 +30,25 @@ import { CustomerService } from '@/modules/master-data/customer/customer-master/
 import { OrgEmployeeService as EmployeeService } from '@/modules/master-data/company/services/employee.service';
 import type { EmployeeListItem } from '@/modules/master-data/company/types/employee.types';
 
+import { PriceLevelNameService } from '@/modules/master-data/sales/pages/price-level-name/services/price-level-name.service';
+import type { PriceLevelName } from '@/modules/master-data/sales/pages/price-level-name/types/price-level-name.types';
+
 export const MasterDataService = {
+  // ... existing methods ...
+  getPriceLevelNames: async (): Promise<PriceLevelName[]> => {
+    try {
+      const response = await PriceLevelNameService.getList();
+      // Handle potential wrapping (data or items)
+      if (Array.isArray(response)) return response;
+      
+      const r = response as { data?: PriceLevelName[]; items?: PriceLevelName[] };
+      return r.data || r.items || [];
+    } catch (error) {
+      logger.error('[MasterDataService] getPriceLevelNames failed:', error);
+      return [];
+    }
+  },
+
   getCustomers: async (): Promise<CustomerMaster[]> => {
     try {
       const response = await CustomerService.getList({ limit: 1000 });

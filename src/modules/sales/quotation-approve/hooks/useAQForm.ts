@@ -206,6 +206,11 @@ function normalizeSQ(raw: unknown): SQForApproval | null {
         if (s === 3) return 'MANUAL';
         return '';
       })(),
+      price_level_priority: (
+        line.price_level_priority !== undefined ? Number(line.price_level_priority) :
+        line.priority !== undefined ? Number(line.priority) :
+        undefined
+      ),
     };
   });
 
@@ -319,6 +324,7 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [isConfirmRejectOpen, setIsConfirmRejectOpen] = useState(false);
   const [currencies, setCurrencies] = useState<import('@/modules/master-data/types/master-data-types').Currency[]>([]);
+  const [priceLevelNames, setPriceLevelNames] = useState<import('@/modules/master-data/sales/pages/price-level-name/types/price-level-name.types').PriceLevelName[]>([]);
   
   const prevIsOpenRef = useRef(false);
   const prevSqIdRef = useRef<number | undefined>(undefined);
@@ -529,6 +535,7 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
           remarks: String(aqLine?.remarks || sqLine.note || sqLine.remarks || ''),
           price_source: sqLine.price_source,
           price_source_name: sqLine.price_source_name,
+          price_level_priority: sqLine.price_level_priority,
         };
       });
 
@@ -618,6 +625,15 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
       if (currencies.length === 0) {
         try { const fc = await MasterDataService.getCurrencies(); setCurrencies(fc); } catch (e) { logger.error('[useAQForm] Failed to fetch currencies:', e); }
       }
+      
+      if (priceLevelNames.length === 0) {
+        try { 
+          const levels = await MasterDataService.getPriceLevelNames(); 
+          setPriceLevelNames(levels); 
+        } catch (e) { 
+          logger.error('[useAQForm] Failed to fetch price level names:', e); 
+        }
+      }
 
       // Reset form with SQ data + AQ details + AQ List Fallbacks
       reset({
@@ -675,7 +691,7 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
     } finally {
       setIsSubmitting(false);
     }
-  }, [reset, user, showAlert, currencies.length]);
+  }, [reset, user, showAlert, currencies.length, priceLevelNames.length]);
 
 
   // ── Reactive Auto-load ──────────────────────────────────────────────────────
@@ -900,5 +916,6 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
     setIsConfirmRejectOpen,
     handleFormError,
     currencies,
+    priceLevelNames,
   };
 };

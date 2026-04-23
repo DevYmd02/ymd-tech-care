@@ -50,6 +50,7 @@ export const AQFormModal: React.FC<Props> = ({
     isConfirmRejectOpen, setIsConfirmRejectOpen,
     activeId, loadSQData,
     currencies,
+    priceLevelNames,
   } = useAQForm({ sqId, isOpen, onClose, onSuccess, approvalItem });
 
   const { register, watch, formState: { errors } } = formMethods;
@@ -241,6 +242,7 @@ export const AQFormModal: React.FC<Props> = ({
                     lines={lines as unknown as import('../schemas/aq.schema').AQLineFormData[]}
                     updateLine={updateLine}
                     readOnly={isAlreadyProcessed}
+                    priceLevelNames={priceLevelNames}
                   />
                 </div>
               </div>

@@ -107,7 +107,8 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
                         updatedLines[index] = {
                             ...line,
                             price_source: result.source,
-                            price_source_name: result.sourceName
+                            price_source_name: result.sourceName,
+                            price_level_priority: result.priority
                         };
                         hasChanges = true;
                     } else {
@@ -284,6 +285,7 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
                         
                         return final || undefined;
                     })(),
+                    price_level_priority: (line.price_level_priority || line.priority) ? Number(line.price_level_priority || line.priority) : undefined,
                 };
             })
         };
@@ -336,6 +338,12 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
     const { data: employees = [] } = useQuery({
         queryKey: ['master-employees'],
         queryFn: () => MasterDataService.getEmployees(),
+        enabled: isOpen,
+    });
+    
+    const { data: priceLevelNames = [] } = useQuery({
+        queryKey: ['master-price-level-names'],
+        queryFn: () => MasterDataService.getPriceLevelNames(),
         enabled: isOpen,
     });
 
@@ -663,6 +671,7 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
                     updatedLine.unit_price = newPrice;
                     updatedLine.price_source = resolvedPrice.source;
                     updatedLine.price_source_name = resolvedPrice.sourceName;
+                    updatedLine.price_level_priority = resolvedPrice.priority;
 
                     // Re-calc line discount and total
                     const qty = Number(updatedLine.qty) || 0;
@@ -744,6 +753,7 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
                             unit_price: price,
                             price_source: result.source,
                             price_source_name: result.sourceName,
+                            price_level_priority: result.priority,
                             line_discount: calcDiscount,
                             line_total: calculateLineTotal(qty, price, calcDiscount)
                         };
@@ -882,5 +892,6 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
         handleSelectProduct,
         handleLinePriceSync,
         loadingPriceLines,
+        priceLevelNames,
     };
 };

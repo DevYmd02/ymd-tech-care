@@ -3,6 +3,7 @@ import { useFormContext } from 'react-hook-form';
 import type { DeepPartial } from 'react-hook-form';
 import type { QuotationLineValues, QuotationFormValues } from '@sales/quotation/schemas/quotation-schemas';
 import type { UnitListItem } from '@/modules/master-data/inventory/types/product-types';
+import type { PriceLevelName } from '@/modules/master-data/sales/pages/price-level-name/types/price-level-name.types';
 
 interface QuotationLineTableProps {
     lines: DeepPartial<QuotationLineValues>[];
@@ -13,6 +14,7 @@ interface QuotationLineTableProps {
     onQtyBlur?: (index: number) => void;
     loadingPriceLines?: Set<number>;
     uoms?: UnitListItem[];
+    priceLevelNames?: PriceLevelName[];
     readOnly?: boolean;
     currencySymbol?: string;
 }
@@ -23,7 +25,7 @@ const PRICE_SOURCE_BADGE: Record<string, { label: string; cls: string }> = {
     MANUAL:         { label: 'Manual',      cls: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200/50 dark:border-amber-800/50' },
 };
 
-export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChange, onSearchProduct, onQtyBlur, loadingPriceLines = new Set(), uoms = [], readOnly = false, currencySymbol = 'บาท' }: QuotationLineTableProps) {
+export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChange, onSearchProduct, onQtyBlur, loadingPriceLines = new Set(), uoms = [], priceLevelNames = [], readOnly = false, currencySymbol = 'บาท' }: QuotationLineTableProps) {
     const { formState: { errors } } = useFormContext<QuotationFormValues>();
     
     const compactInputClass = "h-8 w-full px-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-900 dark:text-white transition-all disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm";
@@ -203,11 +205,23 @@ export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChang
                                     </div>
                                     {sourceInfo && !isFetchingPrice && (Number(line.unit_price) > 0) && (
                                         <div
-                                            className={`inline-flex items-center gap-0.5 mt-0.5 px-1.5 py-0 rounded text-[9px] font-semibold border ${sourceInfo.cls}`}
-                                            title={sourceInfo.label}
+                                            className={`inline-flex items-center gap-0.5 mt-0.5 px-1.5 py-0 rounded text-[9px] font-semibold border whitespace-nowrap ${sourceInfo.cls}`}
+                                            title={(() => {
+                                                if (normalizedSource === 'PRICE_LEVEL' && line.price_level_priority) {
+                                                    const levelName = priceLevelNames.find(n => (Number(n.level_no) || Number(n.levelNo)) === Number(line.price_level_priority))?.name;
+                                                    return `Price Level ${line.price_level_priority}${levelName ? ` - ${levelName}` : ''}`;
+                                                }
+                                                return sourceInfo.label;
+                                            })()}
                                         >
                                             <Tag size={8} />
-                                            {sourceInfo.label}
+                                            {(() => {
+                                                if (normalizedSource === 'PRICE_LEVEL' && line.price_level_priority) {
+                                                    const levelName = priceLevelNames.find(n => (Number(n.level_no) || Number(n.levelNo)) === Number(line.price_level_priority))?.name;
+                                                    return `Price Level ${line.price_level_priority}${levelName ? ` - ${levelName}` : ''}`;
+                                                }
+                                                return sourceInfo.label;
+                                            })()}
                                         </div>
                                     )}
                                     {hasLineFieldError(index, 'unit_price') && <span className="text-[10px] text-red-500 block text-right mt-0.5">ระบุราคา</span>}

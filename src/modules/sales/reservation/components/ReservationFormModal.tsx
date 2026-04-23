@@ -45,6 +45,7 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
         uoms,
         warehouses,
         locations,
+        priceLevelNames,
         // Search Modals State
         isCustomerSearchOpen,
         setIsCustomerSearchOpen,
@@ -181,6 +182,7 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
                                     uoms={uoms}
                                     warehouses={warehouses}
                                     locations={locations}
+                                    priceLevelNames={priceLevelNames}
                                     onAddLine={handleAddLine} 
                                     onRemoveLine={handleRemoveLine}
                                     onLineChange={handleLineChange}
