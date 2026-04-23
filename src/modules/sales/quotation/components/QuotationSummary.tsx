@@ -66,8 +66,8 @@ export function QuotationSummary({
                             maxLength={15}
                             className={`${styles.input} h-9 py-0 text-right ${readOnly ? 'bg-gray-100 italic cursor-not-allowed border-gray-200' : 'bg-white border-blue-200 focus:border-blue-500'}`}
                         />
-                        {/* ✨ Show calculated savings always if discount is applied */}
-                        {discountAmount > 0 && (
+                        {/* ✨ Show calculated savings always if discount is applied as percentage */}
+                        {String(discountInput || '').includes('%') && discountAmount > 0 && (
                             <div className="text-[11px] font-bold text-red-600 dark:text-red-400 whitespace-nowrap animate-in fade-in slide-in-from-top-1 duration-200">
                                 {`-${discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} ${currencySymbol}`}
                             </div>

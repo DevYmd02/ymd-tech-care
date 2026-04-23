@@ -13,13 +13,15 @@ import { SaleAreaService } from '@/modules/master-data/sales/pages/area/services
 import { QuotationService } from '@/modules/sales/quotation/services/quotation.service';
 import type { QuotationFormData } from '@/modules/sales/quotation/types/quotation.types';
 import { toast } from 'react-hot-toast';
+import { logger } from '@/shared/utils/logger';
 
 import type { Currency } from '@/modules/master-data/types/master-data-types';
 import type { CustomerMaster } from '@/modules/master-data/customer/customer-master/types/customer-types';
 import type { ItemListItem, UnitListItem } from '@/modules/master-data/inventory/types/product-types';
 import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
-import type { LotNo } from '@/modules/master-data/inventory/types/inventory-master.types';
+import type { LotNo, Location as LocationItem } from '@/modules/master-data/inventory/types/inventory-master.types';
 import type { EstimateHeader } from '@/modules/sales/estimate/services/estimate.service';
+import type { WarehouseListItem } from '@/modules/master-data/types/master-data-types';
 import { 
     ReservationFormSchema, 
     type ReservationFormValues, 
@@ -76,10 +78,14 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
     const [isLotSearchOpen, setIsLotSearchOpen] = useState(false);
     const [isLeadSearchOpen, setIsLeadSearchOpen] = useState(false);
     const [isAQSearchOpen, setIsAQSearchOpen] = useState(false);
-    const [activeLineIndex, setActiveLineIndex] = useState<number | null>(null);
+    const [isWarehouseSearchOpen, setIsWarehouseSearchOpen] = useState(false);
+    const [isLocationSearchOpen, setIsLocationSearchOpen] = useState(false);
 
+    const [activeLineIndex, setActiveLineIndex] = useState<number | null>(null);
     const [activeLotLineIndex, setActiveLotLineIndex] = useState<number | null>(null);
-    
+    const [activeWarehouseLineIndex, setActiveWarehouseLineIndex] = useState<number | null>(null);
+    const [activeLocationLineIndex, setActiveLocationLineIndex] = useState<number | null>(null);
+
     // React Hook Form Setup
     const methods = useForm<ReservationFormValues>({
         resolver: zodResolver(ReservationFormSchema) as Resolver<ReservationFormValues>,
@@ -94,15 +100,6 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
     const lastInitializedId = useRef<string | null | 'new'>(null);
     const defaultValues = useMemo(() => getReservationDefaultValues(), []);
 
-    useEffect(() => {
-        const currentTarget = id || 'new';
-        if (isOpen && lastInitializedId.current !== currentTarget) {
-            reset(initialData ? { ...defaultValues, ...initialData } : defaultValues);
-            lastInitializedId.current = currentTarget;
-        } else if (!isOpen) {
-            lastInitializedId.current = null;
-        }
-    }, [isOpen, initialData, reset, defaultValues, id]);
 
     // Data Fetching
     const { data: branches = [] } = useQuery({
@@ -166,14 +163,51 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         queryFn: () => WarehouseService.getAll(),
         enabled: isOpen
     });
-    const warehouses = warehouseResponse?.items || [];
+    const warehouses = useMemo(() => warehouseResponse?.items || [], [warehouseResponse]);
 
     const { data: locationResponse } = useQuery({
         queryKey: ['master-locations'],
         queryFn: () => LocationService.getAll({ limit: 1000 }),
         enabled: isOpen
     });
-    const locations = locationResponse?.items || [];
+    const locations = useMemo(() => locationResponse?.items || [], [locationResponse]);
+
+    // 🏗️ Initialization Guard: Wait for critical master data
+    useEffect(() => {
+        const currentTarget = id || 'new';
+
+        const isMasterDataReady = (
+            (branches?.length > 0 || !isOpen) && 
+            (taxCodes?.length > 0 || !isOpen) && 
+            (uoms?.length > 0 || !isOpen)
+        );
+
+        if (isOpen && !isMasterDataReady) {
+            logger.debug('⏳ [ReservationForm] Waiting for master data...', {
+                branches: branches?.length,
+                taxCodes: taxCodes?.length,
+                uoms: uoms?.length
+            });
+            return;
+        }
+
+        if (isOpen && lastInitializedId.current !== currentTarget) {
+            reset(initialData ? { ...defaultValues, ...initialData } : defaultValues);
+            lastInitializedId.current = currentTarget;
+        } else if (!isOpen) {
+            lastInitializedId.current = null;
+        }
+    }, [
+        isOpen, 
+        initialData, 
+        reset, 
+        defaultValues, 
+        id, 
+        branches?.length, 
+        taxCodes?.length, 
+        uoms?.length,
+        currencies?.length
+    ]);
 
     // Exchange Rate Sync Logic
     const isMulti = useWatch({ control, name: 'isMulticurrency' });
@@ -188,8 +222,9 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
             return;
         }
 
-        const sourceObj = currencies?.find((c: Currency) => c.currency_code === sourceCurrency);
-        const targetObj = currencies?.find((c: Currency) => c.currency_code === targetCurrency);
+        const safeCurrencies = Array.isArray(currencies) ? currencies : [];
+        const sourceObj = safeCurrencies.find((c: Currency) => c.currency_code === sourceCurrency);
+        const targetObj = safeCurrencies.find((c: Currency) => c.currency_code === targetCurrency);
 
         const fromRate = sourceObj?.exchange_rate || 1;
         const toRate = targetObj?.exchange_rate || (targetCurrency === 'THB' ? 1 : 1);
@@ -226,7 +261,8 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         }
 
         const amountAfterDiscount = calculatedSubTotal - calculatedDiscount;
-        const selectedTaxCode = taxCodes.find(t => String(t.tax_code_id) === String(taxCodeId));
+        const safeTaxCodes = Array.isArray(taxCodes) ? taxCodes : [];
+        const selectedTaxCode = safeTaxCodes.find(t => String(t.tax_code_id) === String(taxCodeId));
         const taxRate = selectedTaxCode ? (Number(selectedTaxCode.tax_rate) || 0) : 0;
         
         // VAT should be calculated AFTER discount
@@ -336,9 +372,10 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
             
             const productUomId = product.uom_id || product.unit_id;
             const productUomName = product.uom_name || product.base_uom_name || product.unit_name;
-            const foundUom = uoms.find((u: UnitListItem) => 
-                (productUomId && (u.id === productUomId || u.unit_id === productUomId)) ||
-                (productUomName && (u.unit_name === productUomName || u.uom_name === productUomName))
+            const safeUoms = Array.isArray(uoms) ? uoms : [];
+            const foundUom = safeUoms.find((u: UnitListItem) => 
+                (productUomId && (String(u.id) === String(productUomId) || String(u.unit_id) === String(productUomId))) ||
+                (productUomName && (u.unit_name?.trim() === productUomName?.trim() || u.uom_name?.trim() === productUomName?.trim()))
             );
 
             line.uom_id = foundUom ? String(foundUom.id || foundUom.unit_id) : String(productUomId || productUomName || 'PCS');
@@ -359,15 +396,60 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
             if (!currentLines[activeLotLineIndex]) return;
 
             const newLines = [...currentLines];
-            newLines[activeLotLineIndex] = {
-                ...newLines[activeLotLineIndex],
-                lot_no: lot.code || '',
-                reserve_policy: 'MANUAL'
-            };
+            const line = { ...newLines[activeLotLineIndex] };
+            
+            line.lot_no = lot.code || '';
+            line.reserve_policy = 'MANUAL';
+
+            // 💡 Auto-fill Warehouse/Location if they are empty
+            if (!line.warehouse_id && lot.warehouse_id) {
+                line.warehouse_id = String(lot.warehouse_id);
+            }
+            if (!line.location_id && lot.location_id) {
+                line.location_id = String(lot.location_id);
+            }
+
+            newLines[activeLotLineIndex] = line;
             setValue('lines', newLines, { shouldValidate: true, shouldDirty: true });
             setIsLotSearchOpen(false);
         }
     }, [activeLotLineIndex, getValues, setValue]);
+
+    const handleSelectWarehouse = useCallback((warehouse: WarehouseListItem) => {
+        if (activeWarehouseLineIndex !== null) {
+            const currentLines = getValues('lines') || [];
+            if (!currentLines[activeWarehouseLineIndex]) return;
+
+            const newLines = [...currentLines];
+            const line = { ...newLines[activeWarehouseLineIndex] };
+            const newWarehouseId = String(warehouse.warehouse_id);
+            
+            line.warehouse_id = newWarehouseId;
+            
+            // Auto-select first location for this warehouse
+            const firstLoc = locations.find(loc => String(loc.warehouse_id) === newWarehouseId);
+            line.location_id = firstLoc ? String(firstLoc.location_id) : '';
+            
+            newLines[activeWarehouseLineIndex] = line;
+            setValue('lines', newLines, { shouldValidate: true, shouldDirty: true });
+            setIsWarehouseSearchOpen(false);
+        }
+    }, [activeWarehouseLineIndex, getValues, setValue, locations]);
+
+    const handleSelectLocation = useCallback((location: LocationItem) => {
+        if (activeLocationLineIndex !== null) {
+            const currentLines = getValues('lines') || [];
+            if (!currentLines[activeLocationLineIndex]) return;
+
+            const newLines = [...currentLines];
+            newLines[activeLocationLineIndex] = {
+                ...newLines[activeLocationLineIndex],
+                location_id: String(location.location_id)
+            };
+            setValue('lines', newLines, { shouldValidate: true, shouldDirty: true });
+            setIsLocationSearchOpen(false);
+        }
+    }, [activeLocationLineIndex, getValues, setValue]);
 
 
 
@@ -735,10 +817,20 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         setIsLeadSearchOpen,
         isAQSearchOpen,
         setIsAQSearchOpen,
+        isWarehouseSearchOpen,
+        setIsWarehouseSearchOpen,
+        isLocationSearchOpen,
+        setIsLocationSearchOpen,
+
         activeLineIndex,
         setActiveLineIndex,
         activeLotLineIndex,
         setActiveLotLineIndex,
+        activeWarehouseLineIndex,
+        setActiveWarehouseLineIndex,
+        activeLocationLineIndex,
+        setActiveLocationLineIndex,
+
         // Handlers
         handleSubmit,
         handleAddLine,
@@ -747,9 +839,10 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         handleSelectCustomer,
         handleSelectProduct,
         handleSelectLot,
+        handleSelectWarehouse,
+        handleSelectLocation,
         handleSelectLead,
         handleSelectAQ,
         handleFetchQuotation,
     };
 };
-

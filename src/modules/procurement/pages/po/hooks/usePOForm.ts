@@ -184,6 +184,22 @@ export const usePOForm = ({
     // ── Form Reset Effect (Hydration) ─────────────────────────────────────────
     useEffect(() => {
         if (isOpen) {
+            // 🏗️ Initialization Guard: Wait for critical master data
+            const isMasterDataReady = (
+                (branches?.length > 0 || !isOpen) && 
+                (taxCodes?.length > 0 || !isOpen) && 
+                (units?.length > 0 || !isOpen)
+            );
+
+            if (isOpen && !isMasterDataReady) {
+                logger.debug('⏳ [POForm] Waiting for master data...', {
+                    branches: branches?.length,
+                    taxCodes: taxCodes?.length,
+                    units: units?.length
+                });
+                return;
+            }
+
             let initialPOLines: POFormData['po_lines'] = [];
             
             // Phase 0: Loaded from existing PO DB Call
@@ -203,7 +219,7 @@ export const usePOForm = ({
                         status:          l.status || 'OPEN',
                         qty:             Number(l.qty || l.qty_ordered || 0),
                         qty_ordered:     Number(l.qty_ordered || l.qty || 0),
-                        uom_id:          Number(l.uom_id || 1),
+                        uom_id:          l.uom_id ? Number(l.uom_id) : 0,
                         unit_price:      Number(l.unit_price || 0),
                         discount_amount: Number(l.discount_amount || 0),
                         discount_expression: String(l.discount_expression || '0'),
@@ -239,7 +255,7 @@ export const usePOForm = ({
                     status:          'OPEN',
                     qty:             Number(l.qty) || 1,
                     qty_ordered:     Number(l.qty) || 1,
-                    uom_id:          Number(l.uom_id) || 1,
+                    uom_id:          l.uom_id ? Number(l.uom_id) : 0,
                     unit_price:      Number(l.unit_price) || 0,
                     discount_amount: Number(l.discount_amount) || 0,
                     discount_expression: String(l.discount_expression || '0'),
@@ -263,7 +279,7 @@ export const usePOForm = ({
                     status:          'OPEN',
                     qty:             1,
                     qty_ordered:     1,
-                    uom_id:          1,
+                    uom_id:          0,
                     unit_price:      0,
                     discount_amount: 0,
                     discount_expression: '0',
@@ -311,7 +327,18 @@ export const usePOForm = ({
                 po_lines:             initialPOLines,
             });
         }
-    }, [isOpen, initialValues, reset, inheritedQC, user, existingPO]);
+    }, [
+        isOpen, 
+        initialValues, 
+        reset, 
+        inheritedQC, 
+        user, 
+        existingPO,
+        branches?.length,
+        taxCodes?.length,
+        units?.length,
+        currencies?.length
+    ]);
     
 
     // ── Enforce THB when Multicurrency is OFF ─────────────────────────────────
@@ -359,8 +386,9 @@ export const usePOForm = ({
 
         const { isDirty } = getFieldState('exchange_rate');
         if (isSourceChanged || isTargetChanged || !isDirty) {
-            const sourceObj = currencies.find((c: Currency) => c.currency_code === watchCurrencyCode);
-            const targetObj = currencies.find((c: Currency) => c.currency_code === watchTargetCurrency);
+            const safeCurrencies = Array.isArray(currencies) ? currencies : [];
+            const sourceObj = safeCurrencies.find((c: Currency) => c.currency_code === watchCurrencyCode);
+            const targetObj = safeCurrencies.find((c: Currency) => c.currency_code === watchTargetCurrency);
 
             const fromRate = sourceObj?.exchange_rate || 1;
             const toRate = targetObj?.exchange_rate || 1;
@@ -561,7 +589,7 @@ export const usePOForm = ({
             // If still THB but rate != 1, try ID lookup as a last resort
             if (resolvedCode === 'THB' && finalExRate !== 1) {
                 const cId = (fullWinningVQ as any)?.currency_id || (fullWinningVQ as any)?.quote_currency_id || (fullWinningVQ as any)?.currencyId || (fullPR as any).pr_currency_id;
-                if (cId) {
+                if (cId && Array.isArray(currencies)) {
                     const match = (currencies as any[]).find(c => String(c.currency_id) === String(cId) || String(c.id) === String(cId));
                     if (match) {
                         resolvedCode = match.currency_code || match.code;
@@ -819,12 +847,19 @@ export const usePOForm = ({
     const handleSelectItemMaster = useCallback((index: number, item: ItemSelectorResult) => {
         // 🧩 Fallback matching by Name string since Backend might omit ID fields
         const anyItem = item as any;
-        const matchedUnit = units?.find(u => {
-            const prodName = anyItem.uom_name || anyItem.unit_name || anyItem.base_uom_name || anyItem.sale_uom_name || '';
-            if (!prodName) return false;
-            return (u.uom_name === prodName) || (u.unit_name === prodName);
+        const prodUomId = anyItem.uom_id || anyItem.unit_id || anyItem.base_uom_id || anyItem.sale_uom_id;
+        const prodUomName = anyItem.uom_name || anyItem.unit_name || anyItem.base_uom_name || anyItem.sale_uom_name || '';
+
+        const safeUnits = Array.isArray(units) ? units : [];
+        const matchedUnit = safeUnits.find(u => {
+            // Priority 1: ID Match
+            if (prodUomId && (String(u.id) === String(prodUomId) || String(u.uom_id) === String(prodUomId))) return true;
+            // Priority 2: Name Match (Resilient)
+            if (prodUomName && (u.uom_name?.trim() === prodUomName.trim() || u.unit_name?.trim() === prodUomName.trim())) return true;
+            return false;
         });
-        const finalUomId = Number(item.uom_id || item.unit_id || matchedUnit?.uom_id || matchedUnit?.unit_id || 0);
+
+        const finalUomId = Number(prodUomId || matchedUnit?.uom_id || matchedUnit?.id || 1);
 
         update(index, {
             ...getValues(`po_lines.${index}`),
@@ -833,7 +868,7 @@ export const usePOForm = ({
             code: String(item.item_code || item.code || ""),
             item_code: String(item.item_code || item.code || ""),
             description: String(item.item_name || item.description || ""),
-            uom_id: finalUomId,
+            uom_id: finalUomId || 0,
             unit_price: Number(item.standard_price || item.unit_price || 0),
         });
         
@@ -904,7 +939,7 @@ export const usePOForm = ({
             status:          'OPEN',
             qty:             1,
             qty_ordered:     1,
-            uom_id:          1,
+            uom_id:          0,
             unit_price:      0,
             discount_amount: 0,
             discount_expression: '0',

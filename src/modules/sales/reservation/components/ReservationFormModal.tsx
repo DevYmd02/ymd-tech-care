@@ -9,6 +9,8 @@ import { ProductSearchModal } from './ProductSearchModal';
 import { LeadSearchModal } from './LeadSearchModal';
 import { LotSearchModal } from './LotSearchModal';
 import { AQSearchModal } from './AQSearchModal';
+import { WarehouseSearchModal } from './WarehouseSearchModal';
+import { LocationSearchModal } from './LocationSearchModal';
 
 import { useReservationForm } from '../hooks/useReservationForm';
 import type { ReservationFormData } from '../types/reservation.types';
@@ -66,8 +68,17 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
         handleSelectLead,
         handleSelectAQ,
         handleFetchQuotation,
+        handleSelectWarehouse,
+        handleSelectLocation,
         isAQSearchOpen,
         setIsAQSearchOpen,
+        isWarehouseSearchOpen,
+        setIsWarehouseSearchOpen,
+        isLocationSearchOpen,
+        setIsLocationSearchOpen,
+        setActiveWarehouseLineIndex,
+        setActiveLocationLineIndex,
+        activeLocationLineIndex,
     } = useReservationForm(isOpen, id, initialData);
 
 
@@ -181,6 +192,15 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
                                         setActiveLotLineIndex(index);
                                         setIsLotSearchOpen(true);
                                     }}
+                                    onSearchWarehouse={(index) => {
+                                        setActiveWarehouseLineIndex(index);
+                                        setIsWarehouseSearchOpen(true);
+                                    }}
+                                    onSearchLocation={(index) => {
+                                        setActiveLocationLineIndex(index);
+                                        setIsLocationSearchOpen(true);
+                                    }}
+                                    currencySymbol={formData.isMulticurrency ? (formData.base_currency_code || 'บาท') : 'บาท'}
                                 />
                             </div>
                         </div>
@@ -229,12 +249,29 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
                 onClose={() => setIsLotSearchOpen(false)}
                 onSelect={handleSelectLot}
                 itemId={activeLotLineIndex !== null ? getValues(`lines.${activeLotLineIndex}.item_id`) : undefined}
+                warehouseId={activeLotLineIndex !== null ? getValues(`lines.${activeLotLineIndex}.warehouse_id`) : null}
+                locationId={activeLotLineIndex !== null ? getValues(`lines.${activeLotLineIndex}.location_id`) : null}
             />
 
             <AQSearchModal 
                 isOpen={isAQSearchOpen}
                 onClose={() => setIsAQSearchOpen(false)}
                 onSelect={handleSelectAQ}
+            />
+
+            <WarehouseSearchModal 
+                isOpen={isWarehouseSearchOpen}
+                onClose={() => setIsWarehouseSearchOpen(false)}
+                onSelect={handleSelectWarehouse}
+                warehouses={warehouses}
+            />
+
+            <LocationSearchModal 
+                isOpen={isLocationSearchOpen}
+                onClose={() => setIsLocationSearchOpen(false)}
+                warehouseId={activeLocationLineIndex !== null ? getValues(`lines.${activeLocationLineIndex}.warehouse_id`) : null}
+                onSelect={handleSelectLocation}
+                locations={locations}
             />
 
         </WindowFormLayout>

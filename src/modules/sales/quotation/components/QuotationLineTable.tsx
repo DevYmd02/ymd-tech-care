@@ -14,6 +14,7 @@ interface QuotationLineTableProps {
     loadingPriceLines?: Set<number>;
     uoms?: UnitListItem[];
     readOnly?: boolean;
+    currencySymbol?: string;
 }
 
 const PRICE_SOURCE_BADGE: Record<string, { label: string; cls: string }> = {
@@ -22,7 +23,7 @@ const PRICE_SOURCE_BADGE: Record<string, { label: string; cls: string }> = {
     MANUAL:         { label: 'Manual',      cls: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200/50 dark:border-amber-800/50' },
 };
 
-export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChange, onSearchProduct, onQtyBlur, loadingPriceLines = new Set(), uoms = [], readOnly = false }: QuotationLineTableProps) {
+export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChange, onSearchProduct, onQtyBlur, loadingPriceLines = new Set(), uoms = [], readOnly = false, currencySymbol = 'บาท' }: QuotationLineTableProps) {
     const { formState: { errors } } = useFormContext<QuotationFormValues>();
     
     const compactInputClass = "h-8 w-full px-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-900 dark:text-white transition-all disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm";
@@ -83,8 +84,6 @@ export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChang
                         {lines.map((line, index) => {
                             const isFetchingPrice = loadingPriceLines.has(index);
                             
-                            // 🧪 DEBUG: See what exactly comes from the backend per line
-                            if (index === 0) console.log('🧪 [QuotationLineTable] Data:', line);
 
                             const normalizedSource = line.price_source_name 
                                 ? String(line.price_source_name).toUpperCase().replace(/\s+/g, '_') 
@@ -202,16 +201,23 @@ export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChang
                                     {hasLineFieldError(index, 'unit_price') && <span className="text-[10px] text-red-500 block text-right mt-0.5">ระบุราคา</span>}
                                 </td>
                                  <td className="px-2 py-1.5">
-                                     <input 
-                                         type="text" 
-                                         value={line.discount_expression ?? ''} 
-                                         onChange={(e) => onLineChange(index, 'discount_expression', e.target.value)}
-                                         onFocus={(e) => e.target.select()}
-                                         placeholder="0%"
-                                         maxLength={20}
-                                         disabled={readOnly}
-                                         className={`${compactInputClass} text-right`}
-                                     />
+                                     <div className="flex flex-col items-end gap-1">
+                                         <input 
+                                             type="text" 
+                                             value={line.discount_expression ?? ''} 
+                                             onChange={(e) => onLineChange(index, 'discount_expression', e.target.value)}
+                                             onFocus={(e) => e.target.select()}
+                                             placeholder="0%"
+                                             maxLength={20}
+                                             disabled={readOnly}
+                                             className={`${compactInputClass} text-right`}
+                                         />
+                                         {String(line.discount_expression || '').includes('%') && (line.line_discount ?? 0) > 0 && (
+                                             <div className="text-[10px] font-bold text-red-600 dark:text-red-400 whitespace-nowrap animate-in fade-in slide-in-from-top-1 duration-200">
+                                                 {`-${(line.line_discount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} ${currencySymbol}`}
+                                             </div>
+                                         )}
+                                     </div>
                                  </td>
                                  <td className="px-2 py-1.5 text-right">
                                      <input 

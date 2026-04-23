@@ -359,11 +359,16 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
         const isMasterDataReady = (
             (branches?.length > 0 || !isOpen) && 
             (taxCodes?.length > 0 || !isOpen) && 
-            (departments?.length > 0 || !isOpen)
+            (departments?.length > 0 || !isOpen) &&
+            (uoms?.length > 0 || !isOpen)
         );
 
-        if (id && !isMasterDataReady) {
-            logger.info('⏳ [QuotationForm] Waiting for master data before initialization...');
+        if (isOpen && !isMasterDataReady) {
+            logger.debug('⏳ [QuotationForm] Waiting for master data...', { 
+                branches: branches?.length, 
+                taxCodes: taxCodes?.length, 
+                uoms: uoms?.length 
+            });
             return;
         }
 
@@ -406,7 +411,6 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
                 if (lastInitializedId.current === detailId) return;
 
                 const mappedData = mapApiToForm(quotationDetail);
-                console.log('✅ [QuotationForm] Resetting with Full Detail Data:', mappedData);
                 reset(mappedData);
                 lastInitializedId.current = detailId;
                 // 🕵️ Recovery: Detect price sources for the loaded detail
@@ -414,7 +418,6 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
                 // Enrich lines if item_code is missing
                 void enrichLinesWithItemData(mappedData.lines || []);
             } else if (!id && lastInitializedId.current !== currentTarget) {
-                console.log('✨ [QuotationForm] Resetting with Defaults');
                 // 🛡️ Rescue: Ensure types match QuotationFormValues (convert ID strings to numbers)
                 const mergedValues: QuotationFormValues = initialData ? { 
                     ...defaultValues, 
@@ -459,6 +462,7 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
         enrichLinesWithItemData,
         branches?.length,
         taxCodes?.length,
+        uoms?.length,
         departments?.length,
         projects?.length,
         saleAreas?.length,
@@ -495,8 +499,9 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
             return;
         }
 
-        const sourceObj = currencies?.find((c: Currency) => c.currency_code === sourceCurrency);
-        const targetObj = currencies?.find((c: Currency) => c.currency_code === targetCurrency);
+        const safeCurrencies = Array.isArray(currencies) ? currencies : [];
+        const sourceObj = safeCurrencies.find((c: Currency) => c.currency_code === sourceCurrency);
+        const targetObj = safeCurrencies.find((c: Currency) => c.currency_code === targetCurrency);
 
         const fromRate = sourceObj?.exchange_rate || 1;
         const toRate = targetObj?.exchange_rate || (targetCurrency === 'THB' ? 1 : 1);
@@ -532,7 +537,8 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
         }
 
         // VAT Calculation (Calculated on SubTotal AFTER Discount)
-        const selectedTaxCode = taxCodes.find(t => String(t.tax_code_id) === String(taxCodeId));
+        const safeTaxCodes = Array.isArray(taxCodes) ? taxCodes : [];
+        const selectedTaxCode = safeTaxCodes.find(t => String(t.tax_code_id) === String(taxCodeId));
         const taxRate = selectedTaxCode ? (Number(selectedTaxCode.tax_rate) || 0) : 0;
         
         const amountAfterDiscount = calculatedSubTotal - calculatedDiscount;
@@ -695,9 +701,10 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
             const productUomId = product.uom_id || product.unit_id;
             const productUomName = product.uom_name || product.base_uom_name || product.unit_name;
             
-            const foundUom = uoms.find((u: UnitListItem) => 
-                (productUomId && (u.id === productUomId || u.unit_id === productUomId)) ||
-                (productUomName && (u.unit_name === productUomName || u.uom_name === productUomName))
+            const safeUoms = Array.isArray(uoms) ? uoms : [];
+            const foundUom = safeUoms.find((u: UnitListItem) => 
+                (productUomId && (String(u.id) === String(productUomId) || String(u.unit_id) === String(productUomId))) ||
+                (productUomName && (u.unit_name?.trim() === productUomName?.trim() || u.uom_name?.trim() === productUomName?.trim()))
             );
 
             line.uom_id = foundUom ? Number(foundUom.id || foundUom.unit_id) : Number(productUomId || 0);

@@ -60,7 +60,7 @@ export function ReservationSummary({
                                 className={`${styles.input} h-9 py-0 text-right bg-white border-purple-200 focus:border-purple-500 font-semibold text-purple-600`}
                             />
                         </div>
-                        {discountAmount > 0 && (
+                        {String(discountInput || '').includes('%') && discountAmount > 0 && (
                             <span className="text-xs font-bold text-red-500 pr-1 animate-in fade-in slide-in-from-right-1">
                                 -{discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currencySymbol}
                             </span>

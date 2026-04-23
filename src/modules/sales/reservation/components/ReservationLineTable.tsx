@@ -12,10 +12,13 @@ interface ReservationLineTableProps {
     onLineChange: (index: number, field: keyof ReservationLineData, value: string | number) => void;
     onSearchProduct?: (index: number) => void;
     onSearchLot?: (index: number) => void;
+    onSearchWarehouse?: (index: number) => void;
+    onSearchLocation?: (index: number) => void;
     uoms?: UnitListItem[];
     warehouses?: WarehouseListItem[];
     locations?: Location[];
     readOnly?: boolean;
+    currencySymbol?: string;
 }
 
 export function ReservationLineTable({ 
@@ -25,10 +28,13 @@ export function ReservationLineTable({
     onLineChange, 
     onSearchProduct, 
     onSearchLot,
+    onSearchWarehouse,
+    onSearchLocation,
     uoms = [],
     warehouses = [],
     locations = [],
-    readOnly = false
+    readOnly = false,
+    currencySymbol = 'บาท'
 }: ReservationLineTableProps) {
     const { formState: { errors } } = useFormContext<ReservationFormValues>();
     const isLocked = readOnly;
@@ -102,10 +108,6 @@ export function ReservationLineTable({
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-gray-900">
                         {lines.length > 0 && lines.map((line, index) => {
-                            const filteredLocations = locations.filter(loc => 
-                                !line.warehouse_id || String(loc.warehouse_id) === String(line.warehouse_id)
-                            );
-
                             return (
                                 <tr key={index} className="hover:bg-purple-50/50 dark:hover:bg-purple-900/10 transition-colors group">
                                     <td className="px-2 py-2 text-center text-purple-400 dark:text-purple-500/70 font-bold sticky left-0 bg-white dark:bg-gray-900 group-hover:bg-gray-50 dark:group-hover:bg-gray-800 z-10 transition-colors after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[1px] after:bg-gray-100 dark:after:bg-gray-800/40">
@@ -142,46 +144,27 @@ export function ReservationLineTable({
                                     </td>
                                     
                                     <td className="px-2 py-2">
-                                        <select 
-                                            value={line.warehouse_id || ''} 
-                                            disabled={isLocked}
-                                            onChange={(e) => {
-                                                const newWarehouseId = e.target.value;
-                                                onLineChange(index, 'warehouse_id', newWarehouseId);
-                                                if (newWarehouseId) {
-                                                    const firstLoc = locations.find(loc => String(loc.warehouse_id) === newWarehouseId);
-                                                    onLineChange(index, 'location_id', firstLoc ? String(firstLoc.location_id) : '');
-                                                } else {
-                                                    onLineChange(index, 'location_id', ''); 
-                                                }
-                                            }}
-                                            className={`${compactInputClass} bg-white dark:bg-gray-800 dark:text-white/80 border-gray-200 dark:border-gray-700`}
-                                            style={{ colorScheme: 'dark' }}
-                                        >
-                                            <option value="">-- คลัง --</option>
-                                            {warehouses.map((w) => (
-                                                <option key={String(w.warehouse_id)} value={String(w.warehouse_id)}>
-                                                    {w.warehouse_name}
-                                                </option>
-                                            ))}
-                                        </select>
+                                        <div className="flex gap-1 items-center">
+                                            <input 
+                                                value={warehouses.find(w => String(w.warehouse_id) === String(line.warehouse_id))?.warehouse_name || ''}
+                                                readOnly
+                                                onClick={!isLocked ? () => onSearchWarehouse?.(index) : undefined}
+                                                className={`${compactInputClass} ${!isLocked ? 'cursor-pointer hover:border-purple-400 focus:border-purple-500' : 'cursor-not-allowed bg-gray-50/50'} text-gray-700 dark:text-white/80 border-gray-200 dark:border-gray-700 transition-colors`}
+                                                placeholder="เลือกคลัง..."
+                                            />
+                                        </div>
                                     </td>
 
                                     <td className="px-2 py-2">
-                                        <select 
-                                            value={line.location_id || ''} 
-                                            disabled={isLocked}
-                                            onChange={(e) => onLineChange(index, 'location_id', e.target.value)}
-                                            className={`${compactInputClass} bg-white dark:bg-gray-800 dark:text-white/80 border-gray-200 dark:border-gray-700`}
-                                            style={{ colorScheme: 'dark' }}
-                                        >
-                                            <option value="">-- ที่เก็บ --</option>
-                                            {filteredLocations.map((l) => (
-                                                <option key={String(l.location_id)} value={String(l.location_id)}>
-                                                    {l.name_th || l.code}
-                                                </option>
-                                            ))}
-                                        </select>
+                                        <div className="flex gap-1 items-center">
+                                            <input 
+                                                value={locations.find(l => String(l.location_id) === String(line.location_id))?.name_th || locations.find(l => String(l.location_id) === String(line.location_id))?.code || ''}
+                                                readOnly
+                                                onClick={!isLocked ? () => onSearchLocation?.(index) : undefined}
+                                                className={`${compactInputClass} ${!isLocked ? 'cursor-pointer hover:border-orange-400 focus:border-orange-500' : 'cursor-not-allowed bg-gray-50/50'} text-gray-700 dark:text-white/80 border-gray-200 dark:border-gray-700 transition-colors`}
+                                                placeholder="เลือกที่เก็บ..."
+                                            />
+                                        </div>
                                     </td>
                                     
                                     <td className="px-2 py-2">
@@ -279,16 +262,23 @@ export function ReservationLineTable({
                                     </td>
 
                                     <td className="px-2 py-2">
-                                        <input 
-                                            type="text" 
-                                            value={line.line_discount_input ?? ''} 
-                                            disabled={isLocked}
-                                            onChange={(e) => onLineChange(index, 'line_discount_input', e.target.value)}
-                                            onFocus={(e) => e.target.select()}
-                                            placeholder="0"
-                                            maxLength={20}
-                                            className={`${compactInputClass} text-right bg-white dark:bg-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700`}
-                                        />
+                                        <div className="flex flex-col items-end gap-1">
+                                            <input 
+                                                type="text" 
+                                                value={line.line_discount_input ?? ''} 
+                                                disabled={isLocked}
+                                                onChange={(e) => onLineChange(index, 'line_discount_input', e.target.value)}
+                                                onFocus={(e) => e.target.select()}
+                                                placeholder="0"
+                                                maxLength={20}
+                                                className={`${compactInputClass} text-right bg-white dark:bg-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700`}
+                                            />
+                                            {String(line.line_discount_input || '').includes('%') && (line.line_discount ?? 0) > 0 && (
+                                                <div className="text-[10px] font-bold text-red-500 whitespace-nowrap animate-in fade-in slide-in-from-top-1 duration-200">
+                                                    -{line.line_discount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currencySymbol}
+                                                </div>
+                                            )}
+                                        </div>
                                     </td>
                                     
                                     <td className="px-2 py-2">

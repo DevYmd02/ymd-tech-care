@@ -392,8 +392,6 @@ export class QuotationService {
         const payload = this.preparePayload(data);
         
         logger.info('🚀 [QuotationService] CREATE PAYLOAD:', payload);
-        console.log('--- CREATE PAYLOAD JSON ---');
-        console.log(JSON.stringify(payload, null, 2));
 
         try {
             await api.post(ENDPOINTS.list, payload);
@@ -436,8 +434,6 @@ export class QuotationService {
         const payload = this.preparePayload(finalFormValues);
         
         logger.info(`🚀 [QuotationService] UPDATE (PATCH) PAYLOAD for ID ${id}:`, payload);
-        console.log(`--- UPDATE PAYLOAD JSON (ID: ${id}) ---`);
-        console.log(JSON.stringify(payload, null, 2));
 
         try {
             await api.patch(ENDPOINTS.detail(String(id)), payload);
