@@ -11,7 +11,7 @@ export const QuotationLineSchema = z.object({
     item_name: z.string().optional(),
     qty: z.coerce.number().min(0.001, 'จำนวนต้องมากกว่า 0').max(9999999999999, 'ค่าที่ระบุมีจำนวนมากเกินไป'),
     uom_id: z.coerce.number().min(1, 'กรุณาเลือกหน่วยนับ'),
-    unit_price: z.coerce.number().min(0, 'ราคาต้องไม่ติดลบ').max(9999999999999, 'ค่าที่ระบุมีจำนวนมากเกินไป'),
+    unit_price: z.coerce.number().min(0.01, 'กรุณาระบุราคา').max(9999999999999, 'ค่าที่ระบุมีจำนวนมากเกินไป'),
     discount_expression: z.string().optional(),
     line_discount: z.coerce.number().default(0),
     tax_code_id: z.coerce.number().nullable().optional(),

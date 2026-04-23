@@ -655,21 +655,26 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
                 if (!updatedLines[index]) return;
                 
                 const updatedLine = { ...updatedLines[index] };
-                updatedLine.unit_price = resolvedPrice.unitPrice;
-                updatedLine.price_source = resolvedPrice.source;
-                updatedLine.price_source_name = resolvedPrice.sourceName;
+                const newPrice = Number(resolvedPrice.unitPrice);
+                const currentPrice = Number(updatedLine.unit_price || 0);
 
-                // Re-calc line discount and total
-                const qty = Number(updatedLine.qty) || 0;
-                const price = resolvedPrice.unitPrice;
-                const ldInput = updatedLine.discount_expression || '';
-                const calculatedLD = calculateDiscountAmount(qty * price, ldInput);
-                
-                updatedLine.line_discount = calculatedLD;
-                updatedLine.line_total = calculateLineTotal(qty, price, calculatedLD);
+                // 🛡️ Defensive Check: Only overwrite if new price is valid or current is 0
+                if (newPrice > 0 || currentPrice === 0) {
+                    updatedLine.unit_price = newPrice;
+                    updatedLine.price_source = resolvedPrice.source;
+                    updatedLine.price_source_name = resolvedPrice.sourceName;
 
-                updatedLines[index] = updatedLine;
-                setValue('lines', updatedLines, { shouldValidate: true, shouldDirty: true });
+                    // Re-calc line discount and total
+                    const qty = Number(updatedLine.qty) || 0;
+                    const discExpr = updatedLine.discount_expression || '';
+                    const calculatedLD = calculateDiscountAmount(qty * newPrice, discExpr);
+                    
+                    updatedLine.line_discount = calculatedLD;
+                    updatedLine.line_total = calculateLineTotal(qty, newPrice, calculatedLD);
+
+                    updatedLines[index] = updatedLine;
+                    setValue('lines', updatedLines, { shouldValidate: true, shouldDirty: true });
+                }
             }
         } finally {
             setLoadingPriceLines(prev => {
@@ -725,17 +730,36 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
                     const price = Number(result.unitPrice);
                     const qty = Number(line.qty) || 1;
                     const discExpr = line.discount_expression || '';
-                    const calcDiscount = calculateDiscountAmount(qty * price, discExpr);
                     
-                    updatedLines[index] = {
-                        ...line,
-                        unit_price: price,
-                        price_source: result.source,
-                        price_source_name: result.sourceName,
-                        line_discount: calcDiscount,
-                        line_total: calculateLineTotal(qty, price, calcDiscount)
-                    };
-                    hasChanges = true;
+                    // 🛡️ Defensive Check: Only overwrite if the pricing engine found a valid non-zero price
+                    // OR if the current price is already 0. We don't want to overwrite a manual price with 0
+                    // if the pricing engine simply doesn't have a rule for this item.
+                    const currentPrice = Number(line.unit_price || 0);
+                    const isNewPriceValid = price > 0;
+                    
+                    if (isNewPriceValid || currentPrice === 0) {
+                        const calcDiscount = calculateDiscountAmount(qty * price, discExpr);
+                        updatedLines[index] = {
+                            ...line,
+                            unit_price: price,
+                            price_source: result.source,
+                            price_source_name: result.sourceName,
+                            line_discount: calcDiscount,
+                            line_total: calculateLineTotal(qty, price, calcDiscount)
+                        };
+                        hasChanges = true;
+                    } else {
+                        // Pricing engine returned 0 but we already have a manual/previous price.
+                        // We should at least clear the "Price List/Level" source if it was from the OLD customer.
+                        if (line.price_source_name && line.price_source_name !== 'MANUAL') {
+                            updatedLines[index] = {
+                                ...line,
+                                price_source: undefined,
+                                price_source_name: undefined,
+                            };
+                            hasChanges = true;
+                        }
+                    }
                 } else {
                     // No specific price found for this customer/branch combination
                     if (line.price_source_name && line.price_source_name !== 'MANUAL') {
