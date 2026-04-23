@@ -57,6 +57,7 @@ export const CustomerSearchModal: React.FC<CustomerSearchModalProps> = React.mem
                 </div>
             }
             width="max-w-[1200px]"
+            headerColor="bg-purple-600"
         >
             <div className="flex flex-col h-[70vh]">
                 {/* Search Bar */}

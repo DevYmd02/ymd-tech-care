@@ -58,12 +58,39 @@ function createInventoryService<T extends IBaseMaster, F, A, O = Partial<A>>(
     return {
         getAll: async (params?: Record<string, string | number | boolean | undefined>): Promise<ListResponse<T>> => {
             if (USE_MOCK) {
-                logger.info(`🎭 [Mock Mode] Serving ${config.entityName} list`);
+                logger.info(`🎭 [Mock Mode] Serving ${config.entityName} list`, params);
+                let filtered = [...localData];
+                
+                if (params) {
+                    const typedFiltered = filtered as (T & { 
+                        item_id?: string | number; 
+                        warehouse_id?: string | number; 
+                        location_id?: string | number;
+                    })[];
+
+                    if (params.q) {
+                        const q = String(params.q).toLowerCase();
+                        filtered = typedFiltered.filter(i => 
+                            String(i.code || '').toLowerCase().includes(q) || 
+                            String(i.name_th || '').toLowerCase().includes(q)
+                        ) as T[];
+                    }
+                    if (params.item_id) {
+                        filtered = typedFiltered.filter(i => String(i.item_id) === String(params.item_id)) as T[];
+                    }
+                    if (params.warehouse_id) {
+                        filtered = typedFiltered.filter(i => String(i.warehouse_id) === String(params.warehouse_id)) as T[];
+                    }
+                    if (params.location_id) {
+                        filtered = typedFiltered.filter(i => String(i.location_id) === String(params.location_id)) as T[];
+                    }
+                }
+
                 return {
-                    items: localData,
-                    total: localData.length,
+                    items: filtered,
+                    total: filtered.length,
                     page: 1,
-                    limit: 10
+                    limit: params?.limit ? Number(params.limit) : 10
                 };
             }
             try {
@@ -335,6 +362,10 @@ interface LotNoApiResponse {
     is_active: boolean;
     created_at: string;
     updated_at?: string;
+    balance_qty?: number;
+    sale_stock?: number;
+    warehouse_id?: number;
+    location_id?: number;
 }
 
 // ====================================================================================
@@ -743,6 +774,10 @@ export const LotNoService = createInventoryService<LotNo, LotNoFormData, LotNoAp
         is_active: item.is_active,
         created_at: item.created_at,
         updated_at: item.updated_at || '',
+        balance_qty: item.balance_qty,
+        sale_stock: item.sale_stock,
+        warehouse_id: item.warehouse_id,
+        location_id: item.location_id,
     }),
     mapToApi: (data: LotNoFormData) => ({
         lot_no_code: data.code?.trim().toUpperCase(),

@@ -55,6 +55,7 @@ export const LeadSearchModal: React.FC<LeadSearchModalProps> = React.memo(({
                 </div>
             }
             width="max-w-[1000px]"
+            headerColor="bg-purple-600"
         >
             <div className="flex flex-col h-[70vh]">
                 {/* Search Bar */}

@@ -406,7 +406,6 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
                 if (lastInitializedId.current === detailId) return;
 
                 const mappedData = mapApiToForm(quotationDetail);
-                console.log('✅ [QuotationForm] Resetting with Full Detail Data:', mappedData);
                 reset(mappedData);
                 lastInitializedId.current = detailId;
                 // 🕵️ Recovery: Detect price sources for the loaded detail
@@ -414,7 +413,6 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
                 // Enrich lines if item_code is missing
                 void enrichLinesWithItemData(mappedData.lines || []);
             } else if (!id && lastInitializedId.current !== currentTarget) {
-                console.log('✨ [QuotationForm] Resetting with Defaults');
                 // 🛡️ Rescue: Ensure types match QuotationFormValues (convert ID strings to numbers)
                 const mergedValues: QuotationFormValues = initialData ? { 
                     ...defaultValues, 

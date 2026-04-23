@@ -103,9 +103,6 @@ export const ReservationService = {
         return { success: true, data };
     },
 
-    /**
-     * ลบ Reservation
-     */
     delete: async (id: string) => {
         logger.debug('Deleting reservation:', id);
         await new Promise(resolve => setTimeout(resolve, 500));

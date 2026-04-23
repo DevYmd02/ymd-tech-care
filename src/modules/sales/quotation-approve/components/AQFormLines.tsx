@@ -164,11 +164,18 @@ export function AQFormLines({ lines, updateLine, readOnly = false }: AQFormLines
 
                   {/* ส่วนลด */}
                   <td className={`${tdClass} text-right`}>
-                    <span className="text-orange-500 dark:text-orange-400">
-                      {line.discount_expression && line.discount_expression !== '0'
-                        ? line.discount_expression
-                        : fmt(line.discount_amount)}
-                    </span>
+                    <div className="flex flex-col items-end gap-0.5">
+                      <span className="text-orange-500 dark:text-orange-400 font-medium">
+                        {line.discount_expression && line.discount_expression !== '0'
+                          ? line.discount_expression
+                          : fmt(line.discount_amount)}
+                      </span>
+                      {String(line.discount_expression || '').includes('%') && (line.discount_amount || 0) > 0 && (
+                        <div className="text-[10px] font-bold text-red-500 dark:text-red-400 whitespace-nowrap animate-in fade-in slide-in-from-top-1 duration-200">
+                          -{fmt(line.discount_amount)}
+                        </div>
+                      )}
+                    </div>
                   </td>
 
                   {/* ยอดสุทธิเสนอ */}

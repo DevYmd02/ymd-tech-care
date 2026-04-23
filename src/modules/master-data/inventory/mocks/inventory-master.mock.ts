@@ -98,8 +98,53 @@ export const MOCK_SHELVES = createMockData<Shelf>('SHF', [
     { code: 'SHF-B2', nameTh: 'ชั้น B2', nameEn: 'Shelf B2' },
 ]);
 
-export const MOCK_LOT_NUMBERS = createMockData<LotNo>('LOT', [
-    { code: 'LOT-2024-001', nameTh: 'ล็อต 2024-001', nameEn: 'Lot 2024-001' },
-    { code: 'LOT-2024-002', nameTh: 'ล็อต 2024-002', nameEn: 'Lot 2024-002' },
-    { code: 'LOT-2024-003', nameTh: 'ล็อต 2024-003', nameEn: 'Lot 2024-003' },
-]);
+export const MOCK_LOT_NUMBERS: LotNo[] = [
+    { 
+        id: 1001, 
+        lot_no_id: 1001, 
+        code: 'LOT-2024-001', 
+        name_th: 'ล็อต 2024-001', 
+        name_en: 'Lot 2024-001', 
+        is_active: true, 
+        balance_qty: 150, 
+        sale_stock: 120,
+        warehouse_id: 1, // Main Warehouse
+        location_id: 1000, // Zone A
+        mfg_date: '2024-01-01',
+        expiry_date: '2025-01-01',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+    },
+    { 
+        id: 1002, 
+        lot_no_id: 1002, 
+        code: 'LOT-2024-002', 
+        name_th: 'ล็อต 2024-002', 
+        name_en: 'Lot 2024-002', 
+        is_active: true, 
+        balance_qty: 45, 
+        sale_stock: 30,
+        warehouse_id: 1,
+        location_id: 1001, // Zone B
+        mfg_date: '2024-02-15',
+        expiry_date: '2025-02-15',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+    },
+    { 
+        id: 1003, 
+        lot_no_id: 1003, 
+        code: 'LOT-2024-003', 
+        name_th: 'ล็อต 2024-003', 
+        name_en: 'Lot 2024-003', 
+        is_active: true, 
+        balance_qty: 500, 
+        sale_stock: 480,
+        warehouse_id: 2, // Secondary Warehouse
+        location_id: 1002, // Zone C
+        mfg_date: '2024-03-10',
+        expiry_date: '2025-03-10',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+    },
+];

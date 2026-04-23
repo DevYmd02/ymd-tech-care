@@ -216,7 +216,7 @@ export default function QuotationApproveListPage() {
               {isPending ? (
                 <button
                   onClick={() => handleOpenApproval(row)}
-                  className="h-8 px-2.5 bg-[#00a67e] hover:bg-[#008f6d] text-white rounded-lg text-[11px] font-bold shadow-sm transition-all active:scale-95 flex items-center gap-1"
+                  className="h-8 px-2.5 bg-[#00a67e] hover:bg-[#008f6d] text-white rounded-lg text-[11px] font-bold shadow-sm transition-all active:scale-95 flex items-center gap-1 whitespace-nowrap"
                 >
                   <ShieldCheck size={13} strokeWidth={2.5} />
                   พิจารณาอนุมัติ

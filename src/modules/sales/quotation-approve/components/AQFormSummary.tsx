@@ -104,7 +104,7 @@ export function AQFormSummary() {
             </div>
             {approvedDiscount > 0 && (
               <div className="flex justify-between items-center text-orange-600 dark:text-orange-400">
-                <span className="font-medium underline decoration-dotted italic">ส่วนลดท้ายบิล:</span>
+                <span className="font-medium underline decoration-dotted italic">ส่วนลดท้ายบิล ({discountExpr}):</span>
                 <span className="font-bold">- {fmt(approvedDiscount)}</span>
               </div>
             )}

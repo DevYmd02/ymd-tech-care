@@ -18,8 +18,9 @@ import type { Currency } from '@/modules/master-data/types/master-data-types';
 import type { CustomerMaster } from '@/modules/master-data/customer/customer-master/types/customer-types';
 import type { ItemListItem, UnitListItem } from '@/modules/master-data/inventory/types/product-types';
 import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
-import type { LotNo } from '@/modules/master-data/inventory/types/inventory-master.types';
+import type { LotNo, Location as LocationItem } from '@/modules/master-data/inventory/types/inventory-master.types';
 import type { EstimateHeader } from '@/modules/sales/estimate/services/estimate.service';
+import type { WarehouseListItem } from '@/modules/master-data/types/master-data-types';
 import { 
     ReservationFormSchema, 
     type ReservationFormValues, 
@@ -76,10 +77,14 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
     const [isLotSearchOpen, setIsLotSearchOpen] = useState(false);
     const [isLeadSearchOpen, setIsLeadSearchOpen] = useState(false);
     const [isAQSearchOpen, setIsAQSearchOpen] = useState(false);
-    const [activeLineIndex, setActiveLineIndex] = useState<number | null>(null);
+    const [isWarehouseSearchOpen, setIsWarehouseSearchOpen] = useState(false);
+    const [isLocationSearchOpen, setIsLocationSearchOpen] = useState(false);
 
+    const [activeLineIndex, setActiveLineIndex] = useState<number | null>(null);
     const [activeLotLineIndex, setActiveLotLineIndex] = useState<number | null>(null);
-    
+    const [activeWarehouseLineIndex, setActiveWarehouseLineIndex] = useState<number | null>(null);
+    const [activeLocationLineIndex, setActiveLocationLineIndex] = useState<number | null>(null);
+
     // React Hook Form Setup
     const methods = useForm<ReservationFormValues>({
         resolver: zodResolver(ReservationFormSchema) as Resolver<ReservationFormValues>,
@@ -166,14 +171,14 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         queryFn: () => WarehouseService.getAll(),
         enabled: isOpen
     });
-    const warehouses = warehouseResponse?.items || [];
+    const warehouses = useMemo(() => warehouseResponse?.items || [], [warehouseResponse]);
 
     const { data: locationResponse } = useQuery({
         queryKey: ['master-locations'],
         queryFn: () => LocationService.getAll({ limit: 1000 }),
         enabled: isOpen
     });
-    const locations = locationResponse?.items || [];
+    const locations = useMemo(() => locationResponse?.items || [], [locationResponse]);
 
     // Exchange Rate Sync Logic
     const isMulti = useWatch({ control, name: 'isMulticurrency' });
@@ -359,15 +364,60 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
             if (!currentLines[activeLotLineIndex]) return;
 
             const newLines = [...currentLines];
-            newLines[activeLotLineIndex] = {
-                ...newLines[activeLotLineIndex],
-                lot_no: lot.code || '',
-                reserve_policy: 'MANUAL'
-            };
+            const line = { ...newLines[activeLotLineIndex] };
+            
+            line.lot_no = lot.code || '';
+            line.reserve_policy = 'MANUAL';
+
+            // 💡 Auto-fill Warehouse/Location if they are empty
+            if (!line.warehouse_id && lot.warehouse_id) {
+                line.warehouse_id = String(lot.warehouse_id);
+            }
+            if (!line.location_id && lot.location_id) {
+                line.location_id = String(lot.location_id);
+            }
+
+            newLines[activeLotLineIndex] = line;
             setValue('lines', newLines, { shouldValidate: true, shouldDirty: true });
             setIsLotSearchOpen(false);
         }
     }, [activeLotLineIndex, getValues, setValue]);
+
+    const handleSelectWarehouse = useCallback((warehouse: WarehouseListItem) => {
+        if (activeWarehouseLineIndex !== null) {
+            const currentLines = getValues('lines') || [];
+            if (!currentLines[activeWarehouseLineIndex]) return;
+
+            const newLines = [...currentLines];
+            const line = { ...newLines[activeWarehouseLineIndex] };
+            const newWarehouseId = String(warehouse.warehouse_id);
+            
+            line.warehouse_id = newWarehouseId;
+            
+            // Auto-select first location for this warehouse
+            const firstLoc = locations.find(loc => String(loc.warehouse_id) === newWarehouseId);
+            line.location_id = firstLoc ? String(firstLoc.location_id) : '';
+            
+            newLines[activeWarehouseLineIndex] = line;
+            setValue('lines', newLines, { shouldValidate: true, shouldDirty: true });
+            setIsWarehouseSearchOpen(false);
+        }
+    }, [activeWarehouseLineIndex, getValues, setValue, locations]);
+
+    const handleSelectLocation = useCallback((location: LocationItem) => {
+        if (activeLocationLineIndex !== null) {
+            const currentLines = getValues('lines') || [];
+            if (!currentLines[activeLocationLineIndex]) return;
+
+            const newLines = [...currentLines];
+            newLines[activeLocationLineIndex] = {
+                ...newLines[activeLocationLineIndex],
+                location_id: String(location.location_id)
+            };
+            setValue('lines', newLines, { shouldValidate: true, shouldDirty: true });
+            setIsLocationSearchOpen(false);
+        }
+    }, [activeLocationLineIndex, getValues, setValue]);
 
 
 
@@ -735,10 +785,20 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         setIsLeadSearchOpen,
         isAQSearchOpen,
         setIsAQSearchOpen,
+        isWarehouseSearchOpen,
+        setIsWarehouseSearchOpen,
+        isLocationSearchOpen,
+        setIsLocationSearchOpen,
+
         activeLineIndex,
         setActiveLineIndex,
         activeLotLineIndex,
         setActiveLotLineIndex,
+        activeWarehouseLineIndex,
+        setActiveWarehouseLineIndex,
+        activeLocationLineIndex,
+        setActiveLocationLineIndex,
+
         // Handlers
         handleSubmit,
         handleAddLine,
@@ -747,9 +807,10 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         handleSelectCustomer,
         handleSelectProduct,
         handleSelectLot,
+        handleSelectWarehouse,
+        handleSelectLocation,
         handleSelectLead,
         handleSelectAQ,
         handleFetchQuotation,
     };
 };
-

@@ -134,6 +134,10 @@ export interface LotNo extends IBaseMaster {
     supplier_vendor_id?: number | string;
     item_id?: number | string;
     note?: string;
+    balance_qty?: number;
+    sale_stock?: number;
+    warehouse_id?: number;
+    location_id?: number;
 }
 
 export interface LotNoFormData extends IBaseFormData {

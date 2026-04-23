@@ -84,7 +84,7 @@ const POSummaryPanel = ({ control, taxCodes }: { control: Control<POFormData>; t
         });
 
         // Safe Math: Find tax rate with default 0 fallback
-        const selectedTax = taxCodes.find(t => Number(t.tax_code_id) === Number(taxCodeId));
+        const selectedTax = (Array.isArray(taxCodes) ? taxCodes : []).find(t => Number(t.tax_code_id) === Number(taxCodeId));
         const taxRate = selectedTax ? Number(selectedTax.tax_rate) : 0;
 
         const summary = calculatePricingSummary(items, taxRate, false);
@@ -400,7 +400,7 @@ export default function POFormModal({
                                         disabled={isView || isLoadingBranches}
                                     >
                                         <option value="">{isLoadingBranches ? 'กำลังโหลด...' : '— เลือกสาขา —'}</option>
-                                        {branches.map((o) => <option key={o.branch_id} value={o.branch_id}>{o.branch_name}</option>)}
+                                        {Array.isArray(branches) && branches.map((o) => <option key={o.branch_id} value={o.branch_id}>{o.branch_name}</option>)}
                                     </select>
                                     {errors.branch_id && <p className={ui.error}>{errors.branch_id.message}</p>}
                                 </div>
@@ -459,7 +459,7 @@ export default function POFormModal({
 
                                                 >
                                                     <option value="">{isLoadingTaxCodes ? 'กำลังโหลด...' : '— เลือกประเภทภาษี —'}</option>
-                                                    {taxCodes.map((o: TaxCode) => (
+                                                    {Array.isArray(taxCodes) && taxCodes.map((o: TaxCode) => (
                                                         <option key={o.tax_code_id} value={o.tax_code_id}>
                                                             {o.tax_code}
                                                         </option>
@@ -506,7 +506,7 @@ export default function POFormModal({
                                             disabled={isView || isLoadingCurrencies}
                                         >
                                             <option value="">{isLoadingCurrencies ? 'โหลด...' : 'เลือกสกุลเงิน'}</option>
-                                            {currencies.map((o: Currency) => <option key={o.currency_code} value={o.currency_code}>{o.currency_code} - {o.name_th}</option>)}
+                                            {Array.isArray(currencies) && currencies.map((o: Currency) => <option key={o.currency_code} value={o.currency_code}>{o.currency_code} - {o.name_th}</option>)}
                                         </select>
 
                                     </div>
@@ -521,7 +521,7 @@ export default function POFormModal({
                                             disabled={isView || isLoadingCurrencies}
                                         >
                                             <option value="">{isLoadingCurrencies ? 'โหลด...' : 'เลือกสกุลเงิน'}</option>
-                                            {currencies.map((o: Currency) => <option key={o.currency_code} value={o.currency_code}>{o.currency_code} - {o.name_th}</option>)}
+                                            {Array.isArray(currencies) && currencies.map((o: Currency) => <option key={o.currency_code} value={o.currency_code}>{o.currency_code} - {o.name_th}</option>)}
                                         </select>
 
                                     </div>
@@ -689,7 +689,7 @@ export default function POFormModal({
                                                         disabled={isView || isLockedByQC || isLoadingUnits}
                                                     >
                                                         <option value="">{isLoadingUnits ? 'โหลด...' : 'หน่วย'}</option>
-                                                        {units.map((u: UnitListItem) => <option key={u.uom_id} value={u.uom_id}>{u.uom_name || u.unit_name}</option>)}
+                                                        {Array.isArray(units) && units.map((u: UnitListItem) => <option key={u.uom_id} value={u.uom_id}>{u.uom_name || u.unit_name}</option>)}
                                                     </select>
                                                 </td>
                                                 <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">

@@ -359,8 +359,9 @@ export const usePOForm = ({
 
         const { isDirty } = getFieldState('exchange_rate');
         if (isSourceChanged || isTargetChanged || !isDirty) {
-            const sourceObj = currencies.find((c: Currency) => c.currency_code === watchCurrencyCode);
-            const targetObj = currencies.find((c: Currency) => c.currency_code === watchTargetCurrency);
+            const safeCurrencies = Array.isArray(currencies) ? currencies : [];
+            const sourceObj = safeCurrencies.find((c: Currency) => c.currency_code === watchCurrencyCode);
+            const targetObj = safeCurrencies.find((c: Currency) => c.currency_code === watchTargetCurrency);
 
             const fromRate = sourceObj?.exchange_rate || 1;
             const toRate = targetObj?.exchange_rate || 1;
@@ -561,7 +562,7 @@ export const usePOForm = ({
             // If still THB but rate != 1, try ID lookup as a last resort
             if (resolvedCode === 'THB' && finalExRate !== 1) {
                 const cId = (fullWinningVQ as any)?.currency_id || (fullWinningVQ as any)?.quote_currency_id || (fullWinningVQ as any)?.currencyId || (fullPR as any).pr_currency_id;
-                if (cId) {
+                if (cId && Array.isArray(currencies)) {
                     const match = (currencies as any[]).find(c => String(c.currency_id) === String(cId) || String(c.id) === String(cId));
                     if (match) {
                         resolvedCode = match.currency_code || match.code;
@@ -819,7 +820,7 @@ export const usePOForm = ({
     const handleSelectItemMaster = useCallback((index: number, item: ItemSelectorResult) => {
         // 🧩 Fallback matching by Name string since Backend might omit ID fields
         const anyItem = item as any;
-        const matchedUnit = units?.find(u => {
+        const matchedUnit = (Array.isArray(units) ? units : []).find(u => {
             const prodName = anyItem.uom_name || anyItem.unit_name || anyItem.base_uom_name || anyItem.sale_uom_name || '';
             if (!prodName) return false;
             return (u.uom_name === prodName) || (u.unit_name === prodName);

@@ -204,6 +204,7 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
                                         setIsProductSearchOpen(true);
                                     }}
                                     readOnly={readOnly}
+                                    currencySymbol={formData.base_currency_code || formData.currency_code || 'บาท'}
                                 />
                             </div>
                         </div>
