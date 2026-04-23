@@ -174,11 +174,18 @@ export function ReservationLineTable({
                                             disabled={isLocked}
                                             onChange={(e) => {
                                                 const val = e.target.value;
-                                                if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                                                    onLineChange(index, 'qty_reserved', val === '' ? 0 : parseFloat(val));
+                                                // 🎯 Allow up to 3 decimal places for QTY
+                                                if (val === '' || /^\d*\.?\d{0,3}$/.test(val)) {
+                                                    onLineChange(index, 'qty_reserved', val);
                                                 }
                                             }}
                                             onFocus={(e) => e.target.select()}
+                                            onBlur={(e) => {
+                                                const val = e.target.value;
+                                                if (val !== '' && !isNaN(Number(val))) {
+                                                    onLineChange(index, 'qty_reserved', Number(val).toFixed(3));
+                                                }
+                                            }}
                                             placeholder="0"
                                             maxLength={12}
                                             className={`${compactInputClass} text-right font-bold text-purple-600 dark:text-white bg-white dark:bg-gray-800 border-purple-100 dark:border-gray-700`}
@@ -250,11 +257,18 @@ export function ReservationLineTable({
                                             disabled={isLocked}
                                             onChange={(e) => {
                                                 const val = e.target.value;
-                                                if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                                                    onLineChange(index, 'unit_price', val === '' ? 0 : parseFloat(val));
+                                                // 🎯 Allow up to 2 decimal places for Price
+                                                if (val === '' || /^\d*\.?\d{0,2}$/.test(val)) {
+                                                    onLineChange(index, 'unit_price', val);
                                                 }
                                             }}
                                             onFocus={(e) => e.target.select()}
+                                            onBlur={(e) => {
+                                                const val = e.target.value;
+                                                if (val !== '' && !isNaN(Number(val))) {
+                                                    onLineChange(index, 'unit_price', Number(val).toFixed(2));
+                                                }
+                                            }}
                                             placeholder="0.00"
                                             maxLength={12}
                                             className={`${compactInputClass} text-right font-medium bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200 border-gray-200 dark:border-gray-700`}

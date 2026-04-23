@@ -136,12 +136,17 @@ export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChang
                                         value={line.qty || ''} 
                                         onChange={(e) => {
                                             const val = e.target.value;
-                                            if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                                                onLineChange(index, 'qty', val === '' ? 0 : parseFloat(val));
+                                            // 🎯 Allow up to 3 decimal places for QTY
+                                            if (val === '' || /^\d*\.?\d{0,3}$/.test(val)) {
+                                                onLineChange(index, 'qty', val);
                                             }
                                         }}
                                         onFocus={(e) => e.target.select()}
-                                        onBlur={() => {
+                                        onBlur={(e) => {
+                                            const val = e.target.value;
+                                            if (val !== '' && !isNaN(Number(val))) {
+                                                onLineChange(index, 'qty', Number(val).toFixed(3));
+                                            }
                                             if (onQtyBlur && line.item_id) onQtyBlur(index);
                                         }}
                                         placeholder="0"
@@ -149,7 +154,7 @@ export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChang
                                         disabled={readOnly}
                                         className={`${compactInputClass} text-right ${getFieldErrorClass(index, 'qty')}`}
                                     />
-                                    {hasLineFieldError(index, 'qty') && <span className="text-[10px] text-red-500 block text-right mt-0.5">ขั้นต่ำ 0.001</span>}
+                                    {hasLineFieldError(index, 'qty') && <span className="text-[10px] text-red-500 block text-right mt-0.5">ระบุจำนวน</span>}
                                 </td>
                                 <td className="px-2 py-1.5">
                                     <select 
@@ -173,11 +178,18 @@ export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChang
                                             value={line.unit_price || ''} 
                                             onChange={(e) => {
                                                 const val = e.target.value;
-                                                if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                                                    onLineChange(index, 'unit_price', val === '' ? 0 : parseFloat(val));
+                                                // 🎯 Allow up to 2 decimal places for Price
+                                                if (val === '' || /^\d*\.?\d{0,2}$/.test(val)) {
+                                                    onLineChange(index, 'unit_price', val);
                                                 }
                                             }}
                                             onFocus={(e) => e.target.select()}
+                                            onBlur={(e) => {
+                                                const val = e.target.value;
+                                                if (val !== '' && !isNaN(Number(val))) {
+                                                    onLineChange(index, 'unit_price', Number(val).toFixed(2));
+                                                }
+                                            }}
                                             placeholder="0.00"
                                             maxLength={12}
                                             disabled={isFetchingPrice || readOnly}
