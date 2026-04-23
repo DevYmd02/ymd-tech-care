@@ -66,6 +66,14 @@ export interface AQHeader {
   sale_area_name?: string;
   emp_sale_id?: number;
   emp_sale_name?: string;
+
+  // Lines
+  aq_lines?: AQLine[];
+  lines?: AQLine[];
+}
+
+export interface AQDetail extends AQHeader {
+  aq_lines: AQLine[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

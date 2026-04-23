@@ -42,7 +42,7 @@ export const AQService = {
   },
 
   /**
-   * ดึงรายละเอียด SQ รายตัว (เพื่อ clone ข้อมูลเข้า form)
+   * ดึงรายละเอียด SQ รายตัว (เพื่อ clone ข้อมูลเข้า form โดยใช้ service หลักที่ผ่านการแมปแล้ว)
    */
   getSQById: async (sqId: string | number): Promise<unknown> => {
     return await QuotationService.getById(sqId);

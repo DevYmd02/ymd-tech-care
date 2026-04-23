@@ -71,6 +71,10 @@ export const useAQListData = (params: UseAQListDataParams) => {
     });
     return map;
   }, [customerResponse]);
+  
+  const getSqHeader = (obj: Record<string, unknown>) => {
+    return (obj.sq_header || obj.sq || obj.sale_quotation || obj.quotation || obj.sale_quotation_header) as Record<string, unknown> | undefined;
+  };
 
   const mergedData = useMemo((): AQListItem[] => {
     // 1. Extract History
@@ -153,7 +157,8 @@ export const useAQListData = (params: UseAQListDataParams) => {
       const r = raw as Record<string, unknown>;
       const sqId = Number(r.sq_id || r.id || 0);
       const cid = String(r.customer_id || '');
-      const customerNameFallback = customerMap.get(cid) || String(r.customer_name || r.customer_name_th || '');
+      const rawCustomerName = String(r.customer_name || r.customer_name_th || r.cust_name || '');
+      const customerNameFallback = customerMap.get(cid) || (rawCustomerName.includes('Customer ID:') ? '' : rawCustomerName);
 
       return {
         row_key: `pending-${sqId}`,
@@ -164,7 +169,7 @@ export const useAQListData = (params: UseAQListDataParams) => {
         customer_code: String(r.customer_code || ''),
         status: 'PENDING',
         quote_total_amount: Number(r.quote_total_amount || r.total_amount || 0),
-        base_total_amount: Number(r.quote_total_amount || r.total_amount || 0) * Number(r.exchange_rate || (r.rawData as Record<string, unknown>)?.exchange_rate || (r.raw as Record<string, unknown>)?.exchange_rate || 1),
+        base_total_amount: Number(r.base_total_amount || (Number(r.quote_total_amount || r.total_amount || 0) * Number(r.exchange_rate || (r.rawData as Record<string, unknown>)?.exchange_rate || (r.raw as Record<string, unknown>)?.exchange_rate || 1))),
         currency: String(r.currency || r.quote_currency_code || r.currency_code || 'THB'),
         raw: r,
       } satisfies AQListItem;
@@ -173,13 +178,24 @@ export const useAQListData = (params: UseAQListDataParams) => {
     // 5. Map History rows
     const historyRows: AQListItem[] = aqHistory.map((aq, index) => {
         const obj = aq as Record<string, unknown>;
-        const sqObj = (obj.sq || obj.sale_quotation || obj.quotation || obj.sale_quotation_header) as Record<string, unknown> | undefined;
+        const sqObj = getSqHeader(obj);
         const sqId = getAnyId(obj);
-        const sqNo = String(obj.sq_no || obj.sale_quotation_no || sqObj?.sq_no || sqObj?.code || sqObj?.no || '');
-        const sqDate = String(obj.sq_date || obj.sale_quotation_date || sqObj?.sq_date || sqObj?.date || obj.aq_date || '').split('T')[0];
+        const sqNo = String(
+          obj.sq_no || 
+          obj.sale_quotation_no || 
+          obj.quotation_no || 
+          obj.ref_no || 
+          obj.ref_sq_no ||
+          sqObj?.sq_no || 
+          sqObj?.code || 
+          sqObj?.no || 
+          ''
+        );
+        const sqDate = String(obj.sq_date || obj.sale_quotation_date || sqObj?.sq_date || sqObj?.date || obj.aq_date || obj.created_at || '').split('T')[0];
         const cid = String(obj.customer_id || sqObj?.customer_id || sqObj?.id_customer || '');
-        const customerName = customerMap.get(cid) || String(obj.customer_name || obj.customer_name_th || sqObj?.customer_name || sqObj?.customer_name_th || '');
-        const customerCode = String(obj.customer_code || sqObj?.customer_code || sqObj?.code || '');
+        const rawCustomerName = String(obj.customer_name || obj.customer_name_th || obj.customer_name_en || sqObj?.customer_name || sqObj?.customer_name_th || obj.cust_name || '');
+        const customerName = customerMap.get(cid) || (rawCustomerName.includes('Customer ID:') ? '' : rawCustomerName);
+        const customerCode = String(obj.customer_code || sqObj?.customer_code || sqObj?.code || obj.cust_code || '');
         const rawQuoteAmount = Number(obj.quote_total_amount || obj.base_total_amount || 0);
         const sqTotalAmount = Number(sqObj?.quote_total_amount || sqObj?.base_total_amount || sqObj?.total_amount || 0);
         
@@ -199,7 +215,7 @@ export const useAQListData = (params: UseAQListDataParams) => {
           status: String(obj.status || 'PENDING'),
           approval_emp_name: String(obj.approval_emp_name || ''),
           quote_total_amount: displayQuoteAmount,
-          base_total_amount: displayQuoteAmount * Number(obj.exchange_rate || 1),
+          base_total_amount: Number(obj.base_total_amount || sqObj?.base_total_amount || (displayQuoteAmount * Number(obj.exchange_rate || 1))),
           currency: String(obj.currency || obj.quote_currency_code || obj.currency_code || 'THB'),
           raw: obj,
         } satisfies AQListItem;

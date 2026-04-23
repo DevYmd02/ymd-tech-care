@@ -27,7 +27,7 @@ export const QuotationLineSchema = z.object({
  */
 export const QuotationFormSchema = z.object({
     sq_id: z.string().optional(),
-    sq_no: z.string().min(1, 'กรุณาระบุเลขที่ใบเสนอราคา'),
+    sq_no: z.string().optional().or(z.literal('')),
     sq_date: z.string().min(1, 'กรุณาระบุวันที่'),
     lead_id: z.union([z.string(), z.number()]).or(z.literal('')).nullable().optional().transform(v => v === '' ? null : v),
     customer_id: z.coerce.number().min(1, 'กรุณาเลือกลูกค้า'),
@@ -48,12 +48,12 @@ export const QuotationFormSchema = z.object({
     remarks: z.string().optional(),
     payment_term_days: z.coerce.number().default(0),
     onhold: z.enum(['Y', 'N']).default('N'),
-    tax_code_id: z.coerce.number().nullable().optional(),
+    tax_code_id: z.coerce.number().min(1, 'กรุณาเลือกประเภทภาษี'),
     item_id: z.coerce.number().nullable().optional().transform(v => v === 0 ? null : v), // Item/Service Class
-    sale_area_id: z.coerce.number().nullable().optional(),
+    sale_area_id: z.coerce.number().min(1, 'กรุณาเลือกเขตการขาย'),
     emp_sale_id: z.coerce.number().min(1, 'กรุณาเลือกพนักงานขาย'),
-    emp_dept_id: z.coerce.number().nullable().optional(),
-    project_id: z.coerce.number().nullable().optional(),
+    emp_dept_id: z.coerce.number().min(1, 'กรุณาเลือกแผนก'),
+    project_id: z.coerce.number().min(1, 'กรุณาเลือกโครงการ'),
     sq_status: z.string().optional(),
     status_remark: z.string().optional(),
     lines: z.array(QuotationLineSchema).min(1, 'กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ'),
@@ -66,7 +66,7 @@ export type QuotationLineValues = z.infer<typeof QuotationLineSchema>;
  * ค่าเริ่มต้นสำหรับฟอร์มใบเสนอราคา
  */
 export const getQuotationDefaultValues = (): QuotationFormValues => ({
-    sq_no: 'SQ-XXX',
+    sq_no: '',
     sq_date: new Date().toISOString().split('T')[0],
     customer_id: 0,
     currency_code: 'THB',

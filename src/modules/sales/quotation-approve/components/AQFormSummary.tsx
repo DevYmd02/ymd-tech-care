@@ -11,9 +11,8 @@ export function AQFormSummary() {
   const { watch } = useFormContext<AQFormData>();
 
   const lines = watch('lines') || [];
-  const docCurrency = watch('base_currency_code') || 'THB';
-
-  const systemCurrency = watch('quote_currency_code') || 'THB';
+  const docCurrency = watch('quote_currency_code') || 'THB';
+  const systemCurrency = watch('base_currency_code') || 'THB';
   const exchangeRate = watch('exchange_rate') || 1;
   const subTotal = watch('sub_total') || 0;
   const quoteTotal = watch('quote_total_amount') || 0;
@@ -126,11 +125,12 @@ export function AQFormSummary() {
               
               <div className="mt-1 flex items-center gap-2">
                 <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded text-[10px] font-bold uppercase tracking-widest">
-                  {docCurrency}
+                  {/* 🛡️ SMART SYMBOL: Use Base (USD) for main total if it's foreign, otherwise use Quote */}
+                  {(systemCurrency !== 'THB' || docCurrency === 'THB') ? systemCurrency : docCurrency}
                 </span>
                 {isMC && (
                   <span className="text-[10px] text-gray-400 italic">
-                    ( ≈ {fmt(finalApprovedTotalDisplay * exchangeRate)} {systemCurrency} )
+                    ( ≈ {fmt(isFullApproval && (watch('base_total_amount') || 0) > 0 ? (watch('base_total_amount') || 0) : (finalApprovedTotalDisplay * exchangeRate))} {(systemCurrency !== 'THB' || docCurrency === 'THB') ? docCurrency : systemCurrency} )
                   </span>
                 )}
 

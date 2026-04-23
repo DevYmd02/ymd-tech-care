@@ -91,6 +91,7 @@ export const getReservationDefaultValues = (): Partial<ReservationFormValues> =>
     emp_sale_id: '',
     emp_dept_id: '',
     job_id: '',
+    remarks: '',
     ship_date: new Date().toISOString().split('T')[0],
     lines: [],
 });

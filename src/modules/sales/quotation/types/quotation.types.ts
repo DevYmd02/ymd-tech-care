@@ -44,6 +44,13 @@ export interface RawQuotationLine {
     source_name?: string;
     price_source?: number | string;
     price_source_name?: string;
+    // Alternative names from different API versions
+    product_id?: string | number;
+    product_code?: string;
+    product_name?: string;
+    code?: string;
+    name?: string;
+    unit_id?: string | number;
 }
 
 export interface RawQuotationData {
@@ -51,7 +58,16 @@ export interface RawQuotationData {
     sq_no?: string;
     sq_date?: string;
     customer_id?: string | number;
+    base_currency_code?: string;
+    quote_currency_code?: string;
     currency_code?: string;
+    exchange_rate?: number | string;
+    exchange_rate_date?: string;
+    quote_currency?: { currency_code: string; [key: string]: unknown };
+    base_currency?: { currency_code: string; [key: string]: unknown };
+    currency?: string;
+    rate?: number | string;
+    exchangeRate?: number | string;
     status?: string;
     sub_total?: number | string;
     discount_amount?: number | string;
@@ -120,6 +136,7 @@ export interface QuotationHeader {
     customer_name: string;
     customer_code: string;
     total_amount: number;
+    base_total_amount?: number;
     currency: string;
     status: string;
     expiry_date: string;

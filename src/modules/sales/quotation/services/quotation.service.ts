@@ -68,7 +68,9 @@ export class QuotationService {
                 // 📡 Explicitly map relation IDs to satisfy backend 'connect' mandatory requirements
                 branch_id: item.branch_id ? Number(item.branch_id) : null,
                 lead_id: item.lead_id || null,
+                // 🔍 Data Integrity: Prioritize base_total_amount (.99) over total_amount (.90)
                 total_amount: Number(item.quote_total_amount || 0),
+                base_total_amount: Number(item.base_total_amount || item.total_amount || 0),
                 currency: item.quote_currency_code || 'THB',
                 status: item.status as QuotationHeader['status'],
                 expiry_date: item.valid_until || '',
@@ -85,9 +87,7 @@ export class QuotationService {
         };
 
         const rawItems = extractArrayFromResponse<QuotationListItem>(response as object);
-        if (rawItems.length > 0) {
-            console.log('📋 [QuotationService] Raw First Item from List:', rawItems[0]);
-        }
+
         const allItems = rawItems.map(normalizeItem);
 
         // 2. Client-Side Filtering Fallback
@@ -134,11 +134,7 @@ export class QuotationService {
             
             const response = await api.get<RawQuotationData & WrappedRawResponse>(ENDPOINTS.detail(String(id)));
             
-            // 🚨 CRITICAL DIAGNOSTIC: Log the raw data so we can see exactly what the backend sends
-            console.info(`[QuotationService] 🚨 RAW DATA for ID ${id}:`, response);
-            if (response && typeof response === 'object') {
-                console.info('[QuotationService] Keys found:', Object.keys(response as object));
-            }
+
 
             // 🧪 Smart Mapping Logic: Parse strings and isolate the core quotation object
             let extracted: unknown = response;
@@ -166,6 +162,15 @@ export class QuotationService {
                                  (Array.isArray(rObj.saleQuotationLines) ? rObj.saleQuotationLines : []);
                     extracted = { ...header, saleQuotationLines: lines };
                 }
+                else if (rObj.rawData !== undefined && typeof rObj.rawData === 'object') {
+                    // 🛡️ CRITICAL FIX: Extract from rawData wrapper (as seen in debug logs)
+                    const rd = rObj.rawData as Record<string, unknown>;
+                    const lines = Array.isArray(rObj.lines) ? rObj.lines : 
+                                 (Array.isArray(rObj.saleQuotationLines) ? rObj.saleQuotationLines : 
+                                 (Array.isArray(rd.lines) ? rd.lines : 
+                                 (Array.isArray(rd.saleQuotationLines) ? rd.saleQuotationLines : [])));
+                    extracted = { ...rd, saleQuotationLines: lines };
+                }
                 // Shape C: Named Object
                 else if (rObj.sale_quotation !== undefined) {
                     extracted = rObj.sale_quotation;
@@ -174,12 +179,27 @@ export class QuotationService {
                 }
             }
 
-            // 2. Handle single-item arrays gracefully (common in some backend architectures)
-            const finalObject: unknown = Array.isArray(extracted) ? extracted[0] : extracted;
+            // 2. Handle single-item arrays gracefully
+            let finalObject: unknown = Array.isArray(extracted) ? extracted[0] : extracted;
 
-            // 3. Final structural validation with Silence & Resilience
+            // 🚨 Fallback: if Shape A (data) was null/empty but the root object has quotation properties
+            if ((!finalObject || typeof finalObject !== 'object') && response && typeof response === 'object' && !Array.isArray(response)) {
+                const r = response as Record<string, unknown>;
+                if (r.sq_id || r.sq_no || r.id) {
+                    finalObject = response;
+                }
+            }
+
+            // 3. Final structural validation
             if (!finalObject || typeof finalObject !== 'object' || Array.isArray(finalObject)) {
-                logger.warn(`[QuotationService] Normalization failed for ID: ${id}. Final object is invalid.`);
+                // Silenced redundant warning as per user request (Normalization failed usually means empty detail handled by fallback)
+                /*
+                console.warn(`[QuotationService] Normalization failed for ID: ${id}.`, {
+                    response,
+                    extracted,
+                    finalObject
+                });
+                */
                 return null;
             }
 
@@ -203,7 +223,7 @@ export class QuotationService {
                 const firstArray = Object.keys(raw).find(k => Array.isArray(raw[k]) && (raw[k] as unknown[]).length > 0);
                 if (firstArray) rawLines = raw[firstArray] as unknown[];
             }
-
+            
             // 3. Assemble the final strictly-typed object
             const { lines: _rawLines, saleQuotationLines: _rawSaleLines, ...safeRaw } = raw;
             
@@ -212,25 +232,45 @@ export class QuotationService {
                 logger.debug('[QuotationService] Mapping raw line data into strictly typed lines');
             }
 
+            // 🕵️ Aggressive ID & Field Discovery helper
+            const pick = (pref: string, ...fallbacks: string[]) => {
+                if (raw[pref] !== undefined && raw[pref] !== null) return raw[pref];
+                for (const f of fallbacks) {
+                    if (raw[f] !== undefined && raw[f] !== null) return raw[f];
+                }
+                return undefined;
+            };
+
             const result: QuotationFormData = {
                 ...safeRaw,
                 sq_id: raw.sq_id,
                 sq_no: raw.sq_no || '',
                 sq_date: raw.sq_date || '',
                 customer_id: raw.customer_id || 0,
-                currency_code: raw.currency_code || 'THB',
-                status: raw.status || 'DRAFT',
+                currency_code: (() => {
+                    const q = String(raw.quote_currency_code || raw.quote_currency?.currency_code || raw.quote_currency?.code || raw.currency_code || raw.currency || raw.id_currency || raw.currency_id || raw.currency_id_code || 'THB');
+                    const b = String(raw.base_currency_code || raw.base_currency?.currency_code || raw.base_currency?.code || raw.currency_code || 'THB');
+                    return (b !== 'THB' && q === 'THB') ? b : q;
+                })(),
+                base_currency_code: String(raw.base_currency_code || raw.base_currency?.currency_code || raw.base_currency?.code || 'THB'),
+                quote_currency_code: String(raw.quote_currency_code || raw.quote_currency?.currency_code || raw.quote_currency?.code || 'THB'),
+                exchange_rate: Number(raw.exchange_rate || raw.rate || raw.exchangeRate || 1),
+                exchange_rate_date: String(raw.exchange_rate_date || raw.sq_date || raw.date || ''),
+                status: String(raw.status || 'DRAFT'),
                 sub_total: Number(raw.sub_total || 0),
-                discount_amount: Number(raw.discount_amount || 0),
+                discount_expression: String(raw.discount_expression || raw.discount_input || raw.discount_rate_expression || '0'),
+                discount_amount: Number(raw.discount_amount || raw.quote_discount_amount || 0),
                 vat_amount: Number(raw.vat_amount || 0),
                 total_amount: Number(raw.total_amount || 0),
-                payment_term_days: Number(raw.payment_term_days || 0),
+                payment_term_days: Number(pick('payment_term_days', 'payment_term', 'credit_term', 'credit_days') || 0),
                 onhold: raw.onhold || 'N',
                 remarks: raw.remarks || '',
-                sale_area_id: raw.sale_area_id !== undefined 
-                    ? Number(raw.sale_area_id) 
-                    : (raw.emp_area_id !== undefined ? Number(raw.emp_area_id) : undefined),
-                emp_sale_id: raw.emp_sale_id !== undefined ? Number(raw.emp_sale_id) : undefined,
+                tax_code_id: pick('tax_code_id', 'tax_id', 'vat_id', 'id_tax') !== undefined ? Number(pick('tax_code_id', 'tax_id', 'vat_id', 'id_tax')) : undefined,
+                sale_area_id: pick('sale_area_id', 'emp_area_id', 'area_id', 'id_area') !== undefined ? Number(pick('sale_area_id', 'emp_area_id', 'area_id', 'id_area')) : undefined,
+                emp_sale_id: pick('emp_sale_id', 'sale_id', 'emp_id_sale', 'id_sale') !== undefined ? Number(pick('emp_sale_id', 'sale_id', 'emp_id_sale', 'id_sale')) : undefined,
+                emp_dept_id: pick('emp_dept_id', 'dept_id', 'department_id', 'id_dept') !== undefined ? Number(pick('emp_dept_id', 'dept_id', 'department_id', 'id_dept')) : undefined,
+                project_id: pick('project_id', 'job_id', 'id_project', 'project') !== undefined ? Number(pick('project_id', 'job_id', 'id_project', 'project')) : undefined,
+                job_id: pick('job_id', 'project_id', 'id_project') !== undefined ? Number(pick('job_id', 'project_id', 'id_project')) : undefined,
                 lines: Array.isArray(rawLines) ? (rawLines as RawQuotationLine[]).map(line => {
                     const sourceVal = line.price_source !== undefined ? line.price_source : line.source;
                     const sourceNameRaw = line.price_source_name || line.source_name || line.sourceName || '';
@@ -302,10 +342,11 @@ export class QuotationService {
             remarks: data.remarks || '',
             payment_term_days: Number(data.payment_term_days) || 0,
             onhold: data.onhold || 'N',
-            base_currency_code: data.base_currency_code || 'THB',
-            quote_currency_code: data.quote_currency_code || 'THB',
+            // 🛡️ Fix: Use fallback chain to ensure currency and rate aren't reset to THB/1 during partial updates
+            base_currency_code: data.base_currency_code || data.currency_code || 'THB',
+            quote_currency_code: data.quote_currency_code || data.currency_code || 'THB',
             exchange_rate: Number(data.exchange_rate ?? 1),
-            discount_expression: data.discount_expression || '0',
+            discount_expression: data.discount_expression !== undefined ? data.discount_expression : '0',
         };
 
         // 📡 Conditional Field Inclusion (Only if present and not 0/null/undefined for IDs)
@@ -314,7 +355,7 @@ export class QuotationService {
 
         // 🛡️ Ensure exchange_rate_date is never empty for the backend, defaulting to today or sq_date if necessary
         const xrDate = data.exchange_rate_date || data.sq_date || new Date().toISOString().split('T')[0];
-        payload.exchange_rate_date = toISOString(xrDate);
+        payload.exchange_rate_date = toISOString(xrDate) || undefined;
         
         // 🛡️ PROTECTION: Only include relation IDs if they are valid positive numbers
         const isValidId = (id: unknown): boolean => {
