@@ -189,7 +189,7 @@ export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChang
                                             </div>
                                         )}
                                     </div>
-                                    {sourceInfo && !isFetchingPrice && (
+                                    {sourceInfo && !isFetchingPrice && (Number(line.unit_price) > 0) && (
                                         <div
                                             className={`inline-flex items-center gap-0.5 mt-0.5 px-1.5 py-0 rounded text-[9px] font-semibold border ${sourceInfo.cls}`}
                                             title={sourceInfo.label}

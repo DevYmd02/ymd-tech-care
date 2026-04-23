@@ -39,6 +39,10 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
     // Pricing State
     const [loadingPriceLines, setLoadingPriceLines] = useState<Set<number>>(new Set());
     
+    // 🛡️ Refs to track header changes for pricing synchronization
+    const lastCustomerRef = useRef<number | null>(null);
+    const lastBranchRef = useRef<number | null>(null);
+    
     // React Hook Form Setup
     const methods = useForm<QuotationFormValues>({
         resolver: zodResolver(QuotationFormSchema) as Resolver<QuotationFormValues>,
@@ -651,21 +655,26 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
                 if (!updatedLines[index]) return;
                 
                 const updatedLine = { ...updatedLines[index] };
-                updatedLine.unit_price = resolvedPrice.unitPrice;
-                updatedLine.price_source = resolvedPrice.source;
-                updatedLine.price_source_name = resolvedPrice.sourceName;
+                const newPrice = Number(resolvedPrice.unitPrice);
+                const currentPrice = Number(updatedLine.unit_price || 0);
 
-                // Re-calc line discount and total
-                const qty = Number(updatedLine.qty) || 0;
-                const price = resolvedPrice.unitPrice;
-                const ldInput = updatedLine.discount_expression || '';
-                const calculatedLD = calculateDiscountAmount(qty * price, ldInput);
-                
-                updatedLine.line_discount = calculatedLD;
-                updatedLine.line_total = calculateLineTotal(qty, price, calculatedLD);
+                // 🛡️ Defensive Check: Only overwrite if new price is valid or current is 0
+                if (newPrice > 0 || currentPrice === 0) {
+                    updatedLine.unit_price = newPrice;
+                    updatedLine.price_source = resolvedPrice.source;
+                    updatedLine.price_source_name = resolvedPrice.sourceName;
 
-                updatedLines[index] = updatedLine;
-                setValue('lines', updatedLines, { shouldValidate: true, shouldDirty: true });
+                    // Re-calc line discount and total
+                    const qty = Number(updatedLine.qty) || 0;
+                    const discExpr = updatedLine.discount_expression || '';
+                    const calculatedLD = calculateDiscountAmount(qty * newPrice, discExpr);
+                    
+                    updatedLine.line_discount = calculatedLD;
+                    updatedLine.line_total = calculateLineTotal(qty, newPrice, calculatedLD);
+
+                    updatedLines[index] = updatedLine;
+                    setValue('lines', updatedLines, { shouldValidate: true, shouldDirty: true });
+                }
             }
         } finally {
             setLoadingPriceLines(prev => {
@@ -675,6 +684,126 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
             });
         }
     }, [getValues, setValue]);
+    
+    /**
+     * 🔄 Batch Sync: Refreshes all line prices when Customer or Branch changes
+     */
+    const refreshAllLinePrices = useCallback(async () => {
+        const values = getValues();
+        const branch_id = Number(values.branch_id || 0);
+        const customer_id = Number(values.customer_id || 0);
+        const lines = values.lines || [];
+
+        if (lines.length === 0) return;
+
+        logger.info('🔄 [QuotationForm] Header changed. Synchronizing line prices...', { customer_id, branch_id });
+        
+        const updatedLines = [...lines];
+        let hasChanges = false;
+
+        const promises = updatedLines.map(async (line, index) => {
+            if (!line.item_id || line.item_id === 0) return;
+
+            // Case A: Missing Header Data -> Reset system sources
+            if (customer_id === 0 || branch_id === 0) {
+                if (line.price_source_name && line.price_source_name !== 'MANUAL') {
+                    updatedLines[index] = {
+                        ...line,
+                        price_source: undefined,
+                        price_source_name: undefined, // Clears the "Price Level/List" badge
+                    };
+                    hasChanges = true;
+                }
+                return;
+            }
+
+            // Case B: Header Data Present -> Fetch from Pricing Engine
+            try {
+                const result = await PricingService.calculatePrice({
+                    itemId: line.item_id,
+                    qty: Number(line.qty) || 1,
+                    branchId: branch_id,
+                    customerId: customer_id
+                });
+
+                if (result) {
+                    const price = Number(result.unitPrice);
+                    const qty = Number(line.qty) || 1;
+                    const discExpr = line.discount_expression || '';
+                    
+                    // 🛡️ Defensive Check: Only overwrite if the pricing engine found a valid non-zero price
+                    // OR if the current price is already 0. We don't want to overwrite a manual price with 0
+                    // if the pricing engine simply doesn't have a rule for this item.
+                    const currentPrice = Number(line.unit_price || 0);
+                    const isNewPriceValid = price > 0;
+                    
+                    if (isNewPriceValid || currentPrice === 0) {
+                        const calcDiscount = calculateDiscountAmount(qty * price, discExpr);
+                        updatedLines[index] = {
+                            ...line,
+                            unit_price: price,
+                            price_source: result.source,
+                            price_source_name: result.sourceName,
+                            line_discount: calcDiscount,
+                            line_total: calculateLineTotal(qty, price, calcDiscount)
+                        };
+                        hasChanges = true;
+                    } else {
+                        // Pricing engine returned 0 but we already have a manual/previous price.
+                        // We should at least clear the "Price List/Level" source if it was from the OLD customer.
+                        if (line.price_source_name && line.price_source_name !== 'MANUAL') {
+                            updatedLines[index] = {
+                                ...line,
+                                price_source: undefined,
+                                price_source_name: undefined,
+                            };
+                            hasChanges = true;
+                        }
+                    }
+                } else {
+                    // No specific price found for this customer/branch combination
+                    if (line.price_source_name && line.price_source_name !== 'MANUAL') {
+                        updatedLines[index] = {
+                            ...line,
+                            price_source: undefined,
+                            price_source_name: undefined,
+                        };
+                        hasChanges = true;
+                    }
+                }
+            } catch (err) {
+                logger.warn(`[QuotationForm] Price refresh failed for line ${index}`, err);
+            }
+        });
+
+        await Promise.all(promises);
+
+        if (hasChanges) {
+            setValue('lines', updatedLines, { shouldValidate: true, shouldDirty: true });
+            logger.info('✨ [QuotationForm] Line prices synchronized with header changes');
+        }
+    }, [getValues, setValue]);
+
+    // 🕵️ Watcher: Trigger price sync when Customer or Branch changes
+    const watchedCustomerId = useWatch({ control, name: 'customer_id' });
+    const watchedBranchId = useWatch({ control, name: 'branch_id' });
+
+    useEffect(() => {
+        const cId = Number(watchedCustomerId || 0);
+        const bId = Number(watchedBranchId || 0);
+
+        // Run whenever either field changes from its previous value
+        const hasCustomerChanged = lastCustomerRef.current !== null && lastCustomerRef.current !== cId;
+        const hasBranchChanged = lastBranchRef.current !== null && lastBranchRef.current !== bId;
+
+        if (hasCustomerChanged || hasBranchChanged) {
+            void refreshAllLinePrices();
+        }
+
+        // Keep track of current state
+        lastCustomerRef.current = cId;
+        lastBranchRef.current = bId;
+    }, [watchedCustomerId, watchedBranchId, refreshAllLinePrices]);
 
     const handleSelectCustomer = useCallback((customer: CustomerMaster) => {
         setValue('customer_id', Number(customer.customer_id || customer.id || 0), { shouldValidate: true });
