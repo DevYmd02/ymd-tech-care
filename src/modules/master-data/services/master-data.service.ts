@@ -91,7 +91,7 @@ export const MasterDataService = {
 
   getUnits: async (): Promise<UnitListItem[]> => {
     try {
-      const response = await UnitService.getAll();
+      const response = await UnitService.getAll({ limit: 1000 });
       return response.items || [];
     } catch (error) {
       logger.error('[MasterDataService] getUnits failed:', error);

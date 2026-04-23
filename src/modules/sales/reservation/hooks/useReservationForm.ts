@@ -13,6 +13,7 @@ import { SaleAreaService } from '@/modules/master-data/sales/pages/area/services
 import { QuotationService } from '@/modules/sales/quotation/services/quotation.service';
 import type { QuotationFormData } from '@/modules/sales/quotation/types/quotation.types';
 import { toast } from 'react-hot-toast';
+import { logger } from '@/shared/utils/logger';
 
 import type { Currency } from '@/modules/master-data/types/master-data-types';
 import type { CustomerMaster } from '@/modules/master-data/customer/customer-master/types/customer-types';
@@ -99,15 +100,6 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
     const lastInitializedId = useRef<string | null | 'new'>(null);
     const defaultValues = useMemo(() => getReservationDefaultValues(), []);
 
-    useEffect(() => {
-        const currentTarget = id || 'new';
-        if (isOpen && lastInitializedId.current !== currentTarget) {
-            reset(initialData ? { ...defaultValues, ...initialData } : defaultValues);
-            lastInitializedId.current = currentTarget;
-        } else if (!isOpen) {
-            lastInitializedId.current = null;
-        }
-    }, [isOpen, initialData, reset, defaultValues, id]);
 
     // Data Fetching
     const { data: branches = [] } = useQuery({
@@ -180,6 +172,43 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
     });
     const locations = useMemo(() => locationResponse?.items || [], [locationResponse]);
 
+    // 🏗️ Initialization Guard: Wait for critical master data
+    useEffect(() => {
+        const currentTarget = id || 'new';
+
+        const isMasterDataReady = (
+            (branches?.length > 0 || !isOpen) && 
+            (taxCodes?.length > 0 || !isOpen) && 
+            (uoms?.length > 0 || !isOpen)
+        );
+
+        if (isOpen && !isMasterDataReady) {
+            logger.debug('⏳ [ReservationForm] Waiting for master data...', {
+                branches: branches?.length,
+                taxCodes: taxCodes?.length,
+                uoms: uoms?.length
+            });
+            return;
+        }
+
+        if (isOpen && lastInitializedId.current !== currentTarget) {
+            reset(initialData ? { ...defaultValues, ...initialData } : defaultValues);
+            lastInitializedId.current = currentTarget;
+        } else if (!isOpen) {
+            lastInitializedId.current = null;
+        }
+    }, [
+        isOpen, 
+        initialData, 
+        reset, 
+        defaultValues, 
+        id, 
+        branches?.length, 
+        taxCodes?.length, 
+        uoms?.length,
+        currencies?.length
+    ]);
+
     // Exchange Rate Sync Logic
     const isMulti = useWatch({ control, name: 'isMulticurrency' });
     const sourceCurrency = useWatch({ control, name: 'base_currency_code' });
@@ -193,8 +222,9 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
             return;
         }
 
-        const sourceObj = currencies?.find((c: Currency) => c.currency_code === sourceCurrency);
-        const targetObj = currencies?.find((c: Currency) => c.currency_code === targetCurrency);
+        const safeCurrencies = Array.isArray(currencies) ? currencies : [];
+        const sourceObj = safeCurrencies.find((c: Currency) => c.currency_code === sourceCurrency);
+        const targetObj = safeCurrencies.find((c: Currency) => c.currency_code === targetCurrency);
 
         const fromRate = sourceObj?.exchange_rate || 1;
         const toRate = targetObj?.exchange_rate || (targetCurrency === 'THB' ? 1 : 1);
@@ -231,7 +261,8 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         }
 
         const amountAfterDiscount = calculatedSubTotal - calculatedDiscount;
-        const selectedTaxCode = taxCodes.find(t => String(t.tax_code_id) === String(taxCodeId));
+        const safeTaxCodes = Array.isArray(taxCodes) ? taxCodes : [];
+        const selectedTaxCode = safeTaxCodes.find(t => String(t.tax_code_id) === String(taxCodeId));
         const taxRate = selectedTaxCode ? (Number(selectedTaxCode.tax_rate) || 0) : 0;
         
         // VAT should be calculated AFTER discount
@@ -341,9 +372,10 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
             
             const productUomId = product.uom_id || product.unit_id;
             const productUomName = product.uom_name || product.base_uom_name || product.unit_name;
-            const foundUom = uoms.find((u: UnitListItem) => 
-                (productUomId && (u.id === productUomId || u.unit_id === productUomId)) ||
-                (productUomName && (u.unit_name === productUomName || u.uom_name === productUomName))
+            const safeUoms = Array.isArray(uoms) ? uoms : [];
+            const foundUom = safeUoms.find((u: UnitListItem) => 
+                (productUomId && (String(u.id) === String(productUomId) || String(u.unit_id) === String(productUomId))) ||
+                (productUomName && (u.unit_name?.trim() === productUomName?.trim() || u.uom_name?.trim() === productUomName?.trim()))
             );
 
             line.uom_id = foundUom ? String(foundUom.id || foundUom.unit_id) : String(productUomId || productUomName || 'PCS');

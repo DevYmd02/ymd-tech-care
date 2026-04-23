@@ -41,13 +41,32 @@ export const UnitService = {
             logger.info('🎭 [Mock Mode] Serving Unit List');
             return { items: mockUnits, total: mockUnits.length, page: 1, limit: 100 };
         }
+
         try {
-            // ✅ interceptor unwrap แล้ว → ได้ array ตรงๆ
-            const response = await api.get<UomResponse[]>('/uom', { params });
-            const items = response.map(mapUomToUnit);
-            return { items, total: items.length, page: 1, limit: items.length || 10 };
+            // 💡 resilient parsing: handle both raw array and wrapped response
+            type UomListResponse = UomResponse[] | { items?: UomResponse[]; data?: UomResponse[] };
+            const response = await api.get<UomListResponse>('/uom', { params });
+            logger.info('📡 [UnitService] getAll raw response:', response);
+
+            let rawData: UomResponse[] = [];
+            if (Array.isArray(response)) {
+                rawData = response;
+            } else if (response && typeof response === 'object') {
+                rawData = response.items || response.data || [];
+            }
+            
+            logger.info(`📦 [UnitService] Found ${rawData.length} raw units`);
+
+            const items = rawData.map(mapUomToUnit);
+            logger.info(`✅ [UnitService] Mapped ${items.length} units:`, items.slice(0, 3));
+            return { 
+                items, 
+                total: items.length, 
+                page: params?.page || 1, 
+                limit: params?.limit || items.length || 10 
+            };
         } catch (error) {
-            logger.error('[UnitService] getAll error:', error);
+            logger.error('❌ [UnitService] getAll failed:', error);
             return { items: [], total: 0, page: 1, limit: 10 };
         }
     },
