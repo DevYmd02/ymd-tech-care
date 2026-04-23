@@ -67,6 +67,7 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
         handleLinePriceSync,
         loadingPriceLines,
         isLoadingDetail,
+        priceLevelNames,
     } = useQuotationForm(isOpen, id, initialData);
 
     const { setValue } = methods;
@@ -194,6 +195,7 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
                                 <QuotationLineTable 
                                     lines={formData.lines || []} 
                                     uoms={uoms}
+                                    priceLevelNames={priceLevelNames}
                                     onAddLine={handleAddLine} 
                                     onRemoveLine={handleRemoveLine}
                                     onLineChange={handleLineChange}

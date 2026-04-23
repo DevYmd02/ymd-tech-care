@@ -115,9 +115,11 @@ export function ReservationHeaderForm({
                     <div className="flex gap-2">
                         <input 
                             {...register('sq_id')}
+                            readOnly
                             disabled={isLocked}
-                            className={inputClass} 
-                            placeholder="SQxxxx-xxx (ถ้ามี)"
+                            onClick={() => !isLocked && onSearchAQ?.()}
+                            className={`${inputClass} cursor-pointer hover:border-purple-400 transition-colors`} 
+                            placeholder="SQxxxx-xxx"
                         />
                         <button 
                             type="button" 
@@ -136,9 +138,11 @@ export function ReservationHeaderForm({
                     <div className="flex gap-2">
                         <input 
                             {...register('aq_id')}
+                            readOnly
                             disabled={isLocked}
-                            className={inputClass} 
-                            placeholder="AQxxxx-xxx (ถ้ามี)"
+                            onClick={() => !isLocked && (onSearchAQ ? onSearchAQ() : onFetchQuotation?.('AQ'))}
+                            className={`${inputClass} cursor-pointer hover:border-purple-400 transition-colors`} 
+                            placeholder="AQxxxx-xxx"
                         />
                         <button 
                             type="button" 
@@ -153,7 +157,7 @@ export function ReservationHeaderForm({
                     </div>
                 </div>
 
-                {/* Row 2: Client & Logistics */}
+                {/* Row 2: Client & Lead */}
                 <div className="space-y-1 lg:col-span-2">
                     <label className={labelClass}>ลูกค้า (CUSTOMER_ID) <span className="text-red-500">*</span></label>
                     <div className="flex gap-2">
@@ -162,8 +166,9 @@ export function ReservationHeaderForm({
                                 value={customerDisplay}
                                 readOnly
                                 disabled={isLocked}
-                                className={`${inputClass} pl-9 bg-gray-50/50 italic cursor-not-allowed group-hover:border-purple-400 transition-colors`}
-                                placeholder="-- คลิกปุ่มแว่นขยายเพื่อเลือกลูกค้า --"
+                                onClick={() => !isLocked && onSearchCustomer?.()}
+                                className={`${inputClass} pl-9 bg-gray-50/50 italic cursor-pointer hover:border-purple-400 transition-colors`}
+                                placeholder="-- คลิกเพื่อเลือกลูกค้า --"
                             />
                             <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                         </div>
@@ -224,7 +229,7 @@ export function ReservationHeaderForm({
                     />
                 </div>
 
-                {/* Row 3: Terms & Dates */}
+                {/* Row 3: Terms & Org */}
                 <div className="space-y-1">
                     <label className={labelClass}>เครดิตเทอม (วัน) (PAYMENT_TERM_DAYS)</label>
                     <input 
@@ -248,23 +253,7 @@ export function ReservationHeaderForm({
                 </div>
 
                 <div className="space-y-1">
-                    <label className={labelClass}>วันที่กำหนดส่ง (SHIP_DATE) <span className="text-red-500">*</span></label>
-                    <Controller
-                        name="ship_date"
-                        control={control}
-                        render={({ field }) => (
-                            <CustomDateInput
-                                value={field.value || ''}
-                                onChange={field.onChange}
-                                disabled={isLocked}
-                                className={inputClass}
-                            />
-                        )}
-                    />
-                </div>
-
-                <div className="space-y-1">
-                    <label className={labelClass}>แผนก (EMP_DEPT_ID)</label>
+                    <label className={labelClass}>แผนก (EMP_DEPT_ID) <span className="text-red-500">*</span></label>
                     <Controller
                         name="emp_dept_id"
                         control={control}
@@ -287,9 +276,32 @@ export function ReservationHeaderForm({
                     />
                 </div>
 
+                <div className="space-y-1">
+                    <label className={labelClass}>ประเภทภาษี (TAX_CODE_ID)</label>
+                    <Controller
+                        name="tax_code_id"
+                        control={control}
+                        render={({ field }) => (
+                            <select 
+                                {...field}
+                                value={field.value ?? ''}
+                                key={`tax-select-${taxCodes.length}`}
+                                disabled={isLocked}
+                                className={selectClass}
+                                onChange={(e) => field.onChange(e.target.value === '' ? null : Number(e.target.value))}
+                            >
+                                <option value="">-- เลือกประเภทภาษี --</option>
+                                {taxCodes.map((group, idx) => (
+                                    <option key={`tax-${group.tax_code_id || idx}`} value={String(group.tax_code_id || '')}>
+                                        {group.tax_code}
+                                    </option>
+                                ))}
+                            </select>
+                        )}
+                    />
+                </div>
 
-
-                {/* Row 4: Sales Team & Item Type */}
+                {/* Row 4: Sales Team & Project */}
                 <div className="space-y-1">
                     <label className={labelClass}>พนักงานขาย (EMP_SALE_ID)</label>
                     <Controller
@@ -338,7 +350,7 @@ export function ReservationHeaderForm({
                     />
                 </div>
 
-                <div className="space-y-1">
+                <div className="space-y-1 lg:col-span-2">
                     <label className={labelClass}>โครงการ/งาน (JOB_ID)</label>
                     <Controller
                         name="job_id"
@@ -362,35 +374,7 @@ export function ReservationHeaderForm({
                     />
                 </div>
 
-
-
-                {/* Row 5: Financials & Notes */}
-                <div className="space-y-1">
-                    <label className={labelClass}>ประเภทภาษี (TAX_CODE_ID)</label>
-                    <Controller
-                        name="tax_code_id"
-                        control={control}
-                        render={({ field }) => (
-                            <select 
-                                {...field}
-                                value={field.value ?? ''}
-                                key={`tax-select-${taxCodes.length}`}
-                                disabled={isLocked}
-                                className={selectClass}
-                                onChange={(e) => field.onChange(e.target.value === '' ? null : Number(e.target.value))}
-                            >
-                                <option value="">-- เลือกประเภทภาษี --</option>
-                                {taxCodes.map((group, idx) => (
-                                    <option key={`tax-${group.tax_code_id || idx}`} value={String(group.tax_code_id || '')}>
-                                        {group.tax_code}
-                                    </option>
-                                ))}
-                            </select>
-                        )}
-                    />
-                </div>
-
-                <div className="lg:col-span-3 space-y-1">
+                <div className="lg:col-span-4 space-y-1">
                     <label className={labelClass}>หมายเหตุ (REMARKS)</label>
                     <textarea 
                         {...register('remarks')}

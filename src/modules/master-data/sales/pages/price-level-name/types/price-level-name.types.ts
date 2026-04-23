@@ -15,6 +15,7 @@ export interface PriceLevelName extends BaseMasterData {
     code: string;
     name: string;
     level_no: number;
+    levelNo?: number | string;
 }
 
 export interface ApiPriceLevelName {

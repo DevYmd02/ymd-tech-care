@@ -21,6 +21,7 @@ export interface QuotationLineData {
     // Data from Pricing Engine
     price_source?: number;
     price_source_name?: string;
+    price_level_priority?: number;
 }
 
 export interface RawQuotationLine {
@@ -44,6 +45,8 @@ export interface RawQuotationLine {
     source_name?: string;
     price_source?: number | string;
     price_source_name?: string;
+    price_level_priority?: number | string;
+    priority?: number | string;
     // Alternative names from different API versions
     product_id?: string | number;
     product_code?: string;

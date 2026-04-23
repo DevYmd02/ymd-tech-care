@@ -84,14 +84,23 @@ export const AQHistoryModal: React.FC<AQHistoryModalProps> = ({
       header: () => <div className="text-right w-full">ยอดรวม (บาท)</div>,
       cell: (info) => {
         const row = info.row.original;
+        const status = row.status;
+
+        // 🛡️ Business Logic: If not APPROVED, the financial impact in history must be 0
+        if (status !== 'APPROVED') {
+          return <div className="text-right font-bold text-gray-400">0.00</div>;
+        }
+
         // 🛡️ Financial Consistency: Prioritize original SQ total if available in snapshot
         const rawRow = row as unknown as Record<string, unknown>;
         const sqObj = (row.sq || rawRow.sale_quotation || rawRow.quotation) as Record<string, unknown> | undefined;
         const sqTotal = Number(sqObj?.base_total_amount || sqObj?.total_amount || sqObj?.quote_total_amount || 0);
-        const displayAmount = (sqTotal > 0) ? sqTotal : (info.getValue() || 0);
+        
+        // Ensure we don't show negative values and handle fallback
+        const displayAmount = Math.max(0, (sqTotal > 0) ? sqTotal : (Number(info.getValue()) || 0));
 
         return (
-          <div className="text-right font-bold">
+          <div className="text-right font-bold text-emerald-600 dark:text-emerald-400">
             {new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2 }).format(displayAmount)}
           </div>
         );
