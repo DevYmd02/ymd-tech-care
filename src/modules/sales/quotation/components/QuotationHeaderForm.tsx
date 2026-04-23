@@ -72,7 +72,7 @@ export function QuotationHeaderForm({
                 <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
                     <FileText size={20} strokeWidth={2.5} />
                     <h3 className="text-lg font-bold">ข้อมูลใบเสนอราคา — Header Quotation</h3>
-                    {formData.status && (
+                    {(formData.status && formData.sq_no) && (
                         <SQStatusBadge 
                             status={formData.status} 
                             className="ml-2 py-0.5 px-2 text-[10px] font-bold uppercase tracking-wider shadow-sm" 
@@ -95,19 +95,19 @@ export function QuotationHeaderForm({
                 
                 {/* Row 1: Main Identification */}
                 <div className="space-y-1">
-                    <label className={labelClass}>เลขที่ใบเสนอราคา (SQ_NO) <span className="text-red-500">*</span></label>
+                    <label className={labelClass}>เลขที่ใบเสนอราคา <span className="text-red-500">*</span></label>
                     <div className="relative">
                         <input 
                             {...register('sq_no')}
                             readOnly
-                            placeholder="ระบบออกให้อัตโนมัติ"
-                            className={`${inputClass} bg-gray-50 border-gray-200 cursor-not-allowed`}
+                            placeholder="ระบบจะกรอกให้อัตโนมัติเมื่อบันทึก"
+                            className={`${inputClass} bg-gray-50 border-gray-200 cursor-not-allowed ${!watch('sq_no') ? 'italic text-gray-500/70' : 'font-bold text-blue-600'}`}
                         />
                     </div>
                 </div>
 
                 <div className="space-y-1">
-                    <label className={labelClass}>วันที่ (SQ_DATE) <span className="text-red-500">*</span></label>
+                    <label className={labelClass}>วันที่ <span className="text-red-500">*</span></label>
                     <Controller
                         name="sq_date"
                         control={control}
@@ -124,7 +124,7 @@ export function QuotationHeaderForm({
                 </div>
 
                 <div className="lg:col-span-2 space-y-1">
-                    <label className={labelClass}>ลูกค้า (CUSTOMER_ID) <span className="text-red-500">*</span></label>
+                    <label className={labelClass}>ลูกค้า <span className="text-red-500">*</span></label>
                     <div className="flex gap-2">
                         <div className="relative flex-1 group">
                             <input 
@@ -150,7 +150,7 @@ export function QuotationHeaderForm({
 
                 {/* Row 2: Secondary Tracking - Now balanced with 2:2 ratio */}
                 <div className="lg:col-span-2 space-y-1">
-                    <label className={labelClass}>อ้างอิงเลขที่ Lead (LEAD_ID)</label>
+                    <label className={labelClass}>อ้างอิงเลขที่ Lead </label>
                     <div className="flex gap-2">
                         <div className="relative flex-1 group">
                             <input 
@@ -172,7 +172,7 @@ export function QuotationHeaderForm({
                 </div>
 
                 <div className="lg:col-span-2 space-y-1">
-                    <label className={labelClass}>สาขา (BRANCH_ID) <span className="text-red-500">*</span></label>
+                    <label className={labelClass}>สาขา <span className="text-red-500">*</span></label>
                     <select
                         {...register('branch_id', {
                             setValueAs: (v) => (v === '' || v === '0' ? null : Number(v)),
@@ -192,7 +192,7 @@ export function QuotationHeaderForm({
 
                 {/* Row 3: Terms and Classification */}
                 <div className="space-y-1">
-                    <label className={labelClass}>ยื่นราคาจนถึงวันที่ (VALID_UNTIL)</label>
+                    <label className={labelClass}>ยื่นราคาจนถึงวันที่ </label>
                     <Controller
                         name="valid_until"
                         control={control}
@@ -219,7 +219,7 @@ export function QuotationHeaderForm({
                 </div>
 
                 <div className="space-y-1">
-                    <label className={labelClass}>ประเภทภาษี (TAX_CODE_ID)</label>
+                    <label className={labelClass}>ประเภทภาษี (TAX_CODE_ID) <span className="text-red-500">*</span></label>
                     <select 
                         {...register('tax_code_id', {
                             setValueAs: (v) => (v === '' || v === '0' ? null : Number(v)),
@@ -234,11 +234,11 @@ export function QuotationHeaderForm({
                             </option>
                         ))}
                     </select>
-                    {errors.tax_code_id && <span className="text-[10px] text-red-500 font-medium whitespace-nowrap">ระบุประเภทภาษี</span>}
+                    {errors.tax_code_id && <span className="text-[10px] text-red-500 font-medium whitespace-nowrap">กรุณาเลือกประเภทภาษี</span>}
                 </div>
 
                 <div className="space-y-1">
-                    <label className={labelClass}>แผนก (EMP_DEPT_ID)</label>
+                    <label className={labelClass}>แผนก (EMP_DEPT_ID) <span className="text-red-500">*</span></label>
                     <select 
                         {...register('emp_dept_id', {
                             setValueAs: (v) => (v === '' || v === '0' ? null : Number(v)),
@@ -254,11 +254,12 @@ export function QuotationHeaderForm({
                             </option>
                         ))}
                     </select>
+                    {errors.emp_dept_id && <span className="text-[10px] text-red-500 font-medium whitespace-nowrap">กรุณาเลือกแผนก</span>}
                 </div>
 
                 {/* Row 4: Project and Notes */}
                 <div className="space-y-1">
-                    <label className={labelClass}>JOB (PROJECT_ID)</label>
+                    <label className={labelClass}>JOB (PROJECT_ID) <span className="text-red-500">*</span></label>
                     <select 
                         {...register('project_id', {
                             setValueAs: (v) => (v === '' || v === '0' ? null : Number(v)),
@@ -273,10 +274,11 @@ export function QuotationHeaderForm({
                             </option>
                         ))}
                     </select>
+                    {errors.project_id && <span className="text-[10px] text-red-500 font-medium whitespace-nowrap">กรุณาเลือกโครงการ</span>}
                 </div>
                 
                 <div className="space-y-1">
-                    <label className={labelClass}>เขตการขาย (SALE AREA)</label>
+                    <label className={labelClass}>เขตการขาย (SALE AREA) <span className="text-red-500">*</span></label>
                     <select 
                         {...register('sale_area_id', {
                             setValueAs: (v) => (v === '' || v === '0' ? null : Number(v)),
@@ -291,6 +293,7 @@ export function QuotationHeaderForm({
                             </option>
                         ))}
                     </select>
+                    {errors.sale_area_id && <span className="text-[10px] text-red-500 font-medium whitespace-nowrap">กรุณาเลือกเขตการขาย</span>}
                 </div>
 
                 <div className="lg:col-span-2 space-y-1">

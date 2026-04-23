@@ -522,13 +522,13 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
         const currentSubTotal = getValues('sub_total');
         const calculatedSubTotal = lines.reduce((sum, line) => sum + (line.line_total || 0), 0);
         if (currentSubTotal !== calculatedSubTotal) {
-            setValue('sub_total', calculatedSubTotal);
+            setValue('sub_total', calculatedSubTotal, { shouldValidate: true });
         }
 
         // Header Discount
         const calculatedDiscount = calculateDiscountAmount(calculatedSubTotal, discountExpression);
         if (getValues('discount_amount') !== calculatedDiscount) {
-            setValue('discount_amount', calculatedDiscount);
+            setValue('discount_amount', calculatedDiscount, { shouldValidate: true });
         }
 
         // VAT Calculation (Calculated on SubTotal AFTER Discount)
@@ -539,13 +539,13 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
         const vatAmountValue = calculateVatAmount(amountAfterDiscount, taxRate);
         
         if (getValues('vat_amount') !== vatAmountValue) {
-            setValue('vat_amount', vatAmountValue);
+            setValue('vat_amount', vatAmountValue, { shouldValidate: true });
         }
 
         // Final Total
         const totalAmountValue = calculateNetTotal(calculatedSubTotal, calculatedDiscount, vatAmountValue);
         if (getValues('total_amount') !== totalAmountValue) {
-            setValue('total_amount', totalAmountValue);
+            setValue('total_amount', totalAmountValue, { shouldValidate: true });
         }
 
     }, [lines, discountExpression, taxCodeId, taxCodes, setValue, getValues]);
@@ -671,7 +671,7 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
     }, [getValues, setValue]);
 
     const handleSelectCustomer = useCallback((customer: CustomerMaster) => {
-        setValue('customer_id', Number(customer.customer_id || customer.id || 0));
+        setValue('customer_id', Number(customer.customer_id || customer.id || 0), { shouldValidate: true });
         modals.setIsCustomerSearchOpen(false);
     }, [setValue, modals]);
 

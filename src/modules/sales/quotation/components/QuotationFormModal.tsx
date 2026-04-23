@@ -220,7 +220,7 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
                                     totalAmount={formData.total_amount || 0}
                                     currencySymbol={formData.base_currency_code || formData.currency_code || 'บาท'}
                                     lineCount={(formData.lines || []).length}
-                                    onDiscountChange={(val) => setValue('discount_expression', val, { shouldDirty: true })}
+                                    onDiscountChange={(val) => setValue('discount_expression', val, { shouldValidate: true, shouldDirty: true })}
                                     readOnly={readOnly}
                                 />
                             </div>

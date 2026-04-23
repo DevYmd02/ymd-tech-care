@@ -7,13 +7,12 @@ import type {
     BranchListItem, 
     Currency, 
     DepartmentListItem, 
-    Project, 
-    ItemTypeListItem 
+    Project 
 } from '@/modules/master-data/types/master-data-types';
 import type { CustomerMaster } from '@/modules/master-data/customer/customer-master/types/customer-types';
 import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
 import type { SaleAreaMaster } from '@/modules/master-data/sales/pages/area/types/area.types';
-import type { IEmployee } from '@/modules/master-data/company/types/employee-types';
+import type { EmployeeListItem } from '@/modules/master-data/company/types/employee.types';
 
 interface ReservationHeaderFormProps {
     branches: BranchListItem[];
@@ -22,13 +21,15 @@ interface ReservationHeaderFormProps {
     taxCodes: TaxCode[];
     departments: DepartmentListItem[];
     projects: Project[];
-    itemTypes: ItemTypeListItem[];
+
     saleAreas: SaleAreaMaster[];
-    employees: IEmployee[];
+    employees: EmployeeListItem[];
     readOnly?: boolean;
     onSearchCustomer?: () => void;
     onSearchLead?: () => void;
+    onSearchAQ?: () => void;
     onFetchQuotation?: (type: 'SQ' | 'AQ') => void;
+
 }
 
 export function ReservationHeaderForm({ 
@@ -38,13 +39,15 @@ export function ReservationHeaderForm({
     taxCodes,
     departments,
     projects,
-    itemTypes,
+
     saleAreas,
     employees,
     readOnly = false,
     onSearchCustomer,
     onSearchLead,
+    onSearchAQ,
     onFetchQuotation
+
 }: ReservationHeaderFormProps) {
     const { register, watch, setValue, control } = useFormContext<ReservationFormData>();
     
@@ -119,7 +122,7 @@ export function ReservationHeaderForm({
                         <button 
                             type="button" 
                             disabled={isLocked} 
-                            onClick={() => onFetchQuotation?.('SQ')}
+                            onClick={() => onSearchAQ?.()}
                             className="p-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center shrink-0 w-9 h-9"
                             title="ค้นหาข้อมูลจากใบเสนอราคา"
                         >
@@ -140,8 +143,9 @@ export function ReservationHeaderForm({
                         <button 
                             type="button" 
                             disabled={isLocked} 
-                            onClick={() => onFetchQuotation?.('AQ')}
+                            onClick={() => onSearchAQ ? onSearchAQ() : onFetchQuotation?.('AQ')}
                             className="p-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center shrink-0 w-9 h-9"
+
                             title="ค้นหาข้อมูลจากใบอนุมัติ"
                         >
                             <Search size={18} />
@@ -301,8 +305,8 @@ export function ReservationHeaderForm({
                             >
                                 <option value="">-- เลือกพนักงานขาย --</option>
                                 {employees.map((emp, idx) => (
-                                    <option key={`emp-${emp.id || idx}`} value={String(emp.id)}>
-                                        {emp.employee_code} - {emp.employee_firstname_th} {emp.employee_lastname_th}
+                                    <option key={`emp-${emp.employee_id || emp.id || idx}`} value={String(emp.employee_id || emp.id || '')}>
+                                        {emp.employee_code} - {emp.employee_name || emp.employee_fullname || `${emp.employee_firstname_th} ${emp.employee_lastname_th}`}
                                     </option>
                                 ))}
                             </select>
@@ -358,29 +362,7 @@ export function ReservationHeaderForm({
                     />
                 </div>
 
-                <div className="space-y-1">
-                    <label className={labelClass}>ประเภทสินค้าหลัก (ITEM_ID)</label>
-                    <Controller
-                        name="item_id"
-                        control={control}
-                        render={({ field }) => (
-                            <select 
-                                {...field}
-                                value={field.value ?? ''}
-                                key={`item-type-select-${itemTypes.length}`}
-                                disabled={isLocked}
-                                className={selectClass}
-                            >
-                                <option value="">-- เลือกประเภทสินค้า --</option>
-                                {itemTypes.map((item, idx) => (
-                                    <option key={`item-${item.item_type_id || idx}`} value={String(item.item_type_id || '')}>
-                                        {item.item_type_name}
-                                    </option>
-                                ))}
-                            </select>
-                        )}
-                    />
-                </div>
+
 
                 {/* Row 5: Financials & Notes */}
                 <div className="space-y-1">

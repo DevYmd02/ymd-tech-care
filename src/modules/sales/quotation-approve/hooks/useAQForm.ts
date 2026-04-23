@@ -18,6 +18,8 @@ import { calculateLineTotal } from '@sales/shared/utils/sales-calculations';
 // Enrichment Services
 import { MasterDataService } from '@/modules/master-data/services/master-data.service';
 import { TaxCodeService } from '@/modules/master-data/tax/services/tax-code.service';
+import { QuotationService } from '@/modules/sales/quotation/services/quotation.service';
+import type { QuotationHeader } from '@/modules/sales/quotation/types/quotation.types';
 
 import { AQFormSchema } from '../schemas/aq.schema';
 import type { AQFormData, AQLineFormData } from '../schemas/aq.schema';
@@ -44,18 +46,58 @@ export interface UseAQFormProps {
  * Smart Unwrapping for API responses
  */
 const findObject = (source: Record<string, unknown>): Record<string, unknown> => {
-  // 🛡️ RESILIENCY: If the object already looks like a normalized SQ (has sq_id at top level), return it as is.
-  // This prevents double-unwrapping which causes 'Not Found' errors.
+  // 1. Handle nested "rawData" if present (Highest priority for service-mapped objects)
+  if (source.rawData && typeof source.rawData === 'object' && !Array.isArray(source.rawData)) {
+    return source.rawData as Record<string, unknown>;
+  }
+
+  // 2. Handle Array in data
+  if (Array.isArray(source.data) && source.data[0]) {
+    const first = source.data[0] as Record<string, unknown>;
+    if (first.header || first.sale_quotation_header) return (first.header || first.sale_quotation_header) as Record<string, unknown>;
+    return first;
+  }
+
+  // 3. Check for standard wrappers
+  if (source.data && typeof source.data === 'object' && !Array.isArray(source.data)) {
+    const d = source.data as Record<string, unknown>;
+    if (d.header || d.sale_quotation_header || d.quotation_header || d.sq_header) {
+      return (d.header || d.sale_quotation_header || d.quotation_header || d.sq_header) as Record<string, unknown>;
+    }
+    if (d.sq_id || d.sq_no || d.id) return d;
+  }
+
+  // 4. High-priority direct wrappers
+  const priority = ['sale_quotation_header', 'quotation_header', 'header', 'sq_header', 'sale_quotation', 'quotation', 'sq'];
+  for (const p of priority) {
+    const val = source[p];
+    if (val && typeof val === 'object' && !Array.isArray(val)) {
+      const v = val as Record<string, unknown>;
+      if (v.sq_id || v.sq_no || v.id) return v;
+    }
+  }
+
+  // 5. Direct check
   if (source.sq_id || source.sq_no || source.id || source.sale_quotation_id || source.quotation_id) return source;
 
+  // 6. Fallback search
   if (source.data && typeof source.data === 'object' && !Array.isArray(source.data)) return source.data as Record<string, unknown>;
-  if (Array.isArray(source.data) && source.data[0]) return source.data[0] as Record<string, unknown>;
-  if (source.sale_quotation && typeof source.sale_quotation === 'object') return source.sale_quotation as Record<string, unknown>;
-  if (source.quotation && typeof source.quotation === 'object') return source.quotation as Record<string, unknown>;
-  if (source.sq && typeof source.sq === 'object') return source.sq as Record<string, unknown>;
-  if (source.sale_quotation_header && typeof source.sale_quotation_header === 'object') return source.sale_quotation_header as Record<string, unknown>;
-  return source;
+  
+  // 4. Handle nested "rawData" or "data" if present
+  if (source.rawData && typeof source.rawData === 'object' && !Array.isArray(source.rawData)) {
+    return source.rawData as Record<string, unknown>;
+  }
 
+  return source;
+};
+
+/**
+ * Check if a string is a placeholder or empty
+ */
+const isPlaceholder = (val: unknown): boolean => {
+  if (!val) return true;
+  const s = String(val).trim();
+  return s === '' || s === '-' || s === 'null' || s === 'undefined' || s.includes('Customer ID:');
 };
 
 /**
@@ -96,7 +138,6 @@ const findLines = (source: Record<string, unknown>): unknown[] => {
 function normalizeSQ(raw: unknown): SQForApproval | null {
   if (!raw || typeof raw !== 'object') return null;
   const r = raw as Record<string, unknown>;
-
   const obj = findObject(r);
 
   const sqId = Number(
@@ -177,16 +218,17 @@ function normalizeSQ(raw: unknown): SQForApproval | null {
     return {};
   };
 
-  const customer = getNested(obj, ['customer', 'customer_ref']);
-  const branch = getNested(obj, ['branch', 'branch_ref']);
-  const dept = getNested(obj, ['emp_dept', 'department', 'dept']);
-  const area = getNested(obj, ['saleArea', 'empArea', 'sale_area']);
-  const tax = getNested(obj, ['taxCode', 'tax_code_ref', 'tax']);
+  const customer = getNested(obj, ['customer', 'customer_ref', 'customer_master', 'cust']);
+  const branch = getNested(obj, ['branch', 'branch_ref', 'id_branch']);
+  const dept = getNested(obj, ['emp_dept', 'department', 'dept', 'id_dept']);
+  const area = getNested(obj, ['saleArea', 'empArea', 'sale_area', 'sale_area_ref', 'id_sale_area']);
+  const tax = getNested(obj, ['taxCode', 'tax_code_ref', 'tax', 'tax_id']);
 
-  const qCurrency = (obj.quote_currency as Record<string, unknown>) || {};
-  const bCurrency = (obj.base_currency as Record<string, unknown>) || {};
-
-  const qCurrencyCode = String(obj.quote_currency_code || qCurrency.currency_code || obj.currency_code || 'THB');
+  // 🛡️ Standard Alignment: Base is usually the foreign currency (USD), Quote is local (THB)
+  // This ensures Header shows USD -> THB when rate is 33
+  const finalBCurrencyCode = String(obj.base_currency_code || obj.currency_code || obj.currency || 'THB');
+  const finalQCurrencyCode = String(obj.quote_currency_code || obj.id_currency_code || obj.currency_code || obj.currency || 'THB');
+  const finalRate = Number(obj.exchange_rate || obj.rate || 1);
 
   return {
     sq_id: sqId,
@@ -199,18 +241,19 @@ function normalizeSQ(raw: unknown): SQForApproval | null {
     
     status: String(obj.status || 'PENDING'),
 
-    base_currency_code: String(obj.base_currency_code || bCurrency.currency_code || 'THB'),
-    base_currency_id: Number(obj.base_currency_id || bCurrency.id || 1),
-    quote_currency_code: qCurrencyCode,
-    quote_currency_id: Number(obj.quote_currency_id || qCurrency.id || 1),
-    exchange_rate: Number(obj.exchange_rate || 1),
+    base_currency_code: finalBCurrencyCode,
+    base_currency_id: Number(obj.base_currency_id || 1),
+    quote_currency_code: finalQCurrencyCode,
+    quote_currency_id: Number(obj.quote_currency_id || 1),
+    exchange_rate: finalRate,
     isMulticurrency: Boolean(
       (obj.is_multicurrency === true) ||
-      (obj.quote_currency_code) || 
-      (qCurrencyCode)
+      (finalBCurrencyCode !== 'THB') ||
+      (finalQCurrencyCode !== 'THB') ||
+      (Math.abs(Number(obj.quote_total_amount || 0) - Number(obj.base_total_amount || 0)) > 0.01)
     ),
-    exchange_rate_date: String(obj.exchange_rate_date || obj.sq_date || '').split('T')[0],
-
+    exchange_rate_date: String(obj.exchange_rate_date || obj.sq_date || obj.date || obj.date_sq || obj.doc_date || '').split('T')[0],
+    
     total_amount: Number(obj.total_amount || obj.quote_total_amount || 0),
     base_total_amount: Number(obj.base_total_amount || 0),
     quote_total_amount: Number(obj.quote_total_amount || 0),
@@ -218,24 +261,33 @@ function normalizeSQ(raw: unknown): SQForApproval | null {
     base_tax_amount: Number(obj.base_tax_amount || 0),
     quote_tax_amount: Number(obj.quote_tax_amount || 0),
     
-    tax_code_id: obj.tax_code_id ? Number(obj.tax_code_id) : (tax.id ? Number(tax.id) : undefined),
+    tax_code_id: (obj.tax_code_id || obj.tax_id || obj.id_tax || obj.tax_code_ref_id || tax.id) ? Number(obj.tax_code_id || obj.tax_id || obj.id_tax || obj.tax_code_ref_id || tax.id) : undefined,
     tax_rate: Number(obj.tax_rate ?? obj.tax_pct ?? tax.tax_rate ?? tax.tax_pct ?? 0),
     tax_code: String(obj.tax_code || obj.tax_code_name || tax.tax_code || tax.name || tax.tax_code_name || '').replace(/^-$/, ''),
 
     remarks: String(obj.remarks || ''),
-    valid_until: String(obj.valid_until || '').split('T')[0],
+    valid_until: String(obj.valid_until || obj.expire_date || obj.expired_date || '').split('T')[0],
     payment_term_days: Number(obj.payment_term_days || 0),
 
     branch_id: Number(obj.branch_id || branch.id || obj.id_branch || 0),
-    branch_name: String(obj.branch_name || branch.name || '').replace(/^-$/, ''),
+    branch_name: String(obj.branch_name || branch.name || obj.branch_ref_name || '').replace(/^-$/, ''),
     emp_dept_id: Number(obj.emp_dept_id || dept.id || obj.id_dept || obj.id_department || obj.dept_id || 0),
-    emp_dept_name: String(obj.emp_dept_name || dept.name || '').replace(/^-$/, ''),
+    emp_dept_name: String(obj.emp_dept_name || dept.name || obj.dept_name || obj.department_name || '').replace(/^-$/, ''),
     project_id: Number(obj.project_id || obj.id_project || (obj.project as Record<string, unknown>)?.project_id || (obj.project as Record<string, unknown>)?.id || 0),
-    project_name: String(obj.project_name || (obj.project as Record<string, unknown>)?.project_name || (obj.project as Record<string, unknown>)?.name || '').replace(/^-$/, ''),
+    project_name: String(obj.project_name || obj.project_code || (obj.project as Record<string, unknown>)?.project_name || (obj.project as Record<string, unknown>)?.name || '').replace(/^-$/, ''),
     sale_area_id: Number(obj.sale_area_id || obj.emp_area_id || area.id || obj.id_sale_area || obj.id_area || 0),
-    sale_area_name: String(obj.sale_area_name || area.name || '').replace('-', ''),
-    emp_sale_id: Number(obj.emp_sale_id || obj.id_emp_sale || 0),
-    emp_sale_name: String(obj.emp_sale_name || (obj.emp_sale as Record<string, unknown>)?.employee_fullname || (obj.emp_sale as Record<string, unknown>)?.employee_name || ''),
+    sale_area_name: String(obj.sale_area_name || area.name || obj.area_name || '').replace('-', ''),
+    emp_sale_id: Number(obj.emp_sale_id || obj.id_emp_sale || obj.sale_emp_id || (obj.emp_sale as Record<string, unknown>)?.employee_id || (obj.sale_emp as Record<string, unknown>)?.employee_id || 0),
+    emp_sale_name: String(
+      obj.emp_sale_name || 
+      obj.sale_person_name || 
+      obj.sales_person || 
+      (obj.emp_sale as Record<string, unknown>)?.employee_fullname || 
+      (obj.emp_sale as Record<string, unknown>)?.employee_name || 
+      (obj.sale_emp as Record<string, unknown>)?.employee_fullname ||
+      (obj.employee as Record<string, unknown>)?.employee_fullname ||
+      ''
+    ),
 
     discount_expression: String(obj.discount_expression || obj.discount_rate_expression || '0'),
     discount_amount: Number(obj.discount_amount || obj.quote_discount_amount || 0),
@@ -364,9 +416,26 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
       logger.info(`[useAQForm] Fetching SQ detail for ID: ${id}...`);
       let raw = await AQService.getSQById(id);
       
-      // 🕵️ FALLBACK 1: If Detail API returns null/empty, use the record passed from the modal
+      // 🕵️ FALLBACK 1: Global Search by SQ No (Crucial for History items where ID lookup fails)
+      if ((!raw || Object.keys(raw as object).length < 5) && aqItemArg?.sq_no) {
+        logger.info(`[useAQForm] Detail API failed for ID ${id}. Attempting Global Search by SQ No: ${aqItemArg.sq_no}`);
+        // Search across all statuses
+        const searchRes = await QuotationService.getList({ q: aqItemArg.sq_no, limit: 10 });
+        const match = searchRes.data.find((d: QuotationHeader) => String(d.sq_no) === String(aqItemArg.sq_no));
+        if (match) {
+          logger.info('[useAQForm] Global Search success! Found original SQ.');
+          const realId = match.sq_id || match.id;
+          if (realId && String(realId) !== String(id)) {
+             try { raw = await AQService.getSQById(Number(realId)); } catch { raw = match; }
+          } else {
+             raw = match;
+          }
+        }
+      }
+
+      // 🕵️ FALLBACK 2: Use the record passed from the modal as last resort
       if ((!raw || Object.keys(raw as object).length < 5) && aqItemArg) {
-        logger.info('[useAQForm] Detail API returned empty or shallow. Falling back to provided item data.');
+        logger.info('[useAQForm] Falling back to provided item data.');
         raw = (aqItemArg.raw || aqItemArg) as Record<string, unknown>;
       }
       
@@ -432,7 +501,7 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
 
         const approvedQty = aqLine
           ? Number(aqLine.approved_qty || 0)
-          : (isNew ? originalQty : 0);
+          : (isNew ? originalQty : (String(sq.status).toUpperCase() === 'APPROVED' ? originalQty : 0));
 
         // Calculate net amount for approval
         const approvedNet = (approvedQty === originalQty)
@@ -464,8 +533,15 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
       });
 
       // 🕵️ ENRICHMENT
-      const needsLineEnrichment = mappedLines.some(l => !l.item_name || !l.uom_name || l.item_name === '-' || l.uom_name === '-');
-      const needsHeaderEnrichment = sq && (!sq.customer_name || !sq.branch_name || !sq.project_name || !sq.emp_dept_name || !sq.emp_area_name || !sq.tax_code || sq.tax_code === '-');
+      const needsLineEnrichment = mappedLines.some(l => isPlaceholder(l.item_name) || isPlaceholder(l.uom_name));
+      const needsHeaderEnrichment = sq && (
+        isPlaceholder(sq.customer_name) || 
+        isPlaceholder(sq.branch_name) || 
+        isPlaceholder(sq.project_name) || 
+        isPlaceholder(sq.emp_dept_name) || 
+        isPlaceholder(sq.sale_area_name) || 
+        isPlaceholder(sq.tax_code)
+      );
 
       if (needsHeaderEnrichment || needsLineEnrichment) {
         try {
@@ -481,25 +557,25 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
             needsLineEnrichment ? MasterDataService.getUnits() : Promise.resolve([]),
           ]);
           const [customers, branches, projects, depts, areas, employees, taxCodes, items, uoms] = results;
-          if (sq.customer_id && (!sq.customer_name || sq.customer_name === '-')) {
+          if (sq.customer_id && isPlaceholder(sq.customer_name)) {
             const m = customers.find(c => Number(c.customer_id || c.id) === Number(sq.customer_id));
             if (m) sq.customer_name = m.customer_name_th || m.name_th || m.customer_name || '';
           }
-          if (sq.branch_id && (!sq.branch_name || sq.branch_name === '-')) {
+          if (sq.branch_id && isPlaceholder(sq.branch_name)) {
             sq.branch_name = branches.find(b => Number(b.branch_id) === Number(sq.branch_id))?.branch_name || sq.branch_name;
           }
-          if (sq.project_id && (!sq.project_name || sq.project_name === '-' || sq.project_name === '')) {
+          if (sq.project_id && isPlaceholder(sq.project_name)) {
             const m = projects.find(p => Number(p.project_id || p.id) === Number(sq.project_id));
             if (m) sq.project_name = m.project_name || sq.project_name;
           }
-          if (sq.emp_dept_id && (!sq.emp_dept_name || sq.emp_dept_name === '-' || sq.emp_dept_name === '')) {
+          if (sq.emp_dept_id && isPlaceholder(sq.emp_dept_name)) {
             const m = depts.find(d => Number(d.emp_dept_id || d.dept_id || d.id) === Number(sq.emp_dept_id));
             if (m) sq.emp_dept_name = m.emp_dept_name || m.dept_name || m.department_name || sq.emp_dept_name;
           }
-          if (sq.sale_area_id && (!sq.sale_area_name || sq.sale_area_name === '-')) {
+          if (sq.sale_area_id && isPlaceholder(sq.sale_area_name)) {
             sq.sale_area_name = areas.find(a => String(a.sale_area_id) === String(sq.sale_area_id))?.sale_area_name || sq.sale_area_name;
           }
-          if (sq.emp_sale_id && (!sq.emp_sale_name || sq.emp_sale_name === '-' || sq.emp_sale_name === '')) {
+          if (sq.emp_sale_id && isPlaceholder(sq.emp_sale_name)) {
             const m = employees.find(e => Number(e.employee_id) === Number(sq.emp_sale_id));
             if (m) {
               sq.emp_sale_name = m.employee_fullname || 

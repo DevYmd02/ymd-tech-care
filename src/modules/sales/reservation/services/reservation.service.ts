@@ -1,3 +1,4 @@
+import api from '@/core/api/api';
 import { logger } from '@/shared/utils/logger';
 import type { ReservationFormData } from '../types/reservation.types';
 
@@ -27,12 +28,33 @@ export interface ReservationHeader {
     customer_id?: string;
 }
 
+export interface AvailableApproval {
+    aq_id: number;
+    aq_no: string;
+    aq_date: string;
+    aq_status: string;
+    sq_id: number;
+    sq_no: string;
+    sq_date: string;
+    sq_status: string;
+    // Common fields found in the API response
+    currency_code?: string;
+    base_currency_code?: string;
+    quote_currency_code?: string;
+    exchange_rate?: number;
+    exchange_rate_date?: string;
+    aq_lines?: unknown[];
+    lines?: unknown[];
+    [key: string]: unknown; // Capture extra fields from API
+}
+
 export const ReservationService = {
     /**
      * ดึงรายการ Reservation
      */
     getList: async (params: ReservationListParams = {}) => {
         logger.debug('Fetching reservations with params:', params);
+        // Fallback to mock for now as list endpoint might not be ready
         await new Promise(resolve => setTimeout(resolve, 500));
         
         return {
@@ -48,6 +70,19 @@ export const ReservationService = {
         logger.debug('Fetching reservation by id:', id);
         await new Promise(resolve => setTimeout(resolve, 500));
         return null; // Mock return
+    },
+
+    /**
+     * ดึงรายการใบเสนอราคาที่อนุมัติแล้ว (AQ) เพื่อนำมาทำใบสั่งจอง
+     */
+    getAvailableApprovals: async (): Promise<AvailableApproval[]> => {
+        try {
+            const response = await api.get<AvailableApproval[]>('/sale-reservation/available-approvals');
+            return response as unknown as AvailableApproval[];
+        } catch (error) {
+            logger.error('Failed to fetch available approvals:', error);
+            return [];
+        }
     },
 
     /**
@@ -77,4 +112,5 @@ export const ReservationService = {
         return { success: true };
     }
 };
+
 

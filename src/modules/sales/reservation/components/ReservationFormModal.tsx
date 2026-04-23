@@ -8,6 +8,8 @@ import { CustomerSearchModal } from './CustomerSearchModal';
 import { ProductSearchModal } from './ProductSearchModal';
 import { LeadSearchModal } from './LeadSearchModal';
 import { LotSearchModal } from './LotSearchModal';
+import { AQSearchModal } from './AQSearchModal';
+
 import { useReservationForm } from '../hooks/useReservationForm';
 import type { ReservationFormData } from '../types/reservation.types';
 import { logger } from '@/shared/utils/logger';
@@ -36,7 +38,6 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
         taxCodes,
         departments,
         projects,
-        itemTypes,
         saleAreas,
         employees,
         uoms,
@@ -63,8 +64,12 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
         handleSelectProduct,
         handleSelectLot,
         handleSelectLead,
+        handleSelectAQ,
         handleFetchQuotation,
+        isAQSearchOpen,
+        setIsAQSearchOpen,
     } = useReservationForm(isOpen, id, initialData);
+
 
     const { setValue, getValues } = methods;
 
@@ -146,13 +151,14 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
                                     taxCodes={taxCodes}
                                     departments={departments}
                                     projects={projects}
-                                    itemTypes={itemTypes}
                                     saleAreas={saleAreas}
                                     employees={employees}
                                     onSearchCustomer={() => setIsCustomerSearchOpen(true)}
                                     onSearchLead={() => setIsLeadSearchOpen(true)}
+                                    onSearchAQ={() => setIsAQSearchOpen(true)}
                                     onFetchQuotation={handleFetchQuotation}
                                 />
+
                             </div>
                         </div>
 
@@ -224,6 +230,13 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
                 onSelect={handleSelectLot}
                 itemId={activeLotLineIndex !== null ? getValues(`lines.${activeLotLineIndex}.item_id`) : undefined}
             />
+
+            <AQSearchModal 
+                isOpen={isAQSearchOpen}
+                onClose={() => setIsAQSearchOpen(false)}
+                onSelect={handleSelectAQ}
+            />
+
         </WindowFormLayout>
     );
 }

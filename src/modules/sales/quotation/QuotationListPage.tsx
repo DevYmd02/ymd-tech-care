@@ -164,6 +164,17 @@ export default function QuotationListPage() {
                     project_id: (record.project_id ?? (record.rawData as Record<string, unknown>)?.project_id) ? Number(record.project_id ?? (record.rawData as Record<string, unknown>)?.project_id) : undefined,
                     tax_code_id: resolvedTaxCode ? Number(resolvedTaxCode) : undefined,
                     exchange_rate_date: String(record.exchange_rate_date || record.date || new Date().toISOString().split('T')[0]),
+                    // 🛡️ Financial Integrity: Must preserve currency and rate to prevent reset to THB/1
+                    base_currency_code: String(record.base_currency_code || (record.rawData as Record<string, unknown>)?.base_currency_code || 'THB'),
+                    quote_currency_code: String(record.quote_currency_code || (record.rawData as Record<string, unknown>)?.quote_currency_code || 'THB'),
+                    exchange_rate: Number(record.exchange_rate || (record.rawData as Record<string, unknown>)?.exchange_rate || 1),
+                    discount_expression: String(record.discount_expression || (record.rawData as Record<string, unknown>)?.discount_expression || '0'),
+                    
+                    // 🛡️ Critical Fix: Preserve header fields that are often missing from the list view but exist in rawData
+                    payment_term_days: Number((record.rawData as Record<string, unknown>)?.payment_term_days ?? record['payment_term_days'] ?? 0),
+                    valid_until: String(record.expiry_date || (record.rawData as Record<string, unknown>)?.valid_until || ''),
+                    remarks: String(record.remarks || (record.rawData as Record<string, unknown>)?.remarks || ''),
+                    onhold: String((record.rawData as Record<string, unknown>)?.onhold || 'N') as 'Y' | 'N',
                 };
 
                 await QuotationService.update(pendingApproveId, updatePayload);
@@ -243,7 +254,14 @@ export default function QuotationListPage() {
                 const raw = info.row.original.rawData as Record<string, unknown>;
                 const rate = Number(raw?.exchange_rate || 1);
                 const totalAmount = Number(info.getValue()) || 0;
-                const convertedAmount = totalAmount * rate;
+                
+                // 🎯 Absolute Priority: Use pre-calculated base total from backend (.99)
+                // if it exists, otherwise fallback to on-the-fly multiplication.
+                const baseTotal = info.row.original.base_total_amount;
+                const convertedAmount = (baseTotal && baseTotal > 0) 
+                    ? baseTotal 
+                    : (totalAmount * rate);
+
                 const currency = info.row.original.currency;
 
                 return (

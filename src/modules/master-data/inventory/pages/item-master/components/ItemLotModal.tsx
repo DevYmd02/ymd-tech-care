@@ -58,7 +58,7 @@ export function ItemLotModal({ isOpen, onClose, item }: ItemLotModalProps) {
             isOpen={isOpen}
             onClose={onClose}
             title={`จัดการ Lot Number: ${item.code}`}
-            titleIcon={<Database className="w-5 h-5 text-emerald-500" />}
+            titleIcon={<Database className="w-5 h-5 text-white" />}
             width="max-w-[1600px]"
         >
             <div className="space-y-6">

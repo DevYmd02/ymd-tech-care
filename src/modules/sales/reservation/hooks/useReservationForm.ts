@@ -9,9 +9,11 @@ import { TaxCodeService } from '@/modules/master-data/tax/services/tax-code.serv
 import { WarehouseService } from '@/modules/master-data/inventory/services/warehouse.service';
 import { LocationService } from '@/modules/master-data/inventory/services/inventory-master.service';
 import { SaleAreaService } from '@/modules/master-data/sales/pages/area/services/area.service';
-import { EmployeeService } from '@/modules/master-data/employee/services/employee.service';
+
 import { QuotationService } from '@/modules/sales/quotation/services/quotation.service';
+import type { QuotationFormData } from '@/modules/sales/quotation/types/quotation.types';
 import { toast } from 'react-hot-toast';
+
 import type { Currency } from '@/modules/master-data/types/master-data-types';
 import type { CustomerMaster } from '@/modules/master-data/customer/customer-master/types/customer-types';
 import type { ItemListItem, UnitListItem } from '@/modules/master-data/inventory/types/product-types';
@@ -24,6 +26,45 @@ import {
     type ReservationLineValues, 
     getReservationDefaultValues 
 } from '../schemas/reservation-schemas';
+import { ReservationService, type AvailableApproval } from '../services/reservation.service';
+import type { AQLine } from '@/modules/sales/quotation-approve/types/quotation-approve.types';
+
+/**
+ * 🕵️ Local interfaces for data discovery phase
+ * Allows safe access to potential nested fields without using 'any'
+ */
+interface DiscoveryLine {
+    sq_line_id?: string | number;
+    item_id?: string | number | Record<string, unknown> | null;
+    item_code?: string;
+    item_name?: string;
+    code?: string;
+    name?: string;
+    item_no?: string;
+    item_description?: string;
+    description?: string;
+    qty?: number;
+    unit_price?: number;
+    discount_expression?: string;
+    line_discount_input?: string;
+    tax_code_id?: number | string;
+    note?: string;
+    id?: string | number;
+    item?: Record<string, unknown>;
+    item_master?: Record<string, unknown>;
+    master_item?: Record<string, unknown>;
+    master?: Record<string, unknown>;
+    master_data?: Record<string, unknown>;
+    [key: string]: unknown;
+}
+
+interface DiscoveryAQLine extends AQLine {
+    item_code?: string;
+    item_name?: string;
+    [key: string]: unknown;
+}
+
+
 
 export const useReservationForm = (isOpen: boolean, id?: string, initialData?: Partial<ReservationFormValues>) => {
     const isEdit = !!id;
@@ -34,7 +75,9 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
     const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
     const [isLotSearchOpen, setIsLotSearchOpen] = useState(false);
     const [isLeadSearchOpen, setIsLeadSearchOpen] = useState(false);
+    const [isAQSearchOpen, setIsAQSearchOpen] = useState(false);
     const [activeLineIndex, setActiveLineIndex] = useState<number | null>(null);
+
     const [activeLotLineIndex, setActiveLotLineIndex] = useState<number | null>(null);
     
     // React Hook Form Setup
@@ -99,12 +142,6 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         enabled: isOpen
     });
 
-    const { data: itemTypes = [] } = useQuery({
-        queryKey: ['master-item-types'],
-        queryFn: MasterDataService.getItemTypes,
-        enabled: isOpen
-    });
-
     const { data: saleAreas = [] } = useQuery({
         queryKey: ['master-sale-areas'],
         queryFn: () => SaleAreaService.getList(),
@@ -113,7 +150,7 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
 
     const { data: employees = [] } = useQuery({
         queryKey: ['master-employees'],
-        queryFn: () => EmployeeService.getAll(),
+        queryFn: MasterDataService.getEmployees,
         enabled: isOpen
     });
 
@@ -188,14 +225,17 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
             setValue('discount_amount', calculatedDiscount);
         }
 
+        const amountAfterDiscount = calculatedSubTotal - calculatedDiscount;
         const selectedTaxCode = taxCodes.find(t => String(t.tax_code_id) === String(taxCodeId));
         const taxRate = selectedTaxCode ? (Number(selectedTaxCode.tax_rate) || 0) : 0;
-        const vatAmountValue = taxCodeId ? (calculatedSubTotal * (taxRate / 100)) : 0;
+        
+        // VAT should be calculated AFTER discount
+        const vatAmountValue = taxCodeId ? (amountAfterDiscount * (taxRate / 100)) : 0;
         if (getValues('vat_amount') !== vatAmountValue) {
             setValue('vat_amount', vatAmountValue);
         }
 
-        const totalAmountValue = (calculatedSubTotal + vatAmountValue) - calculatedDiscount;
+        const totalAmountValue = amountAfterDiscount + vatAmountValue;
         if (getValues('total_amount') !== totalAmountValue) {
             setValue('total_amount', totalAmountValue);
         }
@@ -329,9 +369,13 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         }
     }, [activeLotLineIndex, getValues, setValue]);
 
-    const handleFetchQuotation = useCallback(async (type: 'SQ' | 'AQ') => {
+
+
+
+    const handleFetchQuotation = useCallback(async (type: 'SQ' | 'AQ', overrideId?: string) => {
         const field = type === 'SQ' ? 'sq_id' : 'aq_id';
-        const val = getValues(field);
+        const val = overrideId || getValues(field);
+
         
         if (!val) {
             toast.error(`กรุณาระบุเลขที่ ${type}`);
@@ -340,18 +384,38 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
 
         setIsSubmitting(true);
         try {
-            // 1. Try to find the Quotation
-            // If it's a UUID, we can use getById directly.
-            // If not (e.g. SQ2024-001), use getList to find it.
             let quotationId: string | number | undefined;
             const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
             
+            let foundAQRecord: AvailableApproval | undefined;
+
             if (isUUID) {
                 quotationId = val;
             } else {
-                const searchRes = await QuotationService.getList({ sq_no: val, limit: 1 });
-                if (searchRes.data && searchRes.data.length > 0) {
-                    quotationId = searchRes.data[0].sq_id || searchRes.data[0].id;
+                // If fetching AQ, try to find the record first to get the linked SQ ID
+                if (type === 'AQ') {
+                    const aqsList = await ReservationService.getAvailableApprovals();
+                    foundAQRecord = aqsList.find((a: AvailableApproval) => 
+                        String(a.aq_no) === String(val) || 
+                        String(a.aq_id) === String(val) ||
+                        String(a.sq_no) === String(val)
+                    );
+                    if (foundAQRecord) {
+                        quotationId = foundAQRecord.sq_id;
+                    }
+                }
+
+                // Primary or Fallback SQ search (if quotationId not yet found via AQ)
+                if (!quotationId) {
+                    const searchRes = await QuotationService.getList({ sq_no: val, limit: 10 }); // Get a few to be safe
+                    const data = searchRes.data || [];
+                    
+                    // Strict matching by sq_no or id
+                    const match = data.find(d => String(d.sq_no) === String(val) || String(d.sq_id || d.id) === String(val));
+                    
+                    if (match) {
+                        quotationId = match.sq_id || match.id;
+                    }
                 }
             }
 
@@ -362,63 +426,285 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
             }
 
             // 2. Fetch full detail
-            const detail = await QuotationService.getById(quotationId);
+            let detail = await QuotationService.getById(quotationId);
+
+
+            // 🚨 Fallback: If ID fetch failed but we have a number, try searching by number
+            if (!detail) {
+                const searchVal = foundAQRecord?.sq_no || (type === 'SQ' ? val : undefined);
+                if (searchVal) {
+                    const searchRes = await QuotationService.getList({ q: searchVal, limit: 10 });
+                    if (searchRes.data && searchRes.data.length > 0) {
+                        // 🔎 Strict search in the results
+                        const listMatch = searchRes.data.find(d => 
+                            String(d.sq_no) === String(searchVal) || 
+                            String(d.sq_id || d.id) === String(searchVal)
+                        );
+
+                        if (listMatch) {
+                            // If the ID from list is different, try fetching detail one last time
+                            const foundId = listMatch.sq_id || listMatch.id;
+                            if (foundId && String(foundId) !== String(quotationId)) {
+                                detail = await QuotationService.getById(foundId);
+                            }
+                            
+                            // Last resort: use the list item as the detail object
+                            if (!detail) {
+                                detail = listMatch as unknown as QuotationFormData;
+                            }
+                        }
+                    }
+                }
+            }
+
             if (!detail) {
                 toast.error(`ไม่สามารถดึงข้อมูลรายละเอียดของ ${val} ได้`);
                 setIsSubmitting(false);
                 return;
             }
 
+            // 2.5 If type is AQ, use the record found in available-approvals list
+            // 🕵️ No longer calling AQService.getApprovalById to avoid 404 errors (endpoint not supported).
+            // We rely on data from foundAQRecord (from available-approvals API) or fallback to SQ details.
+            let aqDetail: AvailableApproval | null = foundAQRecord || null;
+            
+            if (type === 'AQ' && !aqDetail) {
+                try {
+                    const aqs = await ReservationService.getAvailableApprovals();
+                    aqDetail = aqs.find((a: AvailableApproval) => 
+                        String(a.aq_no) === String(val) || 
+                        String(a.aq_id) === String(val) ||
+                        String(a.sq_no) === String(val)
+                    ) || null;
+                } catch {
+                    // Fail silently for available approvals fetch
+                }
+            }
+
             // 3. Populate Header Fields
             if (detail.customer_id) setValue('customer_id', String(detail.customer_id), { shouldDirty: true });
             if (detail.branch_id) setValue('branch_id', String(detail.branch_id), { shouldDirty: true });
-            if (detail.currency_code) {
-                setValue('currency_code', detail.currency_code, { shouldDirty: true });
-                setValue('isMulticurrency', detail.currency_code !== 'THB', { shouldDirty: true });
-                if (detail.currency_code !== 'THB') {
-                    setValue('base_currency_code', detail.currency_code, { shouldDirty: true });
-                    setValue('quote_currency_code', 'THB', { shouldDirty: true });
-                    setValue('exchange_rate', Number(detail.exchange_rate || 1), { shouldDirty: true });
-                }
-            }
-            if (detail.payment_term_days) setValue('payment_term_days', Number(detail.payment_term_days), { shouldDirty: true });
-            if (detail.remarks) setValue('remarks', detail.remarks, { shouldDirty: true });
-            if (detail.tax_code_id) setValue('tax_code_id', Number(detail.tax_code_id), { shouldDirty: true });
-            if (detail.sale_area_id) setValue('sale_area_id', String(detail.sale_area_id), { shouldDirty: true });
-            if (detail.emp_sale_id) setValue('emp_sale_id', String(detail.emp_sale_id), { shouldDirty: true });
-            if (detail.emp_dept_id) setValue('emp_dept_id', String(detail.emp_dept_id), { shouldDirty: true });
-            if (detail.project_id) setValue('job_id', String(detail.project_id), { shouldDirty: true });
+            
+            // 5. Multicurrency & Currency Sync (Aggressive Discovery)
+            const d = detail as unknown as DiscoveryLine;
+            const ad = aqDetail as unknown as DiscoveryAQLine;
+            const rd = ((detail as unknown) as Record<string, unknown>).rawData as Record<string, unknown> || {}; 
+
+            // 🛡️ Standard Alignment: Base is usually foreign (USD), Quote is local (THB)
+            const baseCurrency = String(
+                detail.base_currency_code ||
+                rd.base_currency_code ||
+                d.base_currency_code || 
+                (d.currency_code && d.currency_code !== 'THB' ? d.currency_code : undefined) ||
+                ad?.base_currency_code || 
+                ad?.currency_code || 
+                d.currency_code || 
+                'THB'
+            );
+            
+            const quoteCurrency = String(detail.quote_currency_code || rd.quote_currency_code || d.quote_currency_code || ad?.quote_currency_code || 'THB');
+            const exchangeRate = Number(detail.exchange_rate || rd.exchange_rate || d.exchange_rate || ad?.exchange_rate || 1);
+            
+            // 🛡️ Force isMulticurrency if any currency is not THB or rate is not 1
+            const isMulticurrency = Boolean(
+                (baseCurrency !== 'THB') || 
+                (quoteCurrency !== 'THB') || 
+                (exchangeRate !== 1 && exchangeRate !== 0) ||
+                (detail.isMulticurrency === true) ||
+                (rd.is_multicurrency === 'Y' || rd.is_multicurrency === true) ||
+                (d.is_multicurrency === 'Y' || d.is_multicurrency === true) ||
+                (ad?.is_multicurrency === 'Y' || ad?.is_multicurrency === true)
+            );
+
+            // Get the most relevant date for exchange rate
+            const rawDate = (
+                (detail.exchange_rate_date && detail.exchange_rate_date !== 'null') ? detail.exchange_rate_date :
+                (rd.exchange_rate_date && rd.exchange_rate_date !== 'null') ? rd.exchange_rate_date :
+                (d.exchange_rate_date && d.exchange_rate_date !== 'null') ? d.exchange_rate_date : 
+                (d.sq_date && d.sq_date !== 'null') ? d.sq_date : 
+                (ad?.exchange_rate_date && String(ad.exchange_rate_date) !== 'null') ? String(ad.exchange_rate_date) : 
+                (ad?.aq_date && String(ad.aq_date) !== 'null') ? String(ad.aq_date) : 
+                new Date().toISOString().split('T')[0]
+            );
+            const exchangeRateDate = String(rawDate).split('T')[0];
+
+            // Set Values for Multicurrency
+            setValue('isMulticurrency', isMulticurrency, { shouldDirty: true }); 
+            setValue('base_currency_code', baseCurrency, { shouldDirty: true });
+            setValue('quote_currency_code', quoteCurrency, { shouldDirty: true });
+            setValue('exchange_rate', exchangeRate, { shouldDirty: true });
+            setValue('exchange_rate_date', exchangeRateDate, { shouldDirty: true });
+
+            // 6. Header Field Mapping (Aggressive Fallback Discovery)
+            // Priority: Detail from Service -> Explicit rawData rd -> Discovery Line 'd'
+            
+            // Payment Terms
+            const paymentTerms = Number(detail.payment_term_days ?? rd.payment_term_days ?? d.payment_term_days ?? d.payment_term ?? d.credit_term ?? 0);
+            setValue('payment_term_days', paymentTerms, { shouldDirty: true });
+
+            if (detail.remarks || rd.remarks || d.remarks) setValue('remarks', String(detail.remarks || rd.remarks || d.remarks || ''), { shouldDirty: true });
+            
+            // Discount Mapping
+            const discountInput = String(detail.discount_expression || detail.discount_input || rd.discount_expression || rd.discount_input || d.discount_input || d.discount_rate || '0');
+            setValue('discount_input', discountInput, { shouldDirty: true });
+
+            // Tax Code Discovery
+            const taxCodeId = detail.tax_code_id ?? rd.tax_code_id ?? d.tax_code_id ?? d.tax_id ?? d.vat_id ?? d.id_tax;
+            if (taxCodeId !== undefined && taxCodeId !== null) setValue('tax_code_id', Number(taxCodeId), { shouldDirty: true });
+
+            // Sales Area
+            const saleAreaId = detail.sale_area_id ?? rd.sale_area_id ?? d.sale_area_id ?? d.area_id ?? d.emp_area_id;
+            if (saleAreaId !== undefined && saleAreaId !== null) setValue('sale_area_id', String(saleAreaId), { shouldDirty: true });
+
+            // Sales Person Discovery
+            const empSaleId = detail.emp_sale_id ?? rd.emp_sale_id ?? d.emp_sale_id ?? d.sale_id ?? d.emp_id_sale ?? d.id_sale;
+            if (empSaleId !== undefined && empSaleId !== null) setValue('emp_sale_id', String(empSaleId), { shouldDirty: true });
+
+            // Department
+            const empDeptId = detail.emp_dept_id ?? rd.emp_dept_id ?? d.emp_dept_id ?? d.dept_id ?? d.id_dept;
+            if (empDeptId !== undefined && empDeptId !== null) setValue('emp_dept_id', String(empDeptId), { shouldDirty: true });
+
+            // Project / Job Discovery
+            const projectId = detail.job_id ?? detail.project_id ?? rd.job_id ?? rd.project_id ?? d.job_id ?? d.project_id ?? d.id_project;
+            if (projectId !== undefined && projectId !== null) setValue('job_id', String(projectId), { shouldDirty: true });
 
             // 4. Populate Line Items
             if (detail.lines && detail.lines.length > 0) {
-                const mappedLines: ReservationLineValues[] = detail.lines.map(qLine => ({
-                    item_id: String(qLine.item_id),
-                    item_code: qLine.item_code || '',
-                    item_name: qLine.item_name || '',
-                    qty_reserved: Number(qLine.qty || 0),
-                    warehouse_id: '', // User must select
-                    location_id: '',  // User must select
-                    uom_id: String(qLine.uom_id || 'PCS'),
-                    unit_price: Number(qLine.unit_price || 0),
-                    lot_no: '',
-                    line_discount_input: qLine.discount_expression || '',
-                    line_discount: Number(qLine.line_discount || 0),
-                    reserve_policy: 'AUTO',
-                    line_total: Number(qLine.line_total || 0),
-                    tax_code_id: qLine.tax_code_id ? Number(qLine.tax_code_id) : (detail.tax_code_id ? Number(detail.tax_code_id) : undefined),
-                    note: qLine.note || '',
-                }));
-                setValue('lines', mappedLines, { shouldDirty: true, shouldValidate: true });
+                // If we have AQ detail, use its lines/quantities
+                const aqLines: AQLine[] = (aqDetail?.aq_lines || aqDetail?.lines || []) as AQLine[];
+
+                const mappedLines: ReservationLineValues[] = (detail.lines || []).map((qLineRaw: unknown) => {
+                    const qLine = qLineRaw as DiscoveryLine;
+                    
+
+
+                    // Find matching line in AQ to get approved quantities and potentially item details
+                    const matchingAQLine = (aqLines || []).find((al: AQLine) => {
+                        const dal = al as DiscoveryAQLine;
+                        return Number(dal.sq_line_id) === Number(qLine.sq_line_id) || 
+                               Number(dal.item_id) === Number(qLine.item_id);
+                    }) as DiscoveryAQLine | undefined;
+
+                    // 🕵️ SUPER Aggressive Item Discovery: Extract code/name from any possible nested object
+                    const qLineItemId = qLine.item_id;
+                    const itemObj = (typeof qLineItemId === 'object' && qLineItemId !== null) 
+                        ? (qLineItemId as Record<string, unknown>)
+                        : ((qLine.item || qLine.item_master || qLine.master_item || qLine.master || qLine.master_data || {}) as Record<string, unknown>);
+                    
+                    const itemCode = String(
+                        qLine.item_code || 
+                        matchingAQLine?.item_code ||
+                        itemObj.item_code || 
+                        itemObj.code || 
+                        itemObj.item_no ||
+                        qLine.code || 
+                        qLine.item_no ||
+                        (typeof qLineItemId === 'string' && !qLineItemId.match(/^\d+$/) ? qLineItemId : '') ||
+                        ''
+                    ).trim();
+                    
+                    const itemName = String(
+                        qLine.item_name || 
+                        matchingAQLine?.item_name ||
+                        itemObj.item_name || 
+                        itemObj.name || 
+                        itemObj.item_name_th || 
+                        itemObj.item_description ||
+                        itemObj.description ||
+                        qLine.name || 
+                        qLine.item_description || 
+                        qLine.description ||
+                        ''
+                    ).trim();
+                    
+                    const itemId = typeof qLineItemId === 'object' && qLineItemId !== null
+                        ? String(itemObj.item_id || itemObj.id || '')
+                        : String(qLineItemId || qLine.id || matchingAQLine?.item_id || '');
+
+
+
+                    // If it's an AQ fetch, we should prioritize approved_qty if available
+                    const qtyToUse = (type === 'AQ' && matchingAQLine) 
+                        ? Number(matchingAQLine.approved_qty ?? matchingAQLine.qty ?? qLine.qty ?? 0)
+                        : Number(qLine.qty || 0);
+
+                    // 🛠️ Recalculate Line Total during mapping to ensure UI consistency
+                    const price = Number(qLine.unit_price || 0);
+                    const ldInput = String(qLine.discount_expression || qLine.line_discount_input || '');
+                    
+                    let calculatedLD = 0;
+                    if (ldInput && ldInput.endsWith('%')) {
+                        const percent = parseFloat(ldInput.replace('%', '')) || 0;
+                        calculatedLD = (qtyToUse * price) * (percent / 100);
+                    } else if (ldInput) {
+                        calculatedLD = parseFloat(ldInput) || 0;
+                    }
+
+                    return {
+                        id: String(qLine.sq_line_id || ''),
+                        sq_line_id: String(qLine.sq_line_id || ''),
+                        item_id: itemId,
+                        item_code: itemCode,
+                        item_name: itemName,
+                        qty_reserved: qtyToUse,
+                        warehouse_id: '', 
+                        location_id: '',  
+                        uom_id: String(qLine.uom_id || qLine.unit_id || 'PCS'),
+                        unit_price: price,
+                        lot_no: '',
+                        line_discount_input: ldInput,
+                        line_discount: calculatedLD,
+                        reserve_policy: 'AUTO' as const,
+                        line_total: (qtyToUse * price) - calculatedLD,
+                        tax_code_id: qLine.tax_code_id ? Number(qLine.tax_code_id) : (detail.tax_code_id ? Number(detail.tax_code_id) : undefined),
+                        note: String(qLine.note || ''),
+                    };
+                });
+                
+                // 🕵️ ITEM ENRICHMENT: If names are still missing, fetch from master data
+                const needsEnrichment = mappedLines.some(l => !l.item_name || l.item_name === '-' || l.item_name === '');
+                if (needsEnrichment) {
+
+                    try {
+                        const items = await MasterDataService.getItems();
+                        
+                        mappedLines.forEach((l: ReservationLineValues) => {
+                            if (!l.item_name || l.item_name === '-' || l.item_name === '') {
+                                const match = items.find((i: ItemListItem) => 
+                                    String(i.item_id || i.id) === String(l.item_id)
+                                );
+                                if (match) {
+                                    l.item_name = String(match.item_name || match.description || '');
+                                    l.item_code = String(match.item_code || l.item_code);
+                                }
+                            }
+                        });
+                    } catch {
+                        // Ignore enrichment errors silently
+                    }
+                }
+
+                // Filter out lines with 0 qty if it was from AQ (rejected lines have 0 approved_qty)
+                const finalLines = type === 'AQ' ? mappedLines.filter(l => l.qty_reserved > 0) : mappedLines;
+                
+                setValue('lines', finalLines, { shouldDirty: true, shouldValidate: true });
             }
 
             toast.success(`ซิงค์ข้อมูลจาก ${val} สำเร็จ`);
-        } catch (error) {
-            console.error('Fetch Quotation Error:', error);
+        } catch {
             toast.error('เกิดข้อผิดพลาดในการดึงข้อมูล');
         } finally {
             setIsSubmitting(false);
         }
-    }, [getValues, setValue]);
+    }, [getValues, setValue, setIsSubmitting]);
+
+    const handleSelectAQ = useCallback((aq: AvailableApproval) => {
+        setValue('aq_id', String(aq.aq_no || aq.aq_id));
+        setValue('sq_id', String(aq.sq_no || aq.sq_id));
+        setIsAQSearchOpen(false);
+        // Automatically fetch details after selection
+        handleFetchQuotation('AQ', String(aq.aq_no || aq.aq_id));
+    }, [setValue, handleFetchQuotation]);
 
     return {
         isEdit,
@@ -433,7 +719,6 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         taxCodes,
         departments,
         projects,
-        itemTypes,
         saleAreas,
         employees,
         uoms,
@@ -448,6 +733,8 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         setIsLotSearchOpen,
         isLeadSearchOpen,
         setIsLeadSearchOpen,
+        isAQSearchOpen,
+        setIsAQSearchOpen,
         activeLineIndex,
         setActiveLineIndex,
         activeLotLineIndex,
@@ -461,6 +748,8 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         handleSelectProduct,
         handleSelectLot,
         handleSelectLead,
+        handleSelectAQ,
         handleFetchQuotation,
     };
 };
+
