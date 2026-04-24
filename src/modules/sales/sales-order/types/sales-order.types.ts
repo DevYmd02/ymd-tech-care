@@ -49,7 +49,8 @@ export interface SalesOrderFormData {
     remarks?: string;                                 // text (nullable)
     ship_days?: number;                               // smallint(2) ส่งของภายใน (วัน)
     tax_code_id?: number | string;                    // FK→tax_code (nullable)
-    item_id?: string;                                 // FK→item (nullable)
+    emp_sale_id?: string | number;                    // ID พนักงานขาย (nullable)
+    emp_sale_name?: string;                           // ชื่อพนักงานขาย (display only)
     emp_area_id?: string;                             // ID เขตการขาย (nullable)
     emp_dept_id?: string;                             // ID แผนก
     job_id?: string;                                  // ID Job

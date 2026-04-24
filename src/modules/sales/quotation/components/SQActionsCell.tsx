@@ -22,8 +22,8 @@ export const SQActionsCell: React.FC<SQActionsCellProps> = ({
     const isDraft = status === 'DRAFT';
     const isPending = status === 'PENDING';
     const isRejected = status === 'REJECTED';
-    const isAccepted = status === 'ACCEPTED' || status === 'APPROVED';
-    const canViewHistory = isAccepted || isRejected;
+    const isApproved = status === 'APPROVED';
+    const canViewHistory = isApproved || isRejected;
 
     return (
         <div className="flex items-center justify-center gap-1">

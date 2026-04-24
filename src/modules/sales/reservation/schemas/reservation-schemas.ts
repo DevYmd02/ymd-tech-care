@@ -71,7 +71,7 @@ export type ReservationLineValues = z.infer<typeof ReservationLineSchema>;
  * ค่าเริ่มต้นสำหรับฟอร์มใบสั่งจอง
  */
 export const getReservationDefaultValues = (): Partial<ReservationFormValues> => ({
-    reservation_no: 'RS-AUTO',
+    reservation_no: '',
     reservation_date: new Date().toISOString().split('T')[0],
     customer_id: '',
     branch_id: '',

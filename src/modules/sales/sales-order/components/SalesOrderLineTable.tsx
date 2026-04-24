@@ -1,6 +1,6 @@
 /**
  * @file SalesOrderLineTable.tsx
- * @description ตารางรายการสินค้าในคำสั่งขาย (sale_order_line D10) - รุ่นอัปเกรด High-Density & Sticky
+ * @description ตารางรายการสินค้าในใบสั่งขาย (sale_order_line D10) - รุ่นอัปเกรด High-Density & Sticky
  */
 
 import { Plus, Trash2, ShoppingBag, Search, AlertCircle } from 'lucide-react';
@@ -16,6 +16,9 @@ interface SalesOrderLineTableProps {
     onRemoveLine: (index: number) => void;
     onLineChange: (index: number, field: keyof SalesOrderLineData, value: string | number) => void;
     onSearchProduct?: (index: number) => void;
+    onSearchWarehouse?: (index: number) => void;
+    onSearchLocation?: (index: number) => void;
+    onSearchLot?: (index: number) => void;
     uoms?: UnitListItem[];
     warehouses?: WarehouseListItem[];
     locations?: Location[];
@@ -28,6 +31,9 @@ export function SalesOrderLineTable({
     onRemoveLine,
     onLineChange,
     onSearchProduct,
+    onSearchWarehouse,
+    onSearchLocation,
+    onSearchLot,
     uoms = [],
     warehouses = [],
     locations = [],
@@ -46,9 +52,9 @@ export function SalesOrderLineTable({
         return !!(lineError as Record<string, unknown> | undefined)?.[fieldName];
     };
     
-    // Aesthetic classes matching Reservation but themed Emerald
+    // Aesthetic classes matching Reservation but themed Indigo
     const compactInputClass =
-        "h-8 w-full px-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-gray-900 dark:text-white transition-all disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm rounded";
+        "h-8 w-full px-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-gray-900 dark:text-white transition-all disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm rounded";
     
     const headerThClass = 
         "px-3 py-3 font-bold uppercase text-xs tracking-tighter border-b border-gray-200 dark:border-gray-700 whitespace-nowrap";
@@ -57,15 +63,15 @@ export function SalesOrderLineTable({
         <section className="space-y-6">
             {/* Header section with icon and Add button */}
             <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
-                <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
                     <ShoppingBag size={20} strokeWidth={2.5} />
-                    <h3 className="text-lg font-bold">รายการสินค้าคำสั่งขาย (Order Lines)</h3>
+                    <h3 className="text-lg font-bold">รายการสินค้าใบสั่งขาย (Order Lines)</h3>
                 </div>
                 {!isLocked && (
                     <button
                         type="button"
                         onClick={onAddLine}
-                        className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold shadow-sm transition-all active:scale-95"
+                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold shadow-sm transition-all active:scale-95"
                     >
                         <Plus size={16} strokeWidth={3} />
                         เพิ่มรายการ
@@ -75,7 +81,7 @@ export function SalesOrderLineTable({
 
             {/* Table Container with Premium Styling */}
             <div className="rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden bg-white dark:bg-gray-900">
-                <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-emerald-200 dark:scrollbar-thumb-emerald-500/20 scrollbar-track-transparent bg-white dark:bg-gray-900">
+                <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-indigo-200 dark:scrollbar-thumb-indigo-500/20 scrollbar-track-transparent bg-white dark:bg-gray-900">
                     <table className="table-fixed text-sm text-left border-separate border-spacing-0 w-full min-w-[2130px]">
                         <colgroup>
                             <col className="w-[60px]" />  {/* ลำดับ */}
@@ -90,54 +96,50 @@ export function SalesOrderLineTable({
                             <col className="w-[130px]" /> {/* ส่วนลด */}
                             <col className="w-[160px]" /> {/* ยอดรวม */}
                             <col className="w-[300px]" /> {/* หมายเหตุ */}
-                            <col className="w-[60px]" />  {/* จัดการ */}
+                            {!isLocked && <col className="w-[60px]" />}  {/* จัดการ */}
                         </colgroup>
                         
                         <thead className="bg-[#fbfaff] dark:bg-gray-800 sticky top-0 z-40">
-                            <tr className="bg-emerald-50/50 dark:bg-emerald-900/10">
-                                <th className={`${headerThClass} text-center text-emerald-600 dark:text-emerald-400 sticky left-0 bg-[#fbfaff] dark:bg-gray-800 z-50 border-r-0 after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[1px] after:bg-gray-200 dark:after:bg-gray-700`}>ลำดับ</th>
-                                <th className={`${headerThClass} text-emerald-700 dark:text-emerald-300 sticky left-[60px] bg-[#fbfaff] dark:bg-gray-800 z-50 border-r-0 after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[2px] after:bg-emerald-100 dark:after:bg-emerald-800/40`}>รหัสสินค้า</th>
-                                <th className={`${headerThClass} text-emerald-700 dark:text-emerald-300`}>ชื่อสินค้า</th>
-                                <th className={`${headerThClass} text-emerald-700 dark:text-emerald-300/60`}>คลัง (WAREHOUSE)</th>
-                                <th className={`${headerThClass} text-emerald-700 dark:text-emerald-300/60`}>ที่เก็บ (LOCATION)</th>
-                                <th className={`${headerThClass} text-right text-emerald-700 dark:text-emerald-300/60`}>จำนวน (QTY)</th>
-                                <th className={`${headerThClass} text-center text-emerald-700 dark:text-emerald-300/60`}>หน่วย (UOM)</th>
-                                <th className={`${headerThClass} text-emerald-700 dark:text-emerald-300/60`}>ล็อต (LOT_NO)</th>
-                                <th className={`${headerThClass} text-right text-emerald-700 dark:text-emerald-300/60`}>ราคา/หน่วย</th>
-                                <th className={`${headerThClass} text-right text-emerald-700 dark:text-emerald-300/60`}>ส่วนลด</th>
-                                <th className={`${headerThClass} text-right text-emerald-700 dark:text-emerald-300/60`}>ยอดรวม</th>
-                                <th className={`${headerThClass} text-emerald-700 dark:text-emerald-300/60`}>หมายเหตุ</th>
+                            <tr className="bg-indigo-50/50 dark:bg-indigo-900/10">
+                                <th className={`${headerThClass} text-center text-indigo-600 dark:text-indigo-400 sticky left-0 bg-[#fbfaff] dark:bg-gray-800 z-50 border-r-0 after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[1px] after:bg-gray-200 dark:after:bg-gray-700`}>ลำดับ</th>
+                                <th className={`${headerThClass} text-indigo-700 dark:text-indigo-300 sticky left-[60px] bg-[#fbfaff] dark:bg-gray-800 z-50 border-r-0 after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[2px] after:bg-indigo-100 dark:after:bg-indigo-800/40`}>รหัสสินค้า</th>
+                                <th className={`${headerThClass} text-indigo-700 dark:text-indigo-300`}>ชื่อสินค้า</th>
+                                <th className={`${headerThClass} text-indigo-700 dark:text-indigo-300/60`}>คลัง (WAREHOUSE)</th>
+                                <th className={`${headerThClass} text-indigo-700 dark:text-indigo-300/60`}>ที่เก็บ (LOCATION)</th>
+                                <th className={`${headerThClass} text-right text-indigo-700 dark:text-indigo-300/60`}>จำนวน (QTY)</th>
+                                <th className={`${headerThClass} text-center text-indigo-700 dark:text-indigo-300/60`}>หน่วย (UOM)</th>
+                                <th className={`${headerThClass} text-indigo-700 dark:text-indigo-300/60`}>ล็อต (LOT_NO)</th>
+                                <th className={`${headerThClass} text-right text-indigo-700 dark:text-indigo-300/60`}>ราคา/หน่วย</th>
+                                <th className={`${headerThClass} text-right text-indigo-700 dark:text-indigo-300/60`}>ส่วนลด</th>
+                                <th className={`${headerThClass} text-right text-indigo-700 dark:text-indigo-300/60`}>ยอดรวม</th>
+                                <th className={`${headerThClass} text-indigo-700 dark:text-indigo-300/60`}>หมายเหตุ</th>
                                 {!isLocked && <th className={`${headerThClass} text-center sticky right-[-1px] bg-[#fbfaff] dark:bg-gray-800 z-[60] border-l border-gray-200 dark:border-gray-700 shadow-[-12px_0_20px_-10px_rgba(0,0,0,0.15)] dark:shadow-[-12px_0_20px_-10px_rgba(0,0,0,0.4)] pr-[13px]`}></th>}
                             </tr>
                         </thead>
 
                         <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-gray-900">
                             {lines.map((line, index) => {
-                                const filteredLocations = locations.filter(
-                                    (loc) => !line.warehouse_id || String(loc.warehouse_id) === String(line.warehouse_id)
-                                );
-
                                 return (
-                                    <tr key={index} className="hover:bg-emerald-50/50 dark:hover:bg-emerald-900/10 transition-colors group">
+                                    <tr key={index} className="hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-colors group">
                                         {/* Sticky Left: Index */}
-                                        <td className="px-2 py-2 text-center text-emerald-400 dark:text-emerald-500/70 font-bold sticky left-0 bg-white dark:bg-gray-900 group-hover:bg-[#fcfaff] dark:group-hover:bg-gray-800 z-10 transition-colors after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[1px] after:bg-gray-100 dark:after:bg-gray-800/40">
+                                        <td className="px-2 py-2 text-center text-indigo-400 dark:text-indigo-500/70 font-bold sticky left-0 bg-white dark:bg-gray-900 group-hover:bg-[#fcfaff] dark:group-hover:bg-gray-800 z-10 transition-colors after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[1px] after:bg-gray-100 dark:after:bg-gray-800/40">
                                             {index + 1}
                                         </td>
 
                                         {/* Sticky Left: Item Code */}
-                                        <td className="px-2 py-2 sticky left-[60px] bg-white dark:bg-gray-900 group-hover:bg-[#fcfaff] dark:group-hover:bg-gray-800 z-10 transition-colors after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[2px] after:bg-emerald-50 dark:after:bg-emerald-800/20">
+                                        <td className="px-2 py-2 sticky left-[60px] bg-white dark:bg-gray-900 group-hover:bg-[#fcfaff] dark:group-hover:bg-gray-800 z-10 transition-colors after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[2px] after:bg-indigo-50 dark:after:bg-indigo-800/20">
                                             <div className="flex gap-1 items-center">
                                                 <input
                                                     value={line.item_code || ''}
                                                     readOnly
-                                                    className={`${compactInputClass} bg-gray-50/50 dark:bg-gray-800 italic cursor-not-allowed text-emerald-700 dark:text-white/70 border-gray-200 dark:border-gray-700`}
+                                                    className={`${compactInputClass} bg-gray-50/50 dark:bg-gray-800 italic cursor-not-allowed text-indigo-700 dark:text-white/70 border-gray-200 dark:border-gray-700`}
                                                     placeholder="รหัส"
                                                 />
                                                 {!isLocked && (
                                                     <button
                                                         type="button"
                                                         onClick={() => onSearchProduct?.(index)}
-                                                        className="p-1.5 bg-emerald-600 text-white rounded hover:bg-emerald-700 transition-all shadow-sm active:scale-95 shrink-0 h-8 w-8 flex items-center justify-center font-bold"
+                                                        className="p-1.5 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-all shadow-sm active:scale-95 shrink-0 h-8 w-8 flex items-center justify-center font-bold"
                                                     >
                                                         <Search size={14} />
                                                     </button>
@@ -157,45 +159,28 @@ export function SalesOrderLineTable({
 
                                         {/* Warehouse */}
                                         <td className="px-2 py-2">
-                                            <select
-                                                value={line.warehouse_id || ''}
-                                                disabled={isLocked}
-                                                onChange={(e) => {
-                                                    const nextWhId = e.target.value;
-                                                    onLineChange(index, 'warehouse_id', nextWhId);
-                                                    
-                                                    // Auto-map first location for this warehouse
-                                                    const firstLoc = locations.find(loc => String(loc.warehouse_id) === String(nextWhId));
-                                                    onLineChange(index, 'location_id', firstLoc ? String(firstLoc.location_id) : '');
-                                                }}
-                                                className={`${compactInputClass} bg-white dark:bg-gray-800 dark:text-white/80 border-gray-200 dark:border-gray-700`}
-                                                style={{ colorScheme: 'dark' }}
-                                            >
-                                                <option value="">-- คลัง --</option>
-                                                {warehouses.map((w) => (
-                                                    <option key={String(w.warehouse_id)} value={String(w.warehouse_id)}>
-                                                        {w.warehouse_name}
-                                                    </option>
-                                                ))}
-                                            </select>
+                                            <div className="flex gap-1 items-center">
+                                                <input 
+                                                    value={warehouses.find(w => String(w.warehouse_id) === String(line.warehouse_id))?.warehouse_name || ''}
+                                                    readOnly
+                                                    onClick={!isLocked ? () => onSearchWarehouse?.(index) : undefined}
+                                                    className={`${compactInputClass} ${!isLocked ? 'cursor-pointer hover:border-indigo-400 focus:border-indigo-500' : 'cursor-not-allowed bg-gray-50/50'} text-gray-700 dark:text-white/80 border-gray-200 dark:border-gray-700 transition-colors`}
+                                                    placeholder="เลือกคลัง..."
+                                                />
+                                            </div>
                                         </td>
 
                                         {/* Location */}
                                         <td className="px-2 py-2">
-                                            <select
-                                                value={line.location_id || ''}
-                                                disabled={isLocked}
-                                                onChange={(e) => onLineChange(index, 'location_id', e.target.value)}
-                                                className={`${compactInputClass} bg-white dark:bg-gray-800 dark:text-white/80 border-gray-200 dark:border-gray-700`}
-                                                style={{ colorScheme: 'dark' }}
-                                            >
-                                                <option value="">-- ที่เก็บ --</option>
-                                                {filteredLocations.map((l) => (
-                                                    <option key={String(l.location_id)} value={String(l.location_id)}>
-                                                        {l.name_th || l.code}
-                                                    </option>
-                                                ))}
-                                            </select>
+                                            <div className="flex gap-1 items-center">
+                                                <input 
+                                                    value={locations.find(l => String(l.location_id) === String(line.location_id))?.name_th || locations.find(l => String(l.location_id) === String(line.location_id))?.code || ''}
+                                                    readOnly
+                                                    onClick={!isLocked ? () => onSearchLocation?.(index) : undefined}
+                                                    className={`${compactInputClass} ${!isLocked ? 'cursor-pointer hover:border-indigo-400 focus:border-indigo-500' : 'cursor-not-allowed bg-gray-50/50'} text-gray-700 dark:text-white/80 border-gray-200 dark:border-gray-700 transition-colors`}
+                                                    placeholder="เลือกที่เก็บ..."
+                                                />
+                                            </div>
                                         </td>
 
                                         {/* Quantity */}
@@ -213,7 +198,7 @@ export function SalesOrderLineTable({
                                                 onFocus={(e) => e.target.select()}
                                                 placeholder="0"
                                                 maxLength={12}
-                                                className={`${compactInputClass} text-right font-bold text-emerald-600 dark:text-white bg-white dark:bg-gray-800 border-emerald-100 dark:border-gray-700`}
+                                                className={`${compactInputClass} text-right font-bold text-indigo-600 dark:text-white bg-white dark:bg-gray-800 border-indigo-100 dark:border-gray-700`}
                                             />
                                         </td>
 
@@ -237,14 +222,23 @@ export function SalesOrderLineTable({
 
                                         {/* Lot No */}
                                         <td className="px-2 py-2">
-                                            <input
-                                                type="text"
-                                                value={line.lot_no || ''}
-                                                disabled={isLocked}
-                                                onChange={(e) => onLineChange(index, 'lot_no', e.target.value)}
-                                                placeholder="ล็อตที่..."
-                                                className={`${compactInputClass} font-bold text-orange-600 dark:text-orange-400 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-orange-500`}
-                                            />
+                                            <div className="relative group/lot">
+                                                <div 
+                                                    onClick={!isLocked ? () => onSearchLot?.(index) : undefined}
+                                                    className={`absolute left-0 top-0 bottom-0 flex items-center pl-2 ${!isLocked ? 'cursor-pointer group-hover/lot:text-orange-500 text-gray-400' : 'text-gray-300'}`}
+                                                >
+                                                    <Search size={14} />
+                                                </div>
+                                                <input 
+                                                    type="text" 
+                                                    value={line.lot_no || ''} 
+                                                    readOnly
+                                                    disabled={isLocked}
+                                                    onClick={!isLocked ? () => onSearchLot?.(index) : undefined}
+                                                    placeholder="เลือกล็อต..."
+                                                    className={`${compactInputClass} pl-7 cursor-pointer font-bold text-orange-600 dark:text-orange-400 bg-white dark:bg-gray-800 border-orange-100 dark:border-gray-700 focus:ring-orange-500`}
+                                                />
+                                            </div>
                                         </td>
 
                                         {/* Unit Price */}
@@ -282,7 +276,7 @@ export function SalesOrderLineTable({
 
                                         {/* Line Total */}
                                         <td className="px-2 py-2">
-                                            <div className={`h-8 flex flex-col items-end justify-center px-3 font-bold bg-white dark:bg-gray-900 rounded border shadow-inner overflow-hidden max-w-[150px] ${line.line_total < 0 ? 'text-red-500 border-red-200 dark:border-red-800' : 'text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-700'}`}>
+                                            <div className={`h-8 flex flex-col items-end justify-center px-3 font-bold bg-white dark:bg-gray-900 rounded border shadow-inner overflow-hidden max-w-[150px] ${line.line_total < 0 ? 'text-red-500 border-red-200 dark:border-red-800' : 'text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-700'}`}>
                                                 <span className="truncate w-full text-right overflow-hidden">{(line.line_total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                                 {hasLineFieldError(index, 'line_total') && (
                                                     <div className="flex items-center gap-0.5 text-[8px] font-medium text-red-500 mt-[-2px]">
@@ -324,13 +318,13 @@ export function SalesOrderLineTable({
                     </table>
 
                     {lines.length === 0 && (
-                        <div className="sticky left-0 w-full flex flex-col items-center justify-center py-16 text-gray-400 dark:text-emerald-300/40 bg-gray-50/50 dark:bg-gray-900/50">
-                            <ShoppingBag className="w-16 h-16 mb-4 text-emerald-200 dark:text-emerald-500/30 opacity-40" />
+                        <div className="sticky left-0 w-full flex flex-col items-center justify-center py-16 text-gray-400 dark:text-indigo-300/40 bg-gray-50/50 dark:bg-gray-900/50">
+                            <ShoppingBag className="w-16 h-16 mb-4 text-indigo-200 dark:text-indigo-500/30 opacity-40" />
                             <p className="text-base font-medium">ยังไม่มีรายการสินค้า</p>
                             <button
                                 type="button"
                                 onClick={onAddLine}
-                                className="mt-3 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-bold underline transition-colors"
+                                className="mt-3 text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-bold underline transition-colors"
                             >
                                 เพิ่มรายการแรกที่นี่
                             </button>

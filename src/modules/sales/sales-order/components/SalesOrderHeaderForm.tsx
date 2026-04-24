@@ -1,6 +1,6 @@
 /**
  * @file SalesOrderHeaderForm.tsx
- * @description ฟอร์มส่วนหัวคำสั่งขาย (Sales Order Header)
+ * @description ฟอร์มส่วนหัวใบสั่งขาย (Sales Order Header)
  * @fields ตรงกับ sale_order_header (D9)
  */
 
@@ -14,7 +14,6 @@ import type {
     Currency,
     DepartmentListItem,
     Project,
-    ItemTypeListItem,
 } from '@master-data/types/master-data-types';
 import type { CustomerMaster } from '@customer/customer-master/types/customer-types';
 import type { TaxCode } from '@master-data/tax/types/tax-types';
@@ -27,10 +26,10 @@ interface SalesOrderHeaderFormProps {
     taxCodes: TaxCode[];
     departments: DepartmentListItem[];
     projects: Project[];
-    itemTypes: ItemTypeListItem[];
     saleAreas: SaleAreaListItem[];
     readOnly?: boolean;
     onSearchCustomer?: () => void;
+    onSearchEmployee?: () => void;
     onSearchReservation?: () => void;
 }
 
@@ -41,10 +40,10 @@ export function SalesOrderHeaderForm({
     taxCodes,
     departments,
     projects,
-    itemTypes,
     saleAreas,
     readOnly = false,
     onSearchCustomer,
+    onSearchEmployee,
     onSearchReservation,
 }: SalesOrderHeaderFormProps) {
     const { register, watch, setValue, control } = useFormContext<SalesOrderFormData>();
@@ -52,15 +51,15 @@ export function SalesOrderHeaderForm({
     const formData = watch();
     const isLocked = readOnly;
 
-    // Emerald theme styles
+    // Indigo theme styles
     const inputClass =
-        'h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-white placeholder-gray-400 transition-all disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm';
+        'h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-white placeholder-gray-400 transition-all disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm';
     const selectClass =
-        'h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-white cursor-pointer disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm';
+        'h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-white cursor-pointer disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm';
     const labelClass =
         'block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider';
     const cardSection =
-        'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-4 bg-emerald-50/10 dark:bg-emerald-900/5 p-6 rounded-2xl border border-emerald-100 dark:border-emerald-900/20';
+        'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-4 bg-indigo-50/10 dark:bg-indigo-900/5 p-6 rounded-2xl border border-indigo-100 dark:border-indigo-900/20';
 
     // Find selected customer name for display
     const selectedCustomer = customers.find(
@@ -73,9 +72,9 @@ export function SalesOrderHeaderForm({
     return (
         <section className="space-y-6">
             <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
-                <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
                     <ShoppingCart size={20} strokeWidth={2.5} />
-                    <h3 className="text-lg font-bold">ข้อมูลส่วนหัวคำสั่งขาย (Header Sales Order)</h3>
+                    <h3 className="text-lg font-bold">ข้อมูลส่วนหัวใบสั่งขาย (Header Sales Order)</h3>
                 </div>
                 <div className="flex items-center bg-white dark:bg-gray-800 px-3 py-1 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm transform scale-90 origin-right">
                     <StatusCheckbox
@@ -92,12 +91,12 @@ export function SalesOrderHeaderForm({
                 {/* Row 1: SO No / Date / Branch / Status */}
                 <div className="space-y-1">
                     <label className={labelClass}>
-                        เลขที่คำสั่งขาย (so_no) <span className="text-red-500">*</span>
+                        เลขที่ใบสั่งขาย (so_no) <span className="text-red-500">*</span>
                     </label>
                     <input
                         {...register('so_no')}
                         readOnly
-                        placeholder="SO-AUTO"
+                        placeholder="ระบบจะกรอกให้อัตโนมัติเมื่อบันทึก"
                         className={`${inputClass} bg-gray-50 border-gray-200 cursor-not-allowed`}
                     />
                 </div>
@@ -133,7 +132,7 @@ export function SalesOrderHeaderForm({
                             type="button"
                             disabled={isLocked}
                             onClick={() => onSearchReservation?.()}
-                            className="p-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center shrink-0 w-9 h-9"
+                            className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center shrink-0 w-9 h-9"
                         >
                             <Search size={18} />
                         </button>
@@ -165,7 +164,7 @@ export function SalesOrderHeaderForm({
                                 value={customerDisplay}
                                 readOnly
                                 disabled={isLocked}
-                                className={`${inputClass} pl-9 bg-gray-50/50 italic cursor-not-allowed group-hover:border-emerald-400 transition-colors`}
+                                className={`${inputClass} pl-9 bg-gray-50/50 italic cursor-not-allowed group-hover:border-indigo-400 transition-colors`}
                                 placeholder="-- คลิกปุ่มแว่นขยายเพื่อเลือกลูกค้า --"
                             />
                             <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -174,7 +173,7 @@ export function SalesOrderHeaderForm({
                             type="button"
                             disabled={isLocked}
                             onClick={() => onSearchCustomer?.()}
-                            className="p-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center shrink-0 w-9 h-9"
+                            className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center shrink-0 w-9 h-9"
                         >
                             <Search size={18} />
                         </button>
@@ -295,18 +294,27 @@ export function SalesOrderHeaderForm({
                 </div>
 
                 <div className="space-y-1">
-                    <label className={labelClass}>ประเภทสินค้าหลัก (item_id)</label>
-                    <select {...register('item_id')} disabled={isLocked} className={selectClass}>
-                        <option value="">-- เลือกประเภทสินค้า --</option>
-                        {itemTypes.map((item) => (
-                            <option
-                                key={item.item_type_id}
-                                value={String(item.item_type_id || '')}
-                            >
-                                {item.item_type_name}
-                            </option>
-                        ))}
-                    </select>
+                    <label className={labelClass}>พนักงานขาย (emp_sale_id)</label>
+                    <div className="flex gap-2">
+                        <div className="relative flex-1 group">
+                            <input
+                                value={formData.emp_sale_name || ''}
+                                readOnly
+                                disabled={isLocked}
+                                className={`${inputClass} pl-9 bg-gray-50/50 italic cursor-not-allowed group-hover:border-indigo-400 transition-colors`}
+                                placeholder="-- คลิกค้นหาพนักงาน --"
+                            />
+                            <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        </div>
+                        <button
+                            type="button"
+                            disabled={isLocked}
+                            onClick={() => onSearchEmployee?.()}
+                            className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center shrink-0 w-9 h-9"
+                        >
+                            <Search size={18} />
+                        </button>
+                    </div>
                 </div>
 
                 {/* Row 6: Tax / Remarks */}

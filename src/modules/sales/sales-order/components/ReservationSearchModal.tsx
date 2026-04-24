@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Search, ClipboardList, Check, X } from 'lucide-react';
 import { DialogFormLayout } from '@layout/DialogFormLayout';
+import { cn } from '@/shared/utils/cn';
 import { ReservationService, type ReservationHeader } from '@sales/reservation/services/reservation.service';
 import { useQuery } from '@tanstack/react-query';
 import { useDebounce } from '@hooks/useDebounce';
@@ -16,13 +17,15 @@ export interface ReservationSearchModalProps {
     onClose: () => void;
     onSelect: (reservation: ReservationHeader) => void;
     title?: string;
+    headerColor?: string;
 }
 
 export const ReservationSearchModal: React.FC<ReservationSearchModalProps> = React.memo(({
     isOpen,
     onClose,
     onSelect,
-    title = 'ค้นหาใบจองสินค้า - Find Reservation'
+    title = 'ค้นหาใบจองสินค้า - Find Reservation',
+    headerColor
 }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const debouncedSearch = useDebounce(searchTerm, 400);
@@ -51,8 +54,12 @@ export const ReservationSearchModal: React.FC<ReservationSearchModalProps> = Rea
             isOpen={isOpen}
             onClose={onClose}
             title={title}
+            headerColor={headerColor}
             titleIcon={
-                <div className="bg-emerald-600 p-1.5 rounded-lg shadow-sm">
+                <div className={cn(
+                    "p-1.5 rounded-lg shadow-sm",
+                    headerColor ? "bg-white/20" : "bg-indigo-600"
+                )}>
                     <ClipboardList size={20} className="text-white" />
                 </div>
             }
@@ -62,13 +69,13 @@ export const ReservationSearchModal: React.FC<ReservationSearchModalProps> = Rea
                 {/* Search Bar */}
                 <div className="p-6 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
                     <div className="relative group">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-emerald-500 transition-colors" size={20} />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={20} />
                         <input
                             type="text"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             placeholder="ค้นหาเลขที่ใบจอง หรือ ชื่อลูกค้า..."
-                            className="w-full pl-12 pr-4 h-12 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-base text-gray-900 dark:text-white shadow-sm group-hover:border-gray-300 dark:group-hover:border-gray-600 transition-all font-medium placeholder-gray-400 dark:placeholder-gray-500"
+                            className="w-full pl-12 pr-4 h-12 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-base text-gray-900 dark:text-white shadow-sm group-hover:border-gray-300 dark:group-hover:border-gray-600 transition-all font-medium placeholder-gray-400 dark:placeholder-gray-500"
                             autoFocus
                         />
                         {searchTerm && (
@@ -86,7 +93,7 @@ export const ReservationSearchModal: React.FC<ReservationSearchModalProps> = Rea
                 <div className="flex-1 overflow-auto p-0">
                     {isLoading ? (
                         <div className="flex flex-col items-center justify-center py-24 opacity-60">
-                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mb-4" />
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4" />
                             <p className="text-gray-500 font-medium">กำลังโหลดข้อมูลใบจอง...</p>
                         </div>
                     ) : (
@@ -105,11 +112,11 @@ export const ReservationSearchModal: React.FC<ReservationSearchModalProps> = Rea
                                     reservations.map((rs) => (
                                         <tr 
                                             key={rs.reservation_id} 
-                                            className="hover:bg-emerald-50/50 dark:hover:bg-emerald-900/10 transition-colors group cursor-pointer"
+                                            className="hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-colors group cursor-pointer"
                                             onClick={() => handleSelect(rs)}
                                         >
                                             <td className="px-6 py-4">
-                                                <span className="font-bold text-emerald-600 dark:text-emerald-400 group-hover:scale-105 transition-transform inline-block">
+                                                <span className="font-bold text-indigo-600 dark:text-indigo-400 group-hover:scale-105 transition-transform inline-block">
                                                     {rs.rs_no}
                                                 </span>
                                             </td>
@@ -130,7 +137,7 @@ export const ReservationSearchModal: React.FC<ReservationSearchModalProps> = Rea
                                                         e.stopPropagation();
                                                         handleSelect(rs);
                                                     }}
-                                                    className="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95"
+                                                    className="inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95"
                                                 >
                                                     เลือก
                                                     <Check size={14} />
@@ -157,7 +164,7 @@ export const ReservationSearchModal: React.FC<ReservationSearchModalProps> = Rea
                 {/* Footer */}
                 <div className="p-4 bg-gray-50 dark:bg-gray-800/80 border-t border-gray-100 dark:border-gray-700 flex justify-between items-center px-6">
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                        แสดงข้อมูล <span className="font-bold text-emerald-600">{reservations.length}</span> รายการ
+                        แสดงข้อมูล <span className="font-bold text-indigo-600">{reservations.length}</span> รายการ
                     </p>
                     <button 
                         onClick={onClose}

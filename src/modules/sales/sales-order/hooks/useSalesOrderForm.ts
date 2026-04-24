@@ -12,6 +12,13 @@ import type { ItemListItem } from '@inventory/types/product-types';
 import type { Currency, UnitListItem } from '@master-data/types/master-data-types';
 import type { TaxCode } from '@master-data/tax/types/tax-types';
 import type { ReservationHeader } from '@sales/reservation/services/reservation.service';
+import { ReservationService } from '@sales/reservation/services/reservation.service';
+import { 
+    calculateDiscountAmount, 
+    calculateVatAmount, 
+    calculateNetTotal, 
+    calculateLineTotal 
+} from '@sales/shared/utils/sales-calculations';
 
 interface UseSalesOrderFormProps {
     isOpen: boolean;
@@ -87,21 +94,14 @@ export function useSalesOrderForm({
     const totals = useMemo(() => {
         const subTotal = (formData.lines || []).reduce((sum, line) => sum + (line.line_total || 0), 0);
         
-        const dInput = formData.discount_input || '';
-        let calculatedDiscount = 0;
-        if (dInput.endsWith('%')) {
-            const percent = parseFloat(dInput.replace('%', '')) || 0;
-            calculatedDiscount = subTotal * (percent / 100);
-        } else {
-            calculatedDiscount = dInput === '' ? 0 : parseFloat(dInput) || 0;
-        }
+        const calculatedDiscount = calculateDiscountAmount(subTotal, formData.discount_input || 0);
 
         const selectedTaxCode = taxCodes.find(
             (t) => String(t.tax_code_id) === String(formData.tax_code_id)
         );
         const taxRate = selectedTaxCode ? Number(selectedTaxCode.tax_rate) || 0 : 0;
-        const vatAmount = formData.tax_code_id ? (subTotal - calculatedDiscount) * (taxRate / 100) : 0;
-        const totalAmount = subTotal + vatAmount - calculatedDiscount;
+        const vatAmount = calculateVatAmount(subTotal - calculatedDiscount, taxRate);
+        const totalAmount = calculateNetTotal(subTotal, calculatedDiscount, vatAmount);
 
         return {
             subTotal,
@@ -190,20 +190,12 @@ export function useSalesOrderForm({
         if (field === 'qty_ordered' || field === 'unit_price' || field === 'line_discount_input') {
             const qty = Number(field === 'qty_ordered' ? value : updatedLine.qty_ordered) || 0;
             const price = Number(field === 'unit_price' ? value : updatedLine.unit_price) || 0;
-
-            const ldInput =
-                (field === 'line_discount_input' ? (value as string) : updatedLine.line_discount_input) ||
-                '';
-            let calculatedLD = 0;
-            if (ldInput.endsWith('%')) {
-                const percent = parseFloat(ldInput.replace('%', '')) || 0;
-                calculatedLD = qty * price * (percent / 100);
-            } else {
-                calculatedLD = parseFloat(ldInput) || 0;
-            }
-
+            const ldInput = (field === 'line_discount_input' ? (value as string) : updatedLine.line_discount_input) || '';
+            
+            const calculatedLD = calculateDiscountAmount(qty * price, ldInput);
+            
             updatedLine.line_discount = calculatedLD;
-            updatedLine.line_total = qty * price - calculatedLD;
+            updatedLine.line_total = calculateLineTotal(qty, price, calculatedLD);
         }
 
         newLines[index] = updatedLine as SalesOrderLineValues;
@@ -243,10 +235,44 @@ export function useSalesOrderForm({
         }
     };
 
-    const handleSelectReservation = (reservation: ReservationHeader) => {
+    const handleSelectReservation = async (reservation: ReservationHeader) => {
         setValue('reservation_id', reservation.rs_no, { shouldValidate: true, shouldDirty: true });
         if (reservation.customer_id) {
             setValue('customer_id', String(reservation.customer_id), { shouldValidate: true, shouldDirty: true });
+        }
+
+        try {
+            const rsData = await ReservationService.getById(reservation.reservation_id);
+            if (rsData) {
+                // Populate Header Fields
+                if (rsData.remarks) setValue('remarks', rsData.remarks, { shouldDirty: true });
+                if (rsData.currency_code) setValue('quote_currency_code', rsData.currency_code, { shouldDirty: true });
+                if (rsData.discount_input) setValue('discount_input', rsData.discount_input, { shouldDirty: true });
+
+                // Populate Lines (Override existing lines)
+                if (rsData.lines && rsData.lines.length > 0) {
+                    const mappedLines: SalesOrderLineValues[] = rsData.lines.map((line) => ({
+                        item_id: String(line.item_id || ''),
+                        item_code: line.item_code || '',
+                        item_name: line.item_name || '',
+                        qty_ordered: Number(line.qty_reserved || 0), // Use reserved quantity as ordered quantity
+                        warehouse_id: String(line.warehouse_id || ''),
+                        location_id: String(line.location_id || ''),
+                        uom_id: String(line.uom_id || ''),
+                        unit_price: Number(line.unit_price || 0),
+                        lot_no: line.lot_no || '',
+                        line_discount_input: line.line_discount_input || '',
+                        line_discount: Number(line.line_discount || 0),
+                        line_total: Number(line.line_total || 0),
+                        note: line.note || '',
+                        tax_code_id: Number(rsData.tax_code_id || watchHeaderTaxCodeId || 0),
+                    }));
+                    
+                    setValue('lines', mappedLines, { shouldValidate: true, shouldDirty: true });
+                }
+            }
+        } catch (error) {
+            console.error('Failed to fetch reservation details:', error);
         }
     };
 

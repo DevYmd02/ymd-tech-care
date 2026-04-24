@@ -20,6 +20,7 @@ import { MasterDataService } from '@master-data/services/master-data.service';
 import { TaxCodeService } from '@master-data/tax/services/tax-code.service';
 import { QuotationService } from '@sales/quotation/services/quotation.service';
 import type { QuotationHeader } from '@sales/quotation/types/quotation.types';
+import { ItemMasterService } from '@inventory/services/item-master.service';
 
 import { AQFormSchema } from '../schemas/aq.schema';
 import type { AQFormData, AQLineFormData } from '../schemas/aq.schema';
@@ -556,10 +557,9 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
             MasterDataService.getSaleAreas(),
             MasterDataService.getEmployees(),
             TaxCodeService.getTaxCodes(),
-            needsLineEnrichment ? MasterDataService.getItems() : Promise.resolve([]),
             needsLineEnrichment ? MasterDataService.getUnits() : Promise.resolve([]),
           ]);
-          const [customers, branches, projects, depts, areas, employees, taxCodes, items, uoms] = results;
+          const [customers, branches, projects, depts, areas, employees, taxCodes, uoms] = results;
           if (sq.customer_id && isPlaceholder(sq.customer_name)) {
             const m = customers.find(c => Number(c.customer_id || c.id) === Number(sq.customer_id));
             if (m) sq.customer_name = m.customer_name_th || m.name_th || m.customer_name || '';
@@ -592,9 +592,25 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
             if (taxMatch) sq.tax_code = taxMatch.tax_code || taxMatch.tax_name || '';
           }
           if (needsLineEnrichment) {
+            // Fetch missing items individually
+            const missingItemIds = mappedLines
+                .filter(l => !l.item_name || l.item_name === '-')
+                .map(l => l.item_id)
+                .filter(id => id !== undefined && id !== null);
+                
+            const itemMap = new Map();
+            if (missingItemIds.length > 0) {
+                const missingItemsData = await Promise.all(
+                    missingItemIds.map(id => ItemMasterService.getById(Number(id)))
+                );
+                missingItemsData.forEach(item => {
+                    if (item) itemMap.set(String(item.item_id), item);
+                });
+            }
+
             mappedLines.forEach(l => {
               if (!l.item_name || l.item_name === '-') {
-                const match = items.find(i => Number(i.item_id || i.id) === Number(l.item_id));
+                const match = itemMap.get(String(l.item_id));
                 if (match) { l.item_name = match.item_name || match.description || ''; l.item_code = match.item_code || l.item_code; }
               }
               if (!l.uom_name || l.uom_name === '-') {

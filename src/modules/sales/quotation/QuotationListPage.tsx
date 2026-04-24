@@ -58,6 +58,10 @@ export default function QuotationListPage() {
     const [isApproveLoading, setIsApproveLoading] = useState(false);
     const [pendingApproveId, setPendingApproveId] = useState<string | null>(null);
     
+    // 📄 Pagination State
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(10);
+    
     // 🏷️ History Modal State
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [historySqId, setHistorySqId] = useState<number | undefined>(undefined);
@@ -69,8 +73,10 @@ export default function QuotationListPage() {
         customer_name: customer,
         status: statusFilter === 'ALL' ? undefined : statusFilter,
         start_date: startDate,
-        end_date: endDate
-    }), [sqNo, customer, statusFilter, startDate, endDate]);
+        end_date: endDate,
+        page,
+        limit
+    }), [sqNo, customer, statusFilter, startDate, endDate, page, limit]);
 
     const { data: apiData, isLoading, refetch } = useQuotationList(queryParams);
 
@@ -97,6 +103,7 @@ export default function QuotationListPage() {
         setStatusFilter('ALL');
         setStartDate('');
         setEndDate('');
+        setPage(1);
     };
 
     const handleCreate = () => {
@@ -213,7 +220,7 @@ export default function QuotationListPage() {
         columnHelper.display({
             id: 'index',
             header: () => <div className="flex justify-center items-center w-full">ลำดับ</div>,
-            cell: (info) => <div className="flex justify-center items-center w-full">{info.row.index + 1}</div>,
+            cell: (info) => <div className="flex justify-center items-center w-full">{(page - 1) * limit + info.row.index + 1}</div>,
             size: 50,
             enableSorting: false,
         }),
@@ -327,7 +334,7 @@ export default function QuotationListPage() {
             size: 180,
             enableSorting: false,
         }),
-    ], [columnHelper, customerMap]);
+    ], [columnHelper, customerMap, page, limit]);
 
     return (
         <PageListLayout
@@ -387,7 +394,7 @@ export default function QuotationListPage() {
                                 ล้างค่า
                             </button>
                             <button
-                                onClick={() => refetch()}
+                                onClick={() => { setPage(1); refetch(); }}
                                 className="h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition-all active:scale-95 flex items-center justify-center px-6 gap-2"
                             >
                                 <Search size={18} strokeWidth={3} />
@@ -412,11 +419,11 @@ export default function QuotationListPage() {
                     columns={columns}
                     isLoading={isLoading}
                     pagination={{
-                        pageIndex: 1,
-                        pageSize: 10,
+                        pageIndex: page,
+                        pageSize: limit,
                         totalCount: apiData?.total || 0,
-                        onPageChange: () => {},
-                        onPageSizeChange: () => {},
+                        onPageChange: (p) => setPage(p),
+                        onPageSizeChange: (s) => { setLimit(s); setPage(1); },
                     }}
                     renderMobileCard={(item) => (
                         <SalesMobileCard 

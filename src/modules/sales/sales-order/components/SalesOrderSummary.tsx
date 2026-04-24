@@ -1,6 +1,6 @@
 /**
  * @file SalesOrderSummary.tsx
- * @description สรุปยอดเงินคำสั่งขาย (sub_total, discount_amount, vat_amount, total_amount)
+ * @description สรุปยอดเงินใบสั่งขาย (sub_total, discount_amount, vat_amount, total_amount)
  */
 
 import { Calculator, AlertCircle } from 'lucide-react';
@@ -37,7 +37,7 @@ export function SalesOrderSummary({
             <div className="flex-1">
                 <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700/50">
                     <p className="text-gray-400 text-sm italic">
-                        หมายเหตุเพิ่มเติม: รายละเอียดเพิ่มเติมเกี่ยวกับคำสั่งขายหรือเงื่อนไขพิเศษ
+                        หมายเหตุเพิ่มเติม: รายละเอียดเพิ่มเติมเกี่ยวกับใบสั่งขายหรือเงื่อนไขพิเศษ
                     </p>
                 </div>
             </div>

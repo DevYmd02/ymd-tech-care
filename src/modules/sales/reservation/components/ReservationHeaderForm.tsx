@@ -89,7 +89,7 @@ export function ReservationHeaderForm({
                     <input 
                         {...register('reservation_no')}
                         readOnly
-                        placeholder="RS-AUTO"
+                        placeholder="ระบบจะกรอกให้อัตโนมัติเมื่อบันทึก"
                         className={`${inputClass} bg-gray-100 border-gray-200 cursor-not-allowed font-medium`}
                     />
                 </div>

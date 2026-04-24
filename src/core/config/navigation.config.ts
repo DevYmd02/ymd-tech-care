@@ -104,7 +104,7 @@ export const sidebarMenuItems: MenuItem[] = [
             { id: 'quotation', label: 'ใบเสนอราคา (Quotation)', path: '/sales/quotation' },
             { id: 'quotation-approval', label: 'อนุมัติใบเสนอราคา', path: '/sales/quotation-approval' },
             { id: 'reservation', label: 'ใบสั่งจอง (Reservation)', path: '/sales/reservation' },
-            { id: 'sales-order', label: 'คำสั่งขาย (Sales Order)', path: '/sales/order' },
+            { id: 'sales-order', label: 'ใบสั่งขาย (Sales Order)', path: '/sales/order' },
             { id: 'sales-order-approval', label: 'อนุมัติใบสั่งขาย', path: '/sales/order-approval' },
             { id: 'delivery', label: 'จัดส่งสินค้า (Delivery / DO)', path: '/sales/delivery' },
             { id: 'sales-invoice', label: 'วางบิล/ใบแจ้งหนี้ (Invoice)', path: '/sales/invoice' },

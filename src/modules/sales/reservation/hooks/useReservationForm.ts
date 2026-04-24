@@ -12,6 +12,7 @@ import { SaleAreaService } from '@sales-master/pages/area/services/area.service'
 
 import { QuotationService } from '@sales/quotation/services/quotation.service';
 import type { QuotationFormData } from '@sales/quotation/types/quotation.types';
+import { ItemMasterService } from '@inventory/services/item-master.service';
 import { toast } from 'react-hot-toast';
 import { logger } from '@utils/logger';
 import { 
@@ -741,17 +742,27 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
                 });
                 
                 // 🕵️ ITEM ENRICHMENT: If names are still missing, fetch from master data
-                const needsEnrichment = mappedLines.some(l => !l.item_name || l.item_name === '-' || l.item_name === '');
-                if (needsEnrichment) {
+                const missingItemIds = mappedLines
+                    .filter(l => !l.item_name || l.item_name === '-' || l.item_name === '')
+                    .map(l => l.item_id)
+                    .filter(id => id !== undefined && id !== null);
 
+                if (missingItemIds.length > 0) {
                     try {
-                        const items = await MasterDataService.getItems();
+                        // Fetch only the missing items in parallel
+                        const missingItemsData = await Promise.all(
+                            missingItemIds.map(id => ItemMasterService.getById(Number(id)))
+                        );
+
+                        // Create a map for quick lookup
+                        const itemMap = new Map();
+                        missingItemsData.forEach(item => {
+                            if (item) itemMap.set(String(item.item_id), item);
+                        });
                         
                         mappedLines.forEach((l: ReservationLineValues) => {
                             if (!l.item_name || l.item_name === '-' || l.item_name === '') {
-                                const match = items.find((i: ItemListItem) => 
-                                    String(i.item_id || i.id) === String(l.item_id)
-                                );
+                                const match = itemMap.get(String(l.item_id));
                                 if (match) {
                                     l.item_name = String(match.item_name || match.description || '');
                                     l.item_code = String(match.item_code || l.item_code);

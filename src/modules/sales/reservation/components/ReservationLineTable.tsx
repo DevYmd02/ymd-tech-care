@@ -89,7 +89,7 @@ export function ReservationLineTable({
                         <col className="w-[130px]" />
                         <col className="w-[160px]" />
                         <col className="w-[300px]" />
-                        <col className="w-[60px]" />
+                        {!isLocked && <col className="w-[60px]" />}
                     </colgroup>
                     <thead className="bg-[#fbfaff] dark:bg-gray-800 sticky top-0 z-40">
                         <tr className="bg-purple-50/50 dark:bg-purple-900/10">
