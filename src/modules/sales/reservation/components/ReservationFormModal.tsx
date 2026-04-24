@@ -251,6 +251,8 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
                 onClose={() => setIsLotSearchOpen(false)}
                 onSelect={handleSelectLot}
                 itemId={activeLotLineIndex !== null ? getValues(`lines.${activeLotLineIndex}.item_id`) : undefined}
+                itemName={activeLotLineIndex !== null ? (formData.lines?.[activeLotLineIndex]?.item_name || '') : undefined}
+                itemCode={activeLotLineIndex !== null ? (formData.lines?.[activeLotLineIndex]?.item_code || '') : undefined}
                 warehouseId={activeLotLineIndex !== null ? getValues(`lines.${activeLotLineIndex}.warehouse_id`) : null}
                 locationId={activeLotLineIndex !== null ? getValues(`lines.${activeLotLineIndex}.location_id`) : null}
             />
