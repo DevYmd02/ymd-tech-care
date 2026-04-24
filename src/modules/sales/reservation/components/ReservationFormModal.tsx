@@ -13,7 +13,9 @@ import { WarehouseSearchModal } from './WarehouseSearchModal';
 import { LocationSearchModal } from './LocationSearchModal';
 
 import { useReservationForm } from '../hooks/useReservationForm';
+import { ReservationService } from '../services/reservation.service';
 import type { ReservationFormData } from '../types/reservation.types';
+import { toast } from 'react-hot-toast';
 import { logger } from '@utils/logger';
 
 interface ReservationFormModalProps {
@@ -93,11 +95,41 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
         setIsSubmitting(true);
         logger.debug('Submitting Reservation:', data);
         
-        await new Promise(r => setTimeout(r, 1000));
-        
-        setIsSubmitting(false);
-        onSuccess?.();
-        onClose();
+        try {
+            if (isEdit && id) {
+                await ReservationService.update(id, data);
+                toast.success('อัปเดตใบสั่งจองสำเร็จ');
+            } else {
+                await ReservationService.create(data);
+                toast.success('สร้างใบสั่งจองสำเร็จ');
+            }
+            
+            onSuccess?.();
+            onClose();
+        } catch (error: unknown) {
+            logger.error('Submit reservation error:', error);
+            
+            let errorMessage = 'เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง';
+            const err = error as { response?: { data?: { message?: string | string[], error?: string } } };
+            
+            if (err?.response?.data?.message) {
+                const backendMsg = err.response.data.message;
+                if (Array.isArray(backendMsg)) {
+                    errorMessage = `ข้อมูลไม่ถูกต้อง:\n${backendMsg.join('\n')}`;
+                } else if (typeof backendMsg === 'string') {
+                    errorMessage = `ข้อมูลไม่ถูกต้อง: ${backendMsg}`;
+                }
+            } else if (err?.response?.data?.error) {
+                errorMessage = `เซิร์ฟเวอร์ปฏิเสธข้อมูล: ${err.response.data.error}`;
+            }
+
+            toast.error(
+                <div className="whitespace-pre-line text-sm">{errorMessage}</div>, 
+                { duration: 6000 }
+            );
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     // Modal Footer

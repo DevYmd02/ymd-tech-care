@@ -14,6 +14,7 @@ export const ReservationLineSchema = z.object({
     location_id: z.string().min(1, 'กรุณาเลือกที่เก็บ'),
     uom_id: z.string().min(1, 'กรุณาเลือกหน่วยนับ'),
     unit_price: z.coerce.number().min(0, 'ราคาต้องไม่ติดลบ'),
+    lot_id: z.coerce.number().optional().nullable(),
     lot_no: z.string().optional(),
     line_discount_input: z.string().optional(),
     line_discount: z.coerce.number().default(0),
@@ -31,7 +32,7 @@ export const ReservationLineSchema = z.object({
  */
 export const ReservationFormSchema = z.object({
     reservation_id: z.string().optional(),
-    reservation_no: z.string().min(1, 'กรุณาระบุเลขที่ใบสั่งจอง'),
+    reservation_no: z.string().optional(),
     reservation_date: z.string().min(1, 'กรุณาระบุวันที่จอง'),
     lead_id: z.string().or(z.literal('')).nullable().optional().transform(v => v === '' ? null : v),
     customer_id: z.string().min(1, 'กรุณาเลือกลูกค้า'),

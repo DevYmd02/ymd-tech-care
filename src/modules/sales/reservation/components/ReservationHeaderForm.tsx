@@ -85,7 +85,7 @@ export function ReservationHeaderForm({
                 
                 {/* Row 1: Document Info & Sync */}
                 <div className="space-y-1">
-                    <label className={labelClass}>เลขที่ใบสั่งจอง (RESERVATION_NO) <span className="text-red-500">*</span></label>
+                    <label className={labelClass}>เลขที่ใบสั่งจอง (RESERVATION_NO)</label>
                     <input 
                         {...register('reservation_no')}
                         readOnly

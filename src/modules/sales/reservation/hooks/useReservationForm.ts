@@ -257,7 +257,7 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
     const taxCodeId = useWatch({ control, name: 'tax_code_id' });
 
     useEffect(() => {
-        const calculatedSubTotal = lines.reduce((sum, line) => sum + (line.line_total || 0), 0);
+        const calculatedSubTotal = lines.reduce((sum: number, line: ReservationLineValues) => sum + (line.line_total || 0), 0);
         if (getValues('sub_total') !== calculatedSubTotal) {
             setValue('sub_total', calculatedSubTotal);
         }
@@ -290,9 +290,9 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
     useEffect(() => {
         if (taxCodeId !== undefined) {
              const currentLines = getValues('lines') || [];
-             const needsUpdate = currentLines.some(l => Number(l.tax_code_id) !== Number(taxCodeId));
+             const needsUpdate = currentLines.some((l: ReservationLineValues) => Number(l.tax_code_id) !== Number(taxCodeId));
              if (needsUpdate) {
-                 const updatedLines = currentLines.map(l => ({
+                 const updatedLines = currentLines.map((l: ReservationLineValues) => ({
                      ...l,
                      tax_code_id: taxCodeId
                  }));
@@ -324,7 +324,7 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
     }, [setValue, getValues, taxCodeId]);
 
     const handleRemoveLine = useCallback((index: number) => {
-        setValue('lines', (getValues('lines') || []).filter((_, i) => i !== index));
+        setValue('lines', (getValues('lines') || []).filter((_: unknown, i: number) => i !== index));
     }, [setValue, getValues]);
 
     const handleLineChange = useCallback((index: number, field: keyof ReservationLineValues, value: string | number) => {
@@ -399,6 +399,7 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
             const newLines = [...currentLines];
             const line = { ...newLines[activeLotLineIndex] };
             
+            line.lot_id = lot.lot_no_id ? Number(lot.lot_no_id) : (lot.id ? Number(lot.id) : null);
             line.lot_no = lot.code || '';
             line.reserve_policy = 'MANUAL';
 

@@ -16,8 +16,35 @@ export const ItemLotService = {
       return [];
     }
     try {
-      const response = await api.get<ItemLot[]>(`/item-master/${itemId}/lots`);
-      return response || [];
+      // Use the standard /item-lot endpoint with item_id parameter
+      const response = await api.get<ItemLot[] | { items: ItemLot[], total: number }>('/item-lot', { 
+        params: { item_id: itemId, limit: 1000 } 
+      });
+      
+      // Standardize response: handle both raw array and { items, total } wrapper
+      const rawItems = Array.isArray(response) ? response : (response?.items || []);
+      
+      // Client-side Safety Filter: In case the backend ignores the item_id parameter
+      // and returns all lots, we filter here to ensure UI integrity.
+      const filteredItems = rawItems.filter(item => {
+        const r = (item as unknown) as Record<string, unknown>;
+        const recordItemId = item.item_id || r['item_id'];
+        return String(recordItemId) === String(itemId);
+      });
+
+      // Normalize filtered items to ensure it follows the ItemLot interface
+      return filteredItems.map(item => {
+        const r = (item as unknown) as Record<string, unknown>;
+        return {
+          ...item,
+          lot_id: item.lot_id || (r['id'] as number) || (r['lot_no_id'] as number) || 0,
+          lot_no: item.lot_no || (r['lot_no_code'] as string) || (r['code'] as string) || '',
+          supplier_name: item.supplier_name || (r['supplier_vendor'] as Record<string, unknown>)?.vendor_name as string || '',
+          qty_stock: Number(item.qty_stock || r['balance_qty'] || 0),
+          qty_reserved: Number(item.qty_reserved || r['reserve_qty'] || 0),
+          qty_available: Number(item.qty_available || r['available_qty'] || 0),
+        } as ItemLot;
+      });
     } catch (error) {
       logger.error('[ItemLotService] getList error:', error);
       return [];
