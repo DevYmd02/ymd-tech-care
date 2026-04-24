@@ -18,6 +18,7 @@ import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal'
 import { SQStatusBadge } from '@/modules/sales/shared/components/SQStatusBadge';
 import { SQActionsCell } from './components/SQActionsCell';
 import { AQHistoryModal } from '@/modules/sales/shared/components/AQHistoryModal';
+import { SalesMobileCard } from '@/modules/sales/shared/components/SalesMobileCard';
 
 // ====================================================================================
 // CONSTANTS
@@ -88,6 +89,14 @@ export default function QuotationListPage() {
     }, [customerResponse]);
 
     const displayData = useMemo(() => apiData?.data || [], [apiData]);
+
+    const handleClearFilter = () => {
+        setSqNo('');
+        setCustomer('');
+        setStatusFilter('ALL');
+        setStartDate('');
+        setEndDate('');
+    };
 
     const handleCreate = () => {
         setSelectedId(undefined);
@@ -366,31 +375,28 @@ export default function QuotationListPage() {
                         accentColor="blue"
                     />
                     
-                    {/* Action Buttons Group */}
-                    <div className="md:col-span-5 flex flex-col sm:flex-row justify-end gap-4 mt-2">
-                        <div className="flex gap-2">
-                            <button 
-                                onClick={() => {
-                                    setSqNo('');
-                                    setCustomer('');
-                                    setStatusFilter('ALL');
-                                    setStartDate('');
-                                    setEndDate('');
-                                }}
-                                className="h-10 px-6 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors flex items-center gap-2"
+                    {/* Buttons Layout: 2 Rows on Mobile, 1 Row on Desktop */}
+                    <div className="md:col-span-5 flex flex-col md:flex-row md:justify-end gap-3 mt-2">
+                        <div className="grid grid-cols-2 md:flex gap-2">
+                            <button
+                                onClick={handleClearFilter}
+                                className="h-10 bg-white hover:bg-gray-100 text-slate-700 border border-gray-200 rounded-lg font-medium transition-all flex items-center justify-center px-4 gap-2"
                             >
-                                <Plus size={18} className="rotate-45" />
+                                <Plus size={18} className="rotate-45 text-slate-500" strokeWidth={2.5} />
                                 ล้างค่า
                             </button>
-                            <button className="h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2">
-                                <Search size={18} />
+                            <button
+                                onClick={() => refetch()}
+                                className="h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition-all active:scale-95 flex items-center justify-center px-6 gap-2"
+                            >
+                                <Search size={18} strokeWidth={3} />
                                 ค้นหา
                             </button>
                         </div>
                         
                         <button 
                             onClick={handleCreate}
-                            className="h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2"
+                            className="h-10 w-full md:w-auto px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-all active:scale-95 flex items-center justify-center gap-2"
                         >
                             <Plus size={18} />
                             สร้างใบเสนอราคาใหม่
@@ -411,6 +417,59 @@ export default function QuotationListPage() {
                         onPageChange: () => {},
                         onPageSizeChange: () => {},
                     }}
+                    renderMobileCard={(item) => (
+                        <SalesMobileCard 
+                            docNo={item.sq_no}
+                            customerName={customerMap.get(String(item.customer_id)) || item.customer_name || 'ไม่ระบุ'}
+                            date={item.date ? new Date(item.date).toLocaleDateString('en-GB') : '-'}
+                            amount={item.base_total_amount || (Number(item.total_amount) * Number((item.rawData as Record<string, unknown>)?.exchange_rate || 1))}
+                            statusBadge={<SQStatusBadge status={item.status} />}
+                            onClick={() => handleViewHistory(item)}
+                            actions={
+                                <div className="flex gap-2 w-full mt-2">
+                                    {/* 1. VIEW Button */}
+                                    <button 
+                                        onClick={() => handleView(String(item.id || item.sq_id), item)}
+                                        className="flex-1 h-9 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95"
+                                    >
+                                        <FileText size={14} /> ดูรายละเอียด
+                                    </button>
+
+                                    {/* 2. EDIT Button (For Draft/Pending/Rejected) */}
+                                    {(item.status === 'DRAFT' || item.status === 'PENDING' || item.status === 'REJECTED') && (
+                                        <button 
+                                            onClick={() => handleEdit(String(item.id || item.sq_id), item)}
+                                            className="flex-1 h-9 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95"
+                                        >
+                                            <Plus size={14} className={item.status === 'REJECTED' ? '' : 'rotate-45'} /> 
+                                            {item.status === 'REJECTED' ? 'แก้ไขและส่งใหม่' : 'แก้ไข'}
+                                        </button>
+                                    )}
+
+                                    {/* 3. SEND APPROVE (For Draft Only) - High Priority Action */}
+                                    {item.status === 'DRAFT' && (
+                                        <button 
+                                            onClick={() => handleSendApprove(String(item.id || item.sq_id))}
+                                            className="flex-1 h-9 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95"
+                                        >
+                                            <Send size={14} /> ส่งอนุมัติ
+                                        </button>
+                                    )}
+
+                                    {/* 4. HISTORY (For Approved/Rejected) */}
+                                    {(item.status === 'ACCEPTED' || item.status === 'APPROVED' || item.status === 'REJECTED') && (
+                                        <button 
+                                            onClick={() => handleViewHistory(item)}
+                                            className="h-9 px-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg flex items-center justify-center transition-all active:scale-95"
+                                            title="ประวัติการอนุมัติ"
+                                        >
+                                            <Search size={14} />
+                                        </button>
+                                    )}
+                                </div>
+                            }
+                        />
+                    )}
                 />
             </div>
 

@@ -47,6 +47,7 @@ interface SmartTableProps<TData> {
     stickyColumns?: boolean; // Enable sticky columns logic (default: false)
     stickyBorders?: boolean; // Show border/shadow for sticky columns (default: true)
     showPagination?: boolean; // Enable/disable pagination footer (default: true)
+    renderMobileCard?: (item: TData) => React.ReactNode; // Optional card renderer for mobile
 }
 
 export function SmartTable<TData>({
@@ -66,6 +67,7 @@ export function SmartTable<TData>({
     stickyColumns = false,
     stickyBorders = true,
     showPagination = true,
+    renderMobileCard,
 }: SmartTableProps<TData>) {
     const [rowSelection, setRowSelection] = React.useState<Record<string, boolean>>({});
 
@@ -163,8 +165,19 @@ export function SmartTable<TData>({
 
     return (
         <div className={`flex flex-col h-full ${styles.bg.surface} rounded-lg shadow-sm border ${styles.border.default} ${className}`}>
-            {/* Table Container */}
-            <div className={`flex-1 overflow-auto relative ${stickyColumns ? 'rounded-lg' : ''} ${styles.bg.surface}`}>
+            {/* Mobile View: Render Cards if renderMobileCard is provided */}
+            {renderMobileCard && data.length > 0 && (
+                <div className="md:hidden flex-1 overflow-y-auto p-2 space-y-3">
+                    {data.map((item, idx) => (
+                        <React.Fragment key={idx}>
+                            {renderMobileCard(item)}
+                        </React.Fragment>
+                    ))}
+                </div>
+            )}
+
+            {/* Table Container - Hidden on mobile if cards are rendered */}
+            <div className={`flex-1 overflow-auto relative ${stickyColumns ? 'rounded-lg' : ''} ${styles.bg.surface} ${renderMobileCard ? 'hidden md:block' : ''}`}>
                 <table 
                     className={`w-full text-left border-collapse table-fixed text-sm ${stickyColumns ? 'min-w-max' : 'min-w-full'}`}
                 >

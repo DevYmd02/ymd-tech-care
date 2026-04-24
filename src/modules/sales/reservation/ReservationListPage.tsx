@@ -208,25 +208,27 @@ export default function ReservationListPage() {
                             accentColor="purple"
                         />
                         
-                        {/* Action Buttons Group */}
-                        <div className="md:col-span-5 flex flex-col sm:flex-row justify-end gap-3 mt-2">
-                            <button 
-                                onClick={handleReset}
-                                className="h-10 px-6 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors flex items-center gap-2"
-                            >
-                                <Plus size={18} className="rotate-45" />
-                                ล้างค่า
-                            </button>
-                            <button 
-                                onClick={() => refetch()}
-                                className="h-10 px-6 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2"
-                            >
-                                <Search size={18} />
-                                ค้นหา
-                            </button>
+                        {/* Buttons Layout: 2 Rows on Mobile, 1 Row on Desktop */}
+                        <div className="md:col-span-5 flex flex-col md:flex-row md:justify-end gap-3 mt-2">
+                            <div className="grid grid-cols-2 md:flex gap-2">
+                                <button 
+                                    onClick={handleReset}
+                                    className="h-10 bg-white hover:bg-gray-100 text-slate-700 border border-gray-200 rounded-lg font-medium transition-all flex items-center justify-center px-4 gap-2"
+                                >
+                                    <Plus size={18} className="rotate-45 text-slate-500" strokeWidth={2.5} />
+                                    ล้างค่า
+                                </button>
+                                <button 
+                                    onClick={() => refetch()}
+                                    className="h-10 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold shadow-sm transition-all active:scale-95 flex items-center justify-center px-6 gap-2"
+                                >
+                                    <Search size={18} strokeWidth={3} />
+                                    ค้นหา
+                                </button>
+                            </div>
                             <button 
                                 onClick={handleCreateNew}
-                                className="h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2"
+                                className="h-10 w-full md:w-auto px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-all active:scale-95 flex items-center justify-center gap-2"
                             >
                                 <Plus size={18} />
                                 สร้างใบสั่งจองใหม่

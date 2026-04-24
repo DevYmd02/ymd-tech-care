@@ -14,6 +14,12 @@ import { QuotationService } from '@/modules/sales/quotation/services/quotation.s
 import type { QuotationFormData } from '@/modules/sales/quotation/types/quotation.types';
 import { toast } from 'react-hot-toast';
 import { logger } from '@/shared/utils/logger';
+import { 
+    calculateDiscountAmount, 
+    calculateVatAmount, 
+    calculateNetTotal, 
+    calculateLineTotal 
+} from '@sales/shared/utils/sales-calculations';
 
 import type { Currency } from '@/modules/master-data/types/master-data-types';
 import type { CustomerMaster } from '@/modules/master-data/customer/customer-master/types/customer-types';
@@ -255,13 +261,7 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
             setValue('sub_total', calculatedSubTotal);
         }
 
-        let calculatedDiscount = 0;
-        if (discountInput.endsWith('%')) {
-            const percent = parseFloat(discountInput.replace('%', '')) || 0;
-            calculatedDiscount = calculatedSubTotal * (percent / 100);
-        } else {
-            calculatedDiscount = parseFloat(discountInput) || 0;
-        }
+        const calculatedDiscount = calculateDiscountAmount(calculatedSubTotal, discountInput);
         if (getValues('discount_amount') !== calculatedDiscount) {
             setValue('discount_amount', calculatedDiscount);
         }
@@ -272,12 +272,12 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         const taxRate = selectedTaxCode ? (Number(selectedTaxCode.tax_rate) || 0) : 0;
         
         // VAT should be calculated AFTER discount
-        const vatAmountValue = taxCodeId ? (amountAfterDiscount * (taxRate / 100)) : 0;
+        const vatAmountValue = calculateVatAmount(amountAfterDiscount, taxRate);
         if (getValues('vat_amount') !== vatAmountValue) {
             setValue('vat_amount', vatAmountValue);
         }
 
-        const totalAmountValue = amountAfterDiscount + vatAmountValue;
+        const totalAmountValue = calculateNetTotal(calculatedSubTotal, calculatedDiscount, vatAmountValue);
         if (getValues('total_amount') !== totalAmountValue) {
             setValue('total_amount', totalAmountValue);
         }
@@ -336,18 +336,12 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         if (field === 'qty_reserved' || field === 'unit_price' || field === 'line_discount_input') {
             const qty = Number(field === 'qty_reserved' ? value : updatedLine.qty_reserved) || 0;
             const price = Number(field === 'unit_price' ? value : updatedLine.unit_price) || 0;
-            
             const ldInput = (field === 'line_discount_input' ? (value as string) : updatedLine.line_discount_input) || '';
-            let calculatedLD = 0;
-            if (ldInput.endsWith('%')) {
-                const percent = parseFloat(ldInput.replace('%', '')) || 0;
-                calculatedLD = (qty * price) * (percent / 100);
-            } else {
-                calculatedLD = parseFloat(ldInput) || 0;
-            }
+            
+            const calculatedLD = calculateDiscountAmount(qty * price, ldInput);
             
             updatedLine.line_discount = calculatedLD;
-            updatedLine.line_total = (qty * price) - calculatedLD;
+            updatedLine.line_total = calculateLineTotal(qty, price, calculatedLD);
         }
         
         newLines[index] = updatedLine;
@@ -389,7 +383,7 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
             line.qty_reserved = 1; 
             line.line_discount_input = '';
             line.line_discount = 0;
-            line.line_total = line.unit_price; 
+            line.line_total = calculateLineTotal(line.qty_reserved, line.unit_price, line.line_discount);
             
             setValue('lines', newLines, { shouldValidate: true, shouldDirty: true });
         }
@@ -720,13 +714,7 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
                     const price = Number(qLine.unit_price || 0);
                     const ldInput = String(qLine.discount_expression || qLine.line_discount_input || '');
                     
-                    let calculatedLD = 0;
-                    if (ldInput && ldInput.endsWith('%')) {
-                        const percent = parseFloat(ldInput.replace('%', '')) || 0;
-                        calculatedLD = (qtyToUse * price) * (percent / 100);
-                    } else if (ldInput) {
-                        calculatedLD = parseFloat(ldInput) || 0;
-                    }
+                    const calculatedLD = calculateDiscountAmount(qtyToUse * price, ldInput);
 
                     return {
                         id: String(qLine.sq_line_id || ''),
@@ -743,7 +731,7 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
                         line_discount_input: ldInput,
                         line_discount: calculatedLD,
                         reserve_policy: 'AUTO' as const,
-                        line_total: (qtyToUse * price) - calculatedLD,
+                        line_total: calculateLineTotal(qtyToUse, price, calculatedLD),
                         tax_code_id: qLine.tax_code_id ? Number(qLine.tax_code_id) : (detail.tax_code_id ? Number(detail.tax_code_id) : undefined),
                         note: String(qLine.note || ''),
                         price_source: qLine.price_source !== undefined ? Number(qLine.price_source) : undefined,

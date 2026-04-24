@@ -80,13 +80,10 @@ const findObject = (source: Record<string, unknown>): Record<string, unknown> =>
   // 5. Direct check
   if (source.sq_id || source.sq_no || source.id || source.sale_quotation_id || source.quotation_id) return source;
 
-  // 6. Fallback search
+  // 4. Fallback search
   if (source.data && typeof source.data === 'object' && !Array.isArray(source.data)) return source.data as Record<string, unknown>;
   
-  // 4. Handle nested "rawData" or "data" if present
-  if (source.rawData && typeof source.rawData === 'object' && !Array.isArray(source.rawData)) {
-    return source.rawData as Record<string, unknown>;
-  }
+  return source;
 
   return source;
 };
@@ -302,7 +299,6 @@ function normalizeSQ(raw: unknown): SQForApproval | null {
     approval_emp_name: String(obj.approval_emp_name || ''),
 
     lines,
-    saleQuotationLines: lines,
     sub_total: Number(obj.sub_total || lines.reduce((s, l) => s + (l.net_amount || 0), 0) || 0),
   };
 }
@@ -779,10 +775,7 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
     if (!activeId) return;
     const data = formMethods.getValues();
 
-    const approvedLines = data.lines.filter(l => l.is_approved);
-    const isAllApproved = approvedLines.length === data.lines.length &&
-      data.lines.every(l => l.is_approved && Number(l.approved_qty) >= Number(l.qty));
-    const finalStatus: 'APPROVED' | 'REJECTED' = isAllApproved ? 'APPROVED' : 'APPROVED'; // partial → still APPROVED
+    const finalStatus: 'APPROVED' | 'REJECTED' = 'APPROVED'; // Always APPROVED for this handler
 
 
     const payload: ApproveQuotationPayload = {
