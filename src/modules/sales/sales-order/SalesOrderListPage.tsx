@@ -11,6 +11,7 @@ import { PageListLayout, SmartTable, FilterField } from '@ui';
 import { createColumnHelper } from '@tanstack/react-table';
 import { SalesOrderService, type SalesOrderHeader } from '@sales/sales-order/services/sales-order.service';
 import { SalesOrderFormModal } from './components/SalesOrderFormModal';
+import { SalesMobileCard } from '@/modules/sales/shared/components/SalesMobileCard';
 
 // ====================================================================================
 // CONSTANTS
@@ -111,6 +112,14 @@ export default function SalesOrderListPage() {
     });
 
     const displayData = useMemo(() => apiData?.data || [], [apiData]);
+
+    const handleClearFilter = () => {
+        setSoNo('');
+        setCustomer('');
+        setStatusFilter('ALL');
+        setStartDate('');
+        setEndDate('');
+    };
 
     // Handlers
     const handleCreateNew = () => {
@@ -269,36 +278,33 @@ export default function SalesOrderListPage() {
                             accentColor="emerald"
                         />
 
-                        {/* Action Buttons */}
-                        <div className="md:col-span-5 flex flex-col sm:flex-row justify-end gap-4 mt-2">
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={() => {
-                                        setSoNo('');
-                                        setCustomer('');
-                                        setStatusFilter('ALL');
-                                        setStartDate('');
-                                        setEndDate('');
-                                    }}
-                                    className="h-10 px-6 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors flex items-center gap-2"
-                                >
-                                    <Plus size={18} className="rotate-45" />
-                                    ล้างค่า
-                                </button>
-                                <button className="h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2">
-                                    <Search size={18} />
-                                    ค้นหา
-                                </button>
-                            </div>
-
+                    {/* Buttons Layout: 2 Rows on Mobile, 1 Row on Desktop */}
+                    <div className="md:col-span-5 flex flex-col md:flex-row md:justify-end gap-3 mt-2">
+                        <div className="grid grid-cols-2 md:flex gap-2">
                             <button
-                                onClick={handleCreateNew}
-                                className="h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2"
+                                onClick={handleClearFilter}
+                                className="h-10 bg-white hover:bg-gray-100 text-slate-700 border border-gray-200 rounded-lg font-medium transition-all flex items-center justify-center px-4 gap-2"
                             >
-                                <Plus size={18} />
-                                สร้างใบสั่งขายใหม่
+                                <Plus size={18} className="rotate-45 text-slate-500" strokeWidth={2.5} />
+                                ล้างค่า
+                            </button>
+                            <button
+                                onClick={() => refetch()}
+                                className="h-10 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-all active:scale-95 flex items-center justify-center px-6 gap-2"
+                            >
+                                <Search size={18} strokeWidth={3} />
+                                ค้นหา
                             </button>
                         </div>
+                        
+                        <button 
+                            onClick={handleCreateNew}
+                            className="h-10 w-full md:w-auto px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition-all active:scale-95 flex items-center justify-center gap-2"
+                        >
+                            <Plus size={18} />
+                            สร้างใบสั่งขายใหม่
+                        </button>
+                    </div>
                     </div>
                 }
             >
@@ -314,6 +320,32 @@ export default function SalesOrderListPage() {
                             onPageChange: () => {},
                             onPageSizeChange: () => {},
                         }}
+                        renderMobileCard={(item) => (
+                            <SalesMobileCard 
+                                docNo={item.so_no}
+                                customerName={item.customer_name || 'ไม่ระบุ'}
+                                date={item.so_date}
+                                amount={item.total_amount || 0}
+                                statusBadge={<StatusBadge status={item.status} />}
+                                onClick={() => handleEdit(item.so_id)}
+                                actions={
+                                    <div className="flex gap-2 w-full mt-2">
+                                        <button 
+                                            onClick={() => handleEdit(item.so_id)}
+                                            className="flex-1 h-9 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95"
+                                        >
+                                            <Eye size={14} /> ดูรายละเอียด
+                                        </button>
+                                        <button 
+                                            onClick={() => handleEdit(item.so_id)}
+                                            className="flex-1 h-9 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95"
+                                        >
+                                            <Edit size={14} /> แก้ไข
+                                        </button>
+                                    </div>
+                                }
+                            />
+                        )}
                     />
                 </div>
             </PageListLayout>

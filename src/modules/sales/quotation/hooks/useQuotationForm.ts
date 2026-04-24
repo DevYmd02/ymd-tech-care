@@ -35,8 +35,6 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
     const modals = useQuotationModals();
     
     // Pricing State
-    
-    // Pricing State
     const [loadingPriceLines, setLoadingPriceLines] = useState<Set<number>>(new Set());
     
     // 🛡️ Refs to track header changes for pricing synchronization

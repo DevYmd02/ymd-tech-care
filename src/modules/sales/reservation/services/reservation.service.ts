@@ -78,7 +78,7 @@ export const ReservationService = {
     getAvailableApprovals: async (): Promise<AvailableApproval[]> => {
         try {
             const response = await api.get<AvailableApproval[]>('/sale-reservation/available-approvals');
-            return response as unknown as AvailableApproval[];
+            return response;
         } catch (error) {
             logger.error('Failed to fetch available approvals:', error);
             return [];

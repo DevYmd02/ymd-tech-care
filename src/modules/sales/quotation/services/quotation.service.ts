@@ -192,14 +192,6 @@ export class QuotationService {
 
             // 3. Final structural validation
             if (!finalObject || typeof finalObject !== 'object' || Array.isArray(finalObject)) {
-                // Silenced redundant warning as per user request (Normalization failed usually means empty detail handled by fallback)
-                /*
-                console.warn(`[QuotationService] Normalization failed for ID: ${id}.`, {
-                    response,
-                    extracted,
-                    finalObject
-                });
-                */
                 return null;
             }
 
@@ -305,7 +297,6 @@ export class QuotationService {
      * Helper for Payload Transformation (Backend-Exact Matching)
      */
     private static preparePayload(data: QuotationFormValues) {
-        // 🧪 Helper for ISO Date Formatting (YYYY-MM-DDT00:00:00.000Z)
         // 🧪 Helper for ISO Date Formatting (YYYY-MM-DDT00:00:00.000Z) with fallback detection
         const toISOString = (dateInput?: string | null | Date) => {
             if (!dateInput) return null;

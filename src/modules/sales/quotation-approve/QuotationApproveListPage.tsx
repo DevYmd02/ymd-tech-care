@@ -13,6 +13,7 @@ import { AQFormModal } from './components/AQFormModal';
 import { AQHistoryModal } from '@/modules/sales/shared/components/AQHistoryModal';
 import { useAQListData } from './hooks/useAQListData';
 import type { AQListItem, SQForApproval } from './types/quotation-approve.types';
+import { SalesMobileCard } from '@/modules/sales/shared/components/SalesMobileCard';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -308,34 +309,35 @@ export default function QuotationApproveListPage() {
               accentColor="emerald"
             />
 
-            {/* Buttons */}
-            <div className="md:col-span-5 flex flex-col sm:flex-row justify-end gap-3 mt-2">
-              <div className="flex gap-2">
+            {/* Buttons Layout: 2 Rows on Mobile, 1 Row on Desktop */}
+            <div className="md:col-span-5 flex flex-col md:flex-row md:justify-end gap-3 mt-2">
+              <div className="grid grid-cols-2 md:flex gap-2">
                 <button
                   onClick={handleClearFilter}
-                  className="h-10 px-5 bg-white hover:bg-gray-100 text-slate-700 border border-gray-200 rounded-lg font-medium transition-all flex items-center gap-2"
+                  className="h-10 bg-white hover:bg-gray-100 text-slate-700 border border-gray-200 rounded-lg font-medium transition-all flex items-center justify-center px-4 gap-2"
                 >
                   <Plus size={18} className="rotate-45 text-slate-500" strokeWidth={2.5} />
                   ล้างค่า
                 </button>
                 <button
                   onClick={() => refetch()}
-                  className="h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition-all active:scale-95 flex items-center gap-2"
+                  className="h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition-all active:scale-95 flex items-center justify-center px-6 gap-2"
                 >
                   <Search size={18} strokeWidth={3} />
                   ค้นหา
                 </button>
-                <button
-                  onClick={() => {
-                    setSelectedSqId(undefined);
-                    setSelectedItem(undefined);
-                    setIsModalOpen(true);
-                  }}
-                  className="h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-all active:scale-95 flex items-center gap-2"
-                >
-                  <FileText size={18} strokeWidth={2.5} /> รายการอนุมัติใบเสนอราคา
-                </button>
               </div>
+              
+              <button
+                onClick={() => {
+                  setSelectedSqId(undefined);
+                  setSelectedItem(undefined);
+                  setIsModalOpen(true);
+                }}
+                className="h-10 w-full md:w-auto px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-all active:scale-95 flex items-center justify-center gap-2"
+              >
+                <FileText size={18} strokeWidth={2.5} /> รายการอนุมัติใบเสนอราคา
+              </button>
             </div>
           </div>
         }
@@ -364,6 +366,50 @@ export default function QuotationApproveListPage() {
               onPageChange: () => {},
               onPageSizeChange: () => {},
             }}
+            renderMobileCard={(item) => (
+              <SalesMobileCard 
+                docNo={item.sq_no || '-'}
+                customerName={item.customer_name || 'ไม่ระบุ'}
+                date={item.sq_date ? formatDate(String(item.sq_date)) : '-'}
+                amount={item.base_total_amount || 0}
+                statusBadge={<SQStatusBadge status={String(item.status || '')} />}
+                onClick={() => handleOpenApproval(item)}
+                employeeName={item.approval_emp_name}
+                actions={
+                  <div className="flex gap-2 w-full">
+                    {item.status === 'PENDING' ? (
+                      <button
+                        onClick={() => handleOpenApproval(item)}
+                        className="flex-1 h-9 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2"
+                      >
+                        <ShieldCheck size={14} /> พิจารณาอนุมัติ
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => handleOpenApproval(item)}
+                          className="flex-1 h-9 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold flex items-center justify-center gap-2"
+                        >
+                          <Eye size={14} /> ดูรายละเอียด
+                        </button>
+                        {(item.status === 'APPROVED' || item.status === 'REJECTED') && (
+                          <button
+                            onClick={() => {
+                              setHistorySqId(item.sq_id);
+                              setHistorySqNo(item.sq_no || '');
+                              setIsHistoryOpen(true);
+                            }}
+                            className="h-9 px-3 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-bold flex items-center justify-center"
+                          >
+                            <Clock size={14} />
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                }
+              />
+            )}
           />
         </div>
       </PageListLayout>
