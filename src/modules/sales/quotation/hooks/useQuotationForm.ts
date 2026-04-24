@@ -2,22 +2,22 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useForm, useWatch, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery } from '@tanstack/react-query';
-import { MasterDataService } from '@/modules/master-data';
-import { CustomerService } from '@/modules/master-data/customer/customer-master/services/customer.service';
-import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
-import { TaxCodeService } from '@/modules/master-data/tax/services/tax-code.service';
-import type { Currency } from '@/modules/master-data/types/master-data-types';
-import type { CustomerMaster } from '@/modules/master-data/customer/customer-master/types/customer-types';
-import type { ItemListItem, UnitListItem } from '@/modules/master-data/inventory/types/product-types';
-import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
+import { MasterDataService } from '@master-data';
+import { CustomerService } from '@customer/customer-master/services/customer.service';
+import { UnitService } from '@inventory/services/unit.service';
+import { TaxCodeService } from '@master-data/tax/services/tax-code.service';
+import type { Currency } from '@master-data/types/master-data-types';
+import type { CustomerMaster } from '@customer/customer-master/types/customer-types';
+import type { ItemListItem, UnitListItem } from '@inventory/types/product-types';
+import type { TaxCode } from '@master-data/tax/types/tax-types';
 import { QuotationFormSchema, type QuotationFormValues, type QuotationLineValues, getQuotationDefaultValues } from '@sales/quotation/schemas/quotation-schemas';
-import type { EstimateHeader } from '@/modules/sales/estimate/services/estimate.service';
+import type { EstimateHeader } from '@sales/estimate/services/estimate.service';
 import { PricingService } from '@sales/quotation/services/pricing.service';
 import { QuotationService } from '@sales/quotation/services/quotation.service';
 import type { QuotationFormData, QuotationHeader, RawQuotationLine } from '@sales/quotation/types/quotation.types';
-import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
-import { logger } from '@/shared/utils/logger';
-import { useAuth } from '@/core/auth/contexts/AuthContext';
+import { ItemMasterService } from '@inventory/services/item-master.service';
+import { logger } from '@utils/logger';
+import { useAuth } from '@core/auth/contexts/AuthContext';
 import { 
     calculateDiscountAmount, 
     calculateVatAmount, 

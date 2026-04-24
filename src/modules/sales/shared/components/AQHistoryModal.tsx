@@ -7,11 +7,11 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Clock } from 'lucide-react';
 import { createColumnHelper } from '@tanstack/react-table';
-import { ModalLayout } from '@/shared/components/ui/layout/ModalLayout';
-import { SmartTable } from '@/shared/components/ui/data-display/SmartTable';
-import { AQService } from '@/modules/sales/quotation-approve/services/aq.service';
-import { SQStatusBadge } from '@/modules/sales/shared/components/SQStatusBadge';
-import type { AQHeader } from '@/modules/sales/quotation-approve/types/quotation-approve.types';
+import { ModalLayout } from '@layout/ModalLayout';
+import { SmartTable } from '@ui/data-display/SmartTable';
+import { AQService } from '@sales/quotation-approve/services/aq.service';
+import { SQStatusBadge } from '@sales/shared/components/SQStatusBadge';
+import type { AQHeader } from '@sales/quotation-approve/types/quotation-approve.types';
 
 interface AQHistoryModalProps {
   isOpen: boolean;

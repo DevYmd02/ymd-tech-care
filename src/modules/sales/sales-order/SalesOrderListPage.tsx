@@ -11,7 +11,7 @@ import { PageListLayout, SmartTable, FilterField } from '@ui';
 import { createColumnHelper } from '@tanstack/react-table';
 import { SalesOrderService, type SalesOrderHeader } from '@sales/sales-order/services/sales-order.service';
 import { SalesOrderFormModal } from './components/SalesOrderFormModal';
-import { SalesMobileCard } from '@/modules/sales/shared/components/SalesMobileCard';
+import { SalesMobileCard } from '@sales/shared/components/SalesMobileCard';
 
 // ====================================================================================
 // CONSTANTS

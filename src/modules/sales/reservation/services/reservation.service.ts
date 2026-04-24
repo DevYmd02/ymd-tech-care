@@ -1,5 +1,5 @@
-import api from '@/core/api/api';
-import { logger } from '@/shared/utils/logger';
+import api from '@core/api/api';
+import { logger } from '@utils/logger';
 import type { ReservationFormData } from '../types/reservation.types';
 
 export interface ReservationListParams {
@@ -49,9 +49,6 @@ export interface AvailableApproval {
 }
 
 export const ReservationService = {
-    /**
-     * ดึงรายการ Reservation
-     */
     getList: async (params: ReservationListParams = {}) => {
         logger.debug('Fetching reservations with params:', params);
         // Fallback to mock for now as list endpoint might not be ready

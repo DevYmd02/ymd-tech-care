@@ -4,9 +4,9 @@
  * @fields ตรงกับ sale_order_header (D9)
  */
 
-import { ShoppingCart, Search, User, ClipboardList } from 'lucide-react';
+import { ShoppingCart, Search, User } from 'lucide-react';
 import { useFormContext, Controller } from 'react-hook-form';
-import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWrapper';
+import { MulticurrencyWrapper } from '@components/forms/MulticurrencyWrapper';
 import { CustomDateInput, StatusCheckbox } from '@ui';
 import type { SalesOrderFormData } from '../types/sales-order.types';
 import type {
@@ -15,9 +15,9 @@ import type {
     DepartmentListItem,
     Project,
     ItemTypeListItem,
-} from '@/modules/master-data/types/master-data-types';
-import type { CustomerMaster } from '@/modules/master-data/customer/customer-master/types/customer-types';
-import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
+} from '@master-data/types/master-data-types';
+import type { CustomerMaster } from '@customer/customer-master/types/customer-types';
+import type { TaxCode } from '@master-data/tax/types/tax-types';
 import type { SaleAreaListItem } from '@master-data/sales/pages/area/types/area.types';
 
 interface SalesOrderHeaderFormProps {
@@ -31,6 +31,7 @@ interface SalesOrderHeaderFormProps {
     saleAreas: SaleAreaListItem[];
     readOnly?: boolean;
     onSearchCustomer?: () => void;
+    onSearchReservation?: () => void;
 }
 
 export function SalesOrderHeaderForm({
@@ -44,6 +45,7 @@ export function SalesOrderHeaderForm({
     saleAreas,
     readOnly = false,
     onSearchCustomer,
+    onSearchReservation,
 }: SalesOrderHeaderFormProps) {
     const { register, watch, setValue, control } = useFormContext<SalesOrderFormData>();
 
@@ -70,9 +72,19 @@ export function SalesOrderHeaderForm({
 
     return (
         <section className="space-y-6">
-            <div className="flex items-center gap-2 pb-3 border-b border-gray-100 dark:border-gray-800 text-emerald-600 dark:text-emerald-400">
-                <ShoppingCart size={20} strokeWidth={2.5} />
-                <h3 className="text-lg font-bold">ข้อมูลส่วนหัวคำสั่งขาย (Header Sales Order)</h3>
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
+                <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                    <ShoppingCart size={20} strokeWidth={2.5} />
+                    <h3 className="text-lg font-bold">ข้อมูลส่วนหัวคำสั่งขาย (Header Sales Order)</h3>
+                </div>
+                <div className="flex items-center bg-white dark:bg-gray-800 px-3 py-1 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm transform scale-90 origin-right">
+                    <StatusCheckbox
+                        name="onhold"
+                        control={control}
+                        label="ON HOLD"
+                        disabled={isLocked}
+                    />
+                </div>
             </div>
 
             <div className={cardSection}>
@@ -109,6 +121,26 @@ export function SalesOrderHeaderForm({
                 </div>
 
                 <div className="space-y-1">
+                    <label className={labelClass}>อ้างอิงใบจอง (reservation_id)</label>
+                    <div className="flex gap-2">
+                        <input
+                            {...register('reservation_id')}
+                            disabled={isLocked}
+                            className={inputClass}
+                            placeholder="RS-xxxx (ถ้ามี)"
+                        />
+                        <button
+                            type="button"
+                            disabled={isLocked}
+                            onClick={() => onSearchReservation?.()}
+                            className="p-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center shrink-0 w-9 h-9"
+                        >
+                            <Search size={18} />
+                        </button>
+                    </div>
+                </div>
+
+                <div className="space-y-1">
                     <label className={labelClass}>
                         สาขา (branch_id) <span className="text-red-500">*</span>
                     </label>
@@ -122,18 +154,7 @@ export function SalesOrderHeaderForm({
                     </select>
                 </div>
 
-                <div className="space-y-1">
-                    <div className="flex items-center h-9 mt-5">
-                        <StatusCheckbox
-                            name="onhold"
-                            control={control}
-                            label="ON HOLD"
-                            disabled={isLocked}
-                        />
-                    </div>
-                </div>
-
-                {/* Row 2: Customer / Reservation Ref */}
+                {/* Row 2: Customer / Terms / Ship */}
                 <div className="space-y-1 lg:col-span-2">
                     <label className={labelClass}>
                         ลูกค้า (customer_id) <span className="text-red-500">*</span>
@@ -160,26 +181,6 @@ export function SalesOrderHeaderForm({
                     </div>
                 </div>
 
-                <div className="space-y-1">
-                    <label className={labelClass}>อ้างอิงใบจอง (reservation_id)</label>
-                    <div className="flex gap-2">
-                        <input
-                            {...register('reservation_id')}
-                            disabled={isLocked}
-                            className={inputClass}
-                            placeholder="RS-xxxx (ถ้ามี)"
-                        />
-                        <button
-                            type="button"
-                            disabled={isLocked}
-                            className="p-2 bg-slate-200 text-slate-600 rounded-md hover:bg-slate-300 transition-colors disabled:opacity-50"
-                        >
-                            <ClipboardList size={16} />
-                        </button>
-                    </div>
-                </div>
-
-                {/* Row 3: Term / Ship */}
                 <div className="space-y-1">
                     <label className={labelClass}>เครดิตเทอม (วัน) (payment_term_days)</label>
                     <input

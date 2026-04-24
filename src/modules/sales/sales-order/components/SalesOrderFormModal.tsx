@@ -6,25 +6,26 @@
 
 import { useState } from 'react';
 import { Save, ShoppingCart, Printer, Loader2 } from 'lucide-react';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@utils/logger';
 import { FormProvider } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { WindowFormLayout } from '@ui';
-import { MasterDataService } from '@/modules/master-data';
-import { CustomerService } from '@/modules/master-data/customer/customer-master/services/customer.service';
-import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
-import { TaxCodeService } from '@/modules/master-data/tax/services/tax-code.service';
-import { WarehouseService } from '@/modules/master-data/inventory/services/warehouse.service';
-import { LocationService } from '@/modules/master-data/inventory/services/inventory-master.service';
+import { MasterDataService } from '@master-data';
+import { CustomerService } from '@customer/customer-master/services/customer.service';
+import { UnitService } from '@inventory/services/unit.service';
+import { TaxCodeService } from '@master-data/tax/services/tax-code.service';
+import { WarehouseService } from '@inventory/services/warehouse.service';
+import { LocationService } from '@inventory/services/inventory-master.service';
 import { useSalesOrderForm } from '../hooks';
 import type { SalesOrderFormValues } from '../schemas/sales-order.schemas';
 import { SalesOrderHeaderForm } from './SalesOrderHeaderForm';
 import { SalesOrderLineTable } from './SalesOrderLineTable';
 import { SalesOrderSummary } from './SalesOrderSummary';
-import { CustomerSearchModal } from '@/modules/sales/quotation/components/CustomerSearchModal';
-import { ProductSearchModal } from '@/modules/sales/quotation/components/ProductSearchModal';
-import { SaleAreaService } from '@/modules/master-data/sales/pages/area/services/area.service';
-import type { ItemListItem } from '@/modules/master-data/inventory/types/product-types';
+import { CustomerSearchModal } from '@sales/quotation/components/CustomerSearchModal';
+import { ProductSearchModal } from '@sales/quotation/components/ProductSearchModal';
+import { SaleAreaService } from '@sales-master/pages/area/services/area.service';
+import type { ItemListItem } from '@inventory/types/product-types';
+import { ReservationSearchModal } from './ReservationSearchModal';
 
 // ============================================================
 // Props
@@ -55,6 +56,7 @@ export function SalesOrderFormModal({
 
     // Search Modals
     const [isCustomerSearchOpen, setIsCustomerSearchOpen] = useState(false);
+    const [isReservationSearchOpen, setIsReservationSearchOpen] = useState(false);
     const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
     const [activeLineIndex, setActiveLineIndex] = useState<number | null>(null);
 
@@ -138,6 +140,7 @@ export function SalesOrderFormModal({
         handleLineChange,
         handleSelectCustomer,
         handleSelectProduct,
+        handleSelectReservation,
     } = useSalesOrderForm({
         isOpen,
         initialData,
@@ -242,6 +245,7 @@ export function SalesOrderFormModal({
                                     itemTypes={itemTypes}
                                     saleAreas={saleAreas}
                                     onSearchCustomer={() => setIsCustomerSearchOpen(true)}
+                                    onSearchReservation={() => setIsReservationSearchOpen(true)}
                                 />
                             </div>
                         </div>
@@ -301,6 +305,11 @@ export function SalesOrderFormModal({
                 isOpen={isProductSearchOpen}
                 onClose={() => setIsProductSearchOpen(false)}
                 onSelect={(product: ItemListItem) => activeLineIndex !== null && handleSelectProduct(activeLineIndex, product)}
+            />
+            <ReservationSearchModal
+                isOpen={isReservationSearchOpen}
+                onClose={() => setIsReservationSearchOpen(false)}
+                onSelect={handleSelectReservation}
             />
         </WindowFormLayout>
     );

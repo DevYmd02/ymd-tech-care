@@ -2,8 +2,8 @@ import { Plus, Trash2, Package, Search, AlertCircle, Loader2, Tag } from 'lucide
 import { useFormContext } from 'react-hook-form';
 import type { DeepPartial } from 'react-hook-form';
 import type { QuotationLineValues, QuotationFormValues } from '@sales/quotation/schemas/quotation-schemas';
-import type { UnitListItem } from '@/modules/master-data/inventory/types/product-types';
-import type { PriceLevelName } from '@/modules/master-data/sales/pages/price-level-name/types/price-level-name.types';
+import type { UnitListItem } from '@inventory/types/product-types';
+import type { PriceLevelName } from '@sales-master/pages/price-level-name/types/price-level-name.types';
 
 interface QuotationLineTableProps {
     lines: DeepPartial<QuotationLineValues>[];

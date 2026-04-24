@@ -14,7 +14,7 @@ import { LocationSearchModal } from './LocationSearchModal';
 
 import { useReservationForm } from '../hooks/useReservationForm';
 import type { ReservationFormData } from '../types/reservation.types';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@utils/logger';
 
 interface ReservationFormModalProps {
     isOpen: boolean;

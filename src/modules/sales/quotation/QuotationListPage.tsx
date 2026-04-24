@@ -1,6 +1,7 @@
 /**
  * @file QuotationListPage.tsx
  * @description หน้ารายการใบเสนอราคาขาย (Sales Quotation List Page)
+ * @tables quotation_header (D7)
  */
 
 import { useState, useMemo } from 'react';
@@ -13,12 +14,12 @@ import type { QuotationFormValues } from '@sales/quotation/schemas/quotation-sch
 import { QuotationFormModal } from '@sales/quotation/components/QuotationFormModal';
 import { useQuotationList } from '@sales/quotation/hooks/useQuotation';
 import { useQuery } from '@tanstack/react-query';
-import { CustomerService } from '@/modules/master-data/customer/customer-master/services/customer.service';
-import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal';
-import { SQStatusBadge } from '@/modules/sales/shared/components/SQStatusBadge';
+import { CustomerService } from '@customer/customer-master/services/customer.service';
+import { ConfirmationModal } from '@system/ConfirmationModal';
+import { SQStatusBadge } from '@sales/shared/components/SQStatusBadge';
 import { SQActionsCell } from './components/SQActionsCell';
-import { AQHistoryModal } from '@/modules/sales/shared/components/AQHistoryModal';
-import { SalesMobileCard } from '@/modules/sales/shared/components/SalesMobileCard';
+import { AQHistoryModal } from '@sales/shared/components/AQHistoryModal';
+import { SalesMobileCard } from '@sales/shared/components/SalesMobileCard';
 
 // ====================================================================================
 // CONSTANTS

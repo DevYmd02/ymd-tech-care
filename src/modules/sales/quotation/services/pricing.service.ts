@@ -4,8 +4,8 @@
  * Retrieves dynamically calculated price considering IC Option Priority, Price List, and Price Level.
  */
 
-import api from '@/core/api/api';
-import { logger } from '@/shared/utils/logger';
+import api from '@core/api/api';
+import { logger } from '@utils/logger';
 
 export interface PricingCalculateParams {
     itemId: string | number;

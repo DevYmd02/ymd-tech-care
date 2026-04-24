@@ -1,9 +1,9 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Search, ClipboardList, Check, X } from 'lucide-react';
-import { DialogFormLayout } from '@/shared/components/ui/layout/DialogFormLayout';
-import { EstimateService, type EstimateHeader } from '@/modules/sales/estimate/services/estimate.service';
+import { DialogFormLayout } from '@layout/DialogFormLayout';
+import { EstimateService, type EstimateHeader } from '@sales/estimate/services/estimate.service';
 import { useQuery } from '@tanstack/react-query';
-import { useDebounce } from '@/shared/hooks/useDebounce';
+import { useDebounce } from '@hooks/useDebounce';
 
 /**
  * @file LeadSearchModal.tsx

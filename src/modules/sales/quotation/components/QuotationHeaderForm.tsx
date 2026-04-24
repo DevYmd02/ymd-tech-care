@@ -1,8 +1,8 @@
 import { FileText, Search, User, ClipboardList} from 'lucide-react';
 import { useFormContext, Controller } from 'react-hook-form';
-import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWrapper';
+import { MulticurrencyWrapper } from '@components/forms/MulticurrencyWrapper';
 import { CustomDateInput, StatusCheckbox } from '@ui';
-import { SQStatusBadge } from '@/modules/sales/shared/components/SQStatusBadge';
+import { SQStatusBadge } from '@sales/shared/components/SQStatusBadge';
 import type { QuotationFormValues } from '@sales/quotation/schemas/quotation-schemas';
 import type { 
     BranchListItem, 
@@ -10,9 +10,9 @@ import type {
     DepartmentListItem, 
     Project,
     EmployeeListItem
-} from '@/modules/master-data/types/master-data-types';
-import type { CustomerMaster } from '@/modules/master-data/customer/customer-master/types/customer-types';
-import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
+} from '@master-data/types/master-data-types';
+import type { CustomerMaster } from '@customer/customer-master/types/customer-types';
+import type { TaxCode } from '@master-data/tax/types/tax-types';
 import type { SaleAreaListItem } from '@master-data/sales/pages/area/types/area.types';
 
 interface QuotationHeaderFormProps {
@@ -28,6 +28,18 @@ interface QuotationHeaderFormProps {
     onSearchCustomer?: () => void;
     onSearchLead?: () => void;
 }
+
+// Helper for consistent employee name formatting
+const formatEmployeeName = (emp: EmployeeListItem) => {
+    if (emp.employee_fullname) return emp.employee_fullname;
+    
+    const title = emp.employee_title_th || emp.title_name || '';
+    const firstName = emp.employee_firstname_th || emp.first_name || '';
+    const lastName = emp.employee_lastname_th || emp.last_name || '';
+    
+    const combined = `${title} ${firstName} ${lastName}`.trim();
+    return combined || emp.employee_name || '-';
+};
 
 export function QuotationHeaderForm({ 
     branches, 
@@ -306,16 +318,11 @@ export function QuotationHeaderForm({
                         className={`${selectClass} ${getErrorClass('emp_sale_id')}`}
                     >
                         <option value="0">-- เลือกพนักงานขาย --</option>
-                        {employees.map(emp => {
-                            const fullName = emp.employee_fullname || 
-                                `${emp.employee_title_th || emp.title_name || ''} ${emp.employee_firstname_th || emp.first_name || ''} ${emp.employee_lastname_th || emp.last_name || ''}`.trim() || 
-                                emp.employee_name || '-';
-                            return (
-                                <option key={emp.employee_id} value={String(emp.employee_id || '')}>
-                                    {emp.employee_code} - {fullName}
-                                </option>
-                            );
-                        })}
+                        {employees.map(emp => (
+                            <option key={emp.employee_id} value={String(emp.employee_id || '')}>
+                                {emp.employee_code} - {formatEmployeeName(emp)}
+                            </option>
+                        ))}
                     </select>
                     {errors.emp_sale_id && <span className="text-[10px] text-red-500 font-medium whitespace-nowrap">กรุณาเลือกพนักงานขาย</span>}
                 </div>

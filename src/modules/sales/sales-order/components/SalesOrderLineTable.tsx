@@ -7,8 +7,8 @@ import { Plus, Trash2, ShoppingBag, Search, AlertCircle } from 'lucide-react';
 import { useFormContext } from 'react-hook-form';
 import type { SalesOrderLineValues, SalesOrderFormValues } from '../schemas/sales-order.schemas';
 import type { SalesOrderLineData } from '../types/sales-order.types';
-import type { UnitListItem, WarehouseListItem } from '@/modules/master-data/types/master-data-types';
-import type { Location } from '@/modules/master-data/inventory/types/inventory-master.types';
+import type { UnitListItem, WarehouseListItem } from '@master-data/types/master-data-types';
+import type { Location } from '@inventory/types/inventory-master.types';
 
 interface SalesOrderLineTableProps {
     lines: SalesOrderLineData[];
@@ -96,8 +96,8 @@ export function SalesOrderLineTable({
                         <thead className="bg-[#fbfaff] dark:bg-gray-800 sticky top-0 z-40">
                             <tr className="bg-emerald-50/50 dark:bg-emerald-900/10">
                                 <th className={`${headerThClass} text-center text-emerald-600 dark:text-emerald-400 sticky left-0 bg-[#fbfaff] dark:bg-gray-800 z-50 border-r-0 after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[1px] after:bg-gray-200 dark:after:bg-gray-700`}>ลำดับ</th>
-                                <th className={`${headerThClass} text-emerald-700 dark:text-emerald-300 sticky left-[60px] bg-[#fbfaff] dark:bg-gray-800 z-50 border-r-0 after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[1px] after:bg-gray-200 dark:after:bg-gray-700`}>รหัสสินค้า</th>
-                                <th className={`${headerThClass} text-emerald-700 dark:text-emerald-300 sticky left-[260px] bg-[#fbfaff] dark:bg-gray-800 z-50 border-r-0 after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[2px] after:bg-emerald-100 dark:after:bg-emerald-800/40`}>ชื่อสินค้า</th>
+                                <th className={`${headerThClass} text-emerald-700 dark:text-emerald-300 sticky left-[60px] bg-[#fbfaff] dark:bg-gray-800 z-50 border-r-0 after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[2px] after:bg-emerald-100 dark:after:bg-emerald-800/40`}>รหัสสินค้า</th>
+                                <th className={`${headerThClass} text-emerald-700 dark:text-emerald-300`}>ชื่อสินค้า</th>
                                 <th className={`${headerThClass} text-emerald-700 dark:text-emerald-300/60`}>คลัง (WAREHOUSE)</th>
                                 <th className={`${headerThClass} text-emerald-700 dark:text-emerald-300/60`}>ที่เก็บ (LOCATION)</th>
                                 <th className={`${headerThClass} text-right text-emerald-700 dark:text-emerald-300/60`}>จำนวน (QTY)</th>
@@ -125,7 +125,7 @@ export function SalesOrderLineTable({
                                         </td>
 
                                         {/* Sticky Left: Item Code */}
-                                        <td className="px-2 py-2 sticky left-[60px] bg-white dark:bg-gray-900 group-hover:bg-[#fcfaff] dark:group-hover:bg-gray-800 z-10 transition-colors after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[1px] after:bg-gray-100 dark:after:bg-gray-800/40">
+                                        <td className="px-2 py-2 sticky left-[60px] bg-white dark:bg-gray-900 group-hover:bg-[#fcfaff] dark:group-hover:bg-gray-800 z-10 transition-colors after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[2px] after:bg-emerald-50 dark:after:bg-emerald-800/20">
                                             <div className="flex gap-1 items-center">
                                                 <input
                                                     value={line.item_code || ''}
@@ -145,8 +145,8 @@ export function SalesOrderLineTable({
                                             </div>
                                         </td>
 
-                                        {/* Sticky Left: Item Name */}
-                                        <td className="px-2 py-2 sticky left-[260px] bg-white dark:bg-gray-900 group-hover:bg-[#fcfaff] dark:group-hover:bg-gray-800 z-10 transition-colors after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[2px] after:bg-emerald-50 dark:after:bg-emerald-800/20">
+                                        {/* Item Name (Now scrollable) */}
+                                        <td className="px-2 py-2">
                                             <input
                                                 value={line.item_name || ''}
                                                 readOnly

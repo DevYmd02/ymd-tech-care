@@ -1,11 +1,11 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Search, User, Check, X } from 'lucide-react';
-import { DialogFormLayout } from '@/shared/components/ui/layout/DialogFormLayout';
-import { CustomerService } from '@/modules/master-data/customer/customer-master/services/customer.service';
-import { CustomerStatusBadge } from '@/modules/master-data/customer/customer-master/components/CustomerStatusBadge';
-import type { CustomerMaster } from '@/modules/master-data/customer/customer-master/types/customer-types';
+import { DialogFormLayout } from '@layout/DialogFormLayout';
+import { CustomerService } from '@customer/customer-master/services/customer.service';
+import { CustomerStatusBadge } from '@customer/customer-master/components/CustomerStatusBadge';
+import type { CustomerMaster } from '@customer/customer-master/types/customer-types';
 import { useQuery } from '@tanstack/react-query';
-import { useDebounce } from '@/shared/hooks/useDebounce';
+import { useDebounce } from '@hooks/useDebounce';
 
 /**
  * @file CustomerSearchModal.tsx

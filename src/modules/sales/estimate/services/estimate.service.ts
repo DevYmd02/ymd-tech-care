@@ -3,7 +3,7 @@
  * @description Service สำหรับจัดการข้อมูลประมาณการราคา (Sales Estimate)
  */
 
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@utils/logger';
 
 export interface EstimateListParams {
     estimate_no?: string;

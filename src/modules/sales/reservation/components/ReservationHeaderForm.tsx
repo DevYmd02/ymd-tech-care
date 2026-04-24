@@ -1,6 +1,6 @@
 import { FileBox, Search, User, ClipboardList } from 'lucide-react';
 import { useFormContext, Controller } from 'react-hook-form';
-import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWrapper';
+import { MulticurrencyWrapper } from '@components/forms/MulticurrencyWrapper';
 import { CustomDateInput, StatusCheckbox } from '@ui';
 import type { ReservationFormData } from '../types/reservation.types';
 import type { 
@@ -8,11 +8,11 @@ import type {
     Currency, 
     DepartmentListItem, 
     Project 
-} from '@/modules/master-data/types/master-data-types';
-import type { CustomerMaster } from '@/modules/master-data/customer/customer-master/types/customer-types';
-import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
-import type { SaleAreaMaster } from '@/modules/master-data/sales/pages/area/types/area.types';
-import type { EmployeeListItem } from '@/modules/master-data/company/types/employee.types';
+} from '@master-data/types/master-data-types';
+import type { CustomerMaster } from '@customer/customer-master/types/customer-types';
+import type { TaxCode } from '@master-data/tax/types/tax-types';
+import type { SaleAreaMaster } from '@sales-master/pages/area/types/area.types';
+import type { EmployeeListItem } from '@company/types/employee.types';
 
 interface ReservationHeaderFormProps {
     branches: BranchListItem[];

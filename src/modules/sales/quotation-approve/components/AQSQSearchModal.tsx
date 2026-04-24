@@ -1,13 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { Search, FileText, Check, X, ShieldCheck} from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { DialogFormLayout } from '@/shared/components/ui/layout/DialogFormLayout';
-import { useDebounce } from '@/shared/hooks/useDebounce';
+import { DialogFormLayout } from '@layout/DialogFormLayout';
+import { useDebounce } from '@hooks/useDebounce';
 import { AQService } from '../services/aq.service';
 import type { SQForApproval } from '../types/quotation-approve.types';
-import { CustomerService } from '@/modules/master-data/customer/customer-master/services/customer.service';
+import { CustomerService } from '@customer/customer-master/services/customer.service';
 import type { CustomerMaster } from '@customer/customer-master/types/customer-types';
-import { extractArrayFromResponse } from '@/shared/utils/clientFilterUtils';
+import { extractArrayFromResponse } from '@utils/clientFilterUtils';
 
 export interface AQSQSearchModalProps {
   isOpen: boolean;

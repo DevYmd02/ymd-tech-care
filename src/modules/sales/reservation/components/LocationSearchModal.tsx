@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { DialogFormLayout } from '@ui';
 import { Search, MapPin } from 'lucide-react';
-import type { Location } from '@/modules/master-data/inventory/types/inventory-master.types';
+import type { Location } from '@inventory/types/inventory-master.types';
 
 interface LocationSearchModalProps {
     isOpen: boolean;

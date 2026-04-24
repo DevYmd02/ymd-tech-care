@@ -11,7 +11,7 @@ interface AQFormLinesProps {
   lines: AQLineFormData[];
   updateLine: (index: number, field: keyof AQLineFormData, value: unknown) => void;
   readOnly?: boolean;
-  priceLevelNames?: import('@/modules/master-data/sales/pages/price-level-name/types/price-level-name.types').PriceLevelName[];
+  priceLevelNames?: import('@sales-master/pages/price-level-name/types/price-level-name.types').PriceLevelName[];
 }
 
 const fmt = (n: number) =>

@@ -9,17 +9,17 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import type { FieldErrors, Path, FieldPathValue } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
-import { useToast } from '@/shared/components/ui/feedback/Toast';
-import { useAuth } from '@/core/auth/contexts/AuthContext';
-import { extractErrorMessage } from '@/core/api/api';
-import { logger } from '@/shared/utils/logger';
+import { useToast } from '@ui/feedback/Toast';
+import { useAuth } from '@core/auth/contexts/AuthContext';
+import { extractErrorMessage } from '@core/api/api';
+import { logger } from '@utils/logger';
 import { calculateLineTotal } from '@sales/shared/utils/sales-calculations';
 
 // Enrichment Services
-import { MasterDataService } from '@/modules/master-data/services/master-data.service';
-import { TaxCodeService } from '@/modules/master-data/tax/services/tax-code.service';
-import { QuotationService } from '@/modules/sales/quotation/services/quotation.service';
-import type { QuotationHeader } from '@/modules/sales/quotation/types/quotation.types';
+import { MasterDataService } from '@master-data/services/master-data.service';
+import { TaxCodeService } from '@master-data/tax/services/tax-code.service';
+import { QuotationService } from '@sales/quotation/services/quotation.service';
+import type { QuotationHeader } from '@sales/quotation/types/quotation.types';
 
 import { AQFormSchema } from '../schemas/aq.schema';
 import type { AQFormData, AQLineFormData } from '../schemas/aq.schema';
@@ -319,8 +319,8 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
   const [isRejecting, setIsRejecting] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [isConfirmRejectOpen, setIsConfirmRejectOpen] = useState(false);
-  const [currencies, setCurrencies] = useState<import('@/modules/master-data/types/master-data-types').Currency[]>([]);
-  const [priceLevelNames, setPriceLevelNames] = useState<import('@/modules/master-data/sales/pages/price-level-name/types/price-level-name.types').PriceLevelName[]>([]);
+  const [currencies, setCurrencies] = useState<import('@master-data/types/master-data-types').Currency[]>([]);
+  const [priceLevelNames, setPriceLevelNames] = useState<import('@sales-master/pages/price-level-name/types/price-level-name.types').PriceLevelName[]>([]);
   
   const prevIsOpenRef = useRef(false);
   const prevSqIdRef = useRef<number | undefined>(undefined);

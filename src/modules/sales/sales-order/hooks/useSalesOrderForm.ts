@@ -7,10 +7,11 @@ import {
     type SalesOrderLineValues,
     getSalesOrderDefaultValues 
 } from '../schemas/sales-order.schemas';
-import type { CustomerMaster } from '@/modules/master-data/customer/customer-master/types/customer-types';
-import type { ItemListItem } from '@/modules/master-data/inventory/types/product-types';
-import type { Currency, UnitListItem } from '@/modules/master-data/types/master-data-types';
-import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
+import type { CustomerMaster } from '@customer/customer-master/types/customer-types';
+import type { ItemListItem } from '@inventory/types/product-types';
+import type { Currency, UnitListItem } from '@master-data/types/master-data-types';
+import type { TaxCode } from '@master-data/tax/types/tax-types';
+import type { ReservationHeader } from '@sales/reservation/services/reservation.service';
 
 interface UseSalesOrderFormProps {
     isOpen: boolean;
@@ -242,6 +243,13 @@ export function useSalesOrderForm({
         }
     };
 
+    const handleSelectReservation = (reservation: ReservationHeader) => {
+        setValue('reservation_id', reservation.rs_no, { shouldValidate: true, shouldDirty: true });
+        if (reservation.customer_id) {
+            setValue('customer_id', String(reservation.customer_id), { shouldValidate: true, shouldDirty: true });
+        }
+    };
+
     return {
         methods,
         formData,
@@ -251,5 +259,6 @@ export function useSalesOrderForm({
         handleLineChange,
         handleSelectCustomer,
         handleSelectProduct,
+        handleSelectReservation,
     };
 }

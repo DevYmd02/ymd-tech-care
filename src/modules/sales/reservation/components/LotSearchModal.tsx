@@ -1,11 +1,11 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Search, Tag, Check, X, AlertCircle } from 'lucide-react';
-import { DialogFormLayout } from '@/shared/components/ui/layout/DialogFormLayout';
-import { ReservationInventoryService } from '@/modules/sales/reservation/services/reservation-inventory.service';
-import type { LotNo } from '@/modules/master-data/inventory/types/inventory-master.types';
+import { DialogFormLayout } from '@layout/DialogFormLayout';
+import { ReservationInventoryService } from '@sales/reservation/services/reservation-inventory.service';
+import type { LotNo } from '@inventory/types/inventory-master.types';
 import { useQuery } from '@tanstack/react-query';
-import { useDebounce } from '@/shared/hooks/useDebounce';
-import { formatThaiDate as formatDate } from '@/shared/utils/dateUtils';
+import { useDebounce } from '@hooks/useDebounce';
+import { formatThaiDate as formatDate } from '@utils/dateUtils';
 
 export interface LotSearchModalProps {
     isOpen: boolean;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { MobileListCard } from '@/shared/components/ui/data-display/MobileListCard';
+import { MobileListCard } from '@ui/data-display/MobileListCard';
 
 interface SalesMobileCardProps {
     docNo: string;

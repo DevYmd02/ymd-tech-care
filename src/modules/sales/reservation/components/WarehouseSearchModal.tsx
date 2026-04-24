@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { DialogFormLayout } from '@ui';
 import { Search, Warehouse } from 'lucide-react';
-import type { WarehouseListItem } from '@/modules/master-data/types/master-data-types';
+import type { WarehouseListItem } from '@master-data/types/master-data-types';
 
 interface WarehouseSearchModalProps {
     isOpen: boolean;

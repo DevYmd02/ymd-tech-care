@@ -2,18 +2,18 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useForm, useWatch, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery } from '@tanstack/react-query';
-import { MasterDataService } from '@/modules/master-data';
-import { CustomerService } from '@/modules/master-data/customer/customer-master/services/customer.service';
-import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
-import { TaxCodeService } from '@/modules/master-data/tax/services/tax-code.service';
-import { WarehouseService } from '@/modules/master-data/inventory/services/warehouse.service';
-import { LocationService } from '@/modules/master-data/inventory/services/inventory-master.service';
-import { SaleAreaService } from '@/modules/master-data/sales/pages/area/services/area.service';
+import { MasterDataService } from '@master-data';
+import { CustomerService } from '@customer/customer-master/services/customer.service';
+import { UnitService } from '@inventory/services/unit.service';
+import { TaxCodeService } from '@master-data/tax/services/tax-code.service';
+import { WarehouseService } from '@inventory/services/warehouse.service';
+import { LocationService } from '@inventory/services/inventory-master.service';
+import { SaleAreaService } from '@sales-master/pages/area/services/area.service';
 
-import { QuotationService } from '@/modules/sales/quotation/services/quotation.service';
-import type { QuotationFormData } from '@/modules/sales/quotation/types/quotation.types';
+import { QuotationService } from '@sales/quotation/services/quotation.service';
+import type { QuotationFormData } from '@sales/quotation/types/quotation.types';
 import { toast } from 'react-hot-toast';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@utils/logger';
 import { 
     calculateDiscountAmount, 
     calculateVatAmount, 
@@ -21,13 +21,13 @@ import {
     calculateLineTotal 
 } from '@sales/shared/utils/sales-calculations';
 
-import type { Currency } from '@/modules/master-data/types/master-data-types';
-import type { CustomerMaster } from '@/modules/master-data/customer/customer-master/types/customer-types';
-import type { ItemListItem, UnitListItem } from '@/modules/master-data/inventory/types/product-types';
-import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
-import type { LotNo, Location as LocationItem } from '@/modules/master-data/inventory/types/inventory-master.types';
-import type { EstimateHeader } from '@/modules/sales/estimate/services/estimate.service';
-import type { WarehouseListItem } from '@/modules/master-data/types/master-data-types';
+import type { Currency } from '@master-data/types/master-data-types';
+import type { CustomerMaster } from '@customer/customer-master/types/customer-types';
+import type { ItemListItem, UnitListItem } from '@inventory/types/product-types';
+import type { TaxCode } from '@master-data/tax/types/tax-types';
+import type { LotNo, Location as LocationItem } from '@inventory/types/inventory-master.types';
+import type { EstimateHeader } from '@sales/estimate/services/estimate.service';
+import type { WarehouseListItem } from '@master-data/types/master-data-types';
 import { 
     ReservationFormSchema, 
     type ReservationFormValues, 
@@ -35,7 +35,7 @@ import {
     getReservationDefaultValues 
 } from '../schemas/reservation-schemas';
 import { ReservationService, type AvailableApproval } from '../services/reservation.service';
-import type { AQLine } from '@/modules/sales/quotation-approve/types/quotation-approve.types';
+import type { AQLine } from '@sales/quotation-approve/types/quotation-approve.types';
 
 /**
  * 🕵️ Local interfaces for data discovery phase
