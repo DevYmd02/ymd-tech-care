@@ -4,10 +4,10 @@
  * @pattern Mirrors av.service.ts from Procurement domain
  */
 
-import api from '@/core/api/api';
+import api from '@core/api/api';
 import type { ApproveQuotationPayload } from '../types/quotation-approve.types';
-import { QuotationService } from '@/modules/sales/quotation/services/quotation.service';
-import { extractArrayFromResponse } from '@/shared/utils/clientFilterUtils';
+import { QuotationService } from '@sales/quotation/services/quotation.service';
+import { extractArrayFromResponse } from '@utils/clientFilterUtils';
 
 // API Endpoint constants
 const ENDPOINTS = {

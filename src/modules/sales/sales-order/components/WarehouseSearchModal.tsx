@@ -37,12 +37,12 @@ export const WarehouseSearchModal: React.FC<WarehouseSearchModalProps> = ({
             onClose={onClose}
             title="เลือกคลัง (Select Warehouse)"
             titleIcon={
-                <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-400">
+                <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
                     <Warehouse size={24} />
                 </div>
             }
             width="max-w-3xl"
-            headerColor="bg-purple-600"
+            headerColor="bg-indigo-600"
         >
             <div className="p-1">
                 <div className="mb-4">
@@ -52,10 +52,10 @@ export const WarehouseSearchModal: React.FC<WarehouseSearchModalProps> = ({
                             value={searchTerm} 
                             onChange={(e) => setSearchTerm(e.target.value)} 
                             placeholder="ระบุชื่อ หรือรหัสคลัง..." 
-                            className="w-full h-11 px-4 pl-11 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-white focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 transition-all shadow-sm" 
+                            className="w-full h-11 px-4 pl-11 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-white focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-sm" 
                             autoFocus 
                         />
-                        <div className="absolute left-4 top-3 text-gray-400 group-focus-within:text-purple-500 transition-colors">
+                        <div className="absolute left-4 top-3 text-gray-400 group-focus-within:text-indigo-500 transition-colors">
                              <Search size={20} />
                         </div>
                     </div>
@@ -83,7 +83,7 @@ export const WarehouseSearchModal: React.FC<WarehouseSearchModalProps> = ({
                                 filteredItems.map((item) => (
                                     <tr 
                                         key={item.warehouse_id} 
-                                        className="hover:bg-purple-50/50 dark:hover:bg-purple-900/10 transition-colors cursor-pointer group"
+                                        className="hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-colors cursor-pointer group"
                                         onClick={() => {
                                             onSelect(item);
                                             onClose();
@@ -92,12 +92,12 @@ export const WarehouseSearchModal: React.FC<WarehouseSearchModalProps> = ({
                                         <td className="px-4 py-4 text-center">
                                             <button 
                                                 type="button"
-                                                className="px-4 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold transition-all shadow-md shadow-purple-500/20 active:scale-95"
+                                                className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-all shadow-md shadow-indigo-500/20 active:scale-95"
                                             >
                                                 เลือก
                                             </button>
                                         </td>
-                                        <td className="px-4 py-4 font-mono font-bold text-purple-700 dark:text-purple-400">{item.warehouse_code}</td>
+                                        <td className="px-4 py-4 font-mono font-bold text-indigo-700 dark:text-indigo-400">{item.warehouse_code}</td>
                                         <td className="px-4 py-4 text-gray-700 dark:text-gray-300 font-medium">{item.warehouse_name}</td>
                                     </tr>
                                 ))

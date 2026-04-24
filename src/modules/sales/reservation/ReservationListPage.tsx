@@ -53,6 +53,8 @@ export default function ReservationListPage() {
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(10);
 
     // Modal State
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -64,8 +66,10 @@ export default function ReservationListPage() {
         customer_name: customer,
         status: statusFilter === 'ALL' ? undefined : statusFilter,
         start_date: startDate,
-        end_date: endDate
-    }), [rsNo, customer, statusFilter, startDate, endDate]);
+        end_date: endDate,
+        page,
+        limit
+    }), [rsNo, customer, statusFilter, startDate, endDate, page, limit]);
 
     const { data: apiData, isLoading, refetch } = useReservationList(filterParams);
 
@@ -88,12 +92,23 @@ export default function ReservationListPage() {
         setStatusFilter('ALL');
         setStartDate('');
         setEndDate('');
+        setPage(1);
     };
 
     // Columns Definition
     const columnHelper = createColumnHelper<ReservationHeader>();
     
     const columns = useMemo(() => [
+        columnHelper.display({
+            id: 'index',
+            header: () => <div className="text-center w-full">ลำดับ</div>,
+            cell: (info) => (
+                <div className="text-center font-medium text-gray-500 w-full">
+                    {(page - 1) * limit + info.row.index + 1}
+                </div>
+            ),
+            size: 60,
+        }),
         columnHelper.accessor('rs_no', {
             header: 'เลขที่ใบสั่งจอง',
             cell: (info) => (
@@ -158,7 +173,7 @@ export default function ReservationListPage() {
             ),
             size: 120,
         }),
-    ], [columnHelper]);
+    ], [columnHelper, page, limit]);
 
     return (
         <>
@@ -219,7 +234,7 @@ export default function ReservationListPage() {
                                     ล้างค่า
                                 </button>
                                 <button 
-                                    onClick={() => refetch()}
+                                    onClick={() => { setPage(1); refetch(); }}
                                     className="h-10 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold shadow-sm transition-all active:scale-95 flex items-center justify-center px-6 gap-2"
                                 >
                                     <Search size={18} strokeWidth={3} />
@@ -243,11 +258,11 @@ export default function ReservationListPage() {
                         columns={columns}
                         isLoading={isLoading}
                         pagination={{
-                            pageIndex: 1,
-                            pageSize: 10,
+                            pageIndex: page,
+                            pageSize: limit,
                             totalCount: apiData?.total || 0,
-                            onPageChange: () => {},
-                            onPageSizeChange: () => {},
+                            onPageChange: (p) => setPage(p),
+                            onPageSizeChange: (s) => { setLimit(s); setPage(1); },
                         }}
                     />
                 </div>

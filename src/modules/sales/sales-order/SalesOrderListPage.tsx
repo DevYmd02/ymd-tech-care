@@ -1,6 +1,6 @@
 /**
  * @file SalesOrderListPage.tsx
- * @description หน้ารายการคำสั่งขาย (Sales Order List Page)
+ * @description หน้ารายการใบสั่งขาย (Sales Order List Page)
  * @route /sales/order
  */
 
@@ -11,7 +11,7 @@ import { PageListLayout, SmartTable, FilterField } from '@ui';
 import { createColumnHelper } from '@tanstack/react-table';
 import { SalesOrderService, type SalesOrderHeader } from '@sales/sales-order/services/sales-order.service';
 import { SalesOrderFormModal } from './components/SalesOrderFormModal';
-import { SalesMobileCard } from '@/modules/sales/shared/components/SalesMobileCard';
+import { SalesMobileCard } from '@sales/shared/components/SalesMobileCard';
 
 // ====================================================================================
 // CONSTANTS
@@ -45,7 +45,7 @@ const StatusBadge = ({ status }: { status: string }) => {
         },
         APPROVED: {
             label: 'Approved',
-            className: 'bg-emerald-100 text-emerald-600 border-emerald-200',
+            className: 'bg-indigo-100 text-indigo-600 border-indigo-200',
             icon: CheckCircle,
         },
         CONFIRMED: {
@@ -93,6 +93,8 @@ export default function SalesOrderListPage() {
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(10);
 
     // Modal State
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -100,7 +102,7 @@ export default function SalesOrderListPage() {
 
     // API Integration
     const { data: apiData, isLoading, refetch } = useQuery({
-        queryKey: ['sales-orders', soNo, customer, statusFilter, startDate, endDate],
+        queryKey: ['sales-orders', soNo, customer, statusFilter, startDate, endDate, page, limit],
         queryFn: () =>
             SalesOrderService.getList({
                 so_no: soNo,
@@ -108,6 +110,8 @@ export default function SalesOrderListPage() {
                 status: statusFilter === 'ALL' ? undefined : statusFilter,
                 start_date: startDate,
                 end_date: endDate,
+                page,
+                limit,
             }),
     });
 
@@ -119,6 +123,7 @@ export default function SalesOrderListPage() {
         setStatusFilter('ALL');
         setStartDate('');
         setEndDate('');
+        setPage(1);
     };
 
     // Handlers
@@ -140,7 +145,7 @@ export default function SalesOrderListPage() {
             columnHelper.display({
                 id: 'index',
                 header: 'ลำดับ',
-                cell: (info) => info.row.index + 1,
+                cell: (info) => (page - 1) * limit + info.row.index + 1,
                 size: 50,
             }),
             columnHelper.accessor('so_no', {
@@ -148,7 +153,7 @@ export default function SalesOrderListPage() {
                 cell: (info) => (
                     <span
                         onClick={() => handleEdit(info.row.original.so_id)}
-                        className="text-emerald-600 font-semibold cursor-pointer hover:underline"
+                        className="text-indigo-600 font-semibold cursor-pointer hover:underline"
                     >
                         {info.getValue()}
                     </span>
@@ -210,7 +215,7 @@ export default function SalesOrderListPage() {
                     <div className="flex items-center gap-3">
                         <button
                             onClick={() => handleEdit(info.row.original.so_id)}
-                            className="text-blue-500 hover:text-blue-700 transition-colors"
+                            className="text-indigo-500 hover:text-indigo-700 transition-colors"
                             title="ดูรายละเอียด"
                         >
                             <Eye size={18} />
@@ -227,47 +232,47 @@ export default function SalesOrderListPage() {
                 size: 90,
             }),
         ],
-        [columnHelper]
+        [columnHelper, page, limit]
     );
 
     return (
         <>
             <PageListLayout
-                title="คำสั่งขาย - Sales Order (SO)"
-                subtitle="จัดการข้อมูลคำสั่งซื้อจากลูกค้า"
+                title="ใบสั่งขาย - Sales Order (SO)"
+                subtitle="จัดการข้อมูลใบสั่งขายจากลูกค้า"
                 icon={ShoppingCart}
-                accentColor="emerald"
+                accentColor="indigo"
                 totalCount={apiData?.total || 0}
                 isLoading={isLoading}
                 searchForm={
                     <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
                         <FilterField
-                            label="เลขที่คำสั่งขาย"
+                            label="เลขที่ใบสั่งขาย"
                             value={soNo}
                             onChange={setSoNo}
                             placeholder="SO-xxxx"
-                            accentColor="emerald"
+                            accentColor="indigo"
                         />
                         <FilterField
                             label="ลูกค้า"
                             value={customer}
                             onChange={setCustomer}
                             placeholder="ชื่อลูกค้า"
-                            accentColor="emerald"
+                            accentColor="indigo"
                         />
                         <FilterField
                             label="วันที่ตั้งแต่"
                             type="date"
                             value={startDate}
                             onChange={setStartDate}
-                            accentColor="emerald"
+                            accentColor="indigo"
                         />
                         <FilterField
                             label="ถึงวันที่"
                             type="date"
                             value={endDate}
                             onChange={setEndDate}
-                            accentColor="emerald"
+                            accentColor="indigo"
                         />
                         <FilterField
                             label="สถานะ"
@@ -275,7 +280,7 @@ export default function SalesOrderListPage() {
                             value={statusFilter}
                             onChange={setStatusFilter}
                             options={STATUS_OPTIONS}
-                            accentColor="emerald"
+                            accentColor="indigo"
                         />
 
                     {/* Buttons Layout: 2 Rows on Mobile, 1 Row on Desktop */}
@@ -289,8 +294,8 @@ export default function SalesOrderListPage() {
                                 ล้างค่า
                             </button>
                             <button
-                                onClick={() => refetch()}
-                                className="h-10 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-all active:scale-95 flex items-center justify-center px-6 gap-2"
+                                onClick={() => { setPage(1); refetch(); }}
+                                className="h-10 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold shadow-sm transition-all active:scale-95 flex items-center justify-center px-6 gap-2"
                             >
                                 <Search size={18} strokeWidth={3} />
                                 ค้นหา
@@ -299,7 +304,7 @@ export default function SalesOrderListPage() {
                         
                         <button 
                             onClick={handleCreateNew}
-                            className="h-10 w-full md:w-auto px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition-all active:scale-95 flex items-center justify-center gap-2"
+                            className="h-10 w-full md:w-auto px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-all active:scale-95 flex items-center justify-center gap-2"
                         >
                             <Plus size={18} />
                             สร้างใบสั่งขายใหม่
@@ -314,11 +319,11 @@ export default function SalesOrderListPage() {
                         columns={columns}
                         isLoading={isLoading}
                         pagination={{
-                            pageIndex: 1,
-                            pageSize: 10,
+                            pageIndex: page,
+                            pageSize: limit,
                             totalCount: apiData?.total || 0,
-                            onPageChange: () => {},
-                            onPageSizeChange: () => {},
+                            onPageChange: (p) => setPage(p),
+                            onPageSizeChange: (s) => { setLimit(s); setPage(1); },
                         }}
                         renderMobileCard={(item) => (
                             <SalesMobileCard 

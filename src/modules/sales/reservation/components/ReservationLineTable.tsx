@@ -2,8 +2,8 @@ import { Plus, Trash2, Package, Search, AlertCircle } from 'lucide-react';
 import { useFormContext } from 'react-hook-form';
 import type { ReservationLineValues, ReservationFormValues } from '../schemas/reservation-schemas';
 import type { ReservationLineData } from '../types/reservation.types';
-import type { UnitListItem, WarehouseListItem } from '@/modules/master-data/types/master-data-types';
-import type { Location } from '@/modules/master-data/inventory/types/inventory-master.types';
+import type { UnitListItem, WarehouseListItem } from '@master-data/types/master-data-types';
+import type { Location } from '@inventory/types/inventory-master.types';
 
 interface ReservationLineTableProps {
     lines: ReservationLineData[];
@@ -17,7 +17,7 @@ interface ReservationLineTableProps {
     uoms?: UnitListItem[];
     warehouses?: WarehouseListItem[];
     locations?: Location[];
-    priceLevelNames?: import('@/modules/master-data/sales/pages/price-level-name/types/price-level-name.types').PriceLevelName[];
+    priceLevelNames?: import('@sales-master/pages/price-level-name/types/price-level-name.types').PriceLevelName[];
     readOnly?: boolean;
     currencySymbol?: string;
 }
@@ -89,7 +89,7 @@ export function ReservationLineTable({
                         <col className="w-[130px]" />
                         <col className="w-[160px]" />
                         <col className="w-[300px]" />
-                        <col className="w-[60px]" />
+                        {!isLocked && <col className="w-[60px]" />}
                     </colgroup>
                     <thead className="bg-[#fbfaff] dark:bg-gray-800 sticky top-0 z-40">
                         <tr className="bg-purple-50/50 dark:bg-purple-900/10">

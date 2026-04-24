@@ -1,4 +1,4 @@
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@utils/logger';
 import type { SalesOrderFormData } from '../types/sales-order.types';
 
 export interface SalesOrderListParams {

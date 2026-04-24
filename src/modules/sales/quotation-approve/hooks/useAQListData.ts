@@ -7,11 +7,11 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AQService } from '../services/aq.service';
-import { CustomerService } from '@/modules/master-data/customer/customer-master/services/customer.service';
-import { extractArrayFromResponse } from '@/shared/utils/clientFilterUtils';
+import { CustomerService } from '@customer/customer-master/services/customer.service';
+import { extractArrayFromResponse } from '@utils/clientFilterUtils';
 import type { AQListItem, SQForApproval } from '../types/quotation-approve.types';
-import type { QuotationHeader } from '@/modules/sales/quotation/types/quotation.types';
-import type { CustomerMaster } from '@/modules/master-data/customer/customer-master/types/customer-types';
+import type { QuotationHeader } from '@sales/quotation/types/quotation.types';
+import type { CustomerMaster } from '@customer/customer-master/types/customer-types';
 
 export interface UseAQListDataParams {
   sqNo?: string;

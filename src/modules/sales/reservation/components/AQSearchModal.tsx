@@ -1,10 +1,10 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Search, FileCheck, Check, X } from 'lucide-react';
-import { DialogFormLayout } from '@/shared/components/ui/layout/DialogFormLayout';
+import { DialogFormLayout } from '@layout/DialogFormLayout';
 import { ReservationService, type AvailableApproval } from '../services/reservation.service';
 import { useQuery } from '@tanstack/react-query';
-import { useDebounce } from '@/shared/hooks/useDebounce';
-import { formatThaiDate } from '@/shared/utils/dateUtils';
+import { useDebounce } from '@hooks/useDebounce';
+import { formatThaiDate } from '@utils/dateUtils';
 
 
 /**

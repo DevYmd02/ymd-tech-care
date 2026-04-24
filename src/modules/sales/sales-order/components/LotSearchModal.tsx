@@ -56,24 +56,24 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
             onClose={onClose}
             title={title}
             titleIcon={
-                <div className="bg-purple-600 p-1.5 rounded-lg shadow-sm">
+                <div className="bg-indigo-600 p-1.5 rounded-lg shadow-sm">
                     <Tag size={20} className="text-white" />
                 </div>
             }
             width="max-w-[1000px]"
-            headerColor="bg-purple-600"
+            headerColor="bg-indigo-600"
         >
             <div className="flex flex-col h-[60vh]">
                 {/* Search Bar */}
                 <div className="p-6 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
                     <div className="relative group">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-purple-500 transition-colors" size={20} />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={20} />
                         <input
                             type="text"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             placeholder="ค้นหาเลขล็อต (Lot No)..."
-                            className="w-full pl-12 pr-4 h-12 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-base text-gray-900 dark:text-white shadow-sm group-hover:border-gray-300 dark:group-hover:border-gray-600 transition-all font-medium placeholder-gray-400 dark:placeholder-gray-500"
+                            className="w-full pl-12 pr-4 h-12 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-base text-gray-900 dark:text-white shadow-sm group-hover:border-gray-300 dark:group-hover:border-gray-600 transition-all font-medium placeholder-gray-400 dark:placeholder-gray-500"
                             autoFocus
                         />
                         {searchTerm && (
@@ -98,7 +98,7 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
                 <div className="flex-1 overflow-auto p-0">
                     {isLoading ? (
                         <div className="flex flex-col items-center justify-center py-20 opacity-60">
-                            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-600 mb-4" />
+                            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600 mb-4" />
                             <p className="text-gray-500 font-medium">กำลังโหลดข้อมูลล็อต...</p>
                         </div>
                     ) : (
@@ -118,12 +118,12 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
                                     lots.map((lot) => (
                                         <tr 
                                             key={lot.lot_no_id || lot.id} 
-                                            className="hover:bg-purple-50/50 dark:hover:bg-purple-900/10 transition-colors group cursor-pointer"
+                                            className="hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-colors group cursor-pointer"
                                             onClick={() => handleSelect(lot)}
                                         >
                                             <td className="px-6 py-4">
                                                 <div className="flex flex-col">
-                                                    <span className="font-bold text-purple-600 dark:text-purple-400 group-hover:scale-105 transition-transform inline-block w-fit">
+                                                    <span className="font-bold text-indigo-600 dark:text-indigo-400 group-hover:scale-105 transition-transform inline-block w-fit">
                                                         {lot.code}
                                                     </span>
                                                     {lot.name_th && <span className="text-xs text-gray-500 mt-1">{lot.name_th}</span>}
@@ -155,7 +155,7 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
                                                         e.stopPropagation();
                                                         handleSelect(lot);
                                                     }}
-                                                    className="inline-flex items-center gap-2 px-4 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95"
+                                                    className="inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95"
                                                 >
                                                     เลือก
                                                     <Check size={14} />
@@ -184,7 +184,7 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
                 {/* Footer */}
                 <div className="p-4 bg-gray-50 dark:bg-gray-800/80 border-t border-gray-100 dark:border-gray-700 flex justify-between items-center px-6">
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                        แสดงข้อมูล <span className="font-bold text-purple-600">{lots.length}</span> รายการ
+                        แสดงข้อมูล <span className="font-bold text-indigo-600">{lots.length}</span> รายการ
                     </p>
                     <button 
                         onClick={onClose}

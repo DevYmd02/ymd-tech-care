@@ -10,15 +10,15 @@ import {
   CheckCircle, XCircle, Loader2, Calendar, ShieldCheck, Printer, User, Clock,
 } from 'lucide-react';
 
-import { WindowFormLayout } from '@/shared/components/ui/layout/WindowFormLayout';
-import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal';
+import { WindowFormLayout } from '@layout/WindowFormLayout';
+import { ConfirmationModal } from '@system/ConfirmationModal';
 
 import { useAQForm } from '../hooks/useAQForm';
 import { AQHeader } from './AQHeader';
 import { AQFormLines } from './AQFormLines';
 import { AQFormSummary } from './AQFormSummary';
 import { AQSQSearchModal } from './AQSQSearchModal';
-import { AQHistoryModal } from '@/modules/sales/shared/components/AQHistoryModal';
+import { AQHistoryModal } from '@sales/shared/components/AQHistoryModal';
 import type { AQListItem, SQForApproval } from '../types/quotation-approve.types';
 
 // ─────────────────────────────────────────────────────────────────────────────

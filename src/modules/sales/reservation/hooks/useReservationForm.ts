@@ -2,18 +2,19 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useForm, useWatch, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery } from '@tanstack/react-query';
-import { MasterDataService } from '@/modules/master-data';
-import { CustomerService } from '@/modules/master-data/customer/customer-master/services/customer.service';
-import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
-import { TaxCodeService } from '@/modules/master-data/tax/services/tax-code.service';
-import { WarehouseService } from '@/modules/master-data/inventory/services/warehouse.service';
-import { LocationService } from '@/modules/master-data/inventory/services/inventory-master.service';
-import { SaleAreaService } from '@/modules/master-data/sales/pages/area/services/area.service';
+import { MasterDataService } from '@master-data';
+import { CustomerService } from '@customer/customer-master/services/customer.service';
+import { UnitService } from '@inventory/services/unit.service';
+import { TaxCodeService } from '@master-data/tax/services/tax-code.service';
+import { WarehouseService } from '@inventory/services/warehouse.service';
+import { LocationService } from '@inventory/services/inventory-master.service';
+import { SaleAreaService } from '@sales-master/pages/area/services/area.service';
 
-import { QuotationService } from '@/modules/sales/quotation/services/quotation.service';
-import type { QuotationFormData } from '@/modules/sales/quotation/types/quotation.types';
+import { QuotationService } from '@sales/quotation/services/quotation.service';
+import type { QuotationFormData } from '@sales/quotation/types/quotation.types';
+import { ItemMasterService } from '@inventory/services/item-master.service';
 import { toast } from 'react-hot-toast';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@utils/logger';
 import { 
     calculateDiscountAmount, 
     calculateVatAmount, 
@@ -21,13 +22,13 @@ import {
     calculateLineTotal 
 } from '@sales/shared/utils/sales-calculations';
 
-import type { Currency } from '@/modules/master-data/types/master-data-types';
-import type { CustomerMaster } from '@/modules/master-data/customer/customer-master/types/customer-types';
-import type { ItemListItem, UnitListItem } from '@/modules/master-data/inventory/types/product-types';
-import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
-import type { LotNo, Location as LocationItem } from '@/modules/master-data/inventory/types/inventory-master.types';
-import type { EstimateHeader } from '@/modules/sales/estimate/services/estimate.service';
-import type { WarehouseListItem } from '@/modules/master-data/types/master-data-types';
+import type { Currency } from '@master-data/types/master-data-types';
+import type { CustomerMaster } from '@customer/customer-master/types/customer-types';
+import type { ItemListItem, UnitListItem } from '@inventory/types/product-types';
+import type { TaxCode } from '@master-data/tax/types/tax-types';
+import type { LotNo, Location as LocationItem } from '@inventory/types/inventory-master.types';
+import type { EstimateHeader } from '@sales/estimate/services/estimate.service';
+import type { WarehouseListItem } from '@master-data/types/master-data-types';
 import { 
     ReservationFormSchema, 
     type ReservationFormValues, 
@@ -35,7 +36,7 @@ import {
     getReservationDefaultValues 
 } from '../schemas/reservation-schemas';
 import { ReservationService, type AvailableApproval } from '../services/reservation.service';
-import type { AQLine } from '@/modules/sales/quotation-approve/types/quotation-approve.types';
+import type { AQLine } from '@sales/quotation-approve/types/quotation-approve.types';
 
 /**
  * 🕵️ Local interfaces for data discovery phase
@@ -741,17 +742,27 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
                 });
                 
                 // 🕵️ ITEM ENRICHMENT: If names are still missing, fetch from master data
-                const needsEnrichment = mappedLines.some(l => !l.item_name || l.item_name === '-' || l.item_name === '');
-                if (needsEnrichment) {
+                const missingItemIds = mappedLines
+                    .filter(l => !l.item_name || l.item_name === '-' || l.item_name === '')
+                    .map(l => l.item_id)
+                    .filter(id => id !== undefined && id !== null);
 
+                if (missingItemIds.length > 0) {
                     try {
-                        const items = await MasterDataService.getItems();
+                        // Fetch only the missing items in parallel
+                        const missingItemsData = await Promise.all(
+                            missingItemIds.map(id => ItemMasterService.getById(Number(id)))
+                        );
+
+                        // Create a map for quick lookup
+                        const itemMap = new Map();
+                        missingItemsData.forEach(item => {
+                            if (item) itemMap.set(String(item.item_id), item);
+                        });
                         
                         mappedLines.forEach((l: ReservationLineValues) => {
                             if (!l.item_name || l.item_name === '-' || l.item_name === '') {
-                                const match = items.find((i: ItemListItem) => 
-                                    String(i.item_id || i.id) === String(l.item_id)
-                                );
+                                const match = itemMap.get(String(l.item_id));
                                 if (match) {
                                     l.item_name = String(match.item_name || match.description || '');
                                     l.item_code = String(match.item_code || l.item_code);

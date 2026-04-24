@@ -10,19 +10,22 @@ import { EmployeeService } from '../services/employee.service';
 import type { IEmployee } from '@/modules/master-data/company/types/employee-types';
 import { useQuery } from '@tanstack/react-query';
 import { useDebounce } from '@/shared/hooks/useDebounce';
+import { cn } from '@/shared/utils/cn';
 
 export interface EmployeeSearchModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSelect: (employee: IEmployee) => void;
     title?: string;
+    headerColor?: string;
 }
 
 export const EmployeeSearchModal: React.FC<EmployeeSearchModalProps> = React.memo(({
     isOpen,
     onClose,
     onSelect,
-    title = 'ค้นหาพนักงาน - Find Employee'
+    title = 'ค้นหาพนักงาน - Find Employee',
+    headerColor
 }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const debouncedSearch = useDebounce(searchTerm, 400);
@@ -55,8 +58,13 @@ export const EmployeeSearchModal: React.FC<EmployeeSearchModalProps> = React.mem
             isOpen={isOpen}
             onClose={onClose}
             title={title}
+            headerColor={headerColor}
             titleIcon={
-                <div className="bg-blue-600 p-1.5 rounded-lg shadow-sm">
+                <div className={cn(
+                    "p-1.5 rounded-lg shadow-sm",
+                    headerColor?.includes('indigo') ? "bg-white/20" :
+                    headerColor ? "bg-white/20" : "bg-blue-600"
+                )}>
                     <UserCircle size={20} className="text-white" />
                 </div>
             }
@@ -72,7 +80,11 @@ export const EmployeeSearchModal: React.FC<EmployeeSearchModalProps> = React.mem
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             placeholder="ค้นหาตามรหัสพนักงาน หรือชื่อพนักงาน..."
-                            className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                            className={cn(
+                                "w-full pl-10 pr-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 outline-none transition-all focus:ring-2",
+                                headerColor?.includes('indigo') ? "focus:ring-indigo-500" :
+                                headerColor ? "focus:ring-emerald-500" : "focus:ring-blue-600"
+                            )}
                             autoFocus
                         />
                     </div>
@@ -82,7 +94,11 @@ export const EmployeeSearchModal: React.FC<EmployeeSearchModalProps> = React.mem
                 <div className="flex-1 overflow-auto">
                     {isLoading ? (
                         <div className="flex flex-col items-center justify-center py-20 gap-4">
-                            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
+                            <div className={cn(
+                                "animate-spin rounded-full h-10 w-10 border-b-2 mb-4",
+                                headerColor?.includes('indigo') ? "border-indigo-600" :
+                                headerColor ? "border-emerald-600" : "border-blue-600"
+                            )} />
                             <p className="text-gray-500 font-medium text-sm">กำลังโหลดข้อมูลพนักงาน...</p>
                         </div>
                     ) : (
@@ -101,19 +117,31 @@ export const EmployeeSearchModal: React.FC<EmployeeSearchModalProps> = React.mem
                                     filteredData.map((emp, index) => (
                                         <tr 
                                             key={emp.id || `emp-${index}`} 
-                                            className="hover:bg-blue-50/50 dark:hover:bg-blue-900/10 cursor-pointer transition-colors"
+                                            className={cn(
+                                                "cursor-pointer transition-colors",
+                                                headerColor?.includes('indigo') ? "hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10" :
+                                                headerColor ? "hover:bg-emerald-50/50 dark:hover:bg-emerald-900/10" : "hover:bg-blue-50/50 dark:hover:bg-blue-900/10"
+                                            )}
                                             onDoubleClick={() => handleSelect(emp)}
                                         >
                                             <td className="px-4 py-2.5">
                                                 <button
                                                     onClick={() => handleSelect(emp)}
-                                                    className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-sm"
+                                                    className={cn(
+                                                        "text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-sm",
+                                                        headerColor?.includes('indigo') ? "bg-indigo-600 hover:bg-indigo-700" :
+                                                        headerColor ? "bg-emerald-600 hover:bg-emerald-700" : "bg-blue-600 hover:bg-blue-700"
+                                                    )}
                                                 >
                                                     <Check size={12} />
                                                     เลือก
                                                 </button>
                                             </td>
-                                            <td className="px-4 py-2.5 font-bold text-blue-600 dark:text-blue-400">
+                                            <td className={cn(
+                                                "px-4 py-2.5 font-bold",
+                                                headerColor?.includes('indigo') ? "text-indigo-600 dark:text-indigo-400" :
+                                                headerColor ? "text-emerald-600 dark:text-emerald-400" : "text-blue-600 dark:text-blue-400"
+                                            )}>
                                                 {emp.employee_code}
                                             </td>
                                             <td className="px-4 py-2.5 font-medium text-gray-800 dark:text-gray-200">
@@ -142,7 +170,11 @@ export const EmployeeSearchModal: React.FC<EmployeeSearchModalProps> = React.mem
 
                 {/* Footer Section */}
                 <div className="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                    <p className="text-sm text-gray-500">พบ {filteredData.length} รายการ</p>
+                    <p className="text-sm text-gray-500">พบ <span className={cn(
+                        "font-bold",
+                        headerColor?.includes('indigo') ? "text-indigo-600" :
+                        headerColor ? "text-emerald-600" : "text-blue-600"
+                    )}>{filteredData.length}</span> รายการ</p>
                     <button
                         onClick={onClose}
                         className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 transition-all font-medium"

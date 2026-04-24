@@ -1,8 +1,8 @@
-import api from '@/core/api/api';
-import { logger } from '@/shared/utils/logger';
-import type { LotNo } from '@/modules/master-data/inventory/types/inventory-master.types';
-import { USE_MOCK } from '@/core/api/api';
-import { MOCK_LOT_NUMBERS } from '@/modules/master-data/inventory/mocks/inventory-master.mock';
+import api from '@core/api/api';
+import { logger } from '@utils/logger';
+import type { LotNo } from '@inventory/types/inventory-master.types';
+import { USE_MOCK } from '@core/api/api';
+import { MOCK_LOT_NUMBERS } from '@inventory/mocks/inventory-master.mock';
 
 /**
  * Service for Inventory-related lookups specifically within the Reservation module.

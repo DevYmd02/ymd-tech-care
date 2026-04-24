@@ -8,12 +8,12 @@ import { useState, useMemo } from 'react';
 import { ShieldCheck, Search, Plus, FileText, Eye, Clock } from 'lucide-react';
 import { PageListLayout, SmartTable, FilterField } from '@ui';
 import { createColumnHelper } from '@tanstack/react-table';
-import { SQStatusBadge } from '@/modules/sales/shared/components/SQStatusBadge';
+import { SQStatusBadge } from '@sales/shared/components/SQStatusBadge';
 import { AQFormModal } from './components/AQFormModal';
-import { AQHistoryModal } from '@/modules/sales/shared/components/AQHistoryModal';
+import { AQHistoryModal } from '@sales/shared/components/AQHistoryModal';
 import { useAQListData } from './hooks/useAQListData';
 import type { AQListItem, SQForApproval } from './types/quotation-approve.types';
-import { SalesMobileCard } from '@/modules/sales/shared/components/SalesMobileCard';
+import { SalesMobileCard } from '@sales/shared/components/SalesMobileCard';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants

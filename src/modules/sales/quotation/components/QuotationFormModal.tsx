@@ -1,7 +1,7 @@
 import { FileText, Printer, Save, Loader2 } from 'lucide-react';
 import { FormProvider } from 'react-hook-form';
 import { WindowFormLayout } from '@ui';
-import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal';
+import { ConfirmationModal } from '@system/ConfirmationModal';
 import { QuotationHeaderForm } from './QuotationHeaderForm';
 import { QuotationLineTable } from './QuotationLineTable';
 import { QuotationSummary } from './QuotationSummary';
@@ -10,7 +10,7 @@ import { ProductSearchModal } from './ProductSearchModal';
 import { LeadSearchModal } from './LeadSearchModal';
 import { useQuotationForm } from '@sales/quotation/hooks/useQuotationForm';
 import { QuotationService } from '@sales/quotation/services/quotation.service';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@utils/logger';
 import type { QuotationFormValues } from '@sales/quotation/schemas/quotation-schemas';
 import type { QuotationHeader } from '@sales/quotation/types/quotation.types';
 

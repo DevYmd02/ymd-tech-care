@@ -1,5 +1,5 @@
 import { Calculator, AlertCircle } from 'lucide-react';
-import { styles } from '@/shared/constants/styles';
+import { styles } from '@shared/constants/styles';
 
 interface ReservationSummaryProps {
     subTotal: number;

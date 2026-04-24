@@ -1,9 +1,9 @@
 import { FileText, User, Search, ClipboardList, Calendar } from 'lucide-react';
 import { useFormContext, Controller } from 'react-hook-form';
-import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWrapper';
+import { MulticurrencyWrapper } from '@components/forms/MulticurrencyWrapper';
 import type { AQFormData } from '../schemas/aq.schema';
-import { SQStatusBadge } from '@/modules/sales/shared/components/SQStatusBadge';
-import type { Currency } from '@/modules/master-data/types/master-data-types';
+import { SQStatusBadge } from '@sales/shared/components/SQStatusBadge';
+import type { Currency } from '@master-data/types/master-data-types';
 
 const formatDate = (val?: string): string => {
   if (!val) return '-';

@@ -1,30 +1,36 @@
 /**
  * @file SalesOrderFormModal.tsx
- * @description Modal ฟอร์มสร้าง/แก้ไขคำสั่งขาย (Sales Order)
+ * @description Modal ฟอร์มสร้าง/แก้ไขใบสั่งขาย (Sales Order)
  * @tables sale_order_header (D9) + sale_order_line (D10)
  */
 
 import { useState } from 'react';
 import { Save, ShoppingCart, Printer, Loader2 } from 'lucide-react';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@utils/logger';
 import { FormProvider } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { WindowFormLayout } from '@ui';
-import { MasterDataService } from '@/modules/master-data';
-import { CustomerService } from '@/modules/master-data/customer/customer-master/services/customer.service';
-import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
-import { TaxCodeService } from '@/modules/master-data/tax/services/tax-code.service';
-import { WarehouseService } from '@/modules/master-data/inventory/services/warehouse.service';
-import { LocationService } from '@/modules/master-data/inventory/services/inventory-master.service';
+import { MasterDataService } from '@master-data';
+import { CustomerService } from '@customer/customer-master/services/customer.service';
+import { UnitService } from '@inventory/services/unit.service';
+import { TaxCodeService } from '@master-data/tax/services/tax-code.service';
+import { WarehouseService } from '@inventory/services/warehouse.service';
+import { LocationService } from '@inventory/services/inventory-master.service';
 import { useSalesOrderForm } from '../hooks';
 import type { SalesOrderFormValues } from '../schemas/sales-order.schemas';
 import { SalesOrderHeaderForm } from './SalesOrderHeaderForm';
 import { SalesOrderLineTable } from './SalesOrderLineTable';
 import { SalesOrderSummary } from './SalesOrderSummary';
-import { CustomerSearchModal } from '@/modules/sales/quotation/components/CustomerSearchModal';
-import { ProductSearchModal } from '@/modules/sales/quotation/components/ProductSearchModal';
-import { SaleAreaService } from '@/modules/master-data/sales/pages/area/services/area.service';
-import type { ItemListItem } from '@/modules/master-data/inventory/types/product-types';
+import { CustomerSearchModal } from '@sales/quotation/components/CustomerSearchModal';
+import { ProductSearchModal } from '@sales/quotation/components/ProductSearchModal';
+import { SaleAreaService } from '@sales-master/pages/area/services/area.service';
+import type { ItemListItem } from '@inventory/types/product-types';
+import { ReservationSearchModal } from './ReservationSearchModal';
+import { EmployeeSearchModal } from '@master-data/employee/components/EmployeeSearchModal';
+import type { IEmployee } from '@master-data/company/types/employee-types';
+import { WarehouseSearchModal } from './WarehouseSearchModal';
+import { LocationSearchModal } from './LocationSearchModal';
+import { LotSearchModal } from './LotSearchModal';
 
 // ============================================================
 // Props
@@ -55,7 +61,12 @@ export function SalesOrderFormModal({
 
     // Search Modals
     const [isCustomerSearchOpen, setIsCustomerSearchOpen] = useState(false);
+    const [isReservationSearchOpen, setIsReservationSearchOpen] = useState(false);
     const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
+    const [isEmployeeSearchOpen, setIsEmployeeSearchOpen] = useState(false);
+    const [isWarehouseSearchOpen, setIsWarehouseSearchOpen] = useState(false);
+    const [isLocationSearchOpen, setIsLocationSearchOpen] = useState(false);
+    const [isLotSearchOpen, setIsLotSearchOpen] = useState(false);
     const [activeLineIndex, setActiveLineIndex] = useState<number | null>(null);
 
     // --------------------------------------------------------
@@ -91,11 +102,6 @@ export function SalesOrderFormModal({
     const { data: projects = [] } = useQuery({
         queryKey: ['master-projects'],
         queryFn: MasterDataService.getProjects,
-        enabled: isOpen,
-    });
-    const { data: itemTypes = [] } = useQuery({
-        queryKey: ['master-item-types'],
-        queryFn: MasterDataService.getItemTypes,
         enabled: isOpen,
     });
 
@@ -138,6 +144,7 @@ export function SalesOrderFormModal({
         handleLineChange,
         handleSelectCustomer,
         handleSelectProduct,
+        handleSelectReservation,
     } = useSalesOrderForm({
         isOpen,
         initialData,
@@ -145,6 +152,11 @@ export function SalesOrderFormModal({
         taxCodes,
         uoms,
     });
+
+    const handleSelectEmployee = (emp: IEmployee) => {
+        methods.setValue('emp_sale_id', emp.id, { shouldDirty: true });
+        methods.setValue('emp_sale_name', `${emp.employee_firstname_th} ${emp.employee_lastname_th}`, { shouldDirty: true });
+    };
 
     const { handleSubmit } = methods;
 
@@ -172,7 +184,7 @@ export function SalesOrderFormModal({
                         className="h-10 px-6 bg-purple-50 dark:bg-purple-900/10 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg text-sm font-bold flex items-center gap-2 border border-purple-200 dark:border-purple-800 transition-all"
                     >
                         <Printer size={18} />
-                        พิมพ์ใบคำสั่งขาย
+                        พิมพ์ใบสั่งขาย
                     </button>
                 )}
             </div>
@@ -189,14 +201,14 @@ export function SalesOrderFormModal({
                     type="submit"
                     form="so-form"
                     disabled={isSubmitting}
-                    className="h-10 px-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold shadow-sm transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50"
+                    className="h-10 px-8 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold shadow-sm transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50"
                 >
                     {isSubmitting ? (
                         <Loader2 size={18} className="animate-spin" />
                     ) : (
                         <Save size={18} />
                     )}
-                    {isEdit ? 'บันทึกการแก้ไข' : 'ยืนยันสร้างคำสั่งขาย'}
+                    {isEdit ? 'บันทึกการแก้ไข' : 'ยืนยันสร้างใบสั่งขาย'}
                 </button>
             </div>
         </div>
@@ -211,10 +223,10 @@ export function SalesOrderFormModal({
             onClose={onClose}
             title={
                 isEdit
-                    ? 'รายละเอียดคำสั่งขาย (Sales Order)'
-                    : 'สร้างคำสั่งขายใหม่ (Create Sales Order)'
+                    ? 'รายละเอียดใบสั่งขาย (Sales Order)'
+                    : 'สร้างใบสั่งขายใหม่ (Create Sales Order)'
             }
-            headerColor="bg-emerald-600"
+            headerColor="bg-indigo-600"
             footer={ModalFooter}
             titleIcon={
                 <div className="bg-white/20 p-1.5 rounded shadow-sm">
@@ -239,9 +251,10 @@ export function SalesOrderFormModal({
                                     taxCodes={taxCodes}
                                     departments={departments}
                                     projects={projects}
-                                    itemTypes={itemTypes}
                                     saleAreas={saleAreas}
                                     onSearchCustomer={() => setIsCustomerSearchOpen(true)}
+                                    onSearchReservation={() => setIsReservationSearchOpen(true)}
+                                    onSearchEmployee={() => setIsEmployeeSearchOpen(true)}
                                 />
                             </div>
                         </div>
@@ -260,6 +273,18 @@ export function SalesOrderFormModal({
                                     onSearchProduct={(index: number) => {
                                         setActiveLineIndex(index);
                                         setIsProductSearchOpen(true);
+                                    }}
+                                    onSearchLocation={(index: number) => {
+                                        setActiveLineIndex(index);
+                                        setIsLocationSearchOpen(true);
+                                    }}
+                                    onSearchWarehouse={(index: number) => {
+                                        setActiveLineIndex(index);
+                                        setIsWarehouseSearchOpen(true);
+                                    }}
+                                    onSearchLot={(index: number) => {
+                                        setActiveLineIndex(index);
+                                        setIsLotSearchOpen(true);
                                     }}
                                 />
                             </div>
@@ -296,11 +321,66 @@ export function SalesOrderFormModal({
                 isOpen={isCustomerSearchOpen}
                 onClose={() => setIsCustomerSearchOpen(false)}
                 onSelect={handleSelectCustomer}
+                headerColor="bg-indigo-600"
             />
             <ProductSearchModal
                 isOpen={isProductSearchOpen}
                 onClose={() => setIsProductSearchOpen(false)}
                 onSelect={(product: ItemListItem) => activeLineIndex !== null && handleSelectProduct(activeLineIndex, product)}
+                headerColor="bg-indigo-600"
+            />
+            <ReservationSearchModal
+                isOpen={isReservationSearchOpen}
+                onClose={() => setIsReservationSearchOpen(false)}
+                onSelect={handleSelectReservation}
+                headerColor="bg-indigo-600"
+            />
+            <EmployeeSearchModal
+                isOpen={isEmployeeSearchOpen}
+                onClose={() => setIsEmployeeSearchOpen(false)}
+                onSelect={handleSelectEmployee}
+                headerColor="bg-indigo-600"
+            />
+            
+            <WarehouseSearchModal
+                isOpen={isWarehouseSearchOpen}
+                onClose={() => setIsWarehouseSearchOpen(false)}
+                warehouses={warehouses}
+                onSelect={(warehouse) => {
+                    if (activeLineIndex !== null) {
+                        handleLineChange(activeLineIndex, 'warehouse_id', String(warehouse.warehouse_id));
+                        // Auto-map first location for this warehouse if available
+                        const firstLoc = locations.find(loc => String(loc.warehouse_id) === String(warehouse.warehouse_id));
+                        if (firstLoc) {
+                            handleLineChange(activeLineIndex, 'location_id', String(firstLoc.location_id));
+                        }
+                    }
+                }}
+            />
+            
+            <LocationSearchModal
+                isOpen={isLocationSearchOpen}
+                onClose={() => setIsLocationSearchOpen(false)}
+                warehouseId={activeLineIndex !== null ? String(formData.lines?.[activeLineIndex]?.warehouse_id || '') : null}
+                locations={locations}
+                onSelect={(location) => {
+                    if (activeLineIndex !== null) {
+                        handleLineChange(activeLineIndex, 'location_id', String(location.location_id));
+                    }
+                }}
+            />
+
+            <LotSearchModal
+                isOpen={isLotSearchOpen}
+                onClose={() => setIsLotSearchOpen(false)}
+                onSelect={(lot) => {
+                    if (activeLineIndex !== null) {
+                        handleLineChange(activeLineIndex, 'lot_no', lot.code);
+                    }
+                }}
+                warehouseId={activeLineIndex !== null ? String(formData.lines?.[activeLineIndex]?.warehouse_id || '') : undefined}
+                locationId={activeLineIndex !== null ? String(formData.lines?.[activeLineIndex]?.location_id || '') : undefined}
+                itemId={activeLineIndex !== null ? String(formData.lines?.[activeLineIndex]?.item_id || '') : undefined}
             />
         </WindowFormLayout>
     );

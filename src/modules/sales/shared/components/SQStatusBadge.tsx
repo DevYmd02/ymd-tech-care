@@ -1,5 +1,5 @@
 import React from 'react';
-import { StatusBadge } from '@/shared/components/ui/feedback/StatusBadge';
+import { StatusBadge } from '@ui/feedback/StatusBadge';
 
 const SQ_STATUS_CONFIG: Record<string, { label: string; colorClass: string }> = {
   // Backend standard (Uppercase)

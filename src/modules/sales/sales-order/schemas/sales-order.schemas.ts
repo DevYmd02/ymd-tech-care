@@ -50,7 +50,8 @@ export const SalesOrderFormSchema = z.object({
     total_amount: z.coerce.number().min(0, 'ยอดรวมต้องไม่ติดลบ (ตรวจสอบส่วนลด)').max(9999999999999, 'ค่าที่ระบุมีจำนวนมากเกินไป').default(0),
     onhold: z.enum(['Y', 'N']).default('N'),
     tax_code_id: z.coerce.number().optional(),
-    item_id: z.string().optional(),
+    emp_sale_id: z.union([z.string(), z.number()]).optional(),
+    emp_sale_name: z.string().optional(),
     emp_area_id: z.string().optional(),
     emp_dept_id: z.string().min(1, 'กรุณาเลือกแผนก'),
     job_id: z.string().optional(),
@@ -68,7 +69,7 @@ export type SalesOrderLineValues = z.infer<typeof SalesOrderLineSchema>;
  * ค่าเริ่มต้นสำหรับฟอร์มใบสั่งขาย
  */
 export const getSalesOrderDefaultValues = (): Partial<SalesOrderFormValues> => ({
-    so_no: 'SO-AUTO',
+    so_no: '',
     so_date: new Date().toISOString().split('T')[0],
     customer_id: '',
     branch_id: '',

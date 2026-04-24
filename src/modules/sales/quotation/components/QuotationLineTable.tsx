@@ -2,8 +2,8 @@ import { Plus, Trash2, Package, Search, AlertCircle, Loader2, Tag } from 'lucide
 import { useFormContext } from 'react-hook-form';
 import type { DeepPartial } from 'react-hook-form';
 import type { QuotationLineValues, QuotationFormValues } from '@sales/quotation/schemas/quotation-schemas';
-import type { UnitListItem } from '@/modules/master-data/inventory/types/product-types';
-import type { PriceLevelName } from '@/modules/master-data/sales/pages/price-level-name/types/price-level-name.types';
+import type { UnitListItem } from '@inventory/types/product-types';
+import type { PriceLevelName } from '@sales-master/pages/price-level-name/types/price-level-name.types';
 
 interface QuotationLineTableProps {
     lines: DeepPartial<QuotationLineValues>[];
@@ -78,8 +78,8 @@ export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChang
                              <th className={`${headerThClass} w-28 text-right`}>ราคา/หน่วย</th>
                              <th className={`${headerThClass} w-28 text-right`}>ส่วนลด</th>
                              <th className={`${headerThClass} min-w-[180px]`}>หมายเหตุ (REMARK)</th>
-                             <th className={`${headerThClass} w-32 text-right`}>ยอดสุทธิ</th>
-                             <th className={`${headerThClass} w-14 text-center`}>จัดการ</th>
+                             <th className={`${headerThClass} w-32 ${readOnly ? 'text-center' : 'text-right'}`}>ยอดสุทธิ</th>
+                             {!readOnly && <th className={`${headerThClass} w-14 text-center`}>จัดการ</th>}
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-gray-900">
@@ -255,9 +255,9 @@ export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChang
                                          className={`${compactInputClass} italic text-gray-500`}
                                      />
                                  </td>
-                                <td className={`px-2 py-1.5 text-right font-bold text-sm ${(line.line_total ?? 0) < 0 ? 'text-red-500' : 'text-gray-900 dark:text-white'}`}>
-                                    <div className="flex flex-col items-end overflow-hidden max-w-[150px]">
-                                        <span className="truncate w-full text-right">{(line.line_total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                 <td className={`px-2 py-1.5 ${readOnly ? 'text-center' : 'text-right'} font-bold text-sm ${(line.line_total ?? 0) < 0 ? 'text-red-500' : 'text-gray-900 dark:text-white'}`}>
+                                     <div className={`flex flex-col ${readOnly ? 'items-center' : 'items-end'} overflow-hidden max-w-[150px]`}>
+                                         <span className={`truncate w-full ${readOnly ? 'text-center' : 'text-right'}`}>{(line.line_total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                         {hasLineFieldError(index, 'line_total') && (
                                             <div className="flex items-center gap-0.5 text-[9px] font-medium text-red-500 mt-0.5">
                                                 <AlertCircle size={8} />
@@ -266,8 +266,8 @@ export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChang
                                         )}
                                     </div>
                                 </td>
-                                <td className="px-2 py-1.5 text-center">
-                                    {!readOnly && (
+                                {!readOnly && (
+                                    <td className="px-2 py-1.5 text-center">
                                         <button 
                                             type="button" 
                                             onClick={() => onRemoveLine(index)}
@@ -275,14 +275,14 @@ export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChang
                                         >
                                             <Trash2 size={16} />
                                         </button>
-                                    )}
-                                </td>
+                                    </td>
+                                )}
                             </tr>
                         );
                     })}
                         {lines.length === 0 && (
                             <tr>
-                                 <td colSpan={10} className="px-4 py-10 text-center text-gray-400 bg-gray-50/30 dark:bg-gray-800/20">
+                                 <td colSpan={readOnly ? 9 : 10} className="px-4 py-10 text-center text-gray-400 bg-gray-50/30 dark:bg-gray-800/20">
                                     <Package size={32} className="mx-auto mb-2 opacity-20" />
                                     ไม่มีรายการสินค้า กรุณาคลิกเพื่อเพิ่มรายการ
                                 </td>
