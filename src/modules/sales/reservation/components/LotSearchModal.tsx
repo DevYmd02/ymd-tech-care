@@ -111,17 +111,20 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
                                 )}
                             </div>
 
-                            {/* Create New Lot Button — only shown when itemId is available */}
-                            {numericItemId > 0 && (
-                                <button
-                                    onClick={() => setIsCreateOpen(true)}
-                                    className="h-12 px-5 shrink-0 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-sm font-bold shadow-sm transition-all flex items-center gap-2 whitespace-nowrap"
-                                    title="สร้าง Lot ใหม่สำหรับสินค้านี้"
-                                >
-                                    <Plus size={18} strokeWidth={2.5} />
-                                    สร้าง Lot ใหม่
-                                </button>
-                            )}
+                            {/* Create New Lot Button — always visible, disabled when no item selected */}
+                            <button
+                                onClick={() => numericItemId > 0 && setIsCreateOpen(true)}
+                                disabled={numericItemId <= 0}
+                                title={numericItemId > 0 ? 'สร้าง Lot ใหม่สำหรับสินค้านี้' : 'กรุณาเลือกสินค้าในรายการก่อนสร้าง Lot'}
+                                className={`h-12 px-5 shrink-0 rounded-xl text-sm font-bold shadow-sm transition-all flex items-center gap-2 whitespace-nowrap ${
+                                    numericItemId > 0
+                                        ? 'bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white cursor-pointer'
+                                        : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-60'
+                                }`}
+                            >
+                                <Plus size={18} strokeWidth={2.5} />
+                                สร้าง Lot ใหม่
+                            </button>
                         </div>
 
                         {!itemId && (

@@ -481,9 +481,13 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
                     foundAQRecord = aqsList.find((a: AvailableApproval) => 
                         String(a.aq_no) === String(val) || 
                         String(a.aq_id) === String(val) ||
-                        String(a.sq_no) === String(val)
+                        String(a.sq_no || a.sq?.sq_no) === String(val)
                     );
                     if (foundAQRecord) {
+                        // Resolve sq_no from nested sq object if not at root level
+                        if (!foundAQRecord.sq_no && foundAQRecord.sq?.sq_no) {
+                            foundAQRecord = { ...foundAQRecord, sq_no: foundAQRecord.sq.sq_no, sq_date: foundAQRecord.sq.sq_date };
+                        }
                         quotationId = foundAQRecord.sq_id;
                     }
                 }
@@ -512,32 +516,50 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
             let detail = await QuotationService.getById(quotationId);
 
 
-            // 🚨 Fallback: If ID fetch failed but we have a number, try searching by number
+            // 🚨 Fallback 1: If ID fetch failed, try searching by sq_no (from nested or root)
             if (!detail) {
-                const searchVal = foundAQRecord?.sq_no || (type === 'SQ' ? val : undefined);
-                if (searchVal) {
-                    const searchRes = await QuotationService.getList({ q: searchVal, limit: 10 });
+                const resolvedSqNo = foundAQRecord?.sq_no || foundAQRecord?.sq?.sq_no || (type === 'SQ' ? val : undefined);
+                if (resolvedSqNo) {
+                    const searchRes = await QuotationService.getList({ q: resolvedSqNo, limit: 10 });
                     if (searchRes.data && searchRes.data.length > 0) {
-                        // 🔎 Strict search in the results
                         const listMatch = searchRes.data.find(d => 
-                            String(d.sq_no) === String(searchVal) || 
-                            String(d.sq_id || d.id) === String(searchVal)
+                            String(d.sq_no) === String(resolvedSqNo) || 
+                            String(d.sq_id || d.id) === String(resolvedSqNo)
                         );
 
                         if (listMatch) {
-                            // If the ID from list is different, try fetching detail one last time
                             const foundId = listMatch.sq_id || listMatch.id;
                             if (foundId && String(foundId) !== String(quotationId)) {
                                 detail = await QuotationService.getById(foundId);
                             }
-                            
-                            // Last resort: use the list item as the detail object
                             if (!detail) {
                                 detail = listMatch as unknown as QuotationFormData;
                             }
                         }
                     }
                 }
+            }
+
+            // 🚨 Fallback 2: When sq_no is unavailable but we have sq_id, search all SQs and match by sq_id
+            if (!detail && foundAQRecord?.sq_id) {
+                try {
+                    const searchRes = await QuotationService.getList({ limit: 500 });
+                    const match = (searchRes.data || []).find(d => 
+                        String(d.sq_id || d.id) === String(foundAQRecord!.sq_id)
+                    );
+                    if (match) {
+                        const foundId = match.sq_id || match.id;
+                        detail = await QuotationService.getById(foundId ?? 0);
+                        if (!detail) detail = match as unknown as QuotationFormData;
+                    }
+                } catch {
+                    // Silently ignore sq_id-based fallback errors
+                }
+            }
+
+            // 🚨 Ultimate Fallback: If we are fetching AQ and still have no detail, use the AQ record itself
+            if (!detail && type === 'AQ' && foundAQRecord) {
+                detail = foundAQRecord as unknown as QuotationFormData;
             }
 
             if (!detail) {
@@ -573,6 +595,24 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
             const ad = aqDetail as unknown as DiscoveryAQLine;
             const rd = ((detail as unknown) as Record<string, unknown>).rawData as Record<string, unknown> || {}; 
 
+            // Set SQ/AQ Numbers and IDs
+            if (type === 'SQ') {
+                setValue('sq_id', String(detail.sq_id || d.id || ''), { shouldDirty: true });
+                setValue('sq_no', String(detail.sq_no || ''), { shouldDirty: true });
+            } else {
+                setValue('aq_id', String(aqDetail?.aq_id || d.aq_id || ''), { shouldDirty: true });
+                setValue('aq_no', String(aqDetail?.aq_no || d.aq_no || ''), { shouldDirty: true });
+                setValue('sq_id', String(aqDetail?.sq_id || detail.sq_id || d.id || ''), { shouldDirty: true });
+                // Robust sq_no extraction from aqDetail or detail
+                const resolvedSqNo = String(
+                    aqDetail?.sq_no || 
+                    aqDetail?.sq?.sq_no || 
+                    detail.sq_no || 
+                    ''
+                );
+                setValue('sq_no', resolvedSqNo, { shouldDirty: true });
+            }
+
             // 🛡️ Standard Alignment: Base is usually foreign (USD), Quote is local (THB)
             const baseCurrency = String(
                 detail.base_currency_code ||
@@ -581,23 +621,18 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
                 (d.currency_code && d.currency_code !== 'THB' ? d.currency_code : undefined) ||
                 ad?.base_currency_code || 
                 ad?.currency_code || 
+                ad?.currency || 
                 d.currency_code || 
+                d.currency || 
                 'THB'
             );
             
-            const quoteCurrency = String(detail.quote_currency_code || rd.quote_currency_code || d.quote_currency_code || ad?.quote_currency_code || 'THB');
+            const quoteCurrency = String(detail.quote_currency_code || rd.quote_currency_code || d.quote_currency_code || ad?.quote_currency_code || ad?.currency || 'THB');
             const exchangeRate = Number(detail.exchange_rate || rd.exchange_rate || d.exchange_rate || ad?.exchange_rate || 1);
             
-            // 🛡️ Force isMulticurrency if any currency is not THB or rate is not 1
-            const isMulticurrency = Boolean(
-                (baseCurrency !== 'THB') || 
-                (quoteCurrency !== 'THB') || 
-                (exchangeRate !== 1 && exchangeRate !== 0) ||
-                (detail.isMulticurrency === true) ||
-                (rd.is_multicurrency === 'Y' || rd.is_multicurrency === true) ||
-                (d.is_multicurrency === 'Y' || d.is_multicurrency === true) ||
-                (ad?.is_multicurrency === 'Y' || ad?.is_multicurrency === true)
-            );
+            // 🛡️ User Request: Always enable Multicurrency by default (Auto Tick)
+            // Even if it's THB, we want to show the currency fields.
+            const isMulticurrency = true;
 
             // Get the most relevant date for exchange rate
             const rawDate = (
@@ -789,8 +824,13 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
     }, [getValues, setValue, setIsSubmitting]);
 
     const handleSelectAQ = useCallback((aq: AvailableApproval) => {
-        setValue('aq_id', String(aq.aq_no || aq.aq_id));
-        setValue('sq_id', String(aq.sq_no || aq.sq_id));
+        // Correctly set both ID and NO fields
+        setValue('aq_id', String(aq.aq_id));
+        setValue('aq_no', String(aq.aq_no || ''));
+        setValue('sq_id', String(aq.sq_id));
+        // Use the robust sq_no from the record or nested sq object
+        setValue('sq_no', String(aq.sq_no || aq.sq?.sq_no || ''));
+        
         setIsAQSearchOpen(false);
         // Automatically fetch details after selection
         handleFetchQuotation('AQ', String(aq.aq_no || aq.aq_id));

@@ -111,10 +111,11 @@ export function ReservationHeaderForm({
                 </div>
 
                 <div className="space-y-1">
-                    <label className={labelClass}>อ้างอิงใบเสนอราคา (SQ_ID)</label>
+                    <label className={labelClass}>อ้างอิงใบเสนอราคา (SQ)</label>
                     <div className="flex gap-2">
+                        <input type="hidden" {...register('sq_id')} />
                         <input 
-                            {...register('sq_id')}
+                            {...register('sq_no')}
                             readOnly
                             disabled={isLocked}
                             onClick={() => !isLocked && onSearchAQ?.()}
@@ -134,10 +135,11 @@ export function ReservationHeaderForm({
                 </div>
 
                 <div className="space-y-1">
-                    <label className={labelClass}>อ้างอิงใบเสนอราคาอนุมัติ (AQ_ID)</label>
+                    <label className={labelClass}>อ้างอิงใบเสนอราคาอนุมัติ (AQ)</label>
                     <div className="flex gap-2">
+                        <input type="hidden" {...register('aq_id')} />
                         <input 
-                            {...register('aq_id')}
+                            {...register('aq_no')}
                             readOnly
                             disabled={isLocked}
                             onClick={() => !isLocked && (onSearchAQ ? onSearchAQ() : onFetchQuotation?.('AQ'))}

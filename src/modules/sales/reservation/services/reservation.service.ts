@@ -32,11 +32,21 @@ export interface AvailableApproval {
     aq_id: number;
     aq_no: string;
     aq_date: string;
-    aq_status: string;
+    aq_status?: string;
+    status?: string;
     sq_id: number;
-    sq_no: string;
-    sq_date: string;
-    sq_status: string;
+    sq_no?: string;   // May be missing if API does not JOIN sq table
+    sq_date?: string; // May be missing if API does not JOIN sq table
+    sq_status?: string;
+    // Nested sq object (some APIs return sq data nested)
+    sq?: {
+        sq_no?: string;
+        sq_date?: string;
+        sq_id?: number;
+        status?: string;
+        customer_name?: string;
+        customer_id?: number;
+    };
     // Common fields found in the API response
     currency_code?: string;
     base_currency_code?: string;
@@ -74,8 +84,12 @@ export const ReservationService = {
      */
     getAvailableApprovals: async (): Promise<AvailableApproval[]> => {
         try {
-            const response = await api.get<AvailableApproval[]>('/sale-reservation/available-approvals');
-            return response;
+            const response = await api.get<unknown>('/sale-quotation-approval');
+            // Handle both direct array and paginated { data: [...] } responses
+            if (Array.isArray(response)) return response as AvailableApproval[];
+            const r = response as Record<string, unknown>;
+            if (Array.isArray(r?.data)) return r.data as AvailableApproval[];
+            return [];
         } catch (error) {
             logger.error('Failed to fetch available approvals:', error);
             return [];
@@ -106,5 +120,3 @@ export const ReservationService = {
         return { success: true };
     }
 };
-
-
