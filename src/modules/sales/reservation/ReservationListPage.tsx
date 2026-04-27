@@ -1,47 +1,31 @@
-/**
- * @file ReservationListPage.tsx
- * @description หน้ารายการใบสั่งจอง (Sales Reservation List Page)
- * @route /sales/reservation
- */
-
-import { useState, useMemo } from 'react';
-import { Package, Search, Plus, Edit, FileCheck } from 'lucide-react';
+import { useState, useMemo, useCallback } from 'react';
+import { Package, Search, Plus } from 'lucide-react';
 import { PageListLayout, SmartTable, FilterField } from '@ui';
 import { createColumnHelper } from '@tanstack/react-table';
 import { ReservationFormModal } from './components/ReservationFormModal';
 import { useReservationList } from './hooks/useReservation';
 import type { ReservationHeader } from './services/reservation.service';
-
+import { useQuery } from '@tanstack/react-query';
+import { CustomerService } from '@customer/customer-master/services/customer.service';
+import { RSStatusBadge } from '@sales/shared/components/RSStatusBadge';
+import { RSActionsCell } from './components/RSActionsCell';
+import { SalesMobileCard } from '@sales/shared/components/SalesMobileCard';
+import { ReservationService } from './services/reservation.service';
+import { toast } from 'react-hot-toast';
+import { logger } from '@utils/logger';
+import { useConfirmation } from '@/shared/hooks/useConfirmation';
 // ====================================================================================
 // CONSTANTS
 // ====================================================================================
 
 const STATUS_OPTIONS = [
     { value: 'ALL', label: 'ทั้งหมด' },
-    { value: 'DRAFT', label: 'Draft' },
-    { value: 'CONFIRMED', label: 'Confirmed' },
-    { value: 'RELEASED', label: 'Released' },
+    { value: 'DRAFT', label: 'แบบร่าง' },
+    { value: 'CONFIRMED', label: 'ยืนยันแล้ว' },
+    { value: 'RELEASED', label: 'จ่ายของแล้ว' },
+    { value: 'EXPIRED', label: 'หมดอายุ' },
+    { value: 'CANCELLED', label: 'ยกเลิก' },
 ];
-
-// ====================================================================================
-// COMPONENTS
-// ====================================================================================
-
-const StatusBadge = ({ status }: { status: string }) => {
-    const config = {
-        DRAFT: 'bg-gray-100 text-gray-600 border-gray-200',
-        CONFIRMED: 'bg-blue-100 text-blue-600 border-blue-200',
-        RELEASED: 'bg-emerald-100 text-emerald-600 border-emerald-200',
-        CANCELLED: 'bg-red-100 text-red-600 border-red-200',
-        EXPIRED: 'bg-orange-100 text-orange-600 border-orange-200',
-    }[status] || 'bg-gray-100 text-gray-600 border-gray-200';
-
-    return (
-        <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${config}`}>
-            {status}
-        </span>
-    );
-};
 
 // ====================================================================================
 // MAIN COMPONENT
@@ -59,10 +43,11 @@ export default function ReservationListPage() {
     // Modal State
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [selectedReservationId, setSelectedReservationId] = useState<string | undefined>(undefined);
+    const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('create');
 
-    // API Integration via Hook
+    // 🏗️ API Integration via Hook
     const filterParams = useMemo(() => ({
-        rs_no: rsNo,
+        reservation_no: rsNo,
         customer_name: customer,
         status: statusFilter === 'ALL' ? undefined : statusFilter,
         start_date: startDate,
@@ -72,28 +57,73 @@ export default function ReservationListPage() {
     }), [rsNo, customer, statusFilter, startDate, endDate, page, limit]);
 
     const { data: apiData, isLoading, refetch } = useReservationList(filterParams);
+    const { confirm } = useConfirmation();
+
+    // 🏷️ Fetch Customers for Name Lookup (Pattern from Quotation)
+    const { data: customerResponse } = useQuery({
+        queryKey: ['master-customers'],
+        queryFn: () => CustomerService.getList({ limit: 1000 }),
+        staleTime: 30 * 60 * 1000,
+    });
+
+    const customerMap = useMemo(() => {
+        const map = new Map<string | number, string>();
+        (customerResponse?.data || []).forEach(c => {
+            map.set(String(c.customer_id), c.customer_name_th || c.customer_name || '');
+        });
+        return map;
+    }, [customerResponse]);
 
     const displayData = useMemo(() => apiData?.data || [], [apiData]);
 
     // Handlers
-    const handleCreateNew = () => {
+    const handleCreateNew = useCallback(() => {
         setSelectedReservationId(undefined);
+        setModalMode('create');
         setIsFormModalOpen(true);
-    };
+    }, []);
 
-    const handleEdit = (id: string) => {
+    const handleEdit = useCallback((id: string) => {
         setSelectedReservationId(id);
+        setModalMode('edit');
         setIsFormModalOpen(true);
-    };
+    }, []);
 
-    const handleReset = () => {
+    const handleView = useCallback((id: string) => {
+        setSelectedReservationId(id);
+        setModalMode('view');
+        setIsFormModalOpen(true);
+    }, []);
+
+    const handleReset = useCallback(() => {
         setRsNo('');
         setCustomer('');
         setStatusFilter('ALL');
         setStartDate('');
         setEndDate('');
         setPage(1);
-    };
+    }, []);
+
+    const handleConfirmReservation = useCallback(async (id: string, row: ReservationHeader) => {
+        const isConfirmed = await confirm({
+            title: 'ยืนยันใบสั่งจองสินค้า',
+            description: `คุณต้องการยืนยันใบสั่งจองเลขที่ ${row.reservation_no} หรือไม่? เมื่อยืนยันแล้วจะไม่สามารถแก้ไขได้`,
+            confirmText: 'ยืนยัน',
+            cancelText: 'ยกเลิก',
+            variant: 'success'
+        });
+
+        if (isConfirmed) {
+            try {
+                await ReservationService.confirm(id);
+                toast.success('ยืนยันใบสั่งจองสำเร็จ');
+                refetch();
+            } catch (error) {
+                logger.error('Failed to confirm reservation:', error);
+                toast.error('เกิดข้อผิดพลาดในการยืนยันใบสั่งจอง');
+            }
+        }
+    }, [confirm, refetch]);
 
     // Columns Definition
     const columnHelper = createColumnHelper<ReservationHeader>();
@@ -107,73 +137,89 @@ export default function ReservationListPage() {
                     {(page - 1) * limit + info.row.index + 1}
                 </div>
             ),
-            size: 60,
+            size: 50,
         }),
-        columnHelper.accessor('rs_no', {
+        columnHelper.accessor('reservation_no', {
             header: 'เลขที่ใบสั่งจอง',
             cell: (info) => (
                 <span 
-                    onClick={() => handleEdit(info.row.original.reservation_id)}
+                    onClick={() => handleView(String(info.row.original.reservation_id || info.row.original.id))}
                     className="text-purple-600 font-semibold cursor-pointer hover:underline"
                 >
                     {info.getValue()}
                 </span>
             ),
-            size: 150,
+            size: 180,
         }),
-        columnHelper.accessor('date', {
+        columnHelper.accessor('reservation_date', {
             header: 'วันที่',
-            cell: (info) => info.getValue(),
-            size: 120,
+            cell: (info) => {
+                const val = info.getValue();
+                if (!val) return '-';
+                const d = new Date(val);
+                return isNaN(d.getTime()) ? val : d.toLocaleDateString('en-GB');
+            },
+            size: 100,
         }),
-        columnHelper.accessor('customer_name', {
+        columnHelper.accessor('customer_id', {
             header: 'ลูกค้า',
-            cell: (info) => (
-                <div className="flex flex-col">
-                    <span className="font-medium text-gray-900 dark:text-gray-100">{info.getValue()}</span>
-                    <span className="text-xs text-gray-500">{info.row.original.customer_code}</span>
-                </div>
-            ),
-            size: 250,
+            cell: (info) => {
+                const customerId = info.getValue();
+                const displayName = customerMap.get(String(customerId)) || info.row.original.customer_name || 'ไม่ระบุ';
+                return (
+                    <div className="flex flex-col">
+                        <span className="font-medium text-gray-900 dark:text-gray-100">{displayName}</span>
+                        <span className="text-xs text-gray-500">{info.row.original.customer_code}</span>
+                    </div>
+                );
+            },
+            size: 280,
         }),
-        columnHelper.accessor('total_amount', {
-            header: 'มูลค่ารวม',
-            cell: (info) => (
-                <div className="flex items-center gap-1 text-emerald-600 font-semibold">
-                    <span>{info.row.original.currency === 'USD' ? '$' : '฿'}</span>
-                    <span>{(info.getValue() || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                </div>
-            ),
-            size: 150,
+        columnHelper.accessor('base_total_amount', {
+            header: () => <div className="text-right w-full pr-4">มูลค่ารวม (บาท)</div>,
+            cell: (info) => {
+                const quoteTotal = Number(info.row.original.quote_total_amount || 0);
+                const baseTotal = Number(info.getValue() || 0);
+                const currency = info.row.original.quote_currency_code || 'THB';
+                
+                return (
+                    <div className="flex flex-col items-end pr-4 gap-0.5 w-full">
+                        <div className="text-emerald-600 font-bold">
+                            <span>฿ {baseTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                        {currency !== 'THB' && (
+                            <div className="text-[10px] text-gray-400 font-medium italic">
+                                ({currency} {quoteTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })})
+                            </div>
+                        )}
+                    </div>
+                );
+            },
+            size: 160,
         }),
         columnHelper.accessor('status', {
-            header: 'สถานะ',
-            cell: (info) => <StatusBadge status={info.getValue()} />,
-            size: 120,
+            header: () => <div className="text-center w-full">สถานะ</div>,
+            cell: (info) => (
+                <div className="flex justify-center w-full">
+                    <RSStatusBadge status={info.getValue()} />
+                </div>
+            ),
+            size: 100,
         }),
         columnHelper.display({
             id: 'actions',
-            header: 'การจัดการ',
+            header: () => <div className="text-center w-full">การจัดการ</div>,
             cell: (info) => (
-                <div className="flex items-center gap-3">
-                    <button 
-                        onClick={() => handleEdit(info.row.original.reservation_id)}
-                        className="text-orange-500 hover:text-orange-700 transition-colors"
-                        title="แก้ไข"
-                    >
-                        <Edit size={18} />
-                    </button>
-                    <button 
-                        className="text-emerald-500 hover:text-emerald-700 transition-colors"
-                        title="ยืนยัน"
-                    >
-                        <FileCheck size={18} />
-                    </button>
-                </div>
+                <RSActionsCell 
+                    row={info.row.original}
+                    onView={handleView}
+                    onEdit={handleEdit}
+                    onConfirm={handleConfirmReservation}
+                />
             ),
-            size: 120,
+            size: 220,
         }),
-    ], [columnHelper, page, limit]);
+    ], [columnHelper, page, limit, customerMap, handleView, handleEdit, handleConfirmReservation]);
 
     return (
         <>
@@ -264,6 +310,34 @@ export default function ReservationListPage() {
                             onPageChange: (p) => setPage(p),
                             onPageSizeChange: (s) => { setLimit(s); setPage(1); },
                         }}
+                        renderMobileCard={(item) => (
+                            <SalesMobileCard 
+                                docNo={item.reservation_no}
+                                customerName={customerMap.get(String(item.customer_id)) || item.customer_name || 'ไม่ระบุ'}
+                                date={item.reservation_date ? new Date(item.reservation_date).toLocaleDateString('en-GB') : '-'}
+                                amount={Number(item.base_total_amount || 0)}
+                                statusBadge={<RSStatusBadge status={item.status} />}
+                                onClick={() => handleView(String(item.reservation_id || item.id))}
+                                actions={
+                                    <div className="flex gap-2 w-full mt-2">
+                                        <button 
+                                            onClick={() => handleView(String(item.reservation_id || item.id))}
+                                            className="flex-1 h-9 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95"
+                                        >
+                                            <Search size={14} /> ดูรายละเอียด
+                                        </button>
+                                        {item.status === 'DRAFT' && (
+                                            <button 
+                                                onClick={() => handleEdit(String(item.reservation_id || item.id))}
+                                                className="flex-1 h-9 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95"
+                                            >
+                                                <Plus size={14} className="rotate-45" /> แก้ไข
+                                            </button>
+                                        )}
+                                    </div>
+                                }
+                            />
+                        )}
                     />
                 </div>
             </PageListLayout>
@@ -273,6 +347,7 @@ export default function ReservationListPage() {
                 onClose={() => setIsFormModalOpen(false)}
                 id={selectedReservationId}
                 onSuccess={() => refetch()}
+                readOnly={modalMode === 'view'}
             />
         </>
     );

@@ -742,7 +742,7 @@ export const ShelfService = createInventoryService<Shelf, ShelfFormValues, Shelf
 // Lot No Service
 export const LotNoService = createInventoryService<LotNo, LotNoFormData, LotNoApiResponse>({
     entityName: 'LotNo',
-    apiPath: '/lot-numbers',
+    apiPath: '/item-lot',
     idField: 'lot_no_id',
     mockData: MOCK_LOT_NUMBERS,
     mapToEntity: (data, id, now) => ({
@@ -760,25 +760,28 @@ export const LotNoService = createInventoryService<LotNo, LotNoFormData, LotNoAp
         created_at: now,
         updated_at: now,
     }),
-    mapFromApi: (item: LotNoApiResponse): LotNo => ({
-        id: item.lot_no_id,
-        lot_no_id: item.lot_no_id,
-        code: item.lot_no_code,
-        name_th: item.lot_no_name,
-        name_en: '',
-        expiry_date: item.expiry_date,
-        mfg_date: item.mfg_date,
-        supplier_vendor_id: item.supplier_vendor_id,
-        item_id: item.item_id,
-        note: item.note,
-        is_active: item.is_active,
-        created_at: item.created_at,
-        updated_at: item.updated_at || '',
-        balance_qty: item.balance_qty,
-        sale_stock: item.sale_stock,
-        warehouse_id: item.warehouse_id,
-        location_id: item.location_id,
-    }),
+    mapFromApi: (item: LotNoApiResponse): LotNo => {
+        const r = (item as unknown) as Record<string, unknown>;
+        return {
+            id: item.lot_no_id || (r.lot_id as number) || 0,
+            lot_no_id: item.lot_no_id || (r.lot_id as number) || 0,
+            code: item.lot_no_code || (r.lot_no as string) || '',
+            name_th: item.lot_no_name || (r.lot_no as string) || '',
+            name_en: '',
+            expiry_date: item.expiry_date,
+            mfg_date: item.mfg_date,
+            supplier_vendor_id: item.supplier_vendor_id,
+            item_id: item.item_id,
+            note: item.note,
+            is_active: item.is_active,
+            created_at: item.created_at,
+            updated_at: item.updated_at || '',
+            balance_qty: item.balance_qty,
+            sale_stock: item.sale_stock,
+            warehouse_id: item.warehouse_id,
+            location_id: item.location_id,
+        };
+    },
     mapToApi: (data: LotNoFormData) => ({
         lot_no_code: data.code?.trim().toUpperCase(),
         lot_no_name: data.nameTh?.trim(),

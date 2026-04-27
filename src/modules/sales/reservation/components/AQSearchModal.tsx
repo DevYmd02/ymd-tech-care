@@ -35,13 +35,45 @@ export const AQSearchModal: React.FC<AQSearchModalProps> = React.memo(({
         staleTime: 1000 * 60 * 5, 
     });
 
+    // Helper to extract sq_no robustly
+    const getSqNo = (aq: AvailableApproval) => {
+        const r = aq as Record<string, unknown>;
+        const sqObj = (r['sq_header'] || r['sq'] || r['sale_quotation'] || r['quotation'] || r['sale_quotation_header']) as Record<string, unknown> | undefined;
+        return String(
+            r['sq_no'] || 
+            r['sale_quotation_no'] || 
+            r['quotation_no'] || 
+            r['ref_no'] || 
+            r['ref_sq_no'] ||
+            sqObj?.['sq_no'] || 
+            sqObj?.['code'] || 
+            sqObj?.['no'] || 
+            ''
+        );
+    };
+
+    // Helper to extract sq_date robustly
+    const getSqDate = (aq: AvailableApproval) => {
+        const r = aq as Record<string, unknown>;
+        const sqObj = (r['sq_header'] || r['sq'] || r['sale_quotation'] || r['quotation'] || r['sale_quotation_header']) as Record<string, unknown> | undefined;
+        return String(
+            r['sq_date'] || 
+            r['sale_quotation_date'] || 
+            sqObj?.['sq_date'] || 
+            sqObj?.['date'] || 
+            r['aq_date'] || 
+            r['created_at'] || 
+            ''
+        ).split('T')[0];
+    };
+
     const filteredApprovals = useMemo(() => {
         if (!debouncedSearch) return allApprovals;
         const s = debouncedSearch.toLowerCase();
-        return allApprovals.filter(aq => 
-            aq.aq_no.toLowerCase().includes(s) || 
-            aq.sq_no.toLowerCase().includes(s)
-        );
+        return allApprovals.filter(aq => {
+            const sqNo = getSqNo(aq);
+            return aq.aq_no.toLowerCase().includes(s) || sqNo.toLowerCase().includes(s);
+        });
     }, [allApprovals, debouncedSearch]);
 
     const handleSelect = useCallback((aq: AvailableApproval) => {
@@ -114,11 +146,11 @@ export const AQSearchModal: React.FC<AQSearchModalProps> = React.memo(({
                                         >
                                             <td className="px-6 py-4">
                                                 <span className="font-bold text-purple-600 dark:text-purple-400 group-hover:scale-105 transition-transform inline-block">
-                                                    {aq.sq_no}
+                                                    {getSqNo(aq) || <span className="text-gray-400 dark:text-gray-600 font-normal italic text-sm">-</span>}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
-                                                {formatThaiDate(aq.sq_date)}
+                                                {formatThaiDate(getSqDate(aq))}
                                             </td>
                                             <td className="px-6 py-4 font-semibold text-gray-800 dark:text-gray-200">
                                                 {aq.aq_no}

@@ -3,7 +3,7 @@ import { styles } from '@shared/constants/styles';
 
 interface ReservationSummaryProps {
     subTotal: number;
-    discountInput: string | undefined;
+    discountInput: string | null | undefined;
     discountAmount: number;
     taxRate: number;
     vatAmount: number;
@@ -11,6 +11,7 @@ interface ReservationSummaryProps {
     currencySymbol?: string;
     lineCount: number;
     onDiscountChange: (value: string) => void;
+    disabled?: boolean;
 }
 
 export function ReservationSummary({ 
@@ -22,7 +23,8 @@ export function ReservationSummary({
     totalAmount, 
     currencySymbol = 'บาท',
     lineCount,
-    onDiscountChange 
+    onDiscountChange,
+    disabled = false
 }: ReservationSummaryProps) {
     const isNegative = totalAmount < 0;
 
@@ -56,6 +58,7 @@ export function ReservationSummary({
                                 placeholder={discountAmount > 0 ? discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2 }) : "0.00 หรือ 0%"}
                                 value={discountInput ?? ''} 
                                 onChange={(e) => onDiscountChange(e.target.value)}
+                                disabled={disabled}
                                 maxLength={15}
                                 className={`${styles.input} h-9 py-0 text-right bg-white border-purple-200 focus:border-purple-500 font-semibold text-purple-600`}
                             />

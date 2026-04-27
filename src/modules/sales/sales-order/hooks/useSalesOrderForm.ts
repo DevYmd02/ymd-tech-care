@@ -236,13 +236,13 @@ export function useSalesOrderForm({
     };
 
     const handleSelectReservation = async (reservation: ReservationHeader) => {
-        setValue('reservation_id', reservation.rs_no, { shouldValidate: true, shouldDirty: true });
+        setValue('reservation_id', String(reservation.reservation_no), { shouldValidate: true, shouldDirty: true });
         if (reservation.customer_id) {
             setValue('customer_id', String(reservation.customer_id), { shouldValidate: true, shouldDirty: true });
         }
 
         try {
-            const rsData = await ReservationService.getById(reservation.reservation_id);
+            const rsData = await ReservationService.getById(String(reservation.reservation_id));
             if (rsData) {
                 // Populate Header Fields
                 if (rsData.remarks) setValue('remarks', rsData.remarks, { shouldDirty: true });

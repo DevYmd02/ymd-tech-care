@@ -190,32 +190,34 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
 
                         {/* Supplier */}
                         <div className="col-span-2">
-                            <label className={labelClass}>ผู้ขาย (Supplier)</label>
-                            <div className="relative flex gap-2">
-                                <input
-                                    type="text"
-                                    readOnly
-                                    value={selectedVendorName}
-                                    placeholder="เลือกผู้ขาย..."
-                                    onClick={() => setIsVendorSearchOpen(true)}
-                                    className={`${inputClass} cursor-pointer flex-1 pr-8 hover:border-purple-400`}
-                                />
-                                {selectedVendorName ? (
-                                    <button
-                                        type="button"
-                                        onClick={handleClearVendor}
-                                        className="absolute right-10 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-red-500 transition-colors"
-                                    >
-                                        <X size={14} />
-                                    </button>
-                                ) : null}
+                            <label className={labelClass}>ผู้ขาย (SUPPLIER)</label>
+                            <div className="flex gap-2">
+                                <div className="relative flex-1">
+                                    <input
+                                        type="text"
+                                        readOnly
+                                        value={selectedVendorName}
+                                        placeholder="เลือกผู้ขาย..."
+                                        onClick={() => setIsVendorSearchOpen(true)}
+                                        className={`${inputClass} cursor-pointer w-full pr-8 hover:border-purple-400 transition-colors`}
+                                    />
+                                    {selectedVendorName && (
+                                        <button
+                                            type="button"
+                                            onClick={handleClearVendor}
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-red-500 transition-colors"
+                                        >
+                                            <X size={14} />
+                                        </button>
+                                    )}
+                                </div>
                                 <button
                                     type="button"
                                     onClick={() => setIsVendorSearchOpen(true)}
-                                    className="h-10 w-10 shrink-0 bg-gray-100 dark:bg-gray-700 hover:bg-purple-100 dark:hover:bg-purple-900/30 text-gray-500 hover:text-purple-600 border border-gray-200 dark:border-gray-600 rounded-lg flex items-center justify-center transition-all"
+                                    className="h-10 w-10 shrink-0 bg-purple-600 hover:bg-purple-700 text-white shadow-md rounded-lg flex items-center justify-center transition-all active:scale-95"
                                     title="ค้นหาผู้ขาย"
                                 >
-                                    <Search size={16} />
+                                    <Search size={18} />
                                 </button>
                             </div>
                         </div>

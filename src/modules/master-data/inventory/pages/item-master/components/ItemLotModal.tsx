@@ -269,7 +269,10 @@ export function ItemLotModal({ isOpen, onClose, item }: ItemLotModalProps) {
                                 ล้างรายการที่ยังไม่บันทึก
                             </button>
                             <button
-                                onClick={handleSaveAllDrafts}
+                                onClick={async () => {
+                                    const success = await handleSaveAllDrafts();
+                                    if (success) onClose();
+                                }}
                                 disabled={isSaving}
                                 className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-md transition-all flex items-center gap-2 active:scale-95 disabled:opacity-50"
                             >

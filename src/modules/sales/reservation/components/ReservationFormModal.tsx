@@ -13,7 +13,9 @@ import { WarehouseSearchModal } from './WarehouseSearchModal';
 import { LocationSearchModal } from './LocationSearchModal';
 
 import { useReservationForm } from '../hooks/useReservationForm';
+import { ReservationService } from '../services/reservation.service';
 import type { ReservationFormData } from '../types/reservation.types';
+import { toast } from 'react-hot-toast';
 import { logger } from '@utils/logger';
 
 interface ReservationFormModalProps {
@@ -22,15 +24,17 @@ interface ReservationFormModalProps {
     id?: string;
     initialData?: Partial<ReservationFormData>;
     onSuccess?: () => void;
+    readOnly?: boolean;
 }
 
 const cardClass = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm overflow-hidden';
 
-export function ReservationFormModal({ isOpen, onClose, id, initialData, onSuccess }: ReservationFormModalProps) {
+export function ReservationFormModal({ isOpen, onClose, id, initialData, onSuccess, readOnly }: ReservationFormModalProps) {
     const {
         isEdit,
         isSubmitting,
         setIsSubmitting,
+        isLoading,
         methods,
         formData,
         // Master Data
@@ -93,11 +97,41 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
         setIsSubmitting(true);
         logger.debug('Submitting Reservation:', data);
         
-        await new Promise(r => setTimeout(r, 1000));
-        
-        setIsSubmitting(false);
-        onSuccess?.();
-        onClose();
+        try {
+            if (isEdit && id) {
+                await ReservationService.update(id, data);
+                toast.success('อัปเดตใบสั่งจองสำเร็จ');
+            } else {
+                await ReservationService.create(data);
+                toast.success('สร้างใบสั่งจองสำเร็จ');
+            }
+            
+            onSuccess?.();
+            onClose();
+        } catch (error: unknown) {
+            logger.error('Submit reservation error:', error);
+            
+            let errorMessage = 'เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง';
+            const err = error as { response?: { data?: { message?: string | string[], error?: string } } };
+            
+            if (err?.response?.data?.message) {
+                const backendMsg = err.response.data.message;
+                if (Array.isArray(backendMsg)) {
+                    errorMessage = `ข้อมูลไม่ถูกต้อง:\n${backendMsg.join('\n')}`;
+                } else if (typeof backendMsg === 'string') {
+                    errorMessage = `ข้อมูลไม่ถูกต้อง: ${backendMsg}`;
+                }
+            } else if (err?.response?.data?.error) {
+                errorMessage = `เซิร์ฟเวอร์ปฏิเสธข้อมูล: ${err.response.data.error}`;
+            }
+
+            toast.error(
+                <div className="whitespace-pre-line text-sm">{errorMessage}</div>, 
+                { duration: 6000 }
+            );
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     // Modal Footer
@@ -118,20 +152,22 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
                 <button 
                     type="button" 
                     onClick={onClose}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isLoading}
                     className="h-10 px-6 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg text-sm font-bold transition-all disabled:opacity-50"
                 >
                     ยกเลิก
                 </button>
-                <button 
-                    type="submit" 
-                    form="reservation-form"
-                    disabled={isSubmitting}
-                    className="h-10 px-8 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-bold shadow-sm transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50"
-                >
-                    {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                    {isEdit ? 'บันทึกการแก้ไข' : 'ยืนยันสร้างใบจอง'}
-                </button>
+                {!readOnly && (
+                    <button 
+                        type="submit" 
+                        form="reservation-form"
+                        disabled={isSubmitting || isLoading}
+                        className="h-10 px-8 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-bold shadow-sm transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50"
+                    >
+                        {(isSubmitting || isLoading) ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                        {isEdit ? 'บันทึกการแก้ไข' : 'ยืนยันสร้างใบจอง'}
+                    </button>
+                )}
             </div>
         </div>
     );
@@ -140,7 +176,7 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
         <WindowFormLayout
             isOpen={isOpen}
             onClose={onClose}
-            title={isEdit ? 'รายละเอียดใบสั่งจองสินค้า (Sales Reservation)' : 'สร้างใบสั่งจองใหม่ (Create Sales Reservation)'}
+            title={isEdit ? 'แก้ไขรายละเอียดใบสั่งจองสินค้า (Sales Reservation)' : 'สร้างใบสั่งจองใหม่ (Create Sales Reservation)'}
             headerColor="bg-purple-600"
             footer={ModalFooter}
             titleIcon={
@@ -150,26 +186,44 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
             }
         >
             <FormProvider {...methods}>
-                <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6">
-                    <form id="reservation-form" onSubmit={handleSubmit(onFormSubmit)} className="max-w-[1400px] mx-auto space-y-6">
+                <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6 relative">
+                    {isLoading && (
+                        <div className="absolute inset-0 bg-white/50 dark:bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+                            <div className="flex flex-col items-center gap-3">
+                                <Loader2 className="animate-spin text-purple-600" size={48} />
+                                <p className="font-bold text-gray-600 dark:text-gray-300">กำลังโหลดข้อมูล...</p>
+                            </div>
+                        </div>
+                    )}
+                    <form 
+                        id="reservation-form" 
+                        onSubmit={handleSubmit(onFormSubmit, (errors) => {
+                            logger.debug('Validation Errors:', errors);
+                            const errorFields = Object.keys(errors).join(', ');
+                            toast.error(`กรุณาตรวจสอบข้อมูล: ${errorFields}`);
+                        })} 
+                        className="max-w-[1400px] mx-auto space-y-6"
+                    >
                         
                         {/* 1. Header Section */}
                         <div className={cardClass}>
                             <div className="p-6">
                                 <ReservationHeaderForm 
-                                    branches={branches}
-                                    currencies={currencies}
-                                    customers={customers}
-                                    taxCodes={taxCodes}
-                                    departments={departments}
-                                    projects={projects}
-                                    saleAreas={saleAreas}
-                                    employees={employees}
-                                    onSearchCustomer={() => setIsCustomerSearchOpen(true)}
-                                    onSearchLead={() => setIsLeadSearchOpen(true)}
-                                    onSearchAQ={() => setIsAQSearchOpen(true)}
-                                    onFetchQuotation={handleFetchQuotation}
-                                />
+                                     branches={branches}
+                                     currencies={currencies}
+                                     customers={customers}
+                                     taxCodes={taxCodes}
+                                     departments={departments}
+                                     projects={projects}
+                                     saleAreas={saleAreas}
+                                     employees={employees}
+                                     onSearchCustomer={() => setIsCustomerSearchOpen(true)}
+                                     onSearchLead={() => setIsLeadSearchOpen(true)}
+                                     onSearchSQ={() => setIsAQSearchOpen(true)}
+                                     onSearchAQ={() => setIsAQSearchOpen(true)}
+                                     onFetchQuotation={handleFetchQuotation}
+                                     readOnly={readOnly}
+                                 />
 
                             </div>
                         </div>
@@ -203,6 +257,7 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
                                         setIsLocationSearchOpen(true);
                                     }}
                                     currencySymbol={formData.isMulticurrency ? (formData.base_currency_code || 'บาท') : 'บาท'}
+                                    readOnly={readOnly}
                                 />
                             </div>
                         </div>
@@ -212,7 +267,7 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
                             <div className="p-6">
                                 <ReservationSummary 
                                     subTotal={formData.sub_total}
-                                    discountInput={formData.discount_input}
+                                    discountInput={formData.discount_input ?? undefined}
                                     discountAmount={formData.discount_amount}
                                     taxRate={taxRate}
                                     vatAmount={formData.vat_amount}
@@ -220,6 +275,7 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
                                     currencySymbol={formData.isMulticurrency ? (formData.base_currency_code || 'บาท') : 'บาท'}
                                     lineCount={(formData.lines || []).length}
                                     onDiscountChange={(val) => setValue('discount_input', val, { shouldDirty: true })}
+                                    disabled={readOnly}
                                 />
                             </div>
                         </div>

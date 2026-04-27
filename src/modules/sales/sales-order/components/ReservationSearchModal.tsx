@@ -34,7 +34,7 @@ export const ReservationSearchModal: React.FC<ReservationSearchModalProps> = Rea
     const { data: response, isLoading } = useQuery({
         queryKey: ['reservations-lookup', debouncedSearch],
         queryFn: () => ReservationService.getList({
-            rs_no: debouncedSearch,
+            reservation_no: debouncedSearch,
             status: 'CONFIRMED', // ปกติจะดึงเฉพาะใบที่ยืนยันแล้ว
             limit: 100
         }),
@@ -117,11 +117,11 @@ export const ReservationSearchModal: React.FC<ReservationSearchModalProps> = Rea
                                         >
                                             <td className="px-6 py-4">
                                                 <span className="font-bold text-indigo-600 dark:text-indigo-400 group-hover:scale-105 transition-transform inline-block">
-                                                    {rs.rs_no}
+                                                    {rs.reservation_no}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-gray-600 dark:text-gray-400 font-medium">
-                                                {rs.date ? format(new Date(rs.date), 'dd/MM/yyyy') : '-'}
+                                                {rs.reservation_date ? format(new Date(rs.reservation_date), 'dd/MM/yyyy') : '-'}
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="font-semibold text-gray-800 dark:text-gray-200">
@@ -129,7 +129,7 @@ export const ReservationSearchModal: React.FC<ReservationSearchModalProps> = Rea
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 text-right font-bold text-gray-900 dark:text-white">
-                                                {rs.total_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })} {rs.currency || 'THB'}
+                                                {rs.base_total_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })} {rs.quote_currency_code || 'THB'}
                                             </td>
                                             <td className="px-6 py-4 text-center">
                                                 <button 

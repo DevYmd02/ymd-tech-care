@@ -48,8 +48,37 @@ export const ReservationInventoryService = {
         }
 
         try {
-            const response = await api.get<{ items: LotNo[], total: number }>('/lot-numbers', { params });
-            return response;
+            // Updated endpoint to /item-lot as /lot-numbers is returning 404 on some environments
+            const response = await api.get<LotNo[] | { items: LotNo[], total: number }>('/item-lot', { params });
+            
+            // Normalize response (handle both array and { items, total } formats)
+            const rawItems = Array.isArray(response) ? response : (response.items || []);
+            const total = Array.isArray(response) ? response.length : (response.total || rawItems.length);
+
+            // Normalize items (ensure code and id exist regardless of backend field names)
+            const normalizedItems = rawItems
+                .filter(item => {
+                    if (!params.item_id) return true;
+                    const r = (item as unknown) as Record<string, unknown>;
+                    const recordItemId = item.item_id || r['item_id'];
+                    return String(recordItemId) === String(params.item_id);
+                })
+                .map(item => {
+                    const r = (item as unknown) as Record<string, unknown>;
+                    return {
+                        ...item,
+                        // Map common lot field variations
+                        id: item.id || (r['lot_no_id'] as number) || (r['lot_id'] as number) || 0,
+                        lot_no_id: (r['lot_no_id'] as number) || (r['lot_id'] as number) || item.id || 0,
+                        code: item.code || (r['lot_no'] as string) || (r['lot_no_code'] as string) || '',
+                        name_th: item.name_th || (r['lot_no'] as string) || '',
+                    } as LotNo;
+                });
+
+            return { 
+                items: normalizedItems, 
+                total 
+            };
         } catch (error) {
             logger.error('Failed to fetch available lots for reservation:', error);
             return { items: [], total: 0 };

@@ -27,6 +27,7 @@ interface ReservationHeaderFormProps {
     readOnly?: boolean;
     onSearchCustomer?: () => void;
     onSearchLead?: () => void;
+    onSearchSQ?: () => void;
     onSearchAQ?: () => void;
     onFetchQuotation?: (type: 'SQ' | 'AQ') => void;
 
@@ -45,6 +46,7 @@ export function ReservationHeaderForm({
     readOnly = false,
     onSearchCustomer,
     onSearchLead,
+    onSearchSQ,
     onSearchAQ,
     onFetchQuotation
 
@@ -85,7 +87,7 @@ export function ReservationHeaderForm({
                 
                 {/* Row 1: Document Info & Sync */}
                 <div className="space-y-1">
-                    <label className={labelClass}>เลขที่ใบสั่งจอง (RESERVATION_NO) <span className="text-red-500">*</span></label>
+                    <label className={labelClass}>เลขที่ใบสั่งจอง (RESERVATION_NO)</label>
                     <input 
                         {...register('reservation_no')}
                         readOnly
@@ -111,20 +113,21 @@ export function ReservationHeaderForm({
                 </div>
 
                 <div className="space-y-1">
-                    <label className={labelClass}>อ้างอิงใบเสนอราคา (SQ_ID)</label>
+                    <label className={labelClass}>อ้างอิงใบเสนอราคา (SQ)</label>
                     <div className="flex gap-2">
+                        <input type="hidden" {...register('sq_id')} />
                         <input 
-                            {...register('sq_id')}
+                            {...register('sq_no')}
                             readOnly
                             disabled={isLocked}
-                            onClick={() => !isLocked && onSearchAQ?.()}
+                            onClick={() => !isLocked && (onSearchSQ ? onSearchSQ() : onFetchQuotation?.('SQ'))}
                             className={`${inputClass} cursor-pointer hover:border-purple-400 transition-colors`} 
                             placeholder="SQxxxx-xxx"
                         />
                         <button 
                             type="button" 
                             disabled={isLocked} 
-                            onClick={() => onSearchAQ?.()}
+                            onClick={() => onSearchSQ ? onSearchSQ() : onFetchQuotation?.('SQ')}
                             className="p-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center shrink-0 w-9 h-9"
                             title="ค้นหาข้อมูลจากใบเสนอราคา"
                         >
@@ -134,10 +137,11 @@ export function ReservationHeaderForm({
                 </div>
 
                 <div className="space-y-1">
-                    <label className={labelClass}>อ้างอิงใบเสนอราคาอนุมัติ (AQ_ID)</label>
+                    <label className={labelClass}>อ้างอิงใบเสนอราคาอนุมัติ (AQ)</label>
                     <div className="flex gap-2">
+                        <input type="hidden" {...register('aq_id')} />
                         <input 
-                            {...register('aq_id')}
+                            {...register('aq_no')}
                             readOnly
                             disabled={isLocked}
                             onClick={() => !isLocked && (onSearchAQ ? onSearchAQ() : onFetchQuotation?.('AQ'))}
