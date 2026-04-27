@@ -219,6 +219,7 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
                                      employees={employees}
                                      onSearchCustomer={() => setIsCustomerSearchOpen(true)}
                                      onSearchLead={() => setIsLeadSearchOpen(true)}
+                                     onSearchSQ={() => setIsAQSearchOpen(true)}
                                      onSearchAQ={() => setIsAQSearchOpen(true)}
                                      onFetchQuotation={handleFetchQuotation}
                                      readOnly={readOnly}

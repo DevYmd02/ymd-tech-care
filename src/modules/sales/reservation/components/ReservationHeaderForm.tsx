@@ -27,6 +27,7 @@ interface ReservationHeaderFormProps {
     readOnly?: boolean;
     onSearchCustomer?: () => void;
     onSearchLead?: () => void;
+    onSearchSQ?: () => void;
     onSearchAQ?: () => void;
     onFetchQuotation?: (type: 'SQ' | 'AQ') => void;
 
@@ -45,6 +46,7 @@ export function ReservationHeaderForm({
     readOnly = false,
     onSearchCustomer,
     onSearchLead,
+    onSearchSQ,
     onSearchAQ,
     onFetchQuotation
 
@@ -118,14 +120,14 @@ export function ReservationHeaderForm({
                             {...register('sq_no')}
                             readOnly
                             disabled={isLocked}
-                            onClick={() => !isLocked && onSearchAQ?.()}
+                            onClick={() => !isLocked && (onSearchSQ ? onSearchSQ() : onFetchQuotation?.('SQ'))}
                             className={`${inputClass} cursor-pointer hover:border-purple-400 transition-colors`} 
                             placeholder="SQxxxx-xxx"
                         />
                         <button 
                             type="button" 
                             disabled={isLocked} 
-                            onClick={() => onSearchAQ?.()}
+                            onClick={() => onSearchSQ ? onSearchSQ() : onFetchQuotation?.('SQ')}
                             className="p-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center shrink-0 w-9 h-9"
                             title="ค้นหาข้อมูลจากใบเสนอราคา"
                         >

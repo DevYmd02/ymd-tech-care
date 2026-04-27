@@ -61,7 +61,7 @@ export default function ReservationListPage() {
 
     // 🏷️ Fetch Customers for Name Lookup (Pattern from Quotation)
     const { data: customerResponse } = useQuery({
-        queryKey: ['master-customers-lookup'],
+        queryKey: ['master-customers'],
         queryFn: () => CustomerService.getList({ limit: 1000 }),
         staleTime: 30 * 60 * 1000,
     });

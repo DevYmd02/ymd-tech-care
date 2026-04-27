@@ -159,8 +159,9 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
 
     const { data: customerResponse } = useQuery({
         queryKey: ['master-customers'],
-        queryFn: () => CustomerService.getList({ limit: 100 }),
-        enabled: isOpen
+        queryFn: () => CustomerService.getList({ limit: 1000 }),
+        enabled: isOpen,
+        staleTime: 30 * 60 * 1000,
     });
     const customers = customerResponse?.data || [];
 
@@ -197,21 +198,24 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
     const { data: uomResponse } = useQuery({
         queryKey: ['master-units'],
         queryFn: () => UnitService.getAll({ limit: 1000 }),
-        enabled: isOpen
+        enabled: isOpen,
+        staleTime: 30 * 60 * 1000,
     });
     const uoms = useMemo(() => uomResponse?.items || [], [uomResponse]);
 
     const { data: warehouseResponse } = useQuery({
         queryKey: ['master-warehouses'],
         queryFn: () => WarehouseService.getAll(),
-        enabled: isOpen
+        enabled: isOpen,
+        staleTime: 30 * 60 * 1000,
     });
     const warehouses = useMemo(() => warehouseResponse?.items || [], [warehouseResponse]);
 
     const { data: locationResponse } = useQuery({
         queryKey: ['master-locations'],
         queryFn: () => LocationService.getAll({ limit: 1000 }),
-        enabled: isOpen
+        enabled: isOpen,
+        staleTime: 30 * 60 * 1000,
     });
     const locations = useMemo(() => locationResponse?.items || [], [locationResponse]);
 

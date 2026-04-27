@@ -1,6 +1,5 @@
 import api from '@core/api/api';
 import { logger } from '@utils/logger';
-import { ItemMasterService } from '@inventory/services/item-master.service';
 import type { ReservationFormData } from '../types/reservation.types';
 
 export interface ReservationListParams {
@@ -124,132 +123,74 @@ export const ReservationService = {
             const response = await api.get<RawDetail>(`/sale-reservation/${id}`);
             
             if (response) {
-                logger.debug('[ReservationService] Raw Detail Response:', response);
-
-                // 🕵️ Mapping Discovery: Ensure reference numbers are available at root level
-                if (!response.sq_no) {
-                    const r = response as Record<string, unknown>;
-                    
-                    // 1. Recursive failsafe to find any property named 'sq_no'
-                    const findSqNo = (obj: Record<string, unknown>, depth = 0): string => {
-                        if (depth > 5 || !obj) return '';
-                        if (typeof obj.sq_no === 'string' && obj.sq_no) return obj.sq_no;
-                        if (typeof obj.sale_quotation_no === 'string' && obj.sale_quotation_no) return obj.sale_quotation_no;
-                        
-                        for (const key of Object.keys(obj)) {
-                            const val = obj[key];
-                            if (val && typeof val === 'object' && !Array.isArray(val)) {
-                                const res = findSqNo(val as Record<string, unknown>, depth + 1);
-                                if (res) return res;
-                            }
+                // 🕵️ Structured Discovery: Find Reference Numbers
+                const r = response as Record<string, unknown>;
+                const sqId = (r.sq_id || r.sale_quotation_id || r.quotation_id || r.sq_header_id) as string | number | undefined;
+                
+                // If SQ ID exists but number is missing, fetch it
+                if (!r.sq_no && sqId) {
+                    try {
+                        const sqRes = await api.get<unknown>(`/sale-quotation/${sqId}`);
+                        const sqStr = JSON.stringify(sqRes);
+                        const match = sqStr.match(/SQ-?\d{4,}-\d{4,}/i) || sqStr.match(/"sq_no":"(.*?)"/i) || sqStr.match(/"sqNo":"(.*?)"/i) || sqStr.match(/"code":"(.*?)"/i);
+                        if (match) {
+                            response.sq_no = match[1] || match[0];
+                        } else {
+                            const d = ((sqRes as Record<string, unknown>)?.data || (sqRes as Record<string, unknown>)?.rawData || sqRes) as Record<string, unknown>;
+                            response.sq_no = String(d.sq_no || d.sqNo || d.sale_quotation_no || d.sq_number || d.code || d.no || '');
                         }
-                        return '';
-                    };
 
-                    // 2. 🧪 Ultimate Brute Force: Find ANY string starting with "SQ-" using JSON matching
-                    let foundSq = findSqNo(r);
-                    if (!foundSq) {
-                        try {
-                            const str = JSON.stringify(r);
-                            const match = str.match(/SQ-[A-Z0-9-]{4,}/i);
-                            if (match) foundSq = match[0];
-                        } catch { /* ignore */ }
-                    }
-                    response.sq_no = foundSq;
+                        // Super Fallback: If still no sq_no, try fetching from the list
+                        if (!response.sq_no) {
+                            const sqsRes = await api.get<unknown>('/sale-quotation', { params: { limit: 1000 } });
+                            const sqsData = ((sqsRes as Record<string, unknown>)?.data || (sqsRes as Record<string, unknown>)?.items || sqsRes || []) as Record<string, unknown>[];
+                            const matchInList = sqsData.find(s => String(s.sq_id || s.id) === String(sqId));
+                            if (matchInList) response.sq_no = String(matchInList.sq_no || matchInList.code || matchInList.no || '');
+                        }
+                    } catch { /* ignore */ }
+                }
+
+                // If AQ ID exists but number is missing, fetch it
+                const aqId = (r.aq_id || r.aq_header_id || r.approval_id || r.sale_quotation_approval_id) as string | number | undefined;
+                if (!r.aq_no && aqId) {
+                    try {
+                        const aqs = await ReservationService.getAvailableApprovals();
+                        const match = aqs.find((a) => String(a.aq_id) === String(aqId));
+                        if (match) response.aq_no = match.aq_no;
+                        else {
+                            const aqRes = await api.get<unknown>(`/sale-quotation-approval/${aqId}`);
+                            const aqStr = JSON.stringify(aqRes);
+                            const aqMatch = aqStr.match(/AQ-?\d{4,}-\d{4,}/i) || aqStr.match(/"aq_no":"(.*?)"/i) || aqStr.match(/"aqNo":"(.*?)"/i);
+                            if (aqMatch) response.aq_no = aqMatch[1] || aqMatch[0];
+                        }
+                    } catch { /* ignore */ }
+                }
+
+                if (!response.sq_no) {
+                    const sqObj = (r.sq || r.sale_quotation || r.quotation || r.header || {}) as Record<string, unknown>;
+                    const fullStr = JSON.stringify(response);
+                    const fallbackMatch = fullStr.match(/SQ-?\d{4,}-\d{4,}/i);
+                    response.sq_no = String(r.sq_no || r.sqNo || sqObj.sq_no || sqObj.sqNo || sqObj.code || sqObj.no || r.sale_quotation_no || (fallbackMatch ? fallbackMatch[0] : ''));
                 }
                 
                 if (!response.aq_no) {
-                    const r = response as Record<string, unknown>;
-                    const aqObj = (r.aq || r.aq_header || r.sale_quotation_approval || r.quotation_approval || r.header || {}) as Record<string, unknown>;
-                    const aqH = (aqObj.sale_quotation_approval || aqObj.quotation_approval || aqObj.header || {}) as Record<string, unknown>;
-                    response.aq_no = String(r.aq_no || aqObj.aq_no || aqH.aq_no || aqObj.code || aqH.code || '');
+                    const aqObj = (r.aq || r.aq_header || r.sale_quotation_approval || r.quotation_approval || {}) as Record<string, unknown>;
+                    const aqStr = JSON.stringify(response);
+                    const aqFallback = aqStr.match(/AQ-?\d{4,}-\d{4,}/i);
+                    response.aq_no = String(r.aq_no || r.aqNo || aqObj.aq_no || aqObj.aqNo || aqObj.code || aqObj.no || (aqFallback ? aqFallback[0] : ''));
                 }
                 
-                // 🚨 FALLBACK: If numbers are still missing but IDs exist, fetch them
-                if (!response.sq_no && response.sq_id) {
-                    try {
-                        const rawSq = await api.get<unknown>(`/sale-quotation/${response.sq_id}`);
-                        
-                        if (Array.isArray(rawSq) && rawSq.length === 0) {
-                            // Plan B: Fetch list and search for the ID
-                            const listRes = await api.get<unknown>('/sale-quotation', { params: { limit: 1000 } });
-                            const items = Array.isArray(listRes) ? listRes : (typeof listRes === 'object' && listRes !== null ? (listRes as Record<string, unknown>).data : []) as unknown[];
-                            
-                            if (Array.isArray(items)) {
-                                const match = items.find((i: unknown) => {
-                                    const item = i as Record<string, unknown>;
-                                    return String(item.sq_id || item.id) === String(response.sq_id);
-                                }) as Record<string, unknown> | undefined;
-
-                                if (match && match.sq_no) {
-                                    response.sq_no = String(match.sq_no);
-                                }
-                            }
-                        } else if (rawSq && typeof rawSq === 'object') {
-                            const obj = rawSq as Record<string, unknown>;
-                            const data = (obj.data || obj.rawData || obj.header || obj.sale_quotation || obj.quotation || obj) as Record<string, unknown>;
-                            let foundSqNo = String(data.sq_no || data.sale_quotation_no || '');
-                            
-                            if (!foundSqNo) {
-                                try {
-                                    const str = JSON.stringify(obj);
-                                    const match = str.match(/SQ-[A-Z0-9-]{4,}/i);
-                                    if (match) foundSqNo = match[0];
-                                } catch { /* ignore */ }
-                            }
-                            if (foundSqNo) response.sq_no = foundSqNo;
-                        }
-                    } catch (err) { 
-                        logger.error('[ReservationService] Fallback Error (SQ):', err);
-                    }
-                }
-
-                // 🚀 Combined Approval Lookup: Use the List which we know works to find the SQ
-                if (!response.sq_no && response.aq_id) {
-                    try {
-                        const aqs = await ReservationService.getAvailableApprovals();
-                        const match = aqs.find((a: AvailableApproval) => String(a.aq_id || a.id) === String(response.aq_id));
-                        if (match) {
-                            const m = match as unknown as Record<string, unknown>;
-                            const sqObj = (m.sq || m.sq_header || m.sale_quotation || m.quotation || {}) as Record<string, unknown>;
-                            
-                            let found = String(m.sq_no || m.sale_quotation_no || m.quotation_no || sqObj.sq_no || sqObj.sale_quotation_no || sqObj.code || '');
-                            if (!found) {
-                                try {
-                                    const str = JSON.stringify(m);
-                                    const bruteMatch = str.match(/SQ-[A-Z0-9-]{4,}/i);
-                                    if (bruteMatch) found = bruteMatch[0];
-                                } catch { /* ignore */ }
-                            }
-                            if (found) response.sq_no = found;
-                        }
-                    } catch (err) { 
-                        logger.error('[ReservationService] Fallback Error (AQ List Search):', err);
-                    }
-                }
-
-                if (!response.aq_no && response.aq_id) {
-                    try {
-                        const aqs = await ReservationService.getAvailableApprovals();
-                        const match = aqs.find((a: AvailableApproval) => String(a.aq_id || a.id) === String(response.aq_id));
-                        if (match) response.aq_no = match.aq_no;
-                    } catch (err) {
-                        logger.error('[ReservationService] Fallback Error (AQ):', err);
-                    }
-                }
-
-                // 📅 Date Formatting: Ensure dates are in yyyy-MM-dd format for the input
+                // 📅 Date Formatting
                 if (response.reservation_date) response.reservation_date = String(response.reservation_date).split('T')[0];
                 if (response.exchange_rate_date) response.exchange_rate_date = String(response.exchange_rate_date).split('T')[0];
 
-                // 💰 Multicurrency & Currency Logic
+                // 💰 Multicurrency Logic
                 const qcc = response.quote_currency_code || response.currency_code || 'THB';
                 const bcc = response.base_currency_code || 'THB';
                 response.currency_code = qcc;
                 response.base_currency_code = bcc;
                 response.quote_currency_code = qcc;
                 
-                // 🚀 Default to TRUE if flag is missing, as requested by user
                 const explicitFlag = response.is_multicurrency;
                 const isExplicitlyFalse = explicitFlag === 'N' || explicitFlag === false;
                 
@@ -258,7 +199,6 @@ export const ReservationService = {
                                            explicitFlag === true || 
                                            (!isExplicitlyFalse && (explicitFlag === undefined || explicitFlag === null || explicitFlag === ''));
 
-                // 🏗️ Project/Job Mapping
                 if (response.project_id) response.job_id = String(response.project_id);
 
                 // 💵 Summary Mapping
@@ -268,58 +208,48 @@ export const ReservationService = {
                 response.vat_amount = Number(response.vat_amount || response.base_vat_amount || 0);
                 response.total_amount = Number(response.total_amount || response.base_total_amount || 0);
 
-                // Also ensure IDs are strings for the form if they come as numbers
                 const idFields = ['sq_id', 'aq_id', 'customer_id', 'branch_id', 'emp_dept_id', 'emp_sale_id', 'sale_area_id', 'tax_code_id'];
                 idFields.forEach(f => {
                     if (response[f]) response[f] = String(response[f]);
                 });
                 
-                // 🛠️ Line Mapping: Backend 'saleReservationLines' -> Frontend 'lines'
+                // 🛠️ Line Mapping with Enrichment (Back to fetching if missing)
                 const rawLines = (response.saleReservationLines || response.lines || []) as Record<string, unknown>[];
                 if (Array.isArray(rawLines)) {
-                    const mappedLines = await Promise.all(rawLines.map(async (l: Record<string, unknown>) => {
-                        // Aggressive item discovery
-                        const itemObj = (l.item || l.item_master || l.master_item || {}) as Record<string, unknown>;
-                        let itemCode = String(l.item_code || itemObj.item_code || itemObj.code || '');
-                        let itemName = String(l.item_name || itemObj.item_name || itemObj.name || itemObj.description || '');
+                    response.lines = await Promise.all(rawLines.map(async (l: Record<string, unknown>) => {
+                        const itemObj = (l.item || l.item_master || l.master_item || l.product || {}) as Record<string, unknown>;
+                        let itemCode = String(l.item_code || l.code || itemObj.item_code || itemObj.code || itemObj.sku || '');
+                        let itemName = String(l.item_name || l.name || itemObj.item_name || itemObj.name || itemObj.description || '');
                         
-                        // 🚀 Enrichment: If still missing, fetch from master data
+                        // 🚀 Re-Enrich Items if missing (Essential fallback)
                         if ((!itemCode || !itemName) && l.item_id) {
                             try {
-                                const master = await ItemMasterService.getById(Number(l.item_id));
+                                const masterRes = await api.get<unknown>(`/item-master/${l.item_id}`);
+                                const master = ((masterRes as Record<string, unknown>)?.data || masterRes) as Record<string, unknown>;
                                 if (master) {
-                                    itemCode = itemCode || master.item_code || '';
-                                    itemName = itemName || master.item_name || '';
+                                    itemCode = itemCode || String(master.item_code || master.code || '');
+                                    itemName = itemName || String(master.item_name || master.name || '');
                                 }
                             } catch { /* ignore */ }
                         }
 
-                        // 🔍 Lot Discovery
                         const lotIdVal = l.lot_id;
-                        const lotIdObj = (typeof lotIdVal === 'object' && lotIdVal !== null) ? (lotIdVal as Record<string, unknown>) : {};
-                        const lotBase = (l.lot || (l as Record<string, unknown>).item_lot || lotIdObj || {}) as Record<string, unknown>;
-                        let lotNo = String(l.lot_no || l.lot_number || l.lot_code || lotBase.lot_no || lotBase.code || '');
- 
-                        // 🚀 Enrichment: If still missing but lot_id exists as a number, try to fetch it from /item-lot
+                        const lotObj = (typeof lotIdVal === 'object' && lotIdVal !== null) ? (lotIdVal as Record<string, unknown>) : ((l.lot || l.item_lot || {}) as Record<string, unknown>);
+                        let lotNo = String(l.lot_no || l.lot_number || lotObj.lot_no || lotObj.code || '');
+                        
+                        // 🚀 Re-Enrich Lots if missing (Essential fallback)
                         if (!lotNo && typeof lotIdVal === 'number') {
                             try {
-                                type LotRes = Record<string, unknown> | { items?: Record<string, unknown>[] };
-                                const lotRes = await api.get<LotRes | Record<string, unknown>[]>('/item-lot', { params: { lot_id: lotIdVal, limit: 1 } });
-                                let lotItems: Record<string, unknown>[] = [];
-                                
-                                if (Array.isArray(lotRes)) {
-                                    lotItems = lotRes;
-                                } else if (lotRes && typeof lotRes === 'object' && 'items' in lotRes) {
-                                    lotItems = (lotRes as { items: Record<string, unknown>[] }).items || [];
-                                }
-                                
+                                const lotRes = await api.get<unknown>('/item-lot', { params: { lot_id: lotIdVal, limit: 1 } });
+                                const lotData = (lotRes as Record<string, unknown>)?.data || (lotRes as Record<string, unknown>)?.items || lotRes;
+                                const lotItems = Array.isArray(lotData) ? lotData : [];
                                 if (lotItems.length > 0) {
-                                    const first = lotItems[0];
-                                    lotNo = String(first.lot_no || first.lot_number || first.code || '');
+                                    const firstLot = lotItems[0] as Record<string, unknown>;
+                                    lotNo = String(firstLot.lot_no || firstLot.code || '');
                                 }
                             } catch { /* ignore */ }
                         }
- 
+
                         return {
                             ...l,
                             id: String(l.reservation_line_id || l.id || ''),
@@ -339,7 +269,6 @@ export const ReservationService = {
                             line_total: Number(l.net_amount || l.line_total || 0),
                         };
                     }));
-                    response.lines = mappedLines;
                 }
             }
 
