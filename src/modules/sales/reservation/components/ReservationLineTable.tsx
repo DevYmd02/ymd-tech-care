@@ -241,11 +241,11 @@ export function ReservationLineTable({
                                                     </div>
                                                     <input 
                                                         type="text" 
-                                                        value="เลือก Lot No" 
+                                                        value={line.lot_no || 'เลือก Lot No'} 
                                                         readOnly
                                                         disabled={isLocked}
                                                         onClick={!isLocked ? () => onSearchLot?.(index) : undefined}
-                                                        className={`${compactInputClass} pl-7 cursor-pointer font-bold text-blue-500 dark:text-blue-400 bg-white dark:bg-gray-800 border-blue-100 dark:border-gray-700 hover:border-blue-400 focus:ring-blue-500 transition-colors`}
+                                                        className={`${compactInputClass} pl-7 cursor-pointer font-bold ${line.lot_no ? 'text-blue-600 dark:text-blue-300' : 'text-blue-500 dark:text-blue-400'} bg-white dark:bg-gray-800 border-blue-100 dark:border-gray-700 hover:border-blue-400 focus:ring-blue-500 transition-colors`}
                                                     />
                                                 </>
                                             )}

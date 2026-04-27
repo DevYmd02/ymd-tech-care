@@ -78,6 +78,7 @@ interface DiscoveryAQLine extends AQLine {
 export const useReservationForm = (isOpen: boolean, id?: string, initialData?: Partial<ReservationFormValues>) => {
     const isEdit = !!id;
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
     
     // Search Modals State
     const [isCustomerSearchOpen, setIsCustomerSearchOpen] = useState(false);
@@ -106,6 +107,41 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
     // Initialization Guard
     const lastInitializedId = useRef<string | null | 'new'>(null);
     const defaultValues = useMemo(() => getReservationDefaultValues(), []);
+
+    // Load Data Effect
+    useEffect(() => {
+        if (!isOpen) {
+            lastInitializedId.current = null;
+            return;
+        }
+
+        const loadData = async () => {
+            if (id && lastInitializedId.current !== id) {
+                setIsLoading(true);
+                try {
+                    const data = await ReservationService.getById(id);
+                    if (data) {
+                        reset({
+                            ...getReservationDefaultValues(),
+                            ...data,
+                            reservation_id: data.reservation_id || id,
+                        });
+                        lastInitializedId.current = id;
+                    }
+                } catch (error) {
+                    logger.error('Failed to load reservation data:', error);
+                    toast.error('ไม่สามารถโหลดข้อมูลได้');
+                } finally {
+                    setIsLoading(false);
+                }
+            } else if (!id && lastInitializedId.current !== 'new') {
+                reset({ ...getReservationDefaultValues(), ...(initialData || {}) });
+                lastInitializedId.current = 'new';
+            }
+        };
+
+        loadData();
+    }, [isOpen, id, reset, initialData]);
 
 
     // Data Fetching
@@ -841,6 +877,7 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         isEdit,
         isSubmitting,
         setIsSubmitting,
+        isLoading,
         methods,
         formData,
         // Master Data
