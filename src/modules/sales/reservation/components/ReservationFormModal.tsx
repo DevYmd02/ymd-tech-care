@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Save, FileBox, Printer, Loader2 } from 'lucide-react';
 import { FormProvider } from 'react-hook-form';
 import { WindowFormLayout } from '@ui';
@@ -11,11 +12,12 @@ import { LotSearchModal } from './LotSearchModal';
 import { AQSearchModal } from './AQSearchModal';
 import { WarehouseSearchModal } from './WarehouseSearchModal';
 import { LocationSearchModal } from './LocationSearchModal';
+import { ConfirmationModal } from '@system/ConfirmationModal';
 
 import { useReservationForm } from '../hooks/useReservationForm';
 import { ReservationService } from '../services/reservation.service';
 import type { ReservationFormData } from '../types/reservation.types';
-import { toast } from 'react-hot-toast';
+import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { logger } from '@utils/logger';
 
 interface ReservationFormModalProps {
@@ -30,6 +32,7 @@ interface ReservationFormModalProps {
 const cardClass = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm overflow-hidden';
 
 export function ReservationFormModal({ isOpen, onClose, id, initialData, onSuccess, readOnly }: ReservationFormModalProps) {
+    const { toast } = useToast();
     const {
         isEdit,
         isSubmitting,
@@ -86,24 +89,38 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
         activeLocationLineIndex,
     } = useReservationForm(isOpen, id, initialData);
 
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const [pendingData, setPendingData] = useState<ReservationFormData | null>(null);
 
-    const { setValue, getValues } = methods;
+
+    const { setValue } = methods;
+
+    // Helper for search modals to avoid index errors
+    const activeLotLine = activeLotLineIndex !== null ? (formData.lines || [])[activeLotLineIndex] : null;
+    const activeLocationLine = activeLocationLineIndex !== null ? (formData.lines || [])[activeLocationLineIndex] : null;
 
     // Derived values for summary
     const selectedTaxCode = taxCodes.find(t => String(t.tax_code_id) === String(formData.tax_code_id));
     const taxRate = selectedTaxCode ? (Number(selectedTaxCode.tax_rate) || 0) : 0;
 
-    const onFormSubmit = async (data: ReservationFormData) => {
+    const onFormSubmit = (data: ReservationFormData) => {
+        setPendingData(data);
+        setIsConfirmOpen(true);
+    };
+
+    const handleConfirmSave = async () => {
+        if (!pendingData) return;
+        setIsConfirmOpen(false);
         setIsSubmitting(true);
-        logger.debug('Submitting Reservation:', data);
+        logger.debug('Submitting Reservation:', pendingData);
         
         try {
             if (isEdit && id) {
-                await ReservationService.update(id, data);
-                toast.success('อัปเดตใบสั่งจองสำเร็จ');
+                await ReservationService.update(id, pendingData);
+                toast('อัปเดตใบสั่งจองสำเร็จ', 'success');
             } else {
-                await ReservationService.create(data);
-                toast.success('สร้างใบสั่งจองสำเร็จ');
+                await ReservationService.create(pendingData);
+                toast('สร้างใบสั่งจองสำเร็จ', 'success');
             }
             
             onSuccess?.();
@@ -125,12 +142,13 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
                 errorMessage = `เซิร์ฟเวอร์ปฏิเสธข้อมูล: ${err.response.data.error}`;
             }
 
-            toast.error(
-                <div className="whitespace-pre-line text-sm">{errorMessage}</div>, 
-                { duration: 6000 }
+            toast(
+                <div className="whitespace-pre-line text-sm">{errorMessage}</div>,
+                'error'
             );
         } finally {
             setIsSubmitting(false);
+            setPendingData(null);
         }
     };
 
@@ -199,8 +217,18 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
                         id="reservation-form" 
                         onSubmit={handleSubmit(onFormSubmit, (errors) => {
                             logger.debug('Validation Errors:', errors);
-                            const errorFields = Object.keys(errors).join(', ');
-                            toast.error(`กรุณาตรวจสอบข้อมูล: ${errorFields}`);
+                            const FIELD_LABELS: Record<string, string> = {
+                                reservation_date: 'วันที่จอง',
+                                customer_id: 'ลูกค้า',
+                                branch_id: 'สาขา',
+                                currency_code: 'สกุลเงิน',
+                                emp_dept_id: 'แผนก',
+                                lines: 'รายการสินค้า'
+                            };
+                            const errorFields = Object.keys(errors)
+                                .map(key => FIELD_LABELS[key] || key)
+                                .join(', ');
+                            toast(`กรุณาตรวจสอบข้อมูล: ${errorFields}`, 'error');
                         })} 
                         className="max-w-[1400px] mx-auto space-y-6"
                     >
@@ -281,6 +309,18 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
                         </div>
                     </form>
                 </div>
+            {/* Confirmation Modal */}
+            <ConfirmationModal 
+                isOpen={isConfirmOpen}
+                onClose={() => !isSubmitting && setIsConfirmOpen(false)}
+                onConfirm={handleConfirmSave}
+                title="ยืนยันการบันทึก"
+                description={`คุณต้องการยืนยันการ${isEdit ? 'อัปเดต' : 'สร้าง'}ใบสั่งจองนี้ใช่หรือไม่?`}
+                confirmText="ยืนยันการบันทึก"
+                cancelText="ยกเลิก"
+                variant="info"
+                isLoading={isSubmitting}
+            />
             </FormProvider>
 
             {/* Modals */}
@@ -306,11 +346,11 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
                 isOpen={isLotSearchOpen}
                 onClose={() => setIsLotSearchOpen(false)}
                 onSelect={handleSelectLot}
-                itemId={activeLotLineIndex !== null ? getValues(`lines.${activeLotLineIndex}.item_id`) : undefined}
-                itemName={activeLotLineIndex !== null ? (formData.lines?.[activeLotLineIndex]?.item_name || '') : undefined}
-                itemCode={activeLotLineIndex !== null ? (formData.lines?.[activeLotLineIndex]?.item_code || '') : undefined}
-                warehouseId={activeLotLineIndex !== null ? getValues(`lines.${activeLotLineIndex}.warehouse_id`) : null}
-                locationId={activeLotLineIndex !== null ? getValues(`lines.${activeLotLineIndex}.location_id`) : null}
+                itemId={activeLotLine?.item_id}
+                itemName={activeLotLine?.item_name || ''}
+                itemCode={activeLotLine?.item_code || ''}
+                warehouseId={activeLotLine?.warehouse_id || null}
+                locationId={activeLotLine?.location_id || null}
             />
 
             <AQSearchModal 
@@ -329,7 +369,7 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
             <LocationSearchModal 
                 isOpen={isLocationSearchOpen}
                 onClose={() => setIsLocationSearchOpen(false)}
-                warehouseId={activeLocationLineIndex !== null ? getValues(`lines.${activeLocationLineIndex}.warehouse_id`) : null}
+                warehouseId={activeLocationLine?.warehouse_id || null}
                 onSelect={handleSelectLocation}
                 locations={locations}
             />

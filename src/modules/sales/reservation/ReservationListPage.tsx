@@ -11,7 +11,7 @@ import { RSStatusBadge } from '@sales/shared/components/RSStatusBadge';
 import { RSActionsCell } from './components/RSActionsCell';
 import { SalesMobileCard } from '@sales/shared/components/SalesMobileCard';
 import { ReservationService } from './services/reservation.service';
-import { toast } from 'react-hot-toast';
+import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { logger } from '@utils/logger';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 // ====================================================================================
@@ -32,6 +32,7 @@ const STATUS_OPTIONS = [
 // ====================================================================================
 
 export default function ReservationListPage() {
+    const { toast } = useToast();
     const [rsNo, setRsNo] = useState('');
     const [customer, setCustomer] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
@@ -116,14 +117,14 @@ export default function ReservationListPage() {
         if (isConfirmed) {
             try {
                 await ReservationService.confirm(id);
-                toast.success('ยืนยันใบสั่งจองสำเร็จ');
+                toast('ยืนยันใบสั่งจองสำเร็จ', 'success');
                 refetch();
             } catch (error) {
                 logger.error('Failed to confirm reservation:', error);
-                toast.error('เกิดข้อผิดพลาดในการยืนยันใบสั่งจอง');
+                toast('เกิดข้อผิดพลาดในการยืนยันใบสั่งจอง', 'error');
             }
         }
-    }, [confirm, refetch]);
+    }, [confirm, refetch, toast]);
 
     // Columns Definition
     const columnHelper = createColumnHelper<ReservationHeader>();

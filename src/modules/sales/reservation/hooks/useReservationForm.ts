@@ -13,7 +13,7 @@ import { SaleAreaService } from '@sales-master/pages/area/services/area.service'
 import { QuotationService } from '@sales/quotation/services/quotation.service';
 import type { QuotationFormData } from '@sales/quotation/types/quotation.types';
 import { ItemMasterService } from '@inventory/services/item-master.service';
-import { toast } from 'react-hot-toast';
+import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { logger } from '@utils/logger';
 import { 
     calculateDiscountAmount, 
@@ -76,6 +76,7 @@ interface DiscoveryAQLine extends AQLine {
 
 
 export const useReservationForm = (isOpen: boolean, id?: string, initialData?: Partial<ReservationFormValues>) => {
+    const { toast } = useToast();
     const isEdit = !!id;
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -130,7 +131,7 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
                     }
                 } catch (error) {
                     logger.error('Failed to load reservation data:', error);
-                    toast.error('ไม่สามารถโหลดข้อมูลได้');
+                    toast('ไม่สามารถโหลดข้อมูลได้', 'error');
                 } finally {
                     setIsLoading(false);
                 }
@@ -141,7 +142,7 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         };
 
         loadData();
-    }, [isOpen, id, reset, initialData]);
+    }, [isOpen, id, reset, initialData, toast]);
 
 
     // Data Fetching
@@ -502,7 +503,7 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
 
         
         if (!val) {
-            toast.error(`กรุณาระบุเลขที่ ${type}`);
+            toast(`กรุณาระบุเลขที่ ${type}`, 'error');
             return;
         }
 
@@ -548,7 +549,7 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
             }
 
             if (!quotationId) {
-                toast.error(`ไม่พบข้อมูล ${type} เลขที่ ${val}`);
+                toast(`ไม่พบข้อมูล ${type} เลขที่ ${val}`, 'error');
                 setIsSubmitting(false);
                 return;
             }
@@ -604,7 +605,7 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
             }
 
             if (!detail) {
-                toast.error(`ไม่สามารถดึงข้อมูลรายละเอียดของ ${val} ได้`);
+                toast(`ไม่สามารถดึงข้อมูลรายละเอียดของ ${val} ได้`, 'error');
                 setIsSubmitting(false);
                 return;
             }
@@ -856,13 +857,13 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
                 setValue('lines', finalLines, { shouldDirty: true, shouldValidate: true });
             }
 
-            toast.success(`ซิงค์ข้อมูลจาก ${val} สำเร็จ`);
+            toast(`ซิงค์ข้อมูลจาก ${val} สำเร็จ`, 'success');
         } catch {
-            toast.error('เกิดข้อผิดพลาดในการดึงข้อมูล');
+            toast('เกิดข้อผิดพลาดในการดึงข้อมูล', 'error');
         } finally {
             setIsSubmitting(false);
         }
-    }, [getValues, setValue, setIsSubmitting]);
+    }, [getValues, setValue, setIsSubmitting, toast]);
 
     const handleSelectAQ = useCallback((aq: AvailableApproval) => {
         // Correctly set both ID and NO fields

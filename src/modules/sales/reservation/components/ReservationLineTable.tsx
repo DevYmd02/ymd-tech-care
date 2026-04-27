@@ -1,3 +1,5 @@
+import { useRef } from 'react';
+import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { Plus, Trash2, Package, Search, AlertCircle } from 'lucide-react';
 import { useFormContext } from 'react-hook-form';
 import type { ReservationLineValues, ReservationFormValues } from '../schemas/reservation-schemas';
@@ -39,7 +41,18 @@ export function ReservationLineTable({
     currencySymbol = 'บาท'
 }: ReservationLineTableProps) {
     const { formState: { errors } } = useFormContext<ReservationFormValues>();
+    const { toast } = useToast();
     const isLocked = readOnly;
+
+    // Dedup ref: prevents multiple rows firing the same toast simultaneously
+    const toastThrottleRef = useRef(false);
+    const showNoItemToast = () => {
+        if (toastThrottleRef.current) return;
+        toastThrottleRef.current = true;
+        toast('กรุณาเลือกสินค้าก่อนเลือกล็อต', 'warning');
+        setTimeout(() => { toastThrottleRef.current = false; }, 1500);
+    };
+
 
     const getLineError = (index: number) => {
         if (!errors.lines || !Array.isArray(errors.lines)) return undefined;
@@ -49,6 +62,10 @@ export function ReservationLineTable({
     const hasLineFieldError = (index: number, fieldName: keyof ReservationLineValues) => {
         const lineError = getLineError(index);
         return !!(lineError as Record<string, unknown> | undefined)?.[fieldName];
+    };
+
+    const getFieldErrorClass = (index: number, fieldName: keyof ReservationLineValues) => {
+        return hasLineFieldError(index, fieldName) ? '!border-red-500 !ring-1 !ring-red-500/50' : '';
     };
 
     const compactInputClass = "h-8 w-full px-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-900 dark:text-white transition-all disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm";
@@ -121,14 +138,14 @@ export function ReservationLineTable({
                                             <input 
                                                 value={line.item_code || ''}
                                                 readOnly
-                                                className={`${compactInputClass} bg-gray-50/50 dark:bg-gray-800 italic cursor-not-allowed text-purple-700 dark:text-white/70 border-gray-200 dark:border-gray-700`}
+                                                className={`${compactInputClass} bg-gray-50/50 dark:bg-gray-800 italic cursor-not-allowed text-purple-700 dark:text-white/70 border-gray-200 dark:border-gray-700 ${getFieldErrorClass(index, 'item_id')}`}
                                                 placeholder="รหัส"
                                             />
                                             {!isLocked && (
                                                 <button 
                                                     type="button" 
                                                     onClick={() => onSearchProduct?.(index)}
-                                                    className="p-1.5 bg-purple-600 text-white rounded hover:bg-purple-700 transition-all shadow-sm active:scale-95 shrink-0 h-8 w-8 flex items-center justify-center font-bold"
+                                                    className={`p-1.5 bg-purple-600 text-white rounded hover:bg-purple-700 transition-all shadow-sm active:scale-95 shrink-0 h-8 w-8 flex items-center justify-center font-bold ${hasLineFieldError(index, 'item_id') ? 'ring-2 ring-red-500 ring-offset-1' : ''}`}
                                                 >
                                                     <Search size={14} />
                                                 </button>
@@ -151,7 +168,7 @@ export function ReservationLineTable({
                                                 value={warehouses.find(w => String(w.warehouse_id) === String(line.warehouse_id))?.warehouse_name || ''}
                                                 readOnly
                                                 onClick={!isLocked ? () => onSearchWarehouse?.(index) : undefined}
-                                                className={`${compactInputClass} ${!isLocked ? 'cursor-pointer hover:border-purple-400 focus:border-purple-500' : 'cursor-not-allowed bg-gray-50/50'} text-gray-700 dark:text-white/80 border-gray-200 dark:border-gray-700 transition-colors`}
+                                                className={`${compactInputClass} ${!isLocked ? 'cursor-pointer hover:border-purple-400 focus:border-purple-500' : 'cursor-not-allowed bg-gray-50/50'} text-gray-700 dark:text-white/80 border-gray-200 dark:border-gray-700 transition-colors ${getFieldErrorClass(index, 'warehouse_id')}`}
                                                 placeholder="เลือกคลัง..."
                                             />
                                         </div>
@@ -163,7 +180,7 @@ export function ReservationLineTable({
                                                 value={locations.find(l => String(l.location_id) === String(line.location_id))?.name_th || locations.find(l => String(l.location_id) === String(line.location_id))?.code || ''}
                                                 readOnly
                                                 onClick={!isLocked ? () => onSearchLocation?.(index) : undefined}
-                                                className={`${compactInputClass} ${!isLocked ? 'cursor-pointer hover:border-orange-400 focus:border-orange-500' : 'cursor-not-allowed bg-gray-50/50'} text-gray-700 dark:text-white/80 border-gray-200 dark:border-gray-700 transition-colors`}
+                                                className={`${compactInputClass} ${!isLocked ? 'cursor-pointer hover:border-orange-400 focus:border-orange-500' : 'cursor-not-allowed bg-gray-50/50'} text-gray-700 dark:text-white/80 border-gray-200 dark:border-gray-700 transition-colors ${getFieldErrorClass(index, 'location_id')}`}
                                                 placeholder="เลือกที่เก็บ..."
                                             />
                                         </div>
@@ -190,7 +207,7 @@ export function ReservationLineTable({
                                             }}
                                             placeholder="0"
                                             maxLength={12}
-                                            className={`${compactInputClass} text-right font-bold text-purple-600 dark:text-white bg-white dark:bg-gray-800 border-purple-100 dark:border-gray-700`}
+                                            className={`${compactInputClass} text-right font-bold text-purple-600 dark:text-white bg-white dark:bg-gray-800 border-purple-100 dark:border-gray-700 ${getFieldErrorClass(index, 'qty_reserved')}`}
                                         />
                                     </td>
 
@@ -199,7 +216,7 @@ export function ReservationLineTable({
                                             value={line.uom_id || ''} 
                                             disabled={isLocked}
                                             onChange={(e) => onLineChange(index, 'uom_id', e.target.value)}
-                                            className={`${compactInputClass} text-center bg-white dark:bg-gray-800 dark:text-white/80 border-gray-200 dark:border-gray-700`}
+                                            className={`${compactInputClass} text-center bg-white dark:bg-gray-800 dark:text-white/80 border-gray-200 dark:border-gray-700 ${getFieldErrorClass(index, 'uom_id')}`}
                                             style={{ colorScheme: 'dark' }}
                                         >
                                             <option value="">-- หน่วย --</option>
@@ -216,7 +233,13 @@ export function ReservationLineTable({
                                             {line.reserve_policy === 'MANUAL' ? (
                                                 <>
                                                     <div 
-                                                        onClick={!isLocked ? () => onSearchLot?.(index) : undefined}
+                                                        onClick={!isLocked ? () => {
+                                                            if (line.item_id) {
+                                                                onSearchLot?.(index);
+                                                            } else {
+                                                                showNoItemToast();
+                                                            }
+                                                        } : undefined}
                                                         className={`absolute left-0 top-0 bottom-0 flex items-center pl-2 ${!isLocked ? 'cursor-pointer group-hover/lot:text-orange-500 text-gray-400' : 'text-gray-300'}`}
                                                     >
                                                         <Search size={14} />
@@ -226,15 +249,27 @@ export function ReservationLineTable({
                                                         value={line.lot_no || ''} 
                                                         readOnly
                                                         disabled={isLocked}
-                                                        onClick={!isLocked ? () => onSearchLot?.(index) : undefined}
+                                                        onClick={!isLocked ? () => {
+                                                            if (line.item_id) {
+                                                                onSearchLot?.(index);
+                                                            } else {
+                                                                showNoItemToast();
+                                                            }
+                                                        } : undefined}
                                                         placeholder="เลือกล็อต..."
-                                                        className={`${compactInputClass} pl-7 cursor-pointer font-bold text-orange-600 dark:text-orange-400 bg-white dark:bg-gray-800 border-orange-100 dark:border-gray-700 focus:ring-orange-500`}
+                                                        className={`${compactInputClass} ${getFieldErrorClass(index, 'lot_no')} pl-7 cursor-pointer font-bold text-orange-600 dark:text-orange-400 bg-white dark:bg-gray-800 border-orange-100 dark:border-gray-700 focus:ring-orange-500`}
                                                     />
                                                 </>
                                             ) : (
                                                 <>
                                                     <div 
-                                                        onClick={!isLocked ? () => onSearchLot?.(index) : undefined}
+                                                        onClick={!isLocked ? () => {
+                                                            if (line.item_id) {
+                                                                onSearchLot?.(index);
+                                                            } else {
+                                                                showNoItemToast();
+                                                            }
+                                                        } : undefined}
                                                         className={`absolute left-0 top-0 bottom-0 flex items-center pl-2 ${!isLocked ? 'cursor-pointer group-hover/lot:text-blue-500 text-gray-400' : 'text-gray-300'}`}
                                                     >
                                                         <Search size={14} />
@@ -244,8 +279,14 @@ export function ReservationLineTable({
                                                         value={line.lot_no || 'เลือก Lot No'} 
                                                         readOnly
                                                         disabled={isLocked}
-                                                        onClick={!isLocked ? () => onSearchLot?.(index) : undefined}
-                                                        className={`${compactInputClass} pl-7 cursor-pointer font-bold ${line.lot_no ? 'text-blue-600 dark:text-blue-300' : 'text-blue-500 dark:text-blue-400'} bg-white dark:bg-gray-800 border-blue-100 dark:border-gray-700 hover:border-blue-400 focus:ring-blue-500 transition-colors`}
+                                                        onClick={!isLocked ? () => {
+                                                            if (line.item_id) {
+                                                                onSearchLot?.(index);
+                                                            } else {
+                                                                showNoItemToast();
+                                                            }
+                                                        } : undefined}
+                                                        className={`${compactInputClass} ${getFieldErrorClass(index, 'lot_no')} pl-7 cursor-pointer font-bold ${line.lot_no ? 'text-blue-600 dark:text-blue-300' : 'text-blue-500 dark:text-blue-400'} bg-white dark:bg-gray-800 border-blue-100 dark:border-gray-700 hover:border-blue-400 focus:ring-blue-500 transition-colors`}
                                                     />
                                                 </>
                                             )}
