@@ -47,7 +47,7 @@ export const QUANTITY_VALIDATION_OPTIONS = [
 // ==========================================
 
 export const icOptionListSchema = z.object({
-    ic_option_list_id: z.coerce.number().optional(),
+    option_list_id: z.coerce.number().optional(),
     ic_option_id: z.coerce.number(),
     system_document_id: z.coerce.number(),
     sort_order: z.coerce.number().optional().default(0),
