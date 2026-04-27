@@ -47,7 +47,7 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
             location_id: locationId ?? undefined,
             limit: 100 
         }),
-        enabled: isOpen,
+        enabled: isOpen && !!itemId,
     });
 
     const lots = useMemo(() => response?.items || [], [response]);

@@ -299,7 +299,7 @@ export const ReservationService = {
     /**
      * Helper to clean data before sending to API
      */
-    sanitizeData: (data: ReservationFormData | Partial<ReservationFormData>) => {
+    sanitizeData: (data: ReservationFormData | Partial<ReservationFormData>, isUpdate = false) => {
         const raw = { ...data } as Record<string, unknown>;
         
         // Root Level Mapping
@@ -331,21 +331,29 @@ export const ReservationService = {
 
         // Lines Mapping: Frontend 'lines' -> Backend 'saleReservationLines'
         const rawLines = (raw.lines || []) as Record<string, unknown>[];
-        cleaned.saleReservationLines = rawLines.map((line: Record<string, unknown>) => ({
-            reservation_line_id: line.id ? Number(line.id) : null,
-            item_id: line.item_id ? Number(line.item_id) : null,
-            warehouse_id: line.warehouse_id ? Number(line.warehouse_id) : null,
-            location_id: line.location_id ? Number(line.location_id) : null,
-            lot_id: line.lot_id ? Number(line.lot_id) : null,
-            note: line.note || '',
-            qty: Number(line.qty_reserved || 0),
-            uom_id: line.uom_id ? Number(line.uom_id) : null,
-            unit_price: Number(line.unit_price || 0),
-            discount_expression: line.line_discount_input || '0',
-            discount_rate: 0, // Backend might calculate this or want it
-            discount_amount: Number(line.line_discount || 0),
-            net_amount: Number(line.line_total || 0),
-        }));
+        cleaned.saleReservationLines = rawLines.map((line: Record<string, unknown>) => {
+            const l: Record<string, unknown> = {
+                item_id: line.item_id ? Number(line.item_id) : null,
+                warehouse_id: line.warehouse_id ? Number(line.warehouse_id) : null,
+                location_id: line.location_id ? Number(line.location_id) : null,
+                lot_id: line.lot_id ? Number(line.lot_id) : null,
+                note: line.note || '',
+                qty: Number(line.qty_reserved || 0),
+                uom_id: line.uom_id ? Number(line.uom_id) : null,
+                unit_price: Number(line.unit_price || 0),
+                discount_expression: line.line_discount_input || '0',
+                discount_rate: 0, 
+                discount_amount: Number(line.line_discount || 0),
+                net_amount: Number(line.line_total || 0),
+            };
+
+            // Only send reservation_line_id if it exists AND we are in update mode
+            if (isUpdate && line.id && line.id !== '' && !isNaN(Number(line.id))) {
+                l.reservation_line_id = Number(line.id);
+            }
+
+            return l;
+        });
 
         // Remove null fields to keep payload clean
         Object.keys(cleaned).forEach(key => {
@@ -359,7 +367,7 @@ export const ReservationService = {
      * สร้าง Reservation ใหม่
      */
     create: async (data: ReservationFormData) => {
-        const payload = ReservationService.sanitizeData(data);
+        const payload = ReservationService.sanitizeData(data, false);
         logger.debug('Creating reservation (Sanitized):', payload);
         try {
             const response = await api.post('/sale-reservation', payload);
@@ -381,7 +389,7 @@ export const ReservationService = {
      * อัปเดต Reservation
      */
     update: async (id: string, data: Partial<ReservationFormData>) => {
-        const payload = ReservationService.sanitizeData(data);
+        const payload = ReservationService.sanitizeData(data, true);
         logger.debug('Updating reservation (Sanitized):', id, payload);
         try {
             const response = await api.patch(`/sale-reservation/${id}`, payload);

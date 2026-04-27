@@ -15,7 +15,7 @@ export const ReservationLineSchema = z.object({
     uom_id: z.coerce.string().min(1, 'กรุณาเลือกหน่วยนับ'),
     unit_price: z.coerce.number().min(0, 'ราคาต้องไม่ติดลบ'),
     lot_id: z.coerce.number().optional().nullable(),
-    lot_no: z.string().optional().nullable(),
+    lot_no: z.string().min(1, 'กรุณาเลือกล็อตสินค้า'),
     line_discount_input: z.string().optional().nullable(),
     line_discount: z.coerce.number().default(0),
     reserve_policy: z.enum(['AUTO', 'MANUAL']).default('AUTO'),

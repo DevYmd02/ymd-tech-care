@@ -51,7 +51,7 @@ export function ReservationHeaderForm({
     onFetchQuotation
 
 }: ReservationHeaderFormProps) {
-    const { register, watch, setValue, control } = useFormContext<ReservationFormData>();
+    const { register, watch, setValue, control, formState: { errors } } = useFormContext<ReservationFormData>();
     
     const formData = watch();
     const isLocked = readOnly;
@@ -61,6 +61,10 @@ export function ReservationHeaderForm({
     const selectClass = "h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900 dark:text-white cursor-pointer disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm";
     const labelClass = "block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider";
     const cardSection = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-4 bg-purple-50/10 dark:bg-purple-900/5 p-6 rounded-2xl border border-purple-100 dark:border-purple-900/20";
+
+    const getErrorClass = (name: keyof ReservationFormData) => {
+        return errors[name] ? 'border-red-500 ring-2 ring-red-500/20 focus:ring-red-500' : '';
+    };
 
     // Find selected customer name for display
     const selectedCustomer = customers.find(c => String(c.customer_id || c.id) === String(formData.customer_id));
@@ -106,7 +110,7 @@ export function ReservationHeaderForm({
                                 value={field.value || ''}
                                 onChange={field.onChange}
                                 disabled={isLocked}
-                                className={inputClass}
+                                className={`${inputClass} ${getErrorClass('reservation_date')}`}
                             />
                         )}
                     />
@@ -171,7 +175,7 @@ export function ReservationHeaderForm({
                                 readOnly
                                 disabled={isLocked}
                                 onClick={() => !isLocked && onSearchCustomer?.()}
-                                className={`${inputClass} pl-9 bg-gray-50/50 italic cursor-pointer hover:border-purple-400 transition-colors`}
+                                className={`${inputClass} pl-9 bg-gray-50/50 italic cursor-pointer hover:border-purple-400 transition-colors ${getErrorClass('customer_id')}`}
                                 placeholder="-- คลิกเพื่อเลือกลูกค้า --"
                             />
                             <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -220,7 +224,7 @@ export function ReservationHeaderForm({
                                 value={field.value ?? ''}
                                 key={`branch-select-${branches.length}`}
                                 disabled={isLocked}
-                                className={selectClass}
+                                className={`${selectClass} ${getErrorClass('branch_id')}`}
                             >
                                 <option value="">-- เลือกสาขา --</option>
                                 {branches.map((branch, idx) => (
@@ -267,7 +271,7 @@ export function ReservationHeaderForm({
                                 value={field.value ?? ''}
                                 key={`dept-select-${departments.length}`}
                                 disabled={isLocked}
-                                className={selectClass}
+                                className={`${selectClass} ${getErrorClass('emp_dept_id')}`}
                             >
                                 <option value="">-- เลือกแผนก --</option>
                                 {departments.map((dept, idx) => (
