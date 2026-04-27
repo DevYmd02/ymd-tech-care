@@ -121,12 +121,12 @@ export default function ICOptionList() {
         },
         {
             id: 'actions',
-            header: 'จัดการ',
+            header: () => <div className="text-center w-full">จัดการ</div>,
             size: 80,
             cell: ({ row }) => {
                 const id = row.original.ic_option_id;
                 return (
-                    <div className="flex items-center justify-center gap-2">
+                    <div className="flex items-center justify-center gap-2 w-full">
                         <button 
                             onClick={() => id && handleEdit(id)}
                             className="p-1.5 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors border border-indigo-100 dark:border-indigo-800"

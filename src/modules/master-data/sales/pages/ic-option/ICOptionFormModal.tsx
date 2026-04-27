@@ -1,14 +1,15 @@
-import { useEffect, useMemo, useCallback } from 'react';
+import { useEffect, useMemo, useCallback, useState } from 'react';
 import { useForm, useWatch, type UseFormWatch, type UseFormSetValue, type UseFormRegister, type FieldErrors, type FieldValues, type SubmitHandler, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { DialogFormLayout } from '@ui';
-import { Settings, Save, X, PlusCircle, AlertCircle, Package, Database, Info } from 'lucide-react';
+import { Settings, Save, X, PlusCircle, AlertCircle, Package, Database, Info, List } from 'lucide-react';
 import { ICOptionService } from './services/ic-option.service';
 import { icOptionSchema, type ICOptionFormData } from './types/ic-option.types';
 import { BranchService } from '@company/services/branch.service';
 import { useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { logger } from '@/shared/utils/logger';
+import { ICOptionListTab } from './components/ICOptionListTab';
 
 interface ICOptionFormModalProps {
     isOpen: boolean;
@@ -21,13 +22,38 @@ interface ICOptionFormModalProps {
 // CONSTANTS
 // ==========================================
 
+// Char(1) Y/N flags (NOT including the 3 int-based dropdowns below)
 const IC_OPTION_FLAG_KEYS: (keyof ICOptionFormData)[] = [
-    'auto_perpetual_cost', 'barcode_flag', 'check_deficit', 'check_deficit_option',
-    'check_max_qty', 'check_min_qty', 'check_qty_flag', 'check_standcost',
+    'auto_perpetual_cost', 'barcode_flag',
+    'check_max_qty', 'check_min_qty', 'check_standcost',
     'expire_alert_flag', 'order_alert_flag', 'post_cost_flag', 'reorder_flag',
     'set_autopost', 'set_costcn', 'set_costcn_ap', 'set_costcn_ap_refinv',
     'set_costcn_refinv', 'set_cost_return_issueref', 'set_goodqty', 'set_inve',
     'set_price', 'set_price_ic', 'set_price_pack', 'set_price_po', 'trasfer_cost_flag'
+];
+
+// Options for check_deficit (ตรวจสอบสินค้าติดลบ)
+const CHECK_DEFICIT_OPTIONS = [
+    { id: 0, name: '(Default)' },
+    { id: 1, name: 'สินค้าติดลบไม่ได้' },
+    { id: 2, name: 'สินค้าติดลบได้' },
+    { id: 3, name: 'แสดงข้อความถาม' },
+    { id: 4, name: 'ตามรายตัวสินค้า' },
+];
+
+// Options for check_deficit_option (เงื่อนไขการตรวจสอบ)
+const CHECK_DEFICIT_OPTION_OPTIONS = [
+    { id: 0, name: '(Default)' },
+    { id: 1, name: 'รวมคลังสินค้า' },
+    { id: 2, name: 'แยกคลังสินค้า' },
+    { id: 3, name: 'แยกคลังและที่เก็บสินค้า' },
+];
+
+// Options for check_qty_flag (ตรวจสอบจำนวนสินค้า)
+const CHECK_QTY_FLAG_OPTIONS = [
+    { id: 0, name: '(Default)' },
+    { id: 1, name: 'ยอดสินค้าคงเหลือ' },
+    { id: 2, name: 'Sale Stock' },
 ];
 
 
@@ -93,8 +119,50 @@ const PriceSourceField = ({ name, label, register, errors, options }: PriceSourc
     </div>
 );
 
+type ModalTab = 'settings' | 'option-list';
+
+const DEFAULT_FORM_VALUES: ICOptionFormData = {
+    branch_id: 0,
+    aging_expire: '',
+    set_price1: 0,
+    set_price2: 0,
+    set_price3: 0,
+    set_price4: 0,
+    auto_perpetual_cost: 'N',
+    barcode_flag: 'N',
+    check_deficit: 0,
+    check_deficit_option: 0,
+    check_max_qty: 'N',
+    check_min_qty: 'N',
+    check_qty_flag: 0,
+    check_standcost: 'N',
+    expire_alert_flag: 'N',
+    order_alert_flag: 'N',
+    post_cost_flag: 'N',
+    reorder_flag: 'N',
+    set_autopost: 'N',
+    set_costcn: 'N',
+    set_costcn_ap: 'N',
+    set_costcn_ap_refinv: 'N',
+    set_costcn_refinv: 'N',
+    set_cost_return_issueref: 'N',
+    set_goodqty: 'N',
+    set_inve: 'N',
+    set_price: 'N',
+    set_price_ic: 'N',
+    set_price_pack: 'N',
+    set_price_po: 'N',
+    trasfer_cost_flag: 'N',
+};
+
 export default function ICOptionFormModal({ isOpen, onClose, editId, onSuccess }: ICOptionFormModalProps) {
     const isEditMode = !!editId;
+    const [activeTab, setActiveTab] = useState<ModalTab>('settings');
+
+    // Reset to settings tab when modal opens
+    useEffect(() => {
+        if (isOpen) setActiveTab('settings');
+    }, [isOpen]);
 
     const {
         register,
@@ -107,39 +175,7 @@ export default function ICOptionFormModal({ isOpen, onClose, editId, onSuccess }
     } = useForm<ICOptionFormData>({
         resolver: zodResolver(icOptionSchema) as Resolver<ICOptionFormData>,
         mode: 'onChange',
-        defaultValues: {
-            branch_id: 0,
-            aging_expire: '',
-            set_price1: 0,
-            set_price2: 0,
-            set_price3: 0,
-            set_price4: 0,
-            auto_perpetual_cost: 'N',
-            barcode_flag: 'N',
-            check_deficit: 'N',
-            check_deficit_option: 'N',
-            check_max_qty: 'N',
-            check_min_qty: 'N',
-            check_qty_flag: 'N',
-            check_standcost: 'N',
-            expire_alert_flag: 'N',
-            order_alert_flag: 'N',
-            post_cost_flag: 'N',
-            reorder_flag: 'N',
-            set_autopost: 'N',
-            set_costcn: 'N',
-            set_costcn_ap: 'N',
-            set_costcn_ap_refinv: 'N',
-            set_costcn_refinv: 'N',
-            set_cost_return_issueref: 'N',
-            set_goodqty: 'N',
-            set_inve: 'N',
-            set_price: 'N',
-            set_price_ic: 'N',
-            set_price_pack: 'N',
-            set_price_po: 'N',
-            trasfer_cost_flag: 'N',
-        }
+        defaultValues: DEFAULT_FORM_VALUES,
     });
  
     const watchedBranchId = useWatch({
@@ -173,7 +209,7 @@ export default function ICOptionFormModal({ isOpen, onClose, editId, onSuccess }
                     }
                 });
             } else {
-                reset();
+                reset(DEFAULT_FORM_VALUES);
             }
         }
     }, [isOpen, isEditMode, editId, reset, onClose]);
@@ -190,6 +226,10 @@ export default function ICOptionFormModal({ isOpen, onClose, editId, onSuccess }
                 set_price2: Number(data.set_price2 || 0),
                 set_price3: Number(data.set_price3 || 0),
                 set_price4: Number(data.set_price4 || 0),
+                // Int-based dropdowns (not flags)
+                check_deficit: Number(data.check_deficit || 0),
+                check_deficit_option: Number(data.check_deficit_option || 0),
+                check_qty_flag: Number(data.check_qty_flag || 0),
             };
 
             // Add all 25 flags
@@ -253,23 +293,55 @@ export default function ICOptionFormModal({ isOpen, onClose, editId, onSuccess }
         </div>
     );
 
+    const tabs = [
+        { key: 'settings' as ModalTab, label: 'ตั้งค่าทั่วไป', icon: <Settings size={14} /> },
+        ...(isEditMode ? [{ key: 'option-list' as ModalTab, label: 'IC Option List', icon: <List size={14} /> }] : []),
+    ];
+
     return (
         <DialogFormLayout
             isOpen={isOpen}
             onClose={onClose}
             title={isEditMode ? 'ตั้งค่าโมดูลสินค้าคงคลัง (IC Option Settings)' : 'เพิ่มการตั้งค่า IC Option'}
             titleIcon={TitleIcon}
-            footer={FormFooter}
+            footer={activeTab === 'settings' ? FormFooter : undefined}
             width="max-w-6xl"
         >
-            <div className="p-6 bg-gray-50/30 dark:bg-gray-900/10">
+            <div className="bg-gray-50/30 dark:bg-gray-900/10">
+
+                {/* ── TAB BAR ── */}
+                {isEditMode && (
+                    <div className="px-6 pt-4 border-b border-gray-200 dark:border-gray-700">
+                        <div className="flex gap-1">
+                            {tabs.map((tab) => (
+                                <button
+                                    key={tab.key}
+                                    type="button"
+                                    onClick={() => setActiveTab(tab.key)}
+                                    className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
+                                        activeTab === tab.key
+                                            ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 dark:border-indigo-400'
+                                            : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-300'
+                                    }`}
+                                >
+                                    {tab.icon}
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                <div className="p-6">
 
 
+                {/* ── TAB: SETTINGS ── */}
+                {activeTab === 'settings' && (
                 <form id="icOptionForm" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                     
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         {/* ข้อมูลพื้นฐาน */}
-                        <section className="lg:col-span-1 bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                        <section className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
                             <div className="flex items-center gap-2 mb-4 text-indigo-600 dark:text-indigo-400 border-b pb-2">
                                 <Info size={20} />
                                 <h3 className="font-semibold">ข้อมูลสาขาและการใช้งาน</h3>
@@ -313,12 +385,12 @@ export default function ICOptionFormModal({ isOpen, onClose, editId, onSuccess }
                         </section>
 
                         {/* ลำดับที่มาของราคาขาย */}
-                        <section className="lg:col-span-2 bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                        <section className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
                             <div className="flex items-center gap-2 mb-4 text-emerald-600 dark:text-emerald-400 border-b pb-2">
                                 <Database size={20} />
                                 <h3 className="font-semibold">ลำดับที่มาของราคาขาย (Selling Price Priority)</h3>
                             </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                            <div className="grid grid-cols-1 gap-y-4">
                                 <PriceSourceField name="set_price1" label="ลำดับราคาที่ 1" register={register} errors={errors} options={priceSourceOptions} />
                                 <PriceSourceField name="set_price2" label="ลำดับราคาที่ 2" register={register} errors={errors} options={priceSourceOptions} />
                                 <PriceSourceField name="set_price3" label="ลำดับราคาที่ 3" register={register} errors={errors} options={priceSourceOptions} />
@@ -328,9 +400,44 @@ export default function ICOptionFormModal({ isOpen, onClose, editId, onSuccess }
                                 * ระบบจะดึงราคาตามลำดับ 1-4 หากลำดับก่อนหน้าไม่มีข้อมูลราคา จะข้ามไปดึงลำดับถัดไปให้อัตโนมัติ
                             </p>
                         </section>
-                    </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* ตรวจสอบสินค้าติดลบ (int dropdowns) */}
+                        <section className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                            <h3 className="font-bold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2 border-b pb-3">
+                                <div className="p-1.5 bg-rose-100 dark:bg-rose-900/30 text-rose-600 rounded-lg"><AlertCircle size={18} /></div>
+                                ตรวจสอบสินค้าติดลบ (Stock Validation)
+                            </h3>
+                            <div className="grid grid-cols-1 gap-4">
+                                <div className="space-y-1.5">
+                                    <label className="block text-xs font-bold uppercase tracking-wider text-rose-500 dark:text-rose-400">ตรวจสอบสินค้าติดลบ</label>
+                                    <select
+                                        {...register('check_deficit', { valueAsNumber: true })}
+                                        className="w-full px-3 py-2.5 border rounded-lg shadow-sm focus:ring-2 focus:ring-rose-400 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm border-rose-200 dark:border-rose-900/40 appearance-none"
+                                    >
+                                        {CHECK_DEFICIT_OPTIONS.map(opt => <option key={opt.id} value={opt.id}>{opt.name}</option>)}
+                                    </select>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="block text-xs font-bold uppercase tracking-wider text-violet-500 dark:text-violet-400">เงื่อนไขการตรวจสอบ</label>
+                                    <select
+                                        {...register('check_deficit_option', { valueAsNumber: true })}
+                                        className="w-full px-3 py-2.5 border rounded-lg shadow-sm focus:ring-2 focus:ring-violet-400 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm border-violet-200 dark:border-violet-900/40 appearance-none"
+                                    >
+                                        {CHECK_DEFICIT_OPTION_OPTIONS.map(opt => <option key={opt.id} value={opt.id}>{opt.name}</option>)}
+                                    </select>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="block text-xs font-bold uppercase tracking-wider text-cyan-500 dark:text-cyan-400">ตรวจสอบจำนวนสินค้า</label>
+                                    <select
+                                        {...register('check_qty_flag', { valueAsNumber: true })}
+                                        className="w-full px-3 py-2.5 border rounded-lg shadow-sm focus:ring-2 focus:ring-cyan-400 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm border-cyan-200 dark:border-cyan-900/40 appearance-none"
+                                    >
+                                        {CHECK_QTY_FLAG_OPTIONS.map(opt => <option key={opt.id} value={opt.id}>{opt.name}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+                        </section>
+
                         {/* บัญชีและต้นทุน */}
                         <section className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
                             <h3 className="font-bold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2 border-b pb-3">
@@ -346,23 +453,23 @@ export default function ICOptionFormModal({ isOpen, onClose, editId, onSuccess }
                             </div>
                         </section>
 
-                        {/* การควบคุมสต็อก */}
+                        {/* ควบคุมสต็อกและคลัง */}
                         <section className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
                             <h3 className="font-bold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2 border-b pb-3">
                                 <div className="p-1.5 bg-green-100 dark:bg-green-900/30 text-green-600 rounded-lg"><Settings size={18} /></div>
-                                การควบคุมสินค้า (Stock Control)
+                                ควบคุมสต็อก (Stock Control)
                             </h3>
                             <div className="grid grid-cols-1 gap-2.5">
                                 <FlagToggleField name="barcode_flag" label="มีการใช้ Barcode" watch={watch} setValue={setValue} />
-                                <FlagToggleField name="check_deficit" label="ตรวจสอบสินค้าติดลบ" watch={watch} setValue={setValue} />
-                                <FlagToggleField name="check_deficit_option" label="เงื่อนไขตรวจสอบสินค้าติดลบ" watch={watch} setValue={setValue} />
                                 <FlagToggleField name="check_max_qty" label="เตือนยอดคงเหลือสูงสุด" watch={watch} setValue={setValue} />
-                                <FlagToggleField name="check_min_qty" label="เตือนยอดตํ่ากว่าตํ่าสุด" watch={watch} setValue={setValue} />
-                                <FlagToggleField name="check_qty_flag" label="ตรวจสอบความถูกต้องจำนวนสินค้า" watch={watch} setValue={setValue} />
+                                <FlagToggleField name="check_min_qty" label="เตือนยอดต่ำกว่าต่ำสุด" watch={watch} setValue={setValue} />
+                                <FlagToggleField name="check_standcost" label="เช็คราคามาตรฐาน" watch={watch} setValue={setValue} />
                                 <FlagToggleField name="set_goodqty" label="กำหนดจำนวนอัตโนมัติ" watch={watch} setValue={setValue} />
                                 <FlagToggleField name="set_inve" label="กำหนดคลังเก็บอัตโนมัติ" watch={watch} setValue={setValue} />
                             </div>
                         </section>
+
+
 
                         {/* ระบบขายและราคา */}
                         <section className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
@@ -401,6 +508,14 @@ export default function ICOptionFormModal({ isOpen, onClose, editId, onSuccess }
                         </section>
                     </div>
                 </form>
+                )}
+
+                {/* ── TAB: IC OPTION LIST ── */}
+                {activeTab === 'option-list' && editId && (
+                    <ICOptionListTab icOptionId={editId} />
+                )}
+
+                </div>
             </div>
         </DialogFormLayout>
     );
