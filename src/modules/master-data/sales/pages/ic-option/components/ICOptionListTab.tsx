@@ -87,19 +87,19 @@ function GridTab({ documents, itemMap, icOptionId, onSaved }: GridTabProps) {
     const saveRow = async (docId: number) => {
         const draft = drafts.get(docId);
         if (!draft) return;
-        const existing = itemMap.get(docId);
+        const existing = itemMap.get(Number(docId));
         setSavingIds((p) => new Set(p).add(docId));
         try {
             await ICOptionListService.upsert(
                 {
-                    ic_option_id: icOptionId,
-                    system_document_id: docId,
-                    sort_order: existing?.sort_order ?? 0,
+                    ic_option_id: Number(icOptionId),
+                    system_document_id: Number(docId),
+                    sort_order: existing?.sort_order ?? 1,
                     negative_stock_check: getValue(docId, 'negative_stock_check'),
                     negative_stock_mode: getValue(docId, 'negative_stock_mode'),
                     quantity_validation_flag: getValue(docId, 'quantity_validation_flag'),
                 },
-                existing?.ic_option_list_id
+                existing?.option_list_id
             );
             setDrafts((prev) => {
                 const next = new Map(prev);
@@ -216,7 +216,7 @@ export function ICOptionListTab({ icOptionId }: Props) {
 
     const itemMap = useMemo(() => {
         const map = new Map<number, ICOptionListItem>();
-        listItems.forEach((item) => map.set(item.system_document_id, item));
+        listItems.forEach((item) => map.set(Number(item.system_document_id), item));
         return map;
     }, [listItems]);
 

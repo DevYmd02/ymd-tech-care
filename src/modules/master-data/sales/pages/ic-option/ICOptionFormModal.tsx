@@ -14,8 +14,9 @@ import { ICOptionListTab } from './components/ICOptionListTab';
 interface ICOptionFormModalProps {
     isOpen: boolean;
     onClose: () => void;
-    editId?: string | null;
+    editId: string | null;
     onSuccess: () => void;
+    existingBranchIds?: number[];
 }
 
 // ==========================================
@@ -155,7 +156,13 @@ const DEFAULT_FORM_VALUES: ICOptionFormData = {
     trasfer_cost_flag: 'N',
 };
 
-export default function ICOptionFormModal({ isOpen, onClose, editId, onSuccess }: ICOptionFormModalProps) {
+export default function ICOptionFormModal({ 
+    isOpen, 
+    onClose, 
+    editId, 
+    onSuccess,
+    existingBranchIds = []
+}: ICOptionFormModalProps) {
     const isEditMode = !!editId;
     const [activeTab, setActiveTab] = useState<ModalTab>('settings');
 
@@ -243,6 +250,12 @@ export default function ICOptionFormModal({ isOpen, onClose, editId, onSuccess }
                 await ICOptionService.updateICOption(editId, payload);
                 toast.success('บันทึกการตั้งค่าสำเร็จ');
             } else {
+                // Check if branch already has a config
+                if (existingBranchIds.includes(Number(data.branch_id))) {
+                    toast.error('สาขานี้มีการตั้งค่าอยู่แล้ว ไม่สามารถเพิ่มซ้ำได้');
+                    return;
+                }
+                
                 // For creation, we include everything
                 await ICOptionService.createICOption(payload as ICOptionFormData);
                 toast.success('บันทึกข้อมูลสำเร็จ');
@@ -252,7 +265,7 @@ export default function ICOptionFormModal({ isOpen, onClose, editId, onSuccess }
             toast.error('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
             logger.error('Submit Error:', error);
         }
-    }, [isEditMode, editId, onSuccess]);
+    }, [isEditMode, editId, onSuccess, existingBranchIds]);
 
     /**
      * WINSPEED Price Source Options

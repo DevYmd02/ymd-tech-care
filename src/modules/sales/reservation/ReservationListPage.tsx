@@ -138,6 +138,7 @@ export default function ReservationListPage() {
                 </div>
             ),
             size: 50,
+            enableSorting: false,
         }),
         columnHelper.accessor('reservation_no', {
             header: 'เลขที่ใบสั่งจอง',
@@ -150,6 +151,7 @@ export default function ReservationListPage() {
                 </span>
             ),
             size: 180,
+            enableSorting: false,
         }),
         columnHelper.accessor('reservation_date', {
             header: 'วันที่',
@@ -160,6 +162,7 @@ export default function ReservationListPage() {
                 return isNaN(d.getTime()) ? val : d.toLocaleDateString('en-GB');
             },
             size: 100,
+            enableSorting: false,
         }),
         columnHelper.accessor('customer_id', {
             header: 'ลูกค้า',
@@ -174,6 +177,7 @@ export default function ReservationListPage() {
                 );
             },
             size: 280,
+            enableSorting: false,
         }),
         columnHelper.accessor('base_total_amount', {
             header: () => <div className="text-right w-full pr-4">มูลค่ารวม (บาท)</div>,
@@ -196,6 +200,7 @@ export default function ReservationListPage() {
                 );
             },
             size: 160,
+            enableSorting: false,
         }),
         columnHelper.accessor('status', {
             header: () => <div className="text-center w-full">สถานะ</div>,
@@ -205,6 +210,7 @@ export default function ReservationListPage() {
                 </div>
             ),
             size: 100,
+            enableSorting: false,
         }),
         columnHelper.display({
             id: 'actions',
@@ -218,6 +224,7 @@ export default function ReservationListPage() {
                 />
             ),
             size: 220,
+            enableSorting: false,
         }),
     ], [columnHelper, page, limit, customerMap, handleView, handleEdit, handleConfirmReservation]);
 

@@ -9,6 +9,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 
 export default function ICOptionList() {
     const {
+        data,
         filters,
         setFilters,
         handlePageChange,
@@ -140,9 +141,11 @@ export default function ICOptionList() {
         },
     ], [filters.page, filters.limit, handleEdit, renderPriceSource]);
 
+    const existingBranchIds = useMemo(() => data.map(item => item.branch_id), [data]);
+
     // ==================== RENDER ====================
     return (
-        <div className="p-6 space-y-6">
+        <div className="flex flex-col gap-6 p-6 min-h-screen bg-gray-50/50 dark:bg-gray-900/50">
             
             {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -201,9 +204,10 @@ export default function ICOptionList() {
                 onClose={handleModalClose}
                 editId={editingId}
                 onSuccess={() => {
-                    handleModalClose();
                     fetchData();
+                    handleModalClose();
                 }}
+                existingBranchIds={existingBranchIds}
             />
         </div>
     );

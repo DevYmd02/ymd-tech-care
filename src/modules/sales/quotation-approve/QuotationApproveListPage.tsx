@@ -111,6 +111,7 @@ export default function QuotationApproveListPage() {
         header: () => <div className="flex justify-center w-full">ลำดับ</div>,
         cell: (info) => <div className="text-center">{info.row.index + 1}</div>,
         size: 55,
+        enableSorting: false,
       }),
       columnHelper.accessor('sq_no', {
         header: 'เลขที่ SQ',
@@ -127,6 +128,7 @@ export default function QuotationApproveListPage() {
           </span>
         ),
         size: 140,
+        enableSorting: false,
       }),
       columnHelper.accessor('aq_no', {
         header: 'เลขที่ AQ',
@@ -142,11 +144,13 @@ export default function QuotationApproveListPage() {
           </span>
         ),
         size: 140,
+        enableSorting: false,
       }),
       columnHelper.accessor('sq_date', {
         header: 'วันที่ SQ',
         cell: (info) => <span className="text-sm">{formatDate(String(info.getValue() || ''))}</span>,
         size: 110,
+        enableSorting: false,
       }),
       columnHelper.accessor('customer_name', {
         header: 'ลูกค้า',
@@ -161,6 +165,7 @@ export default function QuotationApproveListPage() {
           </div>
         ),
         size: 200,
+        enableSorting: false,
       }),
       columnHelper.accessor('base_total_amount', {
         header: () => <div className="text-center w-full">มูลค่ารวม (บาท)</div>,
@@ -185,6 +190,7 @@ export default function QuotationApproveListPage() {
           );
         },
         size: 130,
+        enableSorting: false,
       }),
       columnHelper.accessor('approval_emp_name', {
         header: () => <div className="text-center w-full">ผู้อนุมัติ</div>,
@@ -194,6 +200,7 @@ export default function QuotationApproveListPage() {
           </div>
         ),
         size: 140,
+        enableSorting: false,
       }),
       columnHelper.accessor('status', {
         header: () => <div className="text-center w-full">สถานะ</div>,
@@ -203,6 +210,7 @@ export default function QuotationApproveListPage() {
           </div>
         ),
         size: 120,
+        enableSorting: false,
       }),
       columnHelper.display({
         id: 'actions',
@@ -253,6 +261,7 @@ export default function QuotationApproveListPage() {
           );
         },
         size: 120,
+        enableSorting: false,
       }),
     ],
     [],
