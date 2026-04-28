@@ -14,6 +14,7 @@ import { SalesOrderFormModal } from './components/SalesOrderFormModal';
 import { SalesMobileCard } from '@sales/shared/components/SalesMobileCard';
 import { CustomerService } from '@customer/customer-master/services/customer.service';
 import { SQStatusBadge } from '@sales/shared/components/SQStatusBadge';
+import { useConfirmation } from '@hooks/useConfirmation';
 
 // ====================================================================================
 // CONSTANTS
@@ -61,6 +62,8 @@ export default function SalesOrderListPage() {
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [selectedSoId, setSelectedSoId] = useState<string | undefined>(undefined);
     const [isViewOnly, setIsViewOnly] = useState(false);
+
+    const { confirm } = useConfirmation();
 
     // 🏷️ Fetch Customers for Name Lookup
     const { data: customerResponse } = useQuery({
@@ -117,14 +120,23 @@ export default function SalesOrderListPage() {
     };
 
     const handleSubmit = useCallback(async (id: string) => {
-        if (!confirm('คุณต้องการส่งอนุมัติใบสั่งขายนี้ใช่หรือไม่?')) return;
+        const isConfirmed = await confirm({
+            title: 'ยืนยันการส่งอนุมัติ',
+            description: 'คุณต้องการส่งอนุมัติใบสั่งขายนี้ใช่หรือไม่?',
+            variant: 'info',
+            confirmText: 'ตกลง',
+            cancelText: 'ยกเลิก'
+        });
+
+        if (!isConfirmed) return;
+
         try {
             await SalesOrderService.update(id, { status: 'SUBMITTED' });
             refetch();
         } catch (error) {
             console.error('Failed to submit sales order:', error);
         }
-    }, [refetch]);
+    }, [confirm, refetch]);
 
     // Columns Definition
     const columnHelper = createColumnHelper<SalesOrderHeader>();
