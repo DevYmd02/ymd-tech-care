@@ -16,8 +16,6 @@ import {
 } from 'recharts';
 import { 
     ChevronRight, 
-    CheckCircle, 
-    XCircle 
 } from 'lucide-react';
 import { Card } from '@ui';
 
@@ -40,48 +38,45 @@ export interface LeadTimeItem {
     [key: string]: string | number;
 }
 
+export interface FollowUpItem {
+    id: string;
+    vendor: string;
+    deliveryDate: string;
+    status: string;
+    daysLeft: number;
+}
+
 interface ProcurementChartsProps {
     vendorPieData: VendorPieItem[];
     trendData: TrendItem[];
     leadTimeData: LeadTimeItem[];
-    pendingApprovals: {
-        id: string;
-        type: string;
-        requester: string;
-        approver: string;
-        amount: number;
-    }[];
+    followUpList: FollowUpItem[];
 }
 
-function ApprovalItem({ id, type, requester, approver, amount }: {
-    id: string;
-    type: string;
-    requester: string;
-    approver: string;
-    amount: number;
-}) {
+function FollowUpItem({ id, vendor, deliveryDate, status, daysLeft }: FollowUpItem) {
+    const isOverdue = daysLeft < 0;
+    
     return (
         <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg mb-3 last:mb-0">
             <div className="flex justify-between items-start mb-2">
                 <div className="flex items-center gap-2">
                     <span className={`px-2 py-1 text-xs font-semibold rounded ${
-                        type === 'PR' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400' 
-                                       : 'bg-orange-100 text-orange-600 dark:bg-orange-900/50 dark:text-orange-400'
+                        isOverdue ? 'bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400' 
+                                   : 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/50 dark:text-yellow-400'
                     }`}>
-                        {type}
+                        {status}
                     </span>
                     <span className="font-semibold text-gray-900 dark:text-white">{id}</span>
                 </div>
-                <span className="font-bold text-gray-900 dark:text-white">฿{amount.toLocaleString()}</span>
+                <span className={`text-xs font-medium ${isOverdue ? 'text-red-600' : 'text-gray-500'}`}>
+                    {isOverdue ? `เกินกำหนด ${Math.abs(daysLeft)} วัน` : (daysLeft === 0 ? 'ครบกำหนดวันนี้' : `เหลืออีก ${daysLeft} วัน`)}
+                </span>
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">ผู้ขอ: {requester}</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">ผู้อนุมัติ: {approver}</p>
-            <div className="flex gap-2">
-                <button className="flex-1 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs font-medium rounded-lg flex items-center justify-center gap-1">
-                    <CheckCircle className="w-3.5 h-3.5" /> อนุมัติ
-                </button>
-                <button className="flex-1 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-medium rounded-lg flex items-center justify-center gap-1">
-                    <XCircle className="w-3.5 h-3.5" /> ไม่อนุมัติ
+            <p className="text-sm text-gray-900 dark:text-white font-medium mb-1">{vendor}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">กำหนดส่ง: {deliveryDate}</p>
+            <div className="mt-3 flex gap-2">
+                <button className="flex-1 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg">
+                    ติดตามสินค้า
                 </button>
             </div>
         </div>
@@ -92,7 +87,7 @@ export const ProcurementCharts: React.FC<ProcurementChartsProps> = ({
     vendorPieData,
     trendData,
     leadTimeData,
-    pendingApprovals,
+    followUpList,
 }) => {
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -186,19 +181,28 @@ export const ProcurementCharts: React.FC<ProcurementChartsProps> = ({
                 </div>
             </Card>
 
-            {/* Pending Approvals */}
-            <Card className="flex flex-col h-full overflow-hidden">
+            {/* Items to Follow-up */}
+            <Card className="flex flex-col h-full overflow-hidden border-l-4 border-l-orange-500">
                 <div className="flex items-center justify-between mb-4 flex-shrink-0">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">งานรออนุมัติ</h3>
+                    <div>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">รายการที่ต้องติดตาม</h3>
+                        <p className="text-xs text-gray-500">เอกสารที่ใกล้ครบกำหนดหรือเกินกำหนดรับสินค้า</p>
+                    </div>
                     <button className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
                         ดูทั้งหมด <ChevronRight className="w-4 h-4" />
                     </button>
                 </div>
                 <div className="flex-1 overflow-y-auto pr-1 -mr-1 custom-scrollbar">
                     <div className="space-y-3">
-                        {pendingApprovals.map((item, index) => (
-                            <ApprovalItem key={index} {...item} />
-                        ))}
+                        {followUpList.length > 0 ? (
+                            followUpList.map((item, index) => (
+                                <FollowUpItem key={index} {...item} />
+                            ))
+                        ) : (
+                            <div className="h-full flex flex-col items-center justify-center text-center p-6 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
+                                <p className="text-sm text-gray-500">ไม่มีรายการที่ต้องติดตามเร่งด่วน</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </Card>

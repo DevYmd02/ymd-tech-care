@@ -19,5 +19,6 @@ export { VQService } from './vq.service';
 export type { VQListParams, VQListResponse, VQCreateData } from './vq.service';
 
 export { AVService } from './av.service';
-
 export { POAService } from './poa.service';
+export { ProcurementDashboardService } from './dashboard.service';
+export type { DashboardData, DashboardKPI, DashboardSummary } from './dashboard.service';

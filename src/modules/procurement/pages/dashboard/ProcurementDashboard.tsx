@@ -3,7 +3,7 @@
  * @description Dashboard สำหรับระบบจัดซื้อ (Procurement Module)
  * @route /procurement/dashboard
  * @purpose แสดงภาพรวม KPI, Charts และรายการรออนุมัติ
- * @updated รองรับ Dark/Light Mode
+ * @updated รองรับ Real Data จาก API
  */
 
 import { useState, useEffect, Suspense, lazy } from 'react';
@@ -11,14 +11,16 @@ import {
     FileText,
     ShoppingCart,
     Package,
-    Receipt,
     TrendingUp,
     Clock,
     CheckCircle,
     AlertTriangle,
+    RefreshCw,
+    Banknote,
 } from 'lucide-react';
-import { Card } from '@ui';
-import { StatCard } from '@ui';
+import { Card, StatCard } from '@ui';
+import { ProcurementDashboardService, type DashboardData } from '../../services';
+import { logger } from '@/shared/utils/logger';
 
 // Lazy load heavy chart components
 const ProcurementCharts = lazy(() => import('./components/ProcurementCharts'));
@@ -33,71 +35,12 @@ const ChartSkeleton = () => (
 );
 
 // ====================================================================================
-// MOCK DATA
-// ====================================================================================
-
-const kpiData = [
-    { label: 'PR รออนุมัติ', value: 12, icon: FileText, color: 'text-blue-600', bgColor: 'bg-blue-100 dark:bg-blue-900/30' },
-    { label: 'PO รออนุมัติ', value: 8, icon: ShoppingCart, color: 'text-orange-600', bgColor: 'bg-orange-100 dark:bg-orange-900/30' },
-    { label: 'PO ค้างรับ', value: 25, icon: Package, color: 'text-cyan-600', bgColor: 'bg-cyan-100 dark:bg-cyan-900/30' },
-    { label: 'บิลรอ Match', value: 15, icon: Receipt, color: 'text-red-600', bgColor: 'bg-red-100 dark:bg-red-900/30' },
-];
-
-const summaryData = [
-    { label: 'ยอดซื้อเดือนนี้', value: '฿2,450,000', icon: TrendingUp, color: 'green' as const },
-    { label: 'ยอดซื้อปีนี้', value: '฿28,500,000', icon: TrendingUp, color: 'blue' as const },
-    { label: 'Lead Time เฉลี่ย', value: '5.2 วัน', icon: Clock, color: 'purple' as const },
-];
-
-const statusData = {
-    normal: 85,
-    delayed: 12,
-    overdue: 3,
-};
-
-const vendorPieData = [
-    { name: 'เทคโนโลยีดิจิทัล', value: 30, color: '#3b82f6' },
-    { name: 'เซ็พพลาย', value: 22, color: '#22c55e' },
-    { name: 'Global Trading', value: 20, color: '#f97316' },
-    { name: 'ไทยคอมเมิร์ซ', value: 15, color: '#eab308' },
-    { name: 'อื่นๆ', value: 13, color: '#8b5cf6' },
-];
-
-const trendData = [
-    { month: 'ก.ค.', value: 2200000 },
-    { month: 'ส.ค.', value: 2500000 },
-    { month: 'ก.ย.', value: 2300000 },
-    { month: 'ต.ค.', value: 2800000 },
-    { month: 'พ.ย.', value: 3100000 },
-    { month: 'ธ.ค.', value: 2900000 },
-    { month: 'ม.ค.', value: 2450000 },
-];
-
-const leadTimeData = [
-    { process: 'PR→PO', days: 3 },
-    { process: 'PO→GRN', days: 7 },
-    { process: 'GRN→INV', days: 2 },
-    { process: 'รวม', days: 12 },
-];
-
-const pendingApprovals = [
-    { id: 'PR-202601-001', type: 'PR', requester: 'สมชาย ใจดี', approver: 'ผู้จัดการไอที', amount: 175000 },
-    { id: 'PO-202601-001', type: 'PO', requester: 'สมชาย ใจดี', approver: 'CFO', amount: 176550 },
-];
-
-const alerts = [
-    { message: 'PO-202601-005 เกินกำหนดส่งของ 3 วัน', type: 'warning' },
-    { message: 'มีใบแจ้งหนี้ 5 ใบที่ยังไม่ได้ทำ 3-Way Match', type: 'warning' },
-    { message: 'PR-202601-008 รออนุมัติเกิน 5 วันทำการ', type: 'warning' },
-];
-
-// ====================================================================================
 // SUB-COMPONENTS
 // ====================================================================================
 
 function KPICard({ label, value, icon: Icon, color, bgColor }: {
     label: string;
-    value: number;
+    value: string | number;
     icon: React.ElementType;
     color: string;
     bgColor: string;
@@ -115,34 +58,54 @@ function KPICard({ label, value, icon: Icon, color, bgColor }: {
     );
 }
 
-
-function StatusCard() {
+function StatusCard({ normal, approaching, overdue, conversionRate }: { normal: number, approaching: number, overdue: number, conversionRate: number }) {
     return (
         <Card>
-            <div className="flex items-center justify-between mb-3">
-                <p className="text-sm text-gray-500 dark:text-gray-400">สถานะภาพรวม</p>
+            <div className="flex items-center justify-between mb-4">
+                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">สถานะภาพรวม</p>
                 <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
                     <CheckCircle className="w-5 h-5 text-purple-600" />
                 </div>
             </div>
-            <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-300">ปกติ</span>
-                    <span className="text-green-600 font-semibold">{statusData.normal}%</span>
+            <div className="space-y-3">
+                <div className="flex justify-between items-center text-sm">
+                    <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-green-500" />
+                        <span className="text-gray-600 dark:text-gray-400">ปกติ</span>
+                    </div>
+                    <span className="font-bold text-green-600">{normal}%</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-300">ล่าช้า</span>
-                    <span className="text-orange-600 font-semibold">{statusData.delayed}%</span>
+                <div className="flex justify-between items-center text-sm">
+                    <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-yellow-500" />
+                        <span className="text-gray-600 dark:text-gray-400">ใกล้ครบกำหนด</span>
+                    </div>
+                    <span className="font-bold text-yellow-600">{approaching}%</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-300">เกินกำหนด</span>
-                    <span className="text-red-600 font-semibold">{statusData.overdue}%</span>
+                <div className="flex justify-between items-center text-sm">
+                    <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-red-500" />
+                        <span className="text-gray-600 dark:text-gray-400">เกินกำหนด</span>
+                    </div>
+                    <span className="font-bold text-red-600">{overdue}%</span>
+                </div>
+                
+                <div className="pt-3 mt-1 border-t border-gray-100 dark:border-gray-800">
+                    <div className="flex justify-between text-xs mb-1.5">
+                        <span className="text-gray-500 dark:text-gray-400 font-medium">อัตราการเปลี่ยน PR เป็น PO</span>
+                        <span className="text-blue-600 font-bold">{conversionRate}%</span>
+                    </div>
+                    <div className="w-full bg-gray-100 dark:bg-gray-800 h-1.5 rounded-full overflow-hidden">
+                        <div 
+                            className="bg-blue-600 h-full transition-all duration-1000" 
+                            style={{ width: `${conversionRate}%` }} 
+                        />
+                    </div>
                 </div>
             </div>
         </Card>
     );
 }
-
 
 // ====================================================================================
 // MAIN COMPONENT
@@ -150,12 +113,31 @@ function StatusCard() {
 
 export default function ProcurementDashboard() {
     const [currentTime, setCurrentTime] = useState(new Date());
+    const [data, setData] = useState<DashboardData | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [refreshKey, setRefreshKey] = useState(0);
 
     // Update time every second
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
         return () => clearInterval(timer);
     }, []);
+
+    // Fetch Dashboard Data
+    useEffect(() => {
+        const fetchDashboard = async () => {
+            try {
+                setLoading(true);
+                const result = await ProcurementDashboardService.getDashboardData();
+                setData(result);
+            } catch (error) {
+                logger.error('[ProcurementDashboard] Error fetching dashboard data:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchDashboard();
+    }, [refreshKey]);
 
     // Format Thai date
     const thaiDate = currentTime.toLocaleDateString('th-TH', {
@@ -170,12 +152,50 @@ export default function ProcurementDashboard() {
         minute: '2-digit',
     });
 
+    if (loading && !data) {
+        return (
+            <div className="p-6 space-y-6 animate-pulse">
+                <div className="h-16 bg-gray-200 dark:bg-gray-800 rounded-xl" />
+                <div className="grid grid-cols-4 gap-4">
+                    {[1, 2, 3, 4].map(i => <div key={i} className="h-24 bg-gray-200 dark:bg-gray-800 rounded-xl" />)}
+                </div>
+                <div className="grid grid-cols-4 gap-4">
+                    {[1, 2, 3, 4].map(i => <div key={i} className="h-32 bg-gray-200 dark:bg-gray-800 rounded-xl" />)}
+                </div>
+                <ChartSkeleton />
+            </div>
+        );
+    }
+
+    const formatNumber = (val: number) => {
+        return new Intl.NumberFormat('th-TH', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+        }).format(val);
+    };
+
+    const kpiCards = [
+        { label: 'PR รออนุมัติ', value: data?.kpi.prPending || 0, icon: FileText, color: 'text-blue-600', bgColor: 'bg-blue-100 dark:bg-blue-900/30' },
+        { label: 'PO รออนุมัติ', value: data?.kpi.poPending || 0, icon: ShoppingCart, color: 'text-orange-600', bgColor: 'bg-orange-100 dark:bg-orange-900/30' },
+        { label: 'PO ค้างรับ', value: data?.kpi.poPendingReceipt || 0, icon: Package, color: 'text-cyan-600', bgColor: 'bg-cyan-100 dark:bg-cyan-900/30' },
+        { label: 'มูลค่าค้างรับ', value: formatNumber(data?.kpi.pendingReceiptValue || 0), icon: Banknote, color: 'text-emerald-600', bgColor: 'bg-emerald-100 dark:bg-emerald-900/30' },
+    ];
+
     return (
         <div className="p-6 space-y-6">
             {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Procurement Dashboard</h1>
+                    <div className="flex items-center gap-3">
+                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Procurement Dashboard</h1>
+                        <button 
+                            onClick={() => setRefreshKey(prev => prev + 1)}
+                            className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                            title="รีเฟรชข้อมูล"
+                        >
+                            <RefreshCw className={`w-4 h-4 text-gray-500 ${loading ? 'animate-spin' : ''}`} />
+                        </button>
+                    </div>
                     <p className="text-sm text-gray-500 dark:text-gray-400">Dashboard ระบบจัดซื้อ - ภาพรวมและสถานะการดำเนินงาน</p>
                 </div>
                 <div className="text-left sm:text-right">
@@ -186,35 +206,50 @@ export default function ProcurementDashboard() {
 
             {/* KPI Row 1 */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {kpiData.map((kpi, index) => (
+                {kpiCards.map((kpi, index) => (
                     <KPICard key={index} {...kpi} />
                 ))}
             </div>
 
             {/* Summary Row 2 */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {summaryData.map((item, index) => (
-                    <StatCard 
-                        key={index} 
-                        label={item.label}
-                        value={item.value}
-                        color={item.color}
-                        icon={<item.icon className={`w-6 h-6 text-${item.color}-600`} />}
-                    />
-                ))}
-                <StatusCard />
+                <StatCard 
+                    label="ยอดซื้อเดือนนี้"
+                    value={`฿${(data?.summary.monthlyPurchase || 0).toLocaleString()}`}
+                    color="green"
+                    icon={<TrendingUp className="w-6 h-6 text-green-600" />}
+                />
+                <StatCard 
+                    label="ยอดซื้อปีนี้"
+                    value={`฿${(data?.summary.yearlyPurchase || 0).toLocaleString()}`}
+                    color="blue"
+                    icon={<TrendingUp className="w-6 h-6 text-blue-600" />}
+                />
+                <StatCard 
+                    label="Lead Time เฉลี่ย"
+                    value={`${data?.summary.avgLeadTime || 0} วัน`}
+                    color="purple"
+                    icon={<Clock className="w-6 h-6 text-purple-600" />}
+                />
+                <StatusCard 
+                    normal={data?.summary.statusOverview.normal || 0}
+                    approaching={data?.summary.statusOverview.approaching || 0}
+                    overdue={data?.summary.statusOverview.overdue || 0}
+                    conversionRate={data?.summary.conversionRate || 0}
+                />
             </div>
 
             {/* Charts & Summary Row */}
             <Suspense fallback={<ChartSkeleton />}>
-                <ProcurementCharts 
-                    vendorPieData={vendorPieData}
-                    trendData={trendData}
-                    leadTimeData={leadTimeData}
-                    pendingApprovals={pendingApprovals}
-                />
+                {data && (
+                    <ProcurementCharts 
+                        vendorPieData={data.charts.vendorPie}
+                        trendData={data.charts.purchaseTrend}
+                        leadTimeData={data.charts.leadTimeData}
+                        followUpList={data.charts.followUpList}
+                    />
+                )}
             </Suspense>
-
 
             {/* Alert Section */}
             <Card className="bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
@@ -223,7 +258,7 @@ export default function ProcurementDashboard() {
                     <h3 className="text-lg font-semibold text-yellow-800 dark:text-yellow-200">การแจ้งเตือนสำคัญ</h3>
                 </div>
                 <ul className="space-y-2">
-                    {alerts.map((alert, index) => (
+                    {data?.alerts.map((alert, index) => (
                         <li key={index} className="flex items-center gap-2 text-sm text-yellow-700 dark:text-yellow-300">
                             <span className="w-1.5 h-1.5 bg-yellow-600 rounded-full" />
                             {alert.message}
@@ -234,5 +269,3 @@ export default function ProcurementDashboard() {
         </div>
     );
 }
-
-
