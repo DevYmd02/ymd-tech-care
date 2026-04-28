@@ -20,6 +20,7 @@ import { SQStatusBadge } from '@sales/shared/components/SQStatusBadge';
 import { SQActionsCell } from './components/SQActionsCell';
 import { AQHistoryModal } from '@sales/shared/components/AQHistoryModal';
 import { SalesMobileCard } from '@sales/shared/components/SalesMobileCard';
+import { useToast } from '@ui/feedback/Toast';
 
 // ====================================================================================
 // CONSTANTS
@@ -44,6 +45,7 @@ const STATUS_OPTIONS = [
 // ====================================================================================
 
 export default function QuotationListPage() {
+    const { toast } = useToast();
     const [sqNo, setSqNo] = useState('');
     const [customer, setCustomer] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
@@ -199,8 +201,10 @@ export default function QuotationListPage() {
             
             refetch();
             setIsApproveConfirmOpen(false);
+            toast('ส่งใบเสนอราคาเพื่อรออนุมัติเรียบร้อยแล้ว', 'success');
         } catch (error) {
             console.error('Failed to send for approval:', error);
+            toast('เกิดข้อผิดพลาดในการส่งอนุมัติ กรุณาลองใหม่อีกครั้ง', 'error');
         } finally {
             setIsApproveLoading(false);
             setPendingApproveId(null);

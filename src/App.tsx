@@ -114,6 +114,7 @@ const QuotationListPage = React.lazy(() => import('@sales/quotation/QuotationLis
 const QuotationApproveListPage = React.lazy(() => import('@sales/quotation-approve/QuotationApproveListPage'));
 const ReservationListPage = React.lazy(() => import('@sales/reservation/ReservationListPage'));
 const SalesOrderListPage = React.lazy(() => import('@sales/sales-order/SalesOrderListPage'));
+const SalesOrderApproveListPage = React.lazy(() => import('@sales/sales-order-approval/SalesOrderApproveListPage'));
 const SalesDashboard = React.lazy(() => import('@sales/dashboard/SalesDashboard'));
 
 // Auth Pages (from modules)
@@ -313,6 +314,7 @@ function AppContent() {
             <Route path="sales/quotation-approval" element={<QuotationApproveListPage />} />
             <Route path="sales/reservation" element={<ReservationListPage />} />
             <Route path="sales/order" element={<SalesOrderListPage />} />
+            <Route path="sales/order-approval" element={<SalesOrderApproveListPage />} />
 
             {/* ==================== PLACEHOLDER ROUTES ==================== */}
             
