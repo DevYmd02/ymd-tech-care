@@ -2,7 +2,8 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { Search, ClipboardList, Check, X } from 'lucide-react';
 import { DialogFormLayout } from '@layout/DialogFormLayout';
 import { cn } from '@/shared/utils/cn';
-import { ReservationService, type ReservationHeader } from '@sales/reservation/services/reservation.service';
+import { type ReservationHeader } from '@sales/reservation/services/reservation.service';
+import { SalesOrderService } from '../services/sales-order.service';
 import { useQuery } from '@tanstack/react-query';
 import { useDebounce } from '@hooks/useDebounce';
 import { format } from 'date-fns';
@@ -30,19 +31,24 @@ export const ReservationSearchModal: React.FC<ReservationSearchModalProps> = Rea
     const [searchTerm, setSearchTerm] = useState('');
     const debouncedSearch = useDebounce(searchTerm, 400);
 
-    // Fetch reservations
-    const { data: response, isLoading } = useQuery({
-        queryKey: ['reservations-lookup', debouncedSearch],
-        queryFn: () => ReservationService.getList({
-            reservation_no: debouncedSearch,
-            status: 'CONFIRMED', // ปกติจะดึงเฉพาะใบที่ยืนยันแล้ว
-            limit: 100
-        }),
+    // Fetch available reservations using the new API endpoint
+    const { data: allReservations = [], isLoading } = useQuery({
+        queryKey: ['available-reservations'],
+        queryFn: () => SalesOrderService.getAvailableRS(),
         enabled: isOpen,
         staleTime: 1000 * 60 * 5,
     });
 
-    const reservations = useMemo(() => response?.data || [], [response]);
+    // Local filtering based on search term
+    const reservations = useMemo(() => {
+        if (!debouncedSearch) return allReservations;
+        const lowerSearch = debouncedSearch.toLowerCase();
+        return allReservations.filter((rs: ReservationHeader) => 
+            rs.reservation_no?.toLowerCase().includes(lowerSearch) ||
+            rs.customer_name?.toLowerCase().includes(lowerSearch) ||
+            rs.customer_code?.toLowerCase().includes(lowerSearch)
+        );
+    }, [allReservations, debouncedSearch]);
 
     const handleSelect = useCallback((reservation: ReservationHeader) => {
         onSelect(reservation);
@@ -102,14 +108,12 @@ export const ReservationSearchModal: React.FC<ReservationSearchModalProps> = Rea
                                 <tr>
                                     <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">เลขที่ใบจอง</th>
                                     <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">วันที่</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">ลูกค้า</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 text-right">ยอดรวม</th>
                                     <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 text-center">จัดการ</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-[#0b1120]/30 transition-all">
                                 {reservations.length > 0 ? (
-                                    reservations.map((rs) => (
+                                    reservations.map((rs: ReservationHeader) => (
                                         <tr 
                                             key={rs.reservation_id} 
                                             className="hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-colors group cursor-pointer"
@@ -122,14 +126,6 @@ export const ReservationSearchModal: React.FC<ReservationSearchModalProps> = Rea
                                             </td>
                                             <td className="px-6 py-4 text-gray-600 dark:text-gray-400 font-medium">
                                                 {rs.reservation_date ? format(new Date(rs.reservation_date), 'dd/MM/yyyy') : '-'}
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="font-semibold text-gray-800 dark:text-gray-200">
-                                                    {rs.customer_code} - {rs.customer_name}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-right font-bold text-gray-900 dark:text-white">
-                                                {rs.base_total_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })} {rs.quote_currency_code || 'THB'}
                                             </td>
                                             <td className="px-6 py-4 text-center">
                                                 <button 
@@ -147,7 +143,7 @@ export const ReservationSearchModal: React.FC<ReservationSearchModalProps> = Rea
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan={5} className="px-6 py-20 text-center items-center justify-center">
+                                        <td colSpan={3} className="px-6 py-20 text-center items-center justify-center">
                                             <div className="flex flex-col items-center text-gray-400 dark:text-gray-500">
                                                 <Search size={64} className="mb-4 opacity-20" />
                                                 <p className="text-xl font-bold">ไม่พบข้อมูลใบจอง</p>

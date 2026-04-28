@@ -32,11 +32,12 @@ export interface SalesOrderLineData {
 // ============================================================
 export interface SalesOrderFormData {
     so_id?: string;                                   // PK (uuid)
-    so_no: string;                                    // UNIQUE varchar(30)
+    so_no?: string;                                   // UNIQUE varchar(30)
     so_date: string;                                  // date
     customer_id: string;                              // FK→customer
     branch_id: string;                                // FK→org_branch
     reservation_id?: string;                          // FK→sale_reservation_header (nullable)
+    reservation_no?: string;                          // display only
     currency_code: string;                            // FK→currency default 'THB'
     payment_term_days: number;                        // int default 0
     onhold: 'Y' | 'N';                               // char(1) default 'N'
@@ -56,8 +57,6 @@ export interface SalesOrderFormData {
     job_id?: string;                                  // ID Job
     status_remark?: string;                           // เหตุผลการ cancel
     ship_date?: string;                               // datetime(8) วันที่กำหนดส่ง
-    cust_po_no?: string;                              // varchar(25) เลขที่ PO ของลูกค้า
-    cust_po_date?: string;                            // datetime(8) วันที่ PO ลูกค้า
     // Multicurrency (UI helper fields)
     isMulticurrency?: boolean;
     base_currency_code?: string;
