@@ -180,18 +180,6 @@ export function SalesOrderFormModal({
     // Form Submit
     // --------------------------------------------------------
     const onFormSubmit = async (data: SalesOrderFormValues) => {
-        const isConfirmed = await confirm({
-            title: isEdit ? 'ยืนยันการแก้ไข' : 'ยืนยันการสร้างใบสั่งขาย',
-            description: isEdit 
-                ? 'คุณแน่ใจหรือไม่ว่าต้องการบันทึกการแก้ไขใบสั่งขายนี้?' 
-                : 'คุณต้องการสร้างใบสั่งขายใหม่จากรายการนี้ใช่หรือไม่?',
-            variant: 'info',
-            confirmText: 'ตกลง',
-            cancelText: 'ยกเลิก'
-        });
-
-        if (!isConfirmed) return;
-
         setIsSubmitting(true);
         try {
             logger.debug('Submitting Sales Order:', data);
@@ -210,6 +198,22 @@ export function SalesOrderFormModal({
             toast('เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'error');
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const handleSaveClick = async () => {
+        const isConfirmed = await confirm({
+            title: isEdit ? 'ยืนยันการแก้ไข' : 'ยืนยันการสร้างใบสั่งขาย',
+            description: isEdit 
+                ? 'คุณแน่ใจหรือไม่ว่าต้องการบันทึกการแก้ไขใบสั่งขายนี้?' 
+                : 'คุณต้องการสร้างใบสั่งขายใหม่จากรายการนี้ใช่หรือไม่?',
+            variant: 'warning',
+            confirmText: 'ตกลง',
+            cancelText: 'ยกเลิก'
+        });
+
+        if (isConfirmed) {
+            handleSubmit(onFormSubmit)();
         }
     };
 
@@ -240,8 +244,8 @@ export function SalesOrderFormModal({
                 </button>
                 {!isViewOnly && (
                     <button
-                        type="submit"
-                        form="so-form"
+                        type="button"
+                        onClick={handleSaveClick}
                         disabled={isSubmitting}
                         className="h-10 px-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold shadow-sm transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50"
                     >
