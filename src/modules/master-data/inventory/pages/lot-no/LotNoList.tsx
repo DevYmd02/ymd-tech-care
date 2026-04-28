@@ -12,7 +12,6 @@ import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
 
-const STATUS_OPTIONS = [{ value: 'ALL', label: 'ทั้งหมด' }, { value: 'ACTIVE', label: 'ใช้งาน' }, { value: 'INACTIVE', label: 'ไม่ใช้งาน' }];
 
 export default function LotNoList() {
     const { filters, setFilters, handlePageChange, resetFilters } = useTableFilters({ customParamKeys: { search: 'lot_no' } });
@@ -24,7 +23,6 @@ export default function LotNoList() {
     const filterConfig: FilterFieldConfig<keyof typeof filters>[] = useMemo(() => [
         { name: 'search', label: 'รหัส Lot No', type: 'text', placeholder: 'กรอกรหัส' },
         { name: 'search2', label: 'ชื่อ Lot No', type: 'text', placeholder: 'กรอกชื่อ' },
-        { name: 'status', label: 'สถานะ', type: 'select', options: STATUS_OPTIONS },
     ], []);
 
     const fetchData = useCallback(async () => { setIsLoading(true); try { const response = await LotNoService.getAll(); setAllData(response.items); } finally { setIsLoading(false); } }, []);
@@ -32,7 +30,6 @@ export default function LotNoList() {
 
     const filteredData = useMemo(() => {
         let result = [...allData];
-        if (filters.status !== 'ALL') result = result.filter(item => filters.status === 'ACTIVE' ? item.is_active : !item.is_active);
         if (filters.search) result = result.filter(item => item.code.toLowerCase().includes(filters.search.toLowerCase()));
         if (filters.search2) result = result.filter(item => item.name_th.toLowerCase().includes(filters.search2.toLowerCase()));
         return result;
@@ -45,8 +42,7 @@ export default function LotNoList() {
         { id: 'sequence', header: 'ลำดับ', accessorFn: (_, index) => (filters.page - 1) * filters.limit + index + 1, size: 60 },
         { accessorKey: 'code', header: 'รหัส', cell: ({ getValue }) => <span className="font-medium text-blue-600">{getValue() as string}</span> },
         { accessorKey: 'name_th', header: 'ชื่อ (ไทย)' },
-        { accessorKey: 'name_en', header: 'ชื่อ (EN)', cell: ({ getValue }) => <span className="text-gray-600">{getValue() as string || '-'}</span> },
-        { accessorKey: 'is_active', header: 'สถานะ', cell: ({ getValue }) => <ActiveStatusBadge isActive={getValue() as boolean} />, size: 100 },
+        { accessorKey: 'is_active', header: 'สถานะ', cell: () => <ActiveStatusBadge isActive={true} />, size: 100 },
         { id: 'actions', header: 'จัดการ', size: 100, cell: ({ row }) => (<div className="flex items-center gap-2"><button onClick={() => { setEditingId(row.original.id); setIsModalOpen(true); }} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit2 size={18} /></button><button onClick={() => handleDelete(row.original.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={18} /></button></div>)},
     ], [filters.page, filters.limit, handleDelete]);
 

@@ -101,12 +101,12 @@ export default function SalesOrderApproveListPage() {
               setHistorySoNo(info.row.original.so_no || '');
               setIsHistoryOpen(true);
             }}
-            className="text-blue-600 dark:text-blue-400 font-semibold hover:underline cursor-pointer transition-all"
+            className="text-blue-600 dark:text-blue-400 font-semibold hover:underline cursor-pointer transition-all whitespace-nowrap"
           >
             {info.getValue() || '-'}
           </span>
         ),
-        size: 140,
+        size: 160,
         enableSorting: false,
       }),
       columnHelper.accessor('ao_no', {

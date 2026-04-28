@@ -1,5 +1,7 @@
+import api from '@core/api/api';
 import { logger } from '@utils/logger';
 import type { SalesOrderFormData } from '../types/sales-order.types';
+import type { ReservationHeader } from '@sales/reservation/services/reservation.service';
 
 export interface SalesOrderListParams {
     so_no?: string;
@@ -17,42 +19,402 @@ export interface SalesOrderHeader {
     so_no: string;              // เลขที่ SO
     so_date: string;            // วันที่ SO (so_date)
     customer_name: string;      // ชื่อลูกค้า (join)
+    customer_id: string;        // ID ลูกค้า
     customer_code: string;      // รหัสลูกค้า (join)
     status: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'CONFIRMED' | 'CLOSED' | 'CANCELLED';
     total_amount: number;       // total_amount
+    base_total_amount?: number; // base_total_amount
     currency_code: string;      // currency_code
     ship_date?: string;         // วันที่กำหนดส่ง
-    cust_po_no?: string;        // เลขที่ PO ลูกค้า
     remarks?: string;           // หมายเหตุ
     onhold: 'Y' | 'N';         // onhold
+    rawData?: Record<string, unknown>;
 }
 
 export const SalesOrderService = {
     /** ดึงรายการ Sales Order */
     getList: async (params: SalesOrderListParams = {}) => {
         logger.debug('Fetching sales orders with params:', params);
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        return { data: [] as SalesOrderHeader[], total: 0 };
+        try {
+            const response = await api.get<{ data: Record<string, unknown>[], total: number } | Record<string, unknown>[]>('/sale-order', { params });
+            const rawData = Array.isArray(response) ? response : response.data || [];
+            const total = Array.isArray(response) ? response.length : response.total || 0;
+
+            const mappedData = rawData.map((item) => {
+                const customerObj = (item.customer || {}) as Record<string, unknown>;
+                const sqHeader = (item.sq_header || item.sq || {}) as Record<string, unknown>;
+                const aqHeader = (item.aq_header || item.aq || {}) as Record<string, unknown>;
+                const reservation = (item.reservation || {}) as Record<string, unknown>;
+                
+                const customerName = String(item.customer_name || 
+                    customerObj.customer_name_th || customerObj.customer_name || customerObj.name ||
+                    sqHeader.customer_name || aqHeader.customer_name || reservation.customer_name || '');
+                
+                const customerCode = String(item.customer_code || 
+                    customerObj.customer_code || customerObj.code ||
+                    sqHeader.customer_code || aqHeader.customer_code || reservation.customer_code || '');
+
+                const totalVal = Number(item.total_amount || item.base_total_amount || item.net_amount || 0);
+
+                return {
+                    ...item,
+                    so_id: String(item.so_id || item.id || ''),
+                    so_no: String(item.so_no || ''),
+                    so_date: item.so_date ? String(item.so_date).split('T')[0] : '',
+                    customer_id: String(item.customer_id || customerObj.customer_id || sqHeader.customer_id || aqHeader.customer_id || ''),
+                    customer_name: customerName,
+                    customer_code: customerCode,
+                    total_amount: totalVal,
+                    base_total_amount: Number(item.base_total_amount || totalVal),
+                    currency_code: String(item.currency_code || item.base_currency_code || 'THB'),
+                    ship_date: item.ship_date ? String(item.ship_date).split('T')[0] : '',
+                    status: item.status || 'DRAFT',
+                    onhold: item.onhold || 'N',
+                    rawData: item,
+                } as SalesOrderHeader;
+            });
+
+            return { data: mappedData, total };
+        } catch (error) {
+            logger.error('Failed to fetch sales orders:', error);
+            return { data: [], total: 0 };
+        }
     },
 
     /** ดึงข้อมูล Sales Order รายตัว */
     getById: async (id: string): Promise<SalesOrderFormData | null> => {
         logger.debug('Fetching sales order:', id);
-        await new Promise((resolve) => setTimeout(resolve, 300));
-        return null;
+        try {
+            const response = await api.get<Record<string, unknown>>(`/sale-order/${id}`);
+            
+            if (response) {
+                // 🕵️ Deep Data Discovery: Handle nested .data structures
+                let r = response as Record<string, unknown>;
+                if (r['data'] && typeof r['data'] === 'object' && !Array.isArray(r['data'])) {
+                    r = r['data'] as Record<string, unknown>;
+                }
+                
+                logger.debug('Sales Order Raw Detail:', r);
+
+                // Date formatting (Convert ISO to YYYY-MM-DD for HTML date inputs)
+                if (r['so_date']) r['so_date'] = String(r['so_date']).split('T')[0];
+                if (r['ship_date']) r['ship_date'] = String(r['ship_date']).split('T')[0];
+                if (r['exchange_rate_date']) r['exchange_rate_date'] = String(r['exchange_rate_date']).split('T')[0];
+                if (r['ship_date_actual']) r['ship_date_actual'] = String(r['ship_date_actual']).split('T')[0];
+                
+                // Map lines (Robust fallback for various API names)
+                let rawLinesData = (
+                    r['sale_order_lines'] || 
+                    r['saleOrderLines'] || 
+                    r['saleReservationLines'] || 
+                    r['so_lines'] || 
+                    r['lines'] || 
+                    r['items'] ||
+                    r['sale_order_line'] ||
+                    r['saleOrderLine'] ||
+                    []
+                ) as unknown;
+
+                // 🕵️ Aggressive Discovery: Scan all keys for arrays if standard ones are missing
+                if (!Array.isArray(rawLinesData) || (rawLinesData as unknown[]).length === 0) {
+                    const potentialLinesKey = Object.keys(r).find(key => 
+                        Array.isArray(r[key]) && 
+                        (key.toLowerCase().includes('line') || key.toLowerCase().includes('item') || key.toLowerCase().includes('detail'))
+                    );
+                    if (potentialLinesKey) {
+                        rawLinesData = r[potentialLinesKey];
+                    }
+                }
+
+                const rawLines = (Array.isArray(rawLinesData) ? rawLinesData : []) as Record<string, unknown>[];
+                
+                r['lines'] = rawLines.map((l: Record<string, unknown>) => {
+                    const item = (l['item'] || l['item_header'] || l['product'] || {}) as Record<string, unknown>;
+                    const lot = (l['lot'] || l['lot_header'] || {}) as Record<string, unknown>;
+                    
+                    const itemId = String(l['item_id'] || item['item_id'] || item['id'] || '');
+                    const itemName = String(item['item_name'] || item['item_name_th'] || item['name'] || l['item_name'] || (itemId ? `[Item ID: ${itemId}]` : ''));
+
+                    return {
+                        ...l,
+                        so_line_id: String(l['so_line_id'] || l['id'] || l['line_id'] || ''),
+                        item_id: itemId,
+                        item_code: String(item['item_code'] || item['code'] || l['item_code'] || ''),
+                        item_name: itemName,
+                        uom_id: String(l['uom_id'] || item['uom_id'] || l['uom_header_id'] || ''),
+                        warehouse_id: String(l['warehouse_id'] || l['wh_id'] || ''),
+                        location_id: String(l['location_id'] || l['loc_id'] || ''),
+                        qty_ordered: Number(l['qty'] || l['qty_ordered'] || l['quantity'] || 0),
+                        unit_price: Number(l['unit_price'] || l['price'] || 0),
+                        line_discount: Number(l['discount_amount'] || l['line_discount'] || 0),
+                        line_discount_input: String(l['discount_expression'] || l['line_discount_input'] || '0'),
+                        line_total: Number(l['net_amount'] || l['line_total'] || l['amount'] || 0),
+                        lot_id: l['lot_id'] ? String(l['lot_id']) : undefined,
+                        lot_no: String(l['lot_no'] || lot['lot_no'] || ''),
+                    };
+                });
+
+                // Map header fields (Capture raw IDs first for enrichment)
+                const customerObj = (r['customer'] || r['customer_header'] || {}) as Record<string, unknown>;
+                const reservationObj = (r['reservation'] || r['reservation_header'] || r['res_header'] || {}) as Record<string, unknown>;
+                
+                const rawEmpId = r['emp_sale_id'] || r['sale_id'] || r['employee_id'] || r['sale_employee_id'];
+                const rawResId = r['reservation_id'] || r['reservation_header_id'] || r['res_id'];
+                const rawJobId = r['job_id'] || r['project_id'] || r['project_header_id'] || r['job_header_id'];
+
+                r['customer_id'] = String(r['customer_id'] || customerObj['customer_id'] || '');
+                r['customer_name'] = String(r['customer_name'] || customerObj['customer_name_th'] || customerObj['customer_name'] || customerObj['name'] || '');
+                r['customer_code'] = String(r['customer_code'] || customerObj['customer_code'] || customerObj['code'] || '');
+
+                r['branch_id'] = String(r['branch_id'] || '');
+                r['emp_sale_id'] = rawEmpId ? String(rawEmpId) : '';
+                r['emp_dept_id'] = String(r['emp_dept_id'] || r['dept_id'] || r['department_id'] || '');
+                r['emp_area_id'] = String(r['emp_area_id'] || r['sale_area_id'] || r['area_id'] || '');
+                
+                r['reservation_id'] = rawResId ? String(rawResId) : '';
+                r['reservation_no'] = String(r['reservation_no'] || reservationObj['reservation_no'] || reservationObj['code'] || '');
+
+                r['job_id'] = rawJobId ? String(rawJobId) : '';
+                
+                r['sub_total'] = Number(r['sub_total'] || r['base_sub_total'] || r['base_total_amount'] || 0);
+                r['discount_amount'] = Number(r['discount_amount'] || 0);
+                r['discount_input'] = String(r['discount_expression'] || r['discount_input'] || '0');
+                r['vat_amount'] = Number(r['vat_amount'] || 0);
+                r['total_amount'] = Number(r['total_amount'] || r['quote_total_amount'] || r['base_total_amount'] || 0);
+                // Multi-currency mapping (Aggressive Default to true)
+                const apiIsMulticurrency = r['is_multicurrency'];
+                // Default to true unless explicitly disabled (N, false, or 0)
+                r['isMulticurrency'] = !(apiIsMulticurrency === 'N' || apiIsMulticurrency === false || apiIsMulticurrency === 0 || apiIsMulticurrency === 'n');
+
+                // Override if currency is definitely not THB
+                if (!!r['base_currency_code'] && r['base_currency_code'] !== 'THB') {
+                    r['isMulticurrency'] = true;
+                }
+
+                // 🔍 Enrichment: Fetch extra names if missing from primary response
+                // Fallback from reservation first
+                if (!r['emp_sale_name']) {
+                    r['emp_sale_name'] = String(reservationObj['emp_sale_name'] || reservationObj['emp_name'] || '');
+                }
+
+                if (rawEmpId && !r['emp_sale_name']) {
+                    try {
+                        const empRes = await api.get<Record<string, unknown>>(`/employees/${rawEmpId}`);
+                        const empData = empRes as Record<string, unknown>;
+                        const emp = (empData['data'] as Record<string, unknown>) || empData;
+                        if (emp) {
+                            r['emp_sale_name'] = String(emp['employee_fullname'] || emp['employee_name'] || 
+                                `${emp['employee_firstname_th'] || ''} ${emp['employee_lastname_th'] || ''}`.trim());
+                        }
+                    } catch (e) {
+                        logger.warn(`Failed to enrich employee name for ID ${rawEmpId}`, e);
+                    }
+                }
+
+                if (rawResId && (!r['reservation_no'] || r['reservation_no'] === String(rawResId))) {
+                    try {
+                        const resRes = await api.get<Record<string, unknown>>(`/sale-reservation/${rawResId}`);
+                        const resData = resRes as Record<string, unknown>;
+                        const res = (resData['data'] as Record<string, unknown>) || resData;
+                        if (res) {
+                            r['reservation_no'] = String(res['reservation_no'] || res['code'] || '');
+                        }
+                    } catch (e) {
+                        logger.warn(`Failed to enrich reservation number for ID ${rawResId}`, e);
+                    }
+                }
+            }
+            return response as unknown as SalesOrderFormData;
+        } catch (error) {
+            logger.error(`Failed to fetch sales order ${id}:`, error);
+            return null;
+        }
     },
 
     /** สร้าง Sales Order ใหม่ */
     create: async (data: SalesOrderFormData) => {
-        logger.debug('Creating sales order:', data);
-        await new Promise((resolve) => setTimeout(resolve, 800));
-        return { success: true };
+        const payload = SalesOrderService.sanitizeData(data, false);
+        logger.info('🚀 [SalesOrderService] CREATE PAYLOAD:', payload);
+        
+        try {
+            const response = await api.post('/sale-order', payload);
+            return { success: true, data: response };
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { message?: string | string[] } }; message: string };
+            const errorData = err.response?.data;
+            
+            if (errorData && Array.isArray(errorData.message)) {
+                errorData.message.forEach(m => logger.error('Validation Error:', m));
+            } else {
+                logger.error('Failed to create sales order:', errorData || err.message);
+            }
+            throw error;
+        }
     },
 
-    /** แก้ไข Sales Order */
-    update: async (id: string, data: SalesOrderFormData) => {
-        logger.debug('Updating sales order:', id, data);
-        await new Promise((resolve) => setTimeout(resolve, 800));
-        return { success: true };
+    /** อัปเดต Sales Order */
+    update: async (id: string, data: Partial<SalesOrderFormData>) => {
+        const payload = SalesOrderService.sanitizeData(data, true);
+        logger.info(`🚀 [SalesOrderService] UPDATE PAYLOAD for ${id}:`, payload);
+        
+        try {
+            const response = await api.patch(`/sale-order/${id}`, payload);
+            return { success: true, data: response };
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { message?: string | string[] } }; message: string };
+            const errorData = err.response?.data;
+            
+            if (errorData && Array.isArray(errorData.message)) {
+                errorData.message.forEach(m => logger.error('Validation Error:', m));
+            } else {
+                logger.error(`Failed to update sales order ${id}:`, errorData || err.message);
+            }
+            throw error;
+        }
+    },
+
+    /** ลบ Sales Order */
+    delete: async (id: string) => {
+        logger.debug('Deleting sales order:', id);
+        try {
+            await api.delete(`/sale-order/${id}`);
+            return { success: true };
+        } catch (error) {
+            logger.error(`Failed to delete sales order ${id}:`, error);
+            throw error;
+        }
+    },
+
+    /** Helper to clean data before sending to API */
+    sanitizeData: (data: SalesOrderFormData | Partial<SalesOrderFormData>, isUpdate = false) => {
+        const raw = { ...data } as Record<string, unknown>;
+        
+        const toISOString = (dateInput?: unknown) => {
+            if (!dateInput || dateInput === '') return undefined;
+            try {
+                const date = new Date(dateInput as string);
+                if (isNaN(date.getTime())) return undefined;
+                return date.toISOString();
+            } catch {
+                return undefined;
+            }
+        };
+
+        const isValidId = (id: unknown): boolean => {
+            if (id === null || id === undefined || id === '' || id === 0) return false;
+            const num = Number(id);
+            return !isNaN(num) && num > 0;
+        };
+
+        // 🛡️ BACKEND VALIDATION FIX: 
+        // Based on console errors, the backend for /sale-order expects:
+        // 1. Omission of calculated fields (total_amount, etc.)
+        // 2. exchange_rate and exchange_rate_date are mandatory
+        // 3. Lines must be sent as 'saleReservationLines' (likely a backend bug but required)
+        // 4. emp_area_id must be 'sale_area_id'
+        const payload: Record<string, unknown> = {
+            so_date: toISOString(raw['so_date']) || new Date().toISOString(),
+            status: raw['status'] || 'DRAFT',
+            status_remark: raw['status_remark'] || '',
+            // currency_code: OMITTED (Backend error: should not exist)
+            base_currency_code: raw['base_currency_code'] || raw['currency_code'] || 'THB',
+            quote_currency_code: raw['quote_currency_code'] || raw['currency_code'] || 'THB',
+            exchange_rate: Number(raw['exchange_rate'] || 1),
+            exchange_rate_date: toISOString(raw['exchange_rate_date'] || raw['so_date']) || new Date().toISOString(),
+            payment_term_days: Number(raw['payment_term_days'] || 0),
+            ship_days: Number(raw['ship_days'] || 0),
+            onhold: raw['onhold'] === true || raw['onhold'] === 'Y' ? 'Y' : 'N',
+            remarks: raw['remarks'] || '',
+            discount_expression: raw['discount_input'] || raw['discount_expression'] || '0',
+            // Financial fields OMITTED as per backend "should not exist" error
+        };
+
+        // Add Optional IDs only if valid
+        if (isValidId(raw['customer_id'])) payload['customer_id'] = Number(raw['customer_id']);
+        if (isValidId(raw['branch_id'])) payload['branch_id'] = Number(raw['branch_id']);
+        if (isValidId(raw['tax_code_id'])) payload['tax_code_id'] = Number(raw['tax_code_id']);
+        if (isValidId(raw['emp_sale_id'])) payload['emp_sale_id'] = Number(raw['emp_sale_id']);
+        if (isValidId(raw['emp_dept_id'])) payload['emp_dept_id'] = Number(raw['emp_dept_id']);
+        if (isValidId(raw['emp_area_id'] || raw['sale_area_id'])) {
+            payload['sale_area_id'] = Number(raw['emp_area_id'] || raw['sale_area_id']);
+        }
+        if (isValidId(raw['reservation_id'])) payload['reservation_id'] = Number(raw['reservation_id']);
+        
+        const project_id = raw['job_id'] || raw['project_id'];
+        if (isValidId(project_id)) payload['project_id'] = Number(project_id);
+
+        if (raw.lines && Array.isArray(raw.lines)) {
+            // 🚨 CRITICAL: Backend error says 'saleOrderLines' should not exist 
+            // but 'saleReservationLines' is mandatory.
+            payload.saleReservationLines = raw.lines.map((line: Record<string, unknown>) => {
+                const l: Record<string, unknown> = {
+                    so_id: 0, // 🧪 Workaround: Backend Error 2: so_id must be a number
+                    item_id: Number(line['item_id']),
+                    qty: Number(line['qty_ordered'] || line['qty'] || 0),
+                    uom_id: Number(line['uom_id']),
+                    unit_price: Number(line['unit_price'] || 0),
+                    net_amount: Number(line['line_total'] || 0), // 🧪 Backend Error 4: must be a number
+                    discount_expression: line['line_discount_input'] || line['discount_expression'] || '0',
+                    note: line['note'] || '',
+                };
+
+                if (isValidId(line['warehouse_id'])) l['warehouse_id'] = Number(line['warehouse_id']);
+                if (isValidId(line['location_id'])) l['location_id'] = Number(line['location_id']);
+                if (isValidId(line['lot_id'])) l['lot_id'] = Number(line['lot_id']);
+                if (isValidId(line['reservation_line_id'])) l['reservation_line_id'] = Number(line['reservation_line_id']);
+
+                if (isUpdate && line.so_line_id && !isNaN(Number(line.so_line_id))) {
+                    l.so_line_id = Number(line.so_line_id);
+                }
+                return l;
+            });
+        }
+
+        return payload;
+    },
+
+    /** ดึงรายการใบจองที่สามารถนำมาสร้าง Sales Order ได้ */
+    getAvailableRS: async (): Promise<ReservationHeader[]> => {
+        try {
+            const response = await api.get<unknown>('/sale-order/available-rs');
+            const data = (Array.isArray(response) ? response : (response as Record<string, unknown>)?.data || []) as Record<string, unknown>[];
+            
+            return data.map((item) => {
+                const sqHeader = (item.sq_header || item.sq || {}) as Record<string, unknown>;
+                const aqHeader = (item.aq_header || item.aq || {}) as Record<string, unknown>;
+                const customerObj = (item.customer || sqHeader.customer || aqHeader.customer || {}) as Record<string, unknown>;
+                
+                const customerName = String(item.customer_name || 
+                                   sqHeader.customer_name || 
+                                   aqHeader.customer_name || 
+                                   customerObj.customer_name_th || 
+                                   customerObj.customer_name || 
+                                   customerObj.name || 
+                                   item.customer_name_th || '');
+                                   
+                const customerCode = String(item.customer_code || 
+                                   sqHeader.customer_code || 
+                                   aqHeader.customer_code || 
+                                   customerObj.customer_code || 
+                                   customerObj.code || 
+                                   item.customer_code || '');
+ 
+                return {
+                    ...item,
+                    reservation_id: String(item.reservation_id || ''),
+                    reservation_no: String(item.reservation_no || ''),
+                    reservation_date: String(item.reservation_date || ''),
+                    customer_id: String(item.customer_id || sqHeader.customer_id || aqHeader.customer_id || ''),
+                    customer_name: customerName,
+                    customer_code: customerCode,
+                    base_total_amount: Number(item.base_total_amount || item.total_amount || item.net_amount || sqHeader.total_amount || aqHeader.total_amount || 0),
+                    quote_currency_code: String(item.quote_currency_code || item.currency_code || sqHeader.currency_code || 'THB'),
+                    status: String(item.status || '')
+                } as ReservationHeader;
+            });
+        } catch (error) {
+            logger.error('Failed to fetch available reservations:', error);
+            return [];
+        }
     },
 };

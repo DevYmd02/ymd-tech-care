@@ -11,8 +11,8 @@ import type { CustomerMaster } from '@customer/customer-master/types/customer-ty
 import type { ItemListItem } from '@inventory/types/product-types';
 import type { Currency, UnitListItem } from '@master-data/types/master-data-types';
 import type { TaxCode } from '@master-data/tax/types/tax-types';
-import type { ReservationHeader } from '@sales/reservation/services/reservation.service';
-import { ReservationService } from '@sales/reservation/services/reservation.service';
+import { ReservationService, type ReservationHeader } from '@sales/reservation/services/reservation.service';
+import { OrgEmployeeService } from '@master-data/company/services/employee.service';
 import { 
     calculateDiscountAmount, 
     calculateVatAmount, 
@@ -22,6 +22,7 @@ import {
 
 interface UseSalesOrderFormProps {
     isOpen: boolean;
+    id?: string;
     initialData?: Partial<SalesOrderFormValues>;
     currencies: Currency[];
     taxCodes: TaxCode[];
@@ -30,6 +31,7 @@ interface UseSalesOrderFormProps {
 
 export function useSalesOrderForm({
     isOpen,
+    id,
     initialData,
     currencies,
     taxCodes,
@@ -52,17 +54,25 @@ export function useSalesOrderForm({
 
     // Reset form when modal opens or initialData changes
     useEffect(() => {
-        if (isOpen && !isInitializedRef.current) {
-            reset({
-                ...getSalesOrderDefaultValues(),
-                ...(initialData || {}),
-            });
-            isInitializedRef.current = true;
-        } else if (!isOpen) {
-            // Reset initialized flag when modal is closed
+        if (!isOpen) {
             isInitializedRef.current = false;
+            return;
         }
-    }, [isOpen, initialData, reset]);
+
+        const isEditing = !!id;
+        const hasData = initialData && Object.keys(initialData).length > 0;
+
+        // Reset if not initialized AND (not editing OR data has arrived)
+        if (!isInitializedRef.current) {
+            if (!isEditing || hasData) {
+                reset({
+                    ...getSalesOrderDefaultValues(),
+                    ...(initialData || {}),
+                });
+                isInitializedRef.current = true;
+            }
+        }
+    }, [isOpen, initialData, reset, id]);
 
     // --------------------------------------------------------
     // Currency & Exchange Rate Logic
@@ -92,9 +102,25 @@ export function useSalesOrderForm({
     // Totals Calculation
     // --------------------------------------------------------
     const totals = useMemo(() => {
-        const subTotal = (formData.lines || []).reduce((sum, line) => sum + (line.line_total || 0), 0);
+        const lines = formData.lines || [];
+        const isExisting = !!id;
+        const hasLines = lines.length > 0;
+
+        // 🛑 Fix Loop: Use initialData (stable) for fallback, NOT formData (which we update)
+        if (isExisting && !hasLines && initialData) {
+            return {
+                subTotal: Number((initialData as Record<string, unknown>).sub_total || 0),
+                discountAmount: Number((initialData as Record<string, unknown>).discount_amount || 0),
+                vatAmount: Number((initialData as Record<string, unknown>).vat_amount || 0),
+                totalAmount: Number((initialData as Record<string, unknown>).total_amount || 0),
+                taxRate: 0, 
+                isStatic: true 
+            };
+        }
+
+        const subTotal = lines.reduce((sum, line) => sum + (line.line_total || 0), 0);
         
-        const calculatedDiscount = calculateDiscountAmount(subTotal, formData.discount_input || 0);
+        const calculatedDiscount = calculateDiscountAmount(subTotal, formData.discount_input || '0');
 
         const selectedTaxCode = taxCodes.find(
             (t) => String(t.tax_code_id) === String(formData.tax_code_id)
@@ -109,23 +135,26 @@ export function useSalesOrderForm({
             vatAmount,
             totalAmount,
             taxRate,
+            isStatic: false
         };
-    }, [formData.lines, formData.discount_input, formData.tax_code_id, taxCodes]);
+    }, [formData.lines, formData.discount_input, formData.tax_code_id, taxCodes, id, initialData]);
 
-    // Update form values when totals change
+    // Update form values when totals change (ONLY if calculated from lines)
     useEffect(() => {
+        if (totals.isStatic) return;
+
         const currentVals = getValues();
         
-        if (currentVals.sub_total !== totals.subTotal) {
+        if (Number(currentVals.sub_total) !== totals.subTotal) {
             setValue('sub_total', totals.subTotal, { shouldDirty: false });
         }
-        if (currentVals.discount_amount !== totals.discountAmount) {
+        if (Number(currentVals.discount_amount) !== totals.discountAmount) {
             setValue('discount_amount', totals.discountAmount, { shouldDirty: false });
         }
-        if (currentVals.vat_amount !== totals.vatAmount) {
+        if (Number(currentVals.vat_amount) !== totals.vatAmount) {
             setValue('vat_amount', totals.vatAmount, { shouldDirty: false });
         }
-        if (currentVals.total_amount !== totals.totalAmount) {
+        if (Number(currentVals.total_amount) !== totals.totalAmount) {
             setValue('total_amount', totals.totalAmount, { shouldDirty: false });
         }
     }, [totals, setValue, getValues]);
@@ -236,7 +265,8 @@ export function useSalesOrderForm({
     };
 
     const handleSelectReservation = async (reservation: ReservationHeader) => {
-        setValue('reservation_id', String(reservation.reservation_no), { shouldValidate: true, shouldDirty: true });
+        setValue('reservation_id', String(reservation.reservation_id), { shouldValidate: true, shouldDirty: true });
+        setValue('reservation_no', String(reservation.reservation_no || ''), { shouldValidate: true, shouldDirty: true });
         if (reservation.customer_id) {
             setValue('customer_id', String(reservation.customer_id), { shouldValidate: true, shouldDirty: true });
         }
@@ -244,10 +274,61 @@ export function useSalesOrderForm({
         try {
             const rsData = await ReservationService.getById(String(reservation.reservation_id));
             if (rsData) {
-                // Populate Header Fields
-                if (rsData.remarks) setValue('remarks', rsData.remarks, { shouldDirty: true });
-                if (rsData.currency_code) setValue('quote_currency_code', rsData.currency_code, { shouldDirty: true });
-                if (rsData.discount_input) setValue('discount_input', rsData.discount_input, { shouldDirty: true });
+                // Populate Header Fields (Robust Mapping)
+                const headerMap: Record<string, keyof SalesOrderFormValues> = {
+                    customer_id: 'customer_id',
+                    branch_id: 'branch_id',
+                    emp_dept_id: 'emp_dept_id',
+                    emp_sale_id: 'emp_sale_id',
+                    emp_sale_name: 'emp_sale_name',
+                    sale_area_id: 'emp_area_id',
+                    job_id: 'job_id',
+                    tax_code_id: 'tax_code_id',
+                    payment_term_days: 'payment_term_days',
+                    ship_days: 'ship_days',
+                    remarks: 'remarks',
+                    discount_input: 'discount_input',
+                    currency_code: 'currency_code'
+                };
+
+                const rs = rsData as Record<string, unknown>;
+                Object.entries(headerMap).forEach(([rsKey, soKey]) => {
+                    const val = rs[rsKey];
+                    if (val !== undefined && val !== null && val !== '') {
+                        if (['tax_code_id', 'payment_term_days', 'ship_days', 'exchange_rate'].includes(soKey)) {
+                            setValue(soKey as keyof SalesOrderFormValues, Number(val) as never, { shouldValidate: true, shouldDirty: true });
+                        } else {
+                            setValue(soKey as keyof SalesOrderFormValues, String(val) as never, { shouldValidate: true, shouldDirty: true });
+                        }
+                    }
+                });
+                
+                // Multicurrency Mapping
+                if (rsData.isMulticurrency !== undefined) {
+                    setValue('isMulticurrency', !!rsData.isMulticurrency, { shouldDirty: true });
+                    if (rsData.isMulticurrency) {
+                        if (rsData.base_currency_code) setValue('base_currency_code', rsData.base_currency_code, { shouldDirty: true });
+                        if (rsData.quote_currency_code) setValue('quote_currency_code', rsData.quote_currency_code, { shouldDirty: true });
+                        if (rsData.exchange_rate) setValue('exchange_rate', Number(rsData.exchange_rate), { shouldDirty: true });
+                        if (rsData.exchange_rate_date) setValue('exchange_rate_date', rsData.exchange_rate_date, { shouldDirty: true });
+                    }
+                }
+
+                // Special Case: If emp_sale_id is present but emp_sale_name is missing, try to fetch it
+                const empId = rsData.emp_sale_id || rs.emp_id;
+                let empName = String(rs.emp_sale_name || rs.emp_name || '');
+                
+                if (empId && !empName) {
+                    try {
+                        const empRes = await OrgEmployeeService.get(Number(empId));
+                        // Handle potential API wrapper { data: ... } or direct response
+                        const emp = (empRes as unknown as Record<string, unknown>)?.data as Record<string, unknown> || empRes;
+                        if (emp) {
+                            empName = String(emp.employee_fullname || emp.employee_name || `${emp.first_name || ''} ${emp.last_name || ''}`.trim());
+                            if (empName) setValue('emp_sale_name', empName, { shouldDirty: true });
+                        }
+                    } catch { /* ignore */ }
+                }
 
                 // Populate Lines (Override existing lines)
                 if (rsData.lines && rsData.lines.length > 0) {
@@ -255,7 +336,7 @@ export function useSalesOrderForm({
                         item_id: String(line.item_id || ''),
                         item_code: line.item_code || '',
                         item_name: line.item_name || '',
-                        qty_ordered: Number(line.qty_reserved || 0), // Use reserved quantity as ordered quantity
+                        qty_ordered: Number(line.qty_reserved || 0),
                         warehouse_id: String(line.warehouse_id || ''),
                         location_id: String(line.location_id || ''),
                         uom_id: String(line.uom_id || ''),
@@ -265,7 +346,8 @@ export function useSalesOrderForm({
                         line_discount: Number(line.line_discount || 0),
                         line_total: Number(line.line_total || 0),
                         note: line.note || '',
-                        tax_code_id: Number(rsData.tax_code_id || watchHeaderTaxCodeId || 0),
+                        tax_code_id: Number(rsData.tax_code_id || getValues('tax_code_id') || 0),
+                        reservation_line_id: Number(line.id || 0),
                     }));
                     
                     setValue('lines', mappedLines, { shouldValidate: true, shouldDirty: true });

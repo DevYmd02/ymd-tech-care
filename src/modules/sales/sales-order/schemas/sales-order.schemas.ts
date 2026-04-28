@@ -21,6 +21,7 @@ export const SalesOrderLineSchema = z.object({
     line_total: z.coerce.number().min(0, 'ยอดรวมต้องไม่ติดลบ (ตรวจสอบส่วนลด)').max(9999999999999, 'ค่าที่ระบุมีจำนวนมากเกินไป').default(0),
     note: z.string().optional(),
     tax_code_id: z.coerce.number().optional(),
+    reservation_line_id: z.coerce.number().optional(),
 });
 
 /**
@@ -28,11 +29,12 @@ export const SalesOrderLineSchema = z.object({
  */
 export const SalesOrderFormSchema = z.object({
     so_id: z.string().optional(),
-    so_no: z.string().min(1, 'กรุณาระบุเลขที่ใบสั่งขาย'),
+    so_no: z.string().optional(),
     so_date: z.string().min(1, 'กรุณาระบุวันที่สั่งขาย'),
     customer_id: z.string().min(1, 'กรุณาเลือกลูกค้า'),
     branch_id: z.string().min(1, 'กรุณาเลือกสาขา'),
     reservation_id: z.string().optional(),
+    reservation_no: z.string().optional(),
     currency_code: z.string().min(1, 'กรุณาระบุสกุลเงิน'),
     isMulticurrency: z.boolean().default(false),
     base_currency_code: z.string().optional(),
@@ -57,8 +59,6 @@ export const SalesOrderFormSchema = z.object({
     job_id: z.string().optional(),
     status_remark: z.string().optional(),
     ship_date: z.string().optional(),
-    cust_po_no: z.string().optional(),
-    cust_po_date: z.string().optional(),
     lines: z.array(SalesOrderLineSchema).min(1, 'กรุณาเพิ่มรายการอย่างน้อย 1 รายการ'),
 });
 

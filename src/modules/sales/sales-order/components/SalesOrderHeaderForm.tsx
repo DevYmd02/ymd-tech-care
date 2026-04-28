@@ -5,7 +5,7 @@
  */
 
 import { ShoppingCart, Search, User } from 'lucide-react';
-import { useFormContext, Controller } from 'react-hook-form';
+import { useFormContext, Controller, type FieldErrors } from 'react-hook-form';
 import { MulticurrencyWrapper } from '@components/forms/MulticurrencyWrapper';
 import { CustomDateInput, StatusCheckbox } from '@ui';
 import type { SalesOrderFormData } from '../types/sales-order.types';
@@ -33,6 +33,20 @@ interface SalesOrderHeaderFormProps {
     onSearchReservation?: () => void;
 }
 
+/**
+ * Helper component for error messages
+ */
+const ErrorMsg = ({ errors, name }: { errors: FieldErrors<SalesOrderFormData>; name: keyof SalesOrderFormData }) => {
+    const error = errors[name];
+    if (!error) return null;
+    return (
+        <p className="text-[10px] text-red-500 mt-1 font-medium flex items-center gap-1">
+            <span className="w-1 h-1 bg-red-500 rounded-full"></span>
+            {error.message as string}
+        </p>
+    );
+};
+
 export function SalesOrderHeaderForm({
     branches,
     currencies,
@@ -46,7 +60,7 @@ export function SalesOrderHeaderForm({
     onSearchEmployee,
     onSearchReservation,
 }: SalesOrderHeaderFormProps) {
-    const { register, watch, setValue, control } = useFormContext<SalesOrderFormData>();
+    const { register, watch, setValue, control, formState: { errors } } = useFormContext<SalesOrderFormData>();
 
     const formData = watch();
     const isLocked = readOnly;
@@ -60,6 +74,21 @@ export function SalesOrderHeaderForm({
         'block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider';
     const cardSection =
         'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-4 bg-indigo-50/10 dark:bg-indigo-900/5 p-6 rounded-2xl border border-indigo-100 dark:border-indigo-900/20';
+
+    /**
+     * Helper to get conditional classes based on error state
+     */
+    const getFieldClass = (fieldName: keyof SalesOrderFormData, baseClass: string) => {
+        const hasError = !!errors[fieldName];
+        if (!hasError) return baseClass;
+
+        // Replace border and ring colors with red variants
+        return baseClass
+            .replace('border-gray-300', 'border-red-500')
+            .replace('dark:border-gray-700', 'dark:border-red-500')
+            .replace('focus:ring-indigo-500', 'focus:ring-red-500')
+            .replace('border-indigo-100', 'border-red-500'); // For some specific cases
+    };
 
     // Find selected customer name for display
     const selectedCustomer = customers.find(
@@ -91,7 +120,7 @@ export function SalesOrderHeaderForm({
                 {/* Row 1: SO No / Date / Branch / Status */}
                 <div className="space-y-1">
                     <label className={labelClass}>
-                        เลขที่ใบสั่งขาย (so_no) <span className="text-red-500">*</span>
+                        เลขที่ใบสั่งขาย (so_no)
                     </label>
                     <input
                         {...register('so_no')}
@@ -113,21 +142,27 @@ export function SalesOrderHeaderForm({
                                 value={field.value || ''}
                                 onChange={field.onChange}
                                 disabled={isLocked}
-                                className={inputClass}
+                                className={getFieldClass('so_date', inputClass)}
                             />
                         )}
                     />
+                    <ErrorMsg errors={errors} name="so_date" />
                 </div>
 
                 <div className="space-y-1">
-                    <label className={labelClass}>อ้างอิงใบจอง (reservation_id)</label>
+                    <label className={labelClass}>อ้างอิงใบจอง</label>
                     <div className="flex gap-2">
-                        <input
-                            {...register('reservation_id')}
-                            disabled={isLocked}
-                            className={inputClass}
-                            placeholder="RS-xxxx (ถ้ามี)"
-                        />
+                        <div className="relative flex-1 group">
+                            <input
+                                {...register('reservation_no')}
+                                readOnly
+                                disabled={isLocked}
+                                className={`${inputClass} pl-9 bg-gray-50/50 italic cursor-not-allowed group-hover:border-indigo-400 transition-colors`}
+                                placeholder="RS-xxxx (ถ้ามี)"
+                            />
+                            <ShoppingCart size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        </div>
+                        <input type="hidden" {...register('reservation_id')} />
                         <button
                             type="button"
                             disabled={isLocked}
@@ -143,7 +178,7 @@ export function SalesOrderHeaderForm({
                     <label className={labelClass}>
                         สาขา (branch_id) <span className="text-red-500">*</span>
                     </label>
-                    <select {...register('branch_id')} disabled={isLocked} className={selectClass}>
+                    <select {...register('branch_id')} disabled={isLocked} className={getFieldClass('branch_id', selectClass)}>
                         <option value="">-- เลือกสาขา --</option>
                         {branches.map((branch) => (
                             <option key={branch.branch_id} value={String(branch.branch_id || '')}>
@@ -151,6 +186,7 @@ export function SalesOrderHeaderForm({
                             </option>
                         ))}
                     </select>
+                    <ErrorMsg errors={errors} name="branch_id" />
                 </div>
 
                 {/* Row 2: Customer / Terms / Ship */}
@@ -164,7 +200,7 @@ export function SalesOrderHeaderForm({
                                 value={customerDisplay}
                                 readOnly
                                 disabled={isLocked}
-                                className={`${inputClass} pl-9 bg-gray-50/50 italic cursor-not-allowed group-hover:border-indigo-400 transition-colors`}
+                                className={`${getFieldClass('customer_id', inputClass)} pl-9 bg-gray-50/50 italic cursor-not-allowed group-hover:border-indigo-400 transition-colors`}
                                 placeholder="-- คลิกปุ่มแว่นขยายเพื่อเลือกลูกค้า --"
                             />
                             <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -173,11 +209,12 @@ export function SalesOrderHeaderForm({
                             type="button"
                             disabled={isLocked}
                             onClick={() => onSearchCustomer?.()}
-                            className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center shrink-0 w-9 h-9"
+                            className={`p-2 ${errors.customer_id ? 'bg-red-500 hover:bg-red-600' : 'bg-indigo-600 hover:bg-indigo-700'} text-white rounded-lg transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center shrink-0 w-9 h-9`}
                         >
                             <Search size={18} />
                         </button>
                     </div>
+                    <ErrorMsg errors={errors} name="customer_id" />
                 </div>
 
                 <div className="space-y-1">
@@ -218,40 +255,14 @@ export function SalesOrderHeaderForm({
                     />
                 </div>
 
-                {/* Row 4: Customer PO */}
-                <div className="space-y-1">
-                    <label className={labelClass}>เลขที่ PO ลูกค้า (cust_po_no)</label>
-                    <input
-                        {...register('cust_po_no')}
-                        disabled={isLocked}
-                        className={inputClass}
-                        placeholder="PO-xxxx"
-                    />
-                </div>
-
-                <div className="space-y-1">
-                    <label className={labelClass}>วันที่ PO ลูกค้า (cust_po_date)</label>
-                    <Controller
-                        name="cust_po_date"
-                        control={control}
-                        render={({ field }) => (
-                            <CustomDateInput
-                                value={field.value || ''}
-                                onChange={field.onChange}
-                                disabled={isLocked}
-                                className={inputClass}
-                            />
-                        )}
-                    />
-                </div>
 
                 {/* Row 5: Org / Sales */}
                 <div className="space-y-1">
-                    <label className={labelClass}>แผนกขาย (emp_dept_id)</label>
+                    <label className={labelClass}>แผนกขาย (emp_dept_id) <span className="text-red-500">*</span></label>
                     <select
                         {...register('emp_dept_id')}
                         disabled={isLocked}
-                        className={selectClass}
+                        className={getFieldClass('emp_dept_id', selectClass)}
                     >
                         <option value="">-- เลือกแผนก --</option>
                         {departments.map((dept) => (
@@ -263,6 +274,7 @@ export function SalesOrderHeaderForm({
                             </option>
                         ))}
                     </select>
+                    <ErrorMsg errors={errors} name="emp_dept_id" />
                 </div>
 
                 <div className="space-y-1">

@@ -18,7 +18,9 @@ import { TaxCodeService } from '@master-data/tax/services/tax-code.service';
 import { WarehouseService } from '@inventory/services/warehouse.service';
 import { LocationService } from '@inventory/services/inventory-master.service';
 import { useSalesOrderForm } from '../hooks';
+import { SalesOrderService } from '../services/sales-order.service';
 import type { SalesOrderFormValues } from '../schemas/sales-order.schemas';
+import type { SalesOrderFormData } from '../types/sales-order.types';
 import { SalesOrderHeaderForm } from './SalesOrderHeaderForm';
 import { SalesOrderLineTable } from './SalesOrderLineTable';
 import { SalesOrderSummary } from './SalesOrderSummary';
@@ -32,6 +34,7 @@ import type { IEmployee } from '@master-data/company/types/employee-types';
 import { WarehouseSearchModal } from './WarehouseSearchModal';
 import { LocationSearchModal } from './LocationSearchModal';
 import { LotSearchModal } from './LotSearchModal';
+import { useConfirmation } from '@hooks/useConfirmation';
 
 // ============================================================
 // Props
@@ -40,6 +43,7 @@ interface SalesOrderFormModalProps {
     isOpen: boolean;
     onClose: () => void;
     id?: string;
+    isViewOnly?: boolean;
     initialData?: Partial<SalesOrderFormValues>;
     onSuccess?: () => void;
 }
@@ -54,6 +58,7 @@ export function SalesOrderFormModal({
     isOpen,
     onClose,
     id,
+    isViewOnly = false,
     initialData,
     onSuccess,
 }: SalesOrderFormModalProps) {
@@ -134,6 +139,13 @@ export function SalesOrderFormModal({
     });
     const locations = locationResponse?.items || [];
 
+    // 💡 Load Sales Order Detail when editing
+    const { data: soDetail, isFetching: isFetchingDetail } = useQuery({
+        queryKey: ['sales-order', id],
+        queryFn: () => SalesOrderService.getById(id!),
+        enabled: isOpen && !!id,
+    });
+
     // --------------------------------------------------------
     // Hooks
     // --------------------------------------------------------
@@ -149,7 +161,8 @@ export function SalesOrderFormModal({
         handleSelectReservation,
     } = useSalesOrderForm({
         isOpen,
-        initialData,
+        id,
+        initialData: (soDetail || initialData) as Partial<SalesOrderFormValues>,
         currencies,
         taxCodes,
         uoms,
@@ -160,17 +173,34 @@ export function SalesOrderFormModal({
         methods.setValue('emp_sale_name', `${emp.employee_firstname_th} ${emp.employee_lastname_th}`, { shouldDirty: true });
     };
 
+    const { confirm } = useConfirmation();
     const { handleSubmit } = methods;
 
     // --------------------------------------------------------
     // Form Submit
     // --------------------------------------------------------
     const onFormSubmit = async (data: SalesOrderFormValues) => {
+        const isConfirmed = await confirm({
+            title: isEdit ? 'ยืนยันการแก้ไข' : 'ยืนยันการสร้างใบสั่งขาย',
+            description: isEdit 
+                ? 'คุณแน่ใจหรือไม่ว่าต้องการบันทึกการแก้ไขใบสั่งขายนี้?' 
+                : 'คุณต้องการสร้างใบสั่งขายใหม่จากรายการนี้ใช่หรือไม่?',
+            variant: 'info',
+            confirmText: 'ตกลง',
+            cancelText: 'ยกเลิก'
+        });
+
+        if (!isConfirmed) return;
+
         setIsSubmitting(true);
         try {
             logger.debug('Submitting Sales Order:', data);
-            // Simulate API call
-            await new Promise((r) => setTimeout(r, 1000));
+            
+            if (isEdit && id) {
+                await SalesOrderService.update(id, data as unknown as SalesOrderFormData);
+            } else {
+                await SalesOrderService.create(data as unknown as SalesOrderFormData);
+            }
             
             toast(`บันทึกใบสั่งขาย ${isEdit ? 'สำเร็จ' : 'เรียบร้อยแล้ว'}`, 'success');
             onSuccess?.();
@@ -208,19 +238,21 @@ export function SalesOrderFormModal({
                 >
                     ยกเลิก
                 </button>
-                <button
-                    type="submit"
-                    form="so-form"
-                    disabled={isSubmitting}
-                    className="h-10 px-8 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold shadow-sm transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50"
-                >
-                    {isSubmitting ? (
-                        <Loader2 size={18} className="animate-spin" />
-                    ) : (
-                        <Save size={18} />
-                    )}
-                    {isEdit ? 'บันทึกการแก้ไข' : 'ยืนยันสร้างใบสั่งขาย'}
-                </button>
+                {!isViewOnly && (
+                    <button
+                        type="submit"
+                        form="so-form"
+                        disabled={isSubmitting}
+                        className="h-10 px-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold shadow-sm transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50"
+                    >
+                        {isSubmitting ? (
+                            <Loader2 size={18} className="animate-spin" />
+                        ) : (
+                            <Save size={18} />
+                        )}
+                        {isEdit ? 'บันทึกการแก้ไข' : 'ยืนยันสร้างใบสั่งขาย'}
+                    </button>
+                )}
             </div>
         </div>
     );
@@ -232,12 +264,15 @@ export function SalesOrderFormModal({
         <WindowFormLayout
             isOpen={isOpen}
             onClose={onClose}
+            isLoading={isFetchingDetail}
             title={
-                isEdit
+                isViewOnly 
                     ? 'รายละเอียดใบสั่งขาย (Sales Order)'
-                    : 'สร้างใบสั่งขายใหม่ (Create Sales Order)'
+                    : isEdit
+                        ? 'แก้ไขใบสั่งขาย (Edit Sales Order)'
+                        : 'สร้างใบสั่งขายใหม่ (Create Sales Order)'
             }
-            headerColor="bg-indigo-600"
+            headerColor={isViewOnly ? "bg-slate-700" : "bg-indigo-600"}
             footer={ModalFooter}
             titleIcon={
                 <div className="bg-white/20 p-1.5 rounded shadow-sm">
@@ -250,7 +285,7 @@ export function SalesOrderFormModal({
                     <form
                         id="so-form"
                         onSubmit={handleSubmit(onFormSubmit)}
-                        className="max-w-[1400px] mx-auto space-y-6"
+                        className={`max-w-[1400px] mx-auto space-y-6 ${isViewOnly ? 'pointer-events-none opacity-90' : ''}`}
                     >
                         {/* 1. Header */}
                         <div className={cardClass}>

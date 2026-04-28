@@ -51,6 +51,22 @@ export function SalesOrderLineTable({
         const lineError = getLineError(index);
         return !!(lineError as Record<string, unknown> | undefined)?.[fieldName];
     };
+
+    /**
+     * Helper to get conditional classes based on error state for lines
+     */
+    const getFieldClass = (index: number, fieldName: keyof SalesOrderLineValues, baseClass: string) => {
+        const hasError = hasLineFieldError(index, fieldName);
+        if (!hasError) return baseClass;
+
+        return baseClass
+            .replace('border-gray-300', 'border-red-500')
+            .replace('dark:border-gray-700', 'dark:border-red-500')
+            .replace('focus:ring-indigo-500', 'focus:ring-red-500')
+            .replace('border-indigo-100', 'border-red-500')
+            .replace('border-orange-100', 'border-red-500')
+            .replace('border-gray-200', 'border-red-500');
+    };
     
     // Aesthetic classes matching Reservation but themed Indigo
     const compactInputClass =
@@ -83,21 +99,7 @@ export function SalesOrderLineTable({
             <div className="rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden bg-white dark:bg-gray-900">
                 <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-indigo-200 dark:scrollbar-thumb-indigo-500/20 scrollbar-track-transparent bg-white dark:bg-gray-900">
                     <table className="table-fixed text-sm text-left border-separate border-spacing-0 w-full min-w-[2130px]">
-                        <colgroup>
-                            <col className="w-[60px]" />  {/* ลำดับ */}
-                            <col className="w-[200px]" /> {/* รหัสสินค้า */}
-                            <col className="w-[300px]" /> {/* ชื่อสินค้า */}
-                            <col className="w-[160px]" /> {/* คลัง */}
-                            <col className="w-[160px]" /> {/* ที่เก็บ */}
-                            <col className="w-[120px]" /> {/* จำนวน */}
-                            <col className="w-[120px]" /> {/* หน่วย */}
-                            <col className="w-[220px]" /> {/* ล็อต */}
-                            <col className="w-[140px]" /> {/* ราคา */}
-                            <col className="w-[130px]" /> {/* ส่วนลด */}
-                            <col className="w-[160px]" /> {/* ยอดรวม */}
-                            <col className="w-[300px]" /> {/* หมายเหตุ */}
-                            {!isLocked && <col className="w-[60px]" />}  {/* จัดการ */}
-                        </colgroup>
+                        <colgroup><col className="w-[60px]" /><col className="w-[200px]" /><col className="w-[300px]" /><col className="w-[160px]" /><col className="w-[160px]" /><col className="w-[120px]" /><col className="w-[120px]" /><col className="w-[220px]" /><col className="w-[140px]" /><col className="w-[130px]" /><col className="w-[160px]" /><col className="w-[300px]" />{!isLocked && <col className="w-[60px]" />}</colgroup>
                         
                         <thead className="bg-[#fbfaff] dark:bg-gray-800 sticky top-0 z-40">
                             <tr className="bg-indigo-50/50 dark:bg-indigo-900/10">
@@ -132,14 +134,14 @@ export function SalesOrderLineTable({
                                                 <input
                                                     value={line.item_code || ''}
                                                     readOnly
-                                                    className={`${compactInputClass} bg-gray-50/50 dark:bg-gray-800 italic cursor-not-allowed text-indigo-700 dark:text-white/70 border-gray-200 dark:border-gray-700`}
+                                                    className={`${getFieldClass(index, 'item_id', compactInputClass)} bg-gray-50/50 dark:bg-gray-800 italic cursor-not-allowed text-indigo-700 dark:text-white/70 border-gray-200 dark:border-gray-700`}
                                                     placeholder="รหัส"
                                                 />
                                                 {!isLocked && (
                                                     <button
                                                         type="button"
                                                         onClick={() => onSearchProduct?.(index)}
-                                                        className="p-1.5 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-all shadow-sm active:scale-95 shrink-0 h-8 w-8 flex items-center justify-center font-bold"
+                                                        className={`p-1.5 ${hasLineFieldError(index, 'item_id') ? 'bg-red-500 hover:bg-red-600' : 'bg-indigo-600 hover:bg-indigo-700'} text-white rounded transition-all shadow-sm active:scale-95 shrink-0 h-8 w-8 flex items-center justify-center font-bold`}
                                                     >
                                                         <Search size={14} />
                                                     </button>
@@ -164,7 +166,7 @@ export function SalesOrderLineTable({
                                                     value={warehouses.find(w => String(w.warehouse_id) === String(line.warehouse_id))?.warehouse_name || ''}
                                                     readOnly
                                                     onClick={!isLocked ? () => onSearchWarehouse?.(index) : undefined}
-                                                    className={`${compactInputClass} ${!isLocked ? 'cursor-pointer hover:border-indigo-400 focus:border-indigo-500' : 'cursor-not-allowed bg-gray-50/50'} text-gray-700 dark:text-white/80 border-gray-200 dark:border-gray-700 transition-colors`}
+                                                    className={`${getFieldClass(index, 'warehouse_id', compactInputClass)} ${!isLocked ? 'cursor-pointer hover:border-indigo-400 focus:border-indigo-500' : 'cursor-not-allowed bg-gray-50/50'} text-gray-700 dark:text-white/80 border-gray-200 dark:border-gray-700 transition-colors`}
                                                     placeholder="เลือกคลัง..."
                                                 />
                                             </div>
@@ -177,7 +179,7 @@ export function SalesOrderLineTable({
                                                     value={locations.find(l => String(l.location_id) === String(line.location_id))?.name_th || locations.find(l => String(l.location_id) === String(line.location_id))?.code || ''}
                                                     readOnly
                                                     onClick={!isLocked ? () => onSearchLocation?.(index) : undefined}
-                                                    className={`${compactInputClass} ${!isLocked ? 'cursor-pointer hover:border-indigo-400 focus:border-indigo-500' : 'cursor-not-allowed bg-gray-50/50'} text-gray-700 dark:text-white/80 border-gray-200 dark:border-gray-700 transition-colors`}
+                                                    className={`${getFieldClass(index, 'location_id', compactInputClass)} ${!isLocked ? 'cursor-pointer hover:border-indigo-400 focus:border-indigo-500' : 'cursor-not-allowed bg-gray-50/50'} text-gray-700 dark:text-white/80 border-gray-200 dark:border-gray-700 transition-colors`}
                                                     placeholder="เลือกที่เก็บ..."
                                                 />
                                             </div>
@@ -198,7 +200,7 @@ export function SalesOrderLineTable({
                                                 onFocus={(e) => e.target.select()}
                                                 placeholder="0"
                                                 maxLength={12}
-                                                className={`${compactInputClass} text-right font-bold text-indigo-600 dark:text-white bg-white dark:bg-gray-800 border-indigo-100 dark:border-gray-700`}
+                                                className={`${getFieldClass(index, 'qty_ordered', compactInputClass)} text-right font-bold text-indigo-600 dark:text-white bg-white dark:bg-gray-800 border-indigo-100 dark:border-gray-700`}
                                             />
                                         </td>
 
@@ -208,7 +210,7 @@ export function SalesOrderLineTable({
                                                 value={line.uom_id || ''}
                                                 disabled={isLocked}
                                                 onChange={(e) => onLineChange(index, 'uom_id', e.target.value)}
-                                                className={`${compactInputClass} text-center bg-white dark:bg-gray-800 dark:text-white/80 border-gray-200 dark:border-gray-700`}
+                                                className={`${getFieldClass(index, 'uom_id', compactInputClass)} text-center bg-white dark:bg-gray-800 dark:text-white/80 border-gray-200 dark:border-gray-700`}
                                                 style={{ colorScheme: 'dark' }}
                                             >
                                                 <option value="">-- หน่วย --</option>
@@ -256,7 +258,7 @@ export function SalesOrderLineTable({
                                                 onFocus={(e) => e.target.select()}
                                                 placeholder="0.00"
                                                 maxLength={12}
-                                                className={`${compactInputClass} text-right font-medium bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200 border-gray-200 dark:border-gray-700`}
+                                                className={`${getFieldClass(index, 'unit_price', compactInputClass)} text-right font-medium bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200 border-gray-200 dark:border-gray-700`}
                                             />
                                         </td>
 
